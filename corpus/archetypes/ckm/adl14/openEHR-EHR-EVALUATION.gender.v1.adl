@@ -25,9 +25,9 @@ language
 		["sv"] = <
 			language = <[ISO_639-1::sv]>
 			author = <
-				["name"] = <"Emma Malm">
-				["organisation"] = <"Karolinska Universitetssjukhuset">
-				["email"] = <"emma.malm@cambio.se">
+				["name"] = <"Emma Malm, Manna Vosta">
+				["organisation"] = <"Karolinska Universitetssjukhuset, Karolinska University Hospital">
+				["email"] = <"emma.malm@cambio.se, manna.vosta@regionstockholm.se">
 			>
 		>
 		["nb"] = <
@@ -235,9 +235,9 @@ It's Pronounced Metrosexual, (2015), The Genderbread Person v3, http://itspronou
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"A08AF127279C26B62E56446624888406">
-		["build_uid"] = <"139940b4-8435-463e-93e6-d9e13b02c282">
-		["revision"] = <"1.1.4">
+		["MD5-CAM-1.0.1"] = <"51A9C61AB4B67D13A271B83BAF39E73E">
+		["build_uid"] = <"21186cc4-5848-4973-ac85-d3e413ddf993">
+		["revision"] = <"1.1.5">
 	>
 
 definition
@@ -308,7 +308,6 @@ definition
 			}
 		}
 	}
-
 
 ontology
 	term_definitions = <
@@ -582,7 +581,7 @@ ontology
 					comment = <"Exempelvis identitetshandlingar så som födelsebevis eller pass.">
 				>
 				["at0027"] = <
-					text = <"*Gender category (en)">
+					text = <"Könskategori">
 					description = <"*Category describing the alignment of an individual's gender identity with their sex assigned at birth. (en)">
 					comment = <"*For example: cisgender; transgender. (en)">
 				>

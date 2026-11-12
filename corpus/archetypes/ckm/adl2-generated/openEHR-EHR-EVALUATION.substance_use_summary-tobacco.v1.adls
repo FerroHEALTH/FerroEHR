@@ -1,0 +1,97 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e3da226a-03b8-442e-a4f8-9b26d2414cca; build_uid=6fc716e0-0abb-424b-b851-ce34cfd4a55a)
+    openEHR-EHR-EVALUATION.substance_use_summary-tobacco.v1.0.0
+
+specialize
+    openEHR-EHR-EVALUATION.substance_use_summary.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"21/06/2009">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sam Heard, Ocean Informatics, Australia", ...>
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"8CF7D2007A33072B6A4621916E7231CA">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"This is a generic archetype used to record an ongoing and persistent summary of the use of any and all substances. ">
+            keywords = <"consumption", "substance", "use", "usage", "dependence", "tobacco", "smoking", "cigarettes", "cigar", "pipe">
+            use = <"Used to record an ongoing and persistent summary of any and all use of tobacco.  ">
+            misuse = <"Not to be used for recording actual details about the use of the substance and event-related data - this should be captured using the OBSERVATION.substance_use-tobacco archetype.  
+Not to be used to record information about any other substance other than tobacco.">
+            copyright = <"copyright (c) 2009 openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- Tobacco Use Summary
+        /data[at0001]/items cardinality matches {0..*; unordered} matches {
+            ELEMENT[at0005] matches {
+                value matches {
+                    DV_CODED_TEXT[at9001.1] matches {
+                        defining_code matches {[at0.17]}    -- Tobacco
+                    }
+                }
+            }
+            CLUSTER[at0007] matches {
+                /items[at0008]/value matches {
+                    DV_CODED_TEXT[at9003.1] matches {
+                        defining_code matches {[ac0.9000]}    -- Form (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.17"] = <
+                text = <"Tobacco">
+                description = <"Tobacco used">
+            >
+            ["at0.18"] = <
+                text = <"Cigarettes - manufactured">
+                description = <"Commercial, manufactured cigarettes">
+            >
+            ["at0.19"] = <
+                text = <"Cigarettes - roll-your-own">
+                description = <"Home-made, roll-your-own cigarettes">
+            >
+            ["at0.20"] = <
+                text = <"Cigars">
+                description = <"Commercial cigars">
+            >
+            ["at0.21"] = <
+                text = <"Pipe">
+                description = <"Tobacco smoked within a pipe">
+            >
+            ["at0000.1"] = <
+                text = <"Tobacco Use Summary">
+                description = <"Archetype to record a persisting summary or overview of use or consumption of tobacco over time.">
+            >
+            ["ac0.9000"] = <
+                text = <"Form (synthesised)">
+                description = <"Identify the form of tobacco (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.18", "at0.19", "at0.20", "at0.21">
+        >
+    >

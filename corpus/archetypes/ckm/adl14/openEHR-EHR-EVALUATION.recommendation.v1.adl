@@ -1,0 +1,349 @@
+﻿archetype (adl_version=1.4; uid=1acecc29-89c0-4733-833d-162b576f40dc)
+	openEHR-EHR-EVALUATION.recommendation.v1
+
+concept
+	[at0000]	-- Recommendation
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Alina Rehberg">
+				["organisation"] = <"Medizinische Hochschule Hannover">
+				["email"] = <"rehberg.alina@mh-hannover.de">
+			>
+		>
+		["sv"] = <
+			language = <[ISO_639-1::sv]>
+			author = <
+				["name"] = <"Åsa Skagerhult">
+				["organisation"] = <"Region Östergötland">
+				["email"] = <"asa.skagerhult@regionostergotland.se">
+			>
+		>
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			author = <
+				["name"] = <"Alan March">
+				["organisation"] = <"Hospital Universitario Austral, Buenos Aires, Argentina">
+				["email"] = <"alandmarch@gmail.com">
+				["alandmarch@gmail.com"] = <"alandmarch@gmail.com">
+			>
+		>
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			author = <
+				["name"] = <"Bjørn Grøva">
+				["organisation"] = <"Direktoratet for e-helse">
+				["email"] = <"bjorn.grova@ehelse.no">
+			>
+		>
+		["pt-br"] = <
+			language = <[ISO_639-1::pt-br]>
+			author = <
+				["name"] = <"Vladimir Pizzo">
+				["organisation"] = <"Hospital Sirio Libanes, Brazil">
+				["email"] = <"vladimir.pizzo@hsl.org.br">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Atomica Informatics">
+		["email"] = <"heather.leslie@atomicainformatics.com">
+		["date"] = <"2013-02-14">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Darstellung einer Empfehlung, einer Beratung oder eines Vorschlags für das klinische Management zu einem bestimmten Zeitpunkt.">
+			use = <"Verwenden Sie diese Option, um eine Empfehlung, eine Beratung oder einen Vorschlag für das klinische Management zu einem bestimmten Zeitpunkt darzustellen.
+Der vorgesehene Anwendungsfall ist, um einen Kliniker bei der Aufzeichnung einer oder mehreren Empfehlung/en zu einem bestimmten Zeitpunkt zu unterstützen.
+Zum Beispiel als Bestandteil der Schlussfolgerungen, die im Rahmen einer klinischen Beratung getroffen werden.
+
+
+">
+			keywords = <"Beratung", "Empfehlung", "Vorschlag">
+			misuse = <"">
+		>
+		["sv"] = <
+			language = <[ISO_639-1::sv]>
+			purpose = <"Att föreslå eller ge råd om behandlingsåtgärd vid ett specifikt tillfälle.">
+			use = <"Att föreslå eller ge råd om behandlingsåtgärd vid ett specifikt tillfälle.
+
+Är tänkt att ge stöd för att dokumentera en behandlingsrekommendation vid en specifik tidpunkt. Exempelvis som en del av slutsatsen vid en klinisk konsultation.">
+			keywords = <"råd", "förslag", "rekommendation">
+			misuse = <"">
+		>
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			purpose = <"Para el registro de una sugerencia, consejo o propuesta para el manejo clínico en un momento determinado.">
+			use = <"Utilícese para registrar una sugerencia, consejo o propuesta para el manejo clínico en un momento específico.
+
+El caso de uso previsto se vincula a permitir el registro por parte del clínico de una o mas recomendaciones, en un mento específico en el tiempo. Por ejemplo, como un componente de las conclusiones a las que se ha arribado como parte de una consutla clínica.">
+			keywords = <"consejo", "propuesta", "sugerencia">
+			misuse = <"">
+		>
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			purpose = <"Anvendes for å registrere et forslag, et råd eller en anmodning om klinisk oppfølging på et spesifikt tidspunkt.">
+			use = <"Anvendes for å registrere et forslag, et råd eller en anmodning om klinisk oppfølging på et spesifikt tidspunkt.
+
+Arketypen er ment å understøtte klinikere som dokumenterer en eller flere anbefalinger på et spesifikt tidspunkt.
+Anbefalingen kan for eksempel benyttes som en del av dokumentasjonen av konklusjonene som trekkes i forbindelse med en klinisk konsultasjon.">
+			keywords = <"råd", "forslag", "anmodning", "tilråde", "tilrådning", "instruks">
+			misuse = <"">
+		>
+		["pt-br"] = <
+			language = <[ISO_639-1::pt-br]>
+			purpose = <"Registrar uma sugestão, conselho ou proposta de manejo clínico num tempo específico.">
+			use = <"Utilizar para registrar uma sugestão, conselho ou proposta de manejo clínico num tempo específico.
+
+O caso de uso pretendido é apoiar o registro clínico de uma recomendação, ou recomendações, num ponto específico no tempo.
+Por exemplo, como um componente das conclusões tiradas como parte de uma consulta clínica.">
+			keywords = <"conselho", "proposta", "sugestão">
+			misuse = <"">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record a suggestion, advice or proposal for clinical management at a specific time.">
+			use = <"Use to record a suggestion, advice or proposal for clinical management at a specific time.
+
+The intended use case is to support a clinician recording a recommendation, or recommendations, at a specific point-in-time. 
+For example, as a component of the conclusions drawn as part of a clinical consultation.">
+			keywords = <"advice", "proposal", "suggestion">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"deprecated">
+	other_contributors = <"Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Sam Heard, Ocean Informatics, Australia", "Shinji Kobayashi, Kyoto University, Japan", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway", "Bente Gjelsvik, Helse Bergen, Norway", "Kristian Heldal, Telemark Hospital Trust, Norway", "Hilde Hollås, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Hallvard Lærum, Oslo Universitetssykehus HF, Norway", "Tanja Riise, Nasjonal IKT HF, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"46F4300816AAEAB8D16622F35E51C165">
+		["build_uid"] = <"8b00e90a-b1d3-4d4f-9f73-28e3c2e1d07e">
+		["revision"] = <"1.1.3">
+	>
+
+definition
+	EVALUATION[at0000] matches {	-- Recommendation
+		data matches {
+			ITEM_TREE[at0001] matches {	-- Tree
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0002] occurrences matches {0..*} matches {	-- Recommendation
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0003] occurrences matches {0..*} matches {	-- Rationale
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0004] matches {	-- Tree
+				items cardinality matches {0..*; unordered} matches {
+					allow_archetype CLUSTER[at0005] occurrences matches {0..*} matches {	-- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Recommendation">
+					description = <"A suggestion, advice or proposal for clinical management.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Recommendation">
+					description = <"Narrative description of the recommendation.">
+					comment = <"May be coded, using a terminology, if required.">
+				>
+				["at0003"] = <
+					text = <"Rationale">
+					description = <"Justifications for the recommendation.">
+				>
+				["at0004"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Extension">
+					description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+					comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+				>
+			>
+		>
+		["es-ar"] = <
+			items = <
+				["at0000"] = <
+					text = <"Recomendación">
+					description = <"Una sugerencia, consejo o propuesta para el manejo clínico.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Recomendación">
+					description = <"Descripción narrativa de la recomendación">
+					comment = <"Puede ser codificada mediante una terminología si así se lo requiere.">
+				>
+				["at0003"] = <
+					text = <"*Rationale(en)">
+					description = <"*Justifications for the recommendation.(en)">
+				>
+				["at0004"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Extensión">
+					description = <"Información adicional requerida para representar contenido local o para alineamiento con otros modelos de referencia o formalismos.">
+					comment = <"Por ejemplo: requerimientos locales de información o metadatos adicionales para el alineamiento con equivalentes FHIR o CIMI.">
+				>
+			>
+		>
+		["pt-br"] = <
+			items = <
+				["at0000"] = <
+					text = <"Recomendação">
+					description = <"Uma sugestão, conselho ou proposta para manejo clínico.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Recomendação">
+					description = <"Descrição narrativa da recomendação.">
+					comment = <"Pode ser codificada, utilizando terminologia, se necessário.">
+				>
+				["at0003"] = <
+					text = <"Justificativa">
+					description = <"Justificativa para a recomendação.">
+				>
+				["at0004"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Extensão">
+					description = <"Informação adicional necessária para capturar conteúdo local ou para alinhar com outros modelos de referência/formalismos.">
+					comment = <"Por exemplo: necessidades de informação local ou metadados adicionais para alinhar com equivalentes CIMI ou FHIR.">
+				>
+			>
+		>
+		["nb"] = <
+			items = <
+				["at0000"] = <
+					text = <"Anbefaling">
+					description = <"Et forslag, råd eller anmodning om klinisk oppfølging.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Anbefaling">
+					description = <"Fritekstbeskrivelse av anbefalingen.">
+					comment = <"Det bør om mulig benyttes terminologi for å angi anbefaling.">
+				>
+				["at0003"] = <
+					text = <"Begrunnelse">
+					description = <"Begrunnelse for anbefalingen.">
+				>
+				["at0004"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Utvidelse">
+					description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+					comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+				>
+			>
+		>
+		["sv"] = <
+			items = <
+				["at0000"] = <
+					text = <"Rekommendation">
+					description = <"Ett förslag eller råd om behandling.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Rekommendation">
+					description = <"Beskrivning av rekommendationen.">
+					comment = <"Kan kodas i en terminologi vid behov.">
+				>
+				["at0003"] = <
+					text = <"*Rationale(en)">
+					description = <"*Justifications for the recommendation.(en)">
+				>
+				["at0004"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Tilläggsinformation">
+					description = <"Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+					comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR- eller CIMI-motsvarigheter.">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"Empfehlung">
+					description = <"Eine Empfehlung, eine Beratung oder ein Vorschlag für das klinische Management.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Empfehlung">
+					description = <"Beschreibung der Empfehlung.">
+					comment = <"Kann bei Bedarf mit einer Terminologie kodiert werden.">
+				>
+				["at0003"] = <
+					text = <"Begründung">
+					description = <"Begründung für die Empfehlung.">
+				>
+				["at0004"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Erweiterung">
+					description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+					comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR- oder CIMI-Modelle.
+
+">
+				>
+			>
+		>
+	>

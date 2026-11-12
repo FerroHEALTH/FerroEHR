@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -62,9 +62,7 @@ Wilson L, Boase K, Nelson LD, Temkin NR, Giacino JT, Markowitz AJ, Maas A, Menon
       <keywords>aktivitet</keywords>
       <use>Brukes for å registrere resultatene for hver enkelt parameter og deres totale skår for Glasgow Outcome Scale - Extended.&#xD;
 &#xD;
-Et gyldig resultat av en GOSE vurdering er at "Kategori" elementet ikke vil ha et resultat. Ordinalen "99" i noen elementer skal representere et svaralternativ uten en verdi, og enhver form for kalkulasjon av Kategori bør ta hensyn til dette. "Kategori"-elementet bør stå tomt dersom laveste registrerte verdi er "99".&#xD;
-&#xD;
-</use>
+Et gyldig resultat av en GOSE vurdering er at "Kategori" elementet ikke vil ha et resultat. Ordinalen "99" i noen elementer skal representere et svaralternativ uten en verdi, og enhver form for kalkulasjon av Kategori bør ta hensyn til dette. "Kategori"-elementet bør stå tomt dersom laveste registrerte verdi er "99".</use>
       <misuse />
       <copyright>© openEHR Foundation</copyright>
     </details>
@@ -2223,115 +2221,115 @@ A valid outcome of a GOSE assessment is that the 'Category' will have no result.
       </items>
       <items code="at0004">
         <items id="text">Date of injury</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Age at injury</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Interval post-injury</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Consciousness</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Independence in the home</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">1. Is the head injured person able to obey simple commands, or say any words?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">2a Is the assistance of another person at home essential every day for some activities of daily living?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">2b Do they need frequent help or someone to be around at home most of the time?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">2c Was the assistance at home essential before the injury?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Independence outside the home</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">3a Are they able to shop without assistance?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">3b Were they able to shop without assistance before the injury?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">4a Are they able to travel locally without assistance?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">4b Were they able to travel without assistance before the injury?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Work</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">5a Are they currently able to work to their previous capacity?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">5b How restricted are they?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">5c Were they either working or seeking employment before the injury (answer 'yes') or were they doing neither (answer 'no')?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Social &amp; leisure activities</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">6a Are they able to resume regular social and leisure activities outside home?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">6b What is the extent of restricition on their social and leisure activities?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">6c Did they engage in regular social and leisure activities outside home before the injury?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Family &amp; friendships</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">7a Have there been psychological problems which have resulted in ongoing family disruption or disruption to friendships?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">7b What has been the extent of disruption or strain?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">7c Were there problems with family or friends before the injury?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Return to normal life</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">8a Are there any other current problems relating to the injury which affect daily life?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Category</items>
@@ -2339,227 +2337,227 @@ A valid outcome of a GOSE assessment is that the 'Category' will have no result.
       </items>
       <items code="at0037">
         <items id="text">Respondent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Patient alone</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Relative/friend/carer alone</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Patient + relative/friend/carer</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0057">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0059">
         <items id="text">Reduced work capacity.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Able to work only in a sheltered workshop or non-competitive job, or currently unable to work.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Participate a bit less: at least half as often as before injury.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0066">
         <items id="text">Participate much less: less than half as often.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Unable to participate: rarely, if ever, take part.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0068">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0069">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0070">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0072">
         <items id="text">Occasional - less than weekly</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0073">
         <items id="text">Frequent - once a week or more, but tolerable.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0074">
         <items id="text">Constant - daily and intolerable.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0075">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0076">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0077">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0078">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0081">
         <items id="text">Dead</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0082">
         <items id="text">Vegetative state</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0083">
         <items id="text">Lower severe disability</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0084">
         <items id="text">Upper severe disability</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0085">
         <items id="text">Lower moderate disability</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0086">
         <items id="text">Upper moderate disability</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0087">
         <items id="text">Lower good recovery</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0088">
         <items id="text">Upper good recovery</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0089">
         <items id="text">8b Were similar problems present before the injury?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0090">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0091">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0092">
         <items id="text">Since the injury has the head injured person had any epileptic fits?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0093">
         <items id="text">Have they been told that they are currently at risk of developing epilepsy?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0094">
         <items id="text">What is the most important factor in outcome?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0095">
         <items id="text">Item tree</items>
@@ -2567,31 +2565,31 @@ A valid outcome of a GOSE assessment is that the 'Category' will have no result.
       </items>
       <items code="at0096">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0097">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0098">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0099">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0100">
         <items id="text">Effects of head injury</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0101">
         <items id="text">Effects of illness or injury to another part of the body</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0102">
         <items id="text">A mixture of these</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nb">
@@ -2613,115 +2611,115 @@ A valid outcome of a GOSE assessment is that the 'Category' will have no result.
       </items>
       <items code="at0004">
         <items id="text">Skadedato</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Alder ved skadetidspunkt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Tid etter skade</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Bevissthet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Selvhjulpenhet i hjemmet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">1. Er personen med hodeskade i stand til å respondere på enkel instruksjon, eller si noen ord?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">2a Kreves det personhjelp til daglige aktiviteter i hjemmet hver dag?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">2b Trenger han/hun ofte hjelp eller tilsyn i hjemmet?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">2c Var det helt nødvendig med personhjelp i daglige aktiviteter i hjemmet før skaden?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Selvhjulpenhet utenfor hjemmet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">3a Kan han/hun gjøre innkjøp uten hjelp?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">3b Kunne han/hun gjøre innkjøp uten hjelp før skaden?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">4a Kan han/hun reise lokalt uten hjelp?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">4b Kunne han/hun reise lokalt uten hjelp før skaden?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Arbeid</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">5a Er han/hun for tiden i stand til å arbeide med samme kapasitet som tidligere?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">5b Hvor store er hans/hennes begrensninger?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">5c Var han/hun i arbeid eller arbeidssøkende før skaden (svar "ja") eller ingen av delene (svar "nei")?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Sosiale aktiviteter og fritidsaktiviteter</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">6a Kan han/hun gjenoppta regelmessige sosiale aktiviteter og fritidsaktiviteter utenfor hjemmet?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">6b Hvor omfattende er begrensningene i sosiale aktiviteter og fritidsaktiviteter (utenfor hjemmet)?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">6c Deltok han/hun jevnlig i sosiale aktiviteter og fritidsaktiviteter utenfor hjemmet før skaden?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Familie og venner</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">7a Har det vært psykologiske problemer som har resultert i pågående belastninger eller splid i vennskap eller familieforhold?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">7b Hva har vært omfanget av disse problemene?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">7c Var det problemer i forhold til familie eller venner før skaden?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Tilbake til normalt liv</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">8a Er det andre aktuelle problemer relatert til skaden som påvirker dagliglivet?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Kategori</items>
@@ -2729,227 +2727,227 @@ A valid outcome of a GOSE assessment is that the 'Category' will have no result.
       </items>
       <items code="at0037">
         <items id="text">Respondent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Pasient alene</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Familie/venn/personale alene</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Pasient + familie/venn/personale</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0057">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0059">
         <items id="text">Redusert arbeidskapasitet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Mulig å arbeide bare i vernet bedrift eller lignende arbeid (frivillig arbeid, arbeid med bistand); eller er for tiden ikke i stand til å arbeide</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Deltar litt mindre, minst halvparten så ofte som før</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0066">
         <items id="text">Deltar mye mindre, mindre enn halvparten så ofte</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Ute av stand til å delta, eventuelt svært sjeldent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0068">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0069">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0070">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0072">
         <items id="text">Av og til - mindre enn ukentlig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0073">
         <items id="text">Oftere - en gang i uken eller mer, men til å holde ut</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0074">
         <items id="text">Hele tiden - daglig og uutholdelig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0075">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0076">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0077">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0078">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0081">
         <items id="text">Død</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0082">
         <items id="text">Vegetativ tilstand</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0083">
         <items id="text">Alvorlig funksjonshemning nedre nivå</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0084">
         <items id="text">Alvorlig funksjonshemning øvre nivå</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0085">
         <items id="text">Moderat funksjonshemning nedre nivå</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0086">
         <items id="text">Moderat funksjonshemning øvre nivå</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0087">
         <items id="text">God restitusjon nedre nivå</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0088">
         <items id="text">God restitusjon øvre nivå</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0089">
         <items id="text">8b Var de tilsvarende problemene tilstede også før skaden?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0090">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0091">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0092">
         <items id="text">Siden skaden, har personen med hodeskade hatt noen epileptiske anfall?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0093">
         <items id="text">Har han/hun blitt fortalt at han/hun for tiden har risiko for å utvikle epilepsi?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0094">
         <items id="text">Hva er den viktigste utfallsfaktoren?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0095">
         <items id="text">*Item tree (en)</items>
@@ -2957,33 +2955,32 @@ A valid outcome of a GOSE assessment is that the 'Category' will have no result.
       </items>
       <items code="at0096">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0097">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0098">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0099">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0100">
         <items id="text">Virkning av hodeskaden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0101">
         <items id="text">Virkning av sykdom eller skade i andre deler av kroppen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0102">
         <items id="text">En blanding av disse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

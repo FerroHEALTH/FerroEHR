@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -112,7 +112,7 @@ CKM:  http://www.openehr.org/knowledge/</other_details>
     <author id="name">Jussara Rötzsch</author>
     <author id="organisation">openEHR Foundation</author>
     <author id="email">jussara.macedo@gmail.com</author>
-    <accreditation>MD. MSc., Pschyatrist, Clinical Modeller, Coordinator of  Standards and Semantic Interoperability of Brazil e-Health Initiative </accreditation>
+    <accreditation>MD. MSc., Pschyatrist, Clinical Modeller, Coordinator of  Standards and Semantic Interoperability of Brazil e-Health Initiative</accreditation>
   </translations>
   <uid>
     <value>489ceb2a-8336-406c-9fa5-e01b44643a47</value>
@@ -2230,7 +2230,7 @@ CKM:  http://www.openehr.org/knowledge/</other_details>
     <term_definitions language="pt-br">
       <items code="at0000">
         <items id="text">Demonstração</items>
-        <items id="description">Arquétipo de Demonstração com descrições e explicações. </items>
+        <items id="description">Arquétipo de Demonstração com descrições e explicações.</items>
       </items>
       <items code="at0001">
         <items id="text">*Event Series(en)</items>
@@ -2273,15 +2273,15 @@ CKM:  http://www.openehr.org/knowledge/</other_details>
         <items id="description">Paciente está em Pé.</items>
       </items>
       <items code="at0011">
-        <items id="text">Texto Cuja Origem é uma Terminologia Externa </items>
-        <items id="description">Tipo de dado Texto utilizando códigos originários de uma terminologia externa como, por exemplo, um subset do SNOMED CT, do LOINC ou da CID 10. </items>
+        <items id="text">Texto Cuja Origem é uma Terminologia Externa</items>
+        <items id="description">Tipo de dado Texto utilizando códigos originários de uma terminologia externa como, por exemplo, um subset do SNOMED CT, do LOINC ou da CID 10.</items>
       </items>
       <items code="at0012">
         <items id="text">Quantidade</items>
         <items id="description">Um tipo de dado de Quantidade usado para registrar uma medida associada com suas uniddades apropriadas. Essas unidades são derivadas de norams ISO e o modelo de  Referência possibilita a conversão entre elas. O exemplo demonstrado aqui é o comprimento.</items>
       </items>
       <items code="at0013">
-        <items id="text">Contagem </items>
+        <items id="text">Contagem</items>
         <items id="description">Tipos de dados de Contagem são compostos de um número inteiro sem casas decimais (integer), por exemplo, para registar o número de filhos- nesse exemplo o mínimo é colocado como 0 e o máximo não é especificado.</items>
       </items>
       <items code="at0014">
@@ -2337,7 +2337,7 @@ CKM:  http://www.openehr.org/knowledge/</other_details>
         <items id="description">Tipos de dado Multimídia permitem o registro de vários tipos de arquivos multimídia. Todos os tipos disponíveis foram explicitamente selecionados neste exemplo.</items>
       </items>
       <items code="at0027">
-        <items id="text">URI - Identificador de Recursos </items>
+        <items id="text">URI - Identificador de Recursos</items>
         <items id="description">Tipos de dados URI permitem registrar os relacionamentos entre  estes dados e os dados registrados em outros lugares. Esses enlaces (links) podem estar  no mesmo RES ou serem externos, por exemplo, pertencer a  num endereço  na internet, uma URL.</items>
       </items>
       <items code="at0028">
@@ -2353,7 +2353,7 @@ CKM:  http://www.openehr.org/knowledge/</other_details>
         <items id="description">Todos os arquétipos da classe de OBSERVAÇÃO podem conter um modelo de ESTADO, que contém a informação sobre o sujeito a informação na hora que o dado foi colhido, e essa informação é requisito para uma interpretação segura das informações básicas. Um exemplo disso é a posição que o paciente se encontrava quando sua pressão arterial foi medida. Os tipos de dados são idênticos aos que foram explicados no modelo de DADOS acima.</items>
       </items>
       <items code="at0032">
-        <items id="text">Dados - Definição </items>
+        <items id="text">Dados - Definição</items>
         <items id="description">Todos os arquétipos da classe de OBSERVAÇÃO contêm um modelo de DADOS que contém as informações básicas, por exemplo, as pressões sistólica e diastólica, quando está se medindo a pressão sanguínea.</items>
       </items>
       <items code="at0033">
@@ -2625,4 +2625,3 @@ CKM:  http://www.openehr.org/knowledge/</other_details>
     </constraint_definitions>
   </ontology>
 </archetype>
-

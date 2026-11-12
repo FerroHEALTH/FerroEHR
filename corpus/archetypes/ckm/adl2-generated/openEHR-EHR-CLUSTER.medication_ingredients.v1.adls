@@ -1,0 +1,272 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e19adf8f-563d-4e5e-bdda-ae477344e2f4; build_uid=fdd1a659-cf31-4e45-9999-6fb14bede2ca)
+    openEHR-EHR-CLUSTER.medication_ingredients.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2013-05-16">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, Ocean Informatics, UK", ...>
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Chemical description of medication, draft archetype, NEHTA Clinical Knowledge Manager [Internet]. NEHTA. Authored: 12 Nov 2010. Available at: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.885_2 (accessed 15 May 2013).">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B0E8323AFBE84823EF19D74DA271DBEB">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To describe the form of the medication or chemical as well as the active or therapeutic and other ingredients. This is available as a cluster for use in settlngs where the record of a medication or other chemical is required.">
+            keywords = <"composition", "generic", "ingredient", "medication", "chemical">
+            use = <"Use to add detail to a medication order or administration record and in conjunction with medication_amount for quantity and strength of medication ingredients.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Medication ingredients
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Form
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Role
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac9000]}    -- Role (synthesised)
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0030] occurrences matches {1} matches {    -- Strength
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.medication_amount(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            CLUSTER[at0001] matches {    -- Ingredient
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Name
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    use_node ELEMENT[at9007] occurrences matches {0..1} /items[at0010]    -- Ingredient (synthesised)
+                    use_node ELEMENT[at9008] occurrences matches {0..1} /items[at0005]    -- Ingredient (synthesised)
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Compound
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0033] occurrences matches {0..1} matches {    -- Strength
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.medication_amount(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0024] occurrences matches {0..1} matches {    -- Quantity
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.medication_amount(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Medication ingredients">
+                description = <"The actual ingredients with strength and overall form of a chemical or medication.">
+            >
+            ["at0001"] = <
+                text = <"Ingredient">
+                description = <"Detailed Information about an individual ingredient.">
+            >
+            ["at0002"] = <
+                text = <"Name">
+                description = <"The name of the chemical or medication.">
+            >
+            ["at0003"] = <
+                text = <"Compound">
+                description = <"The detailed chemical name of the compound that is an active ingredient.">
+            >
+            ["at0005"] = <
+                text = <"Role">
+                description = <"The role of the agent. If not stated it will be assumed to be therapeutic.">
+            >
+            ["at0006"] = <
+                text = <"Therapeutic">
+                description = <"The chemical has a known and desired effect which is positive.">
+            >
+            ["at0007"] = <
+                text = <"Toxic">
+                description = <"This chemical is toxic and has no therapeutic effect.">
+            >
+            ["at0008"] = <
+                text = <"Adjuvant">
+                description = <"The chemical is active but aids the therapeutic effect of another ingredient.">
+            >
+            ["at0009"] = <
+                text = <"Other">
+                description = <"The chemical has another active role.">
+            >
+            ["at0010"] = <
+                text = <"Form">
+                description = <"The formulation or presentation of the overall substance.">
+                comment = <"e.g. \"Tab\", \"Liquid\", \"Gel\".">
+            >
+            ["at0017"] = <
+                text = <"Dilutant">
+                description = <"Inert dilutant.">
+            >
+            ["at0018"] = <
+                text = <"Propellent">
+                description = <"Inert propellent.">
+            >
+            ["at0019"] = <
+                text = <"Preservative">
+                description = <"The ingredient is present to prolong the life of the substance.">
+            >
+            ["at0020"] = <
+                text = <"Colouring">
+                description = <"The ingredient is used to colour the substance.">
+            >
+            ["at0024"] = <
+                text = <"Quantity">
+                description = <"The quantity of an ingredient used within a mixture.">
+                comment = <"Example:100ml">
+            >
+            ["at0030"] = <
+                text = <"Strength">
+                description = <"The strength of the overall preparation.">
+                comment = <"e.g. \"40mg\", '2mg/5ml\"">
+            >
+            ["at0033"] = <
+                text = <"Strength">
+                description = <"The strength of an individual ingredient.">
+                comment = <"Example: 20mg">
+            >
+            ["at0035"] = <
+                text = <"Electrolyte">
+                description = <"This ingredient is an electrolyte.">
+            >
+            ["ac9000"] = <
+                text = <"Role (synthesised)">
+                description = <"The role of the agent. If not stated it will be assumed to be therapeutic. (synthesised)">
+            >
+            ["at9007"] = <
+                text = <"Ingredient (synthesised)">
+                description = <"Detailed Information about an individual ingredient. (synthesised)">
+            >
+            ["at9008"] = <
+                text = <"Ingredient (synthesised)">
+                description = <"Detailed Information about an individual ingredient. (synthesised)">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"*Chemical description of medication(en)">
+                description = <"*The actual ingredients with strength and overall form of a chemical or medication.(en)">
+            >
+            ["at0001"] = <
+                text = <"*Ingredient(en)">
+                description = <"*Detailed Information about an individual ingredient.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Name(en)">
+                description = <"*The name of the chemical or medication.(en)">
+            >
+            ["at0003"] = <
+                text = <"*Compound(en)">
+                description = <"*The detailed chemical name of the compound that is an active ingredient.(en)">
+            >
+            ["at0005"] = <
+                text = <"*Role(en)">
+                description = <"*The role of the agent. If not stated it will be assumed to be therapeutic.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Therapeutic(en)">
+                description = <"*The chemical has a known and desired effect which is positive.(en)">
+            >
+            ["at0007"] = <
+                text = <"*Toxic(en)">
+                description = <"*This chemical is toxic and has no therapeutic effect.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Adjuvant(en)">
+                description = <"*The chemical is active but aids the therapeutic effect of another ingredient.(en)">
+            >
+            ["at0009"] = <
+                text = <"*Other(en)">
+                description = <"*The chemical has another active role.(en)">
+            >
+            ["at0010"] = <
+                text = <"*Form(en)">
+                description = <"*The formulation or presentation of the overall substance.(en)">
+                comment = <"*e.g. \"Tab\", \"Liquid\", \"Gel\".(en)">
+            >
+            ["at0017"] = <
+                text = <"*Dilutant(en)">
+                description = <"*Inert dilutant.(en)">
+            >
+            ["at0018"] = <
+                text = <"*Propellent(en)">
+                description = <"*Inert propellent.(en)">
+            >
+            ["at0019"] = <
+                text = <"*Preservative(en)">
+                description = <"*The ingredient is present to prolong the life of the substance.(en)">
+            >
+            ["at0020"] = <
+                text = <"*Colouring(en)">
+                description = <"*The ingredient is used to colour the substance.(en)">
+            >
+            ["at0024"] = <
+                text = <"*Quantity(en)">
+                description = <"*The quantity of an ingredient used within a mixture.(en)">
+                comment = <"*Example:100ml(en)">
+            >
+            ["at0030"] = <
+                text = <"*Strength(en)">
+                description = <"*The strength of the overall preparation.(en)">
+                comment = <"*e.g. \"40mg\", '2mg/5ml\"(en)">
+            >
+            ["at0033"] = <
+                text = <"*Strength(en)">
+                description = <"*The strength of an individual ingredient.(en)">
+                comment = <"*Example: 20mg(en)">
+            >
+            ["at0035"] = <
+                text = <"*Electrolyte(en)">
+                description = <"*This ingredient is an electrolyte.(en)">
+            >
+            ["ac9000"] = <
+                text = <"*Role(en) (synthesised)">
+                description = <"*The role of the agent. If not stated it will be assumed to be therapeutic.(en) (synthesised)">
+            >
+            ["at9007"] = <
+                text = <"*Ingredient(en) (synthesised)">
+                description = <"*Detailed Information about an individual ingredient.(en) (synthesised)">
+            >
+            ["at9008"] = <
+                text = <"*Ingredient(en) (synthesised)">
+                description = <"*Detailed Information about an individual ingredient.(en) (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0006", "at0035", "at0007", "at0008", "at0017", "at0018", "at0019", "at0020", "at0009">
+        >
+    >

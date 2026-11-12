@@ -1,0 +1,533 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2010-02-03</original_author>
+    <original_author id="name">Heather Leslie</original_author>
+    <original_author id="organisation">Ocean Informatics</original_author>
+    <original_author id="email">heather.leslie@oceaninformatics.com</original_author>
+    <other_contributors>Tomas Alme, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Magnus Alsaker, Helsedirektoratet, Norway</other_contributors>
+    <other_contributors>Nadim Anani, Karolinska Institutet, Sweden</other_contributors>
+    <other_contributors>Vebjørn Arntzen, Oslo universitetssykehus HF, Norway</other_contributors>
+    <other_contributors>Koray Atalag, University of Auckland, New Zealand</other_contributors>
+    <other_contributors>Gustavo Bacelar-Silva, Healthcare Designs, Brazil (openEHR Editor)</other_contributors>
+    <other_contributors>Silje Ljosland Bakke, National ICT Norway, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Lars Bitsch-Larsen, Haukeland University hospital, Norway</other_contributors>
+    <other_contributors>Stephen Chu, NEHTA, Australia</other_contributors>
+    <other_contributors>Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway</other_contributors>
+    <other_contributors>Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway</other_contributors>
+    <other_contributors>Sebastian Garde, Ocean Informatics, Germany</other_contributors>
+    <other_contributors>Heather Grain, Llewelyn Grain Informatics, Australia</other_contributors>
+    <other_contributors>Sam Heard, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Ingrid Heitmann, Oslo universitetssykehus HF, Norway</other_contributors>
+    <other_contributors>Kristian Heldal, Telemark Hospital Trust, Norway</other_contributors>
+    <other_contributors>Andreas Hering, Helse Bergen HF, Haukeland universitetssjukehus, Norway</other_contributors>
+    <other_contributors>Anca Heyd, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Evelyn Hovenga, EJSH Consulting, Australia</other_contributors>
+    <other_contributors>Lars Karlsen, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Shinji Kobayashi, Kyoto University, Japan</other_contributors>
+    <other_contributors>Sabine Leh, Helse-Bergen, Norway</other_contributors>
+    <other_contributors>Heather Leslie, Ocean Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Hallvard Lærum, Oslo Universitetssykehus HF, Norway</other_contributors>
+    <other_contributors>Luis Marco Ruiz, NST, Spain</other_contributors>
+    <other_contributors>Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)</other_contributors>
+    <other_contributors>Lars Morgan Karlsen, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Bjørn Næss, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Andrej Orel, Marand d.o.o., Slovenia</other_contributors>
+    <other_contributors>Anne Pauline Anderssen, Helse Nord RHF, Norway</other_contributors>
+    <other_contributors>Rune Pedersen, Universitetssykehuset i Nord Norge, Norway</other_contributors>
+    <other_contributors>Jussara Rotzsch, UNB, Brazil</other_contributors>
+    <other_contributors>Stephen Royce, NEHTA, Australia</other_contributors>
+    <other_contributors>Anoop Shah, University College London, United Kingdom</other_contributors>
+    <other_contributors>Norwegian Review Summary, National ICT Norway, Norway</other_contributors>
+    <other_contributors>Line Sæle, Nasjonal IKT HF, Norway</other_contributors>
+    <other_contributors>John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)</other_contributors>
+    <other_contributors>Richard Townley-O'Neill, NEHTA, Australia</other_contributors>
+    <other_contributors>Jon Tysdahl, Furst medlab AS, Norway</other_contributors>
+    <lifecycle_state>rejected</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Exclusion of a Problem/Diagnosis, Draft Archetype [Internet]. NEHTA, Australia, NEHTA Clinical Knowledge Manager [cited: 2015-11-25]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1304</other_details>
+    <other_details id="current_contact">Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">5B1458C55CF53CF328ABC32BDF79ACED</other_details>
+    <other_details id="build_uid">cbcb030e-e7b8-4450-80c4-7689948f11c2</other_details>
+    <other_details id="revision">0.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For å registrere et utsagn om problemer eller diagnoser som enten ikke er tilstede nå, eller ikke har vært tilstede tidligere.</purpose>
+      <keywords>eksklusjon</keywords>
+      <keywords>fravær</keywords>
+      <keywords>utsagn</keywords>
+      <keywords>ekskludert</keywords>
+      <keywords>funn</keywords>
+      <keywords>vurdering</keywords>
+      <keywords>negasjon</keywords>
+      <keywords>utelukkelse</keywords>
+      <keywords>problem</keywords>
+      <keywords>diagnose</keywords>
+      <use>Brukes for å registrere et utsagn om problemer eller diagnoser som enten ikke er tilstede nå, eller ikke har vært tilstede tidligere.&#xD;
+&#xD;
+Denne arketypen er spesifikt utviklet for å gi et tydelig og entydig eksklusjonsutsagn om en klinisk oppføring i journalen. Denne tilnærmingen foretrekkes framfor bruk av flagg eller terminologi for å uttrykke negasjon.&#xD;
+&#xD;
+Arketypen er utviklet for å kunne brukes på en rekke ulike måter. Den primære hensikten er å:&#xD;
+- Representere flere "Eksklusjonsutsagn" i en instans av arketypen.&#xD;
+- Lenke et "Eksklusjonsutsagn" med flere "Problem/diagnose", for eksempel "Ingen tidligere forekomst av" "pneumoni" og "KOLS".&#xD;
+&#xD;
+Det er også mulig å bruke arketypen for følgende bruksområder, selv om gode og trygge kliniske bruksområder ikke er identifisert for dette:&#xD;
+- Lenke flere "Eksklusjonsutsagn" med ett "Spesifikt objekt".&#xD;
+&#xD;
+Er det klinisk behov for at man lenker flere "Eksklusjonsutsagn" med flere "Problem/diagnose" bør dette representeres ved flere instanser av denne arketypen for å sikre riktig gruppering av hvert enkelt "Eksklusjonsutsagn" med hvert enkelt "Problem/diagnose".&#xD;
+&#xD;
+Merk at eksklusjonsutsagn kun anses å være oppdaterte og presise på registreringstidspunktet. Det er mulig at en journal fastslår at et individ på et tidspunkt hadde INGEN KJENT historie av XYZ (ved bruk at et eksklusjonsutsagn) samtidig som en senere registrerer evidens for debut av XYZ (ved bruk av en korresponderende arketype hvor en registrerer det første tilfellet, f.eks. ved å bruke EVALUATION.problem_diagnosis). I framtidige journalutsagn kan individet deretter ha en KJENT forekomst av XYZ i problemlisten sin.</use>
+      <misuse>Brukes ikke for registrering av eksklusjon eller fravær av klinisk informasjon hvor det finnes en spesialisering av denne arketypen for dette formålet.&#xD;
+Det kan være, men er ikke begrenset til:&#xD;
+- Bruk ikke denne arketypen for registrering av eksklusjonsutsagn knyttet til bruk av legemidler - bruk arketypen EVALUATION.exclusion-medication til dette formålet.&#xD;
+- Bruk ikke denne arketypen for registrering av eksklusjonsutsagn knyttet til prosedyrer - bruk arketypen EVALUATION.exclusion-procedure til dette formålet.&#xD;
+- Bruk ikke denne arketypen for registrering av eksklusjonsutsagn knyttet til familieanamnese - bruk arketypen EVALUATION.exclusion-family_history til dette formålet.&#xD;
+- Bruk ikke denne arketypen for registrering av eksklusjonsutsagn knyttet til overfølsomhetsreaksjoner - bruk arketypen EVALUATION.exclusion-adverse_reaction til dette formålet.&#xD;
+&#xD;
+Brukes ikke for å registrere en eksklusjon av en del av en fysisk undersøkelse - bruk arketypen CLUSTER.exclusion_exam i den aktuelle OBSERVATION- eller CLUSTER-arketypen.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record a statement about problems or diagnoses that have never been noted by the individual or recognised by a clinician.</purpose>
+      <keywords>exclusion</keywords>
+      <keywords>rule out</keywords>
+      <keywords>rule-out</keywords>
+      <keywords>r/o</keywords>
+      <use>Use to record a statement about problems or diagnoses that have never been noted by the individual or recognised by a clinician.&#xD;
+&#xD;
+This archetype has been specifically designed to make a clear and unambiguous statement of exclusion or rule-out of a problem or diagnosis from the health record. This approach is used in preference to relying on flags or terminology to express negation.&#xD;
+&#xD;
+This archetype has been designed to be used in a variety of ways. The primary intent is to:&#xD;
+- represent multiple 'Exclusion statements' in one archetype instance; and&#xD;
+- link one 'Exclusion statement' with multiple 'Problem/Diagnosis', for example 'No history of' 'Pneumonia' and 'COPD'.&#xD;
+&#xD;
+There is also the possibility to use the archetype for the following purposes, although clear and safe clinical use cases have not yet been identified:&#xD;
+- to link multiple 'Exclusion statements' with one 'Problem/diagnosis'. &#xD;
+&#xD;
+If the clinical requirement is to link multiple 'Exclusion statements' with multiple 'Problem/diagnosis' then this should be represented using multiple instances of this archetype to ensure correct alignment of each 'Exclusion statement' with each 'Problem/Diagnosis'.&#xD;
+&#xD;
+Please note that exclusion statements can only be considered to be current and accurate at the point-in-time of recording. It is possible for a record to be able to state that an individual has NO KNOWN history of XYZ (using an exclusion statement) at the same time as recording the evidence of their first experience of XYZ (using the corresponding archetype that records the first experience eg via an EVALUATION for a problem or adiagnosis). In future record statements, the individual may subsequently have a KNOWN history of XYZ recorded in their problem list.</use>
+      <misuse>Not to be used to record the exclusion or absence of clinical information for which there is a different purpose-built specialisation of the EVALUATION.exclusion archetype. This includes, but is not limited to the following:&#xD;
+- Do not use this archetype to record the exclusion of medication use - use the EVALUATION.exclusion-medication archetype for this purpose.&#xD;
+- Do not use this archetype to record the exclusion of procedures - use the EVALUATION.exclusion-procedure archetype for this purpose.&#xD;
+- Do not use this archetype to record the exclusion of family history - use the EVALUATION.exclusion-family_history archetype for this purpose.&#xD;
+- Do not use this archetype to record the exclusion of an adverse reaction - use the EVALUATION.exclusion-adverse_reaction archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record the exclusion of any component of physical examination - use the CLUSTER.exclusion_exam archetype within an appropriate OBSERVATION or CLUSTER archetype.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">John Tore Valand</author>
+    <author id="organisation">Helse Bergen HF</author>
+  </translations>
+  <uid>
+    <value>8f45287a-6511-4f92-8faf-f515c13de56a</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-EVALUATION.exclusion-problem_diagnosis.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000.1</concept>
+  <parent_archetype_id>
+    <value>openEHR-EHR-EVALUATION.exclusion.v1</value>
+  </parent_archetype_id>
+  <definition>
+    <rm_type_name>EVALUATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000.1</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </occurrences>
+            <node_id>at0002.1</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0003.1</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0007</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>protocol</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0006</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0004</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0008</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/.*/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>.*</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">*Exclusion statement(en)</items>
+        <items id="description">*Statement about clinical conditions, issues or concerns that are either not currently present and/or have not been present in the past.(en)</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">Exclusion of a Problem/Diagnosis</items>
+        <items id="description">A statement about problems or diagnoses that have never been noted by the individual or recognised by a clinician.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*Exclusion statement(en)</items>
+        <items id="description">*Statement of exclusion of a condition, issue or concern.(en)</items>
+      </items>
+      <items code="at0002.1">
+        <items id="text">Exclusion statement</items>
+        <items id="description">Statement of exclusion of a problem or diagnosis.</items>
+        <items id="comment">Use to record a statement about problems or diagnoses that have never been noted by the individual or recognised by a clinician. This statement can support recording general statements such as "No previous/past ..." or " No known ...". Or it can support more exacting statements about a specified object such as "No known history of ..." where the 'Problem/diagnosis' identifies the precise condition.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Specific item(en)</items>
+        <items id="description">*Identification of the specific clinical item to which the 'Exclusion statement' applies.(en)</items>
+      </items>
+      <items code="at0003.1">
+        <items id="text">Problem/Diagnosis</items>
+        <items id="description">Identification of the specific Problem or Diagnosis to which the 'Exclusion statement' applies.</items>
+        <items id="comment">This data element is used to enable exact statements like: 'No past history of diabetes for the individual'. In this example, 'diabetes' would be an example of the 'Problem/Diagnosis' and the rest of the example phrase would be carried in the 'Exclusion statement'. Another possible use case might be 'Exclusion of pregnancy'. Please note: if coordinated phrases such as 'No known pneumonia' is available, then this can be used as an alternative in the 'Exclusion statement' alone.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Last updated</items>
+        <items id="description">The date on which this exclusion was last updated.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Comment</items>
+        <items id="description">Additional narrative about the Exclusion not captured in other fields.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Extension</items>
+        <items id="description">Additional information required to capture local content or to align with other reference models/formalisms.</items>
+        <items id="comment">For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Eksklusjonsutsagn</items>
+        <items id="description">Utsagn om kliniske tilstander, forhold eller bekymringer som ikke er tilstede nå og/eller ikke har vært tilstede tidligere.</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">Eksklusjon av problem/diagnose</items>
+        <items id="description">Utsagn om problemer eller diagnoser som enten i</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Eksklusjonsutsagn</items>
+        <items id="description">Utsagn om eksklusjon av en klinisk tilstand, forhold eller bekymring.</items>
+        <items id="comment">Brukes til å fange opp all helseinformasjon som eksplisitt skal registreres som ikke tilstede nå og/eller ikke til stede tidligere. Utsagnet støtter registrering av generelle utsagn som "Ingen tidlgere..." eller "Ikke kjent...". Den kan også støtte mer krevende utsagn om et spesifikt objekt som "Ingen kjent historie om..." der "Spesifikt objekt" identifiserer den aktuelle kliniske tilstanden, forholdet eller bekymringen. For eksplisitt modellerte eksempler, se spesialiseringer for legemidler, uønskede reaksjoner, problemer/diagnoser og prosedyrer.</items>
+      </items>
+      <items code="at0002.1">
+        <items id="text">Eksklusjonsutsagn</items>
+        <items id="description">Utsagn om eksklusjon av et problem eller en diagnose som enten ikke er tilstede nå, eller ikke har vært tilstede tidligere.</items>
+        <items id="comment">Brukes til å fange opp all helseinformasjon som eksplisitt skal registreres som ikke tilstede nå og/eller ikke til stede tidligere. Utsagnet støtter registrering av generelle utsagn som "Ingen tidligere..." eller "Ikke kjent...". Den kan også støtte mer krevende utsagn om et spesifikt objekt som "Ingen kjent forekomst av ..." der "Problem/diagnose" identifiserer den aktuelle kliniske tilstanden.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Spesifikt objekt</items>
+        <items id="description">Identifikasjon av det spesifikke objektet "Eksklusjonsutsagnet" gjelder.</items>
+        <items id="comment">I en generisk kontekst er det ikke enkelt å identifisere et vanlig brukt eksempel, men om en ser på spesialiseringer av denne arketypen vil dette dataelementet brukes for å gi presise utsagn som: "Kortikosteroider har aldri blitt brukt", "Det har aldri oppstått en allergisk reaksjon til penicillin", "Ingen familiær forekomst av hjertesykdom", "Aldri hatt diabetes". Fra disse eksemplene vil "kortikosteroider", "penicillin", "hjertesykdom" og "diabetes" være eksempler på "Spesifikt objekt", og resten av setningene registreres i "Eksklusjonsutsagn". Andre mulige bruksområder kan være: "Utelukkelse av graviditet", "Aldri tatt røntgen" eller "Aldri mottatt blodoverføring".&#xD;
+Merk at om prekoordinerte fraser som: "Ingen kjent pencillinallergi" finnes kan dette brukes som et alternativ i datalemententet "Eksklusjonsutsagn".</items>
+      </items>
+      <items code="at0003.1">
+        <items id="text">Problem/diagnose</items>
+        <items id="description">Identifikasjon av det problemet eller diagnosen "Eksklusjonsutsagnet" gjelder.</items>
+        <items id="comment">Dette dataelementet brukes for å gi presise utsagn som f.eks. "Aldri hatt diabetes". I dette eksempelet er "diabetes" et eksempel på "Problem/diagnose", og resten av setningen registreres i "Eksklusjonsutsagn". Et annet mulig bruksområde kan være "Utelukkelse av graviditet". Merk at om prekoordinerte fraser som "Ingen kjent pneumoni" finnes, kan dette brukes som et alternativ i datalemententet "Eksklusjonsutsagn".</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Sist oppdatert</items>
+        <items id="description">Dato da denne eksklusjonen sist ble oppdatert.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Kommentar</items>
+        <items id="description">Ytterligere fritekst om eksklusjonen som ikke fanges opp i andre felter.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Tilleggsinformasjon</items>
+        <items id="description">Ytterligere informasjon som er nødvendig for å registrere lokalt innhold/kontekst, eller for å sammenstille med andre referansemodeller/formalismer.</items>
+        <items id="comment">F.eks lokale informasjonskrav eller ekstra metadata for å tilpasse med FHIR eller CIMI ekvivalenter.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

@@ -1,0 +1,217 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=84a1dfe7-edb0-4756-b26d-0cf391f9e771; build_uid=9e72c899-7e6f-419f-98c5-56c4bd38a5c9)
+    openEHR-EHR-CLUSTER.percussion.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"6/04/2007">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F2972C064AA3297CE0EDD1A2059FC8A7">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording findings related to examination by percussion.">
+            keywords = <"percussion", "resonant">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل الموجودات المتعلقة عند الفحص بالقرع">
+            keywords = <"القرع", "رنَّان">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Percussion
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0001] occurrences matches {0..1} matches {    -- Normal statements
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Normal statement
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            CLUSTER[at0004] matches {    -- Findings
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Percussion note
+                        value matches {
+                            DV_CODED_TEXT[at9003] matches {
+                                defining_code matches {[ac9000]}    -- Percussion note (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0010] matches {    -- Localised percussion
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0011] occurrences matches {1} matches {    -- Region or site
+                        value matches {
+                            DV_CODED_TEXT[at9004] matches {
+                                defining_code matches {}
+                            }
+                        }
+                    }
+                    use_node ELEMENT[at9005] occurrences matches {1} /items[at0004]/items[at0005]    -- Localised percussion (synthesised)
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Percussion">
+                description = <"Cluster for recording findings on percussion.">
+            >
+            ["at0001"] = <
+                text = <"Normal statements">
+                description = <"Grouping of normal statements.">
+            >
+            ["at0002"] = <
+                text = <"Normal statement">
+                description = <"A statement about normal findings on percussion.">
+            >
+            ["at0003"] = <
+                text = <"Clinical description">
+                description = <"Decription of the clinical findings.">
+            >
+            ["at0004"] = <
+                text = <"Findings">
+                description = <"Findings on percussion.">
+            >
+            ["at0005"] = <
+                text = <"Percussion note">
+                description = <"The character of the percussion note.">
+            >
+            ["at0006"] = <
+                text = <"Dull">
+                description = <"The percussion note is dull.">
+            >
+            ["at0007"] = <
+                text = <"Impaired resonance">
+                description = <"The resonance is reduced on percussion.">
+            >
+            ["at0008"] = <
+                text = <"Resonant">
+                description = <"The percussion note is resonant.">
+            >
+            ["at0009"] = <
+                text = <"Hyperresonant">
+                description = <"A tympanic percussion note.">
+            >
+            ["at0010"] = <
+                text = <"Localised percussion">
+                description = <"Percussion in a part or site.">
+            >
+            ["at0011"] = <
+                text = <"Region or site">
+                description = <"Name or description of the region or site.">
+            >
+            ["ac9000"] = <
+                text = <"Percussion note (synthesised)">
+                description = <"The character of the percussion note. (synthesised)">
+            >
+            ["at9005"] = <
+                text = <"Localised percussion (synthesised)">
+                description = <"Percussion in a part or site. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"القرع">
+                description = <"عنقود لتسجيل الموجودات عند القرع">
+            >
+            ["at0001"] = <
+                text = <"البيانات الطبيعية">
+                description = <"تجميع البيانات الطبيعية">
+            >
+            ["at0002"] = <
+                text = <"البيان الطبيعي">
+                description = <"بيان حول الموجودات الطبيعية عند القرع">
+            >
+            ["at0003"] = <
+                text = <"الوصف السريري">
+                description = <"وصف الموجودات السريرية">
+            >
+            ["at0004"] = <
+                text = <"الموجودات">
+                description = <"الموجودات عند القرع">
+            >
+            ["at0005"] = <
+                text = <"ملحوظة لدى القرع">
+                description = <"صفة/خاصة الملحوظة لدى القرع">
+            >
+            ["at0006"] = <
+                text = <"أصم">
+                description = <"ملاحظة القرع صماء">
+            >
+            ["at0007"] = <
+                text = <"رنين معلول">
+                description = <"الرنين قليل/منخفض عند القرع">
+            >
+            ["at0008"] = <
+                text = <"رنان">
+                description = <"ملاحظة القرع رنانة">
+            >
+            ["at0009"] = <
+                text = <"رنين زائد">
+                description = <"ملاحظة قرع طبلي">
+            >
+            ["at0010"] = <
+                text = <"قرع موضعي">
+                description = <"القرع في جزء أو مكان">
+            >
+            ["at0011"] = <
+                text = <"المنطقة/المكان">
+                description = <"اسم أو وصف المنطقة أو المكان">
+            >
+            ["ac9000"] = <
+                text = <"ملحوظة لدى القرع (synthesised)">
+                description = <"صفة/خاصة الملحوظة لدى القرع (synthesised)">
+            >
+            ["at9005"] = <
+                text = <"قرع موضعي (synthesised)">
+                description = <"القرع في جزء أو مكان (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0006", "at0007", "at0008", "at0009">
+        >
+    >

@@ -1,0 +1,1368 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2015-06-23</original_author>
+    <original_author id="name">Heather Leslie</original_author>
+    <original_author id="organisation">Atomica Informatics</original_author>
+    <original_author id="email">heather.leslie@atomicainformatics.com</original_author>
+    <other_contributors>Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>SB Bhattacharyya, Sudisa Consultancy Services, India</other_contributors>
+    <other_contributors>Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway</other_contributors>
+    <other_contributors>Shahla Foozonkhah, Iran ministry of health and education, Iran</other_contributors>
+    <other_contributors>Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom (openEHR Editor)</other_contributors>
+    <other_contributors>Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)</other_contributors>
+    <other_contributors>Ingrid Heitmann, Oslo universitetssykehus HF, Norway</other_contributors>
+    <other_contributors>Hilde Hollås, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Evelyn Hovenga, EJSH Consulting, Australia</other_contributors>
+    <other_contributors>Lars Ivar Mehlum, Helse Bergen HF, Norway</other_contributors>
+    <other_contributors>Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway</other_contributors>
+    <other_contributors>Heather Leslie, Atomica Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Ian McNicoll, freshEHR Clinical Informatics, United Kingdom</other_contributors>
+    <other_contributors>Lars Morgan Karlsen, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Bjørn Næss, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Andrej Orel, Marand d.o.o., Slovenia</other_contributors>
+    <other_contributors>Vladimir Pizzo, Hospital Sírio Libanês, Brazil</other_contributors>
+    <other_contributors>Jussara Rotzsch, UNB, Brazil</other_contributors>
+    <other_contributors>Anoop Shah, University College London, United Kingdom</other_contributors>
+    <other_contributors>Line Silsand, Universitetssykehuset i Nord-Norge, Norway</other_contributors>
+    <other_contributors>Norwegian Review Summary, Nasjonal IKT HF, Norway</other_contributors>
+    <other_contributors>Nyree Taylor, Ocean Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Rowan Thomas, St. Vincent's Hospital Melbourne, Australia</other_contributors>
+    <other_contributors>Jon Tysdahl, Furst medlab AS, Norway</other_contributors>
+    <other_contributors>John Tore Valand, Helse Bergen, Norway (openEHR Editor)</other_contributors>
+    <lifecycle_state>rejected</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="current_contact">Heather Leslie, Atomica Informatics, Australia&lt;heather.leslie@atomicainformatics.com&gt;</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">7BA0C4B6525C26FF3F3F934A5A486553</other_details>
+    <other_details id="build_uid">6fc9b2e4-ce2f-45e4-bd10-34b6bff6c580</other_details>
+    <other_details id="ip_acknowledgements">This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.</other_details>
+    <other_details id="revision">0.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Aufzeichnung einer narrativen Beschreibung und klinischen Interpretation von beobachteten Befunden bei der Auskultation von Atemgeräuschen im Brust- oder Bauchraum.</purpose>
+      <use>Der Archetyp kann verwendet werden, um eine narrative Beschreibung und klinische Interpretation der Befunde aufzuzeichnen, die während der Auskultation von Atemgeräuschen in Brust oder Bauch beobachtet wurden.&#xD;
+&#xD;
+Dieser Archetyp wurde speziell für die Verwendung im SLOT „Untersuchungsdetails“ innerhalb der Archetypen OBSERVATION.exam, CLUSTER.exam-lung oder CLUSTER.exam-abdomen entwickelt, kann aber auch innerhalb anderer ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern dies klinisch angemessen ist.&#xD;
+&#xD;
+Der Archetyp kann verwendet werden, um einen Rahmen bereitzustellen, in dem CLUSTER-Archetypen im SLOT „Untersuchungsergebnisse“ verschachtelt werden können, um zusätzliche strukturierte Befunde aus körperlichen Untersuchungen aufzuzeichnen.&#xD;
+&#xD;
+Der Archetyp CLUSTER.exclusion_exam kann im SLOT „Untersuchung nicht durchgeführt“ verschachtelt werden, um optional explizite Details über die nicht durchgeführte Untersuchung aufzuzeichnen.&#xD;
+&#xD;
+Der Archetyp kann verwendet werden, um die narrativen Beschreibungen klinischer Befunde innerhalb bestehender oder älterer klinischer Systeme mithilfe des Datenelements „Klinische Beschreibung“ in ein archetypisiertes Format zu integrieren.</use>
+      <misuse>Nicht zur Aufzeichnung der Krankengeschichte zu verwenden – hier sollten spezifische OBSERVATION- und CLUSTER-Archetypen verwendet werden. Zum Beispiel OBSERVATION.story und CLUSTER.symptom_sign.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.</purpose>
+      <use>Brukes til å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et spesifisert organsystem eller anatomisk struktur. Denne arketypen består kun av kjerneelementene av mønsteret for undersøkelser, og kan utvides ved hjelp av andre CLUSTER-arketyper eller brukes som grunnlag for undersøkelsesarketyper for spesifikke kroppssystemer eller anatomiske strukturer. &#xD;
+&#xD;
+Eksempler på detaljer som kan beskrives ved hjelp av dette CLUSTER er inspeksjon, palpasjon, auskultasjon, perkusjon og bevegelser i kroppssystemer eller anatomiske strukturer. Undersøkelsen kan støttes av enkle hjelpemidler som stetoskop, otoskop eller reflekshammer. Også funn ved mer avanserte undersøkelser kan registreres her, som ved endoskopi. I de tilfellene vil informasjon om hvilket hjelpemiddel eller utstyr brukt bli registrert i OBSERVATION.exam, elementet "Detaljer om medisinsk utstyr", i ACTION.procedure "Prosedyredetaljer" eller tilsvarende i egnet ENTRY- eller ACTION-arketype.&#xD;
+&#xD;
+Arketypen er laget spesifikt for å brukes i "Undersøkelsesdetaljer"-SLOTet i arketypen OBSERVATION.exam, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende.&#xD;
+&#xD;
+Denne arketypen kan benyttes for alle typer undersøkelser, alt fra enkle undersøkelser som undersøkelse av et hudområde, inspeksjon av ører og til artroskopi av et kne.&#xD;
+&#xD;
+Kan for eksempel nøstes i SLOTet "Undersøkelsesdetaljer" i arketypen OBSERVATION.exam (Norsk Funn ved fysisk undersøkelse) for å registrere ytterligere strukturerte funn ved fysiske undersøkelser.&#xD;
+&#xD;
+Arketypen CLUSTER.exclusion_exam kan nøstes i SLOTet "Undersøkelse ikke utført" der en har behov for å registrere informasjon om at en undersøkelse ikke ble utført.&#xD;
+&#xD;
+Brukes for å videreføre fritekstbeskrivelser av kliniske funn fra tidligere systemer inn i et arketypeformat, ved å bruke elementet "Klinisk beskrivelse".</use>
+      <misuse>Skal ikke brukes til å ta opp frittstående klinisk observasjoner eller testresultater - bruk spesifikke OBSERVATION arketyper, for eksempel OBSERVATION.head_circumference eller OBSERVATION.glasgow_coma_scale.&#xD;
+&#xD;
+Skal ikke brukes til å ta opp anamnese - bruk da spesifikke OBSERVATION og CLUSTER arketyper. For eksempel OBSERVATION.story og CLUSTER.symptom_sign.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record a narrative description and clinical interpretation of the findings observed during the auscultation of breath sounds in the chest or abdomen.</purpose>
+      <use>Use to record a narrative description and clinical interpretation of the findings observed during the auscultation of breath sounds in the chest or abdomen.&#xD;
+&#xD;
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam, CLUSTER.exam-lung or CLUSTER.exam-abdomen archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.&#xD;
+&#xD;
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.&#xD;
+&#xD;
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.&#xD;
+&#xD;
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.</use>
+      <misuse>Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Maximilian Meixner</author>
+    <author id="organisation">Berlin Institute of Health - BIH @ Charité</author>
+    <author id="email">maximilian.meixner@bih-charite.de</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Silje Ljosland Bakke</author>
+    <author id="organisation">Nasjonal IKT HF</author>
+  </translations>
+  <uid>
+    <value>b3dc06e6-f78d-4a9e-a452-d16a4ea3aab3</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-CLUSTER.exam-auscultation-breath_sounds.v0</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000.1.1</concept>
+  <parent_archetype_id>
+    <value>openEHR-EHR-CLUSTER.exam-auscultation.v0</value>
+  </parent_archetype_id>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000.1.1</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001.0.1</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_CODE_PHRASE">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <terminology_id>
+                  <value>local</value>
+                </terminology_id>
+                <code_list>at0.0.1</code_list>
+                <code_list>at0.0.2</code_list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0012</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0011</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.anatomical_location_circle(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.anatomical_location_circle(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v1</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0.0.3</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_CODE_PHRASE">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <terminology_id>
+                  <value>local</value>
+                </terminology_id>
+                <code_list>at0.0.4</code_list>
+                <code_list>at0.0.5</code_list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0002.0.1</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>name</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>1</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_CODE_PHRASE">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <terminology_id>
+                  <value>local</value>
+                </terminology_id>
+                <code_list>at0.0.6</code_list>
+                <code_list>at0.0.7</code_list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_BOOLEAN</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_PRIMITIVE_OBJECT">
+                <rm_type_name>BOOLEAN</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <item xsi:type="C_BOOLEAN">
+                  <true_valid>true</true_valid>
+                  <false_valid>false</false_valid>
+                </item>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0003</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0.0.8</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>1</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0.0.9</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>defining_code</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_CODE_PHRASE">
+                    <rm_type_name>CODE_PHRASE</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <terminology_id>
+                      <value>local</value>
+                    </terminology_id>
+                    <code_list>at0.0.10</code_list>
+                    <code_list>at0.0.11</code_list>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0.0.12</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>defining_code</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_CODE_PHRASE">
+                    <rm_type_name>CODE_PHRASE</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <terminology_id>
+                      <value>local</value>
+                    </terminology_id>
+                    <code_list>at0.0.13</code_list>
+                    <code_list>at0.0.14</code_list>
+                    <code_list>at0.0.15</code_list>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0.0.16</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>defining_code</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_CODE_PHRASE">
+                    <rm_type_name>CODE_PHRASE</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <terminology_id>
+                      <value>local</value>
+                    </terminology_id>
+                    <code_list>at0.0.17</code_list>
+                    <code_list>at0.0.18</code_list>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0.0.19</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0004</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/.*/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>.*</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0005</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v0/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v0</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0006</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0007</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0008</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>1</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0.0.1">
+        <items id="text">Chest</items>
+        <items id="description">The chest is examined.</items>
+      </items>
+      <items code="at0.0.10">
+        <items id="text">Wheezing</items>
+        <items id="description">Whistling noises produced in the airways during breathing. Also referred to as rhonchi.</items>
+      </items>
+      <items code="at0.0.11">
+        <items id="text">Crackles</items>
+        <items id="description">Clicking, rattling or crackling noises produced in the airways during breathing. Also referred to as crepitations.</items>
+      </items>
+      <items code="at0.0.12">
+        <items id="text">Phase</items>
+        <items id="description">Phase of the breathing cycle.</items>
+      </items>
+      <items code="at0.0.13">
+        <items id="text">Inspiratory</items>
+        <items id="description">On inspiration only.</items>
+      </items>
+      <items code="at0.0.14">
+        <items id="text">Expiratory</items>
+        <items id="description">On expiration only.</items>
+      </items>
+      <items code="at0.0.15">
+        <items id="text">Inspiratory and expiratory</items>
+        <items id="description">On both inspiration and expiration.</items>
+      </items>
+      <items code="at0.0.16">
+        <items id="text">Presence</items>
+        <items id="description">Presence of the abnormal breath sound.</items>
+      </items>
+      <items code="at0.0.17">
+        <items id="text">Present</items>
+        <items id="description">The abnormal breath sound is present.</items>
+      </items>
+      <items code="at0.0.18">
+        <items id="text">Absent</items>
+        <items id="description">The abnormal breath sound is not present.</items>
+      </items>
+      <items code="at0.0.19">
+        <items id="text">Clinical description</items>
+        <items id="description">Narrative description about the abnormal breath sound.</items>
+      </items>
+      <items code="at0.0.2">
+        <items id="text">Abdomen</items>
+        <items id="description">The abdomen is examined.</items>
+      </items>
+      <items code="at0.0.3">
+        <items id="text">Presence</items>
+        <items id="description">The presence of breath sounds.</items>
+      </items>
+      <items code="at0.0.4">
+        <items id="text">Present</items>
+        <items id="description">Breath sounds are heard.</items>
+      </items>
+      <items code="at0.0.5">
+        <items id="text">Absent</items>
+        <items id="description">Breath sounds are not heard.</items>
+      </items>
+      <items code="at0.0.6">
+        <items id="text">No abnormality detected</items>
+        <items id="description">Statement that no abnormality was detected (NAD) on physical examination.</items>
+      </items>
+      <items code="at0.0.7">
+        <items id="text">Normal breath sounds</items>
+        <items id="description">Statement that the breath sounds were heard and of normal character.</items>
+      </items>
+      <items code="at0.0.8">
+        <items id="text">Abnormal breath sounds</items>
+        <items id="description">Details about abnormal breath sounds heard on auscultation.</items>
+      </items>
+      <items code="at0.0.9">
+        <items id="text">Breath sound</items>
+        <items id="description">Name of the breath sound.</items>
+      </items>
+      <items code="at0000.1.1">
+        <items id="text">Auscultation of breath sounds</items>
+        <items id="description">Findings observed during the auscultation of breath sounds in the chest or abdomen.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">System or structure examined</items>
+        <items id="description">Identification of the examined body system or anatomical structure.</items>
+        <items id="comment">Coding of the system or structure examined with a terminology is preferred, where possible.</items>
+      </items>
+      <items code="at0001.0.1">
+        <items id="text">System or structure examined</items>
+        <items id="description">Identification of the examined body system or anatomical structure.</items>
+        <items id="comment">Coding of the system or structure examined with a terminology is preferred, where possible.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">No abnormality detected</items>
+        <items id="description">Statement that no abnormality was detected (NAD) on physical examination.</items>
+        <items id="comment">Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element. If 'No abnormality detected' is selected, then recording of other examination data elements becomes redundant, with the exception of only the 'Clinical interpretation' data element, which may be useful if a normal statement is desired for recording, for example 'Normal examination'.</items>
+      </items>
+      <items code="at0002.0.1">
+        <items id="text">No abnormality detected</items>
+        <items id="description">Statement that no abnormality was detected (NAD) on physical examination.</items>
+        <items id="comment">Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element. If 'No abnormality detected' is selected, then recording of other examination data elements becomes redundant, with the exception of only the 'Clinical interpretation' data element, which may be useful if a normal statement is desired for recording, for example 'Normal examination'.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Clinical description</items>
+        <items id="description">Narrative description of the overall findings observed during the physical examination.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Examination findings</items>
+        <items id="description">Structured details about the physical examination findings.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Multimedia representation</items>
+        <items id="description">Digital image, video or diagram representing the physical examination findings.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Clinical interpretation</items>
+        <items id="description">Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings.</items>
+        <items id="comment">Coding of the 'Clinical interpretation' with a terminology is preferred, where possible.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Comment</items>
+        <items id="description">Additional narrative about the physical examination findings, not captured in other fields.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Examination not done</items>
+        <items id="description">Details to explicitly record that this examination was not performed.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Structured body site</items>
+        <items id="description">A structured description of the area of the body under examination.</items>
+        <items id="comment">If the body site has been fully identified in the 'System or structure examined' or the 'Body site' data element, this SLOT becomes redundant.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Body site</items>
+        <items id="description">Identification of the area of the body under examination.</items>
+        <items id="comment">If the body site has been fully identified in the 'System or structure examined' data element, this data element becomes redundant.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0.0.1">
+        <items id="text">*Chest (en)</items>
+        <items id="description">*The chest is examined. (en)</items>
+      </items>
+      <items code="at0.0.10">
+        <items id="text">*Wheezing (en)</items>
+        <items id="description">*Whistling noises produced in the airways during breathing. Also referred to as rhonchi. (en)</items>
+      </items>
+      <items code="at0.0.11">
+        <items id="text">*Crackles (en)</items>
+        <items id="description">*Clicking, rattling or crackling noises produced in the airways during breathing. Also referred to as crepitations. (en)</items>
+      </items>
+      <items code="at0.0.12">
+        <items id="text">*Phase (en)</items>
+        <items id="description">*Phase of the breathing cycle. (en)</items>
+      </items>
+      <items code="at0.0.13">
+        <items id="text">*Inspiratory (en)</items>
+        <items id="description">*On inspiration only. (en)</items>
+      </items>
+      <items code="at0.0.14">
+        <items id="text">*Expiratory (en)</items>
+        <items id="description">*On expiration only. (en)</items>
+      </items>
+      <items code="at0.0.15">
+        <items id="text">*Inspiratory and expiratory (en)</items>
+        <items id="description">*On both inspiration and expiration. (en)</items>
+      </items>
+      <items code="at0.0.16">
+        <items id="text">*Presence (en)</items>
+        <items id="description">*Presence of the abnormal breath sound. (en)</items>
+      </items>
+      <items code="at0.0.17">
+        <items id="text">*Present (en)</items>
+        <items id="description">*The abnormal breath sound is present. (en)</items>
+      </items>
+      <items code="at0.0.18">
+        <items id="text">*Absent (en)</items>
+        <items id="description">*The abnormal breath sound is not present. (en)</items>
+      </items>
+      <items code="at0.0.19">
+        <items id="text">*Clinical description (en)</items>
+        <items id="description">*narrative description about the abnormal breath sound. (en)</items>
+      </items>
+      <items code="at0.0.2">
+        <items id="text">*Abdomen (en)</items>
+        <items id="description">*The abdomen is examined. (en)</items>
+      </items>
+      <items code="at0.0.3">
+        <items id="text">*Presence (en)</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.0.4">
+        <items id="text">*Present (en)</items>
+        <items id="description">*Breath sounds are heard. (en)</items>
+      </items>
+      <items code="at0.0.5">
+        <items id="text">*Absent (en)</items>
+        <items id="description">*Breath sounds are not heard. (en)</items>
+      </items>
+      <items code="at0.0.6">
+        <items id="text">*No abnormality detected (en)</items>
+        <items id="description">*Statement that no abnormality was detected (NAD) on physical examination. (en)</items>
+      </items>
+      <items code="at0.0.7">
+        <items id="text">*Normal breath sounds (en)</items>
+        <items id="description">*Statement that the breath sounds were heard and of normal character. (en)</items>
+      </items>
+      <items code="at0.0.8">
+        <items id="text">*Abnormal breath sounds (en)</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.0.9">
+        <items id="text">*Breath sound (en)</items>
+        <items id="description">*Name of the breath sound. (en)</items>
+      </items>
+      <items code="at0000.1.1">
+        <items id="text">*Auscultation of breath sounds (en)</items>
+        <items id="description">Funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Undersøkt organsystem eller struktur</items>
+        <items id="description">Identifisering av det undersøkte organsystemet eller anatomiske strukturen.</items>
+        <items id="comment">*Coding of the system or structure examined with a terminology is preferred, where possible. (en)</items>
+      </items>
+      <items code="at0001.0.1">
+        <items id="text">Undersøkt organsystem eller struktur</items>
+        <items id="description">Identifisering av det undersøkte organsystemet eller anatomiske strukturen.</items>
+        <items id="comment">*Coding of the system or structure examined with a terminology is preferred, where possible. (en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Uten anmerkning</items>
+        <items id="description">Utsagn om at ingen avvik var oppdaget ved undersøkelsen (U.a.).</items>
+        <items id="comment">*Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element. If 'No abnormality detected' is selected, then recording of other examination data elements becomes redundant, with the exception of only the 'Clinical interpretation' data element, which may be useful if a normal statement is desired for recording, for example 'Normal examination'. (en)</items>
+      </items>
+      <items code="at0002.0.1">
+        <items id="text">Uten anmerkning</items>
+        <items id="description">Utsagn om at ingen avvik var oppdaget ved undersøkelsen (U.a.).</items>
+        <items id="comment">*Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element. If 'No abnormality detected' is selected, then recording of other examination data elements becomes redundant, with the exception of only the 'Clinical interpretation' data element, which may be useful if a normal statement is desired for recording, for example 'Normal examination'. (en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Klinisk beskrivelse</items>
+        <items id="description">Fritekstbeskrivelse av de overordnede funnene ved den fysiske undersøkelsen.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Spesifikke funn</items>
+        <items id="description">Ytterligere strukturerte detaljer om undersøkelsesfunnene.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Multimediarepresentasjon</items>
+        <items id="description">Digitale bilder, video eller diagram som representerer undersøkelsesfunnene.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Fortolkning</items>
+        <items id="description">Enkelt ord, setning, frase eller kort beskrivelse som representerer den kliniske betydning og viktigheten av funnene ved den kliniske undersøkelsen.</items>
+        <items id="comment">Koding med terminologi foretrekkes når mulig. For eksempel "normal undersøkelse" eller "tympanisk membran perforasjon".</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Kommentar</items>
+        <items id="description">Ytterligere fritekst om funn ved undersøkelsen, som ikke dekkes av andre elementer.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Undersøkelse ikke utført</items>
+        <items id="description">Detaljer for å eksplisitt registrere at denne undersøkelsen ikke ble utført.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Strukturert anatomisk lokalisasjon</items>
+        <items id="description">Angivelse av en strukturert anatomisk lokalisering av det undersøkte organsystemet eller anatomiske strukturen.</items>
+        <items id="comment">Hvis anatomisk lokalisasjon er entydig identifisert i elementet "Undersøkt organsystem eller struktur" er dette SLOTet ikke nødvendig å benytte.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Anatomisk lokalisasjon</items>
+        <items id="description">Identifisering av et enkelt fysisk sted enten på eller i menneskekroppen.</items>
+        <items id="comment">*If the body site has been fully identified in the 'System or structure examined' data element, this data element becomes redundant. (en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0.0.1">
+        <items id="text">Brustkorb</items>
+        <items id="description">Der Brustkorb wird untersucht.</items>
+      </items>
+      <items code="at0.0.10">
+        <items id="text">Keuchen</items>
+        <items id="description">Pfeifgeräusche, die beim Atmen in den Atemwegen entstehen. Auch als „Rhonchi“ bezeichnet.</items>
+      </items>
+      <items code="at0.0.11">
+        <items id="text">Knistern</items>
+        <items id="description">Klickende, rasselnde oder knisternde Geräusche, die beim Atmen in den Atemwegen entstehen. Auch als Krepitationen bezeichnet.</items>
+      </items>
+      <items code="at0.0.12">
+        <items id="text">Phase</items>
+        <items id="description">Phase des Atemzyklus.</items>
+      </items>
+      <items code="at0.0.13">
+        <items id="text">Inspiratorisch</items>
+        <items id="description">Nur beim Einatmen.</items>
+      </items>
+      <items code="at0.0.14">
+        <items id="text">Exspiratorisch</items>
+        <items id="description">Nur beim Ausatmen.</items>
+      </items>
+      <items code="at0.0.15">
+        <items id="text">Inspiratorisch und exspiratorisch</items>
+        <items id="description">Sowohl beim Einatmen als auch beim Ausatmen.</items>
+      </items>
+      <items code="at0.0.16">
+        <items id="text">Vorhandensein</items>
+        <items id="description">Vorhandensein eines abnormalen Atemgeräusches.</items>
+      </items>
+      <items code="at0.0.17">
+        <items id="text">Vorhanden</items>
+        <items id="description">Das abnormale Atemgeräusch ist vorhanden.</items>
+      </items>
+      <items code="at0.0.18">
+        <items id="text">Fehlend</items>
+        <items id="description">Das abnormale Atemgeräusch ist nicht vorhanden.</items>
+      </items>
+      <items code="at0.0.19">
+        <items id="text">Klinische Beschreibung</items>
+        <items id="description">Narrative Beschreibung des abnormalen Atemgeräusches.</items>
+      </items>
+      <items code="at0.0.2">
+        <items id="text">Bauch</items>
+        <items id="description">Der Bauch wird untersucht.</items>
+      </items>
+      <items code="at0.0.3">
+        <items id="text">Vorhandensein</items>
+        <items id="description">Das Vorhandensein von Atemgeräuschen.</items>
+      </items>
+      <items code="at0.0.4">
+        <items id="text">Vorhanden</items>
+        <items id="description">Es sind Atemgeräusche zu hören.</items>
+      </items>
+      <items code="at0.0.5">
+        <items id="text">Fehlend</items>
+        <items id="description">Atemgeräusche sind nicht zu hören.</items>
+      </items>
+      <items code="at0.0.6">
+        <items id="text">Ohne Befund</items>
+        <items id="description">Erklärung, dass bei der körperlichen Untersuchung keine Anomalien festgestellt wurden.</items>
+      </items>
+      <items code="at0.0.7">
+        <items id="text">Normale Atemgeräusche</items>
+        <items id="description">Aussage, dass die Atemgeräusche hörbar waren und einen normalen Charakter hatten.</items>
+      </items>
+      <items code="at0.0.8">
+        <items id="text">Abnormale Atemgeräusche</items>
+        <items id="description">Einzelheiten zu abnormalen Atemgeräuschen, die bei der Auskultation zu hören sind.</items>
+      </items>
+      <items code="at0.0.9">
+        <items id="text">Atemgeräusch</items>
+        <items id="description">Name des Atemgeräusches.</items>
+      </items>
+      <items code="at0000.1.1">
+        <items id="text">Auskultation von Atemgeräuschen</items>
+        <items id="description">Befunde, die bei der Auskultation von Atemgeräuschen im Brust- oder Bauchraum beobachtet werden.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Untersuchtes System oder untersuchte Struktur</items>
+        <items id="description">Identifizierung des untersuchten Körpersystems oder der anatomischen Struktur.</items>
+        <items id="comment">Eine Kodierung des untersuchten Systems bzw. der untersuchten Struktur mit einer Terminologie ist, soweit möglich, zu bevorzugen.</items>
+      </items>
+      <items code="at0001.0.1">
+        <items id="text">Untersuchtes System oder untersuchte Struktur</items>
+        <items id="description">Identifizierung des untersuchten Körpersystems oder der anatomischen Struktur.</items>
+        <items id="comment">Eine Kodierung des untersuchten Systems bzw. der untersuchten Struktur mit einer Terminologie ist, soweit möglich, zu bevorzugen.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Ohne Befund</items>
+        <items id="description">Erklärung, dass bei der körperlichen Untersuchung keine Anomalien festgestellt wurden.</items>
+        <items id="comment">Als „Wahr“ aufzeichnen, wenn bei der Untersuchung keine Anomalie festgestellt wurde. Spezifische Aussagen zur Untersuchung können in das Datenelement „Klinische Interpretation“ aufgenommen werden. Wenn „Keine Anomalie festgestellt“ ausgewählt ist, wird die Aufzeichnung anderer Untersuchungsdatenelemente überflüssig, mit Ausnahme des Datenelements „Klinische Interpretation“, das nützlich sein kann, wenn eine normale Aussage zur Aufzeichnung gewünscht wird, z. B. „Normale Untersuchung“.</items>
+      </items>
+      <items code="at0002.0.1">
+        <items id="text">Ohne Befund</items>
+        <items id="description">Erklärung, dass bei der körperlichen Untersuchung keine Anomalien festgestellt wurden.</items>
+        <items id="comment">Als „Wahr“ aufzeichnen, wenn bei der Untersuchung keine Anomalie festgestellt wurde. Spezifische Aussagen zur Untersuchung können in das Datenelement „Klinische Interpretation“ aufgenommen werden. Wenn „Keine Anomalie festgestellt“ ausgewählt ist, wird die Aufzeichnung anderer Untersuchungsdatenelemente überflüssig, mit Ausnahme des Datenelements „Klinische Interpretation“, das nützlich sein kann, wenn eine normale Aussage zur Aufzeichnung gewünscht wird, z. B. „Normale Untersuchung“.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Klinische Beschreibung</items>
+        <items id="description">Narrative Beschreibung der gesamten bei der körperlichen Untersuchung festgestellten Befunde.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Untersuchungsergebnisse</items>
+        <items id="description">Strukturierte Angaben zu den Befunden der körperlichen Untersuchung.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Multimediale Darstellung</items>
+        <items id="description">Digitales Bild, Video oder Diagramm, das die Ergebnisse der körperlichen Untersuchung darstellt.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Klinische Interpretation</items>
+        <items id="description">Einzelnes Wort, Ausdruck oder Kurzbeschreibung der klinischen Bedeutung und Aussagekraft der körperlichen Untersuchungsbefunde.</items>
+        <items id="comment">Wenn möglich, sollte die „Klinische Interpretation“ vorzugsweise mit einer Terminologie kodiert werden.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Kommentar</items>
+        <items id="description">Zusätzlicher Freitext über die allgemeinen körperlichen Untersuchungsergebnisse, die in anderen Bereichen nicht erfasst werden konnten.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Untersuchung nicht durchgeführt</items>
+        <items id="description">Details, um explizit zu erfassen, dass diese Untersuchung nicht durchgeführt wurde.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Körperstelle strukturiert</items>
+        <items id="description">Strukturierte Beschreibung des untersuchten Körperbereichs.</items>
+        <items id="comment">Wenn die Körperstelle im Datenelement „Untersuchtes System oder untersuchte Struktur“ oder „Körperstelle“ vollständig identifiziert wurde, wird dieser SLOT überflüssig.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Körperstelle</items>
+        <items id="description">Identifizierung des zu untersuchenden Körperbereichs.</items>
+        <items id="comment">Wenn die Körperstelle im Datenelement „Untersuchtes System oder untersuchte Struktur“ vollständig identifiziert wurde, wird dieses Datenelement überflüssig.</items>
+      </items>
+    </term_definitions>
+    <term_bindings terminology="SNOMED-CT">
+      <items code="at0.0.1">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>51185008</code_string>
+        </value>
+      </items>
+      <items code="at0.0.2">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>113345001</code_string>
+        </value>
+      </items>
+    </term_bindings>
+  </ontology>
+</archetype>

@@ -1,0 +1,199 @@
+﻿archetype (adl_version=1.4; uid=35fa914e-b2a8-4c6e-809a-8b81c02629aa)
+	openEHR-EHR-OBSERVATION.developmental_milestone.v0
+
+concept
+	[at0000]	-- Developmental milestone
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Atomica Informatics">
+		["email"] = <"heather.leslie@atomicainformatics.com">
+		["date"] = <"2026-11-06">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record whether an individual has achieved a developmental milestone.">
+			use = <"Use to record whether an individual has achieved a specific skill recognised as a developmental milestone, at the time of assessment. The skill may relate to any developmental domain, including movement, language, cognition, social and emotional development, or self-care.
+
+This archetype is designed to:
+- inform clinical assessment of an individual's development, including the need for further assessment or referral;
+- form part of a child health record;
+- support exchange of developmental information between healthcare providers and families; and
+- support clinical decision support, such as reminders to reassess outstanding milestones.
+
+Achievement may be recorded by a healthcare professional, or by a parent or carer, for example in a parent-held child health record. It may also be recorded retrospectively, where the skill was achieved at a different time to the date of assessment.
+
+Developmental milestones are typically recognised for infancy, childhood and adolescence. A skill recorded as 'Not achieved' is considered outstanding, with the expectation that, in typical development, it will eventually be achieved. Developmental delay may occur in some individuals, such as those with a physical or intellectual disability, in which case some milestones may not be achieved until adulthood. In clinical systems, an outstanding skill can continue to be presented to the clinician at later visits until its achievement is recorded, or until a clinician decides it is no longer relevant to reassess. Once a skill is achieved, the achievement remains part of the individual's developmental history, even if the skill is later temporarily or permanently lost.
+
+This archetype is intended to complement OBSERVATION.functional_ability. Functional ability records an individual's current ability to perform an activity at any age, including partial ability and change over time. This archetype records the first achievement of a developmental skill, or that it has not yet been achieved.">
+			keywords = <"development", "developmental", "milestone", "child", "infant", "skill", "attainment", "surveillance">
+			misuse = <"Not to be used to record an individual's ability to perform an activity, including where they can only partly perform it. Use OBSERVATION.functional_ability for this purpose.
+
+Not to be used to record loss of a previously achieved skill. Use OBSERVATION.functional_ability for this purpose.
+
+Not to be used to record a clinical interpretation of whether a skill has been achieved at the expected age. Use a specific archetype for this purpose.
+
+Not to be used to record a diagnosis of developmental delay, developmental disorder, or another condition affecting the achievement of developmental skills. Use EVALUATION.problem_diagnosis for this purpose.
+
+Not to be used to record items or scores from a standardised developmental assessment instrument. Use specific archetypes for this purpose.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"in_development">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"9C2D792D608B8947F0DB2F49A274B1FF">
+		["build_uid"] = <"5f8d1a53-cfc0-4b47-820c-128edd160601">
+		["revision"] = <"0.0.1-alpha">
+	>
+
+definition
+	OBSERVATION[at0000] matches {    -- Developmental milestone
+		data matches {
+			HISTORY[at0001] matches {    -- History
+				events cardinality matches {1..*; unordered} matches {
+					POINT_EVENT[at0002] occurrences matches {0..*} matches {    -- Any point-in-time event
+						data matches {
+							ITEM_TREE[at0003] matches {    -- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0004] matches {    -- Milestone name
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0005] matches {    -- Achievement status
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0006,    -- Achieved
+													at0008]    -- Not achieved
+												}
+											}
+										}
+									}
+									ELEMENT[at0009] occurrences matches {0..1} matches {    -- Date achieved
+										value matches {
+											DV_DATE_TIME matches {*}
+										}
+									}
+									ELEMENT[at0010] occurrences matches {0..1} matches {    -- Variation
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0018] occurrences matches {0..1} matches {    -- Information source
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0017] occurrences matches {0..1} matches {    -- Observer
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0011] occurrences matches {0..1} matches {    -- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0012] matches {    -- Tree
+				items cardinality matches {0..*; unordered} matches {
+					allow_archetype CLUSTER[at0013] occurrences matches {0..*} matches {    -- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Developmental milestone">
+					description = <"An assessment of whether an individual has achieved a skill recognised as a milestone in infant, child or adolescent development.">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any point-in-time event">
+					description = <"Default, unspecified point in time which may be explicitly defined in a template or at run-time.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Milestone name">
+					description = <"The name of the activity, skill or behaviour being assessed as a developmental milestone.">
+					comment = <"The developmental milestone should be sufficiently specific and clearly defined to support consistent assessment of achievement. For example: \"Walks independently\"; \"Waves bye-bye\"; \"Plays with other children\". Where a milestone is commonly known by a term that implies a problematic behaviour, name the underlying milestone accordingly, for example: \"Distinguishes familiar people from strangers\" rather than \"Stranger anxiety\"; \"Understands that a caregiver still exists when out of sight\" rather than \"Separation anxiety\". Coding with a terminology is preferred, where possible.">
+				>
+				["at0005"] = <
+					text = <"Achievement status">
+					description = <"Assessment of whether the individual has achieved the specified developmental skill.">
+				>
+				["at0006"] = <
+					text = <"Achieved">
+					description = <"The individual has achieved the specified developmental skill.">
+				>
+				["at0008"] = <
+					text = <"Not achieved">
+					description = <"The individual has not yet achieved the specified developmental skill, including where the skill can only be partially performed.">
+				>
+				["at0009"] = <
+					text = <"Date achieved">
+					description = <"The date or approximate date when the individual first achieved the developmental skill.">
+					comment = <"Record only when 'Achievement status' is \"Achieved\". This date may differ from the date of assessment, for example when achievement is reported by a parent. A record of \"Not achieved\" applies at the date of assessment. Partial dates may be recorded, for example month and year.">
+				>
+				["at0010"] = <
+					text = <"Variation">
+					description = <"Narrative description of an atypical way in which the individual achieved the developmental skill.">
+					comment = <"For example: \"Bottom shuffling instead of crawling\".">
+				>
+				["at0011"] = <
+					text = <"Comment">
+					description = <"Additional narrative about the developmental milestone assessment not captured in other fields.">
+				>
+				["at0012"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0013"] = <
+					text = <"Extension">
+					description = <"Additional information required to capture local content or to align with other reference models or formalisms.">
+					comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+				>
+				["at0017"] = <
+					text = <"Observer">
+					description = <"The role or relationship of the person who directly observed the individual performing the developmental skill.">
+					comment = <"Record only when the skill was observed by someone other than the person recording the information. For example: 'Mother', 'Father', 'Grandparent', 'Babysitter', or 'Childcare worker'. Coding with a terminology is preferred, where possible.">
+				>
+				["at0018"] = <
+					text = <"Information source">
+					description = <"The role or relationship of the person who provided information about the achievement of the developmental skill.">
+					comment = <"Record only when the information was provided by someone other than the person recording it. The information source may differ from the observer, for example when a parent reports what a babysitter observed. Information may be provided by someone familiar with the individual's development, such as a parent, carer or childcare worker. A report of 'Not achieved' should reflect knowledge that the skill has not yet been achieved, rather than simply an absence of observed performance.">
+				>
+			>
+		>
+	>

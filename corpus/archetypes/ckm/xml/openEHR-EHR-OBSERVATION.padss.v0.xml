@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -665,84 +665,84 @@
       </items>
       <items code="at0004">
         <items id="text">Activity level</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">The patient must be able to ambulate at preoperative level.</items>
       </items>
       <items code="at0005">
         <items id="text">Unable to ambulate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Requires assistance</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Steady gait, no dizziness, or meets preoperative level</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Nausea and vomiting</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">The patient should have minimal nausea and vomiting before discharge</items>
       </items>
       <items code="at0009">
         <items id="text">Severe: continues after repeated treatment</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Moderate: successfully treated with IM medication</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Minimal: successfully treated with PO medication</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Vital signs</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Vital signs must be stable and consistent with age and preoperative baseline.</items>
       </items>
       <items code="at0013">
         <items id="text">BP and pulse ±&gt;40% of pre-operative baseline</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">BP and pulse ±20-40% of pre-operative baseline</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">BP and pulse ±&lt;20% of pre-operative baseline</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Pain acceptable</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">The patient should have minimal or no pain before discharge. The level of pain should be acceptable to the patient. Pain should be controllable by oral analgesics. The location, type and intensity of pain should be consistent with anticipated postoperative discomfort.</items>
       </items>
       <items code="at0018">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Surgical bleeding</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Postoperative bleeding should be consistent with expected blood loss for the procedure.</items>
       </items>
       <items code="at0021">
         <items id="text">Severe: more than three dressing changes required</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Moderate: up to two dressing changes required</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Minimal: does not require dressing change</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Total score</items>
@@ -760,4 +760,3 @@
     </term_definitions>
   </ontology>
 </archetype>
-

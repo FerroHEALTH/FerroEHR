@@ -6,6 +6,14 @@ concept
 language
 	original_language = <[ISO_639-1::en]>
 	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Jonas Bucher">
+				["organisation"] = <"Cistec AG">
+				["email"] = <"jonas.bucher@cistec.com">
+			>
+		>
 		["sv"] = <
 			language = <[ISO_639-1::sv]>
 			author = <
@@ -31,6 +39,28 @@ description
 		["date"] = <"2024-08-14">
 	>
 	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Erfassung der räumlichen Maße einer anatomischen Struktur, eines Objekts oder einer Flüssigkeit, die Teil des Körpers einer Person ist, sich darin befindet oder aus diesem stammt.">
+			use = <"Zu verwenden für die Erfassung der räumlichen Maße einer anatomischen Struktur, eines Objekts oder einer Flüssigkeit, die Teil des Körpers einer Person ist, sich darin befindet oder aus diesem stammt. 
+
+Beispiele hierfür sind unter anderem:
+- Die Abmessungen eines Leberlappens
+- Eine 8.0 × 10.2 × 6.5 mm große Tumorprobe aus dem Darm
+- Eine Wunde mit einer Länge von 24 mm, einer Breite von 15 mm und einer Tiefe von 4 mm
+- 7 ml Blut in einem Vakuumröhrchen
+- Eine Murmel mit einem Durchmesser von 1 cm
+
+Dieser Archetyp ist für die Verwendung im Kontext beliebiger geeigneter ENTRY- oder CLUSTER-Archetypen konzipiert, um eine gemeinsame und wiederverwendbare Struktur für die Erfassung der räumlichen Maße einer Struktur, eines Objekts oder einer Flüssigkeit bereitzustellen. Er ist speziell für die Verwendung innerhalb von CLUSTER.specimen, CLUSTER.imaging_exam und CLUSTER.exam konzipiert, kann jedoch in jedem relevanten Archetyp verwendet werden.
+
+In Modellierungssituationen, in denen die Messanforderungen nicht im Voraus absehbar sind oder noch keine speziellen Archetypen verfügbar sind, sollte dieser Archetyp als vereinbarter Ansatz zur Erfassung einzelner oder aller räumlichen Maße oder Abmessungen verwendet werden.
+
+Ist die Ausrichtung einer anatomischen Struktur oder eines Objekts unklar, kann jede Abmessung wiederholt unter Verwendung desselben Datenelements erfasst werden, beispielsweise „Länge × Länge × Länge“.">
+			keywords = <"Präparat, Labor, Probe, Pathologie, Größe, Fläche, Masse, Volumen, Abmessung, Länge, Breite, Durchmesser, Dicke, Fremdkörper, Höhe, Maße", ...>
+			misuse = <"Nicht zu verwenden für die Erfassung gängiger Körpersegmentmaße, die als separate Archetypen modelliert wurden.
+
+In Modellierungssituationen, in denen die Messanforderungen im Voraus absehbar sind und es gängige und bekannte räumliche Maße gibt, sollten diese explizit als eigenständige Datenelemente innerhalb der entsprechenden Archetypen erfasst werden. Beispiel: „Endometriumdicke“ im CLUSTER.imaging_exam-uterus.">
+		>
 		["sv"] = <
 			language = <[ISO_639-1::sv]>
 			purpose = <"Att registrera de spatiala (rumsliga) måtten på en anatomisk struktur, ett föremål eller en vätska som är en del av, finns i eller kommer från en individs kropp.">
@@ -109,10 +139,10 @@ In modelling situations, where the measurement requirements are able to be antic
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"BEE657F7707979285CCBDEE8A4650A7D">
-		["build_uid"] = <"2b262bfc-de97-4b56-8b74-a184e2856812">
+		["MD5-CAM-1.0.1"] = <"2B1A4A28E8FD775EC27AC251FCF63534">
+		["build_uid"] = <"0262f9b9-76ea-4216-ad7a-efced93e4089">
 		["ip_acknowledgements"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
-		["revision"] = <"1.0.2">
+		["revision"] = <"1.0.3">
 	>
 
 definition
@@ -1253,9 +1283,6 @@ definition
 		}
 	}
 
-
-
-
 ontology
 	term_definitions = <
 		["en"] = <
@@ -1459,6 +1486,72 @@ Detta datafält har flera förekomster för att möjliggöra registrering av fle
 					comment = <"Exempelvis, tjockleken på ett vävnadsskikt, en organvägg eller ett snitt av en biopsi.
 
 Detta datafält har flera förekomster för att möjliggöra registrering av flera tjocklekar. Exempelvis den maximala och minimala tjockleken på en cystvägg.">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"Physikalische Abmessungen">
+					description = <"Die räumlichen Maße einer anatomischen Struktur, eines Objekts oder einer Flüssigkeit, die Teil des Körpers einer Person ist, sich darin befindet oder aus diesem stammt.">
+				>
+				["at0046"] = <
+					text = <"Volumen">
+					description = <"Der dreidimensionale Raum, den eine Struktur bzw. ein Objekt einnimmt.">
+				>
+				["at0049"] = <
+					text = <"Länge">
+					description = <"Die längste Ausdehnung einer anatomischen Struktur oder eines Objekts, die in der Regel mit deren primärer anatomischer oder Längsachse übereinstimmt.">
+					comment = <"Dieses Datenelement kann mehrfach vorkommen, um die Erfassung von mehr als einer Länge zu ermöglichen.
+
+Ist die Ausrichtung einer anatomischen Struktur oder eines Objekts unklar, kann jede Dimension wiederholt unter Verwendung desselben Datenelements erfasst werden, zum Beispiel „Länge × Länge × Länge“.">
+				>
+				["at0050"] = <
+					text = <"Breite">
+					description = <"Die zur Länge senkrechte Dimension, gemessen in koronaler (von links nach rechts) oder transversaler (von einer Seite zur anderen) Richtung – oft die zweitlängste Achse.">
+					comment = <"Dieses Datenelement kann mehrfach vorkommen, um zur Erfassung von mehr als einer Breite zu dienen. Beispielsweise die breiteste und die schmalste Stelle einer pathologischen Masse.">
+				>
+				["at0052"] = <
+					text = <"Durchmesser">
+					description = <"Die Länge einer geraden Linie, die durch den Mittelpunkt eines Objekts von einer Seite zur gegenüberliegenden Seite verläuft und typischerweise an der breitesten Stelle gemessen wird.">
+					comment = <"Dieses Datenelement kann mehrfach vorkommen, um die Erfassung mehrerer Messwerte zu ermöglichen.
+
+Ist die Ausrichtung einer anatomischen Struktur oder eines Objekts unklar, verwenden Sie mehrere Vorkommen desselben Datenelements, um den Durchmesser entlang zweier oder mehrerer Achsen ohne spezifische Ausrichtung zu erfassen. Beispielsweise eine Läsion mit den angegebenen Durchmessern 3 mm × 4 mm, was Messwerte entlang zweier senkrechter Achsen angibt, ohne zu definieren, welche davon die Länge und welche die Breite ist.">
+				>
+				["at0053"] = <
+					text = <"Tiefe">
+					description = <"Der vertikale Abstand von einer neutralen Basis oder Referenzfläche zu einem tiefer gelegenen Punkt an einer anatomischen Struktur oder einem Objekt.">
+					comment = <"Beispiel: die Tiefe einer Wunde gemessen von der normalen Hautoberfläche.
+
+Dieses Datenelement kann mehrfach vorkommen, zur Erfassung der tiefsten und flachsten Stelle einer Hautläsion oder der maximalen und minimalen Tiefe eines inneren Tumors im Weichgewebe.">
+				>
+				["at0054"] = <
+					text = <"Höhe">
+					description = <"Der vertikale Abstand von einer neutralen Basis oder Referenzfläche zu einem höher gelegenen Punkt auf einer anatomischen Struktur oder einem Objekt.">
+					comment = <"Beispielsweise: die Höhe einer Läsion über der normalen Hautoberfläche oder die Höhe einer Probe über einer Tischplatte.
+
+Dieses Datenelement kann mehrfach vorkommen, um zur Erfassung von mehr als einer Höhe zu dienen. Beispielsweise die maximale und minimale Höhe eines Tumors über der Hautoberfläche.">
+				>
+				["at0055"] = <
+					text = <"Umfang">
+					description = <"Der lineare Abstand entlang der Außenkante oder Begrenzung eines Objekts.">
+					comment = <"Dieses Datenelement kann mehrfach vorkommen, zur Erfassung mehrerer Messwerte. Beispielsweise der innere und äußere Umfang einer Narbe oder einer unregelmäßigen Hautveränderung oder der innere und äußere Kreisumfang einer Zyste oder eines Knotens, gemessen an verschiedenen Messorten.">
+				>
+				["at0080"] = <
+					text = <"Radius">
+					description = <"Die Länge einer geraden Linie vom Mittelpunkt eines Objekts bis zu dessen Oberfläche oder Begrenzung, die typischerweise die Hälfte des Durchmessers darstellt.">
+					comment = <"Dieses Datenelement kann mehrfach vorkommen, um zur Erfassung mehrerer Messwerte zu dienen. Zum Beispiel den maximalen und minimalen Radius einer Zyste oder eines Knotens.">
+				>
+				["at0081"] = <
+					text = <"Fläche">
+					description = <"Der berechnete Raum einer Struktur/eines Objekts in zwei Dimensionen.">
+				>
+				["at0082"] = <
+					text = <"Dicke">
+					description = <"Der Abstand zwischen zwei gegenüberliegenden Oberflächen oder Begrenzungen einer anatomischen Struktur oder eines Objekts.">
+					comment = <"Beispielsweise die Dicke einer Gewebeschicht, einer Organwand oder eines Biopsieschnitts. 
+
+Dieses Datenelement kann mehrfach vorkommen, um zur Erfassung mehrerer Messwerte zu dienen. Beispielsweise die maximale und minimale Dicke einer Zystenwand.">
 				>
 			>
 		>

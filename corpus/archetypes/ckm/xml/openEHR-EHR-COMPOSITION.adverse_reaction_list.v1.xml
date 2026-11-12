@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -197,8 +197,7 @@ This archetype is usually managed as a persistent list, however there are situat
 &#xD;
 אמנם זה סביר שתגובות שליליות מאומתות יתמשכו לאורך זמן, אך אותה גישה אינה חלה על הצהרות בדבר אי הכללות או היעדר תגובה. יש לראותם תקפים רק בזמן בו תועדו. לדוגמא רישום הצהרה כי לא ידוע על רגישות לפניצילין של הנבדק אינו תקף מרגע בו מופיעה תגובה לאחר מתן פנצילין.&#xD;
 &#xD;
-ארכיטיפ זה מנוהל בדרך כלל כרשימה פרסיסטנטית, אולם ישנם מצבים בהם נעשה שימוש ברשימה בטיפול אפיזודי ונדרשות תכונות נוספות כגון הקשר וכו' על מנת לאפשר תיעוד מדויק. מודל הייחוס של openEHR מאפשר כרגע להקליט הקשר רק בתוך ארכיטיפי COMPOSITION מבוססי אירועים (event based). כתוצאה מכך, ארכיטיפ זה עוצב כ- COMPOSITION מסוג "אירוע" (Event), במקום פרסיסטנטי\ארוך-טווח (Persistent), כדי לאפשר למערכות קליניות מסוימות גמישות – כך שיוכלו לנהל בבטחה את רשימות התגובה השלילית לפרקי טיפול, בעוד שאחרים יבחרו ליישם את ה- COMPOSITION הזה כדי לפעול באופן מתמשך.&#xD;
-</use>
+ארכיטיפ זה מנוהל בדרך כלל כרשימה פרסיסטנטית, אולם ישנם מצבים בהם נעשה שימוש ברשימה בטיפול אפיזודי ונדרשות תכונות נוספות כגון הקשר וכו' על מנת לאפשר תיעוד מדויק. מודל הייחוס של openEHR מאפשר כרגע להקליט הקשר רק בתוך ארכיטיפי COMPOSITION מבוססי אירועים (event based). כתוצאה מכך, ארכיטיפ זה עוצב כ- COMPOSITION מסוג "אירוע" (Event), במקום פרסיסטנטי\ארוך-טווח (Persistent), כדי לאפשר למערכות קליניות מסוימות גמישות – כך שיוכלו לנהל בבטחה את רשימות התגובה השלילית לפרקי טיפול, בעוד שאחרים יבחרו ליישם את ה- COMPOSITION הזה כדי לפעול באופן מתמשך.</use>
       <misuse />
       <copyright />
     </details>
@@ -492,4 +491,3 @@ This archetype is usually managed as a persistent list, however there are situat
     </term_definitions>
   </ontology>
 </archetype>
-

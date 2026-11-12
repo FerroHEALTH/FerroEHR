@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -4267,123 +4267,123 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0005">
         <items id="text">P3. Bending your hip fully</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">S1. Do you feel grinding, hear clicking or any other type of noise from your hip?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Never</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Rarely</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Sometimes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Often</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Always</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">S3. Difficulties to stride out when walking</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">S4. How severe is your hip joint stiffness after first wakening in the morning?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">S5. How severe is your hip stiffness after sitting, lying or resting later in the day?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Symptoms + Stiffness subtotal</items>
@@ -4391,243 +4391,243 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0049">
         <items id="text">P1. How often is your hip painful?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Never</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Monthly</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Weekly</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Daily</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Always</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">P2. Straightening your hip fully</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0057">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0059">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">P4. Walking on flat surface</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0066">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">P5. Going up or down stairs</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0068">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0069">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0070">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0072">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0073">
         <items id="text">P6. At night while in bed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0074">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0075">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0076">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0077">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0078">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0079">
         <items id="text">P7. Sitting or lying</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0080">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0081">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0082">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0083">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0084">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0085">
         <items id="text">P8. Standing upright</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0086">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0087">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0088">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0089">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0090">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0091">
         <items id="text">P9. Walking on a hard surface (asphalt, concrete, etc.)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0092">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0093">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0094">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0095">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0096">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0097">
         <items id="text">P10. Walking on an uneven surface</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0098">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0099">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0100">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0101">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0102">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0103">
         <items id="text">A1. Descending stairs</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0104">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0105">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0106">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0107">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0108">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">Pain Subtotal</items>
@@ -4635,387 +4635,387 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0110">
         <items id="text">A2. Ascending stairs</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0111">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0112">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0113">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0114">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0115">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0116">
         <items id="text">A3. Rising from sitting</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0117">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0118">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0119">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0120">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0121">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0122">
         <items id="text">A4. Standing</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0123">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0124">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0125">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0126">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0127">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0128">
         <items id="text">A5. Bending to floor/pick up an object</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0129">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0130">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0131">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0132">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0133">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0134">
         <items id="text">A6. Walking on flat surface</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0135">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0136">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0137">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0138">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0139">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0140">
         <items id="text">A7. Getting in/out of car</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0141">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0142">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0143">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0144">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0145">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0146">
         <items id="text">A8. Going shopping</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0147">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0148">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0149">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0150">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0151">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0152">
         <items id="text">A9. Putting on socks/stockings</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0153">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0154">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0155">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0156">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0157">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0158">
         <items id="text">A10. Rising from bed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0159">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0160">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0161">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0162">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0163">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0164">
         <items id="text">A11. Taking off socks/stockings</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0165">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0166">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0167">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0168">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0169">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0170">
         <items id="text">A12. Lying in bed (turning over, maintaining hip position)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0171">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0172">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0173">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0174">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0175">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0176">
         <items id="text">A13. Getting in/out of bath</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0177">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0178">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0179">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0180">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0181">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0182">
         <items id="text">A14. Sitting</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0183">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0184">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0185">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0186">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0187">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0188">
         <items id="text">A15. Getting on/off toilet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0189">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0190">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0191">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0192">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0193">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0194">
         <items id="text">A16. Heavy domestic duties (moving heavy boxes, scrubbing floors, etc)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0195">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0196">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0197">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0198">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0199">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0200">
         <items id="text">A17. Light domestic duties (cooking, dusting, etc)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0201">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0202">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0203">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0204">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0205">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0206">
         <items id="text">Function, daily living subtotal</items>
@@ -5023,195 +5023,195 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0207">
         <items id="text">SP1. Squatting</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0208">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0209">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0210">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0211">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0212">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0213">
         <items id="text">SP2. Running</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0214">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0215">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0216">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0217">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0218">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0219">
         <items id="text">SP3. Twisting/pivoting on your injured hip</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0220">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0221">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0222">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0223">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0224">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0225">
         <items id="text">SP4. Walking on uneven surface</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0226">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0227">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0228">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0229">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0230">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0231">
         <items id="text">Q1. How often are you aware of your hip problem?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0232">
         <items id="text">Never</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0233">
         <items id="text">Monthly</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0234">
         <items id="text">Weekly</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0235">
         <items id="text">Daily</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0236">
         <items id="text">Constantly</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0237">
         <items id="text">Q2. Have you modified your life style to avoid potentially damaging activities to your hip?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0238">
         <items id="text">Not at all</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0239">
         <items id="text">Mildly</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0240">
         <items id="text">Moderately</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0241">
         <items id="text">Severely</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0242">
         <items id="text">Extremely</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0243">
         <items id="text">Q3. How much are you troubled with lack of confidence in your hip?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0244">
         <items id="text">Not at all</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0245">
         <items id="text">Mildly</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0246">
         <items id="text">Moderately</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0247">
         <items id="text">Severely</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0248">
         <items id="text">Extremely</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0249">
         <items id="text">Q4. In general, how much difficulty do you have with your hip?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0250">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0251">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0252">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0253">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0254">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0255">
         <items id="text">Function, sports and recreational activities subtotal</items>
@@ -5227,27 +5227,27 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0258">
         <items id="text">S2. Difficulties spreading legs wide apart</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0259">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0260">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0261">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0262">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0263">
         <items id="text">Extreme</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0264">
         <items id="text">Extension</items>
@@ -5257,4 +5257,3 @@ While openEHR archetypes are all freely available under an open license, the spe
     </term_definitions>
   </ontology>
 </archetype>
-

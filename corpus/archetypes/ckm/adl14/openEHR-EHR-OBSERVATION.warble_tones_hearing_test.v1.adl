@@ -1,0 +1,320 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-OBSERVATION.warble_tones_hearing_test.v1
+
+concept
+	[at0000]	-- Warble Tones Hearing Test
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"?">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["date"] = <"10/11/2007">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"A structure to record the results of testing the hearing thresholds of patients with developmental age between seven months and 18 months of age">
+			use = <"To assess hearing thresholds of patients with developmental age between seven months and 18 months of age">
+			keywords = <"hearing", "warble", "tones">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"هي بِنية لتسجيل نتائج اختبار عَتَبات السمع لدى المرضى الذين تتراوح أعمارهم النمائية ما بين سبعة أشهر و ثمانية عشرة شهرا">
+			use = <"لتقييم العتبات السمعية للمرضى الذين تترواح أعمارهم ما بين سبعة أشهر و ثمانية عشرا شهرا">
+			keywords = <"السماع", "اللُّحمَوية", "النغمات">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <>
+	other_details = <
+		["references"] = <"">
+	>
+
+definition
+	OBSERVATION[at0000] matches {	-- Warble Tones Hearing Test
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..1} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0004] occurrences matches {0..1} matches {	-- Side
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0005, 	-- Left
+													at0006]	-- Right
+												}
+											}
+										}
+									}
+									CLUSTER[at0018] occurrences matches {0..1} matches {	-- Details
+										items cardinality matches {0..*; unordered} matches {
+											ELEMENT[at0017] occurrences matches {0..1} matches {	-- Frequency
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::382]>
+														list = <
+															["1"] = <
+																units = <"Hz">
+															>
+															["2"] = <
+																units = <"kHz">
+															>
+														>
+													>
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0026, 	-- 4kHz
+															at0027, 	-- 2kHz
+															at0028, 	-- 1kHz
+															at0029]	-- 0,5kHz
+														}
+													}
+												}
+											}
+											ELEMENT[at0020] occurrences matches {0..1} matches {	-- Hearing Threshold
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::123]>
+														list = <
+															["1"] = <
+																units = <"dB">
+															>
+														>
+													>
+												}
+											}
+											ELEMENT[at0019] occurrences matches {0..1} matches {	-- Response
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0021, 	-- Positive
+															at0022]	-- Negative
+														}
+													}
+												}
+											}
+											ELEMENT[at0024] occurrences matches {0..1} matches {	-- Image
+												value matches {
+													DV_MULTIMEDIA matches {
+														media_type matches {
+															[openEHR::
+															425, 
+															426, 
+															427, 
+															428, 
+															429]
+														}
+													}
+												}
+											}
+										}
+									}
+									ELEMENT[at0025] occurrences matches {0..1} matches {	-- Reliability
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0023] occurrences matches {0..1} matches {	-- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Warble Tones Hearing Test">
+					description = <"A paediatric behavioural test, for assessing hearing thresholds of patients with developmental age between seven months and 18 months of age">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Side">
+					description = <"Side being tested">
+				>
+				["at0005"] = <
+					text = <"Left">
+					description = <"*">
+				>
+				["at0006"] = <
+					text = <"Right">
+					description = <"*">
+				>
+				["at0017"] = <
+					text = <"Frequency">
+					description = <"Record frequency of Warble tone stimulus presented">
+				>
+				["at0018"] = <
+					text = <"Details">
+					description = <"*">
+				>
+				["at0019"] = <
+					text = <"Response">
+					description = <"Consistent response of infant to stimulus">
+				>
+				["at0020"] = <
+					text = <"Hearing Threshold">
+					description = <"Record of hearing threshold in dB">
+				>
+				["at0021"] = <
+					text = <"Positive">
+					description = <"*">
+				>
+				["at0022"] = <
+					text = <"Negative">
+					description = <"*">
+				>
+				["at0023"] = <
+					text = <"Comment">
+					description = <"Comment on test">
+				>
+				["at0024"] = <
+					text = <"Image">
+					description = <"Image of test result">
+				>
+				["at0025"] = <
+					text = <"Reliability">
+					description = <"Estimation of the reliability of the test result - indicated by behaviour of child eg cooperative etc.">
+				>
+				["at0026"] = <
+					text = <"4kHz">
+					description = <"*">
+				>
+				["at0027"] = <
+					text = <"2kHz">
+					description = <"*">
+				>
+				["at0028"] = <
+					text = <"1kHz">
+					description = <"*">
+				>
+				["at0029"] = <
+					text = <"0,5kHz">
+					description = <"*">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0000"] = <
+					text = <"اختبار النغمات اللُّحمَوية السمعي">
+					description = <"اختبار سلوكي متعلق بطب الأطفال, من أجل تقييم عَتَبَات السمع لدى المرضى الذين تتراوح أعمارهم النَّمائية ما بين سبعة أشهر و ثمانية عشر شهرا ">
+				>
+				["at0001"] = <
+					text = <"سلسلة الوقائع">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"إحدى الوقائع">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"شجرة">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"الجانب">
+					description = <"الجانب الذي يتم اختباره">
+				>
+				["at0005"] = <
+					text = <"الأيسر">
+					description = <"*">
+				>
+				["at0006"] = <
+					text = <"الأيمن">
+					description = <"*">
+				>
+				["at0017"] = <
+					text = <"التكرار/ التردد">
+					description = <"تسجيل تكرار/تردد مُنَبِّه النغمات اللُّحموية التي يتم تقديمها">
+				>
+				["at0018"] = <
+					text = <"التفاصيل">
+					description = <"*">
+				>
+				["at0019"] = <
+					text = <"الاستجابة">
+					description = <"الاستجابة المُتَّسِقة من الطفل للمُنبِّه">
+				>
+				["at0020"] = <
+					text = <"عتبة السمع">
+					description = <"تسجيل عتبة السمع بالديسي بِل">
+				>
+				["at0021"] = <
+					text = <"إيجابي">
+					description = <"*">
+				>
+				["at0022"] = <
+					text = <"سلبي">
+					description = <"*">
+				>
+				["at0023"] = <
+					text = <"التعليق">
+					description = <"تعليق على الاختبار">
+				>
+				["at0024"] = <
+					text = <"الصورة">
+					description = <"صورة نتيجة الاختبار">
+				>
+				["at0025"] = <
+					text = <"المُعَوَّلية">
+					description = <"تقدير مُعَوَّلية نتيجة الاختبار - الذي تتم الإشارة إليه بسلوك الطفل, مثلا تعاونيّ, إلى آخره ">
+				>
+				["at0026"] = <
+					text = <"4 كيلو هرتز">
+					description = <"*">
+				>
+				["at0027"] = <
+					text = <"2 كيلو هرتز">
+					description = <"*">
+				>
+				["at0028"] = <
+					text = <"1 كيلو هرتز">
+					description = <"*">
+				>
+				["at0029"] = <
+					text = <"0.5 كيلو هرتز">
+					description = <"*">
+				>
+			>
+		>
+	>

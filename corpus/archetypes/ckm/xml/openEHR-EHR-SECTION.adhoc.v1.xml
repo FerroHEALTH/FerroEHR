@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -63,9 +63,7 @@
       <keywords>Überschrift</keywords>
       <keywords>Ad hoc</keywords>
       <keywords>Abschnittsüberschrift</keywords>
-      <use>Dieser Archetyp kann für die Erstellung einer Abschnittsüberschrift in einem Template verwendet werden. Die Überschrift kann, passend zu dem jeweiligen klinischen Kontext, umbenannt werden. Zum Beispiel: "Ad hoc Überschrift" wird umbenannt in "Untersuchungsergebnisse".&#xD;
-&#xD;
-</use>
+      <use>Dieser Archetyp kann für die Erstellung einer Abschnittsüberschrift in einem Template verwendet werden. Die Überschrift kann, passend zu dem jeweiligen klinischen Kontext, umbenannt werden. Zum Beispiel: "Ad hoc Überschrift" wird umbenannt in "Untersuchungsergebnisse".</use>
       <misuse>Die Überschrift sollte in einem Template nicht unverändert verwendet werden.</misuse>
       <copyright />
     </details>
@@ -76,7 +74,7 @@
         </terminology_id>
         <code_string>ru</code_string>
       </language>
-      <purpose>Базовый заголовок раздела, должен быть переименован в локальном шаблоне </purpose>
+      <purpose>Базовый заголовок раздела, должен быть переименован в локальном шаблоне</purpose>
       <keywords>раздел</keywords>
       <keywords>шаблон</keywords>
       <keywords>заготовка</keywords>
@@ -509,4 +507,3 @@
     </term_definitions>
   </ontology>
 </archetype>
-

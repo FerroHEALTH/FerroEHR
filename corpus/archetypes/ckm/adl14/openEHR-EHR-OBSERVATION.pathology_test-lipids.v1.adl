@@ -1,0 +1,918 @@
+﻿archetype (adl_version=1.4; uid=218876d6-5a07-4ecc-b46d-60384773e3bf)
+	openEHR-EHR-OBSERVATION.pathology_test-lipids.v1
+specialise
+	openEHR-EHR-OBSERVATION.pathology_test.v1
+
+concept
+	[at0000.1]	-- Lipid Studies Test Result
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Ian McNicoll">
+		["organisation"] = <"Ocean Informatics, United Kingdom">
+		["email"] = <"ian.mcnicoll@oceaninformatics.com">
+		["date"] = <"2009-11-07">
+	>
+	details = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"لتسجيل نتيجة اختبار المعمل, و التي قد يتم استخدامها لتسجيل اختبار ذي قيمة واحدة, و عادة ما يتم بعد ذلك المزيد من التخصيص أو الوضع في قالب لتمثيل اختبار متعدد القيم أو رتل من الاختبارات. 
+و يمثل هذا النموذج كوالد (أب) للتخصيصات الأخرى لاختبارات معملية أكثر تحديدا مثل الميكروبيولوجيا و الهيستوباثولوجيا.">
+			use = <"قد يستخدم لتسجيل نتيجة اختبار المعمل, و التي قد يتم استخدامها لتسجيل اختبار ذي قيمة واحدة, و عادة ما يتم بعد ذلك المزيد من التخصيص أو الوضع في قالب لتمثيل اختبار متعدد القيم أو رتل من الاختبارات. 
+
+يتم بعد ذلك تقديم التقرير للطبيب السريري الذي قام بطلب الاختبار في سياق تقرير معملي متكامل.">
+			keywords = <"المعمل - المختبر", "الباثولوجيا - المرضية", "الكيمياء الحيوية", "الدمويات", "الميكروبيولوجيا", "المناعيات - علم المناعة">
+			misuse = <"قد تكون التخصيصات أكثر مناسبة للتقارير المركبة مثل حالات الميكروبيولوجيا أو الهيستوباثولوجيا.">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record the findings and interpretation of biochemical lipid study test results. This is typically done in a laboratory but may be done in other environments such as at the point of care.">
+			use = <"Use to record a lipid studies test result panel.
+
+This archetype has been designed to enable the health record to:
+- distinguish between fasting and non-fasting lipid measurements, 
+- distinguish measurements from laboratory, point of care and home-based devices, and;
+
+Will normally be reported back to the requesting clinician as one component within the context of an overall COMPOSITION-based report.">
+			keywords = <"lab", "pathology", "biochemistry", "laboratory", "chemical", "clinical", "test", "specimen">
+			misuse = <"Not to be used to represent an entire cumulative report. This Pathology test result archetype represents only one of the result sets that is usually viewed as a vertical in a cumulative test report. A cumulative report is a view that is constructed from the results represented by multiple OBSERVATION archetypes.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Koray Atalag, University of Auckland, New Zealand", "Sharmila Biswas, Dr Sharmila Biswas GP, Australia", "Doug Chesher, PaLMS, Australia", "Stephen Chu, NEHTA, Australia (Editor)", "Matthew Cordell, NEHTA, Australia", "Andre de Wolf, NeHTA, Australia", "Gail Easterbrook, Flinders Medical Centre, Australia", "David Evans, Queensland Health, Australia", "Shahla Foozonkhah, Ocean Informatics, Australia", "Heath Frankel, Ocean Informatics, Australia", "Grahame Grieve, Health Intersections Pyty Ltd, Australia (Editor)", "Sam Heard, Ocean Informatics, Australia", "Mary Kelaher, NEHTA, Australia", "Michael Legg, Michael Legg & associates, Australia", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Mike Martyn, The Hobart Anaesthetic Group, Australia", "Andrew McIntyre, Medical-Objects, Australia", "David McKillop, NEHTA, Australia", "Ian McNicoll, Ocean Informatics UK, United Kingdom", "Chris Mitchell, RACGP, Australia", "Stewart Morrison, NEHTA, Australia", "Michael Osborne, Mater Health Services, Australia", "Kyle Shore, Charm Health, Australia", "Michael Thompson, Queensland Health, Australia", "Gordon Tomes, Australian Institute of Health and Welfare, Australia", "Richard Townley-O'Neill, NEHTA, Australia", "David Rowed, VAMC Clinic, Australia (Editor)", "Mona Saleh (Translator)">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"Pathology (Data Specifications) Version 1.0 [Internet]. Sydney, Australia: National E-Health Transition Authority; 2007 May 29 [cited 2011 Jul 11]; Available at http://www.nehta.gov.au/component/docman/doc_download/962-pathology-v10.
+
+Laboratory Technical Framework, Volume 3: Content, Revision 3.0 [Internet]. USA: IHE International; 2011 May 19; [cited 2011 Jul 11]. Available from: http://www.ihe.net/Technical_Framework/index.cfm#laboratory.
+
+Based on NEHTA 'Pathology Test' archetype. Available from: http://dcm.nehta.org.au/ckm/OKM.html#showarchetype_1013.1.839_8">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"D79EA96F7B62B73C936D68503FA0F6AB">
+		["build_uid"] = <"e9b36b46-4b16-4d4c-915e-44302a54a9d1">
+	>
+
+definition
+	OBSERVATION[at0000.1] matches {	-- Lipid Studies Test Result
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..*} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {2..*; unordered} matches {
+									ELEMENT[at0005] matches {	-- Test Result Name
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0077] occurrences matches {0..1} matches {	-- Diagnostic Service
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									allow_archetype CLUSTER[at0065] occurrences matches {0..*} matches {	-- Specimen Detail
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v1/}
+									}
+									ELEMENT[at0073] matches {	-- Overall Test Result Status
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0107, 	-- Registered
+													at0037, 	-- Interim
+													at0038, 	-- Final
+													at0040, 	-- Amended
+													at0074]	-- Cancelled/Aborted
+												}
+											}
+										}
+									}
+									ELEMENT[at0075] occurrences matches {0..1} matches {	-- DateTime Result Issued
+										value matches {
+											DV_DATE_TIME matches {*}
+										}
+									}
+									ELEMENT[at0100] occurrences matches {0..1} matches {	-- Clinical Information Provided
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									CLUSTER[at0095] occurrences matches {0..*} matches {	-- Result Group
+										items cardinality matches {1..*; unordered} matches {
+											CLUSTER[at0096.6] occurrences matches {0..*} matches {	-- Total Cholesterol
+												items cardinality matches {1..*; unordered} matches {
+													ELEMENT[at0078.1] occurrences matches {0..1} matches {	-- Result Value
+														value matches {
+															C_DV_QUANTITY <
+																property = <[openehr::119]>
+																list = <
+																	["1"] = <
+																		units = <"mg/dl">
+																	>
+																	["2"] = <
+																		units = <"mmol/l">
+																	>
+																>
+															>
+														}
+													}
+													ELEMENT[at0102] occurrences matches {0..*} matches {	-- Result Comment
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+													ELEMENT[at0103] occurrences matches {0..1} matches {	-- Reference Range Guidance
+														value matches {
+															DV_TEXT matches {*}
+														}
+													}
+													ELEMENT[at0108] occurrences matches {0..1} matches {	-- Result Value Status
+														value matches {
+															DV_CODED_TEXT matches {
+																defining_code matches {
+																	[local::
+																	at0107, 	-- Registered
+																	at0037, 	-- Interim
+																	at0038, 	-- Final
+																	at0040, 	-- Amended
+																	at0074]	-- Cancelled/Aborted
+																}
+															}
+														}
+													}
+												}
+											}
+											CLUSTER[at0096.7] occurrences matches {0..*} matches {	-- Triglyceride
+												items cardinality matches {1..*; unordered} matches {
+													ELEMENT[at0078.2] occurrences matches {0..1} matches {	-- Result Value
+														value matches {
+															C_DV_QUANTITY <
+																property = <[openehr::119]>
+																list = <
+																	["1"] = <
+																		units = <"mg/dl">
+																		magnitude = <|>=0.0|>
+																	>
+																	["2"] = <
+																		units = <"mmol/l">
+																		magnitude = <|>=0.0|>
+																	>
+																>
+															>
+														}
+													}
+													use_node ELEMENT occurrences matches {0..*} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0102]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Result Comment]
+													use_node ELEMENT occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0103]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Reference Range Guidance]
+													use_node ELEMENT occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0108]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Result Value Status]
+												}
+											}
+											CLUSTER[at0096.5] occurrences matches {0..*} matches {	-- HDL Cholesterol
+												items cardinality matches {1..*; unordered} matches {
+													ELEMENT[at0078.3] occurrences matches {0..1} matches {	-- Result Value
+														value matches {
+															C_DV_QUANTITY <
+																property = <[openehr::119]>
+																list = <
+																	["1"] = <
+																		units = <"mg/dl">
+																		magnitude = <|>=0.0|>
+																	>
+																	["2"] = <
+																		units = <"mmol/l">
+																		magnitude = <|>=0.0|>
+																	>
+																>
+															>
+														}
+													}
+													use_node ELEMENT occurrences matches {0..*} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0102]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Result Comment]
+													use_node ELEMENT occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0103]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Reference Range Guidance]
+													use_node ELEMENT occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0108]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Result Value Status]
+												}
+											}
+											CLUSTER[at0096.4] occurrences matches {0..*} matches {	-- LDL Cholesterol Direct Assay
+												items cardinality matches {1..*; unordered} matches {
+													ELEMENT[at0078.4] occurrences matches {0..1} matches {	-- Result Value
+														value matches {
+															C_DV_QUANTITY <
+																property = <[openehr::119]>
+																list = <
+																	["1"] = <
+																		units = <"mg/dl">
+																		magnitude = <|>=0.0|>
+																	>
+																	["2"] = <
+																		units = <"mmol/l">
+																		magnitude = <|>=0.0|>
+																	>
+																>
+															>
+														}
+													}
+													use_node ELEMENT occurrences matches {0..*} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0102]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Result Comment]
+													use_node ELEMENT occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0103]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Reference Range Guidance]
+													use_node ELEMENT occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0108]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Result Value Status]
+												}
+											}
+											CLUSTER[at0096.8] occurrences matches {0..*} matches {	-- LDL Cholesterol Calculated
+												items cardinality matches {1..*; unordered} matches {
+													ELEMENT[at0078.7] occurrences matches {0..1} matches {	-- Result Value
+														value matches {
+															C_DV_QUANTITY <
+																property = <[openehr::119]>
+																list = <
+																	["1"] = <
+																		units = <"mg/dl">
+																		magnitude = <|>=0.0|>
+																	>
+																	["2"] = <
+																		units = <"mmol/l">
+																		magnitude = <|>=0.0|>
+																	>
+																>
+															>
+														}
+													}
+													use_node ELEMENT occurrences matches {0..*} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0102]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Result Comment]
+													use_node ELEMENT occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0103]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Reference Range Guidance]
+													use_node ELEMENT occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0108]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Result Value Status]
+												}
+											}
+											CLUSTER[at0096.3] occurrences matches {0..*} matches {	-- VLDL Cholesterol
+												items cardinality matches {1..*; unordered} matches {
+													ELEMENT[at0078.8] occurrences matches {0..1} matches {	-- Result Value
+														value matches {
+															C_DV_QUANTITY <
+																property = <[openehr::119]>
+																list = <
+																	["1"] = <
+																		units = <"mg/dl">
+																		magnitude = <|>=0.0|>
+																	>
+																	["2"] = <
+																		units = <"mmol/l">
+																		magnitude = <|>=0.0|>
+																	>
+																>
+															>
+														}
+													}
+													use_node ELEMENT occurrences matches {0..*} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0102]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Result Comment]
+													use_node ELEMENT occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0103]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Reference Range Guidance]
+													use_node ELEMENT occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0108]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Result Value Status]
+												}
+											}
+											CLUSTER[at0096.2] occurrences matches {0..*} matches {	-- LDL/HDL Cholesterol Ratio
+												items cardinality matches {1..*; unordered} matches {
+													ELEMENT[at0078.5] occurrences matches {0..1} matches {	-- Result Value
+														value matches {
+															DV_PROPORTION matches {
+																is_integral matches {False}
+																type matches {0}
+															}
+														}
+													}
+													use_node ELEMENT occurrences matches {0..*} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0102]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Result Comment]
+													use_node ELEMENT occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0103]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Reference Range Guidance]
+													use_node ELEMENT occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0108]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Result Value Status]
+												}
+											}
+											CLUSTER[at0096.1] occurrences matches {0..*} matches {	-- Total/HDL Cholesterol Ratio
+												items cardinality matches {1..*; unordered} matches {
+													ELEMENT[at0078.6] occurrences matches {0..1} matches {	-- Result Value
+														value matches {
+															DV_PROPORTION matches {
+																is_integral matches {False}
+																type matches {0}
+															}
+														}
+													}
+													use_node ELEMENT occurrences matches {0..*} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0102]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Result Comment]
+													use_node ELEMENT occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0103]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Reference Range Guidance]
+													use_node ELEMENT occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0108]	-- /data[Event Series]/events[Any event]/data[Tree]/items[Result Group]/items[Total Cholesterol]/items[Result Value Status]
+												}
+											}
+											allow_archetype CLUSTER[at0097] occurrences matches {0..1} matches {	-- Specimen Detail
+												include
+													archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v1/}
+											}
+										}
+									}
+									ELEMENT[at0057] occurrences matches {0..1} matches {	-- Conclusion
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0098] occurrences matches {0..*} matches {	-- Pathological Diagnosis
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0010] occurrences matches {0..*} matches {	-- Test Result Representation
+										value matches {
+											DV_MULTIMEDIA matches {
+												media_type matches {
+													[openEHR::
+													417, 
+													418, 
+													419, 
+													517, 
+													518, 
+													519, 
+													682, 
+													683]
+												}
+											}
+										}
+									}
+									ELEMENT[at0101] occurrences matches {0..1} matches {	-- Test Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+						state matches {
+							ITEM_TREE[at0.112] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0.113] occurrences matches {0..1} matches {	-- Fasting State
+										value matches {
+											DV_BOOLEAN matches {
+												value matches {True}
+											}
+										}
+									}
+									ELEMENT[at0.114] occurrences matches {0..1} matches {	-- Duration of Fasting
+										value matches {
+											DV_DURATION matches {
+												value matches {PTHS/|>=PT0S|}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0004] matches {	-- Tree
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0.111] occurrences matches {0..1} matches {	-- Point of Care Device used
+						value matches {
+							DV_BOOLEAN matches {
+								value matches {True, False}
+							}
+						}
+					}
+					allow_archetype CLUSTER[at0017] occurrences matches {0..1} matches {	-- Receiving Laboratory
+						include
+							archetype_id/value matches {/.*/}
+					}
+					CLUSTER[at0094] occurrences matches {0..*} matches {	-- Test Request Details
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0062] occurrences matches {0..1} matches {	-- Requester Order Identifier
+								value matches {
+									DV_IDENTIFIER matches {*}
+								}
+							}
+							ELEMENT[at0106] occurrences matches {0..*} matches {	-- Test Requested Name
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0090] occurrences matches {0..1} matches {	-- Requester
+								include
+									archetype_id/value matches {/.*/}
+							}
+							allow_archetype CLUSTER[at0035] occurrences matches {0..*} matches {	-- Copied Provider
+								include
+									archetype_id/value matches {/.*/}
+							}
+							ELEMENT[at0063] occurrences matches {0..1} matches {	-- Receiver Order Identifier
+								value matches {
+									DV_IDENTIFIER matches {*}
+								}
+							}
+							ELEMENT[at0068] occurrences matches {0..1} matches {	-- Laboratory Test Result Identifier
+								value matches {
+									DV_IDENTIFIER matches {*}
+								}
+							}
+						}
+					}
+					allow_archetype CLUSTER[at0110] occurrences matches {0..*} matches {	-- Test Procedure
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["ar-sy"] = <
+			items = <
+				["at0.111"] = <
+					text = <"*Point of Care Device used(en)">
+					description = <"*The test was performed using a point of care device or a home-based device.(en)">
+				>
+				["at0.112"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0.113"] = <
+					text = <"*Fasting State(en)">
+					description = <"*A fasting specimen was used for the measurement.(en)">
+				>
+				["at0.114"] = <
+					text = <"*Duration of Fasting(en)">
+					description = <"*The duration of fasting completed by the test subject prior to the sample being taken.(en)">
+				>
+				["at0000"] = <
+					text = <"الاختبار المعملي">
+					description = <"لتسجيل نتيجة الاختبار و التي قد تستخدم إما لتسجيل اختبار ذي قيمة واحدة كما أنه قد يتم تخصيصه أو وضعه في قالب لتمثيل الاختبارات متعددة القيمة أو رتل من الاختبارات.
+يستخدم هذا النموذج كوالد (أب) للتخصيصات المناسبة لاختبارات أكثر تحديدا مثل حالات الميكروبيولوجيا و الهيستوباثولوجيا.">
+				>
+				["at0000.1"] = <
+					text = <"*Lipid Studies Test Result(en)">
+					description = <"*The findings and interpretation of bochemical lipid study test results.(en)">
+				>
+				["at0001"] = <
+					text = <"*Event Series(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"إحدى الوقائع">
+					description = <"إحدى الوقائع">
+				>
+				["at0003"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0005"] = <
+					text = <"اسم الاختبار">
+					description = <"تعريف معين لهوية هذا الاختبار. مثل العد الدموي الشامل, الغلوكوز (سكر العنب) في الدم. قد يكون هو نفسه اسم النتيجة في الاختبارات ذات النتيجة المتكونة من قيمة وحيدة. عادة ما يكون مُصطَلحاً مُرمَزًا مثل لوينك و سنوميد-سي تي.">
+				>
+				["at0010"] = <
+					text = <"تمثيل الوسائط المتعددة">
+					description = <"تمثيلات الاختبار الكلي عن طريق الوسائط المتعددة مثل: الصورة, الصوت, و الفيديو">
+				>
+				["at0017"] = <
+					text = <"المعمل المستقبل لطلب الاختبار">
+					description = <"التفاصيل الديموغرافية عن المعمل المسئول عن الاختبار. قد يتضمن معلومات عن معامل أخرى ثانوية.">
+				>
+				["at0035"] = <
+					text = <"*Copied Provider (en)">
+					description = <"*Details of the clinician or organisation who will receive a copy of the pathology test result. (en)">
+				>
+				["at0037"] = <
+					text = <"مؤقت">
+					description = <"هذه هي النتيجة المبدئية أو المؤقتة - المزيد من التحديثات للنتيجة متوقَّعة أو منتظَرة">
+				>
+				["at0038"] = <
+					text = <"نهائية">
+					description = <"هذه هي النتيجة النهائية. لا يوجد المزيد من التعديلات المتوقَّعة">
+				>
+				["at0040"] = <
+					text = <"بعد التصحيح – معدَّلة">
+					description = <"هذا هو تصحيح لابد و أن يحل محلّ أي نتائج سابقة">
+				>
+				["at0057"] = <
+					text = <"التفسير الإجمالي">
+					description = <"تعليق تفسيري إجمالي حول هذا الاختبار">
+				>
+				["at0062"] = <
+					text = <"عنصر معرِّف فريد بواسطة طالب الاختبار">
+					description = <"العنصر التعريفي الفريد الذي يتم إعطاؤه للأمر بالاختبار بواسطة من يقوم بإجراء الأمر. مكافئ للعنصر التعريفي للأمر بواسطة من يقوم بطلب إجرائه.">
+				>
+				["at0063"] = <
+					text = <"عنصر معرِّف فريد بواسطة مستقبل الاختبار">
+					description = <"العنصر التعريفي الذي يتم إعطاؤه للأمر بالاختبار بواسطة منفذ الاختبار, عادةً النظام المعلومات الخاص بالمعمل. يكافئ رقم الإضافة الخاص بـ دايكوم, و معرِّف أمر الاختبار ">
+				>
+				["at0065"] = <
+					text = <"تفاصيل العيِّنة">
+					description = <"تفاصيل العينة حيث جميع النتائج مشتقة من نفس العينة">
+				>
+				["at0068"] = <
+					text = <"العنصر التعريفي الخاص بنتيجة الاختبار">
+					description = <"العنصر التعريفي الذي تم إعطاؤه لنتيجة اختبار معملي خاص بالباثولوجيا – المَرَضية">
+				>
+				["at0073"] = <
+					text = <"حالة الاختبار">
+					description = <"حالة الاختبار المعملي ككل">
+				>
+				["at0074"] = <
+					text = <"مُلغاة">
+					description = <"تم إلغاء الاختبار و لم يتم استكماله بعد ذلك.">
+				>
+				["at0075"] = <
+					text = <"تاريخ و وقت إصدار النتيجة">
+					description = <"التاريخ و / أو الوقت الذي تم فيه إصدار النتيجة لحالة الاختبار المسجَّلة.">
+					comment = <"التاريخ و الوقت المتعلق بحالة النتائج هو من النقاط المفيدة للتحكم في الروايات المتعددة و النتائج التراكمية الخاصة بالتقرير.">
+				>
+				["at0077"] = <
+					text = <"الخدمة التشخيصية">
+					description = <"نوع الخدمة التشخيصية - مستوى عالي من التشخيص - مثلا: الكيمياء الحيوية و الدمويات">
+				>
+				["at0078"] = <
+					text = <"النتيجة">
+					description = <"نتيجة الاختبار">
+				>
+				["at0078.1"] = <
+					text = <"*Result Value(en)">
+					description = <"*Actual value of the result.(en)">
+				>
+				["at0078.2"] = <
+					text = <"*Result Value(en)">
+					description = <"*Actual value of the result.(en)">
+				>
+				["at0078.3"] = <
+					text = <"*Result Value(en)">
+					description = <"*Actual value of the result.(en)">
+				>
+				["at0078.4"] = <
+					text = <"*Result Value(en)">
+					description = <"*Actual value of the result.(en)">
+				>
+				["at0078.5"] = <
+					text = <"*Result Value(en)">
+					description = <"*Actual value of the result.(en)">
+				>
+				["at0078.6"] = <
+					text = <"*Result Value(en)">
+					description = <"*Actual value of the result.(en)">
+				>
+				["at0078.7"] = <
+					text = <"*Result Value(en)">
+					description = <"*Actual value of the result.(en)">
+				>
+				["at0078.8"] = <
+					text = <"*Result Value(en)">
+					description = <"*Actual value of the result.(en)">
+				>
+				["at0090"] = <
+					text = <"الطالب">
+					description = <"تفاصيل حول الطبيب السريري أو المؤسسة التي تطلب الاختبار المعملي.">
+				>
+				["at0094"] = <
+					text = <"*Test Request Details">
+					description = <"*Details concerning a single pathology test requested.">
+					comment = <"*Usually there is one test request (or \"order\") for each result, however in some circumstances multiple test requests may be represented using a single Pathology test result archetype.">
+				>
+				["at0095"] = <
+					text = <"*Result Group">
+					description = <"*A group of results.">
+					comment = <"*If a name or code is used, it is provided by run-time re-naming of the Results may be grouped by specimen, or by some other name or code to describe what binds all the results together. 'Result group' element or may be fixed in a specialised archetype or template. Coding with a terminology, potentially a pre-coordinated term including specimen type, is preferred where possible for the name. Should be coded with LOINC or SNOMED CT.">
+				>
+				["at0096"] = <
+					text = <"*Result">
+					description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+					comment = <"*Results include whatever specific data items pathology labs report as part of the clinical service; it is not confined to measurements. The result is identified by run-time re-naming of the 'Result group' element or may be fixed in a specialised archetype or template. Coding with a terminology, potentially a pre-coordinated term including specimen type, is preferred where possible for the name. Should be coded with LOINC or SNOMED CT. Examples include: glucose, haemoglobin, phenotype, titre, or scatterplot image. If the test result is for a single analyte, then both the \"Test Result Name\" and the \"Result\" item will specify the same test.">
+				>
+				["at0096.1"] = <
+					text = <"*Total/HDL Cholesterol Ratio(en)">
+					description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+				>
+				["at0096.2"] = <
+					text = <"*LDL/HDL Cholesterol Ratio(en)">
+					description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+				>
+				["at0096.3"] = <
+					text = <"*VLDL Cholesterol(en)">
+					description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+				>
+				["at0096.4"] = <
+					text = <"*LDL Cholesterol Direct Assay(en)">
+					description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+				>
+				["at0096.5"] = <
+					text = <"*HDL Cholesterol(en)">
+					description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+				>
+				["at0096.6"] = <
+					text = <"*Total Cholesterol(en)">
+					description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+				>
+				["at0096.7"] = <
+					text = <"*Triglyceride(en)">
+					description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+				>
+				["at0096.8"] = <
+					text = <"*LDL Cholesterol Calculated(en)">
+					description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+				>
+				["at0097"] = <
+					text = <"*Specimen Detail">
+					description = <"*Details about the individual specimen to which these ‘Result group’ test results refer, where testing of multiple specimens is required.">
+				>
+				["at0098"] = <
+					text = <"*Pathological Diagnosis">
+					description = <"*Single word, phrase or brief description representing the narrative in the 'Conclusion'.">
+					comment = <"*Coding with a terminology is preferred, where possible.">
+				>
+				["at0100"] = <
+					text = <"*Clinical Information Provided">
+					description = <"*Description of clinical information available at the time of interpretation of results, which may include a link to the original clinical information provided in the test request.">
+				>
+				["at0101"] = <
+					text = <"*Test Comment">
+					description = <"*Additional narrative about the test not captured in other fields.">
+				>
+				["at0102"] = <
+					text = <"*Result Comment">
+					description = <"*Comment about the Result.">
+					comment = <"*May include statements about significant, unexpected or unreliable. values, or information about the source of the value where this may be relevant to the interpretation of the result.">
+				>
+				["at0103"] = <
+					text = <"*Reference Range Guidance">
+					description = <"*Additional advice on the applicability of the reference range.">
+				>
+				["at0106"] = <
+					text = <"*Test Requested Name">
+					description = <"*Identification of pathology test requested, where the test requested differs from the test actually performed.">
+				>
+				["at0107"] = <
+					text = <"*Registered">
+					description = <"*No result yet available.">
+				>
+				["at0108"] = <
+					text = <"*Result Value Status">
+					description = <"*The status of the result value.">
+					comment = <"*Allows a single test result to contain multiple individual results each with their own status.">
+				>
+				["at0110"] = <
+					text = <"*Test Procedure">
+					description = <"*Additional structured details of pathology test methodology followed. For example, structured details about the laboratory method and data interpretation used.">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0.111"] = <
+					text = <"Point of Care Device used">
+					description = <"The test was performed using a point of care device or a home-based device.">
+				>
+				["at0.112"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0.113"] = <
+					text = <"Fasting State">
+					description = <"A fasting specimen was used for the measurement.">
+				>
+				["at0.114"] = <
+					text = <"Duration of Fasting">
+					description = <"The duration of fasting completed by the test subject prior to the sample being taken.">
+				>
+				["at0000"] = <
+					text = <"Pathology Test Result">
+					description = <"The findings and interpretation of pathology tests performed on patient-related specimens.">
+					comment = <"This archetype may be used to record a single valued test, but will often be specialised or templated to represent multiple value or 'panel' tests. This archetype also acts as the parent for specialisations appropriate for more specific laboratory tests, e.g. microbiology, histopathology.">
+				>
+				["at0000.1"] = <
+					text = <"Lipid Studies Test Result">
+					description = <"The findings and interpretation of bochemical lipid study test results.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Any event.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Test Result Name">
+					description = <"Identification of the pathology test performed, sometimes including specimen type and patient state.">
+					comment = <"A test result may be for a single analyte, or a group of items, including panel tests. Coding with a terminology, potientially a pre-coordinated term including specimen type, is preferred, where possible. May be coded with LOINC or Snomed-CT. Examples include \"Glucose\", \"Urea and Electrolytes\", \"Swab\",  “Cortisol (am)” or \"Liver Biopsy\".">
+				>
+				["at0010"] = <
+					text = <"Test Result Representation">
+					description = <"Rich text representation of the entire result as issued by the diagnostic service.">
+					comment = <"Multiple formats are allowed but they must be semantically equivalent.">
+				>
+				["at0017"] = <
+					text = <"Receiving Laboratory">
+					description = <"Demographic details of the laboratory with responsibility for the pathology test.">
+				>
+				["at0035"] = <
+					text = <"Copied Provider">
+					description = <"Details of the clinician or organisation who will receive a copy of the pathology test result.">
+				>
+				["at0037"] = <
+					text = <"Interim">
+					description = <"This is an initial or interim result: data may be missing or verification not been performed.">
+				>
+				["at0038"] = <
+					text = <"Final">
+					description = <"The result is complete and verified by the responsible pathologist.">
+				>
+				["at0040"] = <
+					text = <"Amended">
+					description = <"The result has been modified subsequent to being Final, and is complete and verified by the responsible pathologist.">
+				>
+				["at0057"] = <
+					text = <"Conclusion">
+					description = <"Concise and clinically contextualised narrative interpretation of the pathology test results.">
+				>
+				["at0062"] = <
+					text = <"Requester Order Identifier">
+					description = <"The local ID assigned to the order by the order requester.">
+					comment = <"Equivalent to the Placer Order Identifier.">
+				>
+				["at0063"] = <
+					text = <"Receiver Order Identifier">
+					description = <"The local ID assigned to the test order by the order filler, usually by the Laboratory Information System (LIS).">
+					comment = <"Assigning an identifier to a request by the Radiology lnformation System enables tracking progress of the request and enables linking results to requests. It also provides a reference to assist with enquiries and it is usually equivalent to the HL7 Filler Order Identifier.">
+				>
+				["at0065"] = <
+					text = <"Specimen Detail">
+					description = <"Details about the specimen if all individual test results are derived from the same specimen. If the specimen type is sufficiently specified with a code in the Test result name, then this additional data is not required.  If there are multiple specimens, these may be represented per 'Result group'.">
+				>
+				["at0068"] = <
+					text = <"Laboratory Test Result Identifier">
+					description = <"The identifier given to the laboratory test result of a pathology investigation.">
+				>
+				["at0073"] = <
+					text = <"Overall Test Result Status">
+					description = <"The publication status of the entire pathology test result.">
+				>
+				["at0074"] = <
+					text = <"Cancelled/Aborted">
+					description = <"The result is unavailable because the test was not started or not completed.">
+				>
+				["at0075"] = <
+					text = <"DateTime Result Issued">
+					description = <"The date and/or time that the entire result was issued for the recorded ‘Overall Test result status’.">
+				>
+				["at0077"] = <
+					text = <"Diagnostic Service">
+					description = <"The diagnostic service that performs the examination.">
+					comment = <"For example, biochemistry, haematology. Coding with a terminology is desirable, where possible.">
+				>
+				["at0078"] = <
+					text = <"Result Value">
+					description = <"Actual value of the result.">
+					comment = <"Most result values will be numerical measurements, but others may be coded concepts, free text, or multimedia images.">
+				>
+				["at0078.1"] = <
+					text = <"Result Value">
+					description = <"Actual value of the result.">
+				>
+				["at0078.2"] = <
+					text = <"Result Value">
+					description = <"Actual value of the result.">
+				>
+				["at0078.3"] = <
+					text = <"Result Value">
+					description = <"Actual value of the result.">
+				>
+				["at0078.4"] = <
+					text = <"Result Value">
+					description = <"Actual value of the result.">
+				>
+				["at0078.5"] = <
+					text = <"Result Value">
+					description = <"Actual value of the result.">
+				>
+				["at0078.6"] = <
+					text = <"Result Value">
+					description = <"Actual value of the result.">
+				>
+				["at0078.7"] = <
+					text = <"Result Value">
+					description = <"Actual value of the result.">
+				>
+				["at0078.8"] = <
+					text = <"Result Value">
+					description = <"Actual value of the result.">
+				>
+				["at0090"] = <
+					text = <"Requester">
+					description = <"Details of the clinician or organisation requesting the pathology test result.">
+				>
+				["at0094"] = <
+					text = <"Test Request Details">
+					description = <"Details concerning a single pathology test requested.">
+					comment = <"Usually there is one test request (or \"order\") for each result, however in some circumstances multiple test requests may be represented using a single Pathology test result archetype.">
+				>
+				["at0095"] = <
+					text = <"Result Group">
+					description = <"A group of results.">
+					comment = <" If a name or code is used, it is provided by run-time re-naming of the Results may be grouped by specimen, or by some other name or code to describe what binds all the results together. 'Result group' element or may be fixed in a specialised archetype or template. Coding with a terminology, potentially a pre-coordinated term including specimen type, is preferred where possible for the name. Should be coded with LOINC or SNOMED CT.">
+				>
+				["at0096"] = <
+					text = <"Result">
+					description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+					comment = <"Results include whatever specific data items pathology labs report as part of the clinical service; it is not confined to measurements. The result is identified by run-time re-naming of the 'Result group' element or may be fixed in a specialised archetype or template. Coding with a terminology, potentially a pre-coordinated term including specimen type, is preferred where possible for the name. Should be coded with LOINC or SNOMED CT. Examples include: glucose, haemoglobin, phenotype, titre, or scatterplot image. If the test result is for a single analyte, then both the \"Test Result Name\" and the \"Result\" item will specify the same test.">
+				>
+				["at0096.1"] = <
+					text = <"Total/HDL Cholesterol Ratio">
+					description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+				>
+				["at0096.2"] = <
+					text = <"LDL/HDL Cholesterol Ratio">
+					description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+				>
+				["at0096.3"] = <
+					text = <"VLDL Cholesterol">
+					description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+				>
+				["at0096.4"] = <
+					text = <"LDL Cholesterol Direct Assay">
+					description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+				>
+				["at0096.5"] = <
+					text = <"HDL Cholesterol">
+					description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+				>
+				["at0096.6"] = <
+					text = <"Total Cholesterol">
+					description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+				>
+				["at0096.7"] = <
+					text = <"Triglyceride">
+					description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+				>
+				["at0096.8"] = <
+					text = <"LDL Cholesterol Calculated">
+					description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+				>
+				["at0097"] = <
+					text = <"Specimen Detail">
+					description = <"Details about the individual specimen to which these ‘Result group’ test results refer, where testing of multiple specimens is required.">
+				>
+				["at0098"] = <
+					text = <"Pathological Diagnosis">
+					description = <"Single word, phrase or brief description representing the narrative in the 'Conclusion'.">
+					comment = <"Coding with a terminology is preferred, where possible.">
+				>
+				["at0100"] = <
+					text = <"Clinical Information Provided">
+					description = <"Description of clinical information available at the time of interpretation of results, which may include a link to the original clinical information provided in the test request.">
+				>
+				["at0101"] = <
+					text = <"Test Comment">
+					description = <"Additional narrative about the test not captured in other fields.">
+				>
+				["at0102"] = <
+					text = <"Result Comment">
+					description = <"Comment about the Result.">
+					comment = <"May include statements about significant, unexpected or unreliable. values, or information about the source of the value where this may be relevant to the interpretation of the result.">
+				>
+				["at0103"] = <
+					text = <"Reference Range Guidance">
+					description = <"Additional advice on the applicability of the reference range.">
+				>
+				["at0106"] = <
+					text = <"Test Requested Name">
+					description = <"Identification of pathology test requested, where the test requested differs from the test actually performed.">
+				>
+				["at0107"] = <
+					text = <"Registered">
+					description = <"No result yet available.">
+				>
+				["at0108"] = <
+					text = <"Result Value Status">
+					description = <"The status of the result value.">
+					comment = <"Allows a single test result to contain multiple individual results each with their own status.">
+				>
+				["at0110"] = <
+					text = <"Test Procedure">
+					description = <"Additional structured details of pathology test methodology followed. For example, structured details about the laboratory method and data interpretation used.">
+				>
+			>
+		>
+	>

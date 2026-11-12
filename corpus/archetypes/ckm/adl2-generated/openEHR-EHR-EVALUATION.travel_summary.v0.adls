@@ -1,0 +1,217 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f826ad57-2084-4b29-88ec-2e43bb6a07fc; build_uid=ddaf1548-ad41-4c27-8149-3486461f47cf)
+    openEHR-EHR-EVALUATION.travel_summary.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-09-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"29EFEFEC1D799A878F79563A0F65AD8D">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the places visited by an individual that may inform a healthcare provider regarding the risk of infectious disease or other health-related exposure.">
+            use = <"Use to gradually build up a record of the places visited by an individual, that may inform a healthcare provider regarding the risk of infectious disease or other health-related exposure.
+
+This archetype has been designed to build a record related to a single 'home base'. If the individual moves to live in a significantly different location, the associated health risks may change and it may be useful to start another instance of this archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Travel summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Home base
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Never left home base
+                        value matches {
+                            DV_BOOLEAN[at9001] matches {
+                                value matches {True}
+                            }
+                        }
+                    }
+                    CLUSTER[at0004] matches {    -- Trip detail
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Date of departure
+                                value matches {
+                                    DV_DATE_TIME[at9002]
+                                }
+                            }
+                            CLUSTER[at0006] matches {    -- Per location
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Country
+                                        value matches {
+                                            DV_TEXT[at9003]
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- State/Region
+                                        value matches {
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- City
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Date of entry
+                                        value matches {
+                                            DV_DATE_TIME[at9006]
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Date of exit
+                                        value matches {
+                                            DV_DATE_TIME[at9007]
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0014] matches {    -- Return transport
+                                value matches {
+                                    DV_TEXT[at9010]
+                                }
+                            }
+                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Date of return
+                                value matches {
+                                    DV_DATE_TIME[at9011]
+                                }
+                            }
+                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9012]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0017] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0018] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE[at9013]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Travel summary">
+                description = <"A summary of travel for an individual.">
+            >
+            ["at0002"] = <
+                text = <"Home base">
+                description = <"The location at which the individual usually resides or regards as their home base.">
+            >
+            ["at0003"] = <
+                text = <"Never left home base">
+                description = <"The individual has never left the location identified as their home country or region.">
+                comment = <"This implies that the individual has not been subjected to health related travel risk.">
+            >
+            ["at0004"] = <
+                text = <"Trip detail">
+                description = <"Details about a single trip away from the home base.">
+                comment = <"The trip has a single departure and return date to their home base. A trip may include visiting many individual places, and these details should be recorded in the Itinerary.">
+            >
+            ["at0005"] = <
+                text = <"Date of departure">
+                description = <"The date when the individual left their home base.">
+            >
+            ["at0006"] = <
+                text = <"Per location">
+                description = <"Details about a single location visited on a trip.">
+            >
+            ["at0007"] = <
+                text = <"Country">
+                description = <"The country visited.">
+            >
+            ["at0008"] = <
+                text = <"State/Region">
+                description = <"The region visited.">
+                comment = <"Different regions within the same country maybe identified if they potentially pose different health risks.">
+            >
+            ["at0009"] = <
+                text = <"City">
+                description = <"The city visited.">
+                comment = <"Different cities within the same country or region maybe identified if they potentially pose different health risks.">
+            >
+            ["at0010"] = <
+                text = <"Date of entry">
+                description = <"Date of entry to the identified location.">
+            >
+            ["at0011"] = <
+                text = <"Date of exit">
+                description = <"Date of exit from the identified location.">
+            >
+            ["at0012"] = <
+                text = <"Description">
+                description = <"Narrative description about the visit to the location, especially about potential exposure to health risks.">
+            >
+            ["at0013"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the stay at the identified location, not captured in other fields">
+            >
+            ["at0014"] = <
+                text = <"Return transport">
+                description = <"Details about how the individual returned to their home base.">
+                comment = <"This may be useful if it is necessary to use contact tracing. For example: the carrier and ID of a flight or ship.">
+            >
+            ["at0015"] = <
+                text = <"Date of return">
+                description = <"The date when the individual returned back to their home base.">
+            >
+            ["at0016"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the whole trip, not captured in other fields">
+            >
+            ["at0018"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0019"] = <
+                text = <"Last updated">
+                description = <"The date this health risk assessment was last updated.">
+            >
+        >
+    >

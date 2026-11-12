@@ -1,0 +1,248 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f4c54e11-4a41-4937-b220-cbbb1630e7fb; build_uid=88b090e0-6f08-4359-84e9-3125b094a69e)
+    openEHR-EHR-OBSERVATION.body_weight-birth.v1.0.0
+
+specialize
+    openEHR-EHR-OBSERVATION.body_weight.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jasmin Buck, Sebastian Garde">
+                ["organisation"] = <"University of Heidelberg, Central Queensland University">
+            >
+        >
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            author = <
+                ["name"] = <"Igor Lizunov">
+                ["email"] = <"i.lizunov@infinnity.ru">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["es-cl"] = <
+            language = <[ISO_639-1::es-cl]>
+            author = <
+                ["name"] = <"Sergio Carmona">
+            >
+        >
+        ["hu"] = <
+            language = <[ISO_639-1::hu]>
+            author = <
+                ["name"] = <"Gabor Szabo">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics, Australia">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2006-03-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sebastian Garde, Ocean Informatics, Germany (Editor)", "Omer Hotomaroglu, Turkey (Editor)", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Ian McNicoll, Ocean Informatics, United Kingdom (Editor)">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"54307987BF6869546E83BDE5F03FC9A0">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation des Geburtsgewichtes einer Person.">
+            keywords = <"Neugeborenes", "Geburt">
+            use = <"Messung des Gewichts zum Zeitpunkt der Geburt ohne Kleidung">
+            misuse = <"Nur für das Geburtsgewicht - für alle anderen Messungen ist OBSERVATION.weight zu benutzen ">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-cl"] = <
+            language = <[ISO_639-1::es-cl]>
+            purpose = <"Registrar el peso de una persona al nacer ">
+            keywords = <"neonato", "nacimiento">
+            use = <"Medir el peso del nacimiento ">
+            misuse = <"Sólo para peso al nacer - Usar OBSERVACIÓN. peso para todas  las otras medidas 
+
+
+
+">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the weight of a person at birth.">
+            keywords = <"neonate", "birth", "weight">
+            use = <"Naked birth weight measurement.">
+            misuse = <"Only for weight at birth - use OBSERVATION.weight for all other measurements.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            purpose = <"
+Для записи веса человека при рождении.">
+            keywords = <"новорожденный", "рождение">
+            use = <"Измерение БЕЗ одежды, пеленок и памперсов.">
+            misuse = <"Только для веса при рождении. Для других измерений использовать observation.body_weight.v1">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل وزن الشخص عند الوضع/ الولادة">
+            keywords = <"حديث الولادة", "الولادة/ الوضع", "الوزن">
+            use = <"قياس الوزن عند الولادة في حالة أن الطفل لا يزال مُعَرَّى">
+            misuse = <"يستخدم فقط لقياس الوزن عند الولادة - استخدم نموذج ملاحظة.الوزن لجميع القياسات الأخرى">
+            copyright = <"© openEHR Foundation">
+        >
+        ["hu"] = <
+            language = <[ISO_639-1::hu]>
+            purpose = <"Egy személy születési súlyának lejegyzésére.">
+            keywords = <"*újszülött", "*születés", "*súly">
+            use = <"Meztelen test születési súlyának mérésére.">
+            misuse = <"Csak a születési súly feljegyzésére - használja az OBSERVATION.weight archetípust minden más méréshez.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] occurrences matches {0..1} matches {    -- Body weight at birth
+        /data[at0002]/events cardinality matches {1; unordered} matches {
+            POINT_EVENT[at0003.1] occurrences matches {1} matches {    -- Birth
+                offset matches {
+                    DV_DURATION[at0.9005] matches {
+                        value matches {PT0S; PT0S}
+                    }
+                }
+                /data[at0001]/items matches {
+                    ELEMENT[at0004.1] occurrences matches {0..1} matches {    -- Birth weight
+                        value matches {
+                            DV_QUANTITY[at0.9006] matches {
+                                property matches {[at9000]}
+                                [magnitude, units] matches {
+                                    [{|0.0..10.0|}, {"kg"}],
+                                    [{|0.0..10000.0|}, {"gm"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0024] matches {
+                        value matches {
+                            DV_TEXT[at0.9002]
+                        }
+                    }
+                }
+                /state[at0008]/items matches {
+                    ELEMENT[at0009] matches {
+                        value matches {
+                            DV_CODED_TEXT[at0.9003] matches {
+                                defining_code matches {[ac9001; at12]}
+                            }
+                        }
+                    }
+                    ELEMENT[at0025] matches {
+                        value matches {
+                            DV_TEXT[at0.9004]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Body weight at birth(en)">
+                description = <"*Total body weight - a surrogate for naked body weight at birth.(en)">
+            >
+            ["at0003.1"] = <
+                text = <"*Birth(en)">
+                description = <"*The event of birth.(en)">
+            >
+            ["at0004.1"] = <
+                text = <"*Birth weight(en)">
+                description = <"*The weight of the whole body at birth.(en)">
+            >
+        >
+        ["ru"] = <
+            ["at0000.1"] = <
+                text = <"Вес тела при рождении">
+                description = <"Общий вес тела при рождении, без одежды.">
+            >
+            ["at0003.1"] = <
+                text = <"*Birth(en)">
+                description = <"*The event of birth.(en)">
+            >
+            ["at0004.1"] = <
+                text = <"Вес при рождении">
+                description = <"Вес всего тела при рождении.">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Body weight at birth">
+                description = <"Total body weight - a surrogate for naked body weight at birth.">
+            >
+            ["at0003.1"] = <
+                text = <"Birth">
+                description = <"The event of birth.">
+            >
+            ["at0004.1"] = <
+                text = <"Birth weight">
+                description = <"The weight of the whole body at birth.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000.1"] = <
+                text = <"وزن الجسم عند الولادة / الوضع">
+                description = <"إجمالي وزن الجسم - بديل عن وزن الجسم المُعَّرى عند الولادة/ الوضع">
+            >
+            ["at0003.1"] = <
+                text = <"الولادة/ الوضع">
+                description = <"واقعة الولادة/ الوضع">
+            >
+            ["at0004.1"] = <
+                text = <"الوزن عند الولادة/ الوضع">
+                description = <"وزن الجسم الكلي عند الولادة/ الوضع">
+            >
+        >
+        ["es-cl"] = <
+            ["at0000.1"] = <
+                text = <"*Body weight at birth(en)">
+                description = <"*Total body weight - a surrogate for naked body weight at birth.(en)">
+            >
+            ["at0003.1"] = <
+                text = <"*Birth(en)">
+                description = <"*The event of birth.(en)">
+            >
+            ["at0004.1"] = <
+                text = <"*Birth weight(en)">
+                description = <"*The weight of the whole body at birth.(en)">
+            >
+        >
+        ["hu"] = <
+            ["at0000.1"] = <
+                text = <"Születéskori testsúly">
+                description = <"Teljes súly - születéskori meztelen test súlya.">
+            >
+            ["at0003.1"] = <
+                text = <"Születés">
+                description = <"A születés eseménye">
+            >
+            ["at0004.1"] = <
+                text = <"Születési súly">
+                description = <"A teljes test súlya születéskor.">
+            >
+        >
+    >

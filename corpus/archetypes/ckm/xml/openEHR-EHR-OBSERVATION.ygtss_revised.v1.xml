@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -56,8 +56,7 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </language>
       <purpose>For å registrere resultatene for hvert parameter, Total poengskår for tics og Global alvorlighetsgrad skår.</purpose>
       <keywords>tics, score</keywords>
-      <use>Brukes for å registrere resultatene for hvert parameter, Total poengskår for tics og Global alvorlighetsgrad skår.&#xD;
-</use>
+      <use>Brukes for å registrere resultatene for hvert parameter, Total poengskår for tics og Global alvorlighetsgrad skår.</use>
       <misuse />
       <copyright />
     </details>
@@ -6838,10 +6837,7 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
                     </occurrences>
                     <node_id />
                     <item xsi:type="C_DURATION">
-                      <range>
-                        <lower_unbounded>true</lower_unbounded>
-                        <upper_unbounded>true</upper_unbounded>
-                      </range>
+                      <value>P1W</value>
                     </item>
                   </children>
                 </attributes>
@@ -6984,7 +6980,7 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0002">
         <items id="text">Over the past week</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0003">
         <items id="text">Tree</items>
@@ -7001,43 +6997,43 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0007">
         <items id="text">Eye blinking</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Eye movements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Nose movements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Facial grimace</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Head jerks/movements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Shoulder shrugs</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Arm movements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Hand movements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Abdominal tensing</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Leg, foot, or toe movements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Name</items>
@@ -7054,55 +7050,55 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0030">
         <items id="text">Eye movements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Mouth movements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Facial movements or expressions</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Head gestures or movements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Shoulder movements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Arm movements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Hand movements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Writing tics</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Dystonic postures</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Bending or gyrating</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Rotating</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Leg or foot or toe movements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Blocking</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Tic related compulsive behaviors</items>
@@ -7110,19 +7106,19 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0058">
         <items id="text">Copropraxia</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Self-abusive behavior</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Paroxysms of tics (displays)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">Paroxysms of tics duration</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Complex Phonic Symptoms Checklist</items>
@@ -7140,35 +7136,35 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0070">
         <items id="text">Coughing</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Throat clearing</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0072">
         <items id="text">Sniffing</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0073">
         <items id="text">Snorting</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0074">
         <items id="text">Grunting</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0075">
         <items id="text">Gulping</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0076">
         <items id="text">Whistling</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0077">
         <items id="text">Humming</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0078">
         <items id="text">Mouth noises</items>
@@ -7176,11 +7172,11 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0079">
         <items id="text">Burping</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0080">
         <items id="text">Hiccups</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0081">
         <items id="text">Atypical breathing tics</items>
@@ -7260,7 +7256,7 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0102">
         <items id="text">Disinhibited behavior</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0103">
         <items id="text">Disinhibited behavior description</items>
@@ -7280,11 +7276,11 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0107">
         <items id="text">Score</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0108">
         <items id="text">Number</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">None</items>
@@ -7312,7 +7308,7 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0115">
         <items id="text">Frequency</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0116">
         <items id="text">None</items>
@@ -7340,7 +7336,7 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0122">
         <items id="text">Intensity</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0123">
         <items id="text">None</items>
@@ -7368,7 +7364,7 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0129">
         <items id="text">Complexity</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0130">
         <items id="text">None</items>
@@ -7396,7 +7392,7 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0136">
         <items id="text">Interference</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0137">
         <items id="text">None</items>
@@ -7424,11 +7420,11 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0143">
         <items id="text">Impairment scale</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0144">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0145">
         <items id="text">Minimal</items>
@@ -7469,15 +7465,15 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0154">
         <items id="text">Motor score</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0155">
         <items id="text">Phonic score</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0158">
         <items id="text">Mouth movements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0159">
         <items id="text">Chirping or other bird noises description</items>
@@ -7699,7 +7695,7 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0002">
         <items id="text">I løpet av den siste uken</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0003">
         <items id="text">Tree</items>
@@ -7716,43 +7712,43 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0007">
         <items id="text">Blunking</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Øyebevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Nesebevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Ansiktsgrimaser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Hoderykninger/-bevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Skuldertrekninger</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Armbevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Håndbevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Spenning av magemuskler</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Ben-, fot- eller tåbevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Navn</items>
@@ -7769,55 +7765,55 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0030">
         <items id="text">Øyebevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Munnbevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Ansiktsbevegelser eller ansiktsuttrykk</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Hodegester eller -bevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Skulderbevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Armbevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Håndbevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Skrivetics</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Dystone stillinger</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Bøying eller snurring</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Rotering</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Ben-, fot- eller tåbevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Blokkering</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Tic-relatert tvangsmessig atferd</items>
@@ -7825,15 +7821,15 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0058">
         <items id="text">Kopropraksi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Selvskadende atferd</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Utbrudd av tics (fremstillinger)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">Utbrudd av tics</items>
@@ -7855,35 +7851,35 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0070">
         <items id="text">Hosting</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Harking</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0072">
         <items id="text">Snufsing</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0073">
         <items id="text">Snøfting</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0074">
         <items id="text">Grynting</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0075">
         <items id="text">Gulping</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0076">
         <items id="text">Plystring</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0077">
         <items id="text">Nynning</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0078">
         <items id="text">Munnlyder</items>
@@ -7891,11 +7887,11 @@ Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, 
       </items>
       <items code="at0079">
         <items id="text">Raping</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0080">
         <items id="text">Hikking</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0081">
         <items id="text">Atypiske pustetics</items>
@@ -7976,7 +7972,7 @@ stemmeleie/tone/volum.</items>
       </items>
       <items code="at0102">
         <items id="text">Uhemmet atferd</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0103">
         <items id="text">Beskrivelse av uhemmet atferd</items>
@@ -7996,11 +7992,11 @@ stemmeleie/tone/volum.</items>
       </items>
       <items code="at0107">
         <items id="text">Skår</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0108">
         <items id="text">Antall</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">Ingen</items>
@@ -8028,7 +8024,7 @@ stemmeleie/tone/volum.</items>
       </items>
       <items code="at0115">
         <items id="text">Frekvens</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0116">
         <items id="text">Ingen</items>
@@ -8056,7 +8052,7 @@ stemmeleie/tone/volum.</items>
       </items>
       <items code="at0122">
         <items id="text">Intensitet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0123">
         <items id="text">Ingen</items>
@@ -8076,8 +8072,7 @@ stemmeleie/tone/volum.</items>
       </items>
       <items code="at0127">
         <items id="text">Markert</items>
-        <items id="description">Tics er kraftigere enn sammenlignbare frivillige handlinger eller ytringer og har vanligvis en "overdreven" karakter. Slike tics kan ofte tiltrekke oppmerksomhet til individet på grunn av sin kraftige og overdrevne karakter.&#xD;
-</items>
+        <items id="description">Tics er kraftigere enn sammenlignbare frivillige handlinger eller ytringer og har vanligvis en "overdreven" karakter. Slike tics kan ofte tiltrekke oppmerksomhet til individet på grunn av sin kraftige og overdrevne karakter.</items>
       </items>
       <items code="at0128">
         <items id="text">Alvorlig</items>
@@ -8085,7 +8080,7 @@ stemmeleie/tone/volum.</items>
       </items>
       <items code="at0129">
         <items id="text">Kompleksitet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0130">
         <items id="text">Ingen</items>
@@ -8113,7 +8108,7 @@ stemmeleie/tone/volum.</items>
       </items>
       <items code="at0136">
         <items id="text">Interferens</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0137">
         <items id="text">Ingen</items>
@@ -8133,8 +8128,7 @@ stemmeleie/tone/volum.</items>
       </items>
       <items code="at0141">
         <items id="text">Markert</items>
-        <items id="description">Når tics forekommer, forstyrrer de hyppig atferds- eller taleflyten, og de avbryter noen ganger planlagte handlinger eller kommunikasjon.&#xD;
-</items>
+        <items id="description">Når tics forekommer, forstyrrer de hyppig atferds- eller taleflyten, og de avbryter noen ganger planlagte handlinger eller kommunikasjon.</items>
       </items>
       <items code="at0142">
         <items id="text">Alvorlig</items>
@@ -8142,16 +8136,15 @@ stemmeleie/tone/volum.</items>
       </items>
       <items code="at0143">
         <items id="text">Skala for funksjonsnedsettelse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0144">
         <items id="text">Ingen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0145">
         <items id="text">Minimal</items>
-        <items id="description">Tics assosiert med subtile vansker med selvtillit, familieliv, sosial aksept, eller fungering i skole eller på jobb (sjelden opprørt eller bekymret for tics med tanke på fremtiden, periodisk en svak økning av stress i familien på grunn av tics, venner eller bekjente kan noen ganger merke eller kommentere tics på en sårende måte.)&#xD;
-</items>
+        <items id="description">Tics assosiert med subtile vansker med selvtillit, familieliv, sosial aksept, eller fungering i skole eller på jobb (sjelden opprørt eller bekymret for tics med tanke på fremtiden, periodisk en svak økning av stress i familien på grunn av tics, venner eller bekjente kan noen ganger merke eller kommentere tics på en sårende måte.)</items>
       </items>
       <items code="at0146">
         <items id="text">Mild</items>
@@ -8188,15 +8181,15 @@ stemmeleie/tone/volum.</items>
       </items>
       <items code="at0154">
         <items id="text">Motorisk skår</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0155">
         <items id="text">Vokal skår</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0158">
         <items id="text">Munnbevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0159">
         <items id="text">Beskrivelse av kvitrelyder eller andre fuglelyder</items>
@@ -8409,4 +8402,3 @@ stemmeleie/tone/volum.</items>
     </term_definitions>
   </ontology>
 </archetype>
-

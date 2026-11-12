@@ -1,0 +1,1733 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2006-03-26</original_author>
+    <original_author id="name">Sam Heard</original_author>
+    <original_author id="organisation">Ocean Informatics</original_author>
+    <original_author id="email">sam.heard@oceaninformatics.com</original_author>
+    <other_contributors>Koray Atalag, University of Auckland, New Zealand</other_contributors>
+    <other_contributors>Rong Chen, Cambio Healthcare Systems, Sweden</other_contributors>
+    <other_contributors>Stephen Chu, NeHTA, Australia</other_contributors>
+    <other_contributors>Angela de Zwart, Orion Health, New Zealand</other_contributors>
+    <other_contributors>Graham Denyer, Australian Antarctic Division, Australia</other_contributors>
+    <other_contributors>Paul Donaldson, Nursing Informatics Australia, Australia</other_contributors>
+    <other_contributors>Sebastian Garde, Ocean Informatics, Germany</other_contributors>
+    <other_contributors>Sam Heard, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Evelyn Hovenga, EJSH Consulting, Australia</other_contributors>
+    <other_contributors>Eugene Igras, IRIS Systems, Inc., Canada</other_contributors>
+    <other_contributors>Athanasios Kleontas, Ergobyte Informatics, Greece</other_contributors>
+    <other_contributors>Shinji Kobayashi, Ehime University, Japan</other_contributors>
+    <other_contributors>Robert Legan, NEHTA, Australia</other_contributors>
+    <other_contributors>Heather Leslie, Ocean Informatics, Australia (Editor)</other_contributors>
+    <other_contributors>Rohan Martin, Ambulance Victoria, Australia</other_contributors>
+    <other_contributors>Ian McNicoll, Ocean Informatics, United Kingdom (Editor)</other_contributors>
+    <other_contributors>Jeroen Meintjens, Medisch Centrum Alkmaar, Netherlands</other_contributors>
+    <other_contributors>Monica Merchat, Hospital Cardiac Electrophysiology, MS Health Informatics Student, former ICU nurse, former Anesthesia Technician, United States</other_contributors>
+    <other_contributors>Arturo Romero, SESCAM, Spain</other_contributors>
+    <lifecycle_state>Rejected</lifecycle_state>
+    <other_details id="MD5-CAM-1.0.1">D134D7B194074ECADE281CDBE3541997</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Dokumentation der Frequenz und des Rhythmus des Herzens.</purpose>
+      <keywords>Frequenz</keywords>
+      <keywords>Herzfrequenz</keywords>
+      <keywords>Rhythmus</keywords>
+      <use>Zur allgemeinen Dokumentation der Herzfrequenz, besonders der elektrischen Frequenz.</use>
+      <misuse>Zur Dokumentation der mechanischen Frequenz Puls benutzen (OSBSERVATION.heart_reate-pulse.v1).</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ru</code_string>
+      </language>
+      <purpose>Для записи информации о частоте  и ритме  сердцечных сокращений.</purpose>
+      <keywords>ЧСС</keywords>
+      <keywords>ритм</keywords>
+      <keywords>сердечный ритм</keywords>
+      <keywords>частотат сердечных сокращений</keywords>
+      <use>Используется для записи измеренных характеристик, связанных с темпом и ритма сердца, в том числе простая констатация наличия сердечного ритма. Эти характеристики не регистрируются путем прямого наблюдения самого сердца, а подразумевают альтернативные источники, включая прямую аускультацию сердца или электрокардиограф, отражающий электрическую активность сердца.&#xD;
+Частота и ритм сердечных сокращений  (или специализация этого архетипа - Пульс), как правило, регистрируются в качестве одного из компонентов жизненно важных признаков - включая кровяное давление, дыхание, температуру и оксиметрию. Для каждого из этих понятий существуют специальные архетипы.</use>
+      <misuse>Не следует использовать для записи выводов о измеряемых частоте и ритме сердечных сокращений. Такого рода заявления, как, например, пациент находится в состоянии фибрилляция предсердий или тахикардии, должны быть записаны в других специальных архетипах, относящихся к категории ОЦЕНКА.&#xD;
+Не следует использовать для записи механической частоты сердечных сокращений, ритма и связанные с ними характеристик - это записывается используя специализацию этого архетипа - OBSERVATION.heart_rate-pulse.&#xD;
+Не используется для записи другой информации обширной системы обследования или оценки сердечно-сосудистой системы. Другие специфические архетипы используются для записи таких характеристик, как верхушечный толчок, шумы, результаты аускультаци и т.д.&#xD;
+Такие понятия, как максимальная или целевая частота сердечных сокращений, должны записываться в отдельных архетипах, предназначенных специально для осуществления оценки.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ar-sy</code_string>
+      </language>
+      <purpose>لتسجيل تفاصيل حول معدل و نظم القلب.</purpose>
+      <keywords>المعدل</keywords>
+      <keywords>معدل القلب</keywords>
+      <keywords>النظم</keywords>
+      <use>يستخدم لتسجيل الخصائص التي تم قياسها فيما يتعلق بمعدل و نظم القلب, بما في ذلك بيان بسيط حول وجود نبض و معدل ضربات القلب. و لا يتم استخدام هذه القراءات بالملاحظة المباشرة للقلب ذاته, و إنما يتنم استنباطها من مصادر بديلة تتضمن التسمع المباشر للقلب أو تخطيط كهربية القلب بما يعكس النشاط الكهربي للقلب.&#xD;
+معدل و نظم القلب ( أو تخصيصهما إلى النبض) عادة ما يتم تسجيلهم على أنهم يمثلون واحدا من العلامات الحياتية – و التي تتكون من ضغط الدم, التنفس, درجة الحرارة, و قياس التأكسج. و يوجد نماذج إضافية مخصصة لكل نوع من هذه المفاهيم.</use>
+      <misuse>لا يستخدم لتسجيل استنتاجات حول معدل و نظم القلب الذي تم قياسهما. و ينبغي تسجيل بيانات مثل (المريض يعاني من الرجفان الأذيني) أو (يعاني من تسرع ضربات القلب) في نماذج أخرى مخصصة و متعلقة بتقييم حالة المريض.&#xD;
+لا تستخدم لتسجيل معدل القلب الميكانيكي, أو النظم أو الخصائص الأخرى – و يتم تسجيل ذلك باستخدام تخصيص لهذا النموذج يسمى ملاحظة. معدل القلب – النبض.&#xD;
+لا يستخدم لتسجيل تفاصيل فحص أو تقييم أكثر شمولا للجهاز القلبي الوريدي. و يمكن أن تستخدم نماذج معينة أخرى لتسجيل خصائص مثل نبض قمة القلب, النفخات, و الموجودات عند التسمع, إلى آخره.&#xD;
+المفاهيم الأخرى مثل أقصى معدل للقلب, أو معدل القلب المستهدف ينبغي أن يتم تسجيلها في نماذج أخرى متعلقة بتقييم المجهود.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record the the measurement of the pulse rate and describe related characteristics.</purpose>
+      <keywords>rate</keywords>
+      <keywords>heart rate</keywords>
+      <keywords>rhythm</keywords>
+      <keywords>beat</keywords>
+      <keywords>pulse</keywords>
+      <use>Use to record the measurement of pulse rate and related characteristics, including a simple statement of presence or absence of a pulse.&#xD;
+&#xD;
+Pulse is commonly recorded as one component of Vital signs - comprising Blood Pressure, Respirations, Temperature, and Oximetry. There are additional specific archetypes for each of these concepts.&#xD;
+&#xD;
+Measurements such as average or maximum pulse rate over a period of time can be recorded using this archetype's interval event model within a template or at run-time.</use>
+      <misuse>Not to be used to record the rate, rhythm and related characteristics about the heart rate - this is recorded using the parent of this archetype OBSERVATION.heart_rate.&#xD;
+&#xD;
+Not to be used to record the heart rate in the context of an Electrocardiograph interpretation or report - this will be recorded using the OBSERVATION.ecg archetype.&#xD;
+&#xD;
+Not to be used to record other details of the broader cardiovascular examination or assessment.  Other specific archetypes will be used to record characteristics such as apex beat, murmurs, auscultatory findings etc.  &#xD;
+&#xD;
+Not to be used to record fetal heart rate - this is recorded using the OBSERVATION.fetal_heart archetype.&#xD;
+&#xD;
+Concepts such as Target Pulse Rate should be recorded in separate archetypes specifically related to goals and exercise assessment.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Jasmin Buck, Sebastian Garde</author>
+    <author id="organisation">University of Heidelberg, Central Queensland University</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ru</code_string>
+    </language>
+    <author id="name">Vyacheslav Mavrin</author>
+    <author id="organisation">JSC Comsoft</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ar-sy</code_string>
+    </language>
+    <author id="name">Mona Saleh</author>
+  </translations>
+  <archetype_id>
+    <value>openEHR-EHR-OBSERVATION.heart_rate-pulse.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000.1</concept>
+  <parent_archetype_id>
+    <value>openEHR-EHR-OBSERVATION.heart_rate.v1</value>
+  </parent_archetype_id>
+  <definition>
+    <rm_type_name>OBSERVATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000.1</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>HISTORY</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0002</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>events</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>EVENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0003</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>data</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ITEM_TREE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0001</node_id>
+                <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                  <rm_attribute_name>items</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at1005.1</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_BOOLEAN</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>value</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_PRIMITIVE_OBJECT">
+                            <rm_type_name>BOOLEAN</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <item xsi:type="C_BOOLEAN">
+                              <true_valid>true</true_valid>
+                              <false_valid>true</false_valid>
+                            </item>
+                          </children>
+                        </attributes>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0004.1</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_QUANTITY">
+                        <rm_type_name>DV_QUANTITY</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <property>
+                          <terminology_id>
+                            <value>openehr</value>
+                          </terminology_id>
+                          <code_string>382</code_string>
+                        </property>
+                        <list>
+                          <magnitude>
+                            <lower_included>true</lower_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>true</upper_unbounded>
+                            <lower>0.0</lower>
+                          </magnitude>
+                          <precision>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>0</lower>
+                            <upper>0</upper>
+                          </precision>
+                          <units>/min</units>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0005.1</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>defining_code</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_CODE_PHRASE">
+                            <rm_type_name>CODE_PHRASE</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <terminology_id>
+                              <value>local</value>
+                            </terminology_id>
+                            <code_list>at0006</code_list>
+                            <code_list>at0007</code_list>
+                            <code_list>at0008</code_list>
+                          </children>
+                        </attributes>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0.36</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0.27</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at1022.1</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </occurrences>
+                    <node_id>at1023.1</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0009.1</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <cardinality>
+                    <is_ordered>false</is_ordered>
+                    <is_unique>false</is_unique>
+                    <interval>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </interval>
+                  </cardinality>
+                </attributes>
+              </children>
+            </attributes>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>state</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ITEM_TREE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0012</node_id>
+                <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                  <rm_attribute_name>items</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0013.1</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>defining_code</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_CODE_PHRASE">
+                            <rm_type_name>CODE_PHRASE</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <assumed_value>
+                              <terminology_id>
+                                <value>local</value>
+                              </terminology_id>
+                              <code_string>at1001</code_string>
+                            </assumed_value>
+                            <terminology_id>
+                              <value>local</value>
+                            </terminology_id>
+                            <code_list>at1003</code_list>
+                            <code_list>at1001</code_list>
+                            <code_list>at1002</code_list>
+                            <code_list>at1000</code_list>
+                          </children>
+                        </attributes>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at1018.1</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="ARCHETYPE_SLOT">
+                    <rm_type_name>CLUSTER</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </occurrences>
+                    <node_id>at1017.1</node_id>
+                    <includes>
+                      <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.level_of_exertion(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+                      <expression xsi:type="EXPR_BINARY_OPERATOR">
+                        <type>Boolean</type>
+                        <operator>2007</operator>
+                        <precedence_overridden>false</precedence_overridden>
+                        <left_operand xsi:type="EXPR_LEAF">
+                          <type>String</type>
+                          <item xsi:type="xsd:string">archetype_id/value</item>
+                          <reference_type>attribute</reference_type>
+                        </left_operand>
+                        <right_operand xsi:type="EXPR_LEAF">
+                          <type>C_STRING</type>
+                          <item xsi:type="C_STRING">
+                            <pattern>openEHR-EHR-CLUSTER\.level_of_exertion(-[a-zA-Z0-9_]+)*\.v1</pattern>
+                          </item>
+                          <reference_type>constraint</reference_type>
+                        </right_operand>
+                      </expression>
+                    </includes>
+                  </children>
+                  <cardinality>
+                    <is_ordered>false</is_ordered>
+                    <is_unique>false</is_unique>
+                    <interval>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </interval>
+                  </cardinality>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>protocol</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0010</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at1019.1</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0.2</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at1013</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+            <excludes>
+              <string_expression>archetype_id/value matches {/.*/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>.*</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </excludes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="ar-sy">
+      <items code="at0.2">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0.27">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0.36">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0000">
+        <items id="text">معدل و نظم القلب</items>
+        <items id="description">خصائص معدل و نبض القلب.</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">*Heart Rate!(en)</items>
+        <items id="description">*Measurement of the heart rate and description of associated characteristics.!(en)</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*structure(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*history(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">إحدى الوقائع</items>
+        <items id="description">واقعة جنيسة - غير محدودة الملكية - و غير محددة.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">المعدل</items>
+        <items id="description">معدل ضربات القلب و يتم قياسه بضربة للدقيقة.</items>
+      </items>
+      <items code="at0004.1">
+        <items id="text">*! - Heart Rate(en)</items>
+        <items id="description">*The rate of the heart in beats per minute.(en)</items>
+      </items>
+      <items code="at0005">
+        <items id="text">نمط المعدل</items>
+        <items id="description">النَّظْم الملحوظ لضربات القلب.</items>
+      </items>
+      <items code="at0005.1">
+        <items id="text">*! - Regularity(en)</items>
+        <items id="description">*The observed regularity of the pulse.(en)</items>
+      </items>
+      <items code="at0006">
+        <items id="text">منتظم</items>
+        <items id="description">نَظْم القلب منتظم</items>
+      </items>
+      <items code="at0007">
+        <items id="text">غير منتظم كالمعتاد</items>
+        <items id="description">نظم القلب غير منتظم كالمعتاد</items>
+      </items>
+      <items code="at0008">
+        <items id="text">غير منتظم على غير العادة</items>
+        <items id="description">نظم القلب غير طبيعي بصورة مشوشة – فوضوية</items>
+      </items>
+      <items code="at0009">
+        <items id="text">تعليق</items>
+        <items id="description">تعليق حول معدل القلب و النظم</items>
+      </items>
+      <items code="at0009.1">
+        <items id="text">*! - Comment(en)</items>
+        <items id="description">*Comment about the pulse.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">*List(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0012">
+        <items id="text">*List(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0013">
+        <items id="text">الوضع</items>
+        <items id="description">وضع المريض عند قياس النبض</items>
+      </items>
+      <items code="at0013.1">
+        <items id="text">*! - Position(en)</items>
+        <items id="description">*The position of the patient when the pulse was recorded.(en)</items>
+      </items>
+      <items code="at1000">
+        <items id="text">مستلقٍ</items>
+        <items id="description">مستلقٍ</items>
+      </items>
+      <items code="at1001">
+        <items id="text">جالس</items>
+        <items id="description">جالس على السرير أو على كرسي</items>
+      </items>
+      <items code="at1002">
+        <items id="text">مضجع</items>
+        <items id="description">الشخص مضجع بزاوية 45 درجة و الأرجل مرتفعة</items>
+      </items>
+      <items code="at1003">
+        <items id="text">واقف</items>
+        <items id="description">واقف معتدل</items>
+      </items>
+      <items code="at1005">
+        <items id="text">يوجد نبض</items>
+        <items id="description">معدل ضربات القلب موجود - بمعني أن المعدل أكثر من صفر.</items>
+      </items>
+      <items code="at1005.1">
+        <items id="text">*! - Heart Beat Present?(en)</items>
+        <items id="description">*Is a heart beat present?(en)</items>
+      </items>
+      <items code="at1013">
+        <items id="text">الجهيزة</items>
+        <items id="description">تفاصيل حول الجهيزة المستخدمة لقياس معدل و نظم القلب.</items>
+      </items>
+      <items code="at1017">
+        <items id="text">المجهود</items>
+        <items id="description">تفاصيل حول المجهود الجسماني الذي يتم فعله في لحظة تسجيل معدل أو / و نظم ضربات القلب.</items>
+      </items>
+      <items code="at1017.1">
+        <items id="text">*! - Exertion(en)</items>
+        <items id="description">*Details about physical exertion being undertaken at the time of measuring the pulse.(en)</items>
+      </items>
+      <items code="at1018">
+        <items id="text">العوامل المربكة</items>
+        <items id="description">تعليق حول و تسجيل للعوامل الأخرى التي قد تؤثر على قياس معدل القلب و النظم. مثلا: مستوى القلق, الألم, الحمى (ارتفاع درجة الحرارة)... إلى آخره</items>
+      </items>
+      <items code="at1018.1">
+        <items id="text">*! - Confounding Factors(en)</items>
+        <items id="description">*Narrative description about any incidental factors that may be contributing to the pulse observations.(en)</items>
+      </items>
+      <items code="at1019">
+        <items id="text">الطريقة</items>
+        <items id="description">مصدر نبض القلب و نظمه الذين يتم تسجيلهما.</items>
+      </items>
+      <items code="at1019.1">
+        <items id="text">*! - Method(en)</items>
+        <items id="description">*Method used to measure the pulse.(en)</items>
+      </items>
+      <items code="at1022">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at1022.1">
+        <items id="text">*! - Clinical Description(en)</items>
+        <items id="description">*Narrative description of the pulse.(en)</items>
+      </items>
+      <items code="at1023">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at1023.1">
+        <items id="text">*! - Clinical Interpretation(en)</items>
+        <items id="description">*Single word, phrase or brief description representing the pulse findings.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="en">
+      <items code="at0.2">
+        <items id="text">Location of measurement</items>
+        <items id="description">The body site where the pulse was measured.</items>
+      </items>
+      <items code="at0.27">
+        <items id="text">Character</items>
+        <items id="description">The shape of the pulse wave on palpation.</items>
+        <items id="comment">For example, bounding, thready, slow-rising, water-hammer, collapsing etc.</items>
+      </items>
+      <items code="at0.36">
+        <items id="text">Volume</items>
+        <items id="description">The size or amplitude of the pulse.</items>
+      </items>
+      <items code="at0000">
+        <items id="text">Heart Rate</items>
+        <items id="description">Measurement of the heart rate and description of associated characteristics.</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">Pulse</items>
+        <items id="description">Measurement of the pulse rate and description of associated characteristics.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">history</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Any event</items>
+        <items id="description">Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Heart Rate</items>
+        <items id="description">The rate of the heart in beats per minute.</items>
+      </items>
+      <items code="at0004.1">
+        <items id="text">Pulse Rate</items>
+        <items id="description">The rate of the pulse in beats per minute.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Regularity</items>
+        <items id="description">The observed regularity of the pulse.</items>
+      </items>
+      <items code="at0005.1">
+        <items id="text">Regularity</items>
+        <items id="description">The observed regularity of the pulse.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Regular</items>
+        <items id="description">Pulse is regular.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Regularly irregular</items>
+        <items id="description">Pulse is regularly irregular.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Irregularly irregular</items>
+        <items id="description">Pulse is irregular in a chaotic manner.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Comment</items>
+        <items id="description">Comment about the pulse.</items>
+      </items>
+      <items code="at0009.1">
+        <items id="text">Comment</items>
+        <items id="description">Comment about the pulse.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">List</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0012">
+        <items id="text">List</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Position</items>
+        <items id="description">The position of the patient when the pulse was recorded.</items>
+      </items>
+      <items code="at0013.1">
+        <items id="text">Position</items>
+        <items id="description">The position of the patient when the pulse was recorded.</items>
+      </items>
+      <items code="at1000">
+        <items id="text">Lying</items>
+        <items id="description">Lying flat at the time of pulse measurement.</items>
+      </items>
+      <items code="at1001">
+        <items id="text">Sitting</items>
+        <items id="description">Sitting (for example on bed or chair) at the time of pulse measurement.</items>
+      </items>
+      <items code="at1002">
+        <items id="text">Reclining</items>
+        <items id="description">Reclining at the time of pulse measurement.</items>
+      </items>
+      <items code="at1003">
+        <items id="text">Standing</items>
+        <items id="description">Standing at the time of pulse measurement.</items>
+      </items>
+      <items code="at1005">
+        <items id="text">Heart Beat Present?</items>
+        <items id="description">Is a heart beat present?</items>
+        <items id="comment">The heart beat is present is implied as true if rate &gt;0.</items>
+      </items>
+      <items code="at1005.1">
+        <items id="text">Pulse Present?</items>
+        <items id="description">Is a pulse present?</items>
+      </items>
+      <items code="at1013">
+        <items id="text">Device</items>
+        <items id="description">Details about the device used to observe the heart rate and rhythm.</items>
+      </items>
+      <items code="at1017">
+        <items id="text">Exertion</items>
+        <items id="description">Details about physical exertion being undertaken at the time of measuring the pulse.</items>
+      </items>
+      <items code="at1017.1">
+        <items id="text">Exertion</items>
+        <items id="description">Details about physical exertion being undertaken at the time of measuring the pulse.</items>
+      </items>
+      <items code="at1018">
+        <items id="text">Confounding Factors</items>
+        <items id="description">Narrative description about any incidental factors that may be contributing to the pulse observations.</items>
+        <items id="comment">For example, presence of a pacemaker, level of anxiety; pain or fever etc.</items>
+      </items>
+      <items code="at1018.1">
+        <items id="text">Confounding Factors</items>
+        <items id="description">Narrative description about any incidental factors that may be contributing to the pulse observations.</items>
+      </items>
+      <items code="at1019">
+        <items id="text">Method</items>
+        <items id="description">Method used to measure the pulse.</items>
+        <items id="comment">For example, palpation or electronic monitoring.</items>
+      </items>
+      <items code="at1019.1">
+        <items id="text">Method</items>
+        <items id="description">Method used to measure the pulse.</items>
+      </items>
+      <items code="at1022">
+        <items id="text">Clinical Description</items>
+        <items id="description">Narrative description of the pulse.</items>
+      </items>
+      <items code="at1022.1">
+        <items id="text">Clinical Description</items>
+        <items id="description">Narrative description of the pulse.</items>
+      </items>
+      <items code="at1023">
+        <items id="text">Clinical Interpretation</items>
+        <items id="description">Single word, phrase or brief description representing the pulse findings.</items>
+        <items id="comment">Coding with a terminology is preferred, where possible. Examples include: Bradycardia, Extrasystoles or Sinus rhythm. Multiple statements are allowed.</items>
+      </items>
+      <items code="at1023.1">
+        <items id="text">Clinical Interpretation</items>
+        <items id="description">Single word, phrase or brief description representing the pulse findings.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0.2">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0.27">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0.36">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0000">
+        <items id="text">*Heart rate and rhythm(en)</items>
+        <items id="description">*The characteristics of the heart rate and rhythm.(en)</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">*Heart Rate!(en)</items>
+        <items id="description">*Measurement of the heart rate and description of associated characteristics.!(en)</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">History</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Any event(en)</items>
+        <items id="description">*Default and unspecified event.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">*Rate(en)</items>
+        <items id="description">*The rate of the heart in beats per minute.(en)</items>
+      </items>
+      <items code="at0004.1">
+        <items id="text">*! - Heart Rate(en)</items>
+        <items id="description">*The rate of the heart in beats per minute.(en)</items>
+      </items>
+      <items code="at0005">
+        <items id="text">*Rhythm pattern(en)</items>
+        <items id="description">*The observed rhythm of the heartbeat.(en)</items>
+      </items>
+      <items code="at0005.1">
+        <items id="text">*! - Regularity(en)</items>
+        <items id="description">*The observed regularity of the pulse.(en)</items>
+      </items>
+      <items code="at0006">
+        <items id="text">*Regular(en)</items>
+        <items id="description">*Heart rhythm is regular.(en)</items>
+      </items>
+      <items code="at0007">
+        <items id="text">*Regularly Irregular(en)</items>
+        <items id="description">*Heart rhythm is regularly irregular.(en)</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Unregulär unregulär</items>
+        <items id="description">Unregulär in einer chaotischen Art und Weise</items>
+      </items>
+      <items code="at0009">
+        <items id="text">*Comment(en)</items>
+        <items id="description">*Comment about the heart rate and rhythm.(en)</items>
+      </items>
+      <items code="at0009.1">
+        <items id="text">*! - Comment(en)</items>
+        <items id="description">*Comment about the pulse.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">List</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0012">
+        <items id="text">List</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Position</items>
+        <items id="description">Die Position des Patienten während der Messung der Herzfrequenz</items>
+      </items>
+      <items code="at0013.1">
+        <items id="text">*! - Position(en)</items>
+        <items id="description">*The position of the patient when the pulse was recorded.(en)</items>
+      </items>
+      <items code="at1000">
+        <items id="text">*Lying(en)</items>
+        <items id="description">*Lying supine.(en)</items>
+      </items>
+      <items code="at1001">
+        <items id="text">Sitzend</items>
+        <items id="description">Auf dem Bett oder einem Stuhl sitzend</items>
+      </items>
+      <items code="at1002">
+        <items id="text">Liegesitz</items>
+        <items id="description">Person sitzt im 45° Winkel mit erhöhten Beinen</items>
+      </items>
+      <items code="at1003">
+        <items id="text">Stehend</items>
+        <items id="description">Aufrecht stehend</items>
+      </items>
+      <items code="at1005">
+        <items id="text">*Heart rate present(en)</items>
+        <items id="description">*The heart rate is present (implied true if rate &gt;0).(en)</items>
+      </items>
+      <items code="at1005.1">
+        <items id="text">*! - Heart Beat Present?(en)</items>
+        <items id="description">*Is a heart beat present?(en)</items>
+      </items>
+      <items code="at1013">
+        <items id="text">*Device(en)</items>
+        <items id="description">*Details about the device used to measure heart rate and rhythm.(en)</items>
+      </items>
+      <items code="at1017">
+        <items id="text">*Exertion(en)</items>
+        <items id="description">*Details about physical exertion being undertaken at the time of recording heart rate and/or rhythm.(en)</items>
+      </items>
+      <items code="at1017.1">
+        <items id="text">*! - Exertion(en)</items>
+        <items id="description">*Details about physical exertion being undertaken at the time of measuring the pulse.(en)</items>
+      </items>
+      <items code="at1018">
+        <items id="text">*Confounding factors(en)</items>
+        <items id="description">*Comment on and record other incidental factors that may be contributing to the heart rate and rhythm measurement. For example, level of anxiety; pain or fever etc.(en)</items>
+      </items>
+      <items code="at1018.1">
+        <items id="text">*! - Confounding Factors(en)</items>
+        <items id="description">*Narrative description about any incidental factors that may be contributing to the pulse observations.(en)</items>
+      </items>
+      <items code="at1019">
+        <items id="text">*Method(en)</items>
+        <items id="description">*Source of heart rate and rhythm record.(en)</items>
+      </items>
+      <items code="at1019.1">
+        <items id="text">*! - Method(en)</items>
+        <items id="description">*Method used to measure the pulse.(en)</items>
+      </items>
+      <items code="at1022">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at1022.1">
+        <items id="text">*! - Clinical Description(en)</items>
+        <items id="description">*Narrative description of the pulse.(en)</items>
+      </items>
+      <items code="at1023">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at1023.1">
+        <items id="text">*! - Clinical Interpretation(en)</items>
+        <items id="description">*Single word, phrase or brief description representing the pulse findings.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="ru">
+      <items code="at0.2">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0.27">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0.36">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0000">
+        <items id="text">Частота и ритм сердечных сокращений</items>
+        <items id="description">Характеристики частоты и ритма сердечных сокращений.</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">*Heart Rate!(en)</items>
+        <items id="description">*Measurement of the heart rate and description of associated characteristics.!(en)</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Дерево</items>
+        <items id="description">@ внутреннийl @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">История</items>
+        <items id="description">@ внутреннийl @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Любое событие</items>
+        <items id="description">По умолчанию неопределённое событие.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Частота</items>
+        <items id="description">Частота сердечных сокращений в минуту.</items>
+      </items>
+      <items code="at0004.1">
+        <items id="text">*! - Heart Rate(en)</items>
+        <items id="description">*The rate of the heart in beats per minute.(en)</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Характер ритма</items>
+        <items id="description">Наблюдаемый ритм сердцебиений.</items>
+      </items>
+      <items code="at0005.1">
+        <items id="text">*! - Regularity(en)</items>
+        <items id="description">*The observed regularity of the pulse.(en)</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Регулярный</items>
+        <items id="description">Сердечный ритм регулярный.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Постоянно нерегулярный</items>
+        <items id="description">Сердечный ритм неправильный постоянно.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Непостоянно нерегулярный</items>
+        <items id="description">Сердечный ритм неправильный в хаотичном порядке.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Комментарий</items>
+        <items id="description">Комментарий о частоте и ритме сердечных сокращений.</items>
+      </items>
+      <items code="at0009.1">
+        <items id="text">*! - Comment(en)</items>
+        <items id="description">*Comment about the pulse.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Дерево</items>
+        <items id="description">@ внутреннийl @</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Дерево</items>
+        <items id="description">@ внутреннийl @</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Положение</items>
+        <items id="description">Положение пациента в момент записи сердцебиений.</items>
+      </items>
+      <items code="at0013.1">
+        <items id="text">*! - Position(en)</items>
+        <items id="description">*The position of the patient when the pulse was recorded.(en)</items>
+      </items>
+      <items code="at1000">
+        <items id="text">Лёжа</items>
+        <items id="description">Лёжа на спине.</items>
+      </items>
+      <items code="at1001">
+        <items id="text">Сидя</items>
+        <items id="description">Сидя на кровати или на стуле.</items>
+      </items>
+      <items code="at1002">
+        <items id="text">Наклон</items>
+        <items id="description">Пациент лежит под углом в 45 градусов с поднятыми ногами.</items>
+      </items>
+      <items code="at1003">
+        <items id="text">Стоя</items>
+        <items id="description">Стоя прямо.</items>
+      </items>
+      <items code="at1005">
+        <items id="text">ЧСС в настоящее время</items>
+        <items id="description">Частота сердечных сокращений в настоящий момент (подразумевается истинно, если скорость&gt; 0).</items>
+      </items>
+      <items code="at1005.1">
+        <items id="text">*! - Heart Beat Present?(en)</items>
+        <items id="description">*Is a heart beat present?(en)</items>
+      </items>
+      <items code="at1013">
+        <items id="text">Устройство</items>
+        <items id="description">Подробная информация об устройстве, используемом для измерения частоты сердечных сокращений и ритма.</items>
+      </items>
+      <items code="at1017">
+        <items id="text">Нагрузка</items>
+        <items id="description">Подробная информация о физических нагрузках, проводимых во время записи частоты сердечных сокращений и/или ритма.</items>
+      </items>
+      <items code="at1017.1">
+        <items id="text">*! - Exertion(en)</items>
+        <items id="description">*Details about physical exertion being undertaken at the time of measuring the pulse.(en)</items>
+      </items>
+      <items code="at1018">
+        <items id="text">Искажающие факторы</items>
+        <items id="description">Комментирование и запись других случайные факторов, которые могут вносить свой вклад в измерение частоты сердечных сокращений и ритма. Например, уровень тревожности, боль или лихорадка и т.д.</items>
+      </items>
+      <items code="at1018.1">
+        <items id="text">*! - Confounding Factors(en)</items>
+        <items id="description">*Narrative description about any incidental factors that may be contributing to the pulse observations.(en)</items>
+      </items>
+      <items code="at1019">
+        <items id="text">Метод</items>
+        <items id="description">Источник записси частоты сердечных сокращений и ритма.</items>
+      </items>
+      <items code="at1019.1">
+        <items id="text">*! - Method(en)</items>
+        <items id="description">*Method used to measure the pulse.(en)</items>
+      </items>
+      <items code="at1022">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at1022.1">
+        <items id="text">*! - Clinical Description(en)</items>
+        <items id="description">*Narrative description of the pulse.(en)</items>
+      </items>
+      <items code="at1023">
+        <items id="text">*New element(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at1023.1">
+        <items id="text">*! - Clinical Interpretation(en)</items>
+        <items id="description">*Single word, phrase or brief description representing the pulse findings.(en)</items>
+      </items>
+    </term_definitions>
+    <term_bindings terminology="SNOMED-CT">
+      <items code="at0.2">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>397987002</code_string>
+        </value>
+      </items>
+      <items code="at0.27">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>271639008</code_string>
+        </value>
+      </items>
+      <items code="at0.36">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>248642002</code_string>
+        </value>
+      </items>
+      <items code="at0004">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>364075005</code_string>
+        </value>
+      </items>
+      <items code="at0004.1">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>78564009</code_string>
+        </value>
+      </items>
+      <items code="at0005">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>364074009</code_string>
+        </value>
+      </items>
+      <items code="at0006">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>248649006</code_string>
+        </value>
+      </items>
+      <items code="at0007">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>248652003</code_string>
+        </value>
+      </items>
+      <items code="at0008">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>248651005</code_string>
+        </value>
+      </items>
+      <items code="at0013">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>422431001</code_string>
+        </value>
+      </items>
+      <items code="at1000">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>40199007</code_string>
+        </value>
+      </items>
+      <items code="at1001">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>33586001</code_string>
+        </value>
+      </items>
+      <items code="at1002">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>272580008</code_string>
+        </value>
+      </items>
+      <items code="at1003">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>10904000</code_string>
+        </value>
+      </items>
+      <items code="at1019">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>386053000</code_string>
+        </value>
+      </items>
+    </term_bindings>
+    <term_bindings terminology="LOINC">
+      <items code="at0004">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>8893-0</code_string>
+        </value>
+      </items>
+      <items code="at0013">
+        <value>
+          <terminology_id>
+            <value>LOINC</value>
+          </terminology_id>
+          <code_string>8361-8</code_string>
+        </value>
+      </items>
+    </term_bindings>
+  </ontology>
+</archetype>

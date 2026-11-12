@@ -1,0 +1,1240 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d8e13c17-6da2-40b7-b945-5f93df77daa4; build_uid=47b8ab5e-31a3-4a3d-b252-8599830a65d2)
+    openEHR-EHR-OBSERVATION.fundoscopic_examination.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Marco Borges">
+                ["organisation"] = <"P2D">
+                ["email"] = <"marco.borges@p2d.com.br">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Aitor Eguzkitza">
+                ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+                ["email"] = <"aitor.eguzkiza@unavarra.es">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2008-07-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Aitor Eguzkitza, Universidad Pública de Navarra - Complejo Hospitalario de Navarra, aitor.eguzkiza@unavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Heather Leslie, Atomica Informatics, Australia">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Lamirel C, Bruce BB, Wright DW, Delaney KP, Newman NJ, Biousse V. Quality of nonmydriatic digital fundus photography obtained by nurse practitioners in the emergency department: the FOTO-ED study. Ophthalmology. 2012 Mar;119(3):617-24. doi: 10.1016/j.ophtha.2011.09.013. Epub 2012 Jan 3. PubMed PMID: 22218140; PubMed Central PMCID: PMC3294008.">
+        ["2"] = <"Grading diabetic retinopathy from stereoscopic color fundus photographs--an extension of the modified Airlie House classification. ETDRS report number 10. Early Treatment Diabetic Retinopathy Study Research Group. Ophthalmology. 1991 May;98(5 Suppl):786-806. PubMed PMID: 2062513.">
+        ["3"] = <"Li HK, Horton M, Bursell SE, Cavallerano J, Zimmer-Galler I, Tennant M, Abramoff M, Chaum E, Debuc DC, Leonard-Martin T, Winchester M; American Telemedicine Association Diabetic Retinopathy Telehealth Practice Recommendations Working Group., Lawrence MG, Bauman W, Gardner WK, Hildebran L, Federman J. Telehealth practice recommendations for diabetic retinopathy, second edition. Telemed J E Health. 2011 Dec;17(10):814-37. doi: 10.1089/tmj.2011.0075. Epub 2011 Oct 4. Review. PubMed PMID: 21970573.">
+    >
+    other_details = <
+        ["current_contact"] = <"Aitor Eguzkitza, Universidad Pública de Navarra - Complejo Hospitalario de Navarra, aitor.eguzkiza@unavarra.es">
+        ["MD5-CAM-1.0.1"] = <"35074AFD3D2DD6088CF87CA1A24BD187">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para registrar detalhes sobre o resultados clínicos do exame fundoscopia dos olhos.">
+            use = <"*">
+            misuse = <"*">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about clinical findings on fundoscopy of eyes.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar los detalles durante la adquisición de imágenes de fondo de ojo">
+            use = <"Descripción de los hallazgos durante la captura de imágenes de fondo de ojo así como los hallazgos clínicos obtenidos a partir de estudiar estas imágenes.">
+            misuse = <"*(en)">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Fundoscopic examination of eyes
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0136] occurrences matches {0..2} matches {    -- Test Result
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Eye examined
+                                                value matches {
+                                                    DV_CODED_TEXT[at9025] matches {
+                                                        defining_code matches {[ac9019]}    -- Eye examined (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Clinical description
+                                                value matches {
+                                                    DV_TEXT[at9048]
+                                                }
+                                            }
+                                            ELEMENT[at0053] occurrences matches {0..1} matches {    -- Red reflex
+                                                value matches {
+                                                    DV_BOOLEAN[at9049] matches {
+                                                        value matches {True, False}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0091] occurrences matches {0..1} matches {    -- Optic disc description
+                                                value matches {
+                                                    DV_TEXT[at9050]
+                                                }
+                                            }
+                                            ELEMENT[at0090] occurrences matches {0..1} matches {    -- Macula description
+                                                value matches {
+                                                    DV_TEXT[at9051]
+                                                }
+                                            }
+                                            ELEMENT[at0092] occurrences matches {0..1} matches {    -- Retinal arteries description
+                                                value matches {
+                                                    DV_TEXT[at9052]
+                                                }
+                                            }
+                                            ELEMENT[at0093] occurrences matches {0..1} matches {    -- Retinal veins description
+                                                value matches {
+                                                    DV_TEXT[at9053]
+                                                }
+                                            }
+                                            ELEMENT[at0094] occurrences matches {0..1} matches {    -- Retinal background description
+                                                value matches {
+                                                    DV_TEXT[at9054]
+                                                }
+                                            }
+                                            ELEMENT[at0098] occurrences matches {0..1} matches {    -- Vitreous description
+                                                value matches {
+                                                    DV_TEXT[at9055]
+                                                }
+                                            }
+                                            ELEMENT[at0143] occurrences matches {0..1} matches {    -- Clinical interpretation
+                                                value matches {
+                                                    DV_TEXT[at9056]
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0142] matches {    -- Multimedia representation
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                                            }
+                                            allow_archetype CLUSTER[at0139] matches {    -- Additional findings
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.clinical_findings(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                            }
+                                            allow_archetype CLUSTER[at0141] matches {    -- Examination not done
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                            }
+                                            ELEMENT[at0126] matches {    -- Comment
+                                                value matches {
+                                                    DV_TEXT[at9057]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0013] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0140] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9058]
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Mydriatic used
+                                        value matches {
+                                            DV_BOOLEAN[at9018] matches {
+                                                value matches {True, False}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0054] occurrences matches {0..1} matches {    -- Small pupil
+                                        value matches {
+                                            DV_BOOLEAN[at9059] matches {
+                                                value matches {True, False}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0124] occurrences matches {0..1} matches {    -- Uncooperative patient
+                                        value matches {
+                                            DV_BOOLEAN[at9060] matches {
+                                                value matches {True, False}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0028] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_CODED_TEXT[at9019] matches {
+                                defining_code matches {[ac9021]}    -- Method (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0089] matches {    -- Device details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0067] occurrences matches {0..1} matches {    -- Field angle
+                        value matches {
+                            DV_CODED_TEXT[at9042] matches {
+                                defining_code matches {[ac9022]}    -- Field angle (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0072] occurrences matches {0..1} matches {    -- Attempts
+                        value matches {
+                            DV_COUNT[at9043] matches {
+                                magnitude matches {|1..3|}
+                            }
+                        }
+                    }
+                    CLUSTER[at0073] occurrences matches {0..1} matches {    -- Subdivision of the retina
+                        name matches {
+                            DV_CODED_TEXT[at9044] matches {
+                                defining_code matches {[ac2]}    -- Subdivision of retina
+                            }
+                        }
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0074] matches {    -- ETRDS fields
+                                name matches {
+                                    DV_CODED_TEXT[at9045] matches {
+                                        defining_code matches {[ac3]}    -- Diabetic Retinopathy Study field
+                                    }
+                                }
+                                value matches {
+                                    DV_CODED_TEXT[at9046] matches {
+                                        defining_code matches {[ac9023]}    -- ETRDS fields (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0082] matches {    -- Mosaic and peripherals
+                                value matches {
+                                    DV_CODED_TEXT[at9047] matches {
+                                        defining_code matches {[ac9024]}    -- Mosaic and peripherals (synthesised)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0056] occurrences matches {0..1} matches {    -- Shadow artifact
+                        value matches {
+                            DV_BOOLEAN[at9061] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0055] occurrences matches {0..1} matches {    -- Cataract artifact
+                        value matches {
+                            DV_BOOLEAN[at9062] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0059] occurrences matches {0..1} matches {    -- Quality of visualisation
+                        value matches {
+                            DV_ORDINAL[at9063] matches {
+                                [value, symbol] matches {
+                                    [{1}, {[at0060]}],    -- Quality inadequate for any diagnostic purpose
+                                    [{2}, {[at0061]}],    -- Unable to exclude all emergent findings
+                                    [{3}, {[at0062]}],    -- Only able to exclude emergent findings
+                                    [{4}, {[at0063]}],    -- Quality not ideal, but is possible to exclude subtle findings
+                                    [{5}, {[at0064]}]    -- Ideal quality
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0058] occurrences matches {0..1} matches {    -- Visualisation description
+                        value matches {
+                            DV_TEXT[at9064]
+                        }
+                    }
+                    ELEMENT[at0123] occurrences matches {0..1} matches {    -- High refraction
+                        value matches {
+                            DV_BOOLEAN[at9065] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0144] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"*Fundoscopic examination of eyes(en)">
+                description = <"*Record of clinical findings on fundoscopy of eyes.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Eye examined(en)">
+                description = <"*Identification of the eye which is being examined.(en)">
+                comment = <"*Matches to DICOM Laterality (0020,0060) attribute.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Clinical description(en)">
+                description = <"*Narrative description of the overall findings observed during the physical examination of the eye examined.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Mydriatic used(en)">
+                description = <"*True if mydriatic is used.(en)">
+            >
+            ["at0029"] = <
+                text = <"*Method(en)">
+                description = <"*Method chosen to perform the funduscopic examination.(en)">
+            >
+            ["at0030"] = <
+                text = <"*Direct(en)">
+                description = <"*Study performed by direct ophthalmoscopy.(en)">
+            >
+            ["at0031"] = <
+                text = <"*Indirect(en)">
+                description = <"*Study of eye fundus by indirect ophthalmoscopy method.(en)">
+            >
+            ["at0053"] = <
+                text = <"*Red reflex(en)">
+                description = <"*True if Red Reflex is present.(en)">
+            >
+            ["at0054"] = <
+                text = <"*Small pupil(en)">
+                description = <"*True if during the acquisition, pupil diameter is smaller than normal (3,3mm).(en)">
+            >
+            ["at0055"] = <
+                text = <"*Cataract artifact(en)">
+                description = <"*True if cataract obstructs the visualization of eye fundus.(en)">
+            >
+            ["at0056"] = <
+                text = <"*Shadow artifact(en)">
+                description = <"*True if shadow artifact is present on the border of the image.(en)">
+            >
+            ["at0058"] = <
+                text = <"*Visualisation description(en)">
+                description = <"*Narrative description about visualisation.(en)">
+            >
+            ["at0059"] = <
+                text = <"*Quality of visualisation(en)">
+                description = <"*Levels quantifying the quality of each acquisition, based in the ease to visualize the structures on the eye fundus.(en)">
+            >
+            ["at0060"] = <
+                text = <"*new ordinal(en)">
+                description = <"**(en)">
+            >
+            ["at0061"] = <
+                text = <"*new ordinal(en)">
+                description = <"**(en)">
+            >
+            ["at0062"] = <
+                text = <"*new ordinal(en)">
+                description = <"**(en)">
+            >
+            ["at0063"] = <
+                text = <"*new ordinal(en)">
+                description = <"**(en)">
+            >
+            ["at0064"] = <
+                text = <"*new ordinal(en)">
+                description = <"**(en)">
+            >
+            ["at0067"] = <
+                text = <"*Field angle(en)">
+                description = <"*Describes the optical acceptance angle of the lens used during the test.(en)">
+            >
+            ["at0068"] = <
+                text = <"*30º(en)">
+                description = <"*30º angle used for small pupil (SP) capture (for patients with pupil diameter <3.3mm).(en)">
+            >
+            ["at0069"] = <
+                text = <"*45º(en)">
+                description = <"*45º angle used to acquire eye fundus of normal pupils.(en)">
+            >
+            ["at0070"] = <
+                text = <"*100º(en)">
+                description = <"*Wide angle acquisition.(en)">
+            >
+            ["at0071"] = <
+                text = <"*200º(en)">
+                description = <"*Ultra-wide angle acquisition.(en)">
+            >
+            ["at0072"] = <
+                text = <"*Attempts(en)">
+                description = <"*Number of attempts before obtaining the acquisition (doesn't compute if test is repeated by a specific recognized technical failure).(en)">
+            >
+            ["at0073"] = <
+                text = <"*Subdivision of the retina(en)">
+                description = <"*Subdivision of the retina identifying eye fundus image locations.(en)">
+            >
+            ["at0074"] = <
+                text = <"*ETRDS fields(en)">
+                description = <"*Subdivision of the retina based on Diabetic Retinopathy Study fields.(en)">
+            >
+            ["at0075"] = <
+                text = <"*Study field 1(en)">
+                description = <"**(en)">
+            >
+            ["at0076"] = <
+                text = <"*Study field 2(en)">
+                description = <"**(en)">
+            >
+            ["at0077"] = <
+                text = <"*Study field 3(en)">
+                description = <"**(en)">
+            >
+            ["at0078"] = <
+                text = <"*Study field 4(en)">
+                description = <"**(en)">
+            >
+            ["at0079"] = <
+                text = <"*Study field 5(en)">
+                description = <"**(en)">
+            >
+            ["at0080"] = <
+                text = <"*Study field 6(en)">
+                description = <"**(en)">
+            >
+            ["at0081"] = <
+                text = <"*Study field 7(en)">
+                description = <"**(en)">
+            >
+            ["at0082"] = <
+                text = <"*Mosaic and peripherals(en)">
+                description = <"*Division of the retina in quadrants + mosaic obtained from the combination of them.(en)">
+            >
+            ["at0083"] = <
+                text = <"*Mosaic(en)">
+                description = <"*Mosaic obtained from combining every peripheral acquisitions and the center one.(en)">
+            >
+            ["at0084"] = <
+                text = <"*Central(en)">
+                description = <"*Image centered on the macula.(en)">
+            >
+            ["at0085"] = <
+                text = <"*Nasal(en)">
+                description = <"*Image centered on the optic nerve or papila.(en)">
+            >
+            ["at0086"] = <
+                text = <"*Temporal(en)">
+                description = <"*Image centered on the temporal quadrant of the retina.(en)">
+            >
+            ["at0087"] = <
+                text = <"*Superior(en)">
+                description = <"*Image centered on the superior half of the retina.(en)">
+            >
+            ["at0088"] = <
+                text = <"*Inferior(en)">
+                description = <"*Image centered on the inferior half of the retina.(en)">
+            >
+            ["at0089"] = <
+                text = <"*Device details(en)">
+                description = <"*Details of the device used to acquire eye fundus images.(en)">
+            >
+            ["at0090"] = <
+                text = <"*Macula description(en)">
+                description = <"*Narrative description about the macula.(en)">
+            >
+            ["at0091"] = <
+                text = <"*Optic disc description(en)">
+                description = <"*Narrative description about the optic disc.(en)">
+            >
+            ["at0092"] = <
+                text = <"*Retinal arteries description(en)">
+                description = <"*Narrative description about the retinal arteries.(en)">
+            >
+            ["at0093"] = <
+                text = <"*Retinal veins description(en)">
+                description = <"*Narrative description about the retinal veins.(en)">
+            >
+            ["at0094"] = <
+                text = <"*Retinal background description(en)">
+                description = <"*Narrative description about the retinal background.(en)">
+            >
+            ["at0098"] = <
+                text = <"*Vitreous description(en)">
+                description = <"*Narrative description about the vitreous humour.(en)">
+            >
+            ["at0122"] = <
+                text = <"*60º(en)">
+                description = <"*60º angle used to acquire eye fundus in some DR screening studies.(en)">
+            >
+            ["at0123"] = <
+                text = <"*High refraction(en)">
+                description = <"*True if the refraction of the eye exceeds the range from -12D to +15D.(en)">
+            >
+            ["at0124"] = <
+                text = <"*Uncooperative patient(en)">
+                description = <"*True if patient doesn't collaborate during the image acquisition.(en)">
+            >
+            ["at0126"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the physical examination findings, not captured in other fields.(en)">
+            >
+            ["at0129"] = <
+                text = <"*Mydriatic retinography(en)">
+                description = <"*Observation of retina through funduscopic images acquired by previous dilatation of patient's pupils.(en)">
+            >
+            ["at0130"] = <
+                text = <"*Non-mydriatic retinography(en)">
+                description = <"*Observation of retina through funduscopic images acquired without previous dilatation of patient's pupils.(en)">
+            >
+            ["at0131"] = <
+                text = <"*Contact lens biomicroscopy(en)">
+                description = <"*Eye fundus viewing through biomicroscopy lens in contact to patient's eye surface.(en)">
+            >
+            ["at0132"] = <
+                text = <"*Non-contact lens biomicroscopy(en)">
+                description = <"*Eye fundus viewing through biomicroscopy lens without contact to patient's eye surface.(en)">
+            >
+            ["at0135"] = <
+                text = <"*Angiography(en)">
+                description = <"*Observation of the eye fundus using a fluorescent dye inyected to emphasize the blood vessels in the eye retina.(en)">
+            >
+            ["at0136"] = <
+                text = <"*New cluster(en)">
+                description = <"**(en)">
+            >
+            ["at0137"] = <
+                text = <"*Left eye(en)">
+                description = <"*The left eye was examined.(en)">
+            >
+            ["at0138"] = <
+                text = <"*Right eye(en)">
+                description = <"*The right eye was examined.(en)">
+            >
+            ["at0139"] = <
+                text = <"*Additional findings(en)">
+                description = <"*Additional structured details about the physical examination findings.(en)">
+            >
+            ["at0140"] = <
+                text = <"*Confounding factors(en)">
+                description = <"*Narrative description of factors, not recorded elsewhere, that may influence the clinical findings.(en)">
+            >
+            ["at0141"] = <
+                text = <"*Examination not done(en)">
+                description = <"*Details to explicitly record that this examination was not performed.(en)">
+            >
+            ["at0142"] = <
+                text = <"*Multimedia representation(en)">
+                description = <"*Digital image, video or diagram representing the physical examination findings.(en)">
+            >
+            ["at0143"] = <
+                text = <"*Clinical interpretation(en)">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings for the eye examined.(en)">
+                comment = <"*Coding of the 'Clinical interpretation' with a terminology is preferred, where possible.(en)">
+            >
+            ["at0144"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["ac2"] = <
+                text = <"*Nueva restricción(en)">
+                description = <"**(en)">
+            >
+            ["ac3"] = <
+                text = <"*Nueva restricción(en)">
+                description = <"**(en)">
+            >
+            ["ac9019"] = <
+                text = <"*Eye examined(en) (synthesised)">
+                description = <"*Identification of the eye which is being examined.(en) (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"*Method(en) (synthesised)">
+                description = <"*Method chosen to perform the funduscopic examination.(en) (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"*Field angle(en) (synthesised)">
+                description = <"*Describes the optical acceptance angle of the lens used during the test.(en) (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"*ETRDS fields(en) (synthesised)">
+                description = <"*Subdivision of the retina based on Diabetic Retinopathy Study fields.(en) (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"*Mosaic and peripherals(en) (synthesised)">
+                description = <"*Division of the retina in quadrants + mosaic obtained from the combination of them.(en) (synthesised)">
+            >
+            ["ac9047"] = <
+                text = <"*Quality of visualisation(en) (synthesised)">
+                description = <"*Levels quantifying the quality of each acquisition, based in the ease to visualize the structures on the eye fundus.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Fundoscopic examination of eyes">
+                description = <"Record of clinical findings on fundoscopy of eyes.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Eye examined">
+                description = <"Identification of the eye which is being examined.">
+                comment = <"Matches to DICOM Laterality (0020,0060) attribute.">
+            >
+            ["at0008"] = <
+                text = <"Clinical description">
+                description = <"Narrative description of the overall findings observed during the physical examination of the eye examined.">
+            >
+            ["at0014"] = <
+                text = <"Mydriatic used">
+                description = <"True if mydriatic is used.">
+            >
+            ["at0029"] = <
+                text = <"Method">
+                description = <"Method chosen to perform the funduscopic examination.">
+            >
+            ["at0030"] = <
+                text = <"Direct">
+                description = <"Study performed by direct ophthalmoscopy.">
+            >
+            ["at0031"] = <
+                text = <"Indirect">
+                description = <"Study of eye fundus by indirect ophthalmoscopy method.">
+            >
+            ["at0053"] = <
+                text = <"Red reflex">
+                description = <"True if Red Reflex is present.">
+            >
+            ["at0054"] = <
+                text = <"Small pupil">
+                description = <"True if during the acquisition, pupil diameter is smaller than normal (3,3mm).">
+            >
+            ["at0055"] = <
+                text = <"Cataract artifact">
+                description = <"True if cataract obstructs the visualization of eye fundus.">
+            >
+            ["at0056"] = <
+                text = <"Shadow artifact">
+                description = <"True if shadow artifact is present on the border of the image.">
+            >
+            ["at0058"] = <
+                text = <"Visualisation description">
+                description = <"Narrative description about visualisation.">
+            >
+            ["at0059"] = <
+                text = <"Quality of visualisation">
+                description = <"Levels quantifying the quality of each acquisition, based in the ease to visualize the structures on the eye fundus.">
+            >
+            ["at0060"] = <
+                text = <"Quality inadequate for any diagnostic purpose">
+                description = <"*">
+            >
+            ["at0061"] = <
+                text = <"Unable to exclude all emergent findings">
+                description = <"*">
+            >
+            ["at0062"] = <
+                text = <"Only able to exclude emergent findings">
+                description = <"*">
+            >
+            ["at0063"] = <
+                text = <"Quality not ideal, but is possible to exclude subtle findings">
+                description = <"*">
+            >
+            ["at0064"] = <
+                text = <"Ideal quality">
+                description = <"*">
+            >
+            ["at0067"] = <
+                text = <"Field angle">
+                description = <"Describes the optical acceptance angle of the lens used during the test.">
+            >
+            ["at0068"] = <
+                text = <"30º">
+                description = <"30º angle used for small pupil (SP) capture (for patients with pupil diameter <3.3mm).">
+            >
+            ["at0069"] = <
+                text = <"45º">
+                description = <"45º angle used to acquire eye fundus of normal pupils.">
+            >
+            ["at0070"] = <
+                text = <"100º">
+                description = <"Wide angle acquisition.">
+            >
+            ["at0071"] = <
+                text = <"200º">
+                description = <"Ultra-wide angle acquisition.">
+            >
+            ["at0072"] = <
+                text = <"Attempts">
+                description = <"Number of attempts before obtaining the acquisition (doesn't compute if test is repeated by a specific recognized technical failure).">
+            >
+            ["at0073"] = <
+                text = <"Subdivision of the retina">
+                description = <"Subdivision of the retina identifying eye fundus image locations.">
+            >
+            ["at0074"] = <
+                text = <"ETRDS fields">
+                description = <"Subdivision of the retina based on Diabetic Retinopathy Study fields.">
+            >
+            ["at0075"] = <
+                text = <"Study field 1">
+                description = <"*">
+            >
+            ["at0076"] = <
+                text = <"Study field 2">
+                description = <"*">
+            >
+            ["at0077"] = <
+                text = <"Study field 3">
+                description = <"*">
+            >
+            ["at0078"] = <
+                text = <"Study field 4">
+                description = <"*">
+            >
+            ["at0079"] = <
+                text = <"Study field 5">
+                description = <"*">
+            >
+            ["at0080"] = <
+                text = <"Study field 6">
+                description = <"*">
+            >
+            ["at0081"] = <
+                text = <"Study field 7">
+                description = <"*">
+            >
+            ["at0082"] = <
+                text = <"Mosaic and peripherals">
+                description = <"Division of the retina in quadrants + mosaic obtained from the combination of them.">
+            >
+            ["at0083"] = <
+                text = <"Mosaic">
+                description = <"Mosaic obtained from combining every peripheral acquisitions and the center one.">
+            >
+            ["at0084"] = <
+                text = <"Central">
+                description = <"Image centered on the macula.">
+            >
+            ["at0085"] = <
+                text = <"Nasal">
+                description = <"Image centered on the optic nerve or papila.">
+            >
+            ["at0086"] = <
+                text = <"Temporal">
+                description = <"Image centered on the temporal quadrant of the retina.">
+            >
+            ["at0087"] = <
+                text = <"Superior">
+                description = <"Image centered on the superior half of the retina.">
+            >
+            ["at0088"] = <
+                text = <"Inferior">
+                description = <"Image centered on the inferior half of the retina.">
+            >
+            ["at0089"] = <
+                text = <"Device details">
+                description = <"Details of the device used to acquire eye fundus images.">
+            >
+            ["at0090"] = <
+                text = <"Macula description">
+                description = <"Narrative description about the macula.">
+            >
+            ["at0091"] = <
+                text = <"Optic disc description">
+                description = <"Narrative description about the optic disc.">
+            >
+            ["at0092"] = <
+                text = <"Retinal arteries description">
+                description = <"Narrative description about the retinal arteries.">
+            >
+            ["at0093"] = <
+                text = <"Retinal veins description">
+                description = <"Narrative description about the retinal veins.">
+            >
+            ["at0094"] = <
+                text = <"Retinal background description">
+                description = <"Narrative description about the retinal background.">
+            >
+            ["at0098"] = <
+                text = <"Vitreous description">
+                description = <"Narrative description about the vitreous humour.">
+            >
+            ["at0122"] = <
+                text = <"60º">
+                description = <"60º angle used to acquire eye fundus in some DR screening studies.">
+            >
+            ["at0123"] = <
+                text = <"High refraction">
+                description = <"True if the refraction of the eye exceeds the range from -12D to +15D.">
+            >
+            ["at0124"] = <
+                text = <"Uncooperative patient">
+                description = <"True if patient doesn't collaborate during the image acquisition.">
+            >
+            ["at0126"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the physical examination findings, not captured in other fields.">
+            >
+            ["at0129"] = <
+                text = <"Mydriatic retinography">
+                description = <"Observation of retina through funduscopic images acquired by previous dilatation of patient's pupils.">
+            >
+            ["at0130"] = <
+                text = <"Non-mydriatic retinography">
+                description = <"Observation of retina through funduscopic images acquired without previous dilatation of patient's pupils.">
+            >
+            ["at0131"] = <
+                text = <"Contact lens biomicroscopy">
+                description = <"Eye fundus viewing through biomicroscopy lens in contact to patient's eye surface.">
+            >
+            ["at0132"] = <
+                text = <"Non-contact lens biomicroscopy">
+                description = <"Eye fundus viewing through biomicroscopy lens without contact to patient's eye surface.">
+            >
+            ["at0135"] = <
+                text = <"Angiography">
+                description = <"Observation of the eye fundus using a fluorescent dye inyected to emphasize the blood vessels in the eye retina.">
+            >
+            ["at0136"] = <
+                text = <"Test Result">
+                description = <"Details of the funduscopic examination test result for each eye.">
+            >
+            ["at0137"] = <
+                text = <"Left eye">
+                description = <"The left eye was examined.">
+            >
+            ["at0138"] = <
+                text = <"Right eye">
+                description = <"The right eye was examined.">
+            >
+            ["at0139"] = <
+                text = <"Additional findings">
+                description = <"Additional structured details about the physical examination findings.">
+            >
+            ["at0140"] = <
+                text = <"Confounding factors">
+                description = <"Narrative description of factors, not recorded elsewhere, that may influence the clinical findings.">
+            >
+            ["at0141"] = <
+                text = <"Examination not done">
+                description = <"Details to explicitly record that this examination was not performed.">
+            >
+            ["at0142"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram representing the physical examination findings.">
+            >
+            ["at0143"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings for the eye examined.">
+                comment = <"Coding of the 'Clinical interpretation' with a terminology is preferred, where possible.">
+            >
+            ["at0144"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac2"] = <
+                text = <"Subdivision of retina">
+                description = <"*">
+            >
+            ["ac3"] = <
+                text = <"Diabetic Retinopathy Study field">
+                description = <"*">
+            >
+            ["ac9019"] = <
+                text = <"Eye examined (synthesised)">
+                description = <"Identification of the eye which is being examined. (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Method (synthesised)">
+                description = <"Method chosen to perform the funduscopic examination. (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Field angle (synthesised)">
+                description = <"Describes the optical acceptance angle of the lens used during the test. (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"ETRDS fields (synthesised)">
+                description = <"Subdivision of the retina based on Diabetic Retinopathy Study fields. (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Mosaic and peripherals (synthesised)">
+                description = <"Division of the retina in quadrants + mosaic obtained from the combination of them. (synthesised)">
+            >
+            ["ac9047"] = <
+                text = <"Quality of visualisation (synthesised)">
+                description = <"Levels quantifying the quality of each acquisition, based in the ease to visualize the structures on the eye fundus. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"*Fundoscopic examination of eyes(en)">
+                description = <"*Record of clinical findings on fundoscopy of eyes.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Eye examined(en)">
+                description = <"*Identification of the eye which is being examined.(en)">
+                comment = <"*Matches to DICOM Laterality (0020,0060) attribute.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Clinical description(en)">
+                description = <"*Narrative description of the overall findings observed during the physical examination of the eye examined.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Mydriatic used(en)">
+                description = <"*True if mydriatic is used.(en)">
+            >
+            ["at0029"] = <
+                text = <"*Method(en)">
+                description = <"*Method chosen to perform the funduscopic examination.(en)">
+            >
+            ["at0030"] = <
+                text = <"*Direct(en)">
+                description = <"*Study performed by direct ophthalmoscopy.(en)">
+            >
+            ["at0031"] = <
+                text = <"*Indirect(en)">
+                description = <"*Study of eye fundus by indirect ophthalmoscopy method.(en)">
+            >
+            ["at0053"] = <
+                text = <"*Red reflex(en)">
+                description = <"*True if Red Reflex is present.(en)">
+            >
+            ["at0054"] = <
+                text = <"*Small pupil(en)">
+                description = <"*True if during the acquisition, pupil diameter is smaller than normal (3,3mm).(en)">
+            >
+            ["at0055"] = <
+                text = <"*Cataract artifact(en)">
+                description = <"*True if cataract obstructs the visualization of eye fundus.(en)">
+            >
+            ["at0056"] = <
+                text = <"*Shadow artifact(en)">
+                description = <"*True if shadow artifact is present on the border of the image.(en)">
+            >
+            ["at0058"] = <
+                text = <"*Visualisation description(en)">
+                description = <"*Narrative description about visualisation.(en)">
+            >
+            ["at0059"] = <
+                text = <"*Quality of visualisation(en)">
+                description = <"*Levels quantifying the quality of each acquisition, based in the ease to visualize the structures on the eye fundus.(en)">
+            >
+            ["at0060"] = <
+                text = <"Inadecuada para propósitos diagnósticos">
+                description = <"La calidad de la imagen no alcanza los criterios mínimos para diagnóstico">
+            >
+            ["at0061"] = <
+                text = <"Incapacidad de distinguir todos los hallazgos fundamentales">
+                description = <"En la imagen se aprecia la estructura del fondo de ojo, sin embargo, no es posible distinguir hallazgos clínicos">
+            >
+            ["at0062"] = <
+                text = <"Sólo es posible distinguir los hallazgos fundamentales">
+                description = <"Es posible detectar signos útiles para diagnóstico, pero se escapan los mas sutiles">
+            >
+            ["at0063"] = <
+                text = <"La calidad no es ideal, pero es posible identificar algunos hallazgos sutiles">
+                description = <"Es posible identificar hallazgos sutiles de interés diagnóstico, pero la calidad de imagen aún podría ser mejor. Suele darse este caso en imágenes periféricas o que implican dificultad, que han sido capturadas correctamente.">
+            >
+            ["at0064"] = <
+                text = <"Calidad ideal">
+                description = <"Imagen ideal en la cual es sencillo identificar hallazgos de interés clínico. Suele darse este caso en imágenes directas obtenidas correctamente.">
+            >
+            ["at0067"] = <
+                text = <"*Field angle(en)">
+                description = <"*Describes the optical acceptance angle of the lens used during the test.(en)">
+            >
+            ["at0068"] = <
+                text = <"*30º(en)">
+                description = <"*30º angle used for small pupil (SP) capture (for patients with pupil diameter <3.3mm).(en)">
+            >
+            ["at0069"] = <
+                text = <"*45º(en)">
+                description = <"*45º angle used to acquire eye fundus of normal pupils.(en)">
+            >
+            ["at0070"] = <
+                text = <"*100º(en)">
+                description = <"*Wide angle acquisition.(en)">
+            >
+            ["at0071"] = <
+                text = <"*200º(en)">
+                description = <"*Ultra-wide angle acquisition.(en)">
+            >
+            ["at0072"] = <
+                text = <"*Attempts(en)">
+                description = <"*Number of attempts before obtaining the acquisition (doesn't compute if test is repeated by a specific recognized technical failure).(en)">
+            >
+            ["at0073"] = <
+                text = <"*Subdivision of the retina(en)">
+                description = <"*Subdivision of the retina identifying eye fundus image locations.(en)">
+            >
+            ["at0074"] = <
+                text = <"*ETRDS fields(en)">
+                description = <"*Subdivision of the retina based on Diabetic Retinopathy Study fields.(en)">
+            >
+            ["at0075"] = <
+                text = <"Campo de estudio 1">
+                description = <"**(en)">
+            >
+            ["at0076"] = <
+                text = <"Campo de estudio 2">
+                description = <"**(en)">
+            >
+            ["at0077"] = <
+                text = <"Campo de estudio 3">
+                description = <"**(en)">
+            >
+            ["at0078"] = <
+                text = <"Campo de estudio 4">
+                description = <"**(en)">
+            >
+            ["at0079"] = <
+                text = <"Campo de estudio 5">
+                description = <"**(en)">
+            >
+            ["at0080"] = <
+                text = <"Campo de estudio 6">
+                description = <"**(en)">
+            >
+            ["at0081"] = <
+                text = <"Campo de estudio 7">
+                description = <"**(en)">
+            >
+            ["at0082"] = <
+                text = <"*Mosaic and peripherals(en)">
+                description = <"*Division of the retina in quadrants + mosaic obtained from the combination of them.(en)">
+            >
+            ["at0083"] = <
+                text = <"*Mosaic(en)">
+                description = <"*Mosaic obtained from combining every peripheral acquisitions and the center one.(en)">
+            >
+            ["at0084"] = <
+                text = <"*Central(en)">
+                description = <"*Image centered on the macula.(en)">
+            >
+            ["at0085"] = <
+                text = <"*Nasal(en)">
+                description = <"*Image centered on the optic nerve or papila.(en)">
+            >
+            ["at0086"] = <
+                text = <"*Temporal(en)">
+                description = <"*Image centered on the temporal quadrant of the retina.(en)">
+            >
+            ["at0087"] = <
+                text = <"*Superior(en)">
+                description = <"*Image centered on the superior half of the retina.(en)">
+            >
+            ["at0088"] = <
+                text = <"*Inferior(en)">
+                description = <"*Image centered on the inferior half of the retina.(en)">
+            >
+            ["at0089"] = <
+                text = <"*Device details(en)">
+                description = <"*Details of the device used to acquire eye fundus images.(en)">
+            >
+            ["at0090"] = <
+                text = <"*Macula description(en)">
+                description = <"*Narrative description about the macula.(en)">
+            >
+            ["at0091"] = <
+                text = <"*Optic disc description(en)">
+                description = <"*Narrative description about the optic disc.(en)">
+            >
+            ["at0092"] = <
+                text = <"*Retinal arteries description(en)">
+                description = <"*Narrative description about the retinal arteries.(en)">
+            >
+            ["at0093"] = <
+                text = <"*Retinal veins description(en)">
+                description = <"*Narrative description about the retinal veins.(en)">
+            >
+            ["at0094"] = <
+                text = <"*Retinal background description(en)">
+                description = <"*Narrative description about the retinal background.(en)">
+            >
+            ["at0098"] = <
+                text = <"*Vitreous description(en)">
+                description = <"*Narrative description about the vitreous humour.(en)">
+            >
+            ["at0122"] = <
+                text = <"*60º(en)">
+                description = <"*60º angle used to acquire eye fundus in some DR screening studies.(en)">
+            >
+            ["at0123"] = <
+                text = <"*High refraction(en)">
+                description = <"*True if the refraction of the eye exceeds the range from -12D to +15D.(en)">
+            >
+            ["at0124"] = <
+                text = <"*Uncooperative patient(en)">
+                description = <"*True if patient doesn't collaborate during the image acquisition.(en)">
+            >
+            ["at0126"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the physical examination findings, not captured in other fields.(en)">
+            >
+            ["at0129"] = <
+                text = <"*Mydriatic retinography(en)">
+                description = <"*Observation of retina through funduscopic images acquired by previous dilatation of patient's pupils.(en)">
+            >
+            ["at0130"] = <
+                text = <"*Non-mydriatic retinography(en)">
+                description = <"*Observation of retina through funduscopic images acquired without previous dilatation of patient's pupils.(en)">
+            >
+            ["at0131"] = <
+                text = <"*Contact lens biomicroscopy(en)">
+                description = <"*Eye fundus viewing through biomicroscopy lens in contact to patient's eye surface.(en)">
+            >
+            ["at0132"] = <
+                text = <"*Non-contact lens biomicroscopy(en)">
+                description = <"*Eye fundus viewing through biomicroscopy lens without contact to patient's eye surface.(en)">
+            >
+            ["at0135"] = <
+                text = <"*Angiography(en)">
+                description = <"*Observation of the eye fundus using a fluorescent dye inyected to emphasize the blood vessels in the eye retina.(en)">
+            >
+            ["at0136"] = <
+                text = <"Resultados de la prueba">
+                description = <"Detalles en cuanto a los resultados de la prueba de exámen del fondo de ojo para cada ojo.">
+            >
+            ["at0137"] = <
+                text = <"Ojo izquierdo">
+                description = <"Se ha observado el ojo izquierdo">
+            >
+            ["at0138"] = <
+                text = <"Ojo derecho">
+                description = <"Se ha observado el ojo derecho">
+            >
+            ["at0139"] = <
+                text = <"*Additional findings(en)">
+                description = <"*Additional structured details about the physical examination findings.(en)">
+            >
+            ["at0140"] = <
+                text = <"*Confounding factors(en)">
+                description = <"*Narrative description of factors, not recorded elsewhere, that may influence the clinical findings.(en)">
+            >
+            ["at0141"] = <
+                text = <"*Examination not done(en)">
+                description = <"*Details to explicitly record that this examination was not performed.(en)">
+            >
+            ["at0142"] = <
+                text = <"*Multimedia representation(en)">
+                description = <"*Digital image, video or diagram representing the physical examination findings.(en)">
+            >
+            ["at0143"] = <
+                text = <"*Clinical interpretation(en)">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings for the eye examined.(en)">
+                comment = <"*Coding of the 'Clinical interpretation' with a terminology is preferred, where possible.(en)">
+            >
+            ["at0144"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["ac2"] = <
+                text = <"*Nueva restricción(en)">
+                description = <"**(en)">
+            >
+            ["ac3"] = <
+                text = <"*Nueva restricción(en)">
+                description = <"**(en)">
+            >
+            ["ac9019"] = <
+                text = <"*Eye examined(en) (synthesised)">
+                description = <"*Identification of the eye which is being examined.(en) (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"*Method(en) (synthesised)">
+                description = <"*Method chosen to perform the funduscopic examination.(en) (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"*Field angle(en) (synthesised)">
+                description = <"*Describes the optical acceptance angle of the lens used during the test.(en) (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"*ETRDS fields(en) (synthesised)">
+                description = <"*Subdivision of the retina based on Diabetic Retinopathy Study fields.(en) (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"*Mosaic and peripherals(en) (synthesised)">
+                description = <"*Division of the retina in quadrants + mosaic obtained from the combination of them.(en) (synthesised)">
+            >
+            ["ac9047"] = <
+                text = <"*Quality of visualisation(en) (synthesised)">
+                description = <"*Levels quantifying the quality of each acquisition, based in the ease to visualize the structures on the eye fundus.(en) (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0137"] = <http://snomed.info/id/362503005>
+            ["at0138"] = <http://snomed.info/id/362502000>
+            ["ac3"] = <terminology:SNOMED-CT/408733002?subset=Diabetic%20Retinopathy%20Study%20field>
+        >
+    >
+    value_sets = <
+        ["ac9024"] = <
+            id = <"ac9024">
+            members = <"at0083", "at0084", "at0085", "at0086", "at0087", "at0088">
+        >
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0075", "at0076", "at0077", "at0078", "at0079", "at0080", "at0081">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0068", "at0069", "at0122", "at0070", "at0071">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0030", "at0031", "at0131", "at0132", "at0129", "at0130", "at0135">
+        >
+        ["ac9047"] = <
+            id = <"ac9047">
+            members = <"at0060", "at0061", "at0062", "at0063", "at0064">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0137", "at0138">
+        >
+    >

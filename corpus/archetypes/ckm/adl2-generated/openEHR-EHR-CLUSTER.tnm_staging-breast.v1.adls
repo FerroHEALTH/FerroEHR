@@ -1,0 +1,953 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7776eadc-c9a7-4409-8816-47d072cb0904; build_uid=8c29ff07-877b-4095-bc0a-f9ecc9c42a40)
+    openEHR-EHR-CLUSTER.tnm_staging-breast.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.tnm_staging.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics Scotland">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2009-07-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie Ocean Informatics Australia", "Sam Heard Ocean Informatics Australia", "Koray Atalag, University of Auckland, New Zealand">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"American Joint Committee on Cancer. TNM schema files [Internet]. [cited 2009 Jul 27 ] ">
+        ["2"] = <"Available from: http://www.cancerstaging.org/education/tnmschema/tnmschema.html">
+        ["3"] = <"Greene FL, Page DL, Fleming ID. et al, eds, for the American Joint Committee on Cancer. AJCC Cancer Staging Manual. 6th ed. New York, NY: Springer-Verlag; 2002.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B47E2F55723FAC93BA0CB254BFB3883E">
+    >
+    details = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل تصنيف مراحل (الورم - العقد الليمفاوية - النقيلة) لسرطان الثدي - النسخة السادسة.">
+            keywords = <"الورم", "(الورم - العقد الليمفاوية - النقيلة)", "الخباثة", "السرطان", "تحديد المرحلة", "التصنيف", "الدرجة", "تحديد الدرجة", "المرحلة", "العقدة الليمفاوية", "النقيلة", "الثدي">
+            use = <"يستخدم لتسجيل تصنيف مراحل (الورم - العقد الليمفاوية - النقيلة) لسرطان الثدي - النسخة السادسة.
+و ينطبق هذا التصنيف فقط على السرطانات, و يتناول ثدي الأنثى و ثدي الذَّكَر">
+            misuse = <"لا يستخدم للنسخ الأخرى من تصنيف (الورم, العقد الليمفاوية و النقيلة).">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the TNM staging classification for colorectal cancer (Sixth edition).">
+            keywords = <"tumour", "TNM", "malignancy", "cancer", "staging", "classification", "grade", "grading", "stage", "lymph node", "metastasis", "breast">
+            use = <"Use of TNM Sixth Edition of colorectal cancer staging.
+The classification applies only to carcinomas and concerns the male as well as the female breast.">
+            misuse = <"Do not use for editions of TNM classification, other than Sixth edition.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- TNM staging - Breast (Sixth edition)
+        items matches {
+            CLUSTER[at0002] matches {
+                items matches {
+                    ELEMENT[at0003] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9001.1] matches {
+                                defining_code matches {[ac0.9000]}    -- Primary tumour (T) (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0004] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9002.1] matches {
+                                defining_code matches {[ac0.9001]}    -- Regional lymph nodes (N) (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0005] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9003.1] matches {
+                                defining_code matches {[ac0.9002]}    -- Distant metastasis (M) (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0010] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9004.1] matches {
+                                defining_code
+                            }
+                        }
+                    }
+                    ELEMENT[at0014] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9005.1] matches {
+                                defining_code matches {[ac0.9003]}    -- Clinical stage grouping (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0006] matches {
+                items matches {
+                    ELEMENT[at0007] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9007.1] matches {
+                                defining_code matches {[ac0.9004]}    -- Primary tumour (pT) (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0008] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9008.1] matches {
+                                defining_code matches {[ac0.9005]}    -- Regional lymph node (pN) (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0009] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9009.1] matches {
+                                defining_code matches {[ac0.9006]}    -- Distant metastasis (pM) (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0015] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9011.1] matches {
+                                defining_code matches {[ac0.9007]}    -- Pathological stage grouping (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.100"] = <
+                text = <"Stage 1">
+                description = <"T1-N0-M0.">
+            >
+            ["at0.101"] = <
+                text = <"Stage IV">
+                description = <"Any T-Any N-M1.">
+            >
+            ["at0.102"] = <
+                text = <"Stage IIIC">
+                description = <"Any T-N3-M0.">
+            >
+            ["at0.103"] = <
+                text = <"Stage IIIB">
+                description = <"T4-N0,N1,N2-M0.">
+            >
+            ["at0.104"] = <
+                text = <"Stage IIIA">
+                description = <"T0-N2-M0;T1-N2-M0;T3-N1,N2-M0.">
+            >
+            ["at0.105"] = <
+                text = <"Stage IIB">
+                description = <"T2-N1-M0;T3-N0-M0.">
+            >
+            ["at0.106"] = <
+                text = <"Stage 0">
+                description = <"Tis-N0-M0.">
+            >
+            ["at0.107"] = <
+                text = <"Stage IIA">
+                description = <"T0-N1-M0 : T1-N1-M0 ; T2-N0-M0.">
+            >
+            ["at0.108"] = <
+                text = <"Stage 1">
+                description = <"T1-N0-M0.">
+            >
+            ["at0.109"] = <
+                text = <"Stage IV">
+                description = <"Any T-Any N-M1.">
+            >
+            ["at0.110"] = <
+                text = <"Stage IIIC">
+                description = <"Any T-N3-M0.">
+            >
+            ["at0.111"] = <
+                text = <"Stage IIIB">
+                description = <"T4-N0,N1,N2-M0.">
+            >
+            ["at0.112"] = <
+                text = <"Stage IIIA">
+                description = <"T0-N2-M0;T1-N2-M0;T3-N1,N2-M0.">
+            >
+            ["at0.113"] = <
+                text = <"Stage IIB">
+                description = <"T2-N1-M0;T3-N0-M0.">
+            >
+            ["at0.114"] = <
+                text = <"Stage 0">
+                description = <"Tis-N0-M0.">
+            >
+            ["at0.115"] = <
+                text = <"pTX">
+                description = <"Primary tumour cannot be assessed.">
+            >
+            ["at0.116"] = <
+                text = <"pT0">
+                description = <"No evidence of primary tumour.">
+            >
+            ["at0.117"] = <
+                text = <"pTis">
+                description = <"Carcinoma in situ.">
+            >
+            ["at0.118"] = <
+                text = <"pTis (DCIS)">
+                description = <"Ductal carcinoma in situ.">
+            >
+            ["at0.119"] = <
+                text = <"pTis (LCIS)">
+                description = <"Lobular carcinoma in situ.">
+            >
+            ["at0.120"] = <
+                text = <"pTis (Paget)">
+                description = <"Paget disease of the nipple with no tumour.">
+            >
+            ["at0.121"] = <
+                text = <"pT1">
+                description = <"Tumour 2 cm or less in greatest dimension.">
+            >
+            ["at0.122"] = <
+                text = <"pT1mic">
+                description = <"Microinvasion 0.1 cm or less in greatest dimension.">
+            >
+            ["at0.123"] = <
+                text = <"pT1a">
+                description = <"More than 0.1 cm but not more than 0.5 cm in greatest dimension.">
+            >
+            ["at0.124"] = <
+                text = <"pT1b">
+                description = <"More than 0.5 cm but not more than 1 cm in greatest dimension.">
+            >
+            ["at0.125"] = <
+                text = <"pT1c">
+                description = <"More than 1 cm but not more than 2 cm in greatest dimension.">
+            >
+            ["at0.126"] = <
+                text = <"pT2">
+                description = <"Tumour more than 2 cm but not more than 5 cm in greatest dimension.">
+            >
+            ["at0.127"] = <
+                text = <"pT3">
+                description = <"Tumour more than 5 cm in greatest dimension.">
+            >
+            ["at0.128"] = <
+                text = <"pT4">
+                description = <"Tumour of any size with direct extension to chest wall or skin only as described in T4a to T4d.">
+            >
+            ["at0.129"] = <
+                text = <"pT4a">
+                description = <"Extension to chest wall.">
+            >
+            ["at0.130"] = <
+                text = <"pT4b">
+                description = <"Oedema (including peau d'orange), or ulceration of the skin of the breast, or satellite skin nodules confined to the same breast.">
+            >
+            ["at0.131"] = <
+                text = <"pT4c">
+                description = <"Both 4a and 4b, above.">
+            >
+            ["at0.132"] = <
+                text = <"pT4d">
+                description = <"Inflammatory carcinoma.">
+            >
+            ["at0.43"] = <
+                text = <"TX">
+                description = <"Primary tumour cannot be assessed.">
+            >
+            ["at0.44"] = <
+                text = <"T0">
+                description = <"No evidence of primary tumour.">
+            >
+            ["at0.45"] = <
+                text = <"Tis">
+                description = <"Carcinoma in situ.">
+            >
+            ["at0.46"] = <
+                text = <"Tis (DCIS)">
+                description = <"Ductal carcinoma in situ.">
+            >
+            ["at0.47"] = <
+                text = <"Tis (LCIS)">
+                description = <"Lobular carcinoma in situ.">
+            >
+            ["at0.48"] = <
+                text = <"Tis (Paget)">
+                description = <"Paget disease of the nipple with no tumour.">
+            >
+            ["at0.49"] = <
+                text = <"T1">
+                description = <"Tumour 2 cm or less in greatest dimension.">
+            >
+            ["at0.50"] = <
+                text = <"T1mic">
+                description = <"Microinvasion 0.1 cm or less in greatest dimension.">
+            >
+            ["at0.51"] = <
+                text = <"T1a">
+                description = <"More than 0.1 cm but not more than 0.5 cm in greatest dimension.">
+            >
+            ["at0.52"] = <
+                text = <"T1b">
+                description = <"More than 0.5 cm but not more than 1 cm in greatest dimension.">
+            >
+            ["at0.53"] = <
+                text = <"T1c">
+                description = <"More than 1 cm but not more than 2 cm in greatest dimension.">
+            >
+            ["at0.54"] = <
+                text = <"T2">
+                description = <"Tumour more than 2 cm but not more than 5 cm in greatest dimension.">
+            >
+            ["at0.55"] = <
+                text = <"T3">
+                description = <"Tumour more than 5 cm in greatest dimension.">
+            >
+            ["at0.56"] = <
+                text = <"T4">
+                description = <"Tumour of any size with direct extension to chest wall or skin only as described in T4a to T4d.">
+            >
+            ["at0.57"] = <
+                text = <"T4a">
+                description = <"Extension to chest wall.">
+            >
+            ["at0.58"] = <
+                text = <"T4b">
+                description = <"Oedema (including peau d'orange), or ulceration of the skin of the breast, or satellite skin nodules confined to the same breast.">
+            >
+            ["at0.59"] = <
+                text = <"T4c">
+                description = <"Both 4a and 4b, above.">
+            >
+            ["at0.60"] = <
+                text = <"T4d">
+                description = <"Inflammatory carcinoma.">
+            >
+            ["at0.61"] = <
+                text = <"NX">
+                description = <"Regional lymph nodes cannot be assessed (e.g. previously removed).
+">
+            >
+            ["at0.62"] = <
+                text = <"N0">
+                description = <"No regional lymph node metastasis.
+">
+            >
+            ["at0.63"] = <
+                text = <"N1">
+                description = <"Metastasis in movable ipsilateral axillary lymph node(s).
+">
+            >
+            ["at0.64"] = <
+                text = <"N2">
+                description = <"Metastasis in fixed ipsilateral axillary lymph node(s) or in clinically apparent* ipsilateral internal mammary lymph node(s) in the absence of clinically evident axillary lymph node metastasis.
+">
+            >
+            ["at0.65"] = <
+                text = <"N2a">
+                description = <"Metastasis in axillary lymph node(s) fixed to one another or to other structures.
+">
+            >
+            ["at0.66"] = <
+                text = <"N2b">
+                description = <"Metastasis only in clinically apparent* internal mammary lymph node(s) and in the absence of clinically evident axillary lymph node metastasis.
+">
+            >
+            ["at0.67"] = <
+                text = <"N3">
+                description = <"Metastasis in ipsilateral infraclavicular lymph node(s) with or without axillary lymph node involvement; or in clinically apparent ipsilateral internal mammary lymph node(s) in the presence of clinically evident axillary lymph node metastasis; or metastasis in ipsilateral supraclavicular lymph node(s) with or without axillary or internal mammary lymph node involvement.
+">
+            >
+            ["at0.68"] = <
+                text = <"N3a">
+                description = <"Metastasis in infraclavicular lymph node(s).
+">
+            >
+            ["at0.69"] = <
+                text = <"N3b">
+                description = <"Metastasis in internal mammary and axillary lymph nodes.
+">
+            >
+            ["at0.70"] = <
+                text = <"N3c">
+                description = <"Metastasis in supraclavicular lymph node(s).
+">
+            >
+            ["at0.71"] = <
+                text = <"MX">
+                description = <"MX. Distant metastasis cannot be assessed.
+">
+            >
+            ["at0.72"] = <
+                text = <"M0">
+                description = <"No distant metastasis.
+">
+            >
+            ["at0.73"] = <
+                text = <"M1">
+                description = <"Distant metastasis.
+">
+            >
+            ["at0.74"] = <
+                text = <"pNX">
+                description = <"Regional lymph nodes cannot be assessed (not removed for study or previously removed).
+">
+            >
+            ["at0.75"] = <
+                text = <"pN0">
+                description = <"No regional lymph node metastasis.
+">
+            >
+            ["at0.76"] = <
+                text = <"pN1mi">
+                description = <"Micrometastasis (larger than 0.2 mm, but none larger than 2 mm in greatest dimension).
+">
+            >
+            ["at0.77"] = <
+                text = <"pN1">
+                description = <"Metastasis in 1-3 ipsilateral axillary lymph node(s), and/or in ipsilateral internal mammary nodes with microscopic metastasis detected by sentinel lymph node dissection but not clinically apparent.
+">
+            >
+            ["at0.78"] = <
+                text = <"pN1a">
+                description = <"Metastasis in 1-3 axillary lymph node(s), including at least one larger than 2 mm in greatest dimension.
+">
+            >
+            ["at0.79"] = <
+                text = <"pN1b">
+                description = <"Internal mammary lymph nodes with microscopic metastasis detected by sentinel lymph node dissection but not clinically apparent.
+">
+            >
+            ["at0.80"] = <
+                text = <"pN1c">
+                description = <"Metastasis in 1-3 axillary lymph nodes and internal mammary lymph nodes with microscopic metastasis detected by sentinel lymph node dissection but not clinically apparent.
+">
+            >
+            ["at0.81"] = <
+                text = <"pN2">
+                description = <"Metastasis in 4-9 ipsilateral axillary lymph nodes, or in clinically apparent* ipsilateral internal mammary lymph node(s) in the absence of axillary lymph node metastasis.
+">
+            >
+            ["at0.82"] = <
+                text = <"pN2a">
+                description = <"Metastasis in 4-9 axillary lymph nodes, including at least one that is larger than 2 mm.
+">
+            >
+            ["at0.83"] = <
+                text = <"pN2b">
+                description = <"Metastasis in clinically apparent internal mammary lymph node(s), in the absence of axillary lymph node metastasis.
+">
+            >
+            ["at0.84"] = <
+                text = <"pN3">
+                description = <"Metastasis in 10 or more ipsilateral axillary lymph nodes; or in ipsilateral infraclavicular lymph nodes; or in clinically apparent ipsilateral internal mammary lymph nodes in the presence of one or more positive axillary lymph nodes; or in more than 3 axillary lymph nodes with clinically negative, microscopic metastasis in internal mammary lymph nodes; or in ipsilateral supraclavicular lymph nodes.
+">
+            >
+            ["at0.85"] = <
+                text = <"pN3a">
+                description = <"Metastasis in 10 or more axillary lymph nodes (at least one larger than 2 mm) or metastasis in infraclavicular lymph nodes.
+">
+            >
+            ["at0.86"] = <
+                text = <"pN3b">
+                description = <"Metastasis in clinically apparent internal mammary lymph node(s) in the presence of positive axillary lymph node(s); or metastasis in more than 3 axillary lymph nodes and in internal mammary lymph nodes with microscopic metastasis detected by sentinel lymph node dissection but not clinically apparent.
+">
+            >
+            ["at0.87"] = <
+                text = <"pN3c">
+                description = <"Metastasis in supraclavicular lymph node(s).
+">
+            >
+            ["at0.88"] = <
+                text = <"pMX">
+                description = <"MX. Distant metastasis cannot be assessed.
+">
+            >
+            ["at0.89"] = <
+                text = <"pM0">
+                description = <"No distant metastasis.
+">
+            >
+            ["at0.90"] = <
+                text = <"pM1">
+                description = <"Distant metastasis.
+">
+            >
+            ["at0.99"] = <
+                text = <"Stage IIA">
+                description = <"T0-N1-M0 : T1-N1-M0 ; T2-N0-M0">
+            >
+            ["at0000.1"] = <
+                text = <"TNM staging - Breast (Sixth edition)">
+                description = <"TNM staging classification for breast cancer (Sixth edition).">
+            >
+            ["ac0.9000"] = <
+                text = <"Primary tumour (T) (synthesised)">
+                description = <"Clincal assessment of the primary tumour. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Regional lymph nodes (N) (synthesised)">
+                description = <"Clinical assessment of the regional lymph nodes. (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Distant metastasis (M) (synthesised)">
+                description = <"Clinical assessment of distant metastasis. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Clinical stage grouping (synthesised)">
+                description = <"The TNM Clinical stage grouping. (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"Primary tumour (pT) (synthesised)">
+                description = <"Pathological assessment of the primary tumour. (synthesised)">
+            >
+            ["ac0.9005"] = <
+                text = <"Regional lymph node (pN) (synthesised)">
+                description = <"Pathological assessment of the regional lymph nodes. (synthesised)">
+            >
+            ["ac0.9006"] = <
+                text = <"Distant metastasis (pM) (synthesised)">
+                description = <"Pathological assessment of distant metastases. (synthesised)">
+            >
+            ["ac0.9007"] = <
+                text = <"Pathological stage grouping (synthesised)">
+                description = <"The TNM Pathological stage grouping. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0.100"] = <
+                text = <"المرحلة 1">
+                description = <"و 1, ل 0, ن 0">
+            >
+            ["at0.101"] = <
+                text = <"المرحلة 4">
+                description = <"أي و , أي ل, ن 1">
+            >
+            ["at0.102"] = <
+                text = <"المرحلة 3 ج">
+                description = <"أي و, ل 3, ن 0">
+            >
+            ["at0.103"] = <
+                text = <"المرحلة 3 ب">
+                description = <"و 4, ل 0 - ل2, ن 0">
+            >
+            ["at0.104"] = <
+                text = <"المرحلة 3 أ">
+                description = <"و 0, ل 2, ن 0,,
+و 1, ل 2, ن 0,,
+و 3, ل 1 - 2, ن 0">
+            >
+            ["at0.105"] = <
+                text = <"المرحلة 2 ب">
+                description = <"و 2, ل 1, ن 0,,
+و 3, ل 0, ن 0">
+            >
+            ["at0.106"] = <
+                text = <"المرحلة 0">
+                description = <"Tis , ل 0, ن 0">
+            >
+            ["at0.107"] = <
+                text = <"المرحلة 2 أ">
+                description = <"و 0, ل 1, ن 0,,
+و 1, ل 1, ن 0,,
+و 2, ل 0, ن 0">
+            >
+            ["at0.108"] = <
+                text = <"المرحلة 1">
+                description = <"و 1, ل 0, ن 0">
+            >
+            ["at0.109"] = <
+                text = <"المرحلة 4">
+                description = <"أي و, أي ل, ن 1">
+            >
+            ["at0.110"] = <
+                text = <"المرحلة 3 ج">
+                description = <"أي و, ل 3, ن 0">
+            >
+            ["at0.111"] = <
+                text = <"المرحلة 3 ب">
+                description = <"و 4 , ل 0 - 2, ن 0">
+            >
+            ["at0.112"] = <
+                text = <"المرحلة 3 أ">
+                description = <"و 0, ل 2, ن 0,,
+و 1, ل 2, ن 0,,
+و 3, ل 1-2, ن 0">
+            >
+            ["at0.113"] = <
+                text = <"المرحلة 2 ب">
+                description = <"و 2, ل 1, ن 0,,
+و 3, ل 0, ن 0">
+            >
+            ["at0.114"] = <
+                text = <"المرحلة 0">
+                description = <"Tis, ل 0, ن 0">
+            >
+            ["at0.115"] = <
+                text = <"و (س) باثولوجي">
+                description = <"لا يمكن تقييم الورم الأولي">
+            >
+            ["at0.116"] = <
+                text = <"و 0 باثولوجي">
+                description = <"لا يوجد دليل حول الورم الأولي">
+            >
+            ["at0.117"] = <
+                text = <"Tis - الباثولوجي">
+                description = <"سرطانة لابِدة/في موضعها">
+            >
+            ["at0.118"] = <
+                text = <"Tis - قَنَوية - الباثولوجي">
+                description = <"سرطانة قَنَويَّة لابِدة/ في موضعها">
+            >
+            ["at0.119"] = <
+                text = <"Tis - فُصَيْصي - الباثولوجي">
+                description = <"سرطانة فُصَيْصية لابِدة/ في موضعها ">
+            >
+            ["at0.120"] = <
+                text = <"Tis - داء بادجيت">
+                description = <"داء بادجيت الذي يصيب الحَلَمة دون ورم">
+            >
+            ["at0.121"] = <
+                text = <"و 1 - الباثولوجي">
+                description = <"الورم أقل من أو يساوي 2 سنتيمتر في أطول أبعاده">
+            >
+            ["at0.122"] = <
+                text = <"و 1 - مجهري - الباثولوجي">
+                description = <"غزو/إغارة موضعية أقل من أو تساوي 0.1 سنتيمتر في أكبر أبعادها">
+            >
+            ["at0.123"] = <
+                text = <"و 1 أ - الباثولوجي">
+                description = <"أكبر من 0.1 سنتيمتر و لا يزيد عن 0.5 سنتيمتر في أطول أبعاده">
+            >
+            ["at0.124"] = <
+                text = <"و 1 ب - الباثولوجي">
+                description = <"أكبر من 0.5 سنتيمتر و لا يزيد عن 1 سنتيمتر في أكبر أبعاده">
+            >
+            ["at0.125"] = <
+                text = <"و أ ج - الباثولوجي">
+                description = <"أكبر من 1 سنتيمتر و لا يزيد عن 2 سنتيمتر في أكبر أبعاده">
+            >
+            ["at0.126"] = <
+                text = <"و 2 - الباثولوجي">
+                description = <"الورم أكبر من 2 سنتيمتر و لا يزيد عن 5 سنتيمتر في أكبر أبعاده">
+            >
+            ["at0.127"] = <
+                text = <"و 3 - الباثولوجي">
+                description = <"الورم أكبر من 5 سنتيمتر في أطول أبعاده">
+            >
+            ["at0.128"] = <
+                text = <"و 4 - الباثولوجي">
+                description = <"الورم بأي حجم مع غزو/ إغارة مباشرة على جدار الصدر أو البشرة/الجلد كما تم وصفه في و 4 أ إلى و 4 د">
+            >
+            ["at0.129"] = <
+                text = <"و 4 أ - الباثولوجي">
+                description = <"امتداد إلى جدار الصدر">
+            >
+            ["at0.130"] = <
+                text = <"و 4 ب - الباثولوجي">
+                description = <"وذمة (تشمل جلد/بشرة البرتقالة), أو تقرح جلد/بشرة الثدي, أو عُقَيْدات جلدية ساتِلة ماخِضة في ذات الثدي">
+            >
+            ["at0.131"] = <
+                text = <"و 4 ج - الباثولوجي">
+                description = <"تشمل كلاًّ من ب أ و 4 ب, أعلاه">
+            >
+            ["at0.132"] = <
+                text = <"و 4 د - الباثولوجي">
+                description = <"سرطانة التهابية">
+            >
+            ["at0.43"] = <
+                text = <"و (س)">
+                description = <"لا يمكن تقييم الورم الأولي">
+            >
+            ["at0.44"] = <
+                text = <"و (0)">
+                description = <"لا يوجد دليل على الورم الأولي">
+            >
+            ["at0.45"] = <
+                text = <"Tis">
+                description = <"سرطانة لابِدة/في موضعها">
+            >
+            ["at0.46"] = <
+                text = <"Tis - قَنَوية">
+                description = <"سرطانة قَنَويَّة لابِدة/ في موضعها">
+            >
+            ["at0.47"] = <
+                text = <"Tis - فُصَيْصي">
+                description = <"سرطانة فُصَيْصية لابِدة/ في موضعها ">
+            >
+            ["at0.48"] = <
+                text = <"Tis - داء بادجيت">
+                description = <"داء بادجيت الذي يصيب الحَلَمة دون ورم">
+            >
+            ["at0.49"] = <
+                text = <"و 1">
+                description = <"الورم أقل من أو يساوي 2 سنتيمتر في أطول أبعاده">
+            >
+            ["at0.50"] = <
+                text = <"و 1 - مجهري">
+                description = <"غزو/إغارة موضعية أقل من أو تساوي 0.1 سنتيمتر في أكبر أبعادها">
+            >
+            ["at0.51"] = <
+                text = <"و 1 أ">
+                description = <"أكبر من 0.1 سنتيمتر و لا يزيد عن 0.5 سنتيمتر في أطول أبعاده">
+            >
+            ["at0.52"] = <
+                text = <"و 1 ب">
+                description = <"أكبر من 0.5 سنتيمتر و لا يزيد عن 1 سنتيمتر في أكبر أبعاده">
+            >
+            ["at0.53"] = <
+                text = <"و 1 ج">
+                description = <"أكبر من 1 سنتيمتر و لا يزيد عن 2 سنتيمتر في أكبر أبعاده">
+            >
+            ["at0.54"] = <
+                text = <"و 2">
+                description = <"الورم أكبر من 2 سنتيمتر و لا يزيد عن 5 سنتيمتر في أكبر أبعاده">
+            >
+            ["at0.55"] = <
+                text = <"و 3">
+                description = <"الورم أكبر من 5 سنتيمتر في أطول أبعاده">
+            >
+            ["at0.56"] = <
+                text = <"و 4">
+                description = <"الورم بأي حجم مع غزو/ إغارة مباشرة على جدار الصدر أو البشرة/الجلد كما تم وصفه في و 4 أ إلى و 4 د">
+            >
+            ["at0.57"] = <
+                text = <"و 4 أ">
+                description = <"امتداد إلى جدار الصدر">
+            >
+            ["at0.58"] = <
+                text = <"و 4 ب">
+                description = <"وذمة (تشمل جلد/بشرة البرتقالة), أو تقرح جلد/بشرة الثدي, أو عُقَيْدات جلدية ساتِلة ماخِضة في ذات الثدي">
+            >
+            ["at0.59"] = <
+                text = <"و 4 ج">
+                description = <"تشمل كلاًّ من ب أ و 4 ب, أعلاه">
+            >
+            ["at0.60"] = <
+                text = <"و 4 د">
+                description = <"سرطانة التهابية">
+            >
+            ["at0.61"] = <
+                text = <"ل (س)">
+                description = <"لا يمكن تقييم العقد الناحية, مثلا: تمت إزالتها من قبل">
+            >
+            ["at0.62"] = <
+                text = <"ل 0">
+                description = <"لا يوجد نقيلة للعقد الليمفاوية الناحية.">
+            >
+            ["at0.63"] = <
+                text = <"ل 1">
+                description = <"يوجد نقيلة في العقدة/العقد الليمفاوية الإبطية المتحركة الموجودة في نفس الجانب">
+            >
+            ["at0.64"] = <
+                text = <"ل 2">
+                description = <"يوجد نقيلة في العقدة/العقد الليمفاوية الإبطية الثابتة الموجودة في نفس الجانب, أو في عقدة/عقد ليمفاوية الثديية/الحلمية الداخلية الموجودة في نفس الجانب ظارهة سريريا,  في غياب نقيلة مُثبَتة سريريا في العقدة الليمفاوية الإبطية">
+            >
+            ["at0.65"] = <
+                text = <"ل 2 أ">
+                description = <"نقيلة في العقدة/العقد الليمفاوية الإبطية الثابتة تصل إلى بعضها البعض أو إلى تراكيب أخرى">
+            >
+            ["at0.66"] = <
+                text = <"ل 2 ب">
+                description = <"نقيلة في العقدة/العقد الليمفاوية الداخلية الثديية/الحلمية الظاهرة سريريا, و في غياب نقيلة مُثبَتة سريريا في العقدة الليمفاوية الإبطية.">
+            >
+            ["at0.67"] = <
+                text = <"ل 3">
+                description = <"نقيلة في العقدة/العقد الليمفاوية تحت الترقوة من نفس الجانب, مع وجود أو في غياب الوصول إلى العقد الليمفاوية الإبطية,,
+أو في العقد/العقدة الليمفاوية الداخلية  الظاهرة سريريا من نفس الجانب في وجود نقيلة مثبتة سريريا في الالعقد الليمفاوية الإبطية,,
+أو نقيلة في العقدة/العقد الليمفاوية ما فوق الترقوة من نفس الجانب مع وجود أو في غياب الوصول إلى العقد الليمفاوية الداخلية الثديية/الحلمية أو العقد الليمفاوية الإبطية.">
+            >
+            ["at0.68"] = <
+                text = <"ل 3 أ">
+                description = <"نقيلة في العقدة/العقد الليمفاوية ما تحت الترقوة">
+            >
+            ["at0.69"] = <
+                text = <"ل 3 ب">
+                description = <"نقيلة في العقد الليمفاوية الثديية/الحلمية أو الإبطية">
+            >
+            ["at0.70"] = <
+                text = <"ل 3 ج">
+                description = <"نقيلة في العقدة/العقد الليمفاوية ما فوق الترقوة">
+            >
+            ["at0.71"] = <
+                text = <"ن (س)">
+                description = <"لا يمكن تقييم النقيلة البعيدة">
+            >
+            ["at0.72"] = <
+                text = <"ن 0">
+                description = <"لا يوجد نقيلة بعيدة">
+            >
+            ["at0.73"] = <
+                text = <"ن 1">
+                description = <"توجد نقيلة بعيدة">
+            >
+            ["at0.74"] = <
+                text = <"ل (س) - الباثولوجي">
+                description = <"لا يمكن تقييم العقد الناحية, لم يتم أخذ خزغة للدراسة أو تمت إزالتها من قبل.">
+            >
+            ["at0.75"] = <
+                text = <"ل 0 - الباثولوجي">
+                description = <"لا يوجد نقيلة للعقد الليمفاوية الناحية.">
+            >
+            ["at0.76"] = <
+                text = <"ل 1 المجهري - الباثولوجي">
+                description = <"توجد نقيلة مجهرية - أكبر من 0.2 ميلليمتر, و لكن ليس أكبر من 2 ميلليمتر في أكبر أبعادها">
+            >
+            ["at0.77"] = <
+                text = <"ل 1 - الباثولوجي">
+                description = <"نقيلة في واحد إلى ثلاثة عقد ليمفاوية من نفس الجانب, و / أو
+العقد الليمفاوية الثديية الداخلية من نفس الجانب مع وجود نقيلة مجهرية يتم اكتشافها بواسطة تشريح العقدة الليمفاوية الخفيرة, و لكنها غير ظاهرة سريريا.">
+            >
+            ["at0.78"] = <
+                text = <"ل 1 أ - الباثولوجي">
+                description = <"النقيلة في واحد إلى ثلاثة من العقد الليمفاوية, بما في ذلك على الأقل واحدة أكبر من 2 ميلليمتر في أكبر أبعادها.">
+            >
+            ["at0.79"] = <
+                text = <"ل 1 ب - الباثولوجي">
+                description = <"عقد ليمفاوية ثديية/حلمية صدرية بوجود نقيلة مجهرية يتم اكتشافها بتشريح العقدة الليمفاوية الخفيرة و لكنها غير ظاهرة سريريا.">
+            >
+            ["at0.80"] = <
+                text = <"ل 1 ج - الباثولوجي">
+                description = <"نقيلة في واحد أو ثلاثة من العقد الليمفاوية الإبطية و العقد الليمفاوية الثديية الداخلية مع وجود نقيلة مجهرية يتم اكتشافها عند تشريح العقدة الليمفاوية الخفيرة و لكنها غير ظاهرة سريريا.">
+            >
+            ["at0.81"] = <
+                text = <"ل 2 - الباثولوجي">
+                description = <"نقيلة في 4 - 9 عقد ليمفاوية إبطية من نفس الجانب, أو في عقدة/عقد ليمفاوية ثديية/حلمية داخلية من نفس الجانب في غياب نقيلة العقدة الليمفاوية الإبطية.">
+            >
+            ["at0.82"] = <
+                text = <"ل 2 أ - الباثولوجي">
+                description = <"نقيلة في 4 - 9 عقد ليمفاوية إبطية, بما في ذلك على الأقل واحدة أكبر من 2 ميلليمتر.">
+            >
+            ["at0.83"] = <
+                text = <"ل 2 ب - الباثولوجي">
+                description = <"نقيلة في عقدة/عقد ليمفاوية داخلية ثديية/ حلمية ظاهرة سريريا, في غياب نقيلة العقدة الليمفاوية الإبطية.">
+            >
+            ["at0.84"] = <
+                text = <"ل 3 - الباثولوجي">
+                description = <"نقيلة في 10 أو أكثر من العقد الليمفاوية الإبطية من نفس الجانب,, أو في عقد ليمفاوية تحت الترقوة من نفس الجانب,,
+أو في عقد ليمفاوية ثديية/حلمية داخلية من نفس الجانب في وجود عقدة ليمفاوية إيجابية أو أكثر,, 
+أو في أكثر من 3 عقد ليمفاوية إبطية بوجود عقد ليمفاوية ثديية/حلمية داخلية بها نقيلة مجهرية سلبية سريريا,,
+أو في العقد الليمفاوية ما فوق الترقوة من نفس الجانب.">
+            >
+            ["at0.85"] = <
+                text = <"ل 3 أ - الباثولوجي">
+                description = <"نقيلة في 10 عقد ليمفاوية إبطية أو أكثر (واحدة على الأقل أكبر من 2 ميلليمتر) أو نقيلة في العقد الليمفاوية ما تحت الترقوة.">
+            >
+            ["at0.86"] = <
+                text = <"ل 3 ب - الباثولوجي">
+                description = <"نقيلة ظاهرة سريريا في العقدة/العقد الليمفاوية الثديية/الحلمية الداخلية في وجود عقد/عقدة ليمفاوية إبطية إيجابية,,
+أو نقيلة في أكثر من 3 عقد ليمفاوية إبطية و في العقد الليمفاوية الثديية/الحلمية الداخلية بها نقيلة مجهرية يتم اكتشافها بواسطة تشريح العقدة الليمفاوية الخفيرة و ليست ظاهرة سريريا.">
+            >
+            ["at0.87"] = <
+                text = <"ل 3 ج - الباثولوجي">
+                description = <"نقيلة في العقدة/العقد الليمفاوية ما فوق الترقوة">
+            >
+            ["at0.88"] = <
+                text = <"ن (س) – باثولوجي">
+                description = <"لا يمكن تقييم النقائل البعيدة.">
+            >
+            ["at0.89"] = <
+                text = <"ن 0 – باثولوجي">
+                description = <"لا يوجد نقيلة بعيدة">
+            >
+            ["at0.90"] = <
+                text = <"ن 1 – باثولوجي">
+                description = <"يوجد نقيلة بعيدة">
+            >
+            ["at0.99"] = <
+                text = <"المرحلة 2 أ">
+                description = <"و 0, ل 1, ن 0,,
+و 1, ل 1, ن 0,,
+و 2, ل 0, ن 0">
+            >
+            ["at0000.1"] = <
+                text = <"تحديد مرحلة (الورم, العقد اللميفاوية, و النقيلة) لسرطان الثدي - النسخة السادسة">
+                description = <"تحديد مرحلة (الورم, العقد اللميفاوية, و النقيلة) لسرطان الثدي - النسخة السادسة">
+            >
+            ["ac0.9000"] = <
+                text = <"ورم أولي (synthesised)">
+                description = <"التقييم السريري للورم الأولي (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"العقد الليمفاوية النَّاحِيَة (synthesised)">
+                description = <"تقييم سريري للعقد الليمفاوية الناحية. (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"النقيلة البعيدة (synthesised)">
+                description = <"تقييم سريري للنقيلة البعيدة (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"مجموعة المرحلة السريرية (synthesised)">
+                description = <"المجموعة التي تنتمي لها المرحلة السريرية و, ل, ن (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"ورم أولي (synthesised)">
+                description = <"تقييم باثولوجي للورم الأولي (synthesised)">
+            >
+            ["ac0.9005"] = <
+                text = <"العقد الليمفاوية النَّاحِيَة - الباثولوجي (synthesised)">
+                description = <"التقييم الباثولوجي للعقد الليمفاوية الناحية. (synthesised)">
+            >
+            ["ac0.9006"] = <
+                text = <"النقيلة البعيدة – باثولوجي (synthesised)">
+                description = <"التقييم الباثولوجي للنقائل البعيدة (synthesised)">
+            >
+            ["ac0.9007"] = <
+                text = <"مجموعة المرحلة الباثولوجية (synthesised)">
+                description = <"المجموعة التي تنتمي لها المرحلة الباثولوجية و, ل, ن (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.43", "at0.44", "at0.45", "at0.46", "at0.47", "at0.48", "at0.49", "at0.50", "at0.51", "at0.52", "at0.53", "at0.54", "at0.55", "at0.56", "at0.57", "at0.58", "at0.59", "at0.60">
+        >
+        ["ac0.9007"] = <
+            id = <"ac0.9007">
+            members = <"at0.114", "at0.108", "at0.107", "at0.113", "at0.110", "at0.111", "at0.112", "at0.109">
+        >
+        ["ac0.9005"] = <
+            id = <"ac0.9005">
+            members = <"at0.74", "at0.75", "at0.76", "at0.77", "at0.78", "at0.79", "at0.80", "at0.81", "at0.82", "at0.83", "at0.84", "at0.85", "at0.86", "at0.87">
+        >
+        ["ac0.9006"] = <
+            id = <"ac0.9006">
+            members = <"at0.88", "at0.89", "at0.90">
+        >
+        ["ac0.9003"] = <
+            id = <"ac0.9003">
+            members = <"at0.106", "at0.100", "at0.99", "at0.102", "at0.103", "at0.104", "at0.105", "at0.101">
+        >
+        ["ac0.9004"] = <
+            id = <"ac0.9004">
+            members = <"at0.115", "at0.116", "at0.117", "at0.118", "at0.119", "at0.120", "at0.121", "at0.122", "at0.123", "at0.124", "at0.125", "at0.126", "at0.127", "at0.128", "at0.129", "at0.130", "at0.131", "at0.132">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.61", "at0.62", "at0.63", "at0.64", "at0.65", "at0.66", "at0.67", "at0.68", "at0.69", "at0.70">
+        >
+        ["ac0.9002"] = <
+            id = <"ac0.9002">
+            members = <"at0.71", "at0.72", "at0.73">
+        >
+    >

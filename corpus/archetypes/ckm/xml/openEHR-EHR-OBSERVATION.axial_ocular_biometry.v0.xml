@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1842,19 +1842,18 @@ Not to be used to record intraocular lens (IOL) power calculation results — us
       </items>
       <items code="at0005">
         <items id="text">Axial length</items>
-        <items id="description">The distance from the anterior corneal surface to the retinal pigment epithelium (optical biometry) or to the vitreoretinal interface (ultrasound).&#xD;
-</items>
+        <items id="description">The distance from the anterior corneal surface to the retinal pigment epithelium (optical biometry) or to the vitreoretinal interface (ultrasound).</items>
         <items id="comment">DICOM tag (0022,1019)</items>
       </items>
       <items code="at0006">
         <items id="text">Anterior chamber depth</items>
-        <items id="description">The distance from the posterior corneal surface (endothelium) to the anterior surface of the crystalline lens (or IOL in pseudophakic eyes) along the measured axis. </items>
+        <items id="description">The distance from the posterior corneal surface (endothelium) to the anterior surface of the crystalline lens (or IOL in pseudophakic eyes) along the measured axis.</items>
         <items id="comment">Also referred to as aqueous depth. &#xD;
 Equivalent to DICOM (0022,1131) if 'Anterior Chamber Depth Definition Code' is 111777, but NOT if it is 111776.</items>
       </items>
       <items code="at0007">
         <items id="text">Lens thickness</items>
-        <items id="description">The axial thickness of the natural or artificial lens, measured from its anterior to posterior surface along the optical axis. </items>
+        <items id="description">The axial thickness of the natural or artificial lens, measured from its anterior to posterior surface along the optical axis.</items>
       </items>
       <items code="at0009">
         <items id="text">Warnings or errors</items>
@@ -1907,7 +1906,7 @@ Equivalent to DICOM (0022,1131) if 'Anterior Chamber Depth Definition Code' is 1
       </items>
       <items code="at0024">
         <items id="text">Assumed state of lens</items>
-        <items id="description">The presumed status of the crystalline lens at the time of measurement, </items>
+        <items id="description">The presumed status of the crystalline lens at the time of measurement,</items>
         <items id="comment">Coding with a terminology is recommended; free text entry should only be permitted if no appropriate coded value is available.</items>
       </items>
       <items code="at0025">
@@ -1924,7 +1923,7 @@ Equivalent to DICOM (0022,1131) if 'Anterior Chamber Depth Definition Code' is 1
       </items>
       <items code="at0028">
         <items id="text">Ultrasound interfacing method</items>
-        <items id="description">The technique used to couple the ultrasound probe to the eye during A-scan biometry. </items>
+        <items id="description">The technique used to couple the ultrasound probe to the eye during A-scan biometry.</items>
         <items id="comment">Applicable only when the method is ultrasound biometry.</items>
       </items>
       <items code="at0029">
@@ -1997,25 +1996,25 @@ Equivalent to DICOM (0022,1131) if 'Anterior Chamber Depth Definition Code' is 1
       </items>
       <items code="at0048">
         <items id="text">Axial length modified</items>
-        <items id="description">Recording of whether the axial length value was manually altered. </items>
+        <items id="description">Recording of whether the axial length value was manually altered.</items>
       </items>
       <items code="at0050">
         <items id="text">Front of cornea to front of lens</items>
-        <items id="description">The axial distance from the front of the cornea to the front of the lens. </items>
+        <items id="description">The axial distance from the front of the cornea to the front of the lens.</items>
         <items id="comment">Anatomically, this is not the anterior chamber depth, but rather the sum of the anterior chamber depth and the central corneal thickness. &#xD;
 Beware of DICOM referring to to this as anterior chamber depth anyway, when qualified it with the 111776 code. "Front Of Cornea To Front Of Lens".</items>
       </items>
       <items code="at0051">
         <items id="text">By lens</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Lens name</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Anteroposterior position</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">anterior</items>
@@ -2027,19 +2026,19 @@ Beware of DICOM referring to to this as anterior chamber depth anyway, when qual
       </items>
       <items code="at0056">
         <items id="text">Inter-lens distance</items>
-        <items id="description">Distance between the posterior surface of the anterior lens and the anterior surface of the posterior lens, along the measured axis. </items>
+        <items id="description">Distance between the posterior surface of the anterior lens and the anterior surface of the posterior lens, along the measured axis.</items>
       </items>
       <items code="at0057">
         <items id="text">Vitreous cavity length</items>
-        <items id="description">The distance between the posterior surface of the most posterior lens and the posterior end-point of the axial length. </items>
+        <items id="description">The distance between the posterior surface of the most posterior lens and the posterior end-point of the axial length.</items>
       </items>
       <items code="at0058">
         <items id="text">Assumed axial sound velocity</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">By lens</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Lens thickness (cycle)</items>
@@ -2048,11 +2047,11 @@ Beware of DICOM referring to to this as anterior chamber depth anyway, when qual
       </items>
       <items code="at0062">
         <items id="text">Lens name</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">Anteroposterior position</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">anterior</items>
@@ -2064,7 +2063,7 @@ Beware of DICOM referring to to this as anterior chamber depth anyway, when qual
       </items>
       <items code="at0066">
         <items id="text">Central corneal thickness</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Phakic plus phakic IOL</items>
@@ -2077,4 +2076,3 @@ Beware of DICOM referring to to this as anterior chamber depth anyway, when qual
     </term_definitions>
   </ontology>
 </archetype>
-

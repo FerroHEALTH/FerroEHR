@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -178,13 +178,7 @@ Hinweis 2: Bekannte Probleme bei der Probenentnahme oder Behandlung, wie z.B. "P
 Werden vom Labor "Reflextests" durchgeführt, können diese gemäß den US/FHIR-Richtlinien (siehe https://www.hl7.org/fhir/2015may/uslabreportguide.html) oder anderen lokalen Richtlinien durchgeführt werden. Zum Beispiel eine der folgenden Punkte.... &#xD;
 1. Protokollierung der Reflextestergebnisse zusätzliche "Testergebnisse" innerhalb derselben "openEHR-EHROBSERVATION.Laborergebnis". &#xD;
 2. Protokollierung der Reflextestergebnisse zusätzliche "Testergebnisse" innerhalb derselben "openEHR-EHROBSERVATION.Laborergebnis", verweisen Sie aber über "Testerforderungsdetails" auf den ursprünglichen Labortestantrag. &#xD;
-3. Protokollierung der Reflextestergebnisse zusätzliche "Testergebnisse" innerhalb derselben "openEHR-EHROBSERVATION.Laborergebnis" festhalten, aber über "Testerforderungsdetails" auf einen neuen Labortestantrag sowie den ursprünglichen Labortestantrag verweisen.&#xD;
-&#xD;
-&#xD;
-&#xD;
-&#xD;
-&#xD;
-</use>
+3. Protokollierung der Reflextestergebnisse zusätzliche "Testergebnisse" innerhalb derselben "openEHR-EHROBSERVATION.Laborergebnis" festhalten, aber über "Testerforderungsdetails" auf einen neuen Labortestantrag sowie den ursprünglichen Labortestantrag verweisen.</use>
       <misuse>Nicht zur Dokumentation eines Autopsieberichts oder eines forensischen Berichts verwenden. Einzelne Proben, die bei einer Autopsie oder einem forensischen Bericht entnommen werden, können jedoch mit diesem Archetyp dargestellt werden. Für diese sind zusätzliche spezialisierte Archetypen erforderlich, um die Daten zu dokumentieren.&#xD;
 &#xD;
 Dieser Archetyp eignet sich zur Darstellung allgemeiner Labortestergebnisse, jedoch nicht für vollständige synoptische Berichte. Für diese sind zusätzliche spezialisierte Archetypen erforderlich, um die Daten zu dokumentieren.</misuse>
@@ -246,9 +240,7 @@ Anmärkning 2: Kända problem med provtagning eller hantering av prover, såsom 
 Om laboratoriet ändrar analyser eller lägger till analyser som uppföljning kan dessa hanteras enligt riktlinjer från HL7 FHIR (https://www.hl7.org/fhir/2015may/uslabreport-guide.html), eller enligt lokala förfaranden. Till exempel något av följande:&#xD;
 1. Registrera de ändrade analyserna/tilläggsanalyserna inom samma instans av denna arketyp.&#xD;
 2. Registrera de ändrade analyserna/tilläggsanalyserna i en ny instans av denna arketyp, men hänvisa till den ursprungliga beställningen via "Beställningsdetaljer".&#xD;
-3. Registrera de ändrade analyserna/tilläggsanalyserna i en ny instans av den här arketypen, men hänvisa till en ny beställning utöver den ursprungliga via "Beställningsdetaljer".&#xD;
-&#xD;
-</use>
+3. Registrera de ändrade analyserna/tilläggsanalyserna i en ny instans av den här arketypen, men hänvisa till en ny beställning utöver den ursprungliga via "Beställningsdetaljer".</use>
       <misuse>Bör inte användas för att lagra en obduktionsrapport eller rättsmedicinsk undersökningsrapport, även om analysresultat för vissa provmaterial som tagits vid en obduktion kan representeras i denna arketyp. För att skapa den verkliga obduktions- eller kriminaltekniska rapporten måste man använda specialiserade arketyper.&#xD;
 &#xD;
 Denna arketyp är lämplig för att representera allmänna laboratoriesvar men är inte avsedd för sammanfattande rapporter, där specialiserade arketyper bör användas istället.</misuse>
@@ -2328,9 +2320,7 @@ Coding with a terminology is desirable, where possible.  (en)</items>
         <items id="description">Details of the laboratory which received the request and has overall responsibility to manage reporting of the test, even if other labs perform specific aspects.</items>
         <items id="comment">This slot is intended to carry details of the laboratory which received the request and has overall responsibility to manage reporting of the test, even if other labs perform specific aspects.&#xD;
 &#xD;
-The receiving laboratory may either perform the test or refer it to another laboratory. Where a different laboratory is responsible for performing the testing on specific analytes, it would be expected that these details would be carried in the 'Analyte result detail' SLOT within the CLUSTER.laboratory_test_analyte archetype.&#xD;
-&#xD;
-</items>
+The receiving laboratory may either perform the test or refer it to another laboratory. Where a different laboratory is responsible for performing the testing on specific analytes, it would be expected that these details would be carried in the 'Analyte result detail' SLOT within the CLUSTER.laboratory_test_analyte archetype.</items>
       </items>
       <items code="at0035">
         <items id="text">Distribution list</items>
@@ -2978,8 +2968,7 @@ Das Empfangslabor kann den Test entweder durchführen oder an ein anderes Labor 
       <items code="at0065">
         <items id="text">Probendetail</items>
         <items id="description">Angaben über die Beschaffenheit der analysierten Probe.</items>
-        <items id="comment">Wenn der Probentyp mit einem Code in der Testbezeichnung ausreichend spezifiziert ist, sind diese zusätzlichen Daten nicht erforderlich. Die Verknüpfung von Ergebnissen mit bestimmten Proben kann sowohl in einem CLUSTER.Probe als auch in den verschiedenen CLUSTER Archetypen mit Hilfe von Elementen mit der Bezeichnung "Probe" dokumentiert werden.&#xD;
-</items>
+        <items id="comment">Wenn der Probentyp mit einem Code in der Testbezeichnung ausreichend spezifiziert ist, sind diese zusätzlichen Daten nicht erforderlich. Die Verknüpfung von Ergebnissen mit bestimmten Proben kann sowohl in einem CLUSTER.Probe als auch in den verschiedenen CLUSTER Archetypen mit Hilfe von Elementen mit der Bezeichnung "Probe" dokumentiert werden.</items>
       </items>
       <items code="at0068">
         <items id="text">Laborinterne Kennzeichnung</items>
@@ -2991,8 +2980,7 @@ Das Empfangslabor kann den Test entweder durchführen oder an ein anderes Labor 
         <items id="description">Der Status des gesamten Laborprüfergebnisses.</items>
         <items id="comment">Die Werte wurden so ausgewählt, dass sie mit denen im HL7 FHIR Diagnosebericht übereinstimmen, der historisch aus der HL7v2Praxis stammt. Andere lokale Codes/Begriffe können über den Text "Auswahl" verwendet werden. &#xD;
 &#xD;
-Dieses Element kann mehrfach vorkommen, um Fälle abzudecken, bei denen der Status für verschiedene Aspekte des Ergebnisses in mehrere Elemente unterteilt wurde.&#xD;
-</items>
+Dieses Element kann mehrfach vorkommen, um Fälle abzudecken, bei denen der Status für verschiedene Aspekte des Ergebnisses in mehrere Elemente unterteilt wurde.</items>
       </items>
       <items code="at0074">
         <items id="text">Abgebrochen</items>
@@ -3144,7 +3132,7 @@ Bekannte Schwierigkeiten bei der Probenentnahme oder -behandlung, wie z.B. die "
       </items>
       <items code="at0035">
         <items id="text">Lista di distribuzione</items>
-        <items id="description">Dettagli su eventuale altro personale sanitario o organismi che hanno richiesto una copia del risultato dell'esame. </items>
+        <items id="description">Dettagli su eventuale altro personale sanitario o organismi che hanno richiesto una copia del risultato dell'esame.</items>
         <items id="comment">La "Lista di distribuzione" ha soltanto scopo informativo, ed il destinatario principale della lista è la persona ritenuta quella preposta ad agire sulle informazioni.</items>
       </items>
       <items code="at0037">
@@ -3153,20 +3141,20 @@ Bekannte Schwierigkeiten bei der Probenentnahme oder -behandlung, wie z.B. die "
       </items>
       <items code="at0038">
         <items id="text">Definitivo</items>
-        <items id="description">Il risultato dell'esame è completo ed è stato verificato da una persona autorizzata. </items>
+        <items id="description">Il risultato dell'esame è completo ed è stato verificato da una persona autorizzata.</items>
       </items>
       <items code="at0040">
         <items id="text">Modificato</items>
-        <items id="description">Il risultato è stato modificato dopo essere stato dichiarato come Definitivo, ed è completo e verificato dal patologo responsabile e data dell'esito è stata cambiata. </items>
+        <items id="description">Il risultato è stato modificato dopo essere stato dichiarato come Definitivo, ed è completo e verificato dal patologo responsabile e data dell'esito è stata cambiata.</items>
       </items>
       <items code="at0057">
         <items id="text">Conclusioni</items>
-        <items id="description">Descrizione relativa agli esiti principali. </items>
+        <items id="description">Descrizione relativa agli esiti principali.</items>
         <items id="comment">Per esempio: "l'esito indica una significativa compromissione renale". Il contenuto delle conclusioni può variare, a seconda dell'indagine effettuata. Queste conclusioni dovrebbero essere allineate con quanto riportato nel campo "Diagnosi dell'esame".</items>
       </items>
       <items code="at0062">
         <items id="text">Identificativo del richiedente l'ordine</items>
-        <items id="description">ID locale assegnato all'ordine dell'esame dal sistema che lo ha richiesto </items>
+        <items id="description">ID locale assegnato all'ordine dell'esame dal sistema che lo ha richiesto</items>
         <items id="comment">E' equivalente al campo HL7 "Placer Order Identifier"</items>
       </items>
       <items code="at0063">
@@ -3176,17 +3164,17 @@ Bekannte Schwierigkeiten bei der Probenentnahme oder -behandlung, wie z.B. die "
       </items>
       <items code="at0065">
         <items id="text">Dettagli sul campione</items>
-        <items id="description">Dettagli sulla sostanza fisica che è stata analizzata. </items>
+        <items id="description">Dettagli sulla sostanza fisica che è stata analizzata.</items>
         <items id="comment">Se il tipo del campione è specificato in maniera esaustiva all'interno del nome dell'esame, allora non è richiesto alcun dettaglio. Nel caso di campioni multipli, questi possono essere rappresentati mediante "gruppo di risultati" ("Result group").</items>
       </items>
       <items code="at0068">
         <items id="text">Identificativo interno del laboratorio</items>
-        <items id="description">Identificativo locale assegnato dal Sistema Informativo di Laboratorio (LIS) ricevente, allo scopo di tracciare il processo dell'esame. </items>
-        <items id="comment">Questo identivicativo è un numero di tracciabilità interno assegnato dal LIS, e non il nome dell'esame. </items>
+        <items id="description">Identificativo locale assegnato dal Sistema Informativo di Laboratorio (LIS) ricevente, allo scopo di tracciare il processo dell'esame.</items>
+        <items id="comment">Questo identivicativo è un numero di tracciabilità interno assegnato dal LIS, e non il nome dell'esame.</items>
       </items>
       <items code="at0073">
         <items id="text">Stato complessivo dell'esame</items>
-        <items id="description">Lo stato relativo all'esame di laboratorio nel suo complesso. </items>
+        <items id="description">Lo stato relativo all'esame di laboratorio nel suo complesso.</items>
         <items id="comment">I valori sono stati specificatamente scelti in moto tale da corrispondere a quelli del "FHIR Diagnostic Report" di HL7, a loro volta storicamente derivanti dal HL7 v2. Altre codifiche/terminologie locali possono essere utilizzare tramite la scelta "Text". Questo elemento ha occorrenze multiple al fine di soddisfare le esigenze di quegli use case in cui gli stati relativi a differenti aspetti del risultato sono stati divisi in più componenti.</items>
       </items>
       <items code="at0074">
@@ -3195,7 +3183,7 @@ Bekannte Schwierigkeiten bei der Probenentnahme oder -behandlung, wie z.B. die "
       </items>
       <items code="at0075">
         <items id="text">Timestamp dello stato generale del test</items>
-        <items id="description">La data e/o l'ora in cui è stato rilasciato lo "Stato complessivo dell'esame". </items>
+        <items id="description">La data e/o l'ora in cui è stato rilasciato lo "Stato complessivo dell'esame".</items>
       </items>
       <items code="at0077">
         <items id="text">Categoria di servizio diagnostico</items>
@@ -3239,11 +3227,11 @@ Come esempio: "un clinico chiede il glucosio nel sangue in una richiesta e gli u
       </items>
       <items code="at0107">
         <items id="text">Registrato</items>
-        <items id="description">L'esistenza del test è registrata nel Sistema Informativo di Laboratorio, ma non c'è ancora nulla di disponibile. </items>
+        <items id="description">L'esistenza del test è registrata nel Sistema Informativo di Laboratorio, ma non c'è ancora nulla di disponibile.</items>
       </items>
       <items code="at0110">
         <items id="text">Dettagli del test</items>
-        <items id="description">Dettagli strutturati sul metodo utilizzato relativamente ad analisi, dispositivi o interpretazione. </items>
+        <items id="description">Dettagli strutturati sul metodo utilizzato relativamente ad analisi, dispositivi o interpretazione.</items>
         <items id="comment">Ad esempio: 'dettagli di ELISA/nefelometria'.</items>
       </items>
       <items code="at0111">
@@ -3304,7 +3292,7 @@ Ove possibile, è auspicabile una codifica con una terminologia.</items>
       <items code="at0122">
         <items id="text">Diagnosi strutturata per il test</items>
         <items id="description">Una diagnosi strutturata o complessa per il test di laboratorio.</items>
-        <items id="comment">Per esempio: Le diagnosi di anatomia patologica che consistono in molteplici assi diversi, come la morfologia, l'eziologia e la funzione. </items>
+        <items id="comment">Per esempio: Le diagnosi di anatomia patologica che consistono in molteplici assi diversi, come la morfologia, l'eziologia e la funzione.</items>
       </items>
     </term_definitions>
     <term_definitions language="nl">
@@ -3504,8 +3492,7 @@ Ove possibile, è auspicabile una codifica con una terminologia.</items>
         <items id="description">Detaljer om det laboratorium som har mottagit beställningen och som har det övergripande ansvaret för att hantera rapporteringen av undersökningen, även om andra laboratorier utför specifika delar av beställningen.</items>
         <items id="comment">Denna SLOT är avsedd för detaljer om det laboratorium som har mottagit beställningen och som har det övergripande ansvaret för att lämna in en resultatrapport, även om andra laboratorier utför specifika delar av den.&#xD;
 &#xD;
-Det ansvariga laboratoriet kan antingen utföra undersökningarna själv eller vidarebefordra dem till andra laboratorier. Om ett annat laboratorium har utfört specifika undersökningar ska information om detta beskrivas i SLOT "Detaljer om analysresultat" i arketypen CLUSTER.laboratory_test_analyte.&#xD;
-</items>
+Det ansvariga laboratoriet kan antingen utföra undersökningarna själv eller vidarebefordra dem till andra laboratorier. Om ett annat laboratorium har utfört specifika undersökningar ska information om detta beskrivas i SLOT "Detaljer om analysresultat" i arketypen CLUSTER.laboratory_test_analyte.</items>
       </items>
       <items code="at0035">
         <items id="text">Distributionslista</items>
@@ -3566,10 +3553,8 @@ Detta element kan upprepas för att stödja applikationer där status för olika
       </items>
       <items code="at0077">
         <items id="text">Laboratoriedisciplin</items>
-        <items id="description">Den diagnostiska organisationsenhet, laboratoriedisciplin eller underdisciplin som ansvarar för laboratorieresultatet.&#xD;
-</items>
-        <items id="comment">Detta är tänkt att vara en allmän kategorisering och inte att fånga laboratoriets interna organisation. Till exempel: patologi, immunologi och transfusionsmedicin, medicinsk mikrobiologi, klinisk farmakologi, medicinsk genetik, medicinsk biokemi. Alternativt kan mer detaljerade underkategorier eller underdiscipliner såsom endokrinologi, hematologi och allergologitjänster användas. Detta kan hjälpa kliniker att filtrera mellan resultatkategorier. Kodning med en terminologi är önskvärd, där det är möjligt.&#xD;
-</items>
+        <items id="description">Den diagnostiska organisationsenhet, laboratoriedisciplin eller underdisciplin som ansvarar för laboratorieresultatet.</items>
+        <items id="comment">Detta är tänkt att vara en allmän kategorisering och inte att fånga laboratoriets interna organisation. Till exempel: patologi, immunologi och transfusionsmedicin, medicinsk mikrobiologi, klinisk farmakologi, medicinsk genetik, medicinsk biokemi. Alternativt kan mer detaljerade underkategorier eller underdiscipliner såsom endokrinologi, hematologi och allergologitjänster användas. Detta kan hjälpa kliniker att filtrera mellan resultatkategorier. Kodning med en terminologi är önskvärd, där det är möjligt.</items>
       </items>
       <items code="at0090">
         <items id="text">Beställare</items>
@@ -3589,18 +3574,13 @@ Till exempel kan en kliniker beställa "glukos" och "urea och elektrolyter" i se
       </items>
       <items code="at0098">
         <items id="text">Undersökningsdiagnos</items>
-        <items id="description">Ett ord, en fras eller en kort beskrivning som representerar den kliniska betydelsen eller konsekvensen av laboratorietestresultatet.&#xD;
-</items>
-        <items id="comment">Till exempel: "Allvarligt nedsatt leverfunktion", "Akut hepatit B". Kodning med en terminologi är att föredra där det är möjligt. Undersökningsdiagnosen bör vara i enlighet med texten i "Tolkning av resultat".&#xD;
-&#xD;
-</items>
+        <items id="description">Ett ord, en fras eller en kort beskrivning som representerar den kliniska betydelsen eller konsekvensen av laboratorietestresultatet.</items>
+        <items id="comment">Till exempel: "Allvarligt nedsatt leverfunktion", "Akut hepatit B". Kodning med en terminologi är att föredra där det är möjligt. Undersökningsdiagnosen bör vara i enlighet med texten i "Tolkning av resultat".</items>
       </items>
       <items code="at0100">
         <items id="text">Tillgänglig klinisk information</items>
         <items id="description">Beskrivning av den kliniska information som finns tillgänglig vid tolkningen av resultaten.</items>
-        <items id="comment">Detta dataelement kan innehålla en länk till den ursprungliga kliniska informationen i beställningen.&#xD;
-&#xD;
-</items>
+        <items id="comment">Detta dataelement kan innehålla en länk till den ursprungliga kliniska informationen i beställningen.</items>
       </items>
       <items code="at0101">
         <items id="text">Kommentar</items>
@@ -3609,14 +3589,11 @@ Till exempel kan en kliniker beställa "glukos" och "urea och elektrolyter" i se
       <items code="at0106">
         <items id="text">Ursprungligt undersökningsnamn</items>
         <items id="description">Namn på den ursprungligen beställda undersökningen eller analysen.</items>
-        <items id="comment">Detta dataelement ska användas när den begärda undersökningen eller analysen skiljer sig från det som faktiskt har utförts av laboratoriet.&#xD;
-</items>
+        <items id="comment">Detta dataelement ska användas när den begärda undersökningen eller analysen skiljer sig från det som faktiskt har utförts av laboratoriet.</items>
       </items>
       <items code="at0107">
         <items id="text">Registrerad</items>
-        <items id="description">Undersökningen är registrerad i laboratorieinformationssystemet, men resultatet finns för närvarande inte.&#xD;
-&#xD;
-</items>
+        <items id="description">Undersökningen är registrerad i laboratorieinformationssystemet, men resultatet finns för närvarande inte.</items>
       </items>
       <items code="at0110">
         <items id="text">Detaljer om undersökningsmetod</items>
@@ -3641,8 +3618,7 @@ Kända antaganden såsom "fasta" bör dokumenteras i dataelementet "Provtagnings
 &#xD;
 Kända förhållanden relaterade till provtagning eller hantering av provet, såsom "förlängd stas" eller "hemolys" bör dokumenteras i elementet "Provkvalitet" i arketypen CLUSTER.specimen.&#xD;
 &#xD;
-Kodning med en terminologi är önskvärt där det är möjligt.&#xD;
-</items>
+Kodning med en terminologi är önskvärt där det är möjligt.</items>
       </items>
       <items code="at0114">
         <items id="text">Strukturerade möjliga felkällor</items>
@@ -3659,10 +3635,8 @@ Kodning med en terminologi är önskvärt där det är möjligt.&#xD;
       </items>
       <items code="at0117">
         <items id="text">Ytterligare information</items>
-        <items id="description">Ytterligare information som krävs för att registrera lokalt definierat innehåll eller för anpassning till andra referensmodeller.&#xD;
-</items>
-        <items id="comment">Exempelvis lokala informationsbehov eller ytterligare metadata för att möjliggöra mappning till FHIR- eller CIMI-modeller.&#xD;
-</items>
+        <items id="description">Ytterligare information som krävs för att registrera lokalt definierat innehåll eller för anpassning till andra referensmodeller.</items>
+        <items id="comment">Exempelvis lokala informationsbehov eller ytterligare metadata för att möjliggöra mappning till FHIR- eller CIMI-modeller.</items>
       </items>
       <items code="at0118">
         <items id="text">Multimedia</items>
@@ -3969,8 +3943,7 @@ El laboratorio receptor puede realizar la prueba o remitirla a otro laboratorio.
       <items code="at0073">
         <items id="text">Estado general de las pruebas</items>
         <items id="description">El estado del resultado de la prueba de laboratorio en su conjunto.</items>
-        <items id="comment">&#xD;
-Los valores se han elegido específicamente para que coincidan con los del informe HL7 FHIR Diagnostic, derivados históricamente de la práctica HL7v2. Pueden utilizarse otros códigos/términos locales mediante el texto "choice".&#xD;
+        <items id="comment">Los valores se han elegido específicamente para que coincidan con los del informe HL7 FHIR Diagnostic, derivados históricamente de la práctica HL7v2. Pueden utilizarse otros códigos/términos locales mediante el texto "choice".&#xD;
 &#xD;
 Este elemento es de ocurrencia múltiple para atender a los casos de uso en los que los estados para diferentes aspectos del resultado se han dividido en varios elementos.</items>
       </items>
@@ -4700,4 +4673,3 @@ Dans la mesure du possible, il est souhaitable d’utiliser une terminologie sta
     </term_definitions>
   </ontology>
 </archetype>
-

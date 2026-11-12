@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -277,12 +277,10 @@ Not to be used for recording details about individuals who are undergoing assist
       <keywords>تنفسی</keywords>
       <use>برای ثبت ویژگی هایی قابل مشاهده و قابل اندازه گیری مربوط به تنفس خود بخود فرد ، شامل میزان تنفس ، عمق و ریتم استفاده می شود.&#xD;
 تنفسها معمولا به عنوان یکی از مولفه های علایم حیاتی ثبت می شوند -شامل فشار خون ، نبض ، درجه حرارت واندازه گیری اکسیژن.&#xD;
-در نوزادان و شیر خواران اندازه گیری تنفس قبل از تغذیه اندازه گیری می شود  .&#xD;
-&#xD;
-</use>
+در نوزادان و شیر خواران اندازه گیری تنفس قبل از تغذیه اندازه گیری می شود  .</use>
       <misuse>برای ثبت سایر جنبه های آزمایشات یا ارزیابی گسترده تر تنفسی استفاده نمی شود.&#xD;
 از سایر الگوسازهای تخصصی برای ثبت ویژگی هایی نظیر تلاش برای تنفس،یافته های شنیداری و غیره استفاده نمایید.&#xD;
-برای ثبت جزییات در زمانی که فرد تحت تنفس مصنوعی است استفاده نکنید .  </misuse>
+برای ثبت جزییات در زمانی که فرد تحت تنفس مصنوعی است استفاده نکنید .</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
     <details>
@@ -305,8 +303,7 @@ Not to be used for recording details about individuals who are undergoing assist
 Ademhaling wordt gewoonlijk geregistreerd als onderdeel van de vitale functies.</use>
       <misuse>Niet te gebruiken om andere aspecten van het uitgebreidere onderzoek of beoordeling van de ademhaling te registreren. Andere, specifieke archetypes zullen gebruikt worden om karakteristieken zoals ademhalingsinspanning en auscultatoire bevindingen te registreren.&#xD;
 &#xD;
-Niet te gebruiken voor de registratie van details, als de persoon beademing ondergaat.&#xD;
-</misuse>
+Niet te gebruiken voor de registratie van details, als de persoon beademing ondergaat.</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
   </description>
@@ -1733,7 +1730,7 @@ Wenn eine vollständige Untersuchung der Atemwege durchgeführt wurde, könnten 
       <items code="at0009">
         <items id="text">Clinical interpretation</items>
         <items id="description">Single word, phrase or brief description which represents the clinical meaning and significance of the respiration findings.</items>
-        <items id="comment">Coding with a terminology is preferred, where possible. For example: Normal breathing; Evidence of respiratory distress; Kussmaul's respiration; Cheyne-Stokes respiration; or Apnoeic episodes. Multiple statements are allowed. </items>
+        <items id="comment">Coding with a terminology is preferred, where possible. For example: Normal breathing; Evidence of respiratory distress; Kussmaul's respiration; Cheyne-Stokes respiration; or Apnoeic episodes. Multiple statements are allowed.</items>
       </items>
       <items code="at0016">
         <items id="text">Depth</items>
@@ -1834,7 +1831,7 @@ Conducting a full respiratory examination, then some of these findings might be 
     <term_definitions language="fa">
       <items code="at0000">
         <items id="text">تنفس</items>
-        <items id="description"> ویژگی های قابل مشاهده مربوط به تنفس خود بخود که معمولا می توان به عنوان بخشی از آزمایشات "علایم حیاتی" ثبت نمود.</items>
+        <items id="description">ویژگی های قابل مشاهده مربوط به تنفس خود بخود که معمولا می توان به عنوان بخشی از آزمایشات "علایم حیاتی" ثبت نمود.</items>
       </items>
       <items code="at0001">
         <items id="text">*history(en)</items>
@@ -2179,8 +2176,7 @@ In het geval van het uitvoeren van een volledig respiratoir onderzoek kunnen dez
       </items>
       <items code="at0056">
         <items id="text">Möjliga felkällor</items>
-        <items id="description">Beskrivning av faktorer och felkällor som kan påverka tolkningen av observationen.&#xD;
-</items>
+        <items id="description">Beskrivning av faktorer och felkällor som kan påverka tolkningen av observationen.</items>
         <items id="comment">Exempelvis oro, smärta, spädbarn som ammas, trakeostomi.</items>
       </items>
       <items code="at0057">
@@ -2628,4 +2624,3 @@ Conducting a full respiratory examination, then some of these findings might be 
     </term_bindings>
   </ontology>
 </archetype>
-

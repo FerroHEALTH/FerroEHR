@@ -1,0 +1,400 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-CLUSTER.menstrual_cycle.v1
+
+concept
+	[at0000]	-- Menstrual cycle
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"19/03/2007">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"Detailed clinical information about a menstrual cycle.">
+			use = <"For inclusion within Menstrual cycle OBSERVATION.">
+			keywords = <"menstruation", "menses", "menstrual cycle", "bleeding">
+			misuse = <"">
+			copyright = <"copyright (c) 2010 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <>
+	other_details = <
+		["references"] = <"">
+		["MD5-CAM-1.0.1"] = <"DA19482778F9F4C2701B1EC0E330677D">
+	>
+
+definition
+	CLUSTER[at0000] matches {	-- Menstrual cycle
+		items cardinality matches {1..*; unordered} matches {
+			CLUSTER[at0001] occurrences matches {0..1} matches {	-- Normal Statements
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0002] occurrences matches {0..*} matches {	-- Normal Statement
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+			ELEMENT[at0061] occurrences matches {0..1} matches {	-- Clinical description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0003] occurrences matches {0..1} matches {	-- Findings
+				items cardinality matches {1..*; unordered} matches {
+					CLUSTER[at0022] occurrences matches {0..1} matches {	-- Cycle
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0020] occurrences matches {0..1} matches {	-- Length of cycle
+								value matches {
+									C_DV_QUANTITY <
+										property = <[openehr::128]>
+										list = <
+											["1"] = <
+												units = <"d">
+											>
+											["2"] = <
+												units = <"wk">
+											>
+											["3"] = <
+												units = <"mo">
+											>
+										>
+									>
+								}
+							}
+							ELEMENT[at0023] occurrences matches {0..1} matches {	-- Relative duration of cycle
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+											[local::
+											at0024, 	-- Longer than usual
+											at0026, 	-- As usual
+											at0027, 	-- Shorter than usual
+											at0028, 	-- Much shorter than usual
+											at0029]	-- Much longer than usual
+										}
+									}
+								}
+							}
+							CLUSTER[at0062] occurrences matches {0..1} matches {	-- Day of cycle
+								items cardinality matches {1..*; unordered} matches {
+									allow_archetype ELEMENT[at0063] occurrences matches {0..*} matches {	-- Cluster: Day of cycle
+										include
+											archetype_id/value matches {/openEHR-EHR-ELEMENT\.menstrual_cycle_day\.v1/}
+									}
+								}
+							}
+						}
+					}
+					CLUSTER[at0033] occurrences matches {0..1} matches {	-- Menstruation
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0043] occurrences matches {0..1} matches {	-- Clinical Descripton
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							CLUSTER[at0056] occurrences matches {0..1} matches {	-- Menstrual flow
+								items cardinality matches {1..*; unordered} matches {
+									ELEMENT[at0057] occurrences matches {0..1} matches {	-- Clinical Description
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0035] occurrences matches {0..1} matches {	-- Relative Description
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0037, 	-- Very heavy flow
+													at0038, 	-- Heavy flow
+													at0039, 	-- Normal flow
+													at0040, 	-- Light flow
+													at0041, 	-- Spotting
+													at0042]	-- Absent
+												}
+											}
+										}
+									}
+									ELEMENT[at0059] occurrences matches {0..1} matches {	-- Colour
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0021] occurrences matches {0..1} matches {	-- Presence of blood clots
+										value matches {
+											DV_BOOLEAN matches {
+												value matches {True}
+											}
+										}
+									}
+									ELEMENT[at0034] occurrences matches {0..1} matches {	-- Flooding
+										value matches {
+											DV_BOOLEAN matches {
+												value matches {True, False}
+											}
+										}
+									}
+									CLUSTER[at0031] occurrences matches {0..1} matches {	-- Duration of Menstruation
+										items cardinality matches {1..*; unordered} matches {
+											ELEMENT[at0017] occurrences matches {0..1} matches {	-- Duration of menstruation
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::128]>
+														list = <
+															["1"] = <
+																units = <"d">
+																magnitude = <|>=0.0|>
+																precision = <|0|>
+															>
+															["2"] = <
+																units = <"wk">
+																magnitude = <|>=0.0|>
+																precision = <|0|>
+															>
+														>
+													>
+												}
+											}
+											ELEMENT[at0032] occurrences matches {0..1} matches {	-- Relative duration of menstruation
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0024, 	-- Longer than usual
+															at0025, 	-- Normal
+															at0026, 	-- As usual
+															at0027, 	-- Shorter than usual
+															at0028, 	-- Much shorter than usual
+															at0029]	-- Much longer than usual
+														}
+													}
+												}
+											}
+										}
+									}
+									CLUSTER[at0046] occurrences matches {0..1} matches {	-- Use of Sanitary products
+										items cardinality matches {1..*; unordered} matches {
+											ELEMENT[at0047] occurrences matches {0..*} matches {	-- Type of Sanitary product
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0048, 	-- Sanitary napkins - 'super'
+															at0049, 	-- Sanitary napkins - 'normal'
+															at0050, 	-- Sanitary napkins - 'light flow'
+															at0051, 	-- Tampon - 'super'
+															at0052, 	-- Tampon - 'normal'
+															at0053, 	-- Sea sponge
+															at0054, 	-- Menstrual cup
+															at0055]	-- Cloth pad or towel
+														}
+													}
+												}
+											}
+											ELEMENT[at0036] occurrences matches {0..1} matches {	-- Number used
+												value matches {
+													DV_COUNT matches {
+														magnitude matches {|>=0|}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Menstrual cycle">
+					description = <"Details about menstrual cycle.">
+				>
+				["at0001"] = <
+					text = <"Normal Statements">
+					description = <"Collection of normal statements about menstrual cycle.">
+				>
+				["at0002"] = <
+					text = <"Normal Statement">
+					description = <"Normal statement about the menstrual cycle.">
+				>
+				["at0003"] = <
+					text = <"Findings">
+					description = <"Finding about menstrual cycle.">
+				>
+				["at0017"] = <
+					text = <"Duration of menstruation">
+					description = <"Duration of menstruation.">
+				>
+				["at0020"] = <
+					text = <"Length of cycle">
+					description = <"Length of menstrual cycle.">
+				>
+				["at0021"] = <
+					text = <"Presence of blood clots">
+					description = <"Blood clots were present during cycle.">
+				>
+				["at0022"] = <
+					text = <"Cycle">
+					description = <"Duration of Menstrual Cycle.">
+				>
+				["at0023"] = <
+					text = <"Relative duration of cycle">
+					description = <"Description of the relative duration of menstrual cycle.">
+				>
+				["at0024"] = <
+					text = <"Longer than usual">
+					description = <"Menstrual cycle duration is longer than a 'usual' cycle.">
+				>
+				["at0025"] = <
+					text = <"Normal">
+					description = <"Menstrual cycle duration is the same as a 'usual' cycle.">
+				>
+				["at0026"] = <
+					text = <"As usual">
+					description = <"Menstrual cycle duration is the same as a 'usual' cycle.">
+				>
+				["at0027"] = <
+					text = <"Shorter than usual">
+					description = <"Menstrual cycle duration is shorter than a 'usual' cycle.">
+				>
+				["at0028"] = <
+					text = <"Much shorter than usual">
+					description = <"Menstrual cycle duration is much shorter than a 'usual' cycle.">
+				>
+				["at0029"] = <
+					text = <"Much longer than usual">
+					description = <"Menstrual cycle duration is much longer than a 'usual' cycle.">
+				>
+				["at0031"] = <
+					text = <"Duration of Menstruation">
+					description = <"Details about duration of menstruation.">
+				>
+				["at0032"] = <
+					text = <"Relative duration of menstruation">
+					description = <"Relative duration of menstruation.">
+				>
+				["at0033"] = <
+					text = <"Menstruation">
+					description = <"Description of the menstruation, or period of bleeding">
+				>
+				["at0034"] = <
+					text = <"Flooding">
+					description = <"Heavy menstrual flow that exceeds capacity sanitary napkins and other menstrual products to absorb the menstrual flow.">
+				>
+				["at0035"] = <
+					text = <"Relative Description">
+					description = <"Relative description of menstrual blood flow.">
+				>
+				["at0036"] = <
+					text = <"Number used">
+					description = <"Number of sanitary products used per day to absorb menstrual flow.">
+				>
+				["at0037"] = <
+					text = <"Very heavy flow">
+					description = <"The amount of menstrual blood loss considered very heavy when compared to normal for the woman.">
+				>
+				["at0038"] = <
+					text = <"Heavy flow">
+					description = <"The amount of menstrual blood loss considered heavier than normal for the woman.">
+				>
+				["at0039"] = <
+					text = <"Normal flow">
+					description = <"The amount of menstrual blood loss considered normal for the woman.">
+				>
+				["at0040"] = <
+					text = <"Light flow">
+					description = <"The amount of menstrual blood loss considered lighter than normal for the woman.">
+				>
+				["at0041"] = <
+					text = <"Spotting">
+					description = <"Small amounts of menstrual blood loss that may have no pattern.">
+				>
+				["at0042"] = <
+					text = <"Absent">
+					description = <"No menstrual flow.">
+				>
+				["at0043"] = <
+					text = <"Clinical Descripton">
+					description = <"Description of the characteristics of menstruation.">
+				>
+				["at0046"] = <
+					text = <"Use of Sanitary products">
+					description = <"Details about use of Sanitary products during menstruation.">
+				>
+				["at0047"] = <
+					text = <"Type of Sanitary product">
+					description = <"Type of sanitary product used.">
+				>
+				["at0048"] = <
+					text = <"Sanitary napkins - 'super'">
+					description = <"'Super' size/thickness of disposable pads worn in the underwear to absorb menstrual flow.">
+				>
+				["at0049"] = <
+					text = <"Sanitary napkins - 'normal'">
+					description = <"'Normal' size/thickness of disposable pads worn in the underwear to absorb menstrual flow.">
+				>
+				["at0050"] = <
+					text = <"Sanitary napkins - 'light flow'">
+					description = <"'Light' size/thickness of disposable pads worn in the underwear to absorb menstrual flow.">
+				>
+				["at0051"] = <
+					text = <"Tampon - 'super'">
+					description = <"'Super' size/thickness of disposable cylinders of absorbant material that are inserted into the vagina to absorb menstrual flow.">
+				>
+				["at0052"] = <
+					text = <"Tampon - 'normal'">
+					description = <"'Normal' size/thickness of disposable cylinders of absorbant material that are inserted into the vagina to absorb menstrual flow.">
+				>
+				["at0053"] = <
+					text = <"Sea sponge">
+					description = <"Natural sponges that are inserted into the vagina to absorb menstrual flow.">
+				>
+				["at0054"] = <
+					text = <"Menstrual cup">
+					description = <"A firm, flexible bell-shaped device worn inside the vagina to catch menstrual flow. Reusable versions include rubber or silicone cups.">
+				>
+				["at0055"] = <
+					text = <"Cloth pad or towel">
+					description = <"Re-usable fabric worn in the underwear to absorb menstrual flow.">
+				>
+				["at0056"] = <
+					text = <"Menstrual flow">
+					description = <"Details about menstrual blood flow.">
+				>
+				["at0057"] = <
+					text = <"Clinical Description">
+					description = <"Description of Menstrual blood flow.">
+				>
+				["at0059"] = <
+					text = <"Colour">
+					description = <"Colour of menstrual blood.">
+				>
+				["at0061"] = <
+					text = <"Clinical description">
+					description = <"Information about the cycle.">
+				>
+				["at0062"] = <
+					text = <"Day of cycle">
+					description = <"Number of days since onset of last period.">
+				>
+				["at0063"] = <
+					text = <"Cluster: Day of cycle">
+					description = <"Number of days since onset of last period.">
+				>
+			>
+		>
+	>

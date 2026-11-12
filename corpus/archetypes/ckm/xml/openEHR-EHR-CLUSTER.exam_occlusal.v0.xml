@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -8,7 +8,7 @@
   </original_language>
   <is_controlled>false</is_controlled>
   <description>
-    <original_author id="name"></original_author>
+    <original_author id="name" />
     <lifecycle_state>in_development</lifecycle_state>
     <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
     <other_details id="custodian_organisation">openEHR Foundation</other_details>
@@ -520,4 +520,3 @@ Shinji Kobayashi&#xD;
     </term_definitions>
   </ontology>
 </archetype>
-

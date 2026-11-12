@@ -1,0 +1,355 @@
+﻿archetype (adl_version=1.4; uid=87cb4a1f-b326-4bdc-ae36-aec11b835023)
+	openEHR-EHR-CLUSTER.structured_address.v0
+
+concept
+	[at0000]	-- Structured address
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Natalia Strauch">
+				["organisation"] = <"Medizinische Hochschule Hannover">
+				["email"] = <"Strauch.Natalia@mh-hannover.de">
+			>
+		>
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			author = <
+				["name"] = <"John Tore Valand, Vebjørn Arntzen">
+				["organisation"] = <"Helse Vest IKT AS, Helse Bergen, Oslo University Hospital">
+				["email"] = <"john.tore.valand@helse-vest-ikt.no, varntzen@ous-hf.no">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Atomica Informatics">
+		["email"] = <"heather.leslie@atomicainformatics.com">
+		["date"] = <"2021-04-14">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Darstellung von strukturierten Details, die eine feingranulierte, lokale Ebene der geografischen/physischen Beschreibung eines Orts darstellen in einer Gesundheitsakte.">
+			use = <"Zur darstellung strukturierter Details, die in Verbindung mit den anderen übergeordneten Adresskomponenten, d. h. „Vorort/Stadt/Ort“, „Postleitzahl“ und „Staat/Gebiet/Provinz“, eine vollständige geografische/physische Adresse bilden.
+
+In den meisten Anwendungsfällen, in denen eine Adresse in eine Gesundheitsakte aufgenommen werden muss, reicht die Freitexteingabe im Element „Adresse unstrukturiert“ im Archetyp CLUSTER.address aus. Verwenden Sie diesen Archetyp nur in Situationen, in denen genauere Details zu einer oder mehreren untergeordneten Adresskomponenten erforderlich sind, indem Sie diesen Archetyp in den SLOT \"Strukturierte Adressdaten\" in CLUSTER.address verschachteln.">
+			misuse = <"Darf nicht verwendet werden, um eine Adresse im Rahmen der Führung eines offiziellen demografischen Registers oder Index zu erfassen. Verwenden Sie zu diesem Zweck einen formellen Master Patient Index oder Health Provider Index oder Archetypen, die auf dem openEHR Demographic Information Model basieren.">
+		>
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			purpose = <"For å registrere strukturerte detaljer som representerer et finkornet nivå for en geografisk/fysisk lokalisering for bruk i pasientjournalen.">
+			use = <"Brukes for å registrere strukturerte detaljer, som sammen med elementer som By, Postnummer, Poststed utgjør en fullstendig geografisk/fysisk adresse.
+
+I de mest vanlige brukscasene der navn skal registreres i pasientjournalen, vil fritekstregistrering i ett eller flere \"Ustrukturert adresse\" elementer være tilstrekkelig. Bruk denne arketypen i situasjoner hvor det er behov for en detaljert beskrivelse av en geografisk/fysisk lokalisering ved å nøste denne arketypen i SLOTet \"Strukturert adresse\" i arketypen CLUSTER.address.">
+			misuse = <"Brukes ikke til å representere eller erstatte de formelle demografiske detaljene for en adresse eller for å opprettholde et demografisk register eller en indeks. Bruk formelle pasientregister, helsepersonellregister eller arketyper basert på openEHR demografisk informasjonsmodell til dette formålet.">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record structured details that represent a fine-grained, local level of geographical/physical description of a location for use within a health record.">
+			use = <"Use to record structured details that, used in conjunction with the other high-level address components i.e. ‘Suburb/Town/Locality’, ‘Postcode’, and ‘State/Territory/Province’, forms a complete geographical/physical address.
+
+In most common use cases where an address needs to be included within a health record, the free text entry within the 'Unstructured address' element in the CLUSTER.address archetype will be sufficient. Use this archetype only in situations when finer-grained detail about one or more lower-level address components is required, by nesting this archetype within the 'Structured address' SLOT in CLUSTER.address.">
+			misuse = <"Not to be used to record an address as part of maintaining an official demographic register or index. Use a formal Master Patient Index or Health Provider Index for this purpose, or archetypes based on the openEHR Demographic Information Model.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"Health Care Client Identification - AS 5017-2006. New South Wales (AU): Standards Australia; 2006.
+
+Health Care Provider Identification - AS 4846-2006. New South Wales (AU): Standards Australia; 2006.
+
+Health informatics — Identification of subjects of health care - ISO/TS 22220:2007. Geneva: International Organization for Standardization; 2007.
+
+HL7 FHIR Resource - Person v4.0.1: R4 [Internet]. Health Level Seven International; [accessed 2021 05 04]. Available from: http://hl7.org/fhir/2021May/person.html.">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"084034BBFD6596C1E2AFE185406E1A7B">
+		["build_uid"] = <"a093de57-b8f9-4c9f-8292-c68d7def0324">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	CLUSTER[at0000] matches {    -- Structured address
+		items cardinality matches {1..*; unordered} matches {
+			ELEMENT[at0001] occurrences matches {0..1} matches {    -- Unit type
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0002] occurrences matches {0..1} matches {    -- Unit number
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0003] occurrences matches {0..*} matches {    -- Site name
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0004] occurrences matches {0..1} matches {    -- Level type
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0005] occurrences matches {0..1} matches {    -- Level number
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0006] occurrences matches {0..1} matches {    -- Street number
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0007] occurrences matches {0..1} matches {    -- Lot number
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0008] occurrences matches {0..1} matches {    -- Street name
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0009] occurrences matches {0..1} matches {    -- Street type
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0010] occurrences matches {0..*} matches {    -- Street suffix
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0011] occurrences matches {0..1} matches {    -- Postal delivery type
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0012] occurrences matches {0..1} matches {    -- Postal delivery number
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Structured address">
+					description = <"Structured details that represent a fine-grained, local level of geographical/physical description of a location for use within a health record.">
+				>
+				["at0001"] = <
+					text = <"Unit type">
+					description = <"The specification of the type of a separately identifiable portion within a building/complex, marina etc. to clearly distinguish it from another.">
+					comment = <"Coding with an external terminology is preferred, where possible. For example: Apartment or unit; or Shop. Where a building or other type of unit is present in a complex of such buildings or units, the data elements 'Unit type' and 'Unit number' should be used in conjunction - Apartment 35A; or Shop 209.
+">
+				>
+				["at0002"] = <
+					text = <"Unit number">
+					description = <"The specification of the number or identifier of  a building/complex, marina etc. to clearly distinguish it  from another.">
+					comment = <"For example: 35A; or 209. Where a building or other type of unit is present in a complex of such buildings or units, the data elements 'Unit type' and 'Unit number' should be used in conjunction - Apartment 35A; or Shop 209.
+">
+				>
+				["at0003"] = <
+					text = <"Site name">
+					description = <"The full name used to identify a physical building or property as part of its location.">
+					comment = <"If a 'Site name' requires additional specific details, such as including a reference to a wing or other components of a building complex, use a comma to separate the wing reference from the rest of the site name. For example: Victoria wing, Treasury building; Brindabella station. 
+">
+				>
+				["at0004"] = <
+					text = <"Level type">
+					description = <"Descriptor used to classify the type of floor or level of a multi-storey building or complex.">
+					comment = <"Coding with an external terminology is preferred, where possible. For example: Floor (FL); Level (L); Basement (B); Lower Ground (LG); Upper Ground (UG); Ground Level (G); or Mezzanine (M). If 'Level' or 'Floor' are selected then they need to be paired with the 'Level number' data element.">
+				>
+				["at0005"] = <
+					text = <"Level number">
+					description = <"Numeric or alphanumeric descriptor used to identify the floor or level of a multi-storey building or complex.">
+					comment = <"A 'Level number' must be recorded with its corresponding 'Level type'. For example: L3; or FL1A.">
+				>
+				["at0006"] = <
+					text = <"Street number">
+					description = <"The numeric or alphanumeric reference number of a house or property that is unique within a street name.">
+					comment = <"For example: '17'; '39A'; or '401-403'. If a Lot number is recorded, this data element is redundant - only one of 'Street number' or 'Lot number' is permitted in an address.">
+				>
+				["at0007"] = <
+					text = <"Lot number">
+					description = <"The Lot reference allocated to an address  in  the  absence of street numbering.">
+					comment = <"For example: 'Lot 17A'; or 'Lot 716-718'. If a Street number is recorded, this data element is redundant - only one of 'Street number' or 'Lot number' is permitted in an address.">
+				>
+				["at0008"] = <
+					text = <"Street name">
+					description = <"The name that identifies a public thoroughfare and differentiates it from others in the same suburb, town, city or locality.">
+					comment = <"For example: 'Jessie'; or 'Bourke'.">
+				>
+				["at0009"] = <
+					text = <"Street type">
+					description = <"A descriptor for the type of public thoroughfare.">
+					comment = <"Coding with an external terminology is preferred, where possible. For example: Hwy (Highway).">
+				>
+				["at0010"] = <
+					text = <"Street suffix">
+					description = <"Descriptor used to qualify the 'Street name' used for directional references.">
+					comment = <"Coding with an external terminology is preferred, where possible. For example: North; or Upper.">
+				>
+				["at0011"] = <
+					text = <"Postal delivery type">
+					description = <"Identification for the channel of postal delivery.">
+					comment = <"Coding with an external terminology is preferred, where possible. Used where mail is to be delivered to a box, bag or agent for pick-up by the intended recipient or to a rural mail box number where no other address exists. For example: 'Poste Restante' (also known as Care-of Post Office); 'Roadside Delivery' (RSD); or 'Post Office Box' (PO Box)">
+				>
+				["at0012"] = <
+					text = <"Postal delivery number">
+					description = <"Identification number for the channel of postal delivery.">
+					comment = <"For example: 'C96'.">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"Adresse strukturiert">
+					description = <"Strukturierte Details, die eine feingranulierte, lokale Ebene der geografischen/physischen Beschreibung eines Standorts zur Verwendung in einer Gesundheitsakte darstellen.">
+				>
+				["at0001"] = <
+					text = <"Einheitstyp">
+					description = <"Die Angabe der Art eines separat identifizierbaren Teils innerhalb eines Gebäudes / Komplexes, Hafens usw., um ihn klar von anderen zu unterscheiden.">
+					comment = <"Die Codierung mit einer externen Terminologie wird nach Möglichkeit bevorzugt. Zum Beispiel: Wohnung, Einheit oder Shop. Wenn ein Gebäude oder eine andere Art von Einheit in einem Komplex aus solchen Gebäuden oder Einheiten vorhanden ist, sollten die Datenelemente \"Einheitstyp\" und \"Einheitsnummer\" in Verbindung verwendet werden - Wohnung 35A oder Shop 209.">
+				>
+				["at0002"] = <
+					text = <"Einheitsnummer">
+					description = <"Die Angabe der Nummer oder Kennung eines Gebäudes / Komplexes, Hafens usw., um diese klar von anderen zu unterscheiden.">
+					comment = <"Zum Beispiel: 35A oder 209. Wenn ein Gebäude oder eine andere Art von Einheit in einem Komplex solcher Gebäude oder Einheiten vorhanden ist, sollten die Datenelemente „Einheitstyp“ und „Einheitsnummer“ in Verbindung verwendet werden – Wohnung 35A oder Shop 209.">
+				>
+				["at0003"] = <
+					text = <"Standortname">
+					description = <"Der vollständige Name, der verwendet wird, um ein physisches Gebäude oder eine Immobilie als Teil seines Standorts zu identifizieren.">
+					comment = <"Wenn ein \"Standortname\" zusätzliche spezifische Details erfordert, z. B. einen Verweis auf einen Flügel oder andere Komponenten eines Gebäudekomplexes, verwenden Sie ein Komma, um die Flügelreferenz vom Rest des Standortnamens zu trennen. Zum Beispiel: Victoria-Flügel, Treasury-Gebäude; Bahnhof Brindabella.">
+				>
+				["at0004"] = <
+					text = <"Ebenentyp">
+					description = <"Deskriptor, der verwendet wird, um die Art des Stockwerks oder der Ebene eines mehrstöckigen Gebäudes oder Komplexes zu klassifizieren.">
+					comment = <"Die Codierung mit einer externen Terminologie wird nach Möglichkeit bevorzugt. Zum Beispiel: Etage (Et.), Ebene (E), Kellergeschoss (KG), Untergeschoss (UG), Obergeschoss (OG), Erdgeschoss (EG) oder Zwischengeschoss (ZG). Wenn \"Ebene\" oder \"Stockwerk\" ausgewählt sind, müssen sie mit dem Datenelement \"Ebene-Nummer\" gepaart werden.">
+				>
+				["at0005"] = <
+					text = <"Ebene-Nummer">
+					description = <"Numerischer oder alphanumerischer Deskriptor zur Identifizierung des Stockwerks oder der Ebene eines mehrstöckigen Gebäudes oder Komplexes.">
+					comment = <"Eine „Ebene-Nummer“ muss mit ihrem entsprechenden „Ebenentyp“ aufgezeichnet werden. Zum Beispiel: E3 oder Et.1A.">
+				>
+				["at0006"] = <
+					text = <"Straßennummer">
+					description = <"Die numerische oder alphanumerische Referenznummer eines Hauses oder Grundstücks, die innerhalb eines Straßennamens eindeutig ist.">
+					comment = <"Beispiel: \"17\", \"39A\" oder \"401-403\". Wenn eine Losnummer erfasst wird, ist dieses Datenelement redundant - in einer Adresse ist nur eine von \"Straßennummer\" oder \"Grundstücksnummer\" zulässig.">
+				>
+				["at0007"] = <
+					text = <"Grundstücksnummer">
+					description = <"Die Grundstücksreferenznummer, die einer Adresse ohne Straßennummerierung zugeordnet ist.">
+					comment = <"Beispiel: \"Grundstück 17A\" oder \"Grundstück 716-718\". Wenn eine Straßennummer erfasst wird, ist dieses Datenelement redundant - in einer Adresse ist nur eine von \"Straßennummer\" oder \"Grundstücksnummer\" zulässig.">
+				>
+				["at0008"] = <
+					text = <"Straßenname">
+					description = <"Der Name, der eine öffentliche Durchgangsstraße identifiziert und von anderen im selben Ort, im derselben Dorf, in derselben Stadt oder in derselben Ortschaft unterscheidet.">
+					comment = <"Beispiel: Deisterallee oder Breiter Weg">
+				>
+				["at0009"] = <
+					text = <"Straßentyp">
+					description = <"Ein Deskriptor für die Art der öffentlichen Durchgangsstraße.">
+					comment = <"Die Codierung mit einer externen Terminologie wird nach Möglichkeit bevorzugt. Beispiel: Highway (Hauptstraße).">
+				>
+				["at0010"] = <
+					text = <"Straße-Zusatz">
+					description = <"Deskriptor, der verwendet wird, um den \"Straßennamen\" zu qualifizieren, der für Richtungsreferenzen verwendet wird.">
+					comment = <"Die Codierung mit einer externen Terminologie wird nach Möglichkeit bevorzugt. Zum Beispiel: Norden oder Ober.">
+				>
+				["at0011"] = <
+					text = <"Postversandart">
+					description = <"Identifikation für den Postweg.">
+					comment = <"Die Codierung mit einer externen Terminologie wird nach Möglichkeit bevorzugt. Wird verwendet, wenn Post an eine Poststelle, PaketShop oder eine Postfiliale zur Abholung durch den vorgesehenen Empfänger oder an eine ländliche Postfachnummer zugestellt werden soll, für die keine andere Adresse existiert. Zum Beispiel: \"Postlagernd\" (auch bekannt als Care-of Post Office), „Roadside Delivery“ (RSD) oder \"Postfach\" (Postfach).">
+				>
+				["at0012"] = <
+					text = <"Postversandnummer">
+					description = <"Identifikationsnummer für den Postweg.">
+					comment = <"Beispiel: \"C96\".">
+				>
+			>
+		>
+		["nb"] = <
+			items = <
+				["at0000"] = <
+					text = <"Strukturert adresse">
+					description = <"Strukturerte detaljer som representerer et finkornet nivå for en geografisk/fysisk lokalisering for bruk i pasientjournalen.">
+				>
+				["at0001"] = <
+					text = <"Type bruksenhet">
+					description = <"Spesifikasjon av en identifiserbar separat del av en bygning eller bygningskompleks, marina eller lignende, som gjør det enkelt å skille den fra andre enheter.">
+					comment = <"Koding av type bruksenhet med en terminologi er å foretrekke når det er mulig. For eksempel Leilighet eller enhet, Seksjon eller Andel. Dersom en bygning eller bruksenhet er i et bygningskompleks eller er en av flere enheter, bør \"Type bruksenhet\" og \"Enhetsnummer\" kombineres, som \"Leilighet 35A\", eller \"Seksjonsnummer 9\".">
+				>
+				["at0002"] = <
+					text = <"Enhetsnummer">
+					description = <"Nummer eller annen identifikator til en bygning, marina eller lignende, som gjør det enkelt å skille den fra andre enheter.">
+					comment = <"For eksempel 35A eller 209. Dersom en bygning eller bruksenhet er i et bygningskompleks eller er en av flere enheter, bør \"Type bruksenhet\" og \"Enhetsnummer\" kombineres, som \"Leilighet 35A\", eller \"Seksjonsnummer 9\".">
+				>
+				["at0003"] = <
+					text = <"Eiendomsnavn">
+					description = <"Hele navnet som brukes for å identifisere en fysisk bygning eller eiendom, for eksempel \"Bislett stadion\" eller \"Buckingham palace\".">
+					comment = <"Hvis eiendomsnavnet trenger detaljer i tillegg, som en referanse til en spesifikk del av bygningen eller eiendommen, bruk komma for å separere dem. For eksempel \"Bislett stadion, nordre sving\".">
+				>
+				["at0004"] = <
+					text = <"Nivå">
+					description = <"Beskrivelse for å angi på hvilket nivå eller i hvilken etasje en enhet er på i en fleretasjes bygning eller bygningskompleks.">
+					comment = <"Koding med en ekstern terminologi er anbefalt, dersom mulig. For eksempel \"Etasje (Etg)\", \"Grunnplan\", \"Mezzanin\" eller \"Underetasje (U)\". Dersom Etasje er brukt, må den kombineres med elementet \"Nivånummer\" for å bli entydig.">
+				>
+				["at0005"] = <
+					text = <"Nivånummer">
+					description = <"Tall eller alfanumerisk betegnelse for å identifisere hvilken etasje eller nivå en enhet er på i en fleretasjet bygning eller bygningskompleks.">
+					comment = <"Nivånummer må bli lagret sammen med det tilhørende Nivå, for eksempel \"4. etasje\", eller \"U1\".">
+				>
+				["at0006"] = <
+					text = <"Gatenummer">
+					description = <"Tall eller alfanumerisk betegnelse for å identifisere en bygning eller eiendom i en gate eller vei.">
+					comment = <"For eksempel \"17\", \"39A\" eller \"401-403\". Dersom Lot-nummer er brukt, er dette dataelementet unødvendig. Kun enten \"Gatenummer\" eller \"Lot-nummer\" er tillatt i en adresse.">
+				>
+				["at0007"] = <
+					text = <"Lot-nummer">
+					description = <"Det allokerte Lot-nummer til en adresse, for eksempel om det mangler gateadresse og gatenummer.">
+					comment = <"For eksempel \"Lot 17\", \"Lot 39A\" eller \"Lot 401-403\". Dersom Gatenummer brukt, er dette dataelementet unødvendig. Kun enten \"Gatenummer\" eller \"Lot-nummer\" er tillatt i en adresse. I Norge kan et Lot-nummer være en sammenslått verdi bestående av kommunenummer, gardsnummer, bruksnummer.">
+				>
+				["at0008"] = <
+					text = <"Gatenavn">
+					description = <"Navnet som identifiserer en offentlig trafikkåre eller adkomst, og som skiller den fra andre i samme by eller område.">
+					comment = <"For eksempel \"Karl Johans gate\" eller \"Kirkegata\".">
+				>
+				["at0009"] = <
+					text = <"Type gate">
+					description = <"Et uttrykk for typen trafikkåre eller adkomst.">
+					comment = <"Koding med en ekstern terminologi anbefales, dersom mulig. For eksempel \"Hwy (Highway)\" eller \"Fv (Fylkesvei)\".">
+				>
+				["at0010"] = <
+					text = <"Gatesuffiks">
+					description = <"Et veiledende uttrykk bak \"Gatenavn\" til for eksempel finne retning.">
+					comment = <"Koding med en ekstern terminologi er anbefalt, dersom mulig. For eksempel \"Nord\", \"Øvre del\" eller \"Mot øst\".">
+				>
+				["at0011"] = <
+					text = <"Postleveringstype">
+					description = <"Identifikasjon av type postlevering.">
+					comment = <"Koding med en ekstern terminologi er anbefalt, dersom mulig. Brukes når post skal leveres i en postkasse, til et postkontor eller et annet leveringssted dersom det ikke finnes en egen adresse eller eget leveringssted. For eksempel \"C/O\", \"Poste restante\", \"Postboks\" (Pb) eller \"Roadside Delivery\" (RSD).">
+				>
+				["at0012"] = <
+					text = <"Postleveringsnummer">
+					description = <"Nummer som identifiserer hvor posten skal leveres.">
+					comment = <"For eksempel \"7777\", i adressen til Norge Rundt, NRK Hordaland, Postboks 7777, 5020 Bergen.">
+				>
+			>
+		>
+	>

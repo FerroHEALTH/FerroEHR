@@ -1,0 +1,603 @@
+﻿archetype (adl_version=1.4; uid=9f842063-4734-4471-9530-31c2a009481a)
+	openEHR-EHR-OBSERVATION.substance_use-alcohol.v1
+specialise
+	openEHR-EHR-OBSERVATION.substance_use.v1
+
+concept
+	[at0000.1]	-- Alcohol Consumption
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			author = <
+				["name"] = <"Dr. Leonardo Der Jachadurian">
+				["organisation"] = <"Bitios.com">
+			>
+			accreditation = <"Medical Doctor (Internal Medicine Specialist)">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"2009-05-06">
+	>
+	details = <
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			purpose = <"Este es un arquetipo usado para registrar detalles del consumo de alcohol en toda clase de bebidas.">
+			use = <"Para registrar detalles del consumo de toda clase de bebidas alcohólicas. Esto incluye el consumo en un momento específico, a lo largo de períodos de tiempo y el uso de funciones matemáticas tales como el promedio el mínimo. Ej. Promedio de consumo en una semana. EL uso típico podría ser para registrar el consumo diario de bebidas alcohólicas.">
+			keywords = <"sustancia", "adicción", "consumo", "uso">
+			misuse = <"No para registrar detalles permanentes y de sumario acerca del consumo del alcohol. Esto debería ser registrado usando el arquetipo EVALUATION.substance_use_summary archetype. No usar para registrar el consumo de otras sustancias distintas del alcohol.">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"This is an archetype used to record details of the use of all forms of alcohol.">
+			use = <"Use to record details of the use of all forms of alcohol.  This includes use at specific point in time, over intervals of time, and use of mathematical functions such as average or minimum e.g. average consumption over a week.  A typical use would be to record usage in an alcohol consumption diary.">
+			keywords = <"substance", "addiction", "consumption", "use">
+			misuse = <"Not to be used for recording persistent and summary details about the use of the substance - this should be captured using the EVALUATION.substance_use_summary archetype.
+Not to be used for recording use or consumption histories for substances other than alcohol.">
+			copyright = <"© openEHR Foundation">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"يستخدم هذا النموذج لتسجيل تفاصيل استخدام جميع أشكال الكحول">
+			use = <"يستخدم لتسجيل تفاصيل استخدام جميع الأشكال من الكحول. و هذا يتضمن الاستخدام في نقطة زمنية معينة, عبر فترة زمنية معينة, و استخدام دوال رياضية مثل المتوسط و الحد الأدنى, مثلا متوسط الاستهلاك خلال أسبوع. الاستخدام النمطي للنموذج يتضمن تسجيل الاستخدام في ملاحظات يومية لاستهلاك الكحول.">
+			keywords = <"*substance(en)", "*addiction(en)", "*consumption(en)", "*use(en)">
+			misuse = <"لا يتم استخدام النموذج لتسجيل التفاصيل المتكررة أو الملخصة عن استخدام المواد. يمكن استخدام نموذج تقييم. ملخص استخدام المواد.
+لا يستخدم لتسجيل تاريخ (سوابق) الاستخدام أو الاستهلاك لمواد غير الكحول
+">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Sam Heard, Ocean Informatics, Australia", ...>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"F242628E720B48FAA3E3F58A6DCED188">
+		["build_uid"] = <"70f3cb45-c8f8-40d9-af38-9055289cffa4">
+	>
+
+definition
+	OBSERVATION[at0000.1] matches {	-- Alcohol Consumption
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..1} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {1..*; unordered} matches {
+									ELEMENT[at0004] occurrences matches {0..1} matches {	-- Substance
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {[local::at0.19]}		-- Alcohol
+											}
+										}
+									}
+									CLUSTER[at0010] occurrences matches {0..1} matches {	-- Consumption details
+										items cardinality matches {1..*; unordered} matches {
+											ELEMENT[at0011] occurrences matches {0..1} matches {	-- Form
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0.20, 	-- All alcohol
+															at0.21, 	-- All beer
+															at0.22, 	-- All wine
+															at0.23, 	-- All spirits
+															at0.24, 	-- Full strength beer
+															at0.25, 	-- Light beer
+															at0.26, 	-- Red wine
+															at0.27, 	-- White wine
+															at0.28]	-- Fortified wine
+														}
+													}
+												}
+											}
+											ELEMENT[at0018] occurrences matches {0..1} matches {	-- Method of use
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+											ELEMENT[at0005] occurrences matches {0..1} matches {	-- Frequency
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0006, 	-- Daily use
+															at0007, 	-- Weekly use
+															at0008, 	-- Irregular use
+															at0009]	-- No use
+														}
+													}
+												}
+											}
+											ELEMENT[at0012] occurrences matches {0..*} matches {*}
+											ELEMENT[at0012.1] occurrences matches {0..*} matches {	-- Standard drinks
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::382]>
+														list = <
+															["1"] = <
+																units = <"/h">
+															>
+															["2"] = <
+																units = <"/d">
+															>
+															["3"] = <
+																units = <"/wk">
+															>
+														>
+													>
+												}
+											}
+											ELEMENT[at0012.2] occurrences matches {0..*} matches {	-- Grams of alcohol
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::347]>
+														list = <
+															["1"] = <
+																units = <"gm/d">
+															>
+															["2"] = <
+																units = <"gm/wk">
+															>
+														>
+													>
+												}
+											}
+										}
+									}
+									ELEMENT[at0013] occurrences matches {0..1} matches {	-- Triggers
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									allow_archetype CLUSTER[at0014] occurrences matches {0..*} matches {	-- Readiness for change
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.change\.v1/}
+									}
+									ELEMENT[at0016] occurrences matches {0..1} matches {	-- Evidence of dependence
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0.29] matches {	-- Tree
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0.30] occurrences matches {0..1} matches {	-- Alcohol per standard drink
+						value matches {
+							C_DV_QUANTITY <
+								property = <[openehr::124]>
+								list = <
+									["1"] = <
+										units = <"gm">
+									>
+								>
+							>
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.19"] = <
+					text = <"Alcohol">
+					description = <"Details about Alcohol consumption.">
+				>
+				["at0.20"] = <
+					text = <"All alcohol">
+					description = <"Total amount of alcohol consumed.">
+				>
+				["at0.21"] = <
+					text = <"All beer">
+					description = <"All beer consumed.">
+				>
+				["at0.22"] = <
+					text = <"All wine">
+					description = <"All wine consumed.">
+				>
+				["at0.23"] = <
+					text = <"All spirits">
+					description = <"All spirits consumed.">
+				>
+				["at0.24"] = <
+					text = <"Full strength beer">
+					description = <"Full strength beer consumed.">
+				>
+				["at0.25"] = <
+					text = <"Light beer">
+					description = <"Light beer consumed.">
+				>
+				["at0.26"] = <
+					text = <"Red wine">
+					description = <"Red wine consumed.">
+				>
+				["at0.27"] = <
+					text = <"White wine">
+					description = <"White wine consumed.">
+				>
+				["at0.28"] = <
+					text = <"Fortified wine">
+					description = <"Fortified wine consumed.">
+				>
+				["at0.29"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0.30"] = <
+					text = <"Alcohol per standard drink">
+					description = <"Amount of alchohol defining a standard drink - this differs in many countries.">
+				>
+				["at0000"] = <
+					text = <"Substance Use">
+					description = <"Generic archetype to record the actual use or consumption of a defined substance at the present time, a specific time or over a period of time.">
+				>
+				["at0000.1"] = <
+					text = <"Alcohol Consumption">
+					description = <"Archetype to record the actual use or consumption of alcohol at the present time, a specific time or over a period of time.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Any event.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Substance">
+					description = <"Identification of substance.">
+				>
+				["at0005"] = <
+					text = <"Frequency">
+					description = <"Frequency of use of alcohol.">
+				>
+				["at0006"] = <
+					text = <"Daily use">
+					description = <"Used every day.">
+				>
+				["at0007"] = <
+					text = <"Weekly use">
+					description = <"Used at least weekly.">
+				>
+				["at0008"] = <
+					text = <"Irregular use">
+					description = <"Used irregularly.">
+				>
+				["at0009"] = <
+					text = <"No use">
+					description = <"Not used at all.">
+				>
+				["at0010"] = <
+					text = <"Consumption details">
+					description = <"Details about the consumption of alcohol.">
+				>
+				["at0011"] = <
+					text = <"Form">
+					description = <"Form of alcohol used.">
+				>
+				["at0012"] = <
+					text = <"Amount">
+					description = <"Amount of substance consumed.  Data type can be further specified in specialised archetypes or in templates.">
+				>
+				["at0012.1"] = <
+					text = <"Standard drinks">
+					description = <"Number of standard drinks of alcohol consumed.">
+				>
+				["at0012.2"] = <
+					text = <"Grams of alcohol">
+					description = <"Number of grams of alcohol consumed.">
+				>
+				["at0013"] = <
+					text = <"Triggers">
+					description = <"Identified triggers which stimulate or cause use.">
+				>
+				["at0014"] = <
+					text = <"Readiness for change">
+					description = <"Details about the readiness to change use or consumption of alcohol.">
+				>
+				["at0016"] = <
+					text = <"Evidence of dependence">
+					description = <"Description of any evidence of dependence on alcohol.">
+				>
+				["at0018"] = <
+					text = <"Method of use">
+					description = <"Method of use or consumption of alcohol.">
+				>
+			>
+		>
+		["es-ar"] = <
+			items = <
+				["at0.19"] = <
+					text = <"Alcohol">
+					description = <"Detalles acerca del consumo de alcohol.">
+				>
+				["at0.20"] = <
+					text = <"Todo tipo de bebidas alcohólicas">
+					description = <"Cantidad total del alcohol consumido.">
+				>
+				["at0.21"] = <
+					text = <"Toda la cerverza">
+					description = <"Toda la cerveza consumida.">
+				>
+				["at0.22"] = <
+					text = <"Todo el vino">
+					description = <"Todo el vino consumido.">
+				>
+				["at0.23"] = <
+					text = <"Todos el licor">
+					description = <"Todos el licor consumido.">
+				>
+				["at0.24"] = <
+					text = <"Cerveza fuerte">
+					description = <"La cerveza fuerte consumida.">
+				>
+				["at0.25"] = <
+					text = <"Cerveza liviana">
+					description = <"La cerveza liviana consumida.">
+				>
+				["at0.26"] = <
+					text = <"Vino tinto">
+					description = <"El vino tinto consumido.">
+				>
+				["at0.27"] = <
+					text = <"Vino blanco">
+					description = <"El vino blanco consumido.">
+				>
+				["at0.28"] = <
+					text = <"Vino generoso">
+					description = <"El vino generoso o fortificado consumido.">
+				>
+				["at0.29"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0.30"] = <
+					text = <"Cantidad de alcohol por trago estándar">
+					description = <"La cantidad de alcohol que define un trago estándar (puede diferir en distintos países).">
+				>
+				["at0000"] = <
+					text = <"*Substance Use(en)">
+					description = <"*Generic archetype to record the actual use or consumption of a defined substance at the present time, a specific time or over a period of time. (en)">
+				>
+				["at0000.1"] = <
+					text = <"Consumo de Alcohol">
+					description = <"Arquetipo para registrar el consumo de alcohol actual.">
+				>
+				["at0001"] = <
+					text = <"*Event Series(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"Cualquier evento">
+					description = <"Cualquier evento">
+				>
+				["at0003"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"Sustancia">
+					description = <"Identificación de sustancia">
+				>
+				["at0005"] = <
+					text = <"Frecuencia">
+					description = <"Frecuencia de consumo de alcohol.">
+				>
+				["at0006"] = <
+					text = <"Consumo diario">
+					description = <"Consumido todos los días.">
+				>
+				["at0007"] = <
+					text = <"Consumo semanal">
+					description = <"Consumido al menos semanalmente.">
+				>
+				["at0008"] = <
+					text = <"Consumo irregular">
+					description = <"Consumido irregularmente.">
+				>
+				["at0009"] = <
+					text = <"No consumo">
+					description = <"No consumo de alcohol en lo absoluto.">
+				>
+				["at0010"] = <
+					text = <"Detalles del consumo">
+					description = <"Detalles acerca del consumo de alcohol.">
+				>
+				["at0011"] = <
+					text = <"Forma">
+					description = <"Forma de consumo del alcohol.">
+				>
+				["at0012"] = <
+					text = <"Cantidad">
+					description = <"Cantidad de sustancia consumida. El tipo de dato a ser usado puede ser especificado con mayor detalle en arquetipos especializados o en plantillas.">
+				>
+				["at0012.1"] = <
+					text = <"Tragos estándar">
+					description = <"El número de tragos estándar de alcohol que se han consumido. Un trago estándar contiene 14 gramos de alcohol puro.">
+				>
+				["at0012.2"] = <
+					text = <"Gramos de alcohol">
+					description = <"La cantidad en gramos de alcohol consumida.">
+				>
+				["at0013"] = <
+					text = <"Disparadores">
+					description = <"Disparadores identificados que estimulan o causan el consumo de alcohol.">
+				>
+				["at0014"] = <
+					text = <"Preparación para el cambio">
+					description = <"Detalles acerca de la preparación para el cambio en el consumo de alcohol.">
+				>
+				["at0016"] = <
+					text = <"Evidencia de dependencia">
+					description = <"Descripción de alguna evidencia de dependencia al alcohol.">
+				>
+				["at0018"] = <
+					text = <"Método de uso">
+					description = <"Método de uso o consumo de alcohol.">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0.19"] = <
+					text = <"الكحول">
+					description = <"تفاصيل عن استهلاك الكحول">
+				>
+				["at0.20"] = <
+					text = <"جميع الكحول">
+					description = <"الكمية الكلية للكحول المستهلك">
+				>
+				["at0.21"] = <
+					text = <"جميع البيرة - الجعة">
+					description = <"البيرة (الجعة) الكلية المستهلكة">
+				>
+				["at0.22"] = <
+					text = <"جميع النبيذ">
+					description = <"جميع النبيذ الذي تم استهلاكه">
+				>
+				["at0.23"] = <
+					text = <"جميع الكحولات">
+					description = <"جميع الكحولات التي يتم استهلاكها">
+				>
+				["at0.24"] = <
+					text = <"البيرة (الجعة) كاملة القوة">
+					description = <"البيرة (الجعة) كاملة القوة التي تم استهلاكها">
+				>
+				["at0.25"] = <
+					text = <"البيرة الخفيفة">
+					description = <"البيرة الخفيفة التي تم استهلاكها">
+				>
+				["at0.26"] = <
+					text = <"النبيذ الأحمر">
+					description = <"النبيذ الأحمر الذي تم استهلاكه">
+				>
+				["at0.27"] = <
+					text = <"النبيذ الأبيض">
+					description = <"النبيذ الأبيض الذي تم استهلاكه">
+				>
+				["at0.28"] = <
+					text = <"النبيذ المقوَّى">
+					description = <"النبيذ المقوَّى الذي تم استخدامه">
+				>
+				["at0.29"] = <
+					text = <"شجرة">
+					description = <"*@ internal @(en)">
+				>
+				["at0.30"] = <
+					text = <"كمية الكحول في الشراب المعياري">
+					description = <"كمية الكحول التي تُعَرِّف الشراب المعياري - و ذلك يختلف في العديد من الدول">
+				>
+				["at0000"] = <
+					text = <"استخدام المواد">
+					description = <"نموذج جنيس (غير محدود الملكية) لتسجيل الاستخدام الفعلي أو الاستهلاك لمادة معينة في الوقت الحالي, أو في وقت معين, أو في فترة زمنية معينة  ">
+				>
+				["at0000.1"] = <
+					text = <"استهلاك الكحول">
+					description = <"نموذج يستخدم لتسجيل الاستخدام الفعلي أو استهلاك الكحول في الوقت الحالي, أو وقت معين أو عبر مدة زمنية معينة.">
+				>
+				["at0001"] = <
+					text = <"سلسلة الوقائع">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"إحدى الوقائع">
+					description = <"إحدى الوقائع">
+				>
+				["at0003"] = <
+					text = <"شجرة">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"المادة">
+					description = <"التعرف على المادة">
+				>
+				["at0005"] = <
+					text = <"التكرار">
+					description = <"تكرار استخدام الكحول">
+				>
+				["at0006"] = <
+					text = <"استخدام يومي">
+					description = <"يتم استخدامه يوميا">
+				>
+				["at0007"] = <
+					text = <"استخدام أسبوعي">
+					description = <"يتم استخدامه أسبوعيا على الأقل">
+				>
+				["at0008"] = <
+					text = <"استخدام غير منتظم">
+					description = <"يتم استخدامه بشكل غير منتظم">
+				>
+				["at0009"] = <
+					text = <"عدم استخدام">
+					description = <"لا يتم الاستخدام على الإطلاق">
+				>
+				["at0010"] = <
+					text = <"تفاصيل الاستهلاك">
+					description = <"تفاصيل حول استهلاك الكحول">
+				>
+				["at0011"] = <
+					text = <"الشكل">
+					description = <"شكل الكحول المستخدم">
+				>
+				["at0012"] = <
+					text = <"الكمية">
+					description = <"كمية المادة التي تم استخدامها. من الممكن أن يتم تحديد نوع البيانات في نموذج مخصص أو في قوالب.">
+				>
+				["at0012.1"] = <
+					text = <"الأشربة المعيارية">
+					description = <"عدد أشربة الكحول المعيارية التي يتم استهلاكها">
+				>
+				["at0012.2"] = <
+					text = <"جرامات الكحول">
+					description = <"عدد جرامات الكحول المستخدمة">
+				>
+				["at0013"] = <
+					text = <"المثيرات - المحفزات">
+					description = <"المحفزات التي تم التعرف عليها و التي تسبب أو تحفز الاستخدام">
+				>
+				["at0014"] = <
+					text = <"الاستعداد للتغيير - عنقود">
+					description = <"تفاصيل حول الاستعداد لتغيير استخدام أو استهلاك الكحول">
+				>
+				["at0016"] = <
+					text = <"البينة على الاعتماد">
+					description = <"وصف أي بينة على الاعتماد على الكحول">
+				>
+				["at0018"] = <
+					text = <"طريقة الاستخدام">
+					description = <"طريقة استخدام أو استهلاك الكحول">
+				>
+			>
+		>
+	>

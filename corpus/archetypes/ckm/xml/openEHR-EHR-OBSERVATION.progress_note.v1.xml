@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -45,9 +45,9 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">0DC26E43DE454A2B3FE00A7AEA553E2A</other_details>
-    <other_details id="build_uid">715f68b3-8720-4824-aca9-b437ebf5dbba</other_details>
-    <other_details id="revision">1.1.1</other_details>
+    <other_details id="MD5-CAM-1.0.1">6F49066691A20F329594AD526BD2BF16</other_details>
+    <other_details id="build_uid">f47ae5f3-f0c8-4571-842d-b21f43476d28</other_details>
+    <other_details id="revision">1.1.2</other_details>
     <details>
       <language>
         <terminology_id>
@@ -134,6 +134,29 @@ Not to be used to record a narrative, summary view of the patient's health, for 
         <terminology_id>
           <value>ISO_639-1</value>
         </terminology_id>
+        <code_string>sl</code_string>
+      </language>
+      <purpose>Za ročno sestavljanje in beleženje pripovednega opisa o z zdravjem povezanih dogodkih, ki so aktualni v času beleženja, iz perspektive izvajalca zdravstvene oskrbe.</purpose>
+      <keywords>komentar</keywords>
+      <keywords>zapis</keywords>
+      <keywords>opomba</keywords>
+      <keywords>napredek</keywords>
+      <keywords>beležka</keywords>
+      <use>Uporabiti za ročno sestavljanje in beleženje pripovednega opisa o aktualnih z zdravjem povezanih dogodkih in dejavnostih iz perspektive izvajalca zdravstvene oskrbe.&#xD;
+&#xD;
+Ta nestrukturiran opis lahko vključuje zdravstveno stanje in ugotovitve o posamezniku, ki so aktualni v času beleženja. Najpogosteje je ta opis povezan z negovalnimi zapiski ob koncu izmene ali dnevnimi zapiski izvajalca zdravstvenih storitev, kot je zdravnik ali fizioterapevt. V praksi je Poročilo o poteku meta opazovanje, ki bo dopolnilo obstoječi strukturirani klinični zapis, kar omogoča izražanje subtilnih, subjektivnih ali interpretativnih informacij o pacientu, ki sicer morda ne bi bile očitne samo s strukturiranimi podatki, kar zagotavlja ravnovesje in kontekst zapisa EHR. V številnih situacijah bo ta arhetip kombiniran skupaj z drugimi bolj strukturiranimi arhetipi znotraj enega samega COMPOSITION arhetipa.&#xD;
+&#xD;
+Ta arhetip se lahko uporablja tudi, če ni na voljo strukturiranih arhetipov, ali za beleženje zapisov o poteku, uvoženih iz zastarelih sistemov.</use>
+      <misuse>Ne uporabljati za beleženje specifičnih strukturiranih ali delno strukturiranih zdravstvenih informacij. Na primer, podrobne informacije o problemih/diagnozah, rezultatih preiskav in vitalnih znakih, ugotovitvah pregleda in zgodbi/anamnezi pacienta je treba beležiti z uporabo specifičnih ustreznih EVALUATION ali OBSERVATION arhetipov.&#xD;
+&#xD;
+Ne uporabljati za beleženje pripovednega, povzetega prikaza zdravja pacienta, na primer za sporočanje jedrnatega povzetka bolnišničnega sprejema pacienta kot ene komponente celovitega in strukturiranega dokumenta odpustnega pisma. Za ta namen uporabiti arhetip EVALUATION.clinical_synopsis.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
         <code_string>nl</code_string>
       </language>
       <purpose>*To manually synthesise and record a narrative description about health related events that are current at the time of recording, from the perspective of a healthcare provider.(en)</purpose>
@@ -183,6 +206,17 @@ Not to be used to record a narrative, summary view of the patient's health, for 
     <author id="organisation">Hospital Universitario Austral</author>
     <author id="email">amarch@cas.austral.edu.ar</author>
     <accreditation>MD</accreditation>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sl</code_string>
+    </language>
+    <author id="name">Vanja Maravić, Ana Milošev, Anđela Marjanović, Vuk Radnić</author>
+    <author id="organisation">Better Deutschland GmbH, Better d.o.o.</author>
+    <author id="email">vanja.maravic@better.care, ana.milosev@better.care, andjela.marjanovic@better.care, vuk.radnic@better.care</author>
   </translations>
   <translations>
     <language>
@@ -579,6 +613,36 @@ Not to be used to record a narrative, summary view of the patient's health, for 
         <items id="comment">Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.</items>
       </items>
     </term_definitions>
+    <term_definitions language="sl">
+      <items code="at0000">
+        <items id="text">Poročilo o poteku</items>
+        <items id="description">Pripovedni opis z zdravjem povezanih dogodkov v določeni časovni točki o posamezniku, posebej iz perspektive izvajalca zdravstvene oskrbe.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Event Series</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Katerikoli dogodek</items>
+        <items id="description">Privzeta, nespecificirana časovna točka ali intervalni dogodek, ki je lahko eksplicitno določen v predlogi ali med izvajanjem.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Poročilo o poteku</items>
+        <items id="description">Pripovedni opis z zdravjem povezanih dogodkov, zdravstvenega stanja, ugotovitev, mnenj v določeni časovni točki.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Razširitev</items>
+        <items id="description">Dodatne informacije, potrebne za zajemanje lokalnega konteksta ali za uskladitev z drugimi referenčnimi modeli/formalizmi.</items>
+        <items id="comment">Na primer: informacije lokalnega bolnišničnega oddelka ali dodatni metapodatki za uskladitev z ekvivalenti FHIR.</items>
+      </items>
+    </term_definitions>
   </ontology>
 </archetype>
-

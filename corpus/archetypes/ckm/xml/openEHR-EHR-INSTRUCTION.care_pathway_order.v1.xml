@@ -1,0 +1,933 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2015-06-20</original_author>
+    <original_author id="name">Bjørn Næss</original_author>
+    <original_author id="organisation">DIPS AS</original_author>
+    <original_author id="email">bna@dips.no</original_author>
+    <other_contributors>Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Koray Atalag, GALATA-Digital, New Zealand</other_contributors>
+    <other_contributors>Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>SB Bhattacharyya, Bhattacharyyas Clinical Records Research &amp; Informatics LLP, India</other_contributors>
+    <other_contributors>Tara Bonet Chinillach, Catalan Health Service, Spain</other_contributors>
+    <other_contributors>Gunn Elin Blakkisrud, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Ciprian Gerstenberger, HN IKT, Norway</other_contributors>
+    <other_contributors>Rosane Gotardo, Systema Ltda., Brazil</other_contributors>
+    <other_contributors>Heather Grain, Llewelyn Grain Informatics, Australia</other_contributors>
+    <other_contributors>Atle Hansen, Universitetssykehuset Nord-Norge, Norway</other_contributors>
+    <other_contributors>Joost Holslag, Joost Holslag Geneeskunde &amp; Advies, Netherlands</other_contributors>
+    <other_contributors>Evelyn Hovenga, EJSH Consulting, Australia</other_contributors>
+    <other_contributors>Matteus Janicki, Akershus Universitetssykehus, Norway</other_contributors>
+    <other_contributors>Anjali Kulkarni, Karkinos, India</other_contributors>
+    <other_contributors>Jörgen Kuylenstierna, eWeave AB, Sweden</other_contributors>
+    <other_contributors>Liv Laugen, Oslo universitetssykehus, Norway</other_contributors>
+    <other_contributors>Heather Leslie, Atomica Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>June Marie Knappskog, Helse Nord IKT AS, Norway, Norway</other_contributors>
+    <other_contributors>Ian McNicoll, freshEHR Clinical Informatics, United Kingdom</other_contributors>
+    <other_contributors>Olha Nikolaieva, University Hospital Basel, Switzerland</other_contributors>
+    <other_contributors>Mikael Nyström, Cambio Healthcare Systems AB, Sweden</other_contributors>
+    <other_contributors>Bjørn Næss, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Norwegian Review Summary, Norwegian Public Hospitals, Norway</other_contributors>
+    <other_contributors>Kanthan Theivendran, NHS, United Kingdom</other_contributors>
+    <other_contributors>John Tore Valand, Helse Vest IKT, Norway</other_contributors>
+    <other_contributors>Marte Vassli Gullesen, HNIKT, Norway</other_contributors>
+    <lifecycle_state>published</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Norway</other_details>
+    <other_details id="references">International Organization for Standardization. Health informatics - System of concepts to support continuity of care; ISO 13940:2015 [Internet]. Geneva: ISO; 2015 [cited 2026 May 18]. Available from: https://www.iso.org/standard/58362.html</other_details>
+    <other_details id="current_contact">Silje Ljosland Bakke &lt;silje.ljosland.bakke@helse-vest-ikt.no&gt;</other_details>
+    <other_details id="original_namespace">no.openehr</other_details>
+    <other_details id="original_publisher">openEHR Norway</other_details>
+    <other_details id="custodian_namespace">no.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">36F1EFA2F5D20784995FC8C137935652</other_details>
+    <other_details id="build_uid">1bfe54ec-20f1-4687-91ca-56c752d13289</other_details>
+    <other_details id="revision">1.0.0</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sv</code_string>
+      </language>
+      <purpose>Att ordinera initiering av en standardiserad vårdprocess för ett specifikt tillstånd eller en behandling.</purpose>
+      <keywords>*pathway(en)</keywords>
+      <keywords>*care pathway(en)</keywords>
+      <keywords>*clinical pathway(en)</keywords>
+      <keywords>*treatment pathway(en)</keywords>
+      <keywords>*patient pathway(en)</keywords>
+      <keywords>*standardised patient pathway(en)</keywords>
+      <keywords>*care plan(en)</keywords>
+      <keywords>*protocol(en)</keywords>
+      <keywords>*order(en)</keywords>
+      <use>Används för att ordinera initiering av en standardiserad vårdprocess för ett specifikt tillstånd eller en behandling. Kliniska riktlinjer kan ligga till grund för strukturerade vårdförlopp, och de interventioner eller andra aktiviteter som rekommenderas inom ett sådant vårdförlopp kan omsättas i en individualiserad vårdplan.&#xD;
+&#xD;
+Omfattningen av denna arketyp inkluderar, men är inte begränsad till, ordinationer av standardiserade vårdförlopp för alla typer av akut, kronisk eller förebyggande vård. Exempel:&#xD;
+- Standardiserade vårdförlopp inom cancervård, till exempel intravesikal instillationsbehandling efter operation vid urinblåsecancer&#xD;
+- Perioperativa vårdförlopp, till exempel vid total höftprotesoperation&#xD;
+- Vårdförlopp inom psykiatri, till exempel för behandling av anorexi&#xD;
+- Vaccinationsscheman, till exempel barnvaccinationsprogram 0–5 år&#xD;
+- Strukturerade behandlingsprogram för kroniska sjukdomar, till exempel diabetesbehandling&#xD;
+&#xD;
+I denna arketyp används termerna ”vårdförlopp” och ”plan” med följande betydelser:&#xD;
+- Vårdförlopp: Ett vårdförlopp är en standardiserad process för ett specifikt tillstånd eller en behandling, vanligtvis med en fördefinierad start- och slutpunkt. De interventioner eller andra aktiviteter som rekommenderas inom ett vårdförlopp kan omsättas i en plan.&#xD;
+- Plan: En vårdplan eller behandlingsplan är anpassad för en specifik individ, är oftast dynamisk och uppdateras i takt med att individens tillstånd förändras. Planer tas ofta fram i samarbete mellan individen och vårdteamet och är inriktade på specifika mål, interventioner och uppföljningar.</use>
+      <misuse>*Not to be used to record information about the execution of the care pathway. Use the ACTION.care_pathway archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record orders for specific activities recommended by a care pathway. Use separate and specific instances of INSTRUCTION.service_request or similar archetypes for this purpose. Examples of specific activities include, but are not limited to: multi-disciplinary team meetings, diagnostic tests, consultations, or measurements.&#xD;
+&#xD;
+Not to be used to record information about treatment goals. Use EVALUATION.goal or other appropriate archetypes for this purpose.(en)</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For å ordinere et standardisert klinisk forløp for en spesifikk tilstand eller behandling.</purpose>
+      <keywords>forløp</keywords>
+      <keywords>behandlingsforløp</keywords>
+      <keywords>behandlingslinje</keywords>
+      <keywords>behandlingsplan</keywords>
+      <keywords>protokoll</keywords>
+      <keywords>pasientforløp</keywords>
+      <keywords>pakkeforløp</keywords>
+      <keywords>ordinering</keywords>
+      <use>Brukes for å ordinere et standardisert klinisk forløp for en spesifikk tilstand eller behandling. Fremdriften i det ordinerte forløpet kan registreres ved hjelp av den tilhørende arketypen ACTION.care_pathway (Styring av klinisk forløp).&#xD;
+&#xD;
+Arketypen omfatter ordinering av standardiserte forløp for enhver type akutt, kronisk eller forebyggende behandling, på tvers av medisinske, kirurgiske, sykepleiefaglige og tverrfaglige fagområder. For eksempel:&#xD;
+- kreftforløp, som instillasjonsbehandling etter kirurgi for blærekreft&#xD;
+- perioperative forløp, som innsetting av total hofteprotese&#xD;
+- forløp innen psykisk helse, som behandlingsforløp for anoreksi&#xD;
+- vaksinasjonsprogrammer, som vaksinasjonsprogram for barn 0-5 år&#xD;
+- protokoller for kroniske sykdommer, som diabetesbehandling&#xD;
+- sykepleieforløp, som forebygging av trykksår eller sårbehandling&#xD;
+&#xD;
+Begrepene "klinisk forløp" og "behandlingsplan" brukes her med følgende betydning:&#xD;
+- klinisk forløp: Et klinisk forløp (noen ganger kalt behandlingsforløp) er en standardisert kunnskapsressurs som beskriver en omsorgsprosess for en spesifikk tilstand eller behandling, vanligvis med en forhåndsdefinert start og slutt. Et klinisk forløp kan bygge på kliniske retningslinjer, og anbefalte intervensjoner eller andre aktiviteter kan konkretiseres i en behandlingsplan. Et klinisk forløp tilsvarer ContSys' (ISO 13940) begrep 'clinical pathway'.&#xD;
+- behandlingsplan: En behandlingsplan eller pleieplan er tilpasset en spesifikk person, ofte basert på ett eller flere kliniske forløp, er vanligvis dynamisk og oppdateres etter hvert som personens tilstand endres. Planer utvikles ofte i samarbeid mellom personen og helseteamet og er orientert rundt spesifikke mål, intervensjoner og evalueringer.&#xD;
+&#xD;
+For flerfasede forløp der et overordnet forløp inneholder distinkte forhåndsdefinerte faser, kan arketypen brukes til å ordinere det overordnede forløpet, for eksempel en hel onkologisk protokoll. I tillegg kan separate instanser av arketypen brukes til å ordinere hver enkelt fase, for eksempel neoadjuvant behandling, kirurgi og adjuvant behandling.</use>
+      <misuse>Brukes ikke for å registrere informasjon om gjennomføringen av det kliniske forløpet. Bruk arketypen ACTION.care_pathway (Styring av klinisk forløp) til dette formålet.&#xD;
+&#xD;
+Brukes ikke for å registrere ordinering av spesifikke aktiviteter som anbefales i et klinisk forløp. Bruk separate og spesifikke instanser av INSTRUCTION.service_request (Helsetjenesteforespørsel) eller lignende arketyper til dette formålet. Eksempler på spesifikke aktiviteter kan omfatte tverrfaglige teammøter, diagnostiske undersøkelser, konsultasjoner eller målinger.&#xD;
+&#xD;
+Brukes ikke for å registrere informasjon om behandlingsmål. Bruk EVALUATION.goal (Behandlingsmål) eller andre passende arketyper til dette formålet.</misuse>
+      <copyright>© openEHR Norway</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To order a standardised care pathway for a specific condition or treatment.</purpose>
+      <keywords>pathway</keywords>
+      <keywords>care pathway</keywords>
+      <keywords>clinical pathway</keywords>
+      <keywords>treatment pathway</keywords>
+      <keywords>patient pathway</keywords>
+      <keywords>standardised patient pathway</keywords>
+      <keywords>care plan</keywords>
+      <keywords>protocol</keywords>
+      <keywords>order</keywords>
+      <use>Use to order a standardised care pathway for a specific condition or treatment. The progress of the ordered pathway can be recorded using the corresponding ACTION.care_pathway archetype.&#xD;
+&#xD;
+The scope of this archetype includes, but is not limited to orders for standardised pathways for any type of acute, chronic or preventive management, across medical, surgical, nursing and multidisciplinary domains. For example:&#xD;
+- Cancer care pathways, for example post-surgical instillation treatment for bladder cancer&#xD;
+- Perioperative pathways, for example total hip replacement&#xD;
+- Mental health pathways, for example anorexia treatment pathway&#xD;
+- Vaccination schedules, for example 0-5 childhood vaccination schedule&#xD;
+- Chronic disease protocols, for example diabetes management&#xD;
+- Nursing care pathways, for example pressure ulcer prevention or wound care pathway&#xD;
+&#xD;
+In this archetype, the terms "care pathway" and "care plan" are used to mean the following:&#xD;
+- Care pathway: A care pathway (sometimes referred to as a clinical pathway) is a standardised knowledge resource describing a care process for a specific condition or treatment, commonly with a predetermined start and end. A care pathway may be informed by clinical guidelines, and the interventions or other activities recommended may be operationalised as a care plan. A care pathway is equivalent to a ContSys (ISO 13940) clinical pathway.&#xD;
+- Care plan: A care plan or treatment plan is tailored to a specific individual, often based on one or more care pathways, is usually dynamic and updated as the individual's condition changes. Plans are often developed collaboratively between the individual and their healthcare team, and oriented around specific goals, interventions and evaluations.&#xD;
+&#xD;
+For multi-phase pathways, where a single overarching pathway contains distinct predefined phases, this archetype may be used to order the overall pathway, for example an entire oncology protocol. In addition, separate instances of this archetype may also be used to order each phase, for example neoadjuvant therapy, surgery, and adjuvant therapy.</use>
+      <misuse>Not to be used to record information about the execution of the care pathway. Use the ACTION.care_pathway archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record orders for specific activities recommended by a care pathway. Use separate and specific instances of INSTRUCTION.service_request or similar archetypes for this purpose. Examples of specific activities include, but are not limited to: multi-disciplinary team meetings, diagnostic tests, consultations, or measurements.&#xD;
+&#xD;
+Not to be used to record information about treatment goals. Use EVALUATION.goal or other appropriate archetypes for this purpose.</misuse>
+      <copyright>© openEHR Norway</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sv</code_string>
+    </language>
+    <author id="name">Oscar Karlsson</author>
+    <author id="organisation">Karolinska Universitetssjukhuset</author>
+    <author id="email">oscar.karlsson@regionstockholm.se</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Silje Ljosland Bakke</author>
+    <author id="organisation">Helse Vest IKT</author>
+    <author id="email">silje.ljosland.bakke@helse-vest-ikt.no</author>
+  </translations>
+  <uid>
+    <value>3b7cca9a-ec00-4062-b694-0b1ebd6cd31d</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-INSTRUCTION.care_pathway_order.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>INSTRUCTION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>activities</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ACTIVITY</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>description</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>1</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ITEM_TREE</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0002</node_id>
+            <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+              <rm_attribute_name>items</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0003</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0005</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>0</lower>
+                </occurrences>
+                <node_id>at0014</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0004</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_DATE_TIME</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0015</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_DATE_TIME</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="ARCHETYPE_SLOT">
+                <rm_type_name>CLUSTER</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>0</lower>
+                </occurrences>
+                <node_id>at0006</node_id>
+              </children>
+              <children xsi:type="ARCHETYPE_SLOT">
+                <rm_type_name>CLUSTER</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>0</lower>
+                </occurrences>
+                <node_id>at0017</node_id>
+                <includes>
+                  <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.knowledge_base_reference(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+                  <expression xsi:type="EXPR_BINARY_OPERATOR">
+                    <type>Boolean</type>
+                    <operator>2007</operator>
+                    <precedence_overridden>false</precedence_overridden>
+                    <left_operand xsi:type="EXPR_LEAF">
+                      <type>String</type>
+                      <item xsi:type="xsd:string">archetype_id/value</item>
+                      <reference_type>attribute</reference_type>
+                    </left_operand>
+                    <right_operand xsi:type="EXPR_LEAF">
+                      <type>C_STRING</type>
+                      <item xsi:type="C_STRING">
+                        <pattern>openEHR-EHR-CLUSTER\.knowledge_base_reference(-[a-zA-Z0-9_]+)*\.v1</pattern>
+                      </item>
+                      <reference_type>constraint</reference_type>
+                    </right_operand>
+                  </expression>
+                </includes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0013</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <cardinality>
+                <is_ordered>false</is_ordered>
+                <is_unique>false</is_unique>
+                <interval>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>0</lower>
+                </interval>
+              </cardinality>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>protocol</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0007</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0018</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_IDENTIFIER</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0019</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0016</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0010</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/.*/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>.*</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Care pathway order</items>
+        <items id="description">An order for a standardised care pathway for a specific condition or treatment.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Order</items>
+        <items id="description">Details of the requested order.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Care pathway name</items>
+        <items id="description">The name of the care pathway.</items>
+        <items id="comment">For example: 'Breast cancer pathway' or 'STEMI pathway'. Coding of the care pathway name with a terminology is preferred, where possible.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Start date/time</items>
+        <items id="description">Date/time when the ordered care pathway should commence.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Description</items>
+        <items id="description">Narrative description about the care pathway order, including any relevant details about how the pathway is intended to be carried out.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Additional details</items>
+        <items id="description">Additional structured details about the care pathway order.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Extension</items>
+        <items id="description">Additional information required to extend the model with local content or to align with other reference models or formalisms.</items>
+        <items id="comment">For example: local information requirements; or additional metadata to align with FHIR.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Comment</items>
+        <items id="description">Additional narrative about the care pathway order not captured in other fields.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Clinical indication</items>
+        <items id="description">The clinical reason for ordering care pathway.</items>
+        <items id="comment">For example: 'Cancer'. Coding of the clinical indication with a terminology is preferred, where possible.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">End date/time</items>
+        <items id="description">Date/time when the ordered care pathway should end.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Review due</items>
+        <items id="description">The date when the care pathway order is intended to be reviewed.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Knowledge base reference</items>
+        <items id="description">Structured details about a knowledge base item used in the care pathway order.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Order identifier</items>
+        <items id="description">Unique identifier for this specific care pathway order for the individual.</items>
+        <items id="comment">This element identifies this specific care pathway order, not the pathway template or protocol itself. It may be used to group all related ACTION and INSTRUCTION compositions belonging to the same patient's care pathway order. The identifier may be issued externally, for example by a national pathway registry or a referring organisation. Multiple occurrences allow more than one identifier to be recorded simultaneously if required.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Parent order identifier</items>
+        <items id="description">Unique identifier of the parent of this pathway order, where an overarching pathway contains distinct predefined phases.</items>
+        <items id="comment">For example: an oncology protocol pathway may be the parent of a neoadjuvant therapy pathway.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Ordinering av klinisk forløp</items>
+        <items id="description">Ordinering av et standardisert klinisk forløp for en spesifikk tilstand eller behandling.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Ordinering</items>
+        <items id="description">Detaljer om ordineringen.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Tre</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Forløpsnavn</items>
+        <items id="description">Navnet på det kliniske forløpet.</items>
+        <items id="comment">For eksempel: "Brystkreftforløp" eller "STEMI-forløp". Koding av forløpsnavnet med en terminologi er å foretrekke, der det er mulig.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Startdato/-tid</items>
+        <items id="description">Dato/tid da det ordinerte kliniske forløpet er planlagt å starte.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Beskrivelse</items>
+        <items id="description">Fritekstbeskrivelse om ordineringen av det kliniske forløpet, inkludert eventuelle relevante detaljer om hvordan forløpet er tiltenkt gjennomført.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Ytterligere detaljer</items>
+        <items id="description">Ytterligere strukturerte detaljer om ordineringen av det kliniske forløpet.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Tre</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Tilleggsinformasjon</items>
+        <items id="description">Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.</items>
+        <items id="comment">For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Kommentar</items>
+        <items id="description">Ytterligere fritekst om ordineringen av det kliniske forløpet som ikke er registrert i andre felt.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Klinisk indikasjon</items>
+        <items id="description">Den kliniske begrunnelsen for at det kliniske forløpet ordineres.</items>
+        <items id="comment">For eksempel: "Kreft". Koding av den kliniske indikasjonen med en terminologi er å foretrekke, der det er mulig.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Sluttdato/-tid</items>
+        <items id="description">Dato/tid da det ordinerte kliniske forløpet er planlagt å avsluttes.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Planlagt revurdering</items>
+        <items id="description">Dato da ordineringen av det kliniske forløpet er planlagt å revurderes.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Referanse til kunnskapsbase</items>
+        <items id="description">Strukturerte detaljer om en kunnskapsbase som er brukt i ordineringen av det kliniske forløpet.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Ordineringsidentifikator</items>
+        <items id="description">Unik identifikator for denne spesifikke ordineringen av klinisk forløp for individet.</items>
+        <items id="comment">Dette elementet identifiserer denne spesifikke ordineringen av klinisk forløp, ikke forløpsmalen eller protokollen som sådan. Den kan brukes til å gruppere alle relaterte ACTION- og INSTRUCTION-komposisjoner som tilhører samme individs kliniske forløp. Identifikatoren kan utstedes eksternt, for eksempel av et nasjonalt forløpsregister eller en henvisende organisasjon. Flere forekomster gjør det mulig å registrere mer enn én identifikator samtidig, ved behov.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Identifikator for overordnet ordinering</items>
+        <items id="description">Unik identifikator for den overordnede ordineringen, der et overordnet klinisk forløp inneholder distinkte forhåndsdefinerte faser.</items>
+        <items id="comment">For eksempel kan et forløp for en onkologisk protokoll være overordnet et forløp for neoadjuvant behandling.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="sv">
+      <items code="at0000">
+        <items id="text">Ordination av vårdförlopp</items>
+        <items id="description">En ordination av ett standardiserat vårdförlopp för ett specifikt tillstånd eller en behandling.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Ordination</items>
+        <items id="description">Detaljer om den begärda ordinationen.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Vårdförlopp</items>
+        <items id="description">Benämning på aktuellt vårdförlopp.</items>
+        <items id="comment">*For example: 'Breast cancer pathway' or 'STEMI pathway'. Coding of the care pathway name with a terminology is preferred, where possible.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Startdatum/tid</items>
+        <items id="description">Datum/tid för start av aktuellt vårdförlopp.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">*Description(en)</items>
+        <items id="description">*Narrative description about the care pathway order, including any relevant details about how the pathway is intended to be carried out.(en)</items>
+      </items>
+      <items code="at0006">
+        <items id="text">*Additional details(en)</items>
+        <items id="description">*Additional structured details about the care pathway order.(en)</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0010">
+        <items id="text">*Extension(en)</items>
+        <items id="description">*Additional information required to extend the model with local content or to align with other reference models or formalisms.(en)</items>
+        <items id="comment">*For example: local information requirements; or additional metadata to align with FHIR.(en)</items>
+      </items>
+      <items code="at0013">
+        <items id="text">*Comment(en)</items>
+        <items id="description">*Additional narrative about the care pathway order not captured in other fields.(en)</items>
+      </items>
+      <items code="at0014">
+        <items id="text">*Clinical indication(en)</items>
+        <items id="description">*The clinical reason for ordering care pathway.(en)</items>
+        <items id="comment">*For example: 'Cancer'. Coding of the clinical indication with a terminology is preferred, where possible.(en)</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Slutdatum/tid</items>
+        <items id="description">Datum/tid för avslut av aktuellt vårdförlopp.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">*Review due(en)</items>
+        <items id="description">*The date when the care pathway order is intended to be reviewed.(en)</items>
+      </items>
+      <items code="at0017">
+        <items id="text">*Knowledge base reference(en)</items>
+        <items id="description">*Structured details about a knowledge base item used in the care pathway order.(en)</items>
+      </items>
+      <items code="at0018">
+        <items id="text">*Order identifier(en)</items>
+        <items id="description">*Unique identifier for this specific care pathway order for the individual.(en)</items>
+        <items id="comment">*This element identifies this specific care pathway order, not the pathway template or protocol itself. It may be used to group all related ACTION and INSTRUCTION compositions belonging to the same patient's care pathway order. The identifier may be issued externally, for example by a national pathway registry or a referring organisation. Multiple occurrences allow more than one identifier to be recorded simultaneously if required.(en)</items>
+      </items>
+      <items code="at0019">
+        <items id="text">*Parent order identifier(en)</items>
+        <items id="description">*Unique identifier of the parent of this pathway order, where an overarching pathway contains distinct predefined phases.(en)</items>
+        <items id="comment">*For example: an oncology protocol pathway may be the parent of a neoadjuvant therapy pathway.(en)</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

@@ -66,11 +66,18 @@ that is a FHIR manifest or names a FHIR package.
 
 ## The openEHR CKM REST API — facts, verified 2026-08-01
 
-Base: `https://ckm.openehr.org/ckm/rest/v1`. The API IS documented: a
-Swagger 2.0 document at `/rest/v1/swagger.json` ("CKM REST API" 1.6.0, 39
-paths) with Swagger UI at `/ckm/rest-doc/` (verified 2026-09-03; the 2026-08-01
-probe tried `openapi.json` and `v3/api-docs` and wrongly concluded none
-existed). Read it first, then re-verify on the wire before trusting a guess.
+Base: `https://ckm.openehr.org/ckm/rest/v1`. The API IS documented: an
+OpenAPI document at `/rest/v1/openapi.json` ("CKM REST API" 1.8.0, verified
+2026-11-12) with Swagger UI at `/ckm/rest-doc/`. The Swagger 2.0 document
+`/rest/v1/swagger.json` the 2026-09-03 probe read now answers 404. Read the
+contract first, then re-verify on the wire before trusting a guess.
+
+- **The archetype list leaves out REJECTED and DEPRECATED by default.** The
+  contract's `/archetypes` `resource-state` parameter "Defaults to all active
+  (i.e., all except REJECTED and DEPRECATED)". Both archetype vendor scripts
+  ask for every state the contract enumerates through
+  `scripts/vendor/lib/ckm.sh` (1263 archetypes on 2026-11-12 against 946 by
+  default) and refuse a list with no REJECTED or DEPRECATED row.
 
 - **Pagination is `?size=M&offset=N` and nothing else** (corrected
   2026-09-03: the earlier `page` claim was wrong; `?page=0&size=10000` worked

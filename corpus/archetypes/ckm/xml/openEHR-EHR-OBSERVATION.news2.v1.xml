@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -77,8 +77,7 @@ Tidlig oppdagelse av forverret tilstand. Pasientsikkerhetsprogrammet [cited 2019
 &#xD;
 In der klinischen Praxis kann der NEWS2 verwendet werden, um eine klinische Verschlechterung bei einem Risikopatienten zu identifizieren oder um einen objektiven Hinweis auf den Grad der Verschlechterung bei einem akut kranken Patienten zu geben.&#xD;
 &#xD;
-Wenn der Patient an hyperkapnischen Versagen der Atemwege leidet, sollte zur Berechnung des NEWS-Scores die 'SpO₂ Skala 2' verwendet werden. In allen anderen Situationen sollte für die Berechnung des NEWS2-Scores die 'SpO₂ Skala 1' verwendet werden.&#xD;
-</use>
+Wenn der Patient an hyperkapnischen Versagen der Atemwege leidet, sollte zur Berechnung des NEWS-Scores die 'SpO₂ Skala 2' verwendet werden. In allen anderen Situationen sollte für die Berechnung des NEWS2-Scores die 'SpO₂ Skala 1' verwendet werden.</use>
       <misuse>Nicht zur Dokumentation von konkreten Messungen für jede Variable verwenden. Verwenden Sie hierfür spezielle OBSERVATION-Archetypen:&#xD;
 - OBSERVATION.blood_pressure;&#xD;
 - OBSERVATION.pulse;&#xD;
@@ -89,8 +88,7 @@ Wenn der Patient an hyperkapnischen Versagen der Atemwege leidet, sollte zur Ber
 &#xD;
 Nicht zur Dokumentation für Kinder oder Jugendliche unter 16 Jahren verwenden. Verwenden Sie dazu einen Archetyp, der den Pädiatrischen Frühwarnscore (PEWS) darstellt.&#xD;
 &#xD;
-Nicht zur Dokumentation während der Schwangerschaft und der postpartalen Phase verwenden. Verwenden Sie für diesen Zweck einen schwangerschaftsspezifischen Archetyp wie den maternalen Frühwarnscore oder den modifizierten geburtshilflichen Frühwarnscore.&#xD;
-</misuse>
+Nicht zur Dokumentation während der Schwangerschaft und der postpartalen Phase verwenden. Verwenden Sie für diesen Zweck einen schwangerschaftsspezifischen Archetyp wie den maternalen Frühwarnscore oder den modifizierten geburtshilflichen Frühwarnscore.</misuse>
       <copyright />
     </details>
     <details>
@@ -1765,8 +1763,7 @@ Not to be used during pregnancy and the postpartum period. Use a pregnancy speci
       </items>
       <items code="at0010">
         <items id="text">&lt;=40</items>
-        <items id="description">Hjärtfrekvensen är lägre än eller lika med 40 slag per minut. &#xD;
-</items>
+        <items id="description">Hjärtfrekvensen är lägre än eller lika med 40 slag per minut.</items>
       </items>
       <items code="at0011">
         <items id="text">111-130</items>
@@ -2045,8 +2042,7 @@ Not to be used during pregnancy and the postpartum period. Use a pregnancy speci
       </items>
       <items code="at0022">
         <items id="text">36.1-38.0</items>
-        <items id="description">Die Körpertemperatur liegt zwischen 36.1 und 38.0 Grad Celcius.&#xD;
-</items>
+        <items id="description">Die Körpertemperatur liegt zwischen 36.1 und 38.0 Grad Celcius.</items>
       </items>
       <items code="at0023">
         <items id="text">35.1-36.0</items>
@@ -2062,15 +2058,13 @@ Not to be used during pregnancy and the postpartum period. Use a pregnancy speci
       </items>
       <items code="at0028">
         <items id="text">Gesamtsumme</items>
-        <items id="description">Die Gesamtsumme der Punkte, die für jede der Komponentenvariablen vergeben wurde.&#xD;
-</items>
+        <items id="description">Die Gesamtsumme der Punkte, die für jede der Komponentenvariablen vergeben wurde.</items>
         <items id="comment">Die Gesamtpunktzahl kann zur Laufzeit generiert werden.</items>
       </items>
       <items code="at0029">
         <items id="text">SpO₂ Skala 1</items>
         <items id="description">Kategorie für die Messung der Sauerstoffsättigung.</items>
-        <items id="comment">'SpO₂ Skala 1' und 'SpO₂ Skala 2' sind Variationen derselben physiologischen Variable, die in verschiedenen klinischen Szenarien verwendet werden sollen. Skala 1 wird für die meisten Patienten verwendet, mit Ausnahme von Patienten mit einem Sauerstoffsättigungs-Zielbereich von 88-92%, wie z.B. Patienten mit hyperkapnischem Atemversagen.&#xD;
-</items>
+        <items id="comment">'SpO₂ Skala 1' und 'SpO₂ Skala 2' sind Variationen derselben physiologischen Variable, die in verschiedenen klinischen Szenarien verwendet werden sollen. Skala 1 wird für die meisten Patienten verwendet, mit Ausnahme von Patienten mit einem Sauerstoffsättigungs-Zielbereich von 88-92%, wie z.B. Patienten mit hyperkapnischem Atemversagen.</items>
       </items>
       <items code="at0030">
         <items id="text">≥96</items>
@@ -2140,8 +2134,7 @@ Not to be used during pregnancy and the postpartum period. Use a pregnancy speci
       </items>
       <items code="at0056">
         <items id="text">Kategorie für klinisches Risiko</items>
-        <items id="description">Gesamtkategorie, die die Notwendigkeit und das Ausmaß des klinischen Ansprechens darstellt, das als Reaktion auf die physiologischen Variablen erforderlich ist.&#xD;
-</items>
+        <items id="description">Gesamtkategorie, die die Notwendigkeit und das Ausmaß des klinischen Ansprechens darstellt, das als Reaktion auf die physiologischen Variablen erforderlich ist.</items>
       </items>
       <items code="at0057">
         <items id="text">Niedrig</items>
@@ -2181,8 +2174,7 @@ Not to be used during pregnancy and the postpartum period. Use a pregnancy speci
       </items>
       <items code="at0066">
         <items id="text">38.1-39.0</items>
-        <items id="description">Die Körpertemperatur liegt zwischen 38.1 und 39.0 Grad Celcius.&#xD;
-</items>
+        <items id="description">Die Körpertemperatur liegt zwischen 38.1 und 39.0 Grad Celcius.</items>
       </items>
       <items code="at0067">
         <items id="text">≥220</items>
@@ -2195,4 +2187,3 @@ Not to be used during pregnancy and the postpartum period. Use a pregnancy speci
     </term_definitions>
   </ontology>
 </archetype>
-

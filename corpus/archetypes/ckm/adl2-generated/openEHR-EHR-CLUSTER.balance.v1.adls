@@ -1,0 +1,314 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0ddd0b11-b0e9-4b8f-8ea8-b88eac8e5165; build_uid=9d5a3608-f2fb-4699-b847-d8b00de6837f)
+    openEHR-EHR-CLUSTER.balance.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2007-03-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Ocean Informatics, Australia (Editor)", "Ian McNicoll, Ocean Informatics, United Kingdom (Editor)">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"147C78E19C96276088DEB0D27C087754">
+    >
+    details = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل توازن المريض و استجابته لاختبارات التوازن المحددة">
+            keywords = <"توازن", ...>
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record patient's balance and response to specific balance testing.">
+            keywords = <"Balance", "Romberg", "Heel-toe">
+            use = <"Use to record the findings on physical examination of a subject's blance, including specific tests such as the Romberg and Heel-Toe Test.
+
+Designed to be used within any clinically appropriate ENTRY or CLUSTER archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination Findings - Balance
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0032] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9013]
+                }
+            }
+            CLUSTER[at0020] occurrences matches {0..2} matches {    -- Test Result
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Test Name
+                        value matches {
+                            DV_CODED_TEXT[at9014] matches {
+                                defining_code matches {[ac9001]}    -- Test Name (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Eyes Open/closed
+                        value matches {
+                            DV_CODED_TEXT[at9015] matches {
+                                defining_code matches {[ac9002]}    -- Eyes Open/closed (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Loss of Balance
+                        value matches {
+                            DV_CODED_TEXT[at9016] matches {
+                                defining_code matches {[ac9004]}    -- Loss of Balance (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Affected Side
+                        value matches {
+                            DV_CODED_TEXT[at9017] matches {
+                                defining_code matches {[ac9005]}    -- Affected Side (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Interpretation
+                value matches {
+                    DV_TEXT[at9012]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"التوازن">
+                description = <"فحص التوازن">
+            >
+            ["at0004"] = <
+                text = <"العينان مفتوحتان/مغلقتان">
+                description = <"تسجيل ما إذا كانت العينان مفتوحتان أو مغلقتان في أثناء أداء/إجراء الاختبار">
+            >
+            ["at0005"] = <
+                text = <"العينان مفتوحتان">
+                description = <"العينان مفتوحتان">
+            >
+            ["at0006"] = <
+                text = <"العينان مغلقتان">
+                description = <"العينان مغلقتان">
+            >
+            ["at0011"] = <
+                text = <"الجانب المتأثر">
+                description = <"تعريف الجانب الذي به موجودات غير طبيعية">
+            >
+            ["at0012"] = <
+                text = <"يسقط تجاه الجانب الأيمن">
+                description = <"سقوط الشخص تجاه الجانب الأيمن">
+            >
+            ["at0013"] = <
+                text = <"يسقط تجاه الجانب الأيسر">
+                description = <"سقوط الشخص تجاه الجانب الأيسر">
+            >
+            ["at0014"] = <
+                text = <"كلا الجانبين">
+                description = <"تأثير مُعَمَّم يستبب في فقد التوازن في كِليْ الجانبين أو جانب واحد">
+            >
+            ["at0017"] = <
+                text = <"الموجودات السريرية">
+                description = <"موجودة سريرية">
+            >
+            ["at0020"] = <
+                text = <"موجودات الاختبار المحدد">
+                description = <"الموجودات المتعلقة باختبارات محددة">
+            >
+            ["at0021"] = <
+                text = <"اسم الاختبار">
+                description = <"اسم الاختبار">
+            >
+            ["at0023"] = <
+                text = <"اختبار رومبيرغ">
+                description = <"اختبار توازن">
+            >
+            ["at0024"] = <
+                text = <"الوصف">
+                description = <"الوصف التفصيلي لناتج اختبار التوازن">
+            >
+            ["at0028"] = <
+                text = <"فقد التوازن">
+                description = <"موجودات فقد التوازن">
+            >
+            ["at0029"] = <
+                text = <"سير العقِب - إصبع القدم">
+                description = <"السير مع وجود عقب القدم القائدة أمام أصبع القدم الخلفية">
+            >
+            ["at0032"] = <
+                text = <"*New element(en)">
+                description = <"**(en)">
+            >
+            ["at0033"] = <
+                text = <"*No loss of balance(en)">
+                description = <"*The subject did not lose their balance.(en)">
+            >
+            ["at0034"] = <
+                text = <"*Partial loss of balance(en)">
+                description = <"*The subject lost their balance but did not fall over completely.(en)">
+            >
+            ["at0035"] = <
+                text = <"*Full loss of balance(en)">
+                description = <"*The subject lost their balance completely.(en)">
+            >
+            ["ac9001"] = <
+                text = <"اسم الاختبار (synthesised)">
+                description = <"اسم الاختبار (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"العينان مفتوحتان/مغلقتان (synthesised)">
+                description = <"تسجيل ما إذا كانت العينان مفتوحتان أو مغلقتان في أثناء أداء/إجراء الاختبار (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"فقد التوازن (synthesised)">
+                description = <"موجودات فقد التوازن (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"الجانب المتأثر (synthesised)">
+                description = <"تعريف الجانب الذي به موجودات غير طبيعية (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Examination Findings - Balance">
+                description = <"Findings observed during the physical examination of balance.">
+            >
+            ["at0004"] = <
+                text = <"Eyes Open/closed">
+                description = <"Record of eyes being open or closed during performance of test.">
+            >
+            ["at0005"] = <
+                text = <"Eyes open">
+                description = <"Both eyes are open.">
+            >
+            ["at0006"] = <
+                text = <"Eyes closed">
+                description = <"Both eyes are closed.">
+            >
+            ["at0011"] = <
+                text = <"Affected Side">
+                description = <"Identification of side of abnormal finding.">
+            >
+            ["at0012"] = <
+                text = <"Fall towards right">
+                description = <"Falling to the person's right side.">
+            >
+            ["at0013"] = <
+                text = <"Fall towards left">
+                description = <"Falling to the person's left side.">
+            >
+            ["at0014"] = <
+                text = <"Both sides">
+                description = <"Generalised effect causing loss of balance to both, or either, side.">
+            >
+            ["at0017"] = <
+                text = <"Interpretation">
+                description = <"Single word, phrase or brief description represents the clinical meaning and significance of the balance findings.">
+            >
+            ["at0020"] = <
+                text = <"Test Result">
+                description = <"Findings relating to specific tests.">
+            >
+            ["at0021"] = <
+                text = <"Test Name">
+                description = <"Name of a specific test of subject's balance.">
+            >
+            ["at0023"] = <
+                text = <"Rhomberg's test">
+                description = <"The Rhomberg balance test was performed.">
+            >
+            ["at0024"] = <
+                text = <"Description">
+                description = <"Detailed description of outcome of balance test.">
+            >
+            ["at0028"] = <
+                text = <"Loss of Balance">
+                description = <"Finding of the extent of loss of balance.">
+            >
+            ["at0029"] = <
+                text = <"Heel-toe walking">
+                description = <"Walking with the heel of the leading foot in front of the toe of the trailing foot.">
+            >
+            ["at0032"] = <
+                text = <"Description">
+                description = <"Narrative description of the overall findings observed during a physical examination of balance.">
+            >
+            ["at0033"] = <
+                text = <"No loss of balance">
+                description = <"The subject did not lose their balance.">
+            >
+            ["at0034"] = <
+                text = <"Partial loss of balance">
+                description = <"The subject temporarily lost their balance but recovered it and did not fall over.">
+            >
+            ["at0035"] = <
+                text = <"Full loss of balance">
+                description = <"The subject lost their balance completely.">
+            >
+            ["ac9001"] = <
+                text = <"Test Name (synthesised)">
+                description = <"Name of a specific test of subject's balance. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Eyes Open/closed (synthesised)">
+                description = <"Record of eyes being open or closed during performance of test. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Loss of Balance (synthesised)">
+                description = <"Finding of the extent of loss of balance. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Affected Side (synthesised)">
+                description = <"Identification of side of abnormal finding. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0005", "at0006">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0023", "at0029">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0012", "at0013", "at0014">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0033", "at0034", "at0035">
+        >
+    >

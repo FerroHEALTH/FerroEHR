@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -607,51 +607,51 @@ Hoewel de originele publicatie van Karnofsky er al. uit 1949 als referentie is o
       </items>
       <items code="at0004">
         <items id="text">Karnofsky performance status</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Dead</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Moribund; fatal processes progressing rapidly.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Very sick; hospital admission necessary; active supportive treatment necessary</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Severely disabled; hospital admission is indicated although death not imminent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Disabled; requires special care and assistance</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Requires considerable assistance and frequent medical care</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Requires occasional assistance, but is able to care for most of his personal needs</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Cares for self; unable to carry on normal activity or to do active work</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Normal activity with effort; some signs or symptoms of disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Able to carry on normal activity; minor signs or symptoms of disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Normal; no complaints; no evidence of disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Item tree</items>
@@ -757,51 +757,51 @@ Hoewel de originele publicatie van Karnofsky er al. uit 1949 als referentie is o
       </items>
       <items code="at0004">
         <items id="text">Karnofsky Performance Status</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Overleden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Moribund</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Ernstig ziek; opname in ziekenhuis is noodzakelijk; actieve ondersteuning vereist</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Geheel bedlegerig; heeft totale verzorging nodig; opname in ziekenhuis geïndiceerd; fatale afloop dreigt nog niet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Grotendeels bedlegerig; heeft zorg en hulp nodig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Heeft veel hulp en frequente medische zorg nodig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Heeft af en toe hulp nodig, maar is in staat grotendeels voor zichzelf te zorgen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">In staat voor zichzelf te zorgen; onmogelijk om normale activiteiten te verrichten of om te werken</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Met inspanning tot normale activiteit in staat</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">In staat tot normale activiteit; minimale verschijnselen van de ziekte</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Geen klachten, geen ziekteverschijnselen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Item tree</items>
@@ -809,8 +809,7 @@ Hoewel de originele publicatie van Karnofsky er al. uit 1949 als referentie is o
       </items>
       <items code="at0017">
         <items id="text">Uitbreiding</items>
-        <items id="description">Extra informatie benodigd voor het uitbreiden van het model met lokale informatie of voor het in lijn brengen met andere referentiemodellen of formalismen. &#xD;
-</items>
+        <items id="description">Extra informatie benodigd voor het uitbreiden van het model met lokale informatie of voor het in lijn brengen met andere referentiemodellen of formalismen.</items>
         <items id="comment">Bijvoorbeeld: lokale informatie eisen of extra metadata om in lijn te brengen met FHIR.</items>
       </items>
     </term_definitions>
@@ -833,51 +832,51 @@ Hoewel de originele publicatie van Karnofsky er al. uit 1949 als referentie is o
       </items>
       <items code="at0004">
         <items id="text">Karnofsky performance status</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Død.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Moribund, dødsprosessen er i sterk frammarsj.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Svært syk, hospitalisering og understøttende behandling nødvendig.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Helt ufør, hospitalisering nødvendig, men fare for død er ikke overhengende.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Ufør, trenger spesiell hjelp og omsorg.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Trenger betydelig hjelp og stadig medisinsk omsorg.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Trenger noe hjelp, men klarer stort sett å tilfredsstille egne behov.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Klarer seg selv, ute av stand til normal aktivitet eller aktivt arbeid.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Klarer med nød normal aktivitet. Sykdommen gir en del symptomer.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Klarer normal aktivitet, sykdommen gir lite symptomer.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Normal, ingen plager eller subjektive tegn på sykdom.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Item tree</items>
@@ -908,51 +907,51 @@ Hoewel de originele publicatie van Karnofsky er al. uit 1949 als referentie is o
       </items>
       <items code="at0004">
         <items id="text">Karnofsky-Performance Status</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Tot</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Sterbend; fatale Prozesse, die schnell voranschreiten</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Schwerkrank; stationäre Aufnahme erforderlich; aktive supportive Behandlung notwendig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Schwerbehindert; stationäre Aufnahme ist angezeigt, obwohl der Tod nicht unmittelbar bevorsteht</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Behindert; erfordert qualifizierte Pflege und Hilfe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Benötigt beträchtliche Unterstützung und häufige medizinische Versorgung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Benötigt gelegentlich fremde Hilfe, ist aber in der Lage, sich um die meisten seiner persönlichen Bedürfnisse zu kümmern</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Selbstversorgend; unfähig, einer normalen Tätigkeit nachzugehen oder aktiv zu arbeiten</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Normale Aktivität mit Anstrengung; einige Anzeichen oder Symptome der Krankheit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">In der Lage, normale Aktivitäten fortzusetzen; geringe Anzeichen oder Symptome einer Krankheit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Normalzustand; weder Beschwerden noch Symptome sind vorhanden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Item tree</items>
@@ -984,4 +983,3 @@ Hoewel de originele publicatie van Karnofsky er al. uit 1949 als referentie is o
     </term_bindings>
   </ontology>
 </archetype>
-

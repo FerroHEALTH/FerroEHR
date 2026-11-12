@@ -1,0 +1,220 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-EVALUATION.check_list-medication.v1
+specialise
+	openEHR-EHR-EVALUATION.check_list.v1
+
+concept
+	[at0000.1]	-- A check list for medications
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Jasmin Buck, Sebastian Garde">
+				["email"] = <"University of Heidelberg, Central Queensland University">
+			>
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"sam.heard@oceaninformatics.com">
+		["date"] = <"2007-04-02">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Eine Kontrollliste zur Dokumentation strukturierter Fragen und Antworten zur Medikation.">
+			use = <"Zur Dokumentation von gesammelten Informationen zur Medikation">
+			keywords = <"Kontrolle", "Liste", "Medikation">
+			misuse = <"Nicht zur Dokumentation von Verordnungen oder Verabreichungen">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"A checklist for recording structured questions and answers about medication.">
+			use = <"Use for recording information gathering about medication.">
+			keywords = <"check", "list", "medication">
+			misuse = <"Not for recording medication orders or administration records.">
+			copyright = <"© openEHR Foundation">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"قائمة مراجعة لتسجيل الأسئلة المركبة و الإجابات المتعلقة بالأدوية">
+			use = <"يستخدم لتسجيل عملية تجميع المعلومات حول الأدوية">
+			keywords = <"التحقق/ المراجعة", "قائمة", "الأدوية">
+			misuse = <"لا يستخدم لتسجيل الأمر بالأدوية أو سجلات تناول الدواء ">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <>
+	other_details = <
+		["references"] = <"">
+		["MD5-CAM-1.0.1"] = <"2F6726A75556B6249EBE41FD5CAEBCA2">
+	>
+
+definition
+	EVALUATION[at0000.1] matches {	-- A check list for medications
+		data matches {
+			ITEM_TREE[at0001] matches {	-- Tree
+				items cardinality matches {1..*; unordered} matches {
+					CLUSTER[at0004] occurrences matches {1..*} matches {	-- Question group
+						items cardinality matches {1..*; unordered} matches {
+							CLUSTER[at0002] occurrences matches {1..*} matches {	-- Question
+								items cardinality matches {1..2; unordered} matches {
+									ELEMENT[at0003.1] occurrences matches {1..1} matches {	-- Medication
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0005] occurrences matches {0..1} matches {	-- A comment on the answer
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+					ELEMENT[at0006] occurrences matches {0..1} matches {	-- Summary
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"eine gesundheitsorientierte Kontrollliste">
+					description = <"Ein allgemeiner Archetyp zur Dokumentation von Fragen und Antworten, erlaubt strukturierte Aufzeichnungen. Tatsächliche Befunde werden in anderen Strukturen dokumentiert.">
+				>
+				["at0000.1"] = <
+					text = <"Eine Kontrollliste für Medikationen">
+					description = <"Ein allgemeiner Archetyp zur Dokumentation von Fragen und Antworten zur Medikation">
+				>
+				["at0001"] = <
+					text = <"Baum">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Frage">
+					description = <"Der Name der Gruppe ist die Frage">
+				>
+				["at0003"] = <
+					text = <"*Answer(en)">
+					description = <"*The answer(s) to the question.(en)">
+				>
+				["at0003.1"] = <
+					text = <"Medikation">
+					description = <"Die Medikation, die die Antwort auf die Frage ist">
+				>
+				["at0004"] = <
+					text = <"Fragegruppe">
+					description = <"Eine Gruppierung von Fragen und Antworten">
+				>
+				["at0005"] = <
+					text = <"Eine Anmerkung zur Antwort">
+					description = <"Eine Anmerkung zur Antwort">
+				>
+				["at0006"] = <
+					text = <"Zusammenfassung">
+					description = <"Zusammenfassung von Fragen">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"A health oriented check list">
+					description = <"A generic archetype for recording questions and answers to allow structured recording. Actual findings are recorded in other structures.">
+				>
+				["at0000.1"] = <
+					text = <"A check list for medications">
+					description = <"A generic archetype for recording questions and answers about medication.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Question">
+					description = <"The name of the cluster is the question.">
+				>
+				["at0003"] = <
+					text = <"Answer">
+					description = <"The answer(s) to the question.">
+				>
+				["at0003.1"] = <
+					text = <"Medication">
+					description = <"The medications that are the answer(s) to the question.">
+				>
+				["at0004"] = <
+					text = <"Question group">
+					description = <"A grouping for questions and answers.">
+				>
+				["at0005"] = <
+					text = <"A comment on the answer">
+					description = <"A comment on the answer.">
+				>
+				["at0006"] = <
+					text = <"Summary">
+					description = <"Summary of questions.">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0000"] = <
+					text = <"*A health oriented check list(en)">
+					description = <"*A generic archetype for recording questions and answers to allow structured recording. Actual findings are recorded in other structures(en)">
+				>
+				["at0000.1"] = <
+					text = <"قائمة مراجعة للأدوية">
+					description = <"نموذج جنيس - غير محدود الملكية - لتسجيل الأسئلة و الإجابات حول الدواء.">
+				>
+				["at0001"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"السؤال">
+					description = <"اسم العنقود هو السؤال">
+				>
+				["at0003"] = <
+					text = <"*Answer(en)">
+					description = <"*The answer(s) to the question.(en)">
+				>
+				["at0003.1"] = <
+					text = <"الدواء">
+					description = <"الأدوية التي هي إجابة للسؤال المطروح">
+				>
+				["at0004"] = <
+					text = <"مجموعة الأسئلة">
+					description = <"تجميع للأسئلة و الإجابات">
+				>
+				["at0005"] = <
+					text = <"تعليق حول الإجابة">
+					description = <"تعليق حول الإجابة">
+				>
+				["at0006"] = <
+					text = <"تلخيص">
+					description = <"تلخيص للأسئلة">
+				>
+			>
+		>
+	>

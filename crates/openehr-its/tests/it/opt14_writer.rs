@@ -52,7 +52,7 @@ use crate::ckm_archetype_xml::{ADJUDICATED, pack_dir, xml_files};
 // Inputs
 // ---------------------------------------------------------------------------
 
-/// Every CKM archetype the XML codec reads (the four adjudicated refusals of
+/// Every CKM archetype the XML codec reads (the adjudicated refusals of
 /// `ckm_archetype_xml` stay out).
 fn library() -> ArchetypeLibrary {
     xml_files(&pack_dir())
@@ -2151,7 +2151,8 @@ fn a_redefinition_overlays_the_attributes_it_names() {
     );
 }
 
-const BLOOD_PRESSURE: &str = "openEHR-EHR-OBSERVATION.blood_pressure.v2";
+// NOTE: v1 carries the systolic constraint of v2 unchanged, and CKM's v2 XML export is refused (`ckm_archetype_xml::ADJUDICATED`).
+const BLOOD_PRESSURE: &str = "openEHR-EHR-OBSERVATION.blood_pressure.v1";
 const SYSTOLIC_VALUE: &str = "/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value";
 
 /// A `C_DV_QUANTITY` in mm[Hg] whose magnitude runs from `lower` to `upper`.

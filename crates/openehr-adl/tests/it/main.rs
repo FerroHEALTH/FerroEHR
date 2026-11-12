@@ -41,6 +41,7 @@ mod corpus_validity_rm;
 mod default_value_intervals;
 mod flattener_spec;
 mod legacy14_corpus;
+mod nested_differential_path;
 mod nesting_bounds;
 mod opt14_conversion;
 mod opt_adl14_specialised;

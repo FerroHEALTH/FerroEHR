@@ -1,0 +1,156 @@
+﻿archetype (adl_version=1.4; uid=556ab863-1668-426c-b47c-73367be84180)
+	openEHR-EHR-CLUSTER.cormack_lehane.v1
+
+concept
+	[at0000]	-- Cormack-Lehane classification
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			author = <
+				["name"] = <"John Tore Valand / Silje Ljosland Bakke">
+				["organisation"] = <"Helse Bergen HF / Nasjonal IKT HF">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"John Tore Valand">
+		["organisation"] = <"Helse Bergen HF">
+		["email"] = <"john.tore.valand@helse-bergen.no">
+		["date"] = <"2016-01-06">
+	>
+	details = <
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			purpose = <"For å beskrive synlige strukturer under direkte laryngoskopi, og indirekte for å indikere en sannsynlig vanskelig intubasjon.">
+			use = <"Brukes for å beskrive synlige strukturer under direkte laryngoskopi, og indirekte for å indikere en sannsynlig vanskelig intubasjon.
+
+Denne arketypen er designet for å brukes innen flere forskjellige ENTRY-arketyper, for eksempel en EVALUATION for en oppsummering av intubasjonsproblemer, eller ACTION.procedure for å registrere en utført intubasjon. Hodets posisjon og annen relevant informasjon registreres i ENTRY-arketypen.">
+			keywords = <"intubasjon", "laryngoskopi", "larynx", "luftvei", "innsyn", "epiglottis", "glottis", "vanskelig intubasjon">
+			misuse = <"Brukes ikke til å registrere Modifisert Cormack/Lehane-klassifikasjon (Yentis & Lee, 1998). Bruk en spesifikk arketype til dette.">
+			copyright = <"© Nasjonal IKT HF">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To describe the structures visible during direct laryngoscopy and indirectly to indicate the likely difficulty of laryngeal intubation.">
+			use = <"Use to describe the structures visible during direct laryngoscopy and indirectly to indicate the likely difficulty of laryngeal intubation.
+
+This archetype has been designed to be used within a variety of ENTRY archetypes - for example an EVALUATION for a summary statement about intubation difficulties, or ACTION.procedure when recording a performed intubation. The position of the head and other relevant information will be carried in the ENTRY archetype.">
+			keywords = <"intubation", "laryngoscopy", "grading", "airway", "glottis", "epiglottis", "difficult airway">
+			misuse = <"Not to be used for recording Modified Cormack-Lehane grading (Yentis & Lee, 1998). Use a specific archetype for this purpose.">
+			copyright = <"© Nasjonal IKT HF">
+		>
+	>
+	lifecycle_state = <"deprecated">
+	other_contributors = <"Anne Pauline Anderssen, Helse Nord RHF, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (Nasjonal IKT redaktør)", "Marcus Baw, openGPSoC / BawMedical Ltd, United Kingdom", "Kristian Berg, Universitetssykehuset Nord Norge, Norway", "Bjørn Christensen, HUS, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Karl Trygve Kalleberg, Oslo Universitetssykehus, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Heather Leslie, Ocean Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Oslo Universitetssykehus HF, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjørn Næss, DIPS ASA, Norway", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Tanja Riise, Nasjonal IKT HF, Norway", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Nils Widnes, Helse-Bergen, Norway", "Thomas Wilson, Finnmarkssykehuset HF Klinikk Hammerfest, Norway">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"Nasjonal IKT">
+		["references"] = <"Cormack RS, Lehane J. Difficult tracheal intubation in obstetrics. Anaesthesia 1984; 39: 1105–11.
+
+Bjerkelund CE, Christensen P, Dragsund S, Aadahl P. [How to secure free airway?]. Tidsskrift for den Norske laegeforening : tidsskrift for praktisk medicin, ny raekke 2010; 130(5): 507-10.
+
+Yentis SM, Lee DJH. Evaluation of an improved scoring system for the grading of direct laryngoscopy. Anaesthesia 1998; 53(11): 1041-4.
+
+OpenAirway. Department of Anaesthesia, University of Cape Town. [internet] Accessed 2016-03-31. http://openairway.org/tag/cormack-lehane/">
+		["original_namespace"] = <"no.nasjonalikt">
+		["original_publisher"] = <"Nasjonal IKT">
+		["custodian_namespace"] = <"no.nasjonalikt">
+		["MD5-CAM-1.0.1"] = <"D59113D4A90DA114199DE6D2C9949C3F">
+		["build_uid"] = <"c46d825c-001c-4db4-86a1-01009dc5679d">
+		["revision"] = <"1.0.1">
+	>
+
+definition
+	CLUSTER[at0000] matches {	-- Cormack-Lehane classification
+		items cardinality matches {1..*; unordered} matches {
+			ELEMENT[at0001] occurrences matches {0..1} matches {	-- Grading
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0002, 	-- Grade 1: Full view of the glottis
+							at0003, 	-- Grade 2: Partial view of the glottis or arytenoids
+							at0004, 	-- Grade 3: Only epiglottis visible
+							at0005]	-- Grade 4: Neither glottis nor epiglottis visible
+						}
+					}
+				}
+			}
+			ELEMENT[at0006] occurrences matches {0..1} matches {	-- Comment
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["nb"] = <
+			items = <
+				["at0000"] = <
+					text = <"Cormack/Lehane-klassifikasjon">
+					description = <"Cormack/Lehane-systemet klassifiserer innsynsforhold til larynx ved direkte laryngoskopi, basert på hvilke strukturer som kan ses.">
+				>
+				["at0001"] = <
+					text = <"Gradering">
+					description = <"Gradering av anatomisk synlighet i larynx.">
+				>
+				["at0002"] = <
+					text = <"Grad 1: Hele larynx synlig">
+					description = <"Hele larynx synlig.">
+				>
+				["at0003"] = <
+					text = <"Grad 2: Epiglottis og aryregionen synlig">
+					description = <"Epiglottis og aryregionen synlig.">
+				>
+				["at0004"] = <
+					text = <"Grad 3: Bare epiglottis synlig">
+					description = <"Bare epiglottis synlig.">
+				>
+				["at0005"] = <
+					text = <"Grad 4: Epiglottis ikke synlig">
+					description = <"Epiglottis ikke synlig.">
+				>
+				["at0006"] = <
+					text = <"Kommentar">
+					description = <"Fritekstkommentar til graderingen.">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Cormack-Lehane classification">
+					description = <"The Cormack-Lehane system classifies views obtained by direct laryngoscopy based on the structures seen.">
+				>
+				["at0001"] = <
+					text = <"Grading">
+					description = <"A grading of the laryngeal anatomical visibility.">
+				>
+				["at0002"] = <
+					text = <"Grade 1: Full view of the glottis">
+					description = <"Full view of the glottis.">
+				>
+				["at0003"] = <
+					text = <"Grade 2: Partial view of the glottis or arytenoids">
+					description = <"Partial view of the glottis or arytenoids.">
+				>
+				["at0004"] = <
+					text = <"Grade 3: Only epiglottis visible">
+					description = <"Only epiglottis visible.">
+				>
+				["at0005"] = <
+					text = <"Grade 4: Neither glottis nor epiglottis visible">
+					description = <"Neither glottis nor epiglottis visible.">
+				>
+				["at0006"] = <
+					text = <"Comment">
+					description = <"Narrative comment about the Cormack-Lehane grading.">
+				>
+			>
+		>
+	>

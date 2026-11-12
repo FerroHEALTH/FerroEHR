@@ -531,9 +531,9 @@ No s'ha de fer servir per registrar un informe d'operació o procediment complet
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"371BFF1565B1BD334E071A3753B967A2">
-		["build_uid"] = <"2fa540e5-07b9-4640-a0a6-ef7e143b2dee">
-		["revision"] = <"1.5.2">
+		["MD5-CAM-1.0.1"] = <"91AEB451145319A9810AA9703E608596">
+		["build_uid"] = <"3c27f0de-6c9d-4ce1-9fab-051969ccc6c6">
+		["revision"] = <"1.5.3">
 	>
 
 definition
@@ -874,7 +874,6 @@ definition
 			}
 		}
 	}
-
 
 ontology
 	term_definitions = <
@@ -2634,7 +2633,7 @@ This element is meant to allow for multiple types of impact, including but not l
 				["at0002"] = <
 					text = <"Benämning på åtgärd">
 					description = <"Åtgärdens benämning.">
-					comment = <"Om möjligt, koda \"benämning på åtgärd\" till en terminologi.">
+					comment = <"Om möjligt, koda \"benämning på åtgärd\" med en terminologi.">
 				>
 				["at0003"] = <
 					text = <"Åtgärdsdetaljer">
@@ -2709,8 +2708,8 @@ Exempelvis hematuri efter njurbiopsi eller vävnadsirritation efter insättning 
 				>
 				["at0048"] = <
 					text = <"Resultat">
-					description = <"Resultat av genomförd åtgärd">
-					comment = <"Om möjligt, koda \"resultat\" till en terminologi.">
+					description = <"Resultat av genomförd åtgärd.">
+					comment = <"Om möjligt, koda \"resultat\" med en terminologi.">
 				>
 				["at0049"] = <
 					text = <"Beskrivning">
@@ -2742,11 +2741,11 @@ Exempelvis hematuri efter njurbiopsi eller vävnadsirritation efter insättning 
 				["at0058"] = <
 					text = <"Brådskandegrad">
 					description = <"Åtgärdens brådskandegrad.">
-					comment = <"Om möjligt, koda \"brådskandegrad\" till en terminologi.">
+					comment = <"Om möjligt, koda \"brådskandegrad\" med en terminologi.">
 				>
 				["at0060"] = <
-					text = <"Slut datum/tid">
-					description = <"Det datum, eller datum och tid, då hela åtgärden avslutades eller det sista delmomentet i en åtgärd som består av flera delmoment.">
+					text = <"Sluttidpunkt">
+					description = <"Det datum eller den tidpunkt, då hela åtgärden avslutades eller det sista delmomentet i en åtgärd som består av flera delmoment.">
 					comment = <"Kan endast användas i samband med steget \"Åtgärd utförd\" och i situationer där åtgärden upprepas vid flera tillfällen innan den avslutas eller om det finns flera delåtgärder i hela åtgärden. Detta kan vara detsamma som referensmodellens attribut för steget \"Åtgärd slutförd\".">
 				>
 				["at0061"] = <
@@ -2759,9 +2758,9 @@ Exempelvis hematuri efter njurbiopsi eller vävnadsirritation efter insättning 
 					description = <"Multimedierepresentation av utförd åtgärd.">
 				>
 				["at0063"] = <
-					text = <"Anatomisk position">
+					text = <"Kroppslokalisation">
 					description = <"Identifiering av anatomisk plats för åtgärden.">
-					comment = <"Förekomsten av detta datafält är obegränsat för att möjliggöra kliniska scenarier som att ta bort flera hudförändringar på olika platser, men där alla andra attribut är identiska. Använd detta datafält för att dokumentera enkla termer eller prekoordinerade anatomiska platser. Om kraven på dokumentation av den anatomiska platsen bestäms vid körning av applikationen eller kräver mer komplex modellering, till exempel relativa platser (exempelvis 3 cm ovanför vänster knä), använd CLUSTER.anatomical_location eller CLUSTER.relative_location i SLOT \"Åtgärdsdetaljer\" i denna arketyp. Om den anatomiska platsen ingår i \"Benämning på åtgärd\" genom prekoordinerade koder blir detta datafält överflödigt.">
+					comment = <"Förekomsten av detta datafält är obegränsat för att möjliggöra kliniska scenarier som att ta bort flera hudförändringar på olika lokalisationer, men där alla andra attribut är identiska. Använd detta datafält för att dokumentera enkla termer eller prekoordinerade kroppslokalisationer. Om kraven på dokumentation av den lokalisationen bestäms vid körning av applikationen eller kräver mer komplex modellering, till exempel relativa lokalisationer (exempelvis 3 cm ovanför vänster knä), använd CLUSTER.anatomical_location eller CLUSTER.relative_location i SLOT \"Åtgärdsdetaljer\" i denna arketyp. Om kroppslokalisationen ingår i \"Benämning på åtgärd\" genom prekoordinerade koder blir detta datafält överflödigt.">
 				>
 				["at0064"] = <
 					text = <"Tilläggsinformation">
@@ -2771,17 +2770,17 @@ Exempelvis hematuri efter njurbiopsi eller vävnadsirritation efter insättning 
 				["at0065"] = <
 					text = <"Metod">
 					description = <"Identifiering av specifik metod eller teknik för åtgärden.">
-					comment = <"Använd detta fält för att dokumentera metoden. Om kraven för dokumentation av metoden kräver mer komplex modellering kan detta representeras av ytterligare arketyper i SLOT \"Åtgärdsdetalj\" i denna arketyp. Om metoden ingår i \"Benämning på åtgärd\" genom prekoordinerade koder blir detta fält överflödigt.">
+					comment = <"Använd detta datafält för att dokumentera metoden. Om kraven för dokumentation av metoden kräver mer komplex modellering kan detta representeras av ytterligare arketyper i SLOT \"Åtgärdsdetalj\" i denna arketyp. Om metoden ingår i \"Benämning på åtgärd\" genom prekoordinerade koder blir detta datafält överflödigt.">
 				>
 				["at0066"] = <
-					text = <"Planerat datum/tid">
-					description = <"Det datum eller datum/tid som åtgärden är planerad att utföras.">
+					text = <"Planerad tidpunkt">
+					description = <"Det datum eller den tidpunkt som åtgärden är planerad att utföras.">
 					comment = <"Ska endast användas i samband med steget \"Åtgärd bokad\".">
 				>
 				["at0067"] = <
 					text = <"Åtgärdstyp">
-					description = <"Typ av åtgärd">
-					comment = <"Detta fält kan användas för att stödja en verksamhet genom användargränssnittet.">
+					description = <"Typ av åtgärd.">
+					comment = <"Detta datafält kan användas för att tydliggöra användargränssnittets struktur.">
 				>
 				["at0068"] = <
 					text = <"Åtgärd påbörjad">
@@ -2809,11 +2808,11 @@ Detta datafält är avsett att möjliggöra registrering av olika typer av påve
 				["at0072"] = <
 					text = <"Avsikt">
 					description = <"Det avsedda resultatet av åtgärden.">
-					comment = <"Exempelvis en operation med kurativ avsikt kan planeras, men under operationen visar det sig att kurativ behandling inte är möjlig och att ingreppet istället genomförs med palliativ avsikt. Om möjligt, koda \"avsikt\" till en terminologi. Detta datafält kan vid behov registreras flera gånger för att möjliggöra dokumentation av flera indikationer.">
+					comment = <"Exempelvis en operation med kurativ avsikt kan planeras, men under operationen visar det sig att kurativ behandling inte är möjlig och att ingreppet istället genomförs med palliativ avsikt. Om möjligt, koda \"avsikt\" med en terminologi. Detta datafält kan vid behov registreras flera gånger för att möjliggöra dokumentation av flera indikationer.">
 				>
 				["at0073"] = <
-					text = <"Start datum/tid">
-					description = <"Det datum, eller datum och tid, då hela åtgärden påbörjades eller den första delen av en åtgärd som består av flera delmoment.">
+					text = <"Starttidpunkt">
+					description = <"Det datum eller den tidpunkt, då hela åtgärden påbörjades eller den första delen av en åtgärd som består av flera delmoment.">
 					comment = <"Exempelvis tidpunkten för första incisionen (\"knife-to-skin time\"). Används endast tillsammans med processtegen \"Åtgärd utförd\", \"Åtgärd pausad\", \"Åtgärd avbruten\" eller \"Åtgärd slutförd\". Detta värde kan vara detsamma som referensmodellens attribut \"time\" för processteget \"Åtgärd påbörjad\".">
 				>
 				["at0074"] = <

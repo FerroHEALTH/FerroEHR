@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -111,8 +111,7 @@ Not to be used to record the length of an object or specific body part. (en)</mi
         </terminology_id>
         <code_string>ru</code_string>
       </language>
-      <purpose>Для записи длины тела человека от макушки до пяток - как фактических, так и приближенных, стоя или лежа.&#xD;
-</purpose>
+      <purpose>Для записи длины тела человека от макушки до пяток - как фактических, так и приближенных, стоя или лежа.</purpose>
       <keywords>сжатие</keywords>
       <keywords>Увеличение</keywords>
       <keywords>снижение</keywords>
@@ -124,8 +123,7 @@ Not to be used to record the length of an object or specific body part. (en)</mi
 Может также использоваться для записи приблизителной длины тела в клиническом сценарии, где не возможно измерить точную высоту или длину - например, у ребенка. Это обстоятельство явно не указывается в архетипе, так как модель openEHR позволяет использовать атрибут приближения для любого типа количественных данных. Например, в интерфейсе приложения пользователь может позволить врачам, выбрать надлежащим образом маркированных флажок рядом с полем данных Рост чтобы показать, что записано приблизительное значение, а не фактический.&#xD;
 Измерения длины тела рекомендуется для детей младше 2 лет и лицам, которые не могут стоять, рост стоя, для всех остальных.&#xD;
 В идеале, рост измеряется стоя на двух ногах с весом распределяется равномерно, пятки вместе, и обе ягодицы и пятки в контакте с вертикальной поверхностью, длина тела измеряется в вытянутом положении лежа таз находится на плоскости, ноги вытянуты и ноги согнуты .&#xD;
-Используется для записи роста (ребёнка) и потери высоты. В случае необходимости, подобное применение настоящее время может быть смоделировано путем ограничения "any event", до интервала, с соответствующей математической функцией увеличения или уменьшения в шаблоне.&#xD;
-</use>
+Используется для записи роста (ребёнка) и потери высоты. В случае необходимости, подобное применение настоящее время может быть смоделировано путем ограничения "any event", до интервала, с соответствующей математической функцией увеличения или уменьшения в шаблоне.</use>
       <misuse>*Not to be used to record an adjusted height, a calculation of the full height of a person who for example are missing parts or all of the lower limbs, or has contractures. A calculated height may be based on measurements of other body parts, and an algorithm. Use specific archetypes for this purpose.&#xD;
 &#xD;
 Not to be used to record growth velocity.&#xD;
@@ -494,7 +492,7 @@ Brukes ikke til å registrere lengden av et ikke-kroppslig objekt eller en beste
         </terminology_id>
         <code_string>fa</code_string>
       </language>
-      <purpose>برای ثبت طول بدن از نوک سر تا کف پای فرد- بطور واقعی و تقریبی و در حالتهای ایستاده یا خوابیده </purpose>
+      <purpose>برای ثبت طول بدن از نوک سر تا کف پای فرد- بطور واقعی و تقریبی و در حالتهای ایستاده یا خوابیده</purpose>
       <keywords>انقباض</keywords>
       <keywords>افزایش</keywords>
       <keywords>کاهش</keywords>
@@ -506,9 +504,7 @@ Brukes ikke til å registrere lengden av et ikke-kroppslig objekt eller en beste
 از این الگو ساز همچنین می توان برای ثبت تقریبی اندازه گیری قد یا طول بدن در سناریوهای بالینی استفاده نمود که امکان اندازه گیری دقیق قد یا طول وجود ندارد، به عنوان مثال اندازه گیری قد یا طول کودکی که همکاری نمی کند. این مورد بطور واضح در الگوساز مدل بندی نشده است ولی مدل مرجع "اوپن ئی اچ ار" ویژگی تقریب را برای هر نوع داده کمی اجازه می دهد. در پیاده سازی، برای مثال، یک واسط کاربری نرم افزار می تواند به کاربران اجازه دهد تا با انتخاب گزینه ای [چک باکس] درکنار محل مربوط به قد و با نشانه گذاری مناسب نشان دهند که قد ثبت شده اندازه ای است تقریبی و نه  واقعی.&#xD;
 بطور عمومی اندازه گیری طول بدن برای کودکان زبر 2 سال و بزرگسالانی که نمی توانند بایستند  و انداز گیری قد برای سایر افراد توصیه می شود.&#xD;
 بطور ایده آل قد بصورت ایستاده بر هر دو پا، پاشنه ها کنار هم ، باسن و پاشنه ها در راستای خط عمودی پشت  با توزیع وزن مساوی اندازه گیری می شود، طول بدن در حالت کاملا کشیده و طاقباز با لگن صاف، ساق های کشیده و پاهای جمع شده از مچ اندازه گیری می شود.&#xD;
-این الگوساز برای ثبت رشد و افت قد استفاده می شود. در حال حاضر با مشروط کردن "هر رویداد" به دوره زمانی در نظر گرفته شده در الگو با عملگرهای ریاضی مرتبط با افزایش یا کاهش بصورت مناسب مدل بندی می شود&#xD;
- &#xD;
-</use>
+این الگوساز برای ثبت رشد و افت قد استفاده می شود. در حال حاضر با مشروط کردن "هر رویداد" به دوره زمانی در نظر گرفته شده در الگو با عملگرهای ریاضی مرتبط با افزایش یا کاهش بصورت مناسب مدل بندی می شود</use>
       <misuse>*Not to be used to record an adjusted height, a calculation of the full height of a person who for example are missing parts or all of the lower limbs, or has contractures. A calculated height may be based on measurements of other body parts, and an algorithm. Use specific archetypes for this purpose.&#xD;
 &#xD;
 Not to be used to record growth velocity.&#xD;
@@ -1444,8 +1440,7 @@ Not to be used to record the length of an object or specific body part. (en)</mi
       </items>
       <items code="at0020">
         <items id="text">Liegend</items>
-        <items id="description">Länge wird in einer voll ausgestreckten, liegenden Position gemessen. Hierbei wird das Becken flach gehalten, die Beine ausgestreckt und die Füße gebeugt.&#xD;
-</items>
+        <items id="description">Länge wird in einer voll ausgestreckten, liegenden Position gemessen. Hierbei wird das Becken flach gehalten, die Beine ausgestreckt und die Füße gebeugt.</items>
       </items>
       <items code="at0021">
         <items id="text">Geburt</items>
@@ -1526,7 +1521,7 @@ A altura é medida com o indivíduo na posição de pé e comprimento do corpo n
     <term_definitions language="fa">
       <items code="at0000">
         <items id="text">قد و یا طول</items>
-        <items id="description">قد یا طول بدن از نوک سر تا کف پا اندازه گیری می شود.بلندی در حالت ایستاده و طول بدن فرد در حالت خوابیده اندازه گیری می شود </items>
+        <items id="description">قد یا طول بدن از نوک سر تا کف پا اندازه گیری می شود.بلندی در حالت ایستاده و طول بدن فرد در حالت خوابیده اندازه گیری می شود</items>
       </items>
       <items code="at0001">
         <items id="text">*history(en)</items>
@@ -1542,7 +1537,7 @@ A altura é medida com o indivíduo na posição de pé e comprimento do corpo n
       </items>
       <items code="at0004">
         <items id="text">قد و یا طول</items>
-        <items id="description">طول فرد از نوک سر تا کف پا </items>
+        <items id="description">طول فرد از نوک سر تا کف پا</items>
       </items>
       <items code="at0007">
         <items id="text">*List(en)</items>
@@ -1575,7 +1570,7 @@ A altura é medida com o indivíduo na posição de pé e comprimento do corpo n
       </items>
       <items code="at0020">
         <items id="text">خوابیده</items>
-        <items id="description">  طول در حالت کاملا کشیده و طاقباز با لگن صاف، ساق های کشیده و پاهای جمع شده از مچ پا اندازه گیری می شود</items>
+        <items id="description">طول در حالت کاملا کشیده و طاقباز با لگن صاف، ساق های کشیده و پاهای جمع شده از مچ پا اندازه گیری می شود</items>
       </items>
       <items code="at0021">
         <items id="text">*Birth(en)</items>
@@ -2137,7 +2132,7 @@ A altura é medida com o indivíduo na posição de pé e comprimento do corpo n
       </items>
       <items code="at0011">
         <items id="text">Dispositiu</items>
-        <items id="description">Informació sobre el dispositiu utilitzat per a mesurar l'alçada o la llargària del cos. </items>
+        <items id="description">Informació sobre el dispositiu utilitzat per a mesurar l'alçada o la llargària del cos.</items>
       </items>
       <items code="at0013">
         <items id="text">Tree</items>
@@ -2316,4 +2311,3 @@ A altura é medida com o indivíduo na posição de pé e comprimento do corpo n
     </term_bindings>
   </ontology>
 </archetype>
-
