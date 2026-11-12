@@ -4657,19 +4657,7 @@
             "description": "The evaluated function: a JSON array of canonical `LOCATABLE_REF`s, each naming the source party's container and the relationship's path in its data; `[]` when no relationship targets the party.",
             "content": {
               "application/json": {
-                "schema": {},
-                "example": [
-                  {
-                    "_type": "LOCATABLE_REF",
-                    "namespace": "local",
-                    "type": "PARTY_RELATIONSHIP",
-                    "id": {
-                      "_type": "HIER_OBJECT_ID",
-                      "value": "6cb19121-4307-4648-9da0-d62e4d51f19b"
-                    },
-                    "path": "/relationships[openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.relationship.v1 and name/value='parent-of']"
-                  }
-                ]
+                "schema": {}
               }
             }
           },

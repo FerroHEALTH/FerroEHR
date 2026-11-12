@@ -74,14 +74,7 @@ guarded_handler! {
                                           the source party's container and the \
                                           relationship's path in its data; `[]` \
                                           when no relationship targets the party.",
-             body = serde_json::Value,
-             example = json!([{
-                 "_type": "LOCATABLE_REF",
-                 "namespace": "local",
-                 "type": "PARTY_RELATIONSHIP",
-                 "id": { "_type": "HIER_OBJECT_ID", "value": "6cb19121-4307-4648-9da0-d62e4d51f19b" },
-                 "path": "/relationships[openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.relationship.v1 and name/value='parent-of']"
-             }])),
+             body = serde_json::Value),
             (status = 204, description = "The version the request selects is a \
                                           deletion marker, as the released party \
                                           read answers it."),
