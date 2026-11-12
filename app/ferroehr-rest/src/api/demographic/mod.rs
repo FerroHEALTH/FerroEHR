@@ -47,6 +47,7 @@ mod contribution;
 pub(crate) mod openapi_routes;
 mod party;
 pub(crate) mod relationship;
+pub(crate) mod reverse;
 mod tags;
 mod versioned_party;
 pub(crate) mod versioned_relationship;

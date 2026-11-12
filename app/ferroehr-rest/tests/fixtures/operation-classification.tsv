@@ -150,6 +150,7 @@ party_relationship_revision_history	false	-	None	None	-	Skip	None	-	false	false	
 party_relationship_update	false	-	None	None	-	Skip	None	-	false	false	false
 party_relationship_version_get_at_time	false	-	None	None	-	Skip	None	-	false	false	false
 party_relationship_version_get_by_id	false	-	None	None	-	Skip	None	-	false	false	false
+party_reverse_relationships_get	false	-	None	None	-	Skip	Some(Audited { action: Read, object: Demographic })	-	false	false	false
 person_create	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Create, object: Demographic })	Create	false	false	false
 person_delete	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Delete, object: Demographic })	Delete	false	false	false
 person_get	true	Some(Clinical)	None	None	false	Skip	Some(Audited { action: Read, object: Demographic })	Read	false	false	false
