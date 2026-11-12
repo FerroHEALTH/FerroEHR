@@ -1,0 +1,115 @@
+archetype (adl_version=2.0.6; rm_release=1.1.0)
+    openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"FerroEHR">
+        ["organisation"] = <"Cadasto B.V.">
+    >
+    lifecycle_state = <"unmanaged">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"The ROLE a system AGENT performs to commit into an EHR: which templates it writes, at which facilities, as a relay of other systems or as a device.">
+            use = <"One CAPABILITY per origin, relay or device, whose credentials hold the templates the system writes, the facilities it writes at and the issuers of the device identifiers it may name; time_validity bounds the grant by day. The ROLE is adapted from the openEHR CKM archetype the derived_from entry names. Its CAPABILITY, whose credentials hold an authorization grant, is FerroEHR's own design: the openEHR RM and CKM use CAPABILITY for the professional qualifications of a performer, and no openEHR specification gives it an authorization meaning.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+    other_details = <
+        ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+        ["derived_from"] = <"openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0 (openEHR CKM 1013.1.482, modified 2019-08-09)">
+    >
+
+definition
+    ROLE[id1] matches {
+        identities matches {
+            PARTY_IDENTITY[id2] matches {
+                details matches {
+                    ITEM_TREE[id3] matches {
+                        items matches {
+                            ELEMENT[id4] occurrences matches {0..1} matches {
+                                value matches { DV_TEXT[id5] }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        capabilities matches {
+            CAPABILITY[id6] occurrences matches {1..2} matches {
+                name matches {
+                    DV_CODED_TEXT[id7] matches {
+                        defining_code matches {[ac1]}
+                    }
+                }
+                credentials matches {
+                    ITEM_TREE[id8] matches {
+                        items matches {
+                            ELEMENT[id9] occurrences matches {0..*} matches {
+                                value matches { DV_TEXT[id30] }
+                            }
+                            CLUSTER[id10] occurrences matches {0..*} matches {
+                                items matches {
+                                    ELEMENT[id11] occurrences matches {1} matches {
+                                        value matches { DV_TEXT[id31] }
+                                    }
+                                    ELEMENT[id12] occurrences matches {0..1} matches {
+                                        value matches { DV_TEXT[id32] }
+                                    }
+                                    ELEMENT[id13] occurrences matches {0..1} matches {
+                                        value matches { DV_TEXT[id33] }
+                                    }
+                                }
+                            }
+                            ELEMENT[id14] occurrences matches {0..*} matches {
+                                value matches { DV_TEXT[id34] }
+                            }
+                            ELEMENT[id15] occurrences matches {0..1} matches {
+                                value matches { DV_DATE_TIME[id35] }
+                            }
+                            ELEMENT[id16] occurrences matches {0..1} matches {
+                                value matches { DV_DATE_TIME[id36] }
+                            }
+                            ELEMENT[id17] occurrences matches {0..1} matches {
+                                value matches { DV_TEXT[id37] }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["id1"] = <text = <"System client"> description = <"The role of a system that commits into an EHR on its own account.">>
+            ["id2"] = <text = <"Role name"> description = <"The name of the role.">>
+            ["id3"] = <text = <"Name"> description = <"The structure of the name.">>
+            ["id4"] = <text = <"Full name"> description = <"The name of the role as it is written in full.">>
+            ["id6"] = <text = <"Write grant"> description = <"What the system may write, for one origin.">>
+            ["id7"] = <text = <"Kind"> description = <"The kind of the grant, which is the name of the capability.">>
+            ["id8"] = <text = <"Grant"> description = <"What the capability grants, held in its credentials.">>
+            ["id9"] = <text = <"Template written"> description = <"The id of a template whose COMPOSITIONs the system may commit.">>
+            ["id10"] = <text = <"Facility"> description = <"A facility the system may commit at, named by an identifier or an identifier prefix of an issuer.">>
+            ["id11"] = <text = <"Issuer"> description = <"The issuer of the facility identifier.">>
+            ["id12"] = <text = <"Identifier"> description = <"The facility identifier.">>
+            ["id13"] = <text = <"Identifier prefix"> description = <"A prefix every facility identifier the grant covers starts with.">>
+            ["id14"] = <text = <"Device identifier issuer"> description = <"The issuer of a device identifier the system may name as the origin of its data.">>
+            ["id15"] = <text = <"Not before"> description = <"The instant before which the grant does not hold, for a bound finer than the day of time_validity.">>
+            ["id16"] = <text = <"Not after"> description = <"The instant after which the grant does not hold, for a bound finer than the day of time_validity.">>
+            ["id17"] = <text = <"Authorisation reference"> description = <"The reference of the decision that authorised the grant, such as a change ticket or a processing agreement.">>
+            ["ac1"] = <text = <"Origins"> description = <"Where the data the system commits comes from.">>
+            ["at10"] = <text = <"Relay"> description = <"The system relays data other systems recorded.">>
+            ["at11"] = <text = <"Device"> description = <"The system commits data a device measured.">>
+        >
+    >
+    value_sets = <
+        ["ac1"] = <
+            id = <"ac1">
+            members = <"at10", "at11">
+        >
+    >

@@ -918,7 +918,7 @@ async fn a_deleted_user_is_404_and_its_user_name_is_free() {
 /// 429 and `Retry-After` (RFC 6585 §4), and nothing is written.
 #[tokio::test]
 async fn deactivations_past_the_bound_are_429() {
-    let (_db, app) = app_limited(2).await;
+    let (_db, app) = Box::pin(app_limited(2)).await;
     let mut ids = Vec::new();
     for (index, key) in [
         "2819c223-7f76-453a-919d-413861904646",

@@ -20,7 +20,7 @@ description
     >
     other_details = <
         ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
-        ["derived_from"] = <"openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0 (openEHR CKM)">
+        ["derived_from"] = <"openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0 (openEHR CKM 1013.1.475, modified 2019-08-09)">
     >
 
 definition

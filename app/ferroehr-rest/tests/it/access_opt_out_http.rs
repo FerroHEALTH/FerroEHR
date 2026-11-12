@@ -252,7 +252,7 @@ async fn trail(pool: &PgPool, resource: &str, expected: usize) -> Vec<(String, S
 /// clinician reads it as before; the reversal brings it back.
 #[tokio::test]
 async fn an_opted_out_ehr_reads_as_absent_to_the_access_services_until_reversed() {
-    let (_db, _pool, app) = app(true).await;
+    let (_db, _pool, app) = Box::pin(app(true)).await;
     let (ehr, vo) = ehr_with_composition(&app).await;
     let (_, kept) = ehr_with_composition(&app).await;
     let composition = format!("{BASE}/ehr/{ehr}/composition/{vo}");
@@ -351,7 +351,7 @@ async fn an_opted_out_ehr_reads_as_absent_to_the_access_services_until_reversed(
 /// the administrator, and the register keeps the reversed opt-out.
 #[tokio::test]
 async fn recording_reversing_and_reading_the_opt_out_are_access_records() {
-    let (_db, pool, app) = app(true).await;
+    let (_db, pool, app) = Box::pin(app(true)).await;
     let (ehr, _) = ehr_with_composition(&app).await;
     assert_eq!(opt_out(&app, &ehr, false).await.0, StatusCode::NO_CONTENT);
     assert_eq!(opt_out(&app, &ehr, true).await.0, StatusCode::NO_CONTENT);
@@ -388,7 +388,7 @@ async fn recording_reversing_and_reading_the_opt_out_are_access_records() {
 /// recorded against the EHR; an ordinary purpose does not lift the opt-out.
 #[tokio::test]
 async fn the_vital_interest_override_reads_the_ehr_and_is_recorded() {
-    let (_db, pool, app) = app(true).await;
+    let (_db, pool, app) = Box::pin(app(true)).await;
     let (ehr, vo) = ehr_with_composition(&app).await;
     assert_eq!(opt_out(&app, &ehr, false).await.0, StatusCode::NO_CONTENT);
     let composition = format!("{BASE}/ehr/{ehr}/composition/{vo}");
@@ -430,7 +430,7 @@ async fn the_vital_interest_override_reads_the_ehr_and_is_recorded() {
 /// refused and nothing is written, while reversing and reading stay open.
 #[tokio::test]
 async fn recording_is_refused_while_no_access_service_is_declared() {
-    let (_db, _pool, app) = app(false).await;
+    let (_db, _pool, app) = Box::pin(app(false)).await;
     let (ehr, vo) = ehr_with_composition(&app).await;
     let (status, body) = opt_out(&app, &ehr, false).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
@@ -467,7 +467,7 @@ async fn recording_is_refused_while_no_access_service_is_declared() {
 /// opt-out alike.
 #[tokio::test]
 async fn a_malformed_ehr_id_is_refused_on_every_opt_out_route() {
-    let (_db, _pool, app) = app(true).await;
+    let (_db, _pool, app) = Box::pin(app(true)).await;
     for reverse in [false, true] {
         let (status, body) = opt_out(&app, "not-a-uuid", reverse).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "reverse={reverse}: {body}");
@@ -516,7 +516,7 @@ fn manifest(ehrs: &[&str]) -> String {
 /// manifest form exported it under the override with no record.
 #[tokio::test]
 async fn a_manifest_export_under_the_override_records_it() {
-    let (_db, pool, app) = app(true).await;
+    let (_db, pool, app) = Box::pin(app(true)).await;
     let (ehr, _vo) = ehr_with_composition(&app).await;
     let (kept, _) = ehr_with_composition(&app).await;
     assert_eq!(opt_out(&app, &ehr, false).await.0, StatusCode::NO_CONTENT);

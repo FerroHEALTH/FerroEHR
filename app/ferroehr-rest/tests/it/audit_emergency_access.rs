@@ -196,7 +196,7 @@ async fn composition_reads(pool: &PgPool, expected: usize) -> Vec<(Option<String
 /// ordinary purpose carries no mark.
 #[tokio::test]
 async fn an_emergency_access_is_marked_and_shown_in_the_subjects_own_access_log() {
-    let (_db, pool, app, ehr) = app().await;
+    let (_db, pool, app, ehr) = Box::pin(app()).await;
     let vo_id = commit(&app, &ehr).await;
 
     let (status, body) = read(&app, &ehr, &vo_id, Some("ETREAT")).await;
@@ -274,7 +274,7 @@ async fn an_emergency_access_is_marked_and_shown_in_the_subjects_own_access_log(
 /// refused attempt is still logged, and still carries the emergency mark.
 #[tokio::test]
 async fn an_emergency_purpose_does_not_lift_a_gdpr_restriction() {
-    let (_db, pool, app, ehr) = app().await;
+    let (_db, pool, app, ehr) = Box::pin(app()).await;
     let vo_id = commit(&app, &ehr).await;
 
     let (status, body) = common::send_body(
