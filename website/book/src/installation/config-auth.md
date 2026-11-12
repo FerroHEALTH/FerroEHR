@@ -281,39 +281,47 @@ paths.
 | `[authz.party_binding.membership]` | `archetype_id` | The `PARTY_RELATIONSHIP` archetype of a group membership, as each membership's `archetype_node_id` carries it (the interface form of an ADL 2 id, `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1`). SCIM serves `/Groups` when the group table names a `display_name` and this table is set. |
 | `[authz.party_binding.representation]` | `archetype_id`, `relationship_codes` | The `PARTY_RELATIONSHIP` archetype a representative acts through, from the representative's `PERSON` to the subject's, and the code of the openEHR `subject_relationship` group each of its relationship types maps to. |
 
-A worked example over the `openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2`
-cluster, with the Microsoft Entra object id as the binding key:
+A worked example over FerroEHR's [default demographic
+definitions](default-demographic-definitions.md), with the Microsoft Entra
+object id as the binding key. Load the five files before the server starts
+and this mapping boots as it stands:
 
 ```toml
 [[authz.party_binding.person.template]]
-template_id = "FerroEHR professional"
+template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
 default = true
-key = { path = "/details[at0001]/items[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2]/items[at0001]", type = "guid" }
-user_name = { path = "/details[at0001]/items[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2]/items[at0001]", type = "scim_user_name" }
-external_id = { path = "/details[at0001]/items[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2]/items[at0001]", type = "scim_external_id" }
+key = { path = "/details[id2]/items[id3]", type = "guid" }
+user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
+external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
 
 [[authz.party_binding.person.attribute]]
 scim = "name.formatted"
 oidc = "name"
 jit = true
 name = true
-path = { "FerroEHR professional" = "/identities[openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1]/details[at0001]/items[at0002]" }
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
 
 [authz.party_binding.professional_role]
-template_id = "FerroEHR professional role"
+template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
 
 [authz.party_binding.group]
-template_id = "FerroEHR care team"
-external_id = { path = "/details[at0001]/items[at0001]", type = "scim_external_id" }
-display_name = "/identities[at0002]/details[at0003]/items[at0004]"
+template_id = "openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0"
+external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
+display_name = "/identities[id4]/details[id5]/items[id6]"
 
 [authz.party_binding.membership]
 archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1"
 
 [authz.party_binding.representation]
 archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1"
-relationship_codes = { at0010 = "254", at0011 = "264" }
+relationship_codes = { at10 = "254", at11 = "264" }
 ```
+
+The template ids are the ADL 2 ids of the stored archetypes, and the two
+relationship archetypes are named in the interface form each relationship's
+`archetype_node_id` carries. The representation archetype's types are
+`at10` (parent) and `at11` (guardian), mapped to `254|parent|` and
+`264|guardian|` of the openEHR `subject_relationship` group.
 
 With Microsoft Entra ID, map the object id to `externalId` (Entra's
 matching) and to the binding-key attribute (the binding): two attributes,
@@ -886,11 +894,11 @@ it, so the steps split between the two.
    [[authz.party_binding.person.attribute]]
    scim = "name.formatted"
    name = true
-   path = { "FerroEHR professional" = "/identities[at0002]/details[at0003]/items[at0004]" }
+   path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
 
    [[authz.party_binding.person.attribute]]
    scim = 'emails[type eq "work"].value'
-   path = { "FerroEHR professional" = "/contacts[at0005]/addresses[at0006]/details[at0007]/items[at0008]" }
+   path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/contacts[id9]/addresses[id10]/details[id11]/items[id12]" }
    ```
 
    A value path such as `emails[type eq "work"].value` serves the value and

@@ -329,8 +329,9 @@ secret_leak_gate() {
       moved=1
       continue
     fi
-    # This chart's ConfigMap; the FerroPIX dependency renders its own.
-    if [[ -n "$(yq -r 'select(.kind == "ConfigMap" and ((.metadata.labels["helm.sh/chart"] // "") | test("^ferropix-") | not)) | .metadata.name' <<<"$render")" ]]; then
+    # This chart's ConfigMap; the FerroPIX dependency renders its own, and the
+    # definitions ConfigMap carries only `.adls` and `.opt` files, never config.
+    if [[ -n "$(yq -r 'select(.kind == "ConfigMap" and ((.metadata.labels["helm.sh/chart"] // "") | test("^ferropix-") | not) and (((.metadata.name | test("-definitions$")) and ((.data // {}) | keys | all_c(test("[.](adls|opt)$")))) | not)) | .metadata.name' <<<"$render")" ]]; then
       red "  config.${path}: a ConfigMap was still rendered"
       moved=1
     fi

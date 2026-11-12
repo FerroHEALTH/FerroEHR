@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DATABASE__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 25.0.1 -n ferroehr \
+  --version 25.1.0 -n ferroehr \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.7.0 \
@@ -68,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.1
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.1.0
 ```
 
 ### Pin two versions, not one
@@ -81,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 25.0.1` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 25.1.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.7.0` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -181,7 +181,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.1 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.1.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -334,7 +334,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.1 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.1.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -803,9 +803,14 @@ their own and runs `ferroehr definitions load` on them as an init container,
 with the server's image, configuration and secrets, in the order listed. A
 definition already stored with the same text is left alone, so the step runs
 at every pod start, and one stored under its id with other text fails the
-pod. `deploy/helm/ci/basic-auth-values.yaml` loads the professional PERSON
-and ROLE pair of `deploy/definitions/professional/` and provisions its user
-through `/scim/v2/Users` (see [`[auth.scim]`](config-auth.md#authscim)).
+pod. The default `definitions.files` is FerroEHR's
+[default demographic definitions](default-demographic-definitions.md), so a
+mapping of the professional PERSON and ROLE, the care-team GROUP, the
+membership and the representation boots without a list of its own; setting
+`definitions.files` replaces the list, and `[]` loads nothing.
+`deploy/helm/ci/basic-auth-values.yaml` maps the professional PERSON and
+ROLE pair and provisions its user through `/scim/v2/Users` (see
+[`[auth.scim]`](config-auth.md#authscim)).
 
 A `persons` issuer with `sender_constraint: required` runs on any number of
 replicas: each records the DPoP proofs it accepts in the database they all
@@ -837,7 +842,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 25.0.1 -n ferroehr --reuse-values \
+  --version 25.1.0 -n ferroehr --reuse-values \
   --set config.record.query.plan_cache_capacity=512
 ```
 
@@ -1017,7 +1022,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 25.0.1 -n ferroehr --reuse-values \
+  --version 25.1.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1392,7 +1397,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.0.1 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 25.1.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

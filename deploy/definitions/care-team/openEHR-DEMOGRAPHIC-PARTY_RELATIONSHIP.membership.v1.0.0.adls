@@ -1,0 +1,46 @@
+archetype (adl_version=2.0.6; rm_release=1.1.0)
+    openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"FerroEHR">
+        ["organisation"] = <"Cadasto B.V.">
+    >
+    lifecycle_state = <"unmanaged">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"The membership of a person in a team: a PARTY_RELATIONSHIP from the member's PERSON, its source, to the team's GROUP, its target.">
+            use = <"Held in the member's PERSON.relationships. Adapted from the PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline: its details and type of relationship, here the member's role in the team, optional.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+    other_details = <
+        ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+        ["derived_from"] = <"openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0 (openEHR CKM)">
+    >
+
+definition
+    PARTY_RELATIONSHIP[id1] matches {
+        details matches {
+            ITEM_TREE[id2] occurrences matches {0..1} matches {
+                items matches {
+                    ELEMENT[id3] occurrences matches {0..1} matches {
+                        value matches { DV_TEXT[id4] }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["id1"] = <text = <"Membership"> description = <"The membership of a person in a team.">>
+            ["id2"] = <text = <"Details"> description = <"The details of the membership.">>
+            ["id3"] = <text = <"Role in the team"> description = <"The role the member holds in the team.">>
+        >
+    >
