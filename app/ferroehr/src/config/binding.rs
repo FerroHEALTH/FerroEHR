@@ -59,17 +59,17 @@ pub struct PartyBindingConfig {
     /// The representation `PARTY_RELATIONSHIP` archetype.
     pub representation: Option<person::RepresentationSection>,
     /// The system `AGENT` template.
-    pub agent: Option<policy::AgentSection>,
+    pub agent: Option<Box<policy::AgentSection>>,
     /// The acts-for `PARTY_RELATIONSHIP` archetype.
-    pub acts_for: Option<policy::ActsForSection>,
+    pub acts_for: Option<Box<policy::ActsForSection>>,
     /// The `ROLE` template of a system client's grant.
-    pub system_client_role: Option<person::RoleSection>,
+    pub system_client_role: Option<Box<person::RoleSection>>,
     /// The `ROLE` template of a data migration's grant.
-    pub data_migration_role: Option<person::RoleSection>,
+    pub data_migration_role: Option<Box<person::RoleSection>>,
     /// The `ROLE` template of a federation partner's agreement.
-    pub federation_partner_role: Option<person::RoleSection>,
+    pub federation_partner_role: Option<Box<person::RoleSection>>,
     /// The `ROLE` template of a person's privilege.
-    pub privileged_role: Option<person::RoleSection>,
+    pub privileged_role: Option<Box<person::RoleSection>>,
     /// What FerroEHR does for each `persons` issuer beyond the lookup
     /// (`[[authz.party_binding.issuer]]`): just-in-time creation.
     pub issuer: Vec<jit::IssuerBinding>,
@@ -95,12 +95,12 @@ impl PartyBindingConfig {
             membership: self.membership.as_ref(),
             representation: self.representation.as_ref(),
             policy: policy::PolicySections {
-                agent: self.agent.as_ref(),
-                acts_for: self.acts_for.as_ref(),
-                system_client_role: self.system_client_role.as_ref(),
-                data_migration_role: self.data_migration_role.as_ref(),
-                federation_partner_role: self.federation_partner_role.as_ref(),
-                privileged_role: self.privileged_role.as_ref(),
+                agent: self.agent.as_deref(),
+                acts_for: self.acts_for.as_deref(),
+                system_client_role: self.system_client_role.as_deref(),
+                data_migration_role: self.data_migration_role.as_deref(),
+                federation_partner_role: self.federation_partner_role.as_deref(),
+                privileged_role: self.privileged_role.as_deref(),
             },
         }
     }

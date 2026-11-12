@@ -529,7 +529,10 @@ fn protected(mapping: &BindingMapping, kind: Kind, facts: &Facts) -> Protected {
     let mut protected = Protected::default();
     if let Some(template) = &facts.template {
         let policy = match kind {
-            Kind::Agent => mapping.agent.as_ref().is_some_and(|a| &a.template == template),
+            Kind::Agent => mapping
+                .agent
+                .as_ref()
+                .is_some_and(|a| &a.template == template),
             Kind::Role => mapping.policy_roles.contains_key(template),
             _ => false,
         };

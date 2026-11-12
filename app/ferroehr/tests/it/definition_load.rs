@@ -337,7 +337,7 @@ fn dv_text(value: &str) -> serde_json::Value {
 }
 
 /// An `ELEMENT` `id` named `name` holding `value`.
-fn element(id: &str, name: &str, value: serde_json::Value) -> serde_json::Value {
+fn element(id: &str, name: &str, value: &serde_json::Value) -> serde_json::Value {
     serde_json::json!({ "_type": "ELEMENT", "archetype_node_id": id, "name": dv_text(name), "value": value })
 }
 
@@ -376,14 +376,12 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
     }
     let patient_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0";
     let me = "3e7a1d5c-9b2f-4c8e-a6d0-1f4b8e2c7a95";
-    let identifier = |issuer: &str, id: &str| {
-        json!({ "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id, "type": "NNNLD" })
-    };
+    let identifier = |issuer: &str, id: &str| json!({ "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id, "type": "NNNLD" });
     let relationship = |at: &str, tree: &str, item: &str, class: &str, target: &str| {
         json!({
             "_type": "PARTY_RELATIONSHIP", "archetype_node_id": at, "name": dv_text("relationship"),
             "details": { "_type": "ITEM_TREE", "archetype_node_id": tree, "name": dv_text("details"),
-                "items": [element(item, "identifier", identifier("urn:oid:2.16.840.1.113883.2.4.6.3", "999911120"))] },
+                "items": [element(item, "identifier", &identifier("urn:oid:2.16.840.1.113883.2.4.6.3", "999911120"))] },
             "source": party_ref("PERSON", me),
             "target": party_ref(class, target)
         })
@@ -398,27 +396,27 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
         "name": dv_text("Patient"),
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "id2", "name": dv_text("Details"),
             "items": [
-                element("id3", "Patient identifier", identifier("urn:oid:2.16.840.1.113883.2.4.6.3", "999911120")),
-                element("id4", "Date of birth", json!({ "_type": "DV_DATE", "value": "2015-03-14" })),
-                element("id5", "Sex", local("at11", "Female"))
+                element("id3", "Patient identifier", &identifier("urn:oid:2.16.840.1.113883.2.4.6.3", "999911120")),
+                element("id4", "Date of birth", &json!({ "_type": "DV_DATE", "value": "2015-03-14" })),
+                element("id5", "Sex", &local("at11", "Female"))
             ] },
         "identities": [{ "_type": "PARTY_IDENTITY", "archetype_node_id": "id6", "name": local("at24", "Legal name"),
             "details": { "_type": "ITEM_TREE", "archetype_node_id": "id7", "name": dv_text("Name structure"),
-                "items": [element("id8", "Full name", dv_text("Sam de Vries"))] } }],
+                "items": [element("id8", "Full name", &dv_text("Sam de Vries"))] } }],
         "contacts": [{ "_type": "CONTACT", "archetype_node_id": "id11", "name": dv_text("Contact"),
             "addresses": [
                 { "_type": "ADDRESS", "archetype_node_id": "id12", "name": local("at34", "Residential"),
                   "details": { "_type": "ITEM_TREE", "archetype_node_id": "id13", "name": dv_text("Address details"),
                     "items": [
-                        element("id14", "Address line", dv_text("Dorpsstraat 1")),
-                        element("id15", "Postal code", dv_text("1234 AB")),
-                        element("id16", "Suburb/town/locality", dv_text("Utrecht"))
+                        element("id14", "Address line", &dv_text("Dorpsstraat 1")),
+                        element("id15", "Postal code", &dv_text("1234 AB")),
+                        element("id16", "Suburb/town/locality", &dv_text("Utrecht"))
                     ] } },
                 { "_type": "ADDRESS", "archetype_node_id": "id19", "name": local("at44", "E-mail"),
                   "details": { "_type": "ITEM_TREE", "archetype_node_id": "id20", "name": dv_text("Components"),
                     "items": [
-                        element("id21", "Usage", local("at50", "Personal")),
-                        element("id22", "Details", dv_text("sam@example.org"))
+                        element("id21", "Usage", &local("at50", "Personal")),
+                        element("id22", "Details", &dv_text("sam@example.org"))
                     ] } }
             ] }],
         "relationships": [
@@ -443,10 +441,10 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
         "name": dv_text("Healthcare provider"),
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "id2", "name": dv_text("Identifiers"),
             "items": [element("id3", "Provider identifier",
-                json!({ "_type": "DV_IDENTIFIER", "issuer": "urn:oid:2.16.528.1.1007.3.3", "id": "01234567", "type": "URA" }))] },
+                &json!({ "_type": "DV_IDENTIFIER", "issuer": "urn:oid:2.16.528.1.1007.3.3", "id": "01234567", "type": "URA" }))] },
         "identities": [{ "_type": "PARTY_IDENTITY", "archetype_node_id": "id4", "name": local("at12", "Business name"),
             "details": { "_type": "ITEM_TREE", "archetype_node_id": "id5", "name": dv_text("Items"),
-                "items": [element("id6", "Name", dv_text("Example hospital"))] } }]
+                "items": [element("id6", "Name", &dv_text("Example hospital"))] } }]
     });
     let fit = svc
         .party_template_fit(&provider, provider_id)
@@ -454,7 +452,10 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
         .expect("the provider fits");
     assert_eq!(fit, TemplateFit::Complete);
     let mut anonymous = provider.clone();
-    anonymous.as_object_mut().expect("an object").remove("details");
+    anonymous
+        .as_object_mut()
+        .expect("an object")
+        .remove("details");
     let fit = svc
         .party_template_fit(&anonymous, provider_id)
         .await
@@ -475,23 +476,23 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
         "name": dv_text("Healthcare professional role"),
         "identities": [{ "_type": "PARTY_IDENTITY", "archetype_node_id": "id2", "name": dv_text("Role name"),
             "details": { "_type": "ITEM_TREE", "archetype_node_id": "id3", "name": dv_text("Name"),
-                "items": [element("id4", "Full name", dv_text("General practitioner"))] } }],
+                "items": [element("id4", "Full name", &dv_text("General practitioner"))] } }],
         "performer": party_ref("PERSON", me),
         "capabilities": [{
             "_type": "CAPABILITY", "archetype_node_id": "id6", "name": dv_text("Professional credentials"),
             "credentials": { "_type": "ITEM_TREE", "archetype_node_id": "id7", "name": dv_text("Details"),
                 "items": [
-                    element("id8", "Field of practice", dv_text("General practice")),
+                    element("id8", "Field of practice", &dv_text("General practice")),
                     { "_type": "CLUSTER", "archetype_node_id": "id10", "name": dv_text("Registration"),
                       "items": [
-                        element("id11", "Registration ID", dv_text("19012345601")),
-                        element("id12", "Registering body", dv_text("BIG-register")),
-                        element("id13", "Registration status", json!({ "_type": "DV_CODED_TEXT",
+                        element("id11", "Registration ID", &dv_text("19012345601")),
+                        element("id12", "Registering body", &dv_text("BIG-register")),
+                        element("id13", "Registration status", &json!({ "_type": "DV_CODED_TEXT",
                             "value": "Active/Full registration",
                             "defining_code": { "_type": "CODE_PHRASE",
                                 "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
                                 "code_string": "at10" } })),
-                        element("id14", "Period", json!({ "_type": "DV_INTERVAL",
+                        element("id14", "Period", &json!({ "_type": "DV_INTERVAL",
                             "lower": { "_type": "DV_DATE", "value": "2020-01-01" },
                             "lower_unbounded": false, "upper_unbounded": true,
                             "lower_included": true, "upper_included": false }))

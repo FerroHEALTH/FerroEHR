@@ -63,10 +63,7 @@ fn example(name: &str) -> String {
         .split_once(&marker)
         .unwrap_or_else(|| panic!("the page marks the example {name}"))
         .1;
-    let body = after
-        .split_once('\n')
-        .expect("a fence opens the example")
-        .1;
+    let body = after.split_once('\n').expect("a fence opens the example").1;
     body.split_once("\n```")
         .expect("a fence closes the example")
         .0
@@ -128,7 +125,7 @@ async fn the_book_mapping_passes_the_boot_rules_over_the_policy_definitions() {
     let (_db, svc) = loaded().await;
     let config = config(&example("mapping"));
     let sections = config.authz.party_binding.sections();
-    assert!(sections.errors(&[], &[]).is_empty());
+    assert_eq!(sections.errors(&[], &[]), Vec::<String>::new());
     let errors = svc
         .party_mapping_errors(&sections)
         .await
@@ -215,7 +212,7 @@ fn caller(subject: &str) -> CommitterIdentity {
 async fn as_caller<F: Future>(subject: &str, roles: &[&str], fut: F) -> F::Output {
     ferroehr::system_log::access_context::with_roles(
         roles.iter().map(|r| (*r).to_owned()).collect(),
-        with_committer(Some(caller(subject)), fut),
+        with_committer(Some(caller(subject)), Box::pin(fut)),
     )
     .await
 }
@@ -324,7 +321,11 @@ async fn referred(svc: &FerroEhrService) -> [(VoId, String); 3] {
     let organisation = "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0";
     let provider = plain("ORGANISATION", organisation, "Example hospital");
     let partner = plain("ORGANISATION", organisation, "Regional care network");
-    let person = plain("PERSON", "openEHR-DEMOGRAPHIC-PERSON.person.v0", "J. Jansen");
+    let person = plain(
+        "PERSON",
+        "openEHR-DEMOGRAPHIC-PERSON.person.v0",
+        "J. Jansen",
+    );
     as_clinician(async {
         [
             create(svc, PartyKind::Organisation, &provider)
@@ -345,17 +346,32 @@ async fn referred(svc: &FerroEhrService) -> [(VoId, String); 3] {
 async fn each_worked_example_fits_its_definition() {
     let (_db, svc) = loaded().await;
     let any = VoId::from_uid_head(AGENT).expect("a uuid");
-    let ids = [(AGENT, any), (PROVIDER, any), (PARTNER, any), (PERSON, any), (ROLE, any)];
+    let ids = [
+        (AGENT, any),
+        (PROVIDER, any),
+        (PARTNER, any),
+        (PERSON, any),
+        (ROLE, any),
+    ];
     for (name, template) in [
         ("agent", "openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0"),
         ("agent-acts-for", "openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0"),
-        ("system-client-role", "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0"),
-        ("data-migration-role", "openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0"),
+        (
+            "system-client-role",
+            "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0",
+        ),
+        (
+            "data-migration-role",
+            "openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0",
+        ),
         (
             "federation-partner-role",
             "openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0",
         ),
-        ("privileged-role", "openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0"),
+        (
+            "privileged-role",
+            "openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0",
+        ),
     ] {
         let fit = svc
             .party_template_fit(&body(name, &ids), template)
@@ -369,7 +385,10 @@ async fn each_worked_example_fits_its_definition() {
     }
     let relationship = &body("agent-acts-for", &ids)["relationships"][0];
     let fit = svc
-        .party_template_fit(relationship, "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1.0.0")
+        .party_template_fit(
+            relationship,
+            "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1.0.0",
+        )
         .await
         .expect("the acts-for relationship fits its archetype");
     assert_eq!(
@@ -420,11 +439,24 @@ async fn only_an_administrator_writes_a_system_client() {
         &[(AGENT, agent_vo), (PROVIDER, provider), (ROLE, role_vo)],
     );
     assert_policy_refusal(
-        as_clinician(update(&svc, PartyKind::Agent, agent_vo, &agent_uid, &acts_for)).await,
+        as_clinician(update(
+            &svc,
+            PartyKind::Agent,
+            agent_vo,
+            &agent_uid,
+            &acts_for,
+        ))
+        .await,
     );
-    let agent_uid = as_admin(update(&svc, PartyKind::Agent, agent_vo, &agent_uid, &acts_for))
-        .await
-        .expect("an administrator names the provider");
+    let agent_uid = as_admin(update(
+        &svc,
+        PartyKind::Agent,
+        agent_vo,
+        &agent_uid,
+        &acts_for,
+    ))
+    .await
+    .expect("an administrator names the provider");
 
     // A non-administrator neither changes nor deletes them.
     assert_policy_refusal(
@@ -492,9 +524,8 @@ async fn an_acts_for_relationship_is_written_by_an_administrator_only() {
     let (_db, svc) = mapped().await;
     let [(provider, _), (partner, partner_uid), _] = referred(&svc).await;
     let relationship = |source: VoId, class: &str| {
-        let mut relationship = body("agent-acts-for", &[(PROVIDER, provider)])["relationships"]
-            [0]
-        .clone();
+        let mut relationship =
+            body("agent-acts-for", &[(PROVIDER, provider)])["relationships"][0].clone();
         relationship["source"]["type"] = json!(class);
         relationship["source"]["id"]["value"] = json!(source.to_string());
         relationship
@@ -528,11 +559,16 @@ async fn an_acts_for_relationship_is_written_by_an_administrator_only() {
         "archetype_id": { "_type": "ARCHETYPE_ID", "value": ACTS_FOR },
         "rm_version": "1.1.0"
     });
-    let refused = as_clinician(svc.party_relationship_create(version(&standalone, None))).await;
+    let refused = as_clinician(Box::pin(
+        svc.party_relationship_create(version(&standalone, None)),
+    ))
+    .await;
     assert_policy_refusal(refused);
-    as_admin(svc.party_relationship_create(version(&standalone, None)))
-        .await
-        .expect("an administrator writes the relationship");
+    as_admin(Box::pin(
+        svc.party_relationship_create(version(&standalone, None)),
+    ))
+    .await
+    .expect("an administrator writes the relationship");
 }
 
 /// A demographic `CONTRIBUTION` creating `data` as one `complete` version,
@@ -562,8 +598,10 @@ fn contribution(data: &Value) -> Value {
 async fn a_contribution_holding_a_policy_party_is_an_administrators() {
     let (_db, svc) = mapped().await;
     let agent = contribution(&body("agent", &[]));
-    assert_policy_refusal(as_clinician(svc.demographic_contribution_create(agent.clone())).await);
-    as_admin(svc.demographic_contribution_create(agent))
+    assert_policy_refusal(
+        as_clinician(Box::pin(svc.demographic_contribution_create(agent.clone()))).await,
+    );
+    as_admin(Box::pin(svc.demographic_contribution_create(agent)))
         .await
         .expect("an administrator commits the AGENT in a CONTRIBUTION");
 }

@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The mapping of the policy parties: `[authz.party_binding.agent]`,
+//! The mapping of the policy parties.
+//!
+//! Its sections are `[authz.party_binding.agent]`,
 //! `[authz.party_binding.acts_for]` and the four policy `ROLE` sections,
 //! `system_client_role`, `data_migration_role`, `federation_partner_role` and
 //! `privileged_role`.
