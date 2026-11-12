@@ -152,6 +152,41 @@ port. Set `ingressFrom` to your ingress controller, or set
 open state at all. And note that **none of it does anything unless your CNI
 enforces NetworkPolicy**. Check yours; several do not.
 
+## Demographic definitions and the party mapping
+
+`definitions.files` defaults to FerroEHR's default demographic definitions:
+the professional `PERSON` and `ROLE`, a care-team `GROUP`, and the membership
+and representation `PARTY_RELATIONSHIP` archetypes, which the `definitions`
+init container stores before the server starts. Setting the list replaces
+it, so a deployment that loads its own templates lists those.
+
+The party mapping under `config.authz.party_binding` is yours, and the chart
+ships none. A mapping that uses the whole default set, with SCIM Groups and
+representation, adds these tables beside its `person` and
+`professional_role` (each client's `config.auth.party` table also needs a
+`group_claim` and a `group_identifier_issuer`):
+
+```yaml
+config:
+  authz:
+    party_binding:
+      group:
+        template_id: openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0
+        external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
+        display_name: "/identities[id4]/details[id5]/items[id6]"
+      membership:
+        archetype_id: openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1
+      representation:
+        archetype_id: openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1
+        relationship_codes: { at10: "254", at11: "264" }
+```
+
+Set the mapping before the first start: the binding side table is filled
+under its digest then, and a server whose mapping differs refuses to start
+until `ferroehr party-binding refill` has run with every replica stopped.
+The whole set is described at
+<https://ferroehr.eu/docs/latest/installation/default-demographic-definitions.html>.
+
 ## FerroBRIDGE alongside the CDR
 
 `bridge.enabled=true` deploys [FerroBRIDGE](https://github.com/FerroHEALTH/FerroBRIDGE),

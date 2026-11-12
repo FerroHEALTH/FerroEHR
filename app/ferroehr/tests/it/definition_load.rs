@@ -150,49 +150,38 @@ fn default_definition(file: &str) -> String {
     std::fs::read_to_string(path).expect("the default definition is readable")
 }
 
-/// The mapping the lanes configure over the professional pair of the set.
-const PROFESSIONAL_MAPPING: &str = r#"
-[[auth.issuer]]
-issuer = "https://basic-users.ferroehr.invalid"
-kind = "persons"
-audience = ["ferroehr-basic-users"]
+/// The configuration of each lane that loads the default set: the two
+/// quickstart configurations, the hosted sandbox and the dev lanes.
+fn lane_configs() -> Vec<(String, String)> {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let read = |relative: &str| {
+        std::fs::read_to_string(root.join(relative)).expect("the lane configuration is readable")
+    };
+    let compose = repo_yaml("docker-compose.yml");
+    let mut lanes: Vec<(String, String)> = ["ferroehr-config", "ferroehr-config-local"]
+        .iter()
+        .map(|config| {
+            let text = compose["configs"][*config]["content"]
+                .as_str()
+                .expect("the quickstart carries its configuration inline");
+            // NOTE: Compose interpolation, `$$` is a literal `$` in a config's content.
+            (
+                format!("docker-compose.yml {config}"),
+                text.replace("$$", "$"),
+            )
+        })
+        .collect();
+    for path in [
+        "deploy/hosted/ferroehr.sandbox.toml",
+        "docker/ferroehr.dev.toml",
+    ] {
+        lanes.push((path.to_owned(), read(path)));
+    }
+    lanes
+}
 
-[[auth.party]]
-issuer = "https://basic-users.ferroehr.invalid"
-identifier_issuer = "urn:ferroehr:basic-user"
-identifier_type = "login"
-
-[authz.party_binding]
-provider = { issuer = "urn:oid:2.999.7.9", id = "dev" }
-
-[[authz.party_binding.person.template]]
-template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
-default = true
-key = { path = "/details[id2]/items[id3]", type = "login" }
-user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
-external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
-
-[[authz.party_binding.person.attribute]]
-scim = "name.formatted"
-name = true
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
-
-[[authz.party_binding.person.attribute]]
-scim = "name.givenName"
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id7]" }
-
-[[authz.party_binding.person.attribute]]
-scim = "name.familyName"
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id8]" }
-
-[[authz.party_binding.person.attribute]]
-scim = 'emails[type eq "work"].value'
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/contacts[id9]/addresses[id10]/details[id11]/items[id12]" }
-
-[authz.party_binding.professional_role]
-template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
-"#;
-
+/// Every lane maps the whole default set, and the mapping it boots with is
+/// judged against the loaded files as boot judges it.
 #[tokio::test]
 async fn the_default_definitions_load_and_carry_the_lanes_mapping() {
     use assert_fs::prelude::FileWriteStr as _;
@@ -205,16 +194,26 @@ async fn the_default_definitions_load_and_carry_the_lanes_mapping() {
             .unwrap_or_else(|e| panic!("{file} loads: {e:?}"));
         assert!(matches!(loaded, Loaded::Stored(_)), "{loaded:?}");
     }
-    let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp file");
-    file.write_str(PROFESSIONAL_MAPPING).expect("write");
-    let config =
-        ferroehr::config::assemble(Some(file.path()), &std::collections::HashMap::new(), &[])
-            .expect("the mapping assembles");
-    let errors = svc
-        .party_mapping_errors(&config.authz.party_binding.sections())
-        .await
-        .expect("the store answers");
-    assert!(errors.is_empty(), "{errors:?}");
+    for (lane, text) in lane_configs() {
+        let file = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp file");
+        file.write_str(&text).expect("write");
+        let config =
+            ferroehr::config::assemble(Some(file.path()), &std::collections::HashMap::new(), &[])
+                .unwrap_or_else(|e| panic!("{lane} assembles: {e:?}"));
+        let binding = &config.authz.party_binding;
+        assert!(
+            binding.professional_role.is_some()
+                && binding.group.is_some()
+                && binding.membership.is_some()
+                && binding.representation.is_some(),
+            "{lane} maps the whole default set"
+        );
+        let errors = svc
+            .party_mapping_errors(&binding.sections())
+            .await
+            .expect("the store answers");
+        assert!(errors.is_empty(), "{lane}: {errors:?}");
+    }
 }
 
 /// Reads a YAML file of the repository.
