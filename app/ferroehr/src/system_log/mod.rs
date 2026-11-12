@@ -321,7 +321,7 @@ impl FerroEhrService {
     }
 
     /// Classifies what an access touched through the configured category map
-    /// ([`config::AuditConfig::categories`]), as data the access wrote when
+    /// ([`crate::policy_register`]), as data the access wrote when
     /// `action` creates, updates or deletes and as data it read otherwise;
     /// `None` when no audit sender is wired, because no record will carry it.
     #[must_use]

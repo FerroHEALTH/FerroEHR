@@ -3,7 +3,7 @@
 
 //! The EHDS Art. 3(3) delay of the person's own access: the professional's
 //! hold and release, the register, and the expiry records under the policy
-//! of [`crate::config::access_delay`].
+//! of [`crate::policy_register::access_delay`].
 //!
 //! Regulation (EU) 2025/327 Art. 3(1) gives a person access to their data
 //! "immediately after" it is registered, and Art. 3(3) lets a Member State
