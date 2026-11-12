@@ -314,6 +314,7 @@ impl AbacConfig {
 /// own design.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 #[serde(default, deny_unknown_fields)]
 pub struct GrantsConfig {
     /// The kinds of grant the party store may hold

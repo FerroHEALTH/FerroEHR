@@ -15,7 +15,7 @@
 #
 # What you must set
 #
-# This file lists 913 keys. A deployment that holds real data sets the 10
+# This file lists 914 keys. A deployment that holds real data sets the 10
 # below; every other key is optional and runs on the built-in default its line
 # shows, or stays unset where its note says so.
 #
@@ -1630,7 +1630,7 @@ trusted_systems = []
 # The kinds of grant the policy parties may hold (`[authz.grants]`).
 [authz.grants]
 # The kinds of grant the party store may hold
-# (`FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated).
+# (`FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated). Optional (trust).
 allowed = ["system_client.relay", "system_client.device"]
 
 # The openEHR REST API: the base path, the system identifier, the `OPTIONS`
