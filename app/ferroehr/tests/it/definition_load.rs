@@ -356,7 +356,7 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
         json!({
             "_type": "PARTY_RELATIONSHIP", "archetype_node_id": at, "name": dv_text("relationship"),
             "details": { "_type": "ITEM_TREE", "archetype_node_id": tree, "name": dv_text("details"),
-                "items": [element(item, "identifier", &identifier("urn:oid:2.16.840.1.113883.2.4.6.3", "999911120"))] },
+                "items": [element(item, "identifier", &identifier("urn:oid:2.16.840.1.113883.2.4.6.3", "123456789"))] },
             "source": party_ref("PERSON", me),
             "target": party_ref(class, target)
         })
@@ -371,7 +371,7 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
         "name": dv_text("Patient"),
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "id2", "name": dv_text("Details"),
             "items": [
-                element("id3", "Patient identifier", &identifier("urn:oid:2.16.840.1.113883.2.4.6.3", "999911120")),
+                element("id3", "Patient identifier", &identifier("urn:oid:2.16.840.1.113883.2.4.6.3", "123456789")),
                 element("id4", "Date of birth", &json!({ "_type": "DV_DATE", "value": "2015-03-14" })),
                 element("id5", "Sex", &local("at11", "Female"))
             ] },
