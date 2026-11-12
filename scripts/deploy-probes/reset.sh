@@ -159,9 +159,8 @@ probes_decommission() {
   status=0
   out="$(dc exec -T ferroehr /usr/local/bin/ferroehr db erase --confirm "$token" 2>&1)" || status=$?
   assert_eq "0" "$status" "the confirmed erase exits 0: $out"
-  # The quickstart's own start order: the party mapping's templates are stored
-  # before serve, and the erase removed them with everything else.
-  dc -f docker-compose.yml run --rm ferroehr-definitions >/dev/null 2>&1 || true
+  # The erase removed the default definitions with everything else, and the
+  # restarted server stores them again as it boots.
   dc -f docker-compose.yml restart ferroehr >/dev/null 2>&1 || true
   if wait_http "$CDR/health/readiness" 90; then
     # The erase removed the Basic user's PERSON too, so it is provisioned again.

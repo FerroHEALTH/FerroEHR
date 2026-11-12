@@ -1,13 +1,10 @@
 # Professional PERSON and ROLE definitions: provenance
 
-Two ADL 2 archetypes of FerroEHR's default demographic definitions, which a
-deployment loads with `ferroehr definitions load` before `serve`, so that its
-party mapping (`[authz.party_binding.person]` and
-`[authz.party_binding.professional_role]`) finds its templates at boot and
-SCIM can provision its professionals. The development lanes, the conformance
-harness, the viewer browser lane, the compose quickstart, the hosted sandbox
-and the Helm chart's default `definitions.files` load them first, in this
-order, before the care-team and representation definitions beside them:
+Two ADL 2 archetypes of FerroEHR's default demographic definitions, which
+the binary carries and stores at boot when absent, first and in this order,
+so that the party mapping (`[authz.party_binding.person]` and
+`[authz.party_binding.professional_role]`, whose defaults name them) finds
+its templates and SCIM can provision its professionals:
 
 1. `openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls`
 2. `openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls`

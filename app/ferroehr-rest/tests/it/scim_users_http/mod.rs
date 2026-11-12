@@ -176,7 +176,7 @@ fn binding() -> PartyBindingConfig {
     };
     PartyBindingConfig {
         namespace: "demographic".to_owned(),
-        person: PersonSection {
+        person: Some(PersonSection {
             template: vec![PersonTemplate {
                 template_id: PERSON.to_owned(),
                 key: selector("guid"),
@@ -207,7 +207,7 @@ fn binding() -> PartyBindingConfig {
                     ..PersonAttribute::default()
                 },
             ],
-        },
+        }),
         professional_role: Some(RoleSection {
             template_id: ROLE.to_owned(),
         }),

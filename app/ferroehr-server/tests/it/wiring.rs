@@ -540,6 +540,8 @@ identifier_type = "guid"
 [authz.party_binding]
 provider = { issuer = "urn:oid:2.999.1", id = "1" }
 
+[authz.party_binding.person]
+
 [record]
 subject_index = "local"
 
@@ -555,7 +557,10 @@ scope = "ferroehr/scim"
 binding_issuer = "urn:example:login"
 "#;
     let (ok, text) = config_check(scim);
-    assert!(!ok, "a SCIM endpoint with no person template: {text}");
+    assert!(
+        !ok,
+        "a SCIM endpoint whose person section maps no template: {text}"
+    );
     assert!(
         text.contains("no [[authz.party_binding.person.template]] is declared"),
         "{text}"

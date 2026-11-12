@@ -18,12 +18,10 @@
 # for the old runner-side psql and its Neon-endpoint fence.
 #
 # The bring-up is the box's `deploy` verb, the same one the release's
-# `sandbox` job runs after its own wipe (#5406). Since party binding (#5002)
-# the CDR refuses to boot until its demographic templates are in the
-# definition store, which the wipe empties; the deploy runs the
-# `ferroehr-definitions` one-shot before it starts the CDR, and the box's
-# `restart` verb starts the CDR alone. The deploy reinstalls the image the
-# box's .env names and must serve the release the box served before the wipe.
+# `sandbox` job runs after its own wipe (#5406). The wipe empties the
+# definition store, and the CDR stores its default demographic and policy
+# definitions again as it boots. The deploy reinstalls the image the box's
+# .env names and must serve the release the box served before the wipe.
 #
 # The release pipeline calls this seed-only (#3467): its `sandbox` job wipes
 # BEFORE the deploy, so the deploy's recreate is the fresh boot. The v4.3.1
@@ -187,8 +185,7 @@ jobs:
           fi
 
       # The deploy verb, as the release's `sandbox` job runs it after its own
-      # wipe: the definitions one-shot loads the party-binding templates into
-      # the emptied store before the CDR starts (#5406), and the action
+      # wipe (#5406): the CDR boots fresh on the emptied store, and the action
       # requires the release the box served before the wipe.
       - name: Bring the CDR up through the deploy
         uses: ./.github/actions/hosted-deploy # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)

@@ -59,7 +59,7 @@ pub(crate) fn discovery(
     let ours = EXTENSION_URN;
     let intrinsic = ["userName", "active"].into_iter().map(str::to_owned);
     let mapped = binding
-        .person
+        .person()
         .attribute
         .iter()
         .filter_map(|attribute| attribute.scim.clone());
@@ -263,7 +263,7 @@ mod tests {
 
     fn mapped(paths: &[&str]) -> PartyBindingConfig {
         let mut binding = PartyBindingConfig::default();
-        binding.person.attribute = paths
+        binding.person.get_or_insert_default().attribute = paths
             .iter()
             .map(|scim| PersonAttribute {
                 scim: Some((*scim).to_owned()),

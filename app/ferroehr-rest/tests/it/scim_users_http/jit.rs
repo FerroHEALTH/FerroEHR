@@ -39,7 +39,11 @@ const IDP: &str = "https://sts.example/hospital";
 /// just-in-time creation on for `PERSONS`, admitting logins of `IDP`.
 fn jit_config() -> AppConfig {
     let mut config = config();
-    let attributes = &mut config.party_binding.person.attribute;
+    let attributes = &mut config
+        .party_binding
+        .person
+        .get_or_insert_default()
+        .attribute;
     for (attribute, claim) in
         attributes
             .iter_mut()
@@ -258,7 +262,13 @@ async fn a_provisional_record_names_the_declared_provider() {
 #[tokio::test]
 async fn an_attribute_marked_jit_is_written() {
     let mut config = jit_config();
-    if let Some(email) = config.party_binding.person.attribute.get_mut(3) {
+    if let Some(email) = config
+        .party_binding
+        .person
+        .get_or_insert_default()
+        .attribute
+        .get_mut(3)
+    {
         email.jit = true;
     }
     let (_db, _pool, _service, app) = Box::pin(jit_app(config)).await;

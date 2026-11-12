@@ -26,6 +26,7 @@ pub mod policy;
 pub mod protect;
 pub mod provisioned;
 mod rows;
+pub mod shipped;
 pub mod source;
 pub mod store;
 
@@ -279,6 +280,13 @@ struct Step {
     attribute: String,
     /// The node id the step keeps, when it names one.
     node_id: Option<String>,
+}
+
+/// Whether `path` is an absolute openEHR path of attribute steps, each with
+/// at most one node id predicate, as a selector path must be.
+#[must_use]
+pub fn parses(path: &str) -> bool {
+    parse(path).is_some()
 }
 
 /// Parses `path`, an absolute path of attribute steps each with at most one
