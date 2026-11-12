@@ -74,8 +74,8 @@ impl Authenticator {
     ///
     /// `[auth.smart] issuer_metadata_file` is the metadata of the issuer it names,
     /// whose key set is a `jwks_file`, so its discovery document can name a
-    /// `token_endpoint`. The SMART discovery document describes the issuer
-    /// [`Described`] chooses: `[auth.smart] described_issuer`, else the one
+    /// `token_endpoint`. The SMART discovery document describes
+    /// `[auth.smart] described_issuer`, else the one
     /// issuer that is not `machines` and whose metadata is available. Every
     /// caller an issuer admits carries `patient_claim`, the live ABAC patient
     /// claim, as the `ferrohealth-smart` `PatientClaim`. The `DPoP` proof
