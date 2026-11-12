@@ -199,10 +199,9 @@ evaluation, not for production:
 - **The user is a professional `PERSON`:** the `ferroehr-definitions` one-shot
   loads the
   [default demographic definitions](default-demographic-definitions.md)
-  (`ferroehr definitions load`, copies of `deploy/definitions/`), among them
-  the professional PERSON and ROLE templates the party mapping names, before
-  the server starts, and the
-  `ferroehr-provision` service then creates the user's `PERSON` through
+  (`ferroehr definitions load`, copies of `deploy/definitions/`) before the
+  server starts. The party mapping names all five, so SCIM Users, Groups and
+  representation work, and the `ferroehr-provision` service then creates the user's `PERSON` through
   `/scim/v2/Users`, with a client credentials token the development
   `identity-issuer` signs for the client `quickstart-scim`. It stays up and
   reports healthy once the login is bound, so `docker compose up --wait`

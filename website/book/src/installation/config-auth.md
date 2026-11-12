@@ -177,7 +177,7 @@ Basic user refuses the start.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `cache_ttl` | duration | `"5min"` | How long a credential that verified is kept, so a repeat request skips the Argon2id derivation; `"0s"` turns the cache off and checks every request. The entry is named by a keyed hash of `user-id:password` under a key drawn at boot, never the password, and only a credential that verified is kept, so a wrong password always pays the derivation. The cache holds at most 4096 credentials and empties at a restart. The TTL bounds how long a removed user keeps working, which matters only until the restart that applies the new user list. Argon2id is slow by design, so with the cache off its cost bounds how many Basic requests a core can answer. |
+| `cache_ttl` | duration | `"5min"` | How long a credential that verified is kept, so a repeat request skips the Argon2id derivation; `"0s"` turns the cache off and checks every request. The entry is named by a keyed hash of `user-id:password` under a key drawn at boot, never the password, and only a credential that verified is kept, so a wrong password always pays the derivation. The cache holds at most 4096 credentials and empties at a restart. The user list and its hashes are read at boot, so removing a user or changing a password takes effect at the restart that loads the new list, which also empties the cache: the TTL never keeps a removed user working. Argon2id is slow by design, so with the cache off its cost bounds how many Basic requests a core can answer. |
 
 > [!WARNING]
 > **Every `password_hash` must meet the OWASP Argon2id floor: `m>=19456`
@@ -557,7 +557,7 @@ own accessor kind; every agreement is listed on the boot line and in
 | `consent` | `mitz` or `local` | unset | The source of the consent the exchange is conditioned on, never its legal ground. A read under it needs the consent decision reference the token carries in the field its `[[auth.federation]]` table maps to `consent.reference`, and is refused with `403` without it. Required for every NL agreement with `reads` (Wabvpz Art. 15a(1)); an organisation may not take it from Mitz, whose closed question needs a responsible professional. |
 | `reads` | list of `patient/` scopes | `[]` | The most an external caller may read; a `user/` or `system/` scope refuses the start. |
 | `writes` | list of template ids | `[]` | The templates an external person may commit; an organisation agreement takes none (EHDS Art. 13(4)), and a template the store does not hold refuses the start. |
-| `discard`, `discard_window` | bool, int | `false`, `24` | Whether an external person may discard a dispensation of the same point of care within the window (MyHealth@EU Requirements Catalogue 10.0.0, requirement 07.04). |
+| `discard`, `discard_window` | bool, duration | `false`, `"1d"` | Whether an external person may discard a dispensation of the same point of care within the window (MyHealth@EU Requirements Catalogue 10.0.0, requirement 07.04). With `discard` set, a window that is not a whole number of hours greater than zero, such as `"90min"`, refuses the start. |
 | `ehdsi_service` | `patient_summary`, `eprescription` or `orcd` | unset | The MyHealth@EU service a `contact_point` issuer's person agreement serves, whose `*_NOT_FOUND` code a request outside the patient of the treatment relationship confirmation answers ([the contact-point route](../identity-providers.md#the-myhealtheu-contact-point-route)). Required on a contact point's person agreement; on any other agreement it refuses the start. |
 | `caller_rate` | `{ requests_per_second, burst }` | **required** | The admission rate per caller, keyed on the token's subject and kept per replica: each caller gets `burst` requests at once and `requests_per_second` after that, and a request above it is answered `429` with `Retry-After` before any patient lookup, a contact point's included, and counted into the caller's [summary record](../audit.md#refusal-records-and-their-budgets). |
 | `opt_out_override` | bool | `false` | Whether a professional may read an opted-out EHR under national vital-interest access (EHDS Art. 10(2)); never on an organisation agreement. |
@@ -686,8 +686,9 @@ Each `[[auth.scim.client]]` table declares one provisioning client:
 | `scope` | The one scope a token of the client must hold. SMART on openEHR defines none for SCIM, so the value is yours to choose. |
 | `binding_issuer` | The identifier issuer of the binding keys the client provisions: the `identifier_issuer` of an `[[auth.party]]` table. Each User belongs to the one client whose `binding_issuer` issues its key, so no two clients share one. |
 
-The start is refused when `enabled` is set without `public_base_url` or
-without a client, and for a client that misses a key, is declared twice,
+The table's presence turns the endpoint on; `enabled` is a retired key and
+refuses the start. The start is refused when the table is present without
+`public_base_url` or without a client, and for a client that misses a key, is declared twice,
 shares a `binding_issuer`, names an issuer that is not of kind `machines`, or
 names a `binding_issuer` no `[[auth.party]]` table carries. It is refused too
 when the [party mapping](#authzparty_binding) lacks what a User is written
@@ -915,7 +916,7 @@ it, so the steps split between the two.
    authorization server, an `[[auth.issuer]]` of kind `machines`, and whose
    `binding_issuer` is the `identifier_issuer` of the `[[auth.party]]` your
    professionals log in through. Set `public_base_url` to the origin Entra
-   reaches. In the Helm chart, `config.the [auth.scim] table: true` also adds the
+   reaches. In the Helm chart, a `config.auth.scim` value also adds the
    `/scim/v2` path to the Ingress. `ferroehr config check` refuses a mapping
    the endpoint cannot serve.
 3. **Federate Entra's credential at your authorization server.** Entra's

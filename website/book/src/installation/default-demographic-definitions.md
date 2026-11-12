@@ -134,28 +134,47 @@ The shipped deployments load all thirteen:
   them, stored by an init container. Setting `definitions.files` replaces the
   list, so a deployment that loads its own templates lists those.
 
-The quickstart, the sandbox and the chart's `values-production.yaml` map
-only the professional `PERSON` and `ROLE`. Loading the others changes nothing
-until a mapping names them.
-
 ## The mapping that names them
 
 The worked example of [the party mapping](config-auth.md#the-party-mapping)
-maps the first five, and boots on them as they stand; the mapping on
-[Operational policy](operational-policy.md#the-mapping) maps the policy
-definitions, and a test boots it over them and commits every worked example
-on that page. A test loads the files,
+maps the first five, and boots on them as they stand. A test loads the files,
 boots that example from the page and provisions a SCIM User, a Group with the
 User as its member and a representation through it, so the example and the
-files cannot drift apart.
+files cannot drift apart. The mapping on
+[Operational policy](operational-policy.md#the-mapping) maps the policy
+definitions, and a test boots it over them and commits every worked example
+on that page. SCIM serves `/scim/v2/Groups` once the group table
+names a `display_name` and the membership table is set, and each client's
+`[[auth.party]]` table needs a `group_claim` and a
+`group_identifier_issuer` ([Groups](config-auth.md#groups)).
 
-To turn on Groups or representation in a deployment that already runs, add
-`[authz.party_binding.group]` with `[authz.party_binding.membership]`, or
-`[authz.party_binding.representation]`, as the example sets them. A change
-of the mapping changes the digest the binding side table was filled under,
-so stop every replica and run
+The quickstart, its Keycloak overlay, the hosted sandbox and the
+development lanes map all five, so SCIM Users, Groups and representation
+work there out of the box. No lane maps the patient `PERSON`, the
+provider `ORGANISATION` or the policy definitions; they are stored for a
+deployment that maps them. The Helm chart's party mapping is yours: its
+`values-production.yaml` maps the `PERSON` and the `ROLE`, and you add the
+rest when you want them.
+
+For the Helm chart, the same tables go under `config.authz.party_binding`:
+
+```yaml
+config:
+  authz:
+    party_binding:
+      group:
+        template_id: openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0
+        external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
+        display_name: "/identities[id4]/details[id5]/items[id6]"
+      membership:
+        archetype_id: openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1
+      representation:
+        archetype_id: openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1
+        relationship_codes: { at10: "254", at11: "264" }
+```
+
+Set the mapping before the first start. The binding side table is filled
+under the mapping's digest at the first start, and a server whose mapping
+differs from it refuses to start until
 [`ferroehr party-binding refill`](config-cli.md#ferroehr-party-binding-refill)
-before you start them with the new mapping. SCIM serves `/scim/v2/Groups`
-once the group table names a `display_name` and the membership table is set,
-and each client's `[[auth.party]]` table needs a `group_identifier_issuer`
-([Groups](config-auth.md#groups)).
+has run with every replica stopped.
