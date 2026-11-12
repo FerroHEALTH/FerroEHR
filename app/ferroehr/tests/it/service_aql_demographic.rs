@@ -460,7 +460,7 @@ async fn paths_into_relationships_contacts_roles_and_capabilities() {
     let jane = svc
         .party_update(
             PartyKind::Person,
-            crate::fixtures::object(party_id(&draft).to_owned()),
+            crate::fixtures::object(party_id(&draft)),
             crate::fixtures::if_match(draft.clone()),
             WriteRequest::new(typed(&jane)),
         )

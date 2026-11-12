@@ -93,8 +93,9 @@ pub struct ReverseRelationship {
 
 /// The relationships whose target is `target`, read from the current trunk
 /// version of each source party the index names, ordered by source container
-/// and then by position in its `relationships` list, each with what tells it
-/// from its siblings in that list.
+/// and then by position in its `relationships` list.
+///
+/// Each row carries what tells it from its siblings in that list.
 ///
 /// A source under restriction of processing is left out, as every read path
 /// leaves it out (`vo_head.restricted_at`).

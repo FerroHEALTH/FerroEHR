@@ -1969,6 +1969,7 @@ fn relationship_with_identifier(person: VoId, index: u32) -> Value {
 async fn a_lookup_under_every_demographic_root_reads_the_one_object() {
     use ferroehr::aql::sql::PolicyParties;
     const EACH: u32 = 50;
+    const MIDDLE: u32 = 25;
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let pools = ferroehr::db::domain::DomainPools::from_shared(&pool);
@@ -2011,11 +2012,11 @@ async fn a_lookup_under_every_demographic_root_reads_the_one_object() {
 
     // One object of each class sits in the middle of its class's numbers.
     for (class, wanted) in [
-        ("GROUP", 2 * EACH + EACH / 2),
-        ("AGENT", 3 * EACH + EACH / 2),
-        ("ACTOR", 2 * EACH + EACH / 2),
-        ("PARTY", EACH / 2),
-        ("PARTY_RELATIONSHIP", 4 * EACH + EACH / 2),
+        ("GROUP", 2 * EACH + MIDDLE),
+        ("AGENT", 3 * EACH + MIDDLE),
+        ("ACTOR", 2 * EACH + MIDDLE),
+        ("PARTY", MIDDLE),
+        ("PARTY_RELATIONSHIP", 4 * EACH + MIDDLE),
     ] {
         let aql = format!(
             "SELECT p/uid/value, id/items[at0001]/value/type \
