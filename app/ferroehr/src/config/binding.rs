@@ -276,15 +276,9 @@ pub fn errors(authz: &crate::config::authz::AuthzConfig, resolved: &Resolved) ->
     shared_audiences(resolved, &mut errors);
     providers(binding, resolved, &mut errors);
     errors.extend(jit::errors(binding, resolved, &authz.assurance));
-    // NOTE: ferrohealth-smart's `check_role_issuers` names the issuer as a plain string, so
-    // the list is judged here, where each issuer renders as its `SecretUrl` (RFC 3986 §3.2.1).
-    for issuer in &authz.rbac.role_issuers {
-        if resolved.kinds.get(issuer.expose()) != Some(&IssuerKind::Persons) {
-            errors.push(format!(
-                "the authz.rbac.role_issuers list names the issuer {issuer:?}, which is not a \
-                 trusted persons issuer"
-            ));
-        }
+    if let Err(e) = resolved.check_role_issuers("authz.rbac.role_issuers", &authz.rbac.role_issuers)
+    {
+        errors.push(crate::error::ErrorChain::new(&e).to_string());
     }
     errors
 }
