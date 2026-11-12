@@ -172,10 +172,7 @@ fn template_declares_every_optional_field_of_the_secret_bearing_sections() {
         ),
         (
             "authz.party_binding",
-            retired::live(
-                accepted_fields::<binding::PartyBindingConfig>("authz.party_binding"),
-                &["enabled", "provisional_report_days"],
-            ),
+            accepted_fields::<binding::PartyBindingConfig>("authz.party_binding"),
         ),
         (
             "database",
@@ -193,11 +190,8 @@ fn template_declares_every_optional_field_of_the_secret_bearing_sections() {
         ),
         (
             "record.multimedia",
-            retired::live(
-                accepted_fields::<crate::extensions::multimedia::config::MultimediaConfig>(
-                    "record.multimedia",
-                ),
-                &["allow_http"],
+            accepted_fields::<crate::extensions::multimedia::config::MultimediaConfig>(
+                "record.multimedia",
             ),
         ),
     ];

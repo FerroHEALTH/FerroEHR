@@ -141,20 +141,11 @@ until the family releases move them.
 
 ### Keys a release before v5.7.0 read
 
-v5.7.0 moved the configuration tree to one table per concern. Every key an
-earlier release read is refused at load with the key that replaced it, all of
-them in one pass, so `ferroehr config check --config <old file>` prints the
-whole move list for an old file:
-
-```text
-db was replaced by [database]: db.acquire_timeout_secs is database.acquire_timeout ...
-rest was replaced by [api]: rest.swagger_ui is api.openapi_ui ...
-audit.store.retention_days was replaced by audit.store.retention, a calendar period ...
-```
-
-No key is read under two names. These refusals ship in v5.7.0 only; the next
-release removes them, and an old key is then an unknown key. The full map is
-in the v5.7.0 changelog.
+v5.7.0 moved the configuration tree to one table per concern. A key an
+earlier release read is an unknown key like any other: the start is refused
+naming it, with the keys its table does read, so
+`ferroehr config check --config <old file>` lists every key an old file still
+sets. The v5.7.0 changelog maps each old key to its replacement.
 
 ## `deployment.spec_profile`
 
