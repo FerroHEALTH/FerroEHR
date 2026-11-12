@@ -668,13 +668,13 @@ async fn the_mark_is_written_by_the_commit_and_never_cleared() {
     let (db, svc) = mapped().await;
     let fixture = fixture(&svc).await;
     let mut marks = Vec::new();
-    for (_, uids) in &fixture.policy {
+    for uids in fixture.policy.values() {
         for uid in uids {
             let vo = vo_of(uid);
             marks.push((vo, mark(&db, vo).await.expect("a policy party is marked")));
         }
     }
-    for (_, uids) in &fixture.ordinary {
+    for uids in fixture.ordinary.values() {
         for uid in uids {
             assert_eq!(mark(&db, vo_of(uid)).await, None, "the ordinary {uid}");
         }
@@ -744,7 +744,7 @@ async fn the_refill_rebuilds_the_mark() {
     .await
     .expect("the refill runs");
 
-    for (_, uids) in &fixture.policy {
+    for uids in fixture.policy.values() {
         for uid in uids {
             assert!(
                 mark(&db, vo_of(uid)).await.is_some(),
@@ -752,7 +752,7 @@ async fn the_refill_rebuilds_the_mark() {
             );
         }
     }
-    for (_, uids) in &fixture.ordinary {
+    for uids in fixture.ordinary.values() {
         for uid in uids {
             assert_eq!(mark(&db, vo_of(uid)).await, None, "the ordinary {uid}");
         }
