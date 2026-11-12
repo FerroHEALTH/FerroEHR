@@ -688,7 +688,7 @@ async fn create_refuses_a_relationship_sourced_at_another_party() {
     );
 
     let reverse = svc
-        .party_reverse_relationships(other_vo.parse().expect("a container id"))
+        .party_reverse_relationships(other_vo.parse().expect("a container id"), None)
         .await
         .expect("read the reverse list");
     assert!(
@@ -805,7 +805,7 @@ async fn contribution_refuses_a_relationship_sourced_at_another_party() {
         .await
         .expect("a relationship sourced at its holder commits");
     let reverse = svc
-        .party_reverse_relationships(other_vo.parse().expect("a container id"))
+        .party_reverse_relationships(other_vo.parse().expect("a container id"), None)
         .await
         .expect("read the reverse list");
     assert_eq!(
