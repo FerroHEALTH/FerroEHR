@@ -326,9 +326,6 @@ data:
     
     [audit]
       enabled = true
-      [audit.categories]
-        [audit.categories.archetypes]
-        [audit.categories.templates]
       [audit.store]
         enabled = true
     
@@ -1028,9 +1025,9 @@ spec:
         # Roll pods when anything the process reads AT BOOT changes: the rendered
         # ferroehr.toml (wherever it lands), the mounted config files, and the
         # secret values. Hashing the ConfigMap template alone missed the last two,
-        # so a rotated passphrase or an edited Cedar policy propagated into the
+        # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 69111d209ff7ffe7bf4af6770b6db965be44e8fbfbc6f4c14ca8de0bb4c178a0
+        checksum/config: 829e0e9ca15a2b6563936b0ee33f01b897bf9baf26969478c0213ef290c6846f
         # A changed definition list rolls the pods, so the init container loads it.
         checksum/definitions: 3755fd863c9f72a1eb98519a38f76b4769be6b893a23ca13c76471c8bbcdfcf4
         prometheus.io/scrape: "true"

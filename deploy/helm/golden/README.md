@@ -19,8 +19,9 @@ without a golden is a render nothing compares.
 - `terminology.yaml` — `ci/terminology-values.yaml` (FerroTERM as a second
   pod-bearing workload, with a built index mounted from an existing claim).
 - `audit-categories.yaml` — `ci/audit-categories-values.yaml` (a German SGB V
-  § 309 controller: the access-log horizon as `retention_years: 3` and an EHDS
-  priority-category map under `[audit.categories]`).
+  § 309 controller: the access-log horizon as `retention_years: 3`; its EHDS
+  priority-category map is the audit category admin register, written once the
+  server runs).
 - `server-tls.yaml` — `ci/server-tls-values.yaml` (`[server.tls]` on, with the
   viewer, FerroBRIDGE and the ServiceMonitor scrape all calling the CDR over
   https and trusting the CA from `service.tls.caExistingSecret`).

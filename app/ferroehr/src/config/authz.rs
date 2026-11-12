@@ -20,7 +20,7 @@ use std::collections::BTreeMap;
 use ferrohealth_secret::secret_url::SecretUrl;
 use serde::{Deserialize, Serialize};
 
-use crate::config::abac_rules::{CedarConfig, RemoteConfig};
+use crate::config::abac_rules::RemoteConfig;
 
 /// The server-wide disposition for an EHR that carries no
 /// `ACCESS_CONTROL_SETTINGS` of its own — the `ehr_access_default` tri-state's
@@ -152,7 +152,8 @@ impl Default for RbacConfig {
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum AbacEngineKind {
-    /// Embedded Cedar (`cedar-policy`), policies from `abac.cedar.policy_dir`.
+    /// Embedded Cedar (`cedar-policy`), its policy set from the Cedar admin
+    /// register.
     #[default]
     Cedar,
     /// The remote policy-decision-point (`abac.remote.url`).
@@ -237,8 +238,6 @@ pub struct AbacConfig {
     /// only when no other namespace holds the same id, and matches nothing
     /// otherwise. No openEHR spec governs the claim — our own extension.
     pub patient_namespace: Option<String>,
-    /// Embedded-Cedar settings.
-    pub cedar: CedarConfig,
     /// Remote-PDP settings.
     pub remote: RemoteConfig,
     /// Whether DIRECTORY (FOLDER) operations are submitted to the PDP
@@ -269,7 +268,6 @@ impl Default for AbacConfig {
             organization_claim: "organization_id".to_owned(),
             patient_claim: "patient_id".to_owned(),
             patient_namespace: None,
-            cedar: CedarConfig::default(),
             remote: RemoteConfig::default(),
             check_directory: false,
             policy: BTreeMap::new(),
@@ -357,9 +355,6 @@ pub enum AuthzConfigError {
     /// carries the URL with its `userinfo` masked.
     #[error("authz.abac.remote.url must end with '/' (got {0:?})")]
     RemoteServerTrailingSlash(String),
-    /// `engine = cedar` without a configured policy directory.
-    #[error("authz.abac.cedar.policy_dir is required when abac.engine = cedar")]
-    CedarDirMissing,
     /// `engine = remote` without a policy for a kind the enforcement point
     /// consults — the runtime branch can only fail closed, so it is refused here.
     #[error(
@@ -391,7 +386,6 @@ impl AuthzConfig {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
 
     use super::*;
     use crate::config::abac_rules::REQUIRED_REMOTE_POLICY_KINDS;
@@ -476,10 +470,6 @@ mod tests {
                 abac: AbacConfig {
                     enabled: true,
                     engine: AbacEngineKind::Cedar,
-                    cedar: CedarConfig {
-                        policy_dir: Some(PathBuf::from("/tmp/policies")),
-                        ..CedarConfig::default()
-                    },
                     policy,
                     ..AbacConfig::default()
                 },
@@ -505,10 +495,6 @@ mod tests {
         let c = AuthzConfig {
             abac: AbacConfig {
                 enabled: true,
-                cedar: CedarConfig {
-                    policy_dir: Some(PathBuf::from("/tmp/p")),
-                    ..CedarConfig::default()
-                },
                 policy,
                 ..AbacConfig::default()
             },
@@ -638,16 +624,12 @@ mod tests {
             Err(AuthzConfigError::RemotePolicyMissing("directory"))
         );
 
-        // The Cedar engine reads its policies from disk, so the map is not
-        // required there.
+        // The Cedar engine reads its policies from the Cedar register, so the
+        // map is not required there.
         let cedar = AuthzConfig {
             abac: AbacConfig {
                 enabled: true,
                 engine: AbacEngineKind::Cedar,
-                cedar: CedarConfig {
-                    policy_dir: Some(PathBuf::from("/etc/ferroehr/policies")),
-                    ..CedarConfig::default()
-                },
                 ..AbacConfig::default()
             },
             ..AuthzConfig::default()
@@ -664,10 +646,6 @@ mod tests {
             abac: AbacConfig {
                 enabled: true,
                 engine: AbacEngineKind::Cedar,
-                cedar: CedarConfig {
-                    policy_dir: Some(PathBuf::from("/etc/ferroehr/policies")),
-                    ..CedarConfig::default()
-                },
                 check_directory: true,
                 ..AbacConfig::default()
             },
@@ -679,8 +657,11 @@ mod tests {
         );
     }
 
+    /// The Cedar engine takes its policy set from the Cedar register, so it
+    /// needs no configuration of its own, and `[authz.abac.cedar]` is an
+    /// unknown table.
     #[test]
-    fn cedar_requires_policy_dir() {
+    fn cedar_needs_no_configuration() {
         let c = AuthzConfig {
             abac: AbacConfig {
                 enabled: true,
@@ -689,7 +670,11 @@ mod tests {
             },
             ..AuthzConfig::default()
         };
-        assert_eq!(c.validate(), Err(AuthzConfigError::CedarDirMissing));
+        assert_eq!(c.validate(), Ok(()));
+        assert!(
+            toml::from_str::<AbacConfig>("[cedar]\npolicy_dir = \"/etc/ferroehr\"").is_err(),
+            "[authz.abac.cedar] is no longer a configuration table"
+        );
     }
 
     #[test]

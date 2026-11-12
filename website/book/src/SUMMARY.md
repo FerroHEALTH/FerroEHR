@@ -92,6 +92,7 @@
   - [Preferences & the theme](viewer/preferences.md)
 - [Operations](operations.md)
   - [Admin & messaging APIs](operations-admin-apis.md)
+  - [Operational policy](operational-policy.md)
   - [Usage report](usage-report.md)
   - [Returning to the original state](operations-reset.md)
   - [Decommissioning](operations-decommissioning.md)

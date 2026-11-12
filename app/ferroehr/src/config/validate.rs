@@ -33,16 +33,6 @@ impl FerroEhrConfig {
                 .into_iter()
                 .map(ConfigError::semantic),
         );
-        let categories = &self.audit.categories;
-        errors.extend(categories.errors().into_iter().map(ConfigError::semantic));
-        if let Some(delay) = &self.privacy.access_delay {
-            errors.extend(
-                delay
-                    .errors(categories)
-                    .into_iter()
-                    .map(ConfigError::semantic),
-            );
-        }
         if let Some(cors) = &self.api.cors {
             errors.extend(cors.errors().into_iter().map(ConfigError::semantic));
         }

@@ -57,6 +57,7 @@ const EXTENSION_ROOTS: &[&str] = &[
     "/admin/outbox",
     "/admin/party",
     "/admin/query",
+    "/admin/registers",
     "/admin/report",
     "/admin/research-objection",
     "/admin/restriction",

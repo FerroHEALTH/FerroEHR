@@ -4,10 +4,9 @@
 //! The boot rules of `[authz.abac]` and the two engines' own tables.
 //!
 //! The policy kinds, the parameters each may carry, what each engine needs,
-//! and `[authz.abac.cedar]` and `[authz.abac.remote]`. No openEHR spec governs RBAC or ABAC:
+//! and `[authz.abac.remote]`; the Cedar engine's policy set is the Cedar admin
+//! register ([`crate::policy_register`]). No openEHR spec governs RBAC or ABAC:
 //! our own design.
-
-use std::path::PathBuf;
 
 use ferrohealth_secret::secret_url::RedactedUrl;
 use ferrohealth_smart::config::endpoint::EndpointSection;
@@ -41,10 +40,7 @@ impl AbacConfig {
         self.validate_policy_rules()?;
         match self.engine {
             AbacEngineKind::Remote => self.validate_remote_engine(),
-            AbacEngineKind::Cedar => match self.cedar.policy_dir {
-                Some(_) => Ok(()),
-                None => Err(AuthzConfigError::CedarDirMissing),
-            },
+            AbacEngineKind::Cedar => Ok(()),
         }
     }
 
@@ -93,20 +89,6 @@ impl AbacConfig {
         }
         Ok(())
     }
-}
-
-/// The embedded-Cedar engine settings.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(default, deny_unknown_fields)]
-pub struct CedarConfig {
-    /// Directory of `*.cedar` policy files (required when `engine = cedar`).
-    pub policy_dir: Option<PathBuf>,
-    /// Optional periodic hot-reload interval; off when unset.
-    pub reload_interval: Option<ferrohealth_config::units::Duration>,
-    /// Retired in v5.7.0: refused at load, naming `reload_interval`.
-    #[serde(skip_serializing)]
-    pub reload_secs: ferrohealth_config::removed::Removed,
 }
 
 /// The remote-PDP client settings.

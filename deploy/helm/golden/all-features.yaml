@@ -478,8 +478,8 @@ stringData:
 ---
 # Source: ferroehr/templates/secret.yaml
 # Mounted config files (TOML/PEM) at /etc/ferroehr — file-shaped material an
-# in-TOML `*_path`/`*_file` key points at: the PGP key, Cedar/ABAC policies,
-# ATNA PEMs, a JWKS blob. Mounted alongside ferroehr.toml.
+# in-TOML `*_path`/`*_file` key points at: the PGP key, ATNA PEMs, a JWKS
+# blob. Mounted alongside ferroehr.toml.
 apiVersion: v1
 kind: Secret
 metadata:
@@ -634,9 +634,6 @@ data:
       enterprise_site_id = "site-1"
       fail_mode = "closed"
       source_id = "ferroehr-prod"
-      [audit.categories]
-        [audit.categories.archetypes]
-        [audit.categories.templates]
       [audit.fhir_feed]
       [audit.store]
         enabled = true
@@ -684,8 +681,6 @@ data:
         engine = "cedar"
         organization_claim = "organization_id"
         patient_claim = "patient_id"
-        [authz.abac.cedar]
-          policy_dir = "/etc/ferroehr"
       [authz.federation]
         agreement = []
       [authz.party_binding]
@@ -1943,9 +1938,9 @@ spec:
         # Roll pods when anything the process reads AT BOOT changes: the rendered
         # ferroehr.toml (wherever it lands), the mounted config files, and the
         # secret values. Hashing the ConfigMap template alone missed the last two,
-        # so a rotated passphrase or an edited Cedar policy propagated into the
+        # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: e665050352a343a5fc11867d7d42c43f199a7a28b330265e9eefdaff5a146a20
+        checksum/config: 5cadefe00182d9603279afb80e7ea3ba762f685c278b688602581397694d8951
         # A changed definition list rolls the pods, so the init container loads it.
         checksum/definitions: 3755fd863c9f72a1eb98519a38f76b4769be6b893a23ca13c76471c8bbcdfcf4
         prometheus.io/scrape: "true"

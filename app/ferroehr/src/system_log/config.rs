@@ -429,11 +429,6 @@ pub struct AuditConfig {
     /// (<https://eur-lex.europa.eu/eli/reg/2016/679/oj>) and every access under
     /// this deployment carries it. Unset records nothing rather than a guess.
     pub legal_basis: Option<String>,
-    /// `[audit.categories]` — the template and archetype map every access is
-    /// classified through by EHDS priority category (Annex II 3.2(c)). Empty by
-    /// default, so the map FerroEHR ships applies; an unmapped access is
-    /// recorded `unclassified`.
-    pub categories: crate::system_log::categories::CategoryMapConfig,
     /// `[audit.store]` — the local Audit Record Repository.
     pub store: StoreConfig,
     /// `[audit.syslog]` — the classic DICOM-over-syslog feed; absent, off.
@@ -460,7 +455,6 @@ impl Default for AuditConfig {
             purpose_codes: Vec::new(),
             emergency_purpose_codes: Vec::new(),
             legal_basis: None,
-            categories: crate::system_log::categories::CategoryMapConfig::default(),
             store: StoreConfig::default(),
             syslog: None,
             fhir_feed: None,
@@ -490,10 +484,6 @@ pub struct AuditPosture {
     /// Calendar years the local store keeps records, when the horizon is stated
     /// in years.
     pub retention_years: Option<u32>,
-    /// The digest of the `[audit.categories]` map every access record is
-    /// classified through and carries (EHDS Annex II 3.2(c)); `None` only for a
-    /// map the boot validation refuses.
-    pub category_map: Option<crate::system_log::categories::MapDigest>,
 }
 
 impl AuditPosture {
@@ -512,8 +502,6 @@ impl AuditPosture {
                 Retention::Years(years) => Some(years),
                 Retention::Forever | Retention::Days(_) => None,
             },
-            // NOTE: an invalid map has no digest; `FerroEhrConfig::validate` refuses to boot on it.
-            category_map: config.categories.compile().ok().map(|map| map.digest()),
         }
     }
 
@@ -583,7 +571,6 @@ mod tests {
             FhirFeedConfig::default().endpoint.retry.max_backoff,
             Duration::from_mins(1)
         );
-        assert!(c.categories.templates.is_empty() && c.categories.archetypes.is_empty());
     }
 
     /// The store states one horizon: forever, days or years.

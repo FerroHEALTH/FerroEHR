@@ -17,6 +17,9 @@ mapping's digest with the replica leases (`fill`), and the
 configuration is `config::binding::person`),
 `origins` (the
 `[origins]` register of recognised data origins, EHDS Annex II 3.4),
+`policy_register` (the operational-policy admin registers: the audit category
+map, the access delay and the Cedar policy set, versioned in the clinical
+`policy_register` table and read again on every request),
 `licence`, `ids`, `extensions`, `banner`, `decommission` (the `ferroehr db
 erase` operation: blobs first, then `db::erase_schema` drops every schema,
 behind a confirmation naming the instance), `manufacturer` (the one source of

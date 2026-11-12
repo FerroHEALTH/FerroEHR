@@ -76,7 +76,7 @@ related imaging reports; (e) medical test results, including laboratory and
 other diagnostic results and related reports; and (f) discharge reports", and
 any category a Member State adds in national law. Which of them an instance
 holds depends on the templates it loads, and the deployment declares that in
-the [`[audit.categories]`](../installation/config-audit.md#auditcategories)
+the [audit category register](../installation/config-audit.md#the-audit-category-register)
 map, which classifies every access record. FerroEHR ships no such map. Images
 are held as `DV_MULTIMEDIA` attachments, optionally offloaded to an
 S3-compatible store ([S3 multimedia](../beyond-core/s3-multimedia.md)), or as

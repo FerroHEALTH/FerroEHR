@@ -47,6 +47,8 @@
 //!   and its mark on `vo_head`.
 //! - [`opt_out`] — the EHDS Art. 10 opt-out from access through the access
 //!   services and its mark on `ehr`.
+//! - [`policy_register`] — the versions of the operational-policy admin
+//!   registers.
 //! - [`statistics`] — the counts and listings behind the admin statistics.
 //! - [`integrity`] — the reads of the storage-integrity sweep and the node rebuild.
 //! - [`template_repo`] — the OPT 1.4 `template_store` and the `template_ref`
@@ -88,6 +90,7 @@ pub mod node_repo;
 pub mod node_write;
 pub mod opt_out;
 pub mod party_reverse;
+pub mod policy_register;
 pub mod promoted;
 pub mod row;
 pub mod slim;

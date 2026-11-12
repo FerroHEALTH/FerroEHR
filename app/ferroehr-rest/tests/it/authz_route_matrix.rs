@@ -393,6 +393,9 @@ const ADMIN_READ: &[(&str, &str)] = &[
     ("GET", "/admin/party/identifiers"),
     // The outbox feed read (#4786); a read moves no cursor.
     ("GET", "/admin/outbox/{reader}"),
+    // The operational-policy registers and their versions (#5442).
+    ("GET", "/admin/registers/{register}"),
+    ("GET", "/admin/registers/{register}/history"),
 ];
 
 /// Admin-class writes (relative to their namespace).
@@ -449,6 +452,9 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     ("POST", "/admin/integrity/rebuild-nodes"),
     // The outbox acknowledgement moves the reader's cursor (#4786).
     ("POST", "/admin/outbox/{reader}/ack"),
+    // A new version of an operational-policy register decides every request
+    // after it (#5442).
+    ("PUT", "/admin/registers/{register}"),
 ];
 
 /// The ITI-81 audit retrieval: the node's security-surveillance record, so the

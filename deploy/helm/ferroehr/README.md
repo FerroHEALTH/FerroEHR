@@ -306,8 +306,6 @@ Kubernetes: `>=1.36.0-0`
 | config.api.body_limit | string | `"16MiB"` |  |
 | config.api.openapi_ui | string | `"private"` |  |
 | config.api.terminology | bool | `false` |  |
-| config.audit.categories.archetypes | object | `{}` |  |
-| config.audit.categories.templates | object | `{}` |  |
 | config.audit.enabled | bool | `true` |  |
 | config.audit.store.enabled | bool | `true` |  |
 | config.audit.store.retention | string | unset |  |

@@ -39,7 +39,8 @@ use openehr_rm::prelude::Composition;
 
 use crate::api::RequestParts;
 use crate::extensions::access::authn::{Principal, current_principal};
-use crate::extensions::access::authz::{AbacGate, ContentRules};
+use crate::extensions::access::authz::AbacGate;
+use crate::extensions::access::authz::content::ContentRules;
 use crate::overview::error::RestError;
 use ferroehr::config::authz::AbacEngineKind;
 use ferroehr::storage::version_repo::meta::VersionContent;
@@ -432,12 +433,7 @@ struct ContentAttrs {
 /// The category attribute of `content`, as the access record spells each
 /// category: a `<system>|<code>` token, `none` or `unclassified`.
 fn category_attr(rules: &ContentRules, content: &AccessedContent, written: bool) -> Attr {
-    Attr::Set(
-        rules
-            .categories
-            .classify(content, written)
-            .stored_categories(),
-    )
+    Attr::Set(rules.classify(content, written).stored_categories())
 }
 
 /// The attributes of objects identified by `objects`, with `origins` as the
