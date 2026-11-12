@@ -895,11 +895,6 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
-        "openEHR-EHR-OBSERVATION.apgar.v1.adls",
-        ValidationCode::Vttbk,
-        "source: binds LOINC codes at paths through the use_node events at0026 to at0028, which name no node the archetype defines there (master07 VTTBK), as in the 1.4 source",
-    ),
-    (
         "openEHR-EHR-OBSERVATION.audiogram.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
@@ -1514,6 +1509,11 @@ const ADJUDICATED: &[ValidityRefusal] = &[
 /// The refusals a LOINC-serving terminology adds, and the one it changes: a
 /// row here replaces the [`ADJUDICATED`] row of the same file.
 const ADJUDICATED_LOINC: &[ValidityRefusal] = &[
+    (
+        "openEHR-EHR-OBSERVATION.apgar.v1.adls",
+        ValidationCode::Vetdf,
+        "source: binds the LOINC answer codes LA6713 to LA6727 without the check digit every LOINC code carries after its hyphen, so LOINC defines none of them (master03 VETDF)",
+    ),
     (
         "openEHR-EHR-OBSERVATION.braden_scale-q.v0.adls",
         ValidationCode::Vasid,
