@@ -102,11 +102,12 @@ pub(crate) async fn version_get_by_id(
         VersionedPartyVersionGetByIdParams::from_request,
         VersionedPartyVersionGetByIdParams::PARAMS,
     )?;
-    let vo = p.versioned_object_uid.clone();
+    let version = parse_version_uid(&p.version_uid)?.1;
+    let vo = p.versioned_object_uid;
     let vo_id = super::object_of(&vo)?;
     let mut resp = state
         .backend()
-        .versioned_party_version_get_by_id(vo_id, parse_version_uid(&p.version_uid)?.1)
+        .versioned_party_version_get_by_id(vo_id, version)
         .await?;
     let served = version_reverse_relationships(&state, vo_id, &mut resp.body).await?;
     // ETag from VERSION.uid.value; Last-Modified from the served

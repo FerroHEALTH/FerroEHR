@@ -50,7 +50,7 @@ pub(crate) async fn create(
     let _p = parts.decode(AgentCreateParams::from_request, AgentCreateParams::PARAMS)?;
     let body = decode_party_body(kind, h, &parts.body, state.config().spec_profile)?;
     let pending_tags = item_tags::pending(h)?;
-    let mut resp = state
+    let resp = state
         .backend()
         .party_create(
             kind,
@@ -64,16 +64,28 @@ pub(crate) async fn create(
         .await?;
     // The party must exist first (`item_tag.target_vo_id` FK), so the
     // request-header tags are persisted after the create.
-    persist_request_tags(&state, kind, pending_tags, &mut resp).await?;
-    let served = written_reverse_relationships(&state, h, &mut resp).await?;
-    let mut out = write_party(
-        &state,
-        kind,
-        h,
-        &base,
-        (StatusCode::CREATED, StatusCode::CREATED),
-        &resp,
-    );
+    let statuses = (StatusCode::CREATED, StatusCode::CREATED);
+    respond_written(&state, kind, h, &base, statuses, pending_tags, resp).await
+}
+
+/// Persists the request-header tags of a committed create or update, adds the
+/// stable-profile `reverse_relationships` to its representation and renders
+/// the write response with the minimal and representation `statuses`.
+///
+/// # Errors
+/// The tag write and the index read failures.
+async fn respond_written(
+    state: &AppState,
+    kind: PartyKind,
+    h: &HeaderMap,
+    base: &str,
+    statuses: (StatusCode, StatusCode),
+    pending_tags: item_tags::PendingItemTags,
+    mut resp: ServiceResponse,
+) -> Result<Response, RestError> {
+    persist_request_tags(state, kind, pending_tags, &mut resp).await?;
+    let served = written_reverse_relationships(state, h, &mut resp).await?;
+    let mut out = write_party(state, kind, h, base, statuses, &resp);
     super::set_item_tag_headers(&mut out, &resp);
     audit_served(&mut out, served);
     Ok(out)
@@ -107,20 +119,9 @@ pub(crate) async fn update(
         .party_update(kind, vo_id, precondition, request)
         .await
     {
-        Ok(mut resp) => {
-            persist_request_tags(&state, kind, pending_tags, &mut resp).await?;
-            let served = written_reverse_relationships(&state, h, &mut resp).await?;
-            let mut out = write_party(
-                &state,
-                kind,
-                h,
-                &base,
-                (StatusCode::NO_CONTENT, StatusCode::OK),
-                &resp,
-            );
-            super::set_item_tag_headers(&mut out, &resp);
-            audit_served(&mut out, served);
-            Ok(out)
+        Ok(resp) => {
+            let statuses = (StatusCode::NO_CONTENT, StatusCode::OK);
+            respond_written(&state, kind, h, &base, statuses, pending_tags, resp).await
         }
         // person_update.yaml: `If-Match` mismatch → 412 + latest version_uid.
         Err(e) if super::is_precondition(&e) => {
@@ -154,18 +155,15 @@ pub(crate) async fn get(
     // mapping; reject a simplified Content-Type/Accept uniformly.
     crate::formats::dispatch::guard_non_templated(&parts.headers)?;
     let h = &parts.headers;
-    let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
-    let address = parse_uid_based_id(&p.uid_based_id)?;
-    let vo_id = address.vo_id;
-    let pinned = address.tree().is_some() || p.version_at_time.is_some();
-    let mut resp = state
-        .backend()
-        .party_get(kind, address, p.version_at_time)
-        .await?;
     // A deleted current version → Null body → 204 (like composition_get).
-    if resp.is_empty() {
+    let Some(Addressed {
+        vo_id,
+        pinned,
+        mut resp,
+    }) = read_addressed(&state, Some(kind), &parts).await?
+    else {
         return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
-    }
+    };
     let profile = state.config().spec_profile;
     let mut served = Vec::new();
     if serves_reverse_relationships(profile, h) {
@@ -175,6 +173,46 @@ pub(crate) async fn get(
     let mut out = read_party(kind, h, &resp, profile);
     audit_served(&mut out, served);
     Ok(out)
+}
+
+/// One party version a read addressed.
+pub(super) struct Addressed {
+    /// The party's version container.
+    pub(super) vo_id: VoId,
+    /// Whether the read named one version, by its id or at a time.
+    pub(super) pinned: bool,
+    /// The version read.
+    pub(super) resp: ServiceResponse,
+}
+
+/// Reads the party version the `uid_based_id` and `version_at_time` of
+/// `parts` address, of `kind` or, when `None`, of the kind it is stored as;
+/// `None` when that version is a deletion marker.
+///
+/// # Errors
+/// The `400` of a malformed address and the read's own refusals.
+pub(super) async fn read_addressed(
+    state: &AppState,
+    kind: Option<PartyKind>,
+    parts: &RequestParts,
+) -> Result<Option<Addressed>, RestError> {
+    let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
+    let address = parse_uid_based_id(&p.uid_based_id)?;
+    let vo_id = address.vo_id;
+    let pinned = address.tree().is_some() || p.version_at_time.is_some();
+    let kind = match kind {
+        Some(kind) => kind,
+        None => state.backend().party_kind(vo_id).await?,
+    };
+    let resp = state
+        .backend()
+        .party_get(kind, address, p.version_at_time)
+        .await?;
+    Ok((!resp.is_empty()).then_some(Addressed {
+        vo_id,
+        pinned,
+        resp,
+    }))
 }
 
 /// The instant a party read serves `reverse_relationships` at: `None`, now,

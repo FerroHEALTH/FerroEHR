@@ -21,10 +21,6 @@ use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use openehr_its::rest::generated::demographic::AgentGetParams;
-
-use ferroehr::versioning::object_version_id::parse_uid_based_id;
-
 use crate::api::{RequestParts, guarded_handler};
 use crate::negotiate;
 use crate::overview::error::RestError;
@@ -99,18 +95,14 @@ guarded_handler! {
 /// The `party_reverse_relationships_get` operation.
 pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
-    let address = parse_uid_based_id(&p.uid_based_id)?;
-    let vo_id = address.vo_id;
-    let pinned = address.tree().is_some() || p.version_at_time.is_some();
-    let kind = state.backend().party_kind(vo_id).await?;
-    let resp = state
-        .backend()
-        .party_get(kind, address, p.version_at_time)
-        .await?;
-    if resp.is_empty() {
+    let Some(super::party::Addressed {
+        vo_id,
+        pinned,
+        resp,
+    }) = super::party::read_addressed(&state, None, &parts).await?
+    else {
         return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
-    }
+    };
     let at = super::party::pinned_instant(pinned, &resp);
     let reverse = state
         .backend()
