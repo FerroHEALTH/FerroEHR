@@ -44,7 +44,7 @@ fn config(toml: &str) -> FerroEhrConfig {
 /// mapping, as the server installs it, honouring `ceiling`.
 async fn replica(pool: &sqlx::PgPool, ceiling: GrantCeiling) -> FerroEhrService {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool));
-    svc.seed_policy_definitions()
+    svc.seed_default_definitions()
         .await
         .expect("the policy definitions are seeded");
     let config = config("");

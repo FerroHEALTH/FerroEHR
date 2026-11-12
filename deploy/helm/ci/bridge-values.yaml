@@ -51,20 +51,6 @@ config:
       # The healthcare provider this deployment acts for (an example id
       # under the OID arc 2.999).
       provider: { issuer: "urn:oid:2.999.7.9", id: "bridge" }
-      # The party mapping over the professional PERSON and ROLE pair of
-      # deploy/definitions/professional/, which an install stores before boot
-      # through `definitions.files` (basic-auth-values.yaml carries them). The
-      # key is written under the identifier_type the [[auth.party]] table above
-      # looks logins up under, or no login of the issuer binds.
-      person:
-        template:
-          - template_id: openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0
-            default: true
-            key: { path: "/details[id2]/items[id3]", type: login }
-            user_name: { path: "/details[id2]/items[id3]", type: scim_user_name }
-            external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
-      professional_role:
-        template_id: openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0
       basic_user:
         - user: clinician
           key_issuer: urn:ferroehr:basic-user

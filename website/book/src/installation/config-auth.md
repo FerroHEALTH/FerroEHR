@@ -281,26 +281,37 @@ paths.
 | `[authz.party_binding.group]` | `template_id`, `external_id`, `display_name` | The template of a SCIM Group's `GROUP`, its `externalId` selector and the path of its `displayName`. |
 | `[authz.party_binding.membership]` | `archetype_id` | The `PARTY_RELATIONSHIP` archetype of a group membership, as each membership's `archetype_node_id` carries it (the interface form of an ADL 2 id, `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1`). SCIM serves `/Groups` when the group table names a `display_name` and this table is set. |
 | `[authz.party_binding.representation]` | `archetype_id`, `relationship_codes` | The `PARTY_RELATIONSHIP` archetype a representative acts through, from the representative's `PERSON` to the subject's, and the code of the openEHR `subject_relationship` group each of its relationship types maps to. |
+| `[authz.party_binding.patient]` | `template_id`, `identifier`, `name` | The template of a patient's `PERSON`, the subject of an EHR and the target of a representation: the path of the `ELEMENT` holding its identifiers (each a `DV_IDENTIFIER` of any type and issuer) and the path of its name. A `PERSON` written under this template is validated against it. |
 
-A worked example over FerroEHR's [default demographic
-definitions](default-demographic-definitions.md), with the Microsoft Entra
-object id as the binding key. Load the five files before the server starts
-and this mapping boots as it stands:
+With no mapping key set, every section maps FerroEHR's [default
+demographic definitions](default-demographic-definitions.md), which the
+server stores as it boots when the definition store holds no definition of
+their id. An empty configuration has this mapping:
 
 ```toml
 [[authz.party_binding.person.template]]
 template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
 default = true
-key = { path = "/details[id2]/items[id3]", type = "guid" }
+key = { path = "/details[id2]/items[id3]", type = "login" }
 user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
 external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
 
 [[authz.party_binding.person.attribute]]
 scim = "name.formatted"
-oidc = "name"
-jit = true
 name = true
 path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
+
+[[authz.party_binding.person.attribute]]
+scim = "name.givenName"
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id7]" }
+
+[[authz.party_binding.person.attribute]]
+scim = "name.familyName"
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id8]" }
+
+[[authz.party_binding.person.attribute]]
+scim = 'emails[type eq "work"].value'
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/contacts[id9]/addresses[id10]/details[id11]/items[id12]" }
 
 [authz.party_binding.professional_role]
 template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
@@ -316,13 +327,47 @@ archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1"
 [authz.party_binding.representation]
 archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1"
 relationship_codes = { at10 = "254", at11 = "264" }
+
+[authz.party_binding.patient]
+template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0"
+identifier = "/details[id2]/items[id3]"
+name = "/identities[id6]/details[id7]/items[id8]"
 ```
 
 The template ids are the ADL 2 ids of the stored archetypes, and the two
 relationship archetypes are named in the interface form each relationship's
 `archetype_node_id` carries. The representation archetype's types are
 `at10` (parent) and `at11` (guardian), mapped to `254|parent|` and
-`264|guardian|` of the openEHR `subject_relationship` group.
+`264|guardian|` of the openEHR `subject_relationship` group. The default
+key is of the type `login`, so an `[[auth.party]]` table whose
+`identifier_type` is `login` needs no mapping key.
+
+A section you set replaces that section's default whole: a deployment that
+sets `[[authz.party_binding.person.template]]` maps its own attributes too.
+A deployment with templates of its own sets the sections that name them and
+stores its templates before boot (`ferroehr definitions load`); the server
+stores nothing under its ids, and still stores the default definitions,
+which no section of its mapping then names.
+
+A worked example over the default definitions, with the Microsoft Entra
+object id as the binding key. It sets the person section, and every other
+section keeps its default:
+
+```toml
+[[authz.party_binding.person.template]]
+template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
+default = true
+key = { path = "/details[id2]/items[id3]", type = "guid" }
+user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
+external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
+
+[[authz.party_binding.person.attribute]]
+scim = "name.formatted"
+oidc = "name"
+jit = true
+name = true
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
+```
 
 With Microsoft Entra ID, map the object id to `externalId` (Entra's
 matching) and to the binding-key attribute (the binding): two attributes,
@@ -832,10 +877,14 @@ demographic `GROUP` of the group template:
 - its `displayName` is the `GROUP`'s `PARTY_IDENTITY`, unique across the live
   Groups after case folding, so a duplicate is **409** `uniqueness`;
 - its `externalId` is a `DV_IDENTIFIER` at the `external_id` selector under
-  the `group_identifier_issuer` of the `[[auth.party]]` table whose
-  `identifier_issuer` is the client's `binding_issuer`, so the group claim of
-  that issuer's tokens matches it. `ferroehr config check` refuses a client
-  whose table sets no `group_identifier_issuer`;
+  the client's group issuer: the `group_identifier_issuer` of the
+  `[[auth.party]]` table whose `identifier_issuer` is the client's
+  `binding_issuer`, so the group claim of that issuer's tokens matches it.
+  When that table sets none, the group issuer is the `binding_issuer` with
+  `/groups` appended (`urn:example:login` gives `urn:example:login/groups`),
+  with any trailing `/` of the `binding_issuer` dropped first. A deployment
+  whose tokens assert groups sets `group_claim` and a
+  `group_identifier_issuer` in the table, and that value is the group issuer;
 - each member holds one inline `PARTY_RELATIONSHIP` of the membership
   archetype, with its `PERSON` as `source` and the `GROUP` as `target`,
   stored in the member's own version (RM demographic §Party Relationships).
@@ -900,20 +949,11 @@ Microsoft Entra ID provisions through a non-gallery enterprise application.
 FerroEHR validates the access token your own authorization server issues to
 it, so the steps split between the two.
 
-1. **Map the person template.** Give the default
-   `[[authz.party_binding.person.template]]` a `user_name` and an
-   `external_id` selector, and map the attributes Entra sends, for example:
-
-   ```toml
-   [[authz.party_binding.person.attribute]]
-   scim = "name.formatted"
-   name = true
-   path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
-
-   [[authz.party_binding.person.attribute]]
-   scim = 'emails[type eq "work"].value'
-   path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/contacts[id9]/addresses[id10]/details[id11]/items[id12]" }
-   ```
+1. **Map the person template.** The default
+   [party mapping](#the-party-mapping) maps `userName`, `externalId`, the
+   formatted, given and family name and the work email Entra sends. Set the
+   person section only to map more, or to key the binding on the object id
+   as the worked example there does.
 
    A value path such as `emails[type eq "work"].value` serves the value and
    its `type`. FerroEHR holds one value per `type` and no preference among

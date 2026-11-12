@@ -34,7 +34,7 @@ const MACHINES: &str = "https://grants.machines.example";
 /// `party` when given, and it listens for grant changes when `listen`.
 async fn replica(pool: &PgPool, party: Option<PgPool>, listen: bool) -> Router {
     let mut svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool));
-    svc.seed_policy_definitions()
+    svc.seed_default_definitions()
         .await
         .expect("the policy definitions are seeded");
     let config = ferroehr::config::FerroEhrConfig::default();

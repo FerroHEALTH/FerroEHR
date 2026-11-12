@@ -462,12 +462,25 @@ binary carries a default template of each (`party_binding::policy::DEFINITIONS`,
 from `app/ferroehr/assets/definitions/policy/`); each boot stores one
 through the normal definition path only when no definition of its id is
 stored, never overwriting, never refusing a deployment's change and never
-re-seeding over it (`seed_policy_definitions`). After that they are ordinary
+re-seeding over it (`seed_default_definitions`). After that they are ordinary
 definitions, versioned and replaced through the definition API, and every
 write of a policy party is validated against its own template. The
 recognition runs with or without a party mapping and enters no mapping
 digest: the grant rows it derives do not depend on the mapping. **Our own
 design.**
+
+The default demographic definitions of `deploy/definitions/` (the
+professional `PERSON` and `ROLE`, the care-team `GROUP`, the membership and
+representation `PARTY_RELATIONSHIP`s, the patient `PERSON` and the provider
+`ORGANISATION`) are carried and seeded the same way
+(`party_binding::shipped::DEFINITIONS`), and each `[authz.party_binding]`
+mapping section defaults to them (the `Default` of `PartyBindingConfig`), so
+an empty configuration boots with SCIM Users, Groups and representation. A
+section a deployment sets replaces that section's default whole, and nothing
+is seeded under a deployment's own ids. A SCIM client whose `[[auth.party]]`
+table names no `group_identifier_issuer` writes its Groups' `externalId`s
+under its `binding_issuer` with `/groups` appended
+(`ScimClient::group_issuer`). **Our own design.**
 
 **Who writes and reads a policy party.** A policy party is an `AGENT` or a
 `ROLE` whose root archetype is a policy archetype or a specialisation, under

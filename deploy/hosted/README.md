@@ -88,7 +88,7 @@ limits, with what each used on 2026-10-27 in the local rehearsal of #4242
 | **Total** | **6528m** | |
 
 That leaves about 1.1 GiB for the OS, Docker and the page cache. The one-shots
-(`identity-issuer-ready`, `ferropix-seed`, `ferroehr-definitions`) live for seconds and carry no limit; `ferroehr-definitions` stores the professional PERSON and ROLE templates the party mapping names before the CDR starts.
+(`identity-issuer-ready`, `ferropix-seed`) live for seconds and carry no limit. The CDR stores its default demographic definitions itself as it boots.
 
 ## What is in this directory
 
@@ -154,9 +154,9 @@ every step. Three callers:
    seed-only) — verbs `wipe` (drop the CDR's five schemas on the private
    database box, plus the four superseded first-generation ones a box seeded
    before the storage rewrite still carries, with the DSN this box already
-   holds), `deploy` (as above: the `ferroehr-definitions` one-shot loads the
-   party-binding templates into the wiped store, then the CDR boots fresh and
-   re-runs its migrations; #5406) and `identities` (below).
+   holds), `deploy` (as above: the CDR boots fresh on the wiped store, re-runs
+   its migrations and stores its default definitions; #5406) and `identities`
+   (below).
 
 The deploy key is restricted on the box to `deploy.sh` (`command=` in
 `cloud-init.yaml`), which reads `SSH_ORIGINAL_COMMAND` and accepts exactly

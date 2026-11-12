@@ -16,12 +16,13 @@ mapping's digest with the replica leases (`fill`), and the
 `ferrohealth-smart` `PartySource` over it, no cache; the mapping's
 configuration is `config::binding::person`; `policy` recognises the policy
 parties by archetype and carries their default definitions from
-`assets/definitions/policy/`, which `service::demographic::policy_definitions`
-seeds at boot when absent; `grants` derives the system `AGENT`s and the
-policy `ROLE` capabilities into the side table in each commit, refuses a
-capability above `[authz.grants] allowed`, and keeps them in memory per
-replica (`LiveGrants`, invalidated through `NOTIFY`) for
-`Capabilities::current()`),
+`assets/definitions/policy/`, and `shipped` carries the default demographic
+definitions of `deploy/definitions/` and the ids the default mapping names;
+`service::demographic::default_definitions` seeds both sets at boot when
+absent; `grants` derives the system `AGENT`s and the policy `ROLE`
+capabilities into the side table in each commit, refuses a capability above
+`[authz.grants] allowed`, and keeps them in memory per replica
+(`LiveGrants`, invalidated through `NOTIFY`) for `Capabilities::current()`),
 `origins` (the
 `[origins]` register of recognised data origins, EHDS Annex II 3.4),
 `policy_register` (the operational-policy admin registers: the audit category

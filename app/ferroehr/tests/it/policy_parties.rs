@@ -24,7 +24,7 @@ use ferroehr::party_binding::policy::{PolicyKind, PolicyRole};
 use ferroehr::party_binding::protect;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::definition::load::{Loaded, SourceFormat};
-use ferroehr::service::demographic::policy_definitions::Seeded;
+use ferroehr::service::demographic::default_definitions::Seeded;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
@@ -85,7 +85,7 @@ fn config(toml: &str) -> FerroEhrConfig {
 /// as a boot seeds them.
 async fn loaded() -> (testkit::TestDb, FerroEhrService) {
     let (db, svc) = crate::fixtures::service().await;
-    svc.seed_policy_definitions()
+    svc.seed_default_definitions()
         .await
         .expect("the policy definitions are seeded");
     (db, svc)
@@ -115,15 +115,16 @@ async fn mapped() -> (testkit::TestDb, FerroEhrService) {
 }
 
 #[tokio::test]
-async fn the_policy_definitions_are_seeded_once_and_never_overwritten() {
+async fn the_default_definitions_are_seeded_once_and_never_overwritten() {
     let (_db, svc) = crate::fixtures::service().await;
     let first = svc
-        .seed_policy_definitions()
+        .seed_default_definitions()
         .await
         .expect("a first boot seeds them");
     assert_eq!(
         first.len(),
         ferroehr::party_binding::policy::DEFINITIONS.len()
+            + ferroehr::party_binding::shipped::DEFINITIONS.len()
     );
     assert!(
         first
@@ -132,7 +133,7 @@ async fn the_policy_definitions_are_seeded_once_and_never_overwritten() {
         "{first:?}"
     );
     let again = svc
-        .seed_policy_definitions()
+        .seed_default_definitions()
         .await
         .expect("a second boot keeps them");
     assert!(
@@ -153,7 +154,7 @@ async fn a_deployments_text_under_a_policy_id_is_kept() {
         .await
         .expect("the deployment's AGENT");
     let seeded = svc
-        .seed_policy_definitions()
+        .seed_default_definitions()
         .await
         .expect("the boot seeds the rest");
     assert!(matches!(&seeded[0], Seeded::Kept(_)), "{seeded:?}");
@@ -780,7 +781,7 @@ async fn a_deployments_version_and_specialisation_are_policy_parties() {
     }
 
     let seeded = svc
-        .seed_policy_definitions()
+        .seed_default_definitions()
         .await
         .expect("a boot after the uploads");
     assert!(

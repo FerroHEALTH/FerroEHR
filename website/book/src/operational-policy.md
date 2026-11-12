@@ -38,7 +38,11 @@ store, or before it can trust anything:
   and `[authz.rbac] admin_role` with `role_issuers`: the authority that
   writes policy parties;
 - the party mapping of the deployment's own people (`[authz.party_binding]`),
-  which is digest-locked; the policy parties take no key;
+  which is digest-locked. Each section defaults to FerroEHR's default
+  demographic definitions, which the server stores at boot as it stores the
+  policy definitions, so a deployment that uses them sets no mapping key and
+  one with templates of its own sets the sections that name them; the
+  policy parties take no key;
 - the provider the instance acts for (`[authz.party_binding] provider`);
 - the security floors: the assurance minimum, `ehr_access_default` and the
   cohort thresholds;
@@ -252,8 +256,10 @@ At boot FerroEHR stores each one through the normal definition path only
 when no definition of its id is stored. It never overwrites a stored
 definition, never refuses one you changed, and never seeds over your change.
 After that they are ordinary definitions: upload a new version, a renamed or
-a specialised template through the definition API, as for any other. Every
-write of a policy party is validated against its own template. The sources
+a specialised template through the definition API, as for any other. The
+[default demographic definitions](installation/default-demographic-definitions.md)
+are stored at boot the same way, the healthcare provider `ORGANISATION` the
+examples below write among them. Every write of a policy party is validated against its own template. The sources
 and every change from them are in
 `app/ferroehr/assets/definitions/policy/PROVENANCE.md`.
 

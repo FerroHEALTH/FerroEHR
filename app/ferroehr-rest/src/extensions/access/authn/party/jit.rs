@@ -90,7 +90,7 @@ impl NotAdmitted {
 /// keyed by issuer; empty when the mapping cannot write, which boot refuses.
 pub(super) fn tables(binding: &PartyBindingConfig, resolved: &Resolved) -> BTreeMap<String, Jit> {
     let mut out = BTreeMap::new();
-    let Some(template) = binding.person.template.iter().find(|t| t.default) else {
+    let Some(template) = binding.person().template.iter().find(|t| t.default) else {
         return out;
     };
     let (Some(user_name), Some(role)) = (&template.user_name, &binding.professional_role) else {
@@ -104,7 +104,7 @@ pub(super) fn tables(binding: &PartyBindingConfig, resolved: &Resolved) -> BTree
         })
     };
     let mut names: Vec<(bool, Claimed)> = binding
-        .person
+        .person()
         .attribute
         .iter()
         .filter(|a| a.source() == Source::Name)
@@ -113,7 +113,7 @@ pub(super) fn tables(binding: &PartyBindingConfig, resolved: &Resolved) -> BTree
     names.sort_by_key(|(later, _)| *later);
     let names: Vec<Claimed> = names.into_iter().map(|(_, named)| named).collect();
     let others: Vec<Claimed> = binding
-        .person
+        .person()
         .attribute
         .iter()
         .filter(|a| a.jit && a.source() != Source::Name)
@@ -335,14 +335,14 @@ mod tests {
             identifier_type: kind.to_owned(),
         };
         let mut binding = PartyBindingConfig::default();
-        binding.person.template = vec![PersonTemplate {
+        binding.person.get_or_insert_default().template = vec![PersonTemplate {
             template_id: "professional".to_owned(),
             key: selector("guid"),
             user_name: Some(selector("scim_user_name")),
             external_id: Some(selector("scim_external_id")),
             default: true,
         }];
-        binding.person.attribute = vec![
+        binding.person.get_or_insert_default().attribute = vec![
             attribute(
                 "given_name",
                 "/identities[id4]/details[id5]/items[id15]",

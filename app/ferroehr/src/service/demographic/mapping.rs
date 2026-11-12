@@ -6,15 +6,15 @@
 //! Every template and archetype the mapping names must be in the definition
 //! store, rooted at its class (`PERSON`, `ROLE`, `GROUP` or
 //! `PARTY_RELATIONSHIP`), with every mapped path present and of an RM type
-//! that can carry its source: a selector a `DV_IDENTIFIER`, a name a
-//! `DV_TEXT`. Every relationship type code of the representation archetype
+//! that can carry its source: a selector or a patient's identifier a
+//! `DV_IDENTIFIER`, a name a `DV_TEXT`. Every relationship type code of the representation archetype
 //! must be mapped to a `subject_relationship` code. No openEHR spec governs a
 //! mapping from SCIM or OpenID Connect to a demographic template: our own
 //! design.
 
 use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 
-use crate::config::binding::person::{Sections, Source};
+use crate::config::binding::person::{PatientSection, Sections, Source};
 use crate::error::ServiceError;
 use crate::party_binding::check::{CheckError, CheckInput, Report};
 use crate::party_binding::fill::{FillError, Lease};
@@ -154,7 +154,36 @@ impl FerroEhrService {
                 }
             }
         }
+        if let Some(patient) = sections.patient {
+            self.patient_errors(patient, &mut errors).await?;
+        }
         Ok(errors)
+    }
+
+    /// Pushes the refusals of the patient section to `errors`.
+    async fn patient_errors(
+        &self,
+        patient: &PatientSection,
+        errors: &mut Vec<String>,
+    ) -> Result<(), ServiceError> {
+        let at = "authz.party_binding.patient";
+        if let Some(wt) = self
+            .mapped_definition_of(at, &patient.template_id, "PERSON", errors)
+            .await?
+        {
+            path_errors(
+                &wt,
+                at,
+                "identifier",
+                &patient.identifier,
+                Carries::Identifier,
+                errors,
+            );
+            if let Some(path) = &patient.name {
+                path_errors(&wt, at, "name", path, Carries::Text, errors);
+            }
+        }
+        Ok(())
     }
 
     /// The definition `id` resolves to when it is stored and rooted at
