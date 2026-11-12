@@ -80,11 +80,21 @@ pub struct ReverseRelationship {
     pub node_id: Option<String>,
     /// The relationship's `name/value`.
     pub name: Option<String>,
+    /// The relationship's `uid/value`.
+    pub uid: Option<String>,
+    /// The relationship's 1-based position in the source's `relationships`.
+    pub position: i64,
+    /// Whether no other relationship of the source has its `archetype_node_id`
+    /// and its `name/value`.
+    pub name_unique: bool,
+    /// Whether no other relationship of the source has its `uid/value`.
+    pub uid_unique: bool,
 }
 
 /// The relationships whose target is `target`, read from the current trunk
 /// version of each source party the index names, ordered by source container
-/// and then by position in its `relationships` list.
+/// and then by position in its `relationships` list, each with what tells it
+/// from its siblings in that list.
 ///
 /// A source under restriction of processing is left out, as every read path
 /// leaves it out (`vo_head.restricted_at`).
@@ -98,7 +108,15 @@ pub async fn reverse_of(
     let rows = sqlx::query(concat!(
         "SELECT h.vo_id AS source_vo_id, \
                 r.rel ->> 'archetype_node_id' AS node_id, \
-                r.rel -> 'name' ->> 'value' AS name \
+                r.rel -> 'name' ->> 'value' AS name, \
+                r.rel -> 'uid' ->> 'value' AS uid, \
+                r.ord AS position, \
+                (SELECT count(*) = 1 FROM jsonb_array_elements(v.body::jsonb -> 'relationships') s(rel) \
+                 WHERE s.rel ->> 'archetype_node_id' IS NOT DISTINCT FROM r.rel ->> 'archetype_node_id' \
+                   AND s.rel -> 'name' ->> 'value' IS NOT DISTINCT FROM r.rel -> 'name' ->> 'value') \
+                    AS name_unique, \
+                (SELECT count(*) = 1 FROM jsonb_array_elements(v.body::jsonb -> 'relationships') s(rel) \
+                 WHERE s.rel -> 'uid' ->> 'value' = r.rel -> 'uid' ->> 'value') AS uid_unique \
          FROM party_relationship_target t \
          JOIN vo_head h ON h.vo_id = t.source_vo_id AND h.restricted_at IS NULL ",
         current_relationships!(),
@@ -114,6 +132,10 @@ pub async fn reverse_of(
             source_vo_id: row.try_get("source_vo_id")?,
             node_id: row.try_get("node_id")?,
             name: row.try_get("name")?,
+            uid: row.try_get("uid")?,
+            position: row.try_get("position")?,
+            name_unique: row.try_get("name_unique")?,
+            uid_unique: row.try_get("uid_unique")?,
         });
     }
     Ok(out)

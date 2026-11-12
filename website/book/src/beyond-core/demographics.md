@@ -144,6 +144,11 @@ attribute:
   `reverse_relationships`, one `LOCATABLE_REF` per relationship another party's
   current version carries with this party as its target: the reference names
   that party's version container and the relationship's path in its data.
+  The path names that one relationship: by its `uid` when no sibling shares
+  it (`/relationships[<node> and uid='…']`), else by its archetype node id and
+  name when no sibling shares both, else by its position
+  (`/relationships[2]`), the three unique forms of BASE §Data Paths and
+  Uniqueness.
   The canonical-XML read does not carry it yet.
 - Under **`development`**, the attribute is not part of the model and a body
   carrying it is refused as an undeclared field, like any other unknown key.

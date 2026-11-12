@@ -31,13 +31,34 @@ use super::ir::{
 use super::version_path::{last_attestation, resolve_version_predicate};
 use crate::versioning::Kind;
 
-/// The demographic roots the experimental demographic extension serves.
+/// The demographic versioned-object kinds the RM class `rm_type` covers: its
+/// concrete descendants, itself included when it is concrete, or `None` when
+/// any of them is no demographic versioned object or the class is unknown.
 ///
-/// No openEHR spec governs AQL over a demographic repository (QUERY master03
-/// §FROM names only clinical classes), so the served set is our own design:
-/// the three roots the extension's consumers issue. `GROUP`, `AGENT` and
-/// `PARTY_RELATIONSHIP` answer a typed refusal.
-pub(crate) const SERVED_PARTY_ROOTS: [&str; 3] = ["PERSON", "ORGANISATION", "ROLE"];
+/// The experimental demographic extension serves every such class as a root:
+/// the five concrete `PARTY` classes, the abstract `PARTY` and `ACTOR` over
+/// the concrete classes the RM model lists below them (RM demographic
+/// `master02-demographic_package.adoc` §Class Descriptions), and a standalone
+/// `PARTY_RELATIONSHIP` container. No openEHR spec governs AQL over a
+/// demographic repository (QUERY master03 §FROM names only clinical
+/// classes): our own design.
+fn demographic_kinds(rm_type: &str) -> Option<Vec<Kind>> {
+    let class = model::class(rm_type)?;
+    class
+        .descendants
+        .iter()
+        .map(|t| Kind::from_type(t).filter(|k| k.is_demographic()))
+        .collect::<Option<Vec<_>>>()
+        .filter(|kinds| !kinds.is_empty())
+}
+
+/// Whether every concrete class `rm_type` covers is a `PARTY`: the roots an
+/// `EHR_STATUS.subject` reference can name, so the roots the join to an
+/// `EHR` serves (RM ehr master04 §EHR Status; `PARTY_SELF.external_ref` is a
+/// `PARTY_REF`).
+pub(crate) fn is_party_class(rm_type: &str) -> bool {
+    demographic_kinds(rm_type).is_some_and(|kinds| kinds.iter().all(|k| k.is_party()))
+}
 
 /// Lowers one parsed [`SelectQuery`] into a [`QueryIr`] (without parameter-
 /// presence validation, which [`super::plan`] performs).
@@ -110,7 +131,7 @@ fn refuse_mixed_aggregates(select: &[SelectColumn]) -> Result<(), AqlError> {
 struct Planner {
     sources: Vec<Source>,
     bindings: Bindings,
-    /// Every operand whose concrete types are all served demographic roots,
+    /// Every operand whose concrete types are all demographic versioned objects,
     /// with the class it names.
     party_roots: Vec<(SourceId, String)>,
     /// The class of every operand whose concrete types are all clinical
@@ -315,15 +336,13 @@ impl Planner {
     /// The class must be addressable in the node store: at least one concrete
     /// descendant is a structure type (the node codec's set, demographic
     /// containers included). A class whose concrete descendants are all
-    /// demographic versioned objects is a demographic root, served when each
-    /// of them is in [`SERVED_PARTY_ROOTS`].
+    /// demographic versioned objects is a demographic root
+    /// ([`demographic_kinds`]).
     ///
     /// # Errors
     /// [`AnalysisError::UnknownClass`] for a class the RM model does not
     /// declare, [`AnalysisError::ClassNotInProfile`] for one outside the
     /// active `spec_profile`'s generation set,
-    /// [`AqlFeatureError::UnsupportedDemographicClass`] for a demographic
-    /// class outside the served roots,
     /// [`AqlFeatureError::UnsupportedSourceClass`] for a class no concrete
     /// descendant of which is a structure type, plus the node-predicate
     /// rejections and a duplicate variable binding.
@@ -352,15 +371,6 @@ impl Planner {
             .map(|t| Kind::from_type(t))
             .collect();
         if kinds.iter().all(|k| k.is_some_and(Kind::is_demographic)) {
-            if !concrete
-                .names()
-                .iter()
-                .all(|t| SERVED_PARTY_ROOTS.contains(&t.as_str()))
-            {
-                return Err(
-                    AqlFeatureError::UnsupportedDemographicClass(rm_type.to_owned()).into(),
-                );
-            }
             self.party_roots.push((id, rm_type.to_owned()));
         } else if !concrete
             .names()
