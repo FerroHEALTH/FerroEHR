@@ -109,7 +109,7 @@ async fn each_reverse_reference_names_one_relationship() {
     .expect("the source names the target five times");
 
     let reverse = svc
-        .party_reverse_relationships(crate::fixtures::object(target))
+        .party_reverse_relationships(crate::fixtures::object(target), None)
         .await
         .expect("the reverse relationships");
     let paths: Vec<&str> = reverse
