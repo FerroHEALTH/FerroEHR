@@ -28,6 +28,7 @@ use super::person::{NEVER_A_KEY, Source};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct IssuerBinding {
     /// The `persons` issuer the table holds for. It renders with any userinfo masked.
     pub issuer: SecretUrl,

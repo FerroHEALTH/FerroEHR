@@ -51,6 +51,7 @@ pub enum EhrAccessDefault {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct RbacConfig {
     /// Master switch of the coarse role gate, active only when auth is enabled
     /// (`FERROEHR__AUTHZ__RBAC__ENABLED`, default `true`).
@@ -200,6 +201,7 @@ impl AbacParam {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct PolicyRule {
     /// The policy name (the path segment appended to `abac.remote.url`).
     pub name: String,
@@ -218,6 +220,7 @@ pub struct PolicyRule {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct AbacConfig {
     /// Master ABAC switch (default `false`).
     pub enabled: bool,
@@ -312,6 +315,7 @@ pub struct AuthzConfig {
     pub abac: AbacConfig,
     /// The authentication assurance a patient-data request must carry
     /// (`[authz.assurance]`, off by default).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub assurance: ferrohealth_smart::assurance::AssuranceSection,
     /// The party binding: the provider, the namespace and the Basic users'
     /// keys (`[authz.party_binding]`).

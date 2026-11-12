@@ -108,10 +108,12 @@ impl std::str::FromStr for SpecProfile {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct DeploymentConfig {
     /// `profile` — the declared posture (`sandbox` | `production`; default
     /// `sandbox`). `production` refuses to start while a separation it
     /// asserts is missing and not accepted by name (#3226).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = true)))]
     pub profile: crate::config::deployment::DeploymentProfile,
     /// `accepts` — the [`DeploymentGap`](crate::config::deployment::DeploymentGap)s a `production` deployment runs
     /// without, each stated on every boot and on `/management/status`.

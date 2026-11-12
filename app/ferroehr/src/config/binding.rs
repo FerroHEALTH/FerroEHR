@@ -33,6 +33,8 @@ pub mod person;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = ["provider.issuer", "provider.id"])))]
 pub struct PartyBindingConfig {
     /// The healthcare provider this deployment acts for, which every access
     /// record of a bound person and every version a person commits name
@@ -41,6 +43,7 @@ pub struct PartyBindingConfig {
     pub provider: Option<Providers>,
     /// The `PARTY_REF.namespace` a bound party is written under, held to the
     /// `OBJECT_REF.namespace` pattern.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub namespace: String,
     /// The key each Basic user is bound by (`[[authz.party_binding.basic_user]]`).
     pub basic_user: Vec<BasicUserKey>,
@@ -62,6 +65,7 @@ pub struct PartyBindingConfig {
     pub issuer: Vec<jit::IssuerBinding>,
     /// The age past which `ferroehr party-binding check` reports a
     /// provisional `PERSON`.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub provisional_report_after: ferrohealth_config::units::Duration,
     /// Retired in v5.7.0: refused at load, naming `provisional_report_after`.
     #[serde(skip_serializing)]
@@ -111,6 +115,7 @@ impl Default for PartyBindingConfig {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct ProviderId {
     /// The issuer of the identifier.
     pub issuer: String,
@@ -129,6 +134,7 @@ impl fmt::Display for ProviderId {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct TenantProvider {
     /// The `tenant_claim` value the table holds for.
     pub tenant: String,
@@ -181,6 +187,7 @@ impl<'de> Visitor<'de> for ProvidersVisitor {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct BasicUserKey {
     /// The `[[auth.basic.users]]` user-id.
     pub user: String,

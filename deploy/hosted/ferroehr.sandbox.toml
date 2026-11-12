@@ -19,12 +19,6 @@
 [deployment]
 profile = "sandbox"
 
-[server]
-# The image's own port; Caddy terminates TLS in front of it.
-listen = "0.0.0.0:8080"
-# Template uploads and the /message imports, up to 64 MiB.
-body_limit = "64MiB"
-
 [api]
 # The public API reference the documentation links to; the default asks for the
 # API credential.
@@ -32,9 +26,6 @@ openapi_ui = "public"
 
 admin = true
 terminology = true
-[auth]
-enabled = true
-
 # The issuer the Basic users bind under. A Basic user is a person and maps to
 # the PERSON carrying its binding key, which [[auth.party]] places under the
 # identifier issuer of a persons issuer. This one signs nothing: its key set,
@@ -142,13 +133,10 @@ enabled = false
 # FerroTERM beside the CDR (#3304). The read-only /terminology/* routes are on so
 # the viewer's terminology browser and code picker work; the terminology server
 # is FerroTERM at its compose-network name, the only address it answers on, and
-# every terminology the bundle does not carry goes to it. Fail-open is the
-# shipped default and the posture this sandbox declares (register AMB-172): a
-# binding the server cannot resolve is accepted, a binding it resolves as a
-# non-member is refused with 422.
-
-[terminology]
-on_error = "accept"
+# every terminology the bundle does not carry goes to it. The sandbox keeps the
+# shipped fail-open default (register AMB-172): a binding the server cannot
+# resolve is accepted, a binding it resolves as a non-member is refused with
+# 422.
 
 [terminology.endpoint]
 url = "http://ferroterm:8080/r4b"

@@ -44,6 +44,7 @@ pub struct FederationConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct Agreement {
     /// The `federation` issuer of the external callers. It renders with any userinfo masked.
     pub issuer: SecretUrl,
@@ -82,6 +83,7 @@ pub struct Agreement {
     pub ehdsi_service: Option<EhdsiService>,
     /// The admission rate per caller, above which a request is refused before
     /// any patient lookup; required.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub caller_rate: Option<CallerRate>,
     /// Whether a professional of the agreement may read an opted-out EHR
     /// where national law provides the EHDS Art. 10(2) vital-interest access.
@@ -226,6 +228,7 @@ pub enum ConsentSource {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct LegalGround {
     /// The point of GDPR Art. 6(1), `a` to `f`.
     pub gdpr_6_1: String,

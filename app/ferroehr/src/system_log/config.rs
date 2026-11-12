@@ -41,6 +41,7 @@ pub enum FailMode {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct StoreConfig {
     /// Persist every record locally (`FERROEHR__AUDIT__STORE__ENABLED`).
     /// **On by default** (owner posture: compliance out of the box).
@@ -79,12 +80,14 @@ pub struct StoreConfig {
     /// counted and reported by the `audit_chain` health indicator
     /// (`docs/law/eu/cra/text.html Annex I Part I(2)(f)`: "report on
     /// corruptions").
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub verify_interval: Duration,
     /// The time between two scheduled full passes over the hash chain
     /// (`FERROEHR__AUDIT__STORE__FULL_VERIFY_INTERVAL`), which also recompute
     /// the records before the checkpoint; `"0s"` leaves the full pass to
     /// `SELECT * FROM audit.verify_audit_chain()` on demand. Default one week.
     /// A run that found damage is always followed by a full pass.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub full_verify_interval: Duration,
     /// Retired in v5.7.0: refused at load, naming `retention`.
     #[serde(skip_serializing)]
@@ -163,6 +166,7 @@ impl StoreConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct SinkRetry {
     /// The longest wait between two delivery attempts after a failure.
     pub max_backoff: Duration,
@@ -182,6 +186,7 @@ impl Default for SinkRetry {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct SyslogConfig {
     /// The Audit Record Repository, `tls://host:port`
     /// (`FERROEHR__AUDIT__SYSLOG__URL`): RFC 5425 TLS, on the §4.1 port 6514
@@ -190,14 +195,17 @@ pub struct SyslogConfig {
     /// The TLS material of the connection to the ARR
     /// (`[audit.syslog.tls]`): the family's outbound TLS keys, the client
     /// identity for mutual TLS and the trust roots beside the platform's.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
     pub tls: TlsClientSection,
     /// The directory of the `ihe-atna` spool every record is stored in before
     /// it is sent (`FERROEHR__AUDIT__SYSLOG__SPOOL_DIR`), owner-only; unset,
     /// the spool is held in memory and a restart loses what it holds.
     pub spool_dir: Option<std::path::PathBuf>,
     /// The most records the spool holds (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_EVENTS`).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub spool_max_events: usize,
     /// The most the spool holds in size (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_SIZE`).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub spool_max_size: ByteSize,
     /// `[audit.syslog.retry]`: the wait between two delivery attempts.
     pub retry: SinkRetry,
@@ -291,6 +299,7 @@ impl SyslogConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct FhirFeedConfig {
     /// `[audit.fhir_feed.endpoint]`, the family's outbound endpoint: the ARR's
     /// FHIR base URL (`url`; the `AuditEvent` endpoint is
@@ -298,10 +307,12 @@ pub struct FhirFeedConfig {
     /// delivery, the TLS and the credential, such as the OAuth 2.0 client
     /// credentials grant of the IHE IUA authorized client. Credentials in the
     /// URL are masked in every rendering.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
     pub endpoint: EndpointSection,
     /// How long the forwarder waits for a new record before it reads the
     /// store again (`FERROEHR__AUDIT__FHIR_FEED__POLL_INTERVAL`); at least
     /// 100 ms is waited.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub poll_interval: Duration,
     /// Retired in v5.7.0: refused at load, naming the table's presence.
     #[serde(skip_serializing)]
@@ -347,6 +358,7 @@ impl Default for FhirFeedConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct AuditConfig {
     /// Master switch (`FERROEHR__AUDIT__ENABLED`). **On by default** — every
     /// deployment gets a queryable audit trail with zero external
@@ -360,21 +372,26 @@ pub struct AuditConfig {
     pub source_id: String,
     /// Fill value for empty mandatory fields
     /// (`FERROEHR__AUDIT__VALUE_IF_MISSING`).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub value_if_missing: String,
     /// Skip successful-login records (`FERROEHR__AUDIT__SUPPRESS_LOGIN_EVENTS`).
     /// Rejected accesses (401/403) are always recorded.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub suppress_login_events: bool,
     /// Failure mode (`FERROEHR__AUDIT__FAIL_MODE`): `open` | `closed`.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub fail_mode: FailMode,
     /// Enrich the patient participant via a background indexed lookup of
     /// `ehr.subject_id` (`FERROEHR__AUDIT__RESOLVE_SUBJECT`). On by default —
     /// the IHE BALP `Patient*` patterns and the patient-centric audit search
     /// need the subject; the lookup runs only on the background drain.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub resolve_subject: bool,
     /// Bounded audit queue capacity (`FERROEHR__AUDIT__QUEUE_CAPACITY`).
     /// Sized for write-path bursts: the drain persists in multi-row batches,
     /// so the queue only needs to ride out sink latency spikes, but a loaded
     /// write path can enqueue thousands per second.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub queue_capacity: usize,
     /// This node's advertised network address → the destination
     /// network-access-point (`FERROEHR__AUDIT__SERVER_HOST`); the
@@ -388,6 +405,7 @@ pub struct AuditConfig {
     /// it and the trail records what was declared. No openEHR spec governs
     /// this and IHE carries the equivalent in a SAML attribute rather than a
     /// header, so the header is our own design.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub purpose_header: String,
     /// The request header carrying the data permit the caller acts under
     /// (`FERROEHR__AUDIT__PERMIT_HEADER`), recorded on every access record.
@@ -398,6 +416,7 @@ pub struct AuditConfig {
     /// permit's identifier, 1 to 128 characters of letters, digits and
     /// `.` `_` `:` `/` `#` `-`; anything else is recorded as absent. No
     /// specification names a header for it: our own design.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub permit_header: String,
     /// The purpose codes this deployment accepts
     /// (`FERROEHR__AUDIT__PURPOSE_CODES`).
@@ -406,6 +425,7 @@ pub struct AuditConfig {
     /// list records a declared code only when it is on the list, so a
     /// deployment that has agreed a vocabulary does not accumulate a trail of
     /// free text that means nothing at review time.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub purpose_codes: Vec<String>,
     /// The declared purpose codes that mark an access as an emergency access
     /// (`FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES`). Empty (the default) marks
@@ -420,6 +440,7 @@ pub struct AuditConfig {
     /// The mark records; it lifts no restriction. Every code must also be on
     /// `purpose_codes`, so the mark never keys on free text; the boot
     /// validation refuses anything else.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub emergency_purpose_codes: Vec<String>,
     /// The legal basis this deployment processes under
     /// (`FERROEHR__AUDIT__LEGAL_BASIS`), recorded on every access record.

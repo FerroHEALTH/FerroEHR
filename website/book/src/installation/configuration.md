@@ -19,13 +19,23 @@ Copy the shipped template, edit it, and run:
 curl -fsSLo ferroehr.toml \
   https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/main/app/ferroehr/assets/ferroehr.default.toml
 
-# Edit it — at minimum set database.url and an auth mechanism.
+# Edit it: set the keys its "What you must set" block lists.
 $EDITOR ferroehr.toml
 
 # Validate without touching the database, then run.
 ferroehr config check --config ferroehr.toml
 ferroehr --config ferroehr.toml
 ```
+
+The template opens with a **What you must set** block: the keys a deployment
+that holds real data sets (the posture, the database, the system identifier,
+the patient identity source and pseudonym namespace, the provider and at
+least one token issuer). Every other key is optional and runs on the built-in
+default its line shows. Each key's note ends with why it is in the file:
+infrastructure (what the server needs before it reaches its store), trust
+(what it trusts, its floors and its secrets), or nothing more for a tuning
+key. A key the configuration types leave unclassified fails the build, so the
+file cannot gain a key nobody justified.
 
 A server started with **no file and no environment** still boots, with one
 exception you will hit immediately: authentication is on by default and a

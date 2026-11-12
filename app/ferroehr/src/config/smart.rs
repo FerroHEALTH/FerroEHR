@@ -31,6 +31,7 @@ use url::Url;
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct SmartConfig {
     /// Serve the `/.well-known/smart-configuration` discovery document
     /// (SMART App Launch 2.x §Conformance; default `false`). The document is
@@ -70,12 +71,14 @@ pub struct SmartConfig {
     /// The `client_id`s of the backend clients a `system/aql-*` grant counts
     /// for: master08 §Resource Scopes says such a grant "would grant access to
     /// all registered and ad-hoc AQL queries system-wide". Empty, no client.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub backend_clients: Vec<String>,
 
     /// The issuers whose `patient/` grants count, each confined to the `ehrId`
     /// of the token's launch context (master07 §Context Selection: the `ehrId`
     /// names an EHR of the platform that issued it). Empty, a `patient/` grant
     /// grants nothing. Each renders with any userinfo masked.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub patient_issuers: Vec<SecretUrl>,
 
     /// The `client_id`s that reach the DEMOGRAPHIC API. master08 §Resource
@@ -83,6 +86,7 @@ pub struct SmartConfig {
     /// scope covers it: a listed client, or a caller holding the
     /// `[auth] product_scope`, reaches it (no openEHR spec governs this: our
     /// own design).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub demographic_clients: Vec<String>,
 
     /// Retired in v5.7.0: refused at load, naming `discovery`.

@@ -41,6 +41,7 @@ use url::Url;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct MultimediaConfig {
     /// Master switch. `false` (default) = today's inline behaviour, byte for
     /// byte; no object store is built or contacted.

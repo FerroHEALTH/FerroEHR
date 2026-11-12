@@ -45,6 +45,7 @@ pub struct OriginsConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct RegisteredOrigin {
     /// The id the origin's data carry: the
     /// `FEEDER_AUDIT.originating_system_audit.system_id` its feeds commit

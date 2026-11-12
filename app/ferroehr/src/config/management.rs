@@ -68,6 +68,7 @@ impl AccessLevel {
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct EndpointLevels {
     /// `/management/info`.
     #[serde(default)]
@@ -111,6 +112,7 @@ pub struct EndpointLevels {
     reason = "each key is a ceiling a request is held to, and the `max_` names are the keys \
               an operator writes"
 )]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct ProfilingConfig {
     /// The longest sample window a single request may ask for, in whole
     /// seconds.
@@ -144,6 +146,7 @@ impl Default for ProfilingConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct ManagementConfig {
     /// Master switch. When `false`, no management routes are mounted at all.
     #[serde(default)]
