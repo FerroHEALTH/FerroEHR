@@ -319,7 +319,7 @@ async fn get_json(app: &Router, path: &str) -> Value {
         common::req("GET", path).accept("application/json").build(),
     )
     .await;
-    assert_eq!(status, StatusCode::OK, "{path}: {text}");
+    assert_eq!(status, StatusCode::OK, "{text}");
     serde_json::from_str(&text).expect("a JSON body")
 }
 
