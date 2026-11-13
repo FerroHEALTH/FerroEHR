@@ -118,8 +118,8 @@ struct Emitted {
 }
 
 /// The generated files for one schema version plus its top-level module names.
-struct Version {
-    files: Vec<GenFile>,
+pub(crate) struct Version {
+    pub(crate) files: Vec<GenFile>,
     /// Top-level module names of this version (under its prefix, if any).
     top: BTreeSet<String>,
     /// The types this version emitted, for crate-prelude assembly (empty for a
@@ -196,7 +196,7 @@ impl<'a> Shape<'a> {
 /// ruling 2026-08-05: no version constants anywhere — a second copy of the
 /// same fact can only drift, and `spec_version()` is a `const fn`, so even
 /// const contexts need no constant).
-fn emit_version(
+pub(crate) fn emit_version(
     model: &Model,
     schema: &BmmSchema,
     prefix: &str,
