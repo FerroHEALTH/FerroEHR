@@ -45,6 +45,22 @@ use crate::party_binding::grants::capabilities::{Credentials, Grant};
 use crate::party_binding::grants::operation::{GrantCeiling, Operation, ROLE};
 use crate::party_binding::grants::trust::FederationTrust;
 
+/// Judges the committed body `facts` of the `ROLE` `role` by the grants
+/// `grants` holds: the ceiling ([`check_ceiling`]) and the federation
+/// agreements ([`check_agreements`]).
+///
+/// # Errors
+/// The refusals of both, and a storage failure.
+pub(crate) async fn check_role(
+    tx: &mut PgConnection,
+    role: Uuid,
+    facts: &Facts,
+    grants: &live::LiveGrants,
+) -> Result<(), ServiceError> {
+    check_ceiling(facts, &grants.ceiling())?;
+    check_agreements(tx, role, facts, &grants.federation()).await
+}
+
 /// Refuses the committed body `facts` of a `ROLE` when it grants an
 /// operation `ceiling` does not admit, or a `hold_roles` grant names a role
 /// the ceiling reserves.
