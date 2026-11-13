@@ -35,7 +35,7 @@ use crate::aql;
 use crate::aql::exec::{ColumnMeta, QueryResult};
 use crate::aql::ir::{Params, QueryDomain, QueryIr};
 use crate::aql::join::{JoinPlan, Side};
-use crate::aql::sql::{EhrAccessScope, EhrScopeKind, PolicyParties, SqlCtx};
+use crate::aql::sql::{EhrAccessReaders, EhrAccessScope, EhrScopeKind, PolicyParties, SqlCtx};
 use crate::error::ServiceError;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
@@ -142,6 +142,7 @@ impl FerroEhrService {
             offset: None,
             archetype_lineage: self.archetype_lineage().await,
             policy_parties: PolicyParties::of_request(&self.binding),
+            access_settings: EhrAccessReaders::Every,
         };
         let party = aql::exec::execute(
             &self.demographic_pool,
@@ -199,6 +200,9 @@ impl FerroEhrService {
                 }
             }),
             ehr_access: job.request.ehr_access.clone(),
+            access_settings: Box::pin(self.ehr_access_readers())
+                .await
+                .map_err(Failure::analysis)?,
             ..party_ctx
         };
         let exec = aql::exec::execute(
