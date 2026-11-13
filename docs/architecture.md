@@ -299,8 +299,17 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   differ), and the audit store's hourly worker replaces every entry past its
   `retain_until` by its tombstone, in any order of expiry
   (`access_log::expiry`); an erasure a law orders takes the same path through
-  `POST /admin/access-log/erase`, which writes an access record. No openEHR
-  spec governs audit storage: our own design.
+  `POST /admin/access-log/erase`, which writes an access record. `access_log_checkpoint` keeps the
+  signed `ACCESS_LOG_CHECKPOINT`s of the head, signed with the version-signing
+  keyring's OpenPGP key; a link's `signature` may be set once, after the
+  insert that computed its digest. `access_log::checkpoint` seals and verifies
+  (the chain through `audit.verify_audit_chain()`, the checkpoint and the link
+  signatures beside it), `access_log::chain` verifies a span of links apart
+  from the database (an export), and `access_log::transfer` exports one EHR's
+  records with the span and checkpoint and imports another system's into
+  `access_log_imported_*`, outside this system's chain
+  (`audit/0028_access_log_checkpoint.sql`). No openEHR spec governs audit
+  storage: our own design.
 - **One pool and one DSN per storage domain.** `[database.clinical]`,
   `[database.party]` and `[database.audit]` each carry a
   `url`/`url_file`, defaulting to the shared `[database].url`, and
@@ -426,8 +435,10 @@ which is what makes an optional stage safe to disable:
    access settings"); the settings are read only by those callers and the
    subject, and are absent to anyone else in AQL, an EHR Extract and the
    CONTRIBUTION read, since a restriction stays invisible to a provider (EHDS
-   Art. 8). Who writes and reads them is our own design
-   (`service::ehr::access_rule`).
+   Art. 8). An EHR Extract also carries them for the holder of an
+   `export_ehr_extract` grant covering the EHR, since the extract transfers
+   the whole EHR (RM EHR Extract IM, `X_VERSIONED_EHR_ACCESS`). Who writes and
+   reads them is our own design (`service::ehr::access_rule`).
 3. **RBAC** — the coarse operation class (public / clinical / admin /
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an
