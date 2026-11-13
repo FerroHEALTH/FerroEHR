@@ -71,6 +71,7 @@ use crate::overview::error::RestError;
 use crate::smart::routes::SmartRoutes;
 use assurance::PatientDataGate;
 use build::Primary;
+use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::system_log::event::ActorAuthentication;
 use gates::patient_data_refusal;
 
@@ -595,10 +596,7 @@ pub(crate) async fn middleware(
             };
             // NOTE: master08 §Resource Scopes, a `system/aql-*` grant reaches every
             // query, so it counts only for a client the CDR grants `query_system_wide`.
-            principal.honoured.backend = grants::client_holds(
-                &granted,
-                ferroehr::party_binding::grants::operation::Operation::QuerySystemWide,
-            );
+            principal.honoured.backend = grants::client_holds(&granted, Operation::QuerySystemWide);
             // How the person authenticated is judged before what they may do:
             // a step-up refusal is an authentication outcome (RFC 9470 §3).
             let actor = match layer.patient_data.as_deref() {

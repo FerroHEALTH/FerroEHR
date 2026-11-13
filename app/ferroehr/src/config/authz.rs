@@ -352,8 +352,7 @@ pub struct GrantsConfig {
     /// grant names and nothing else: an import, an export, a federation
     /// agreement, a system-wide query, the DEMOGRAPHIC API and every
     /// privilege reach data beyond one system's own writes, so each is
-    /// allowed by name. An empty list lets the store grant
-    /// nothing.
+    /// allowed by name. An empty list lets the store grant nothing.
     pub allowed: Vec<crate::party_binding::grants::operation::Operation>,
 }
 
