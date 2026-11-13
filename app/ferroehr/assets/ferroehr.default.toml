@@ -15,7 +15,7 @@
 #
 # What you must set
 #
-# This file lists 905 keys. A deployment that holds real data sets the 10
+# This file lists 899 keys. A deployment that holds real data sets the 10
 # below; every other key is optional and runs on the built-in default its line
 # shows, or stays unset where its note says so.
 #
@@ -1482,34 +1482,18 @@ provisional_report_after = "30d"
 # The path of the patient's name, a `DV_TEXT` in `identities`. Optional.
 #? name = "/identities[id6]/details[id7]/items[id8]"
 
-# What FerroEHR does for each `persons` issuer beyond the lookup
-# (`[authz.party_binding.issuer]`): just-in-time creation.
+# How FerroEHR reads each `persons` issuer's tokens when it creates a
+# provisional `PERSON` at a first login (`[authz.party_binding.issuer]`).
 #? [[authz.party_binding.issuer]]
 # The `persons` issuer the table holds for. It renders with any userinfo
 # masked. Optional (trust).
 #? issuer = ""
-# Whether a first login with no party creates a provisional `PERSON`. Optional
-# (trust).
-#? jit = false
-# Whether a guest the issuer's `[auth.party]` table admits is created too.
-# Optional (trust).
-#? guests_jit = false
 # The claim the `userName` is read from; the issuer profile's `person_key` when
 # unset. Optional, unset by default (trust).
 #? user_name_claim = ""
-# The dotted claim path the identity provider is read from. Optional (trust).
+# The dotted claim path the identity provider an `admit_idp` admission
+# condition matches is read from. Optional (trust).
 #? idp_claim = "idp"
-# The identity providers whose logins are created. Optional (trust).
-#? admit_idp = []
-# The groups, read from the `[auth.party]` table's `group_claim`, one of which
-# a created login holds. Optional (trust).
-#? admit_groups = []
-# The roles, read from `[auth] role_claims`, one of which a created login
-# holds. Optional (trust).
-#? admit_roles = []
-# The lowest `[authz.assurance]` level a created login carries. Optional, unset
-# by default (trust).
-#? admit_assurance = "low"
 
 # The systems whose imported committers are trusted (`[authz.import]`).
 [authz.import]

@@ -556,7 +556,7 @@ its `credentials` hold, at any depth, an element whose value is a
 (`commit_composition`, `import_ehr`, `import_ehr_extract`,
 `export_ehr_extract`, `federated_person_access`,
 `federated_organisation_access`, `read_subject_audit`, `access_service`,
-`read_identifiers`, `hold_roles`, `hold_scopes`); elements named by the
+`read_identifiers`, `hold_roles`, `hold_scopes`, `create_at_login`); elements named by the
 qualifier codes `not_before` and `not_after` bound it finer than a day,
 `template`, `facility` (an element of a `DV_IDENTIFIER`, or a cluster of
 `issuer` with `identifier` or `identifier_prefix`) and `subject_namespace`
@@ -643,18 +643,37 @@ store. The keys `[[auth.basic.users]] roles` and `scopes` belong to
 `ferrohealth-smart`, so they leave the schema with that crate. **Our own
 design.**
 
+**Just-in-time admission** (`party_binding::grants::admission`, #5441). Which
+first logins of a `persons` issuer create a provisional `PERSON` is policy,
+so it is CDR data: a `CAPABILITY` coding `create_at_login` admits the
+logins of each issuer its `login_issuer` elements name that meet every
+condition it declares (`admit_idp`, `admit_group`, `admit_role`,
+`admit_assurance`, and `admit_guests` for a guest), and any grant in force
+admits a login. The grant is read by its credentials, whoever performs its
+`ROLE`, from the same `LiveGrants` copy (`LiveGrants::admissions`), which
+the login binding consults only for an unbound person or delegated caller,
+so the request path adds no transaction. A grant that names no issuer or
+declares no condition is refused at commit with `422`
+(`admission::check`) and a stored one is never honoured, so no grant admits
+every login of an issuer; `create_at_login` is above the default ceiling.
+The `[[authz.party_binding.issuer]]` table keeps only how the tokens are
+read (`user_name_claim`, `idp_claim`), and the six admission keys it held
+are gone. **Our own design:** the RM (Incomplete Content) allows an
+incomplete demographic version, and no specification governs when a login
+creates one.
+
 **System clients from the CDR** (#5436, #5432). The
 `[[authz.system_client]]` table is gone: a system caller
 (`CallerKind::System`) is what the policy parties say. Its commit into an EHR
-(`versioning::system`) needs a `commit_composition` grant and an acts-for
-relationship of its `ACTOR` to a provider, or it is `403`, and a
+(`versioning::system`) needs a `commit_composition` grant, or it is `403`, and
+a
 `COMPOSITION` is admitted when one grant lists its template, has the origin
 the act needs (a device's registration under `device`, recognised by a
 composer identifier of a `device_identifier_issuer` equal to
 `feeder_audit.originating_system_audit.system_id`; any other act under
 `relay`, naming the professional) and covers the facility it names (EHDS
 Art. 13(4)). A `ROLE` whose grant lacks the terms its operation is checked by
-is `422` at its commit (`party_binding::grants::check_terms`), the boot
+is `422` at its commit (`party_binding::grants::check_role`), the boot
 refusals the table had. The import grant of #5438 is held to its scope:
 `message_import_ehr` needs `[authz.rbac] import_role` or an `import_ehr`
 grant whose `subject_namespace` names the subject namespace of the
@@ -670,7 +689,8 @@ caller is attributed to its `ACTOR`: the committer's `external_ref` is a
 `PARTY_REF` of type `ACTOR` (BASE `base_types` `PARTY_REF`
 `Type_validity`), and its access record names the `ACTOR` as its party and
 the provider by the first `DV_IDENTIFIER` in the `details` of the
-`ORGANISATION` its acts-for relationship targets (EHDS Annex II 3.2(a)). The
+`ORGANISATION` its acts-for relationship targets, or, with none, the
+deployment's `[authz.party_binding] provider` (EHDS Annex II 3.2(a)). The
 target and that identifier are side-table rows too (`binding_client.provider_id`,
 `binding_provider`, migration `party/0036`), written in the commit of the
 `AGENT` and of the `ORGANISATION`, so the request path still adds no

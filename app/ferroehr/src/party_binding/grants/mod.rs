@@ -24,6 +24,7 @@
 //! No openEHR spec gives a capability an authorization meaning, or governs
 //! the side table: our own design.
 
+pub mod admission;
 pub mod capabilities;
 pub(crate) mod derive;
 pub mod live;
@@ -38,24 +39,17 @@ use crate::party_binding::grants::operation::{
     SCOPES,
 };
 
-/// Refuses the committed body `facts` of a `ROLE` that [`check_ceiling`] or
-/// [`check_terms`] refuses.
-///
-/// # Errors
-/// The refusal of the first that refuses.
-pub(crate) fn check_role(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
-    check_ceiling(facts, ceiling)?;
-    check_terms(facts)
-}
-
 /// Refuses the committed body `facts` of a `ROLE` when it grants an
-/// operation `ceiling` does not admit, or a `hold_roles` grant names a role
-/// the ceiling reserves.
+/// operation `ceiling` does not admit, a `hold_roles` grant names a role
+/// the ceiling reserves, a `create_at_login` grant admits nothing
+/// ([`admission::check`]), or a grant lacks the terms of its operation
+/// ([`check_terms`]).
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) naming the first such capability and
-/// the configuration key.
-pub(crate) fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
+/// the configuration key, and the `422` of [`admission::check`] and
+/// [`check_terms`].
+pub(crate) fn check_role(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
     let reserved = facts
         .grants
         .capabilities
@@ -76,7 +70,8 @@ pub(crate) fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(),
         .iter()
         .find(|capability| !ceiling.allows_code(&capability.code))
     else {
-        return Ok(());
+        admission::check(facts)?;
+        return check_terms(facts);
     };
     let allowed: Vec<&str> = ceiling.allowed().map(Operation::code).collect();
     Err(ServiceError::not_permitted(format!(
@@ -99,7 +94,7 @@ pub(crate) fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(),
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] (`422`) naming the first such capability.
-pub(crate) fn check_terms(facts: &Facts) -> Result<(), ServiceError> {
+fn check_terms(facts: &Facts) -> Result<(), ServiceError> {
     for capability in &facts.grants.capabilities {
         let credentials = Credentials::of(capability.credentials.as_ref());
         let refusal = match Operation::of(&capability.code) {

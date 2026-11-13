@@ -57,8 +57,9 @@ pub(crate) struct Binding {
     /// Each issuer's `identifier_issuer`s, which a `refused-unbound` problem
     /// names so the operator can provision the person.
     identifier_issuers: BTreeMap<String, Vec<String>>,
-    /// The just-in-time creation of each issuer that sets `jit = true`.
-    jit: BTreeMap<String, jit::Jit>,
+    /// The just-in-time creation of each bound `persons` issuer, or why the
+    /// mapping cannot write a provisional `PERSON`.
+    jit: Result<BTreeMap<String, jit::Jit>, Vec<String>>,
     /// `[authz.assurance]`, which an `admit_assurance` condition reads.
     assurance: AssuranceSection,
 }
@@ -233,13 +234,38 @@ impl Binding {
         roles: &[String],
     ) -> Result<Option<Outcome>, AuthError> {
         let issuer = caller.issuer().unwrap_or("-");
-        let Some(jit) = self.jit.get(issuer).filter(|jit| jit.creates(caller)) else {
+        if jit::candidate(caller).is_none() {
             return Ok(None);
+        }
+        let admissions = self.source.admissions(issuer).await.map_err(|error| {
+            tracing::warn!(
+                error = %ferroehr::error::ErrorChain::new(&error),
+                "the admission rules of just-in-time creation could not be read"
+            );
+            AuthError::PartyUnavailable { retry_after: None }
+        })?;
+        if admissions.is_empty() {
+            return Ok(None);
+        }
+        let jit = match &self.jit {
+            Ok(tables) => match tables.get(issuer) {
+                Some(jit) => jit,
+                None => return Ok(None),
+            },
+            Err(reasons) => {
+                tracing::warn!(
+                    issuer,
+                    reasons = %reasons.join("; "),
+                    "a create_at_login grant admits this issuer's logins, and the party mapping \
+                     cannot write a provisional PERSON"
+                );
+                return Ok(None);
+            }
         };
         let person = match jit.person(
             caller,
-            roles,
-            &self.assurance,
+            &admissions,
+            (roles, &self.assurance),
             (&self.namespace, self.provider_of(caller)),
         ) {
             Ok(person) => person,

@@ -588,7 +588,11 @@ An issuer can let a professional with no party work at their first login:
 FerroEHR then creates a provisional `PERSON` from the access token and binds
 the login to it, as
 [the configuration reference](installation/config-auth.md#just-in-time-creation)
-describes. It is off by default. What each identity provider must do for it:
+describes. It is off until an administrator writes a `create_at_login`
+grant for the issuer in the CDR, whose admission conditions read the
+claims below
+([Operational policy](operational-policy.md#just-in-time-admission)). What
+each identity provider must do for it:
 
 - **Put the name claims in the access token.** FerroEHR reads the person's
   data from the access token only (RFC 9068 §2.2.2 lets an authorization
@@ -600,8 +604,9 @@ describes. It is off by default. What each identity provider must do for it:
   `given_name` and `family_name` to the access token of your app
   registration and request the `profile` scope: Entra documents both as v2.0
   optional claims that "Requires the `profile` scope" (Microsoft identity
-  platform, *Optional claims reference*). Admit logins by group
-  (`admit_groups`, the object ids in `groups`) or by the `idp` claim, which
+  platform, *Optional claims reference*). Admit logins by group (an
+  `admit_group` element of the `create_at_login` grant, holding an object
+  id of `groups`) or by the `idp` claim (an `admit_idp` element), which
   "records the identity provider that authenticated the subject of the
   token" and differs from the issuer for a guest (*Access token claims
   reference*). The key is the object id `oid`, never `upn` or `email`, which

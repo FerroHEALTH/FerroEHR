@@ -160,26 +160,61 @@ services:
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 
+  # Grants the realm's service client `ferroehr-service` commit_composition
+  # in the CDR, on the operator's authority (`ferroehr party-binding grant`):
+  # an AGENT carrying its client_id and a ROLE whose capability grants the
+  # operation with the origin relay, the only way a caller acting for no
+  # person commits into an EHR. It names no template, so the service creates
+  # EHRs and reads, for the provider the deployment acts for. A client that
+  # holds the grant already gets nothing, so it runs again on a kept volume.
+  ferroehr-grant-service:
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:main}
+    network_mode: service:identity-issuer
+    depends_on:
+      ferroehr:
+        condition: service_healthy
+    environment:
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
+      FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
+      FERROEHR__USAGE_REPORT__ENABLED: "false"
+    configs:
+      - source: ferroehr-config${FERROEHR_EHR_INDEX:+-${FERROEHR_EHR_INDEX}}
+        target: /etc/ferroehr/ferroehr.toml
+    command:
+      - party-binding
+      - grant
+      - --issuer
+      - ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
+      - --client-id
+      - ferroehr-service
+      - --operation
+      - commit_composition
+      - --element
+      - origin=relay
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+
   # Provisions the realm's four users as professional PERSONs through
   # FerroEHR's SCIM endpoint (RFC 7644 §3.3), as the base file's
   # ferroehr-provision does for the Basic user: each User's loginIdentifier is
   # the fixed `id` the realm import gives that user, which Keycloak puts in
-  # `sub`. A User that exists already (409) is kept. The service account binds
-  # to no party: it is a system client, which the `ferroehr-service-grant`
-  # script grants in the CDR. The one-shot then stays up and reports healthy,
-  # so `up --wait` returns once every login is bound and the service client
-  # is granted.
+  # `sub`. The service account is a system client, which the
+  # ferroehr-grant-service one-shot grants in the CDR, and binds to no party.
+  # A User that exists already (409) is kept, and the one-shot then stays up
+  # and reports healthy, so `up --wait` returns once every login is bound and
+  # the service client is granted.
   ferroehr-provision-keycloak:
     image: ${FERROEHR_CURL_IMAGE:-curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777}
     network_mode: service:identity-issuer
     depends_on:
       ferroehr:
         condition: service_healthy
-      ferroehr-provision:
-        condition: service_healthy
-    configs:
-      - source: ferroehr-service-grant
-        target: /usr/local/bin/ferroehr-service-grant.sh
+      ferroehr-grant-service:
+        condition: service_completed_successfully
     entrypoint:
       - sh
       - -c
@@ -200,7 +235,6 @@ services:
         http://localhost:8080/scim/v2/Users);
         case $$status in 201|409) ;; *) echo "provisioning $$1 answered $$status" >&2; cat /tmp/answer >&2; exit 1;; esac;
         done;
-        sh /usr/local/bin/ferroehr-service-grant.sh;
         touch /tmp/provisioned; echo 'the realm users are provisioned'; exec sleep infinity
     healthcheck:
       test: ["CMD", "test", "-f", "/tmp/provisioned"]
@@ -307,61 +341,6 @@ volumes:
   keycloak-tls:
 
 configs:
-  # Grants the realm's service client in the CDR, as the quickstart
-  # administrator through the Demographic API (the book's "Operational
-  # policy"): the AGENT carrying its client_id under the realm issuer, the
-  # provider ORGANISATION it acts for (the example id the base quickstart acts
-  # for), and the ROLE whose capability grants commit_composition with the
-  # origin relay, the only way a caller acting for no person commits into an
-  # EHR. It names no template, so the service creates EHRs and reads. An AGENT
-  # that exists already (409) means the grant was written before.
-  ferroehr-service-grant:
-    content: |
-      set -eu
-      api=http://localhost:8080/ferroehr/rest/openehr/v1/demographic
-      issuer='${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr'
-      text() { printf '{"_type":"DV_TEXT","value":"%s"}' "$$1"; }
-      coded() { printf '{"_type":"DV_CODED_TEXT","value":"%s","defining_code":{"_type":"CODE_PHRASE","terminology_id":{"_type":"TERMINOLOGY_ID","value":"ferroehr-operations"},"code_string":"%s"}}' "$$1" "$$1"; }
-      archetyped() { printf '{"_type":"ARCHETYPED","archetype_id":{"_type":"ARCHETYPE_ID","value":"%s"},"rm_version":"1.1.0"}' "$$1"; }
-      identities() { printf '[{"_type":"PARTY_IDENTITY","archetype_node_id":"at0001","name":%s,"details":{"_type":"ITEM_TREE","archetype_node_id":"at0002","name":%s,"items":[{"_type":"ELEMENT","archetype_node_id":"at0003","name":%s,"value":%s}]}}]' "$$(text name)" "$$(text details)" "$$(text name)" "$$(text "$$1")"; }
-      identified() { printf '{"_type":"ITEM_TREE","archetype_node_id":"at0010","name":%s,"items":[{"_type":"ELEMENT","archetype_node_id":"at0011","name":%s,"value":{"_type":"DV_IDENTIFIER","issuer":"%s","id":"%s","type":"%s"}}]}' "$$(text identifiers)" "$$(text "$$4")" "$$1" "$$2" "$$3"; }
-      ref() { printf '{"_type":"PARTY_REF","namespace":"demographic","type":"%s","id":{"_type":"HIER_OBJECT_ID","value":"%s"}}' "$$1" "$$2"; }
-      party() { printf '{"_type":"%s","archetype_node_id":"%s","archetype_details":%s,"name":%s,"details":%s,"identities":%s%s}' "$$1" "$$2" "$$(archetyped "$$2")" "$$(text "$$3")" "$$4" "$$(identities "$$3")" "$$5"; }
-      write() { curl -sS -u ferroehr:ferroehr -o /tmp/answer -D /tmp/headers -w '%{http_code}' -H 'Content-Type: application/json' -H 'Prefer: return=minimal' "$$@"; }
-      version() { tr -d '\r' < /tmp/headers | sed -n 's/^[Ee][Tt][Aa][Gg]: *"\(.*\)"$$/\1/p'; }
-      expect() {
-        case " $$2 " in
-          *" $$1 "*) ;;
-          *) echo "$$3 answered $$1" >&2; cat /tmp/answer >&2; exit 1 ;;
-        esac
-      }
-      agent_archetype=openEHR-DEMOGRAPHIC-AGENT.quickstart_service.v1
-      client=$$(identified "$$issuer" ferroehr-service client_id client)
-      status=$$(write -X POST --data "$$(party AGENT "$$agent_archetype" 'Quickstart service' "$$client" '')" "$$api/agent")
-      if [ "$$status" = 409 ]; then
-        echo 'the service client was granted before'
-        exit 0
-      fi
-      expect "$$status" 201 'the service client AGENT'
-      agent_version=$$(version)
-      agent=$${agent_version%%::*}
-      provider=$$(identified urn:oid:2.999.7.9 quickstart healthcare-provider provider)
-      status=$$(write -X POST --data "$$(party ORGANISATION openEHR-DEMOGRAPHIC-ORGANISATION.quickstart_provider.v1 'Quickstart provider' "$$provider" '')" "$$api/organisation")
-      expect "$$status" 201 'the provider ORGANISATION'
-      organisation=$$(version)
-      organisation=$${organisation%%::*}
-      acts_for=",\"relationships\":[{\"_type\":\"PARTY_RELATIONSHIP\",\"archetype_node_id\":\"at0020\",\"name\":$$(coded acts_for),\"source\":$$(ref AGENT "$$agent"),\"target\":$$(ref ORGANISATION "$$organisation")}]"
-      status=$$(write -X PUT -H "If-Match: \"$$agent_version\"" --data "$$(party AGENT "$$agent_archetype" 'Quickstart service' "$$client" "$$acts_for")" "$$api/agent/$$agent")
-      expect "$$status" '200 204' 'the acts-for relationship'
-      operation="{\"_type\":\"ELEMENT\",\"archetype_node_id\":\"at0032\",\"name\":$$(text operation),\"value\":$$(coded commit_composition)}"
-      origin="{\"_type\":\"ELEMENT\",\"archetype_node_id\":\"at0033\",\"name\":$$(coded origin),\"value\":$$(coded relay)}"
-      capability="{\"_type\":\"CAPABILITY\",\"archetype_node_id\":\"at0030\",\"name\":$$(text grant),\"credentials\":{\"_type\":\"ITEM_TREE\",\"archetype_node_id\":\"at0031\",\"name\":$$(text terms),\"items\":[$$operation,$$origin]}}"
-      role_archetype=openEHR-DEMOGRAPHIC-ROLE.quickstart_service.v1
-      role="{\"_type\":\"ROLE\",\"archetype_node_id\":\"$$role_archetype\",\"archetype_details\":$$(archetyped "$$role_archetype"),\"name\":$$(text 'Quickstart service'),\"identities\":$$(identities 'Quickstart service'),\"performer\":$$(ref AGENT "$$agent"),\"capabilities\":[$$capability]}"
-      status=$$(write -X POST --data "$$role" "$$api/role")
-      expect "$$status" 201 'the commit_composition grant'
-      echo 'the service client is granted'
-
   # The development TLS material, generated once per volume: an EC P-256 CA,
   # and a certificate for `keycloak` (SAN keycloak, localhost, 127.0.0.1)
   # signed by it. Keycloak reads the PKCS #12 key store; the CDR reads only

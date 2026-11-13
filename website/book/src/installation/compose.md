@@ -432,10 +432,11 @@ A service with no user behind it takes the client-credentials grant with
 clinical API and the admin routes refuse it with `403`. Its `system/aql-*`
 grant counts because the overlay names the client in `[auth.smart] backend_clients`
 (`FERROEHR__AUTH__SMART__BACKEND_CLIENTS`). It creates EHRs because the
-overlay's `ferroehr-provision-keycloak` one-shot grants it in the CDR, as the
-quickstart administrator through the Demographic API: an `AGENT` carrying its
-`client_id`, acting for the quickstart provider and performing a `ROLE` that
-grants `commit_composition`
+overlay's `ferroehr-grant-service` one-shot grants it in the CDR with
+`ferroehr party-binding grant`, on the operator's authority: an `AGENT`
+carrying its `client_id` and performing a `ROLE` that grants
+`commit_composition` with the origin `relay`, for the provider the quickstart
+acts for
 ([Operational policy](../operational-policy.md#what-a-system-client-may-do)),
 the only way a caller acting for no person commits. The grant names no
 template, so it commits no COMPOSITION:
