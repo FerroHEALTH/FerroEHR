@@ -137,18 +137,23 @@ fn transform_translations(translations: &mut BTreeMap<String, TranslationDetails
         else {
             continue;
         };
-        let lines: Vec<String> = raw
-            .lines()
-            .map(str::trim)
-            .filter(|line| !line.is_empty())
-            .map(str::to_owned)
-            .collect();
-        if lines.is_empty() {
+        let Some(lines) = nonblank_lines(raw) else {
             continue;
-        }
+        };
         translation.other_contributors = Some(lines);
         take_detail(&mut translation.other_details, OTHER_CONTRIBUTORS);
     }
+}
+
+/// The trimmed non-blank lines of an LF-separated value, `None` when none survive.
+fn nonblank_lines(raw: &str) -> Option<Vec<String>> {
+    let lines: Vec<String> = raw
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_owned)
+        .collect();
+    (!lines.is_empty()).then_some(lines)
 }
 
 /// The record of one conversion: what was converted, by which tool, and when.
@@ -255,15 +260,9 @@ fn take_keyed_lines(
     let Some(raw) = other.get(key) else {
         return;
     };
-    let lines: Vec<String> = raw
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .map(str::to_owned)
-        .collect();
-    if lines.is_empty() {
+    let Some(lines) = nonblank_lines(raw) else {
         return;
-    }
+    };
     // (Ordinals are unpadded, so ten or more entries sort lexicographically in
     // the `BTreeMap` — a display order, not a semantic one; the ordinal itself
     // still names the source line.)
