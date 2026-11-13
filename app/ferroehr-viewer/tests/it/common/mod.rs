@@ -909,16 +909,17 @@ impl Element {
     }
 
     /// Scroll it to the middle of the viewport, clear of the sticky top bar
-    /// and the docked decision bar, and wait for the browser to draw it
-    /// there.
+    /// and the docked decision bar. A control in an open modal dialog stays
+    /// where it is.
     ///
-    /// A popover form is a modal dialog placed against its trigger by CSS
-    /// anchor positioning, and the browser moves it with a scrolled anchor
-    /// only at its next rendering update (CSS Anchor Positioning, "Taking
-    /// Scroll Into Account"). Until then its controls still report their
-    /// place before the scroll, and a click aimed there lands outside the
-    /// dialog, which closes it as a press outside does and posts nothing
-    /// (#5503). The second animation frame starts after that update.
+    /// A modal dialog sits in the top layer, which the page's scroll never
+    /// brings into view. A popover form is one, placed against its trigger
+    /// by CSS anchor positioning, and the browser moves it with a scrolled
+    /// anchor only at its next rendering update (CSS Anchor Positioning,
+    /// "Taking Scroll Into Account"). Until then its controls still report
+    /// their place before the scroll, and a click aimed there lands outside
+    /// the dialog, which closes it as a press outside does and posts nothing
+    /// (#5503).
     ///
     /// # Panics
     /// When the `WebDriver` answers with anything but success.
@@ -930,10 +931,9 @@ impl Element {
         element_command(&format!("scroll_to_centre({})", self.what), async {
             self.inner
                 .handle()
-                .execute_async(
-                    "const done = arguments[arguments.length - 1]; \
-                     arguments[0].scrollIntoView({block: 'center'}); \
-                     requestAnimationFrame(() => requestAnimationFrame(() => done()));",
+                .execute(
+                    "if (!arguments[0].closest('dialog:modal')) \
+                     arguments[0].scrollIntoView({block: 'center'});",
                     vec![arg],
                 )
                 .await
