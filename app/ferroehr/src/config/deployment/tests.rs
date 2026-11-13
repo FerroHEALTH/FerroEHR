@@ -25,13 +25,16 @@ fn separated() -> FerroEhrConfig {
                 },
                 ..crate::config::authz::AuthzConfig::default()
             },
-            server: ferrohealth_server::section::ServerSection {
-                listen: "0.0.0.0:8443".parse().expect("an address"),
-                tls: Some(ferrohealth_server::section::TlsSection::new(
-                    "server.pem".into(),
-                    "server.key".into(),
-                )),
-                ..ferrohealth_server::section::ServerSection::default()
+            server: crate::config::server::ServerConfig {
+                shared: ferrohealth_server::section::ServerSection {
+                    listen: "0.0.0.0:8443".parse().expect("an address"),
+                    tls: Some(ferrohealth_server::section::TlsSection::new(
+                        "server.pem".into(),
+                        "server.key".into(),
+                    )),
+                    ..ferrohealth_server::section::ServerSection::default()
+                },
+                public_base_url: None,
             },
             ..FerroEhrConfig::default()
         };
@@ -88,7 +91,7 @@ fn on(clusters: ClusterIdentities) -> DatabaseFacts {
 #[test]
 fn the_default_is_sandbox_and_a_stock_deployment_names_its_gaps() {
     let config = FerroEhrConfig::default();
-    assert_eq!(config.server.listen.to_string(), "0.0.0.0:8080");
+    assert_eq!(config.server.shared.listen.to_string(), "0.0.0.0:8080");
     assert_eq!(config.deployment.profile, DeploymentProfile::Sandbox);
     let clusters = ClusterIdentities {
         clinical: Some("1".to_owned()),
@@ -111,7 +114,7 @@ fn the_default_is_sandbox_and_a_stock_deployment_names_its_gaps() {
     );
     assert!(posture.permits_boot());
     let mut on_loopback = FerroEhrConfig::default();
-    on_loopback.server.listen = "127.0.0.1:8080".parse().expect("an address");
+    on_loopback.server.shared.listen = "127.0.0.1:8080".parse().expect("an address");
     let loopback = DeploymentPosture::evaluate(&on_loopback, &on(clusters_of("1")));
     assert!(
         !loopback.gaps.contains(&DeploymentGap::PlaintextListener),
@@ -463,22 +466,22 @@ fn production_refuses_rbac_off_and_a_restricted_default_stays_closed() {
 #[test]
 fn production_refuses_a_routable_plaintext_listener_and_exempts_loopback() {
     let mut config = production(separated());
-    config.server.tls = None;
+    config.server.shared.tls = None;
     for bind in ["0.0.0.0:8080", "10.0.0.4:8080", "[::]:8080"] {
-        config.server.listen = bind.parse().expect("an address");
+        config.server.shared.listen = bind.parse().expect("an address");
         let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert_eq!(posture.gaps, [DeploymentGap::PlaintextListener], "{bind}");
         assert!(!posture.permits_boot(), "{bind}");
     }
 
     for bind in ["127.0.0.1:8080", "[::1]:8080"] {
-        config.server.listen = bind.parse().expect("an address");
+        config.server.shared.listen = bind.parse().expect("an address");
         let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert!(posture.gaps.is_empty(), "{bind} is loopback: {posture:?}");
         assert!(posture.permits_boot(), "{bind}");
     }
 
-    config.server.listen = "0.0.0.0:8080".parse().expect("an address");
+    config.server.shared.listen = "0.0.0.0:8080".parse().expect("an address");
     let accepted = accepting_the_plain_listener(&mut config);
     assert_eq!(accepted.gaps, [DeploymentGap::PlaintextListener]);
 }

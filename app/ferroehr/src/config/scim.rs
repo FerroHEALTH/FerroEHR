@@ -20,7 +20,6 @@ use ferrohealth_smart::config::Resolved;
 use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::party::config::PartySection;
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 /// The longest `contact_erasure_delay` a deployment may configure: 30 days.
 const MAX_CONTACT_ERASURE_DELAY: Duration = Duration::from_days(30);
@@ -31,11 +30,6 @@ const MAX_CONTACT_ERASURE_DELAY: Duration = Duration::from_days(30);
 #[serde(default, deny_unknown_fields)]
 #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct ScimConfig {
-    /// The externally reachable origin the SCIM base URL hangs off, such as
-    /// `https://cdr.example.com`; every `meta.location` and discovery document
-    /// names `<public_base_url>/scim/v2` (RFC 7643 §3.1: `location` is "The
-    /// URI of the resource being returned"). Required.
-    pub public_base_url: Option<SecretUrl>,
     /// The most resources one list response returns (RFC 7643 §5, the
     /// `ServiceProviderConfig` `filter.maxResults`).
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
@@ -66,7 +60,6 @@ pub struct ScimConfig {
 impl Default for ScimConfig {
     fn default() -> Self {
         Self {
-            public_base_url: None,
             filter_max_results: 100,
             max_deactivations: 100,
             deactivation_window: Duration::from_hours(1),
@@ -117,14 +110,6 @@ impl ScimClient {
 }
 
 impl ScimConfig {
-    /// The SCIM base URL, `<public_base_url>/scim/v2`, when one is configured.
-    #[must_use]
-    pub fn base_url(&self) -> Option<String> {
-        self.public_base_url
-            .as_ref()
-            .map(|origin| format!("{}/scim/v2", origin.expose().trim().trim_end_matches('/')))
-    }
-
     /// The deactivation window in whole minutes, a part minute rounded down.
     #[must_use]
     pub fn window_minutes(&self) -> u32 {
@@ -161,24 +146,6 @@ impl ScimConfig {
     #[must_use]
     pub fn errors(&self, resolved: Option<&Resolved>) -> Vec<String> {
         let mut errors = Vec::new();
-        let origin = self.public_base_url.as_ref().map(|url| url.expose().trim());
-        let parsed = origin.and_then(|origin| Url::parse(origin).ok());
-        let absolute = parsed.as_ref().is_some_and(|url| {
-            matches!(url.scheme(), "http" | "https")
-                && url.has_host()
-                && url.username().is_empty()
-                && url.password().is_none()
-                && url.query().is_none()
-                && url.fragment().is_none()
-        });
-        if !absolute {
-            errors.push(
-                "auth.scim.public_base_url (an absolute http(s) origin with no userinfo, query \
-                 or fragment, e.g. 'https://cdr.example.com') is required: every meta.location \
-                 names the resource by its URI (RFC 7643 §3.1)"
-                    .to_owned(),
-            );
-        }
         if self.filter_max_results == 0 {
             errors.push("auth.scim.filter_max_results must be at least 1".to_owned());
         }
@@ -285,7 +252,6 @@ mod tests {
 
     fn enabled(clients: Vec<ScimClient>) -> ScimConfig {
         ScimConfig {
-            public_base_url: Some(SecretUrl::new("https://cdr.example.com")),
             client: clients,
             ..ScimConfig::default()
         }
@@ -328,14 +294,14 @@ mod tests {
     }
 
     #[test]
-    fn the_base_url_hangs_off_the_origin() {
-        let config = ScimConfig {
-            public_base_url: Some(SecretUrl::new("https://cdr.example.com/")),
-            ..ScimConfig::default()
-        };
-        assert_eq!(
-            config.base_url().as_deref(),
-            Some("https://cdr.example.com/scim/v2")
+    fn the_table_takes_no_public_base_url() {
+        let refused = toml::from_str::<ScimConfig>("public_base_url = \"https://cdr.example.com\"")
+            .expect_err("the key is unknown");
+        assert!(
+            refused
+                .to_string()
+                .contains("unknown field `public_base_url`"),
+            "{refused}"
         );
     }
 
@@ -355,15 +321,13 @@ mod tests {
     }
 
     #[test]
-    fn each_missing_key_and_a_bad_origin_are_named() {
+    fn each_missing_key_is_named() {
         let config = ScimConfig {
-            public_base_url: Some(SecretUrl::new("https://user:pw@cdr.example.com")),
             client: vec![ScimClient::default()],
             ..enabled(Vec::new())
         };
         let errors = config.errors(None);
         for needed in [
-            "auth.scim.public_base_url",
             "needs issuer",
             "needs client_id",
             "needs scope",
@@ -402,7 +366,6 @@ mod tests {
     #[test]
     fn a_contact_erasure_period_past_thirty_days_is_refused() {
         let config = ScimConfig {
-            public_base_url: Some(SecretUrl::new("https://cdr.example.com")),
             contact_erasure_delay: Duration::from_millis(30 * 86_400_000 + 1),
             client: vec![client(
                 "https://as.example",

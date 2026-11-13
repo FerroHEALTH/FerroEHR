@@ -191,6 +191,10 @@ async fn serve_also(
     };
     config.auth.smart.patient_issuers =
         vec![ferrohealth_secret::secret_url::SecretUrl::new(FEDERATION)];
+    config.public_root = Some(
+        ferroehr::config::server::PublicRoot::new("https://ehr.example", "")
+            .expect("a public root"),
+    );
     let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
         .await
         .expect("build app");
@@ -729,10 +733,7 @@ fn contact_point() -> (IssuerEntry, FederationSection, DpopSection) {
         countries: vec!["BE".to_owned()],
         ..FederationSection::default()
     };
-    let dpop = DpopSection {
-        external_url: "https://ehr.example".to_owned(),
-        ..DpopSection::default()
-    };
+    let dpop = DpopSection::default();
     (entry, table, dpop)
 }
 

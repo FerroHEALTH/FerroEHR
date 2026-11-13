@@ -276,13 +276,10 @@ fn url_userinfo_reaches_no_rendering() {
         ..crate::system_log::config::SyslogConfig::default()
     });
     c.auth.smart.platform_base_url = Some(leaky(17));
-    c.auth.smart.public_base_url = Some(leaky(18));
-    c.auth.scim = Some(scim::ScimConfig {
-        public_base_url: Some(leaky(19)),
-        ..scim::ScimConfig::default()
-    });
+    c.server.public_base_url = Some(leaky(18));
     // URL 11 was the usage report endpoint, whose type refuses userinfo, so it
-    // can hold no sentinel; URL 7 was the removed event broker.
+    // can hold no sentinel; URL 7 was the removed event broker; URL 19 was
+    // `[auth.scim] public_base_url`, which URL 18 replaces.
     assert!(
         ferrohealth_usage_report::section::Endpoint::new(
             "https://u11:URL_PW_SENTINEL_11@h11:1/p11"
@@ -296,7 +293,7 @@ fn url_userinfo_reaches_no_rendering() {
             !rendered.contains("URL_PW_SENTINEL"),
             "URL userinfo leaked into the {surface} rendering: {rendered}"
         );
-        for n in (1..=21).filter(|n| *n != 7 && *n != 11) {
+        for n in (1..=21).filter(|n| ![7, 11, 19].contains(n)) {
             assert!(
                 rendered.contains(&format!("https://***@h{n}:1/p{n}")),
                 "URL {n} lost its host and path in the {surface} rendering: {rendered}"
@@ -319,13 +316,13 @@ fn surfaces(c: &FerroEhrConfig) -> [(&'static str, String); 4] {
     ]
 }
 
-/// A refusal of an issuer or a published SMART URL never prints the
+/// A refusal of an issuer or the published public URL never prints the
 /// userinfo it carries.
 #[test]
 fn an_issuer_refusal_masks_userinfo() {
     let mut c = standalone();
     c.auth.smart.discovery = true;
-    c.auth.smart.public_base_url = Some(SecretUrl::new("https://a:SMART_PW_SENTINEL@cdr.example"));
+    c.server.public_base_url = Some(SecretUrl::new("https://a:SMART_PW_SENTINEL@cdr.example"));
     c.auth.shared.issuer = auth_section::machines("https://b:OIDC_PW_SENTINEL@idp.example/r");
     let text = c.validate().expect_err("refused").to_string();
     assert!(!text.contains("SMART_PW_SENTINEL"), "{text}");
