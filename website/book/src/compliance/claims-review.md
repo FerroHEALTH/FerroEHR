@@ -1548,13 +1548,13 @@ carried. The facts added since, checked in every text in scope:
 
 ## The review of 2026-11-13, for 5.7.1-rc1
 
-Read on the tree after commit `90cbb3313`, for the FerroEHR release candidate
+Read on the tree after commit `de48ac5a8`, for the FerroEHR release candidate
 5.7.1-rc1. The reviews for 5.7.0-rc1 to 5.7.0 stand for everything 5.7.0
 carried. The facts added since, checked in every text in scope:
 
 - **Operational policy lives in the CDR** (#5433): who may do what is coded content of demographic parties, read on every request with no restart, under `[authz.grants] allowed`. System clients with their imports and exports (#5432, #5436, #5530), the backend and DEMOGRAPHIC clients and the clients a token is classified through (#5437), Basic users' roles and scopes, with `[authz.rbac] first_admin` as the first administrator (#5438), trusted import systems, origins, change-feed readers and SCIM clients (#5439), federation agreements (#5440), just-in-time admission (#5441) and the four privileges beyond clinical access (#5521) are grants; the audit category map, the access delay and the Cedar policy set are admin registers (#5442). A policy party is recognised by the codes it holds, in any archetype, and only an administrator reads or writes one (#5434, #5450, #5474, #5485).
 - **The configuration** lists 855 keys, 920 in 5.7.0, and names the 10 a deployment must set (#5455); one public URL takes the place of three (#5465), and the party mapping defaults to the shipped demographic definitions (#5428, #5462).
-- **Representatives in the patient portal** read the patient's record under a representation the deployment or the patient records (#5446).
+- **Representatives in the patient portal** read the patient's record under a representation the deployment or the patient records, and a former representative is never taken for the patient (#5446, #5532).
 - **The demographic write rules** refuse a relationship sourced elsewhere and a reference of the wrong kind, and `reverse_relationships` reads as it stood at a version (#5471, #5472, #5473).
 - **The security fix** GHSA-gwh2-7hjm-4pj4: every issuer FerroEHR's own keys name renders its userinfo masked (#5418).
 - **The family crates** move to `ferrohealth-smart` 0.24.1 and its siblings, `ihe-atna` and `ehds-logging` 0.18.0 among them (#5417, #5422, #5465, #5437).
