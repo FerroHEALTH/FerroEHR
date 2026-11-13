@@ -41,6 +41,10 @@
 //! - [`policy_register`] — the operational-policy admin registers (the audit
 //!   category map, the access delay and the Cedar policy set), versioned and
 //!   read on every request.
+//! - [`access_policy`] — the controller's `ACCESS_POLICY` in force, kept
+//!   fresh by `LISTEN`/`NOTIFY`.
+//! - [`draft_model`] — the RM extended by the draft packages, which archetypes
+//!   are validated against.
 //! - [`served_vocabulary`] — the deployment gap codes and OpenAPI family slugs
 //!   the server serves and the viewer names.
 
@@ -48,12 +52,14 @@
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
 #![doc(test(attr(deny(warnings))))]
 pub mod access_log;
+pub mod access_policy;
 pub mod aql;
 pub mod banner;
 pub mod config;
 pub mod db;
 pub mod decommission;
 pub mod digest;
+pub mod draft_model;
 pub mod error;
 pub mod extensions;
 pub mod identifier_protection;

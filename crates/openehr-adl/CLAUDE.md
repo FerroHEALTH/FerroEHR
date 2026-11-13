@@ -54,6 +54,7 @@ else; each helper has exactly ONE home.
 | `validate/specialisation` | the differential-vs-flat-parent walk (`ParentScan`) + the parent-dependent VACSD/VASID/VALC |
 | `validate/slots` | the slot arm of that walk (a second `impl ParentScan` block) + `validate_fillers` |
 | `validate/rm` | the reference-model seam (`RmModel`, `ProductionRmModel`, `validate_rm_conformance(archetype, rm, dialect)` over `RmScan`) |
+| `validate/rm_extended` | `ExtendedRmModel`: the RM extended by the class tables of packages that are no RM release (AOM2 master11 RM adaptation), and the class-table reads `ProductionRmModel` shares |
 | `validate/conformance` | the `master04.5` conformance functions |
 | `validate/flat` | the flat-form walk (`FlatScan`: `validate_flat_form_structure` + the 1.4 VDFPT twin) + the deferred flat-form halves (`validate_flat_form`) |
 | `flatten` | specialisation flattening (`flatten`, `flat_form`) |
