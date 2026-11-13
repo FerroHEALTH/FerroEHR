@@ -2,11 +2,12 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 #
-# ferroehr.toml: every key FerroEHR reads, each under its description and set to
-# its default. Copy this file to ferroehr.toml and edit what you change. A line
-# marked `#?` is a key with no default, a secret, or a table the defaults leave
-# out: remove `#? ` and fill the placeholder to set it. A line marked `#` under a
-# `# [table.<name>]` header shows a table you name yourself.
+# ferroehr.toml: every key FerroEHR reads, each under its description. Copy
+# this file to ferroehr.toml and set the keys the "What you must set" block
+# names, which are its only live lines. Every other key is a `#?` line that
+# shows its default, or a placeholder where it has none: remove `#? ` and edit
+# the value to set it. A line marked `#` under a `# [table.<name>]` header
+# shows a table you name yourself.
 #
 # A duration is a string with its unit ("500ms", "30s", "10min", "12h",
 # "7d"), a size a string with an IEC binary unit ("64MiB"). Each key can
@@ -16,8 +17,8 @@
 # What you must set
 #
 # This file lists 868 keys. A deployment that holds real data sets the 10
-# below; every other key is optional and runs on the built-in default its line
-# shows, or stays unset where its note says so.
+# below, the only live lines; every other key is optional and runs on the
+# built-in default its `#?` line shows, or stays unset where its note says so.
 #
 #   [deployment] profile
 #   [[auth.issuer]] issuer, kind, audience
@@ -40,10 +41,10 @@ profile = "sandbox"
 # The `DeploymentGap`s a `production` deployment runs without, each stated on
 # every boot and on `/management/status`. Ignored under `sandbox`, which
 # accepts everything. Optional (infrastructure).
-accepts = []
+#? accepts = []
 # The openEHR specification generation set the server runs (`development` |
 # `stable`; default `development`). Optional (infrastructure).
-spec_profile = "development"
+#? spec_profile = "development"
 # The commercial licence token file the licensor issued. Optional in every
 # respect: an unset, missing, malformed or expired token is logged once at boot
 # and the server runs unlicensed, identically in every other way. Optional,
@@ -54,52 +55,52 @@ spec_profile = "development"
 # the body limit, the overload bound, the drain, TLS, the trusted proxies, the
 # caller rate and compression) and the public base URL every public URL derives
 # from.
-[server]
+#? [server]
 # The socket address the listener binds. Optional (infrastructure).
-listen = "0.0.0.0:8080"
+#? listen = "0.0.0.0:8080"
 # The path every route is served under: empty, or starting with `/` and not
 # ending with one. Optional (infrastructure).
-base_path = ""
+#? base_path = ""
 # How long one request may take before the server answers `408`. Optional
 # (infrastructure).
-request_timeout = "30s"
+#? request_timeout = "30s"
 # How long a client may take to send its first byte once it connected, and each
 # HTTP/1.1 request head from that head's first byte; a client still sending its
 # head then is disconnected, which bounds a connection that never finishes one.
 # Never zero. Optional (infrastructure).
-header_read_timeout = "30s"
+#? header_read_timeout = "30s"
 # How long a kept-alive HTTP/1.1 connection may wait for its next request
 # before the server closes it. Keep it longer than the idle timeout of the
 # clients and proxies in front, so they close an idle connection first. Never
 # zero. Optional (infrastructure).
-idle_timeout = "2min"
+#? idle_timeout = "2min"
 # The largest request body the server reads before answering `413`. Optional
 # (infrastructure).
-body_limit = "64MiB"
+#? body_limit = "64MiB"
 # How long readiness stays withdrawn before the listener closes, so an
 # orchestrator stops sending requests first. Optional (infrastructure).
-drain_delay = "0s"
+#? drain_delay = "0s"
 # How long the requests in flight may take once the listener closed. Optional
 # (infrastructure).
-shutdown_timeout = "10s"
+#? shutdown_timeout = "10s"
 # How many requests the server serves at once; past it a request is answered
 # `503`. Unset, there is no bound. Optional, unset by default (infrastructure).
 #? max_concurrent_requests = 0
 # How long a refused request is told to wait (`Retry-After`), a whole number of
 # seconds, since the header carries delay-seconds (RFC 9110 §10.2.3). Optional
 # (infrastructure).
-retry_after = "1s"
+#? retry_after = "1s"
 # The reverse proxies whose forwarded client address is believed, each an
 # address or a CIDR block; empty, every request is named by its peer. Optional
 # (infrastructure).
-trusted_proxies = []
+#? trusted_proxies = []
 # The header a trusted proxy names the client in. Optional (infrastructure).
-forwarded_header = "forwarded"
+#? forwarded_header = "forwarded"
 # Whether a response is compressed with gzip or Brotli when the client accepts
 # one. Optional (infrastructure).
-compression = true
+#? compression = true
 # The smallest response body that is compressed. Optional (infrastructure).
-compression_min_size = "1KiB"
+#? compression_min_size = "1KiB"
 # The URL clients reach this listener at, through any proxy in front of it:
 # `https://cdr.example.com`, or with a path when a proxy serves the server
 # under one. Every public URL derives from it, after `server.base_path`: the
@@ -146,14 +147,14 @@ compression_min_size = "1KiB"
 
 # The console, the request log and the OpenTelemetry export, the family's
 # shared section.
-[telemetry]
+#? [telemetry]
 # The console rendering. Optional (infrastructure).
-format = "auto"
+#? format = "auto"
 # The `tracing` filter directive of the console. Optional (infrastructure).
-filter = "info,hyper=warn,tower=warn,h2=warn"
+#? filter = "info,hyper=warn,tower=warn,h2=warn"
 # The query parameters whose values the request log may carry; empty, it
 # carries none. Optional (infrastructure).
-logged_query_parameters = []
+#? logged_query_parameters = []
 # The deployment environment, `deployment.environment.name` on the resource,
 # such as `production`. Optional, unset by default (infrastructure).
 #? environment = ""
@@ -190,42 +191,42 @@ logged_query_parameters = []
 #? min_version = "1.3"
 
 # The installation report to `FerroPULSE` (on by default).
-[usage_report]
+#? [usage_report]
 # The off switch: `false` sends nothing. Optional (infrastructure).
-enabled = true
+#? enabled = true
 # The collector. Optional (infrastructure).
-endpoint = "https://report.ferropulse.eu/v1/report"
+#? endpoint = "https://report.ferropulse.eu/v1/report"
 # The directory the instance id lives in; without one nothing is sent, since
 # every restart would count as a new installation. Optional, unset by default
 # (infrastructure).
 #? state_dir = ""
 # How the product is deployed. Optional (infrastructure).
-deployment = "unknown"
+#? deployment = "unknown"
 
 # Authentication: the `ferrohealth-smart` section, whose serialization writes
 # every secret as `***`, `[auth.idp]`, `[auth.smart]` and `[auth.scim]`.
-[auth]
+#? [auth]
 # Whether inbound authentication is on; a product may refuse `false`. Optional
 # (trust).
-enabled = true
+#? enabled = true
 # The realm the challenges name; empty for none, which a product replaces with
 # its own default. Optional.
-realm = ""
+#? realm = ""
 # The SMART capabilities the discovery document adds, each a capability SMART
 # App Launch 2.2.0 or the SMART on openEHR draft defines, or a full URI.
 # Optional.
-capabilities = []
+#? capabilities = []
 # The scopes the discovery document lists as `scopes_supported`: only scopes
 # the product honours, because "the server SHALL support all scopes listed
 # here". Optional.
-scopes_supported = []
+#? scopes_supported = []
 # The issuer the discovery document describes; absent for the one eligible
 # issuer (`crate::resource::described`). It renders with any userinfo masked.
 # Optional, unset by default (trust).
 #? described_issuer = ""
 # The product's own scope, a full URI or a string starting with `__`; empty for
 # none. Optional (trust).
-product_scope = ""
+#? product_scope = ""
 
 # The `[auth.issuer]` tables, each issuer with its own settings.
 #? [[auth.issuer]]
@@ -600,7 +601,7 @@ product_scope = ""
 # every issuer: trust roots beside the platform's, for an issuer behind a
 # private certificate authority, a client identity and the minimum version. The
 # crate reads none of it: the product's `TlsBuilder` builds it once at start.
-[auth.tls]
+#? [auth.tls]
 # The client certificate chain and its private key, in one PEM. Optional, unset
 # by default (trust).
 #? client_identity = ""
@@ -611,7 +612,7 @@ product_scope = ""
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (trust).
-min_version = "1.3"
+#? min_version = "1.3"
 
 # The `[auth.federation]` tables, one per `federation` issuer.
 #? [[auth.federation]]
@@ -704,7 +705,7 @@ min_version = "1.3"
 
 # The `[auth.idp]` table: the vendor adapters a profile may name, each read in
 # a build that compiles it in.
-[auth.idp]
+#? [auth.idp]
 
 # The Microsoft Graph access of the `idp-entra` adapter (`[auth.idp.entra]`),
 # which resolves an Entra ID groups overage.
@@ -813,7 +814,7 @@ min_version = "1.3"
 #? min_version = "1.3"
 
 # The SMART App Launch resource-server posture.
-[auth.smart]
+#? [auth.smart]
 # Serve the `/.well-known/smart-configuration` discovery document (SMART App
 # Launch 2.x §Conformance; default `false`). The document is built from the
 # metadata of one `[auth]` issuer that serves a user launch: `[auth]
@@ -822,7 +823,7 @@ min_version = "1.3"
 # or none, refuse the start. master04 §Services makes every
 # `services.*.baseUrl` an "Absolute URL to the root of the API (required)", so
 # the document needs `[server] public_base_url`. Optional (infrastructure).
-discovery = false
+#? discovery = false
 # The RFC 8414 §2 authorization-server metadata of the `[auth]` issuer it
 # names, whose key set is a `jwks_file` and carries none: a JSON document read
 # at boot. SMART App Launch 2.2.0, Conformance, §Metadata requires the
@@ -840,12 +841,12 @@ discovery = false
 # capabilities and applies no episode filtering (openEHR has no first-class
 # Episode resource; master09 calls the semantics "currently
 # implementation-defined"). Optional (infrastructure).
-episode_launch = false
+#? episode_launch = false
 # The issuers whose `patient/` grants count, each confined to the `ehrId` of
 # the token's launch context (master07 §Context Selection: the `ehrId` names
 # an EHR of the platform that issued it). Empty, a `patient/` grant grants
 # nothing. Each renders with any userinfo masked. Optional (trust).
-patient_issuers = []
+#? patient_issuers = []
 
 # The SCIM 2.0 service provider and its provisioning clients; absent,
 # `/scim/v2/` is not served.
@@ -871,21 +872,21 @@ patient_issuers = []
 
 # RBAC, ABAC, assurance, the party binding, the system clients and the grant
 # ceiling.
-[authz]
+#? [authz]
 
 # Role-based access control.
-[authz.rbac]
+#? [authz.rbac]
 # Master switch of the coarse role gate, active only when auth is enabled
 # (`FERROEHR__AUTHZ__RBAC__ENABLED`, default `true`). Optional (trust).
-enabled = true
+#? enabled = true
 # The role required for Admin-class operations (default `ADMIN`). Optional
 # (trust).
-admin_role = "ADMIN"
+#? admin_role = "ADMIN"
 # The role marking a principal as read-only (default `READONLY`): a caller
 # carrying it is refused on every write operation even when it also holds
 # granting roles (a restriction overrides a grant). Supports the conformance
 # catalogue's authorization-separation cases. Optional (trust).
-readonly_role = "READONLY"
+#? readonly_role = "READONLY"
 # The role that may read the access log for ONE subject at a time
 # (`FERROEHR__AUTHZ__RBAC__SUBJECT_AUDIT_ROLE`, default unset). Optional, unset
 # by default (trust).
@@ -897,7 +898,7 @@ readonly_role = "READONLY"
 # The roles of an EHDS Art. 10 access-service caller, held to an opt-out
 # (`FERROEHR__AUTHZ__RBAC__ACCESS_SERVICE_ROLES`; empty, the default, holds
 # nobody). Optional (trust).
-access_service_roles = []
+#? access_service_roles = []
 # The role that may read a party's protected national identifiers
 # (`FERROEHR__AUTHZ__RBAC__IDENTIFIER_READER_ROLE`, default unset). Optional,
 # unset by default (trust).
@@ -911,35 +912,34 @@ access_service_roles = []
 # `persons` issuer; empty, the default, lets no token grant them. A policy
 # grant of `import_ehr`, `import_ehr_extract` or `read_identifiers` is a second
 # source. Each renders with any userinfo masked. Optional (trust).
-role_issuers = []
+#? role_issuers = []
 # What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default `open`).
 # Optional (trust).
-ehr_access_default = "open"
+#? ehr_access_default = "open"
 
 # Attribute-based access control (opt-in).
-[authz.abac]
+#? [authz.abac]
 # Master ABAC switch (default `false`). Optional (infrastructure).
-enabled = false
+#? enabled = false
 # Which PDP engine to use (default `cedar`). Optional (infrastructure).
-engine = "cedar"
+#? engine = "cedar"
 # The JWT claim carrying the caller's organization (default `organization_id`);
-# resolved opportunistically (absent → no attribute). Optional
-# (infrastructure).
-organization_claim = "organization_id"
+# resolved opportunistically (absent → no attribute). Optional (trust).
+#? organization_claim = "organization_id"
 # The JWT claim carrying the patient id (default `patient_id`); its presence
 # enables the local subject gate. Set to empty to disable the gate. Optional
-# (infrastructure).
-patient_claim = "patient_id"
+# (trust).
+#? patient_claim = "patient_id"
 # The subject namespace patient-claim ids are issued in
 # (`EHR_STATUS.subject.external_ref.namespace`, RM ehr master04 §EHR Status),
-# default unset. Optional, unset by default (infrastructure).
+# default unset. Optional, unset by default (trust).
 #? patient_namespace = ""
 # Whether DIRECTORY (FOLDER) operations are submitted to the PDP (default
 # `false`). Optional (infrastructure).
-check_directory = false
+#? check_directory = false
 
 # Remote-PDP settings.
-[authz.abac.remote]
+#? [authz.abac.remote]
 
 # `[authz.abac.remote.endpoint]`, the family's outbound endpoint: the PDP base
 # URL (`url`; the policy name is appended, so it must end with `/`; required
@@ -948,28 +948,28 @@ check_directory = false
 # `retry` of a call that got no answer or a `5xx`, the TLS and the credential,
 # such as the OAuth 2.0 client credentials grant. Any `userinfo` in the URL is
 # masked in every rendering.
-[authz.abac.remote.endpoint]
+#? [authz.abac.remote.endpoint]
 # The service's URL (RFC 3986); required. It renders with its userinfo and its
 # query masked, in `Debug` and when serialized. Optional (infrastructure).
-url = ""
+#? url = ""
 # How long one whole call may take; never zero. Optional (infrastructure).
-timeout = "5s"
+#? timeout = "5s"
 # How long opening the connection may take; unset, only `timeout` bounds it.
 # Optional (infrastructure).
-connect_timeout = "2s"
+#? connect_timeout = "2s"
 
 # How a failed call is tried again.
-[authz.abac.remote.endpoint.retry]
+#? [authz.abac.remote.endpoint.retry]
 # How many times one call is tried in all; 1 tries once. Optional
 # (infrastructure).
-max_attempts = 3
+#? max_attempts = 3
 # The wait before the second try. Optional (infrastructure).
-initial_backoff = "200ms"
+#? initial_backoff = "200ms"
 # The longest wait between two tries. Optional (infrastructure).
-max_backoff = "5s"
+#? max_backoff = "5s"
 
 # The TLS of the connection, built by the product's reader of TLS material.
-[authz.abac.remote.endpoint.tls]
+#? [authz.abac.remote.endpoint.tls]
 # The client certificate chain and its private key, in one PEM. Optional, unset
 # by default (infrastructure).
 #? client_identity = ""
@@ -981,12 +981,12 @@ max_backoff = "5s"
 #? trust_roots_file = ""
 # The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
 # as for the listener. Optional (infrastructure).
-min_version = "1.3"
+#? min_version = "1.3"
 
 # The credential the calls carry: HTTP Basic or the client credentials grant.
-[authz.abac.remote.endpoint.credentials]
+#? [authz.abac.remote.endpoint.credentials]
 # The Basic user-id. Optional (infrastructure).
-user = ""
+#? user = ""
 # The Basic password, rendered redacted. Optional, unset by default
 # (infrastructure).
 #? password = ""
@@ -1317,26 +1317,26 @@ user = ""
 
 # The authentication assurance a patient-data request must carry
 # (`[authz.assurance]`, off by default).
-[authz.assurance]
+#? [authz.assurance]
 # The claim carrying the authentication context class, a dotted path; `acr` by
 # default (OpenID Connect Core 1.0 §2). Optional (trust).
-claim = "acr"
+#? claim = "acr"
 # The level each claim value the issuer emits stands for; a value the map does
 # not name carries none. Optional (trust).
-levels = {}
+#? levels = {}
 # The level a request held to the section must carry; none refuses nothing.
 # Optional, unset by default (trust).
 #? minimum = "low"
 
 # The party binding: the provider, the namespace and the Basic users' keys
 # (`[authz.party_binding]`).
-[authz.party_binding]
+#? [authz.party_binding]
 # The `PARTY_REF.namespace` a bound party is written under, held to the
 # `OBJECT_REF.namespace` pattern. Optional.
-namespace = "demographic"
+#? namespace = "demographic"
 # The age past which `ferroehr party-binding check` reports a provisional
 # `PERSON`. Optional.
-provisional_report_after = "30d"
+#? provisional_report_after = "30d"
 
 # The healthcare provider this deployment acts for, which every access record
 # of a bound person and every version a person commits name (EHDS Art. 13(4),
@@ -1367,49 +1367,46 @@ provisional_report_after = "30d"
 # `[authz.party_binding.person.template]`, one per template a professional's
 # `PERSON` may use.
 #? [[authz.party_binding.person.template]]
-# An operational template in the definition store rooted at `PERSON`. Optional
-# (infrastructure).
+# An operational template in the definition store rooted at `PERSON`. Optional.
 #? template_id = ""
 # Whether SCIM and just-in-time creation create new persons with this template;
-# exactly one table sets it. Optional (infrastructure).
+# exactly one table sets it. Optional.
 #? default = false
 
 # The binding key.
 #? [authz.party_binding.person.template.key]
-# The openEHR path. Optional (infrastructure).
+# The openEHR path. Optional.
 #? path = ""
-# The `DV_IDENTIFIER.type`. Optional (infrastructure).
+# The `DV_IDENTIFIER.type`. Optional.
 #? type = ""
 
 # The SCIM `userName`.
 #? [authz.party_binding.person.template.user_name]
-# The openEHR path. Optional (infrastructure).
+# The openEHR path. Optional.
 #? path = ""
-# The `DV_IDENTIFIER.type`. Optional (infrastructure).
+# The `DV_IDENTIFIER.type`. Optional.
 #? type = ""
 
 # The SCIM `externalId`.
 #? [authz.party_binding.person.template.external_id]
-# The openEHR path. Optional (infrastructure).
+# The openEHR path. Optional.
 #? path = ""
-# The `DV_IDENTIFIER.type`. Optional (infrastructure).
+# The `DV_IDENTIFIER.type`. Optional.
 #? type = ""
 
 # `[authz.party_binding.person.attribute]`, one per mapped value.
 #? [[authz.party_binding.person.attribute]]
 # A SCIM attribute path, with the RFC 7644 §3.4.2.2 `valuePath` filter form
-# (`emails[type eq "work"].value`). Optional, unset by default
-# (infrastructure).
+# (`emails[type eq "work"].value`). Optional, unset by default.
 #? scim = ""
-# An OpenID Connect Core 1.0 §5.1 claim. Optional, unset by default
-# (infrastructure).
+# An OpenID Connect Core 1.0 §5.1 claim. Optional, unset by default.
 #? oidc = ""
-# Whether just-in-time creation writes the value. Optional (infrastructure).
+# Whether just-in-time creation writes the value. Optional.
 #? jit = false
 # Whether this is the name the committer reads; at most one table sets it.
-# Optional (infrastructure).
+# Optional.
 #? name = false
-# The path the value goes to, per template id. Optional (infrastructure).
+# The path the value goes to, per template id. Optional.
 #? path = {}
 
 # The professional `ROLE` template.
@@ -1426,9 +1423,9 @@ provisional_report_after = "30d"
 
 # The group's `externalId`.
 #? [authz.party_binding.group.external_id]
-# The openEHR path. Optional (infrastructure).
+# The openEHR path. Optional.
 #? path = "/details[id2]/items[id3]"
-# The `DV_IDENTIFIER.type`. Optional (infrastructure).
+# The `DV_IDENTIFIER.type`. Optional.
 #? type = "scim_external_id"
 
 # The membership `PARTY_RELATIONSHIP` archetype.
@@ -1470,10 +1467,10 @@ provisional_report_after = "30d"
 #? idp_claim = "idp"
 
 # The operations the policy grants may grant (`[authz.grants]`).
-[authz.grants]
+#? [authz.grants]
 # The operations the party store may grant (`FERROEHR__AUTHZ__GRANTS__ALLOWED`,
 # comma-separated). Optional (trust).
-allowed = ["commit_composition"]
+#? allowed = ["commit_composition"]
 
 # The openEHR REST API: the base path, the system identifier, the `OPTIONS`
 # identity, the `OpenAPI` UI, CORS, the clinical body tier and the ADMIN and
@@ -1482,7 +1479,7 @@ allowed = ["commit_composition"]
 # The ITS-REST base path all API routes hang off, from the root of the
 # listener. `management.base_path` is set the same way; the two never overlap.
 # Optional (infrastructure).
-base_path = "/ferroehr/rest/openehr/v1"
+#? base_path = "/ferroehr/rest/openehr/v1"
 # Who may read the Swagger UI and the `OpenAPI` documents at the REST root:
 # `off` (not mounted), `admin_only`, `private` (any authenticated principal;
 # the default) or `public`. The documents list the whole enabled operation
@@ -1490,7 +1487,7 @@ base_path = "/ferroehr/rest/openehr/v1"
 # anyone who can reach the port. The same vocabulary the management endpoints
 # use; the name is the `OpenAPI` Specification's, the document the UI renders.
 # Optional (infrastructure).
-openapi_ui = "private"
+#? openapi_ui = "private"
 # This CDR's own openEHR **system identifier** — the identity the deployment
 # stamps into the data it authors (`FERROEHR__API__SYSTEM_ID`). Must set
 # (infrastructure).
@@ -1499,11 +1496,11 @@ system_id = "ferroehr.local"
 # `server.body_limit`. Optional, unset by default (infrastructure).
 #? body_limit = "512KiB"
 # Whether the ADMIN API group is served. Optional (infrastructure).
-admin = false
+#? admin = false
 # Whether the terminology extension API is mounted. Off by default — the
 # routes answer `404` unless enabled. The terminology server the CDR asks is
 # `[terminology]`. Optional (infrastructure).
-terminology = false
+#? terminology = false
 
 # The CORS protocol answers of the API (Fetch Standard §3.2). Absent, no CORS
 # header is sent, so a browser on another origin cannot read a response.
@@ -1534,17 +1531,17 @@ terminology = false
 # the live endpoint list is supplied separately by `ferroehr_rest::router`.
 # This is the *display* identity of the manifest — the data-authoring
 # identity is `Self::system_id`.
-[api.options]
+#? [api.options]
 # `Options.solution` — the product name. Optional.
-solution = "FerroEHR"
+#? solution = "FerroEHR"
 # `Options.vendor` — the organisation providing the solution (ITS-REST
 # `specifications/schemas/others/Options.yaml`, a plain string); defaults to
 # the manufacturer's name (`crate::manufacturer::MANUFACTURER`). Optional.
-vendor = "Cadasto B.V."
+#? vendor = "Cadasto B.V."
 
 # The shared `PostgreSQL` DSN, pool tuning, migrations and one table per
 # storage domain.
-[database]
+#? [database]
 # `PostgreSQL` connection DSN (`postgres://user:pass@host:port/db`).
 # Credentials are redacted from every rendering (`SecretUrl`). Must set
 # (infrastructure).
@@ -1560,21 +1557,21 @@ vendor = "Cadasto B.V."
 # Setting both is a boot error. Optional, unset by default (infrastructure).
 #? migrate_url_file = ""
 # Upper bound of the connection pool. Optional.
-max_connections = 20
+#? max_connections = 20
 # Connections the pool keeps open when idle (avoids cold reopen + `SET
 # search_path` churn under variable load). Optional.
-min_connections = 2
+#? min_connections = 2
 # How long to wait for a free connection before failing. Optional.
-acquire_timeout = "30s"
+#? acquire_timeout = "30s"
 # `statement_timeout` applied to every pooled connection; `"0s"` leaves the
 # server default (usually unlimited). Optional.
-statement_timeout = "1min"
+#? statement_timeout = "1min"
 # Whether the server applies its embedded migrations at boot (`MigrationMode`).
 # Optional (infrastructure).
-migrations = "apply"
+#? migrations = "apply"
 
 # The clinical record's own DSN and the credential that prepares its database.
-[database.clinical]
+#? [database.clinical]
 # This domain's `PostgreSQL` DSN. Unset reuses `[database] url`. Optional,
 # unset by default (infrastructure).
 #? url = ""
@@ -1593,7 +1590,7 @@ migrations = "apply"
 #? migrate_url_file = ""
 
 # The identities' own DSN and the credential that prepares their database.
-[database.party]
+#? [database.party]
 # This domain's `PostgreSQL` DSN. Unset reuses `[database] url`. Optional,
 # unset by default (infrastructure).
 #? url = ""
@@ -1612,7 +1609,7 @@ migrations = "apply"
 #? migrate_url_file = ""
 
 # The audit repository's own DSN and the credential that prepares its database.
-[database.audit]
+#? [database.audit]
 # This domain's `PostgreSQL` DSN. Unset reuses `[database] url`. Optional,
 # unset by default (infrastructure).
 #? url = ""
@@ -1631,12 +1628,12 @@ migrations = "apply"
 #? migrate_url_file = ""
 
 # The management/observability surface.
-[management]
+#? [management]
 # Master switch. When `false`, no management routes are mounted at all.
 # Optional (infrastructure).
-enabled = false
+#? enabled = false
 # The base path the management endpoints hang off. Optional (infrastructure).
-base_path = "/management"
+#? base_path = "/management"
 # When set, the management surface is served from its **own** listener on this
 # socket address (a separate axum server task in the binary) instead of the
 # main API listener — so production can keep it off the public listener
@@ -1649,72 +1646,72 @@ base_path = "/management"
 #? flame_file = ""
 
 # Per-endpoint access levels — the SINGLE authority for this surface.
-[management.endpoints]
+#? [management.endpoints]
 # `/management/info`. Optional (infrastructure).
-info = "off"
+#? info = "off"
 # `/management/metrics` (+ `/{name}`) — the JSON registry view. Optional
 # (infrastructure).
-metrics = "off"
+#? metrics = "off"
 # `/management/prometheus` — the text exposition scraped by Prometheus.
 # Optional (infrastructure).
-prometheus = "off"
+#? prometheus = "off"
 # `/management/env` — the redacted effective configuration. Optional
 # (infrastructure).
-env = "off"
+#? env = "off"
 # `/management/loggers` — the runtime `EnvFilter` control. Optional
 # (infrastructure).
-loggers = "off"
+#? loggers = "off"
 # `/management/flamegraph` — the on-demand CPU flamegraph (pprof sampling).
 # Optional (infrastructure).
-flamegraph = "off"
+#? flamegraph = "off"
 # `/management/health` — every readiness indicator with its detail. Optional
 # (infrastructure).
-health = "off"
+#? health = "off"
 # `/management/status` — the status document with the licence, the deployment
 # posture and the support period. Optional (infrastructure).
-status = "off"
+#? status = "off"
 
 # Limits for the on-demand CPU profiler (`endpoints.flamegraph`).
-[management.profiling]
+#? [management.profiling]
 # The longest sample window a single request may ask for, in whole seconds.
 # Optional.
-max_duration = "30s"
+#? max_duration = "30s"
 # The highest sampling frequency a request may ask for, in Hz. Optional.
-max_frequency = 999
+#? max_frequency = 999
 
 # The IHE ATNA audit trail / System Log (local Audit Record Repository + the
 # syslog and FHIR-feed forwarding sinks).
-[audit]
+#? [audit]
 # Master switch (`FERROEHR__AUDIT__ENABLED`). **On by default** — every
 # deployment gets a queryable audit trail with zero external dependencies (the
 # sinks decide where records go). Optional (infrastructure).
-enabled = true
+#? enabled = true
 # Enterprise/site id → `AuditEnterpriseSiteID`
 # (`FERROEHR__AUDIT__ENTERPRISE_SITE_ID`). Optional, unset by default
 # (infrastructure).
 #? enterprise_site_id = ""
 # Audit source id → `AuditSourceID` and the destination participant
 # (`FERROEHR__AUDIT__SOURCE_ID`). Optional (infrastructure).
-source_id = "ferroehr"
+#? source_id = "ferroehr"
 # Fill value for empty mandatory fields (`FERROEHR__AUDIT__VALUE_IF_MISSING`).
 # Optional.
-value_if_missing = "UNKNOWN"
+#? value_if_missing = "UNKNOWN"
 # Skip successful-login records (`FERROEHR__AUDIT__SUPPRESS_LOGIN_EVENTS`).
 # Rejected accesses (401/403) are always recorded. Optional.
-suppress_login_events = true
+#? suppress_login_events = true
 # Failure mode (`FERROEHR__AUDIT__FAIL_MODE`): `open` | `closed`. Optional
 # (trust).
-fail_mode = "open"
+#? fail_mode = "open"
 # Enrich the patient participant via a background indexed lookup of
 # `ehr.subject_id` (`FERROEHR__AUDIT__RESOLVE_SUBJECT`). On by default — the
 # IHE BALP `Patient*` patterns and the patient-centric audit search need the
 # subject; the lookup runs only on the background drain. Optional.
-resolve_subject = true
+#? resolve_subject = true
 # Bounded audit queue capacity (`FERROEHR__AUDIT__QUEUE_CAPACITY`). Sized for
 # write-path bursts: the drain persists in multi-row batches, so the queue only
 # needs to ride out sink latency spikes, but a loaded write path can enqueue
 # thousands per second. Optional.
-queue_capacity = 8192
+#? queue_capacity = 8192
 # This node's advertised network address → the destination
 # network-access-point (`FERROEHR__AUDIT__SERVER_HOST`); the `value_if_missing`
 # fill when unset. Optional, unset by default (infrastructure).
@@ -1722,29 +1719,29 @@ queue_capacity = 8192
 # The request header carrying the caller's declared purpose of use
 # (`FERROEHR__AUDIT__PURPOSE_HEADER`), recorded on every access record.
 # Optional.
-purpose_header = "x-purpose-of-use"
+#? purpose_header = "x-purpose-of-use"
 # The request header carrying the data permit the caller acts under
 # (`FERROEHR__AUDIT__PERMIT_HEADER`), recorded on every access record.
 # Optional.
-permit_header = "x-data-permit"
+#? permit_header = "x-data-permit"
 # The purpose codes this deployment accepts (`FERROEHR__AUDIT__PURPOSE_CODES`).
 # Optional.
-purpose_codes = []
+#? purpose_codes = []
 # The declared purpose codes that mark an access as an emergency access
 # (`FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES`). Empty (the default) marks
 # nothing. Optional (trust).
-emergency_purpose_codes = []
+#? emergency_purpose_codes = []
 # The legal basis this deployment processes under
 # (`FERROEHR__AUDIT__LEGAL_BASIS`), recorded on every access record. Optional,
 # unset by default (infrastructure).
 #? legal_basis = ""
 
 # The local Audit Record Repository.
-[audit.store]
+#? [audit.store]
 # Persist every record locally (`FERROEHR__AUDIT__STORE__ENABLED`). **On by
 # default** (owner posture: compliance out of the box). Optional
 # (infrastructure).
-enabled = true
+#? enabled = true
 # How long records are kept, a calendar period (`"P5Y"`, `"P1830D"`); unset
 # keeps them forever (`FERROEHR__AUDIT__STORE__RETENTION`). Applied hourly by
 # the retention reaper. Optional, unset by default (infrastructure).
@@ -1753,17 +1750,17 @@ enabled = true
 # German telematics-infrastructure application
 # (`FERROEHR__AUDIT__STORE__SGB_V_309_CONTROLLER`). **Off by default.**
 # Optional (infrastructure).
-sgb_v_309_controller = false
+#? sgb_v_309_controller = false
 # The time between two scheduled verifications of the store's hash chain
 # (`FERROEHR__AUDIT__STORE__VERIFY_INTERVAL`); `"0s"` turns the schedule off.
 # Default one hour. Optional.
-verify_interval = "1h"
+#? verify_interval = "1h"
 # The time between two scheduled full passes over the hash chain
 # (`FERROEHR__AUDIT__STORE__FULL_VERIFY_INTERVAL`), which also recompute the
 # records before the checkpoint; `"0s"` leaves the full pass to `SELECT * FROM
 # audit.verify_audit_chain()` on demand. Default one week. A run that found
 # damage is always followed by a full pass. Optional.
-full_verify_interval = "7d"
+#? full_verify_interval = "7d"
 
 # The classic DICOM-over-syslog feed; absent, off.
 #? [audit.syslog]
@@ -2185,21 +2182,21 @@ subject_namespaces = []
 # Accept `PARTY_IDENTIFIED` / `PARTY_RELATED` carrying `name` or `identifiers`
 # in clinical content (`FERROEHR__PRIVACY__ALLOW_IDENTIFIED_PARTIES_IN_EHR`).
 # Optional (trust).
-allow_identified_parties_in_ehr = false
+#? allow_identified_parties_in_ehr = false
 
 # The identifier scanner.
-[privacy.identifier_scan]
+#? [privacy.identifier_scan]
 # `strict` (refuse) or `warn` (accept and record)
 # (`FERROEHR__PRIVACY__IDENTIFIER_SCAN__MODE`). Optional (trust).
-mode = "strict"
+#? mode = "strict"
 # The national personal-identifier rules this deployment scans for, by rule key
 # (`FERROEHR__PRIVACY__IDENTIFIER_SCAN__RULES`, comma-separated in the
 # environment). An unknown key is a boot error naming it. Optional (trust).
-rules = ["ch-ahvn13", "ch-epd-pid", "de-kvnr", "fi-hetu", "gb-nhs-number", "nl-bsn", "no-fodselsnummer", "se-personnummer"]
+#? rules = ["ch-ahvn13", "ch-epd-pid", "de-kvnr", "fi-hetu", "gb-nhs-number", "nl-bsn", "no-fodselsnummer", "se-personnummer"]
 # Extra identifier patterns this deployment refuses, as Rust regular
 # expressions (`FERROEHR__PRIVACY__IDENTIFIER_SCAN__PATTERNS`, comma-separated
 # in the environment). Optional (trust).
-patterns = []
+#? patterns = []
 
 # The national-identifier protection of the demographic domain; absent, off.
 #? [privacy.identifier_protection]
@@ -2216,20 +2213,20 @@ patterns = []
 #? key_file = ""
 
 # The cross-domain cohort-query allow-list and limits.
-[privacy.cohort]
+#? [privacy.cohort]
 # The distinct-EHR floor a result set must reach to be served
 # (`FERROEHR__PRIVACY__COHORT__SMALL_CELL_THRESHOLD`); `0` disables
 # suppression. Optional (trust).
-small_cell_threshold = 5
+#? small_cell_threshold = 5
 # The largest cohort a predicate may select
 # (`FERROEHR__PRIVACY__COHORT__MAX_COHORT_SIZE`). Optional (trust).
-max_cohort_size = 100000
+#? max_cohort_size = 100000
 # Whether a cohort may name its subjects by identifier
 # (`FERROEHR__PRIVACY__COHORT__SUBJECTS`), each resolved through the installed
 # EHR index provider. The one cohort form an IHE patient identity source
 # serves, so it turns the surface on without a bound predicate. Optional
 # (trust).
-subjects = false
+#? subjects = false
 
 # The bound predicates, keyed by the name a caller uses
 # (`[privacy.cohort.predicates]`). Empty — the default — leaves the
@@ -2250,14 +2247,14 @@ subjects = false
 
 # The record itself: the subject index, versioning, signing, the query engine,
 # the change feed and multimedia.
-[record]
+#? [record]
 # Who holds the subject-to-EHR cross-reference, the IHE patient identity source
 # of `[pixm]` (`pixm`) or the in-instance map (`local`). No default: an unset
 # index refuses the start. Must set (infrastructure).
 #? subject_index = "pixm"
 
 # The answer to an identical re-send.
-[record.versioning]
+#? [record.versioning]
 # `idempotent_resend` (default `false`): when `true`, an update whose content
 # equals the current version's commits nothing and answers with the existing
 # version's `ETag` and `Location`, leaving one `resend` record on the access
@@ -2265,15 +2262,15 @@ subjects = false
 # master06 §Committal and Audits), which is why the default records every
 # commit. The name is RFC 9110 §9.2.2's: a re-send then has the effect of one
 # request. Optional (infrastructure).
-idempotent_resend = false
+#? idempotent_resend = false
 
 # VERSION signing.
-[record.signing]
+#? [record.signing]
 # Server-side signing of committed versions. Defaults **on** so the STANDARD
 # "Signing" capability is demonstrably met. Optional (infrastructure).
-enabled = true
+#? enabled = true
 # Signing mode: `digest` | `pgp`. Optional (infrastructure).
-mode = "digest"
+#? mode = "digest"
 # Armored RFC 4880 secret key; **required for `pgp` mode** (validated at boot,
 # fail-closed). Optional, unset by default (infrastructure).
 #? key_file = ""
@@ -2287,7 +2284,7 @@ mode = "digest"
 # Armored RFC 4880 **public** keys retired from signing but retained for
 # verification, so versions signed before a key rotation keep verifying.
 # Optional (infrastructure).
-retired_key_files = []
+#? retired_key_files = []
 # Read-time verification policy: `off` | `warn` | `strict`. **Unset** (the
 # default) resolves via `Self::effective_verify_on_read` to `strict` when
 # signing is enabled — the explicit "sign but never check" state is reachable
@@ -2296,37 +2293,37 @@ retired_key_files = []
 #? verify_on_read = "off"
 
 # AQL execution knobs.
-[record.query]
+#? [record.query]
 # Max distinct cached query plans; `0` disables the plan cache (every lookup
 # misses and the full parse→lower path runs). Optional.
-plan_cache_capacity = 256
+#? plan_cache_capacity = 256
 # Per-query DB execution budget; `"0s"` disables it. Overrun reports `408`
 # (ITS-REST `Requests_and_responses` §HTTP status codes). Optional
 # (infrastructure).
-timeout = "30s"
+#? timeout = "30s"
 # The largest page of rows one query execution serves; `0` means unbounded.
 # Optional (infrastructure).
-max_result_rows = 10000
+#? max_result_rows = 10000
 
 # The commit-event outbox retention; its readers are the change-feed grants.
-[record.change_feed]
+#? [record.change_feed]
 # How long a row is kept once every active reader has acknowledged it, counted
 # from its commit instant. Optional.
-retention = "7d"
+#? retention = "7d"
 # How often the retention prune runs. Optional.
-prune_interval = "1h"
+#? prune_interval = "1h"
 
 # `DV_MULTIMEDIA` externalization to object storage. It keeps `enabled`,
 # because its store applies while it is off: blobs already offloaded are read
 # back from `url`.
-[record.multimedia]
+#? [record.multimedia]
 # Master switch. `false` (default) = today's inline behaviour, byte for byte;
 # no object store is built or contacted. Optional (infrastructure).
-enabled = false
+#? enabled = false
 # A decoded `DV_MULTIMEDIA.data` strictly larger than this is offloaded to the
 # object store; at or below it stays inline. Default `"256KiB"`. Optional
 # (infrastructure).
-threshold = "256KiB"
+#? threshold = "256KiB"
 # S3-compatible endpoint URL (e.g. a SeaweedFS S3 gateway in dev/test, or an
 # AWS/MinIO endpoint in prod). `None` uses the object_store default AWS
 # endpoint resolution. Any `userinfo` in it is masked in every rendering. An
@@ -2334,10 +2331,10 @@ threshold = "256KiB"
 # deployment names it as a gap. Optional, unset by default (infrastructure).
 #? url = ""
 # Target bucket for content-addressed blobs. Optional (infrastructure).
-bucket = "openehr-multimedia"
+#? bucket = "openehr-multimedia"
 # AWS region (S3 requires one even for non-AWS endpoints). Optional
 # (infrastructure).
-region = "us-east-1"
+#? region = "us-east-1"
 # Access key id. `None` (with `secret_access_key` also `None`) runs the client
 # unsigned/anonymous — the mode a keyless dev SeaweedFS accepts. Optional,
 # unset by default (infrastructure).
