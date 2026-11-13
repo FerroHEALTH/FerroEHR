@@ -630,6 +630,11 @@ config:
     # The requests served at once; past it a request is answered 503 with
     # Retry-After, and the health probes are never refused.
     max_concurrent_requests: 256
+    # The URL clients reach the server at through the Ingress, named once:
+    # the SMART discovery document's baseUrl, every SCIM meta.location and
+    # the URL a DPoP proof's htu is compared with all hang off it. Required
+    # with auth.smart.discovery, auth.scim or auth.dpop.
+    #   public_base_url: https://ferroehr.example.com
     # [server.caller_rate] — per authenticated caller, refused 429 +
     # Retry-After. Not the same control as max_concurrent_requests (503): this
     # one is per caller over time. The defaults sit above the reference SUT's
@@ -739,14 +744,13 @@ config:
   # table's presence serves it. It needs a machines [[auth.issuer]] (the
   # deployment's own authorization server); the party mapping under
   # authz.party_binding defaults to FerroEHR's default definitions.
-  # public_base_url is required, and the Ingress then routes /scim/v2 on every
-  # host. Who provisions is CDR data, not a value: a scim_provision grant on
-  # the client's AGENT names its binding_issuer (the identifier_issuer of an
-  # [[auth.party]]) and its token_scope, and config.authz.grants.allowed must
-  # admit scim_provision (the book's "Operational policy" page). Under
-  # config.auth:
+  # config.server.public_base_url is required, and the Ingress then routes
+  # /scim/v2 on every host. Who provisions is CDR data, not a value: a
+  # scim_provision grant on the client's AGENT names its binding_issuer (the
+  # identifier_issuer of an [[auth.party]]) and its token_scope, and
+  # config.authz.grants.allowed must admit scim_provision (the book's
+  # "Operational policy" page). Under config.auth:
   #   scim:
-  #     public_base_url: https://ferroehr.example.com
   #     max_deactivations: 100           # per client per window, else 429
   #     deactivation_window: 1h
 

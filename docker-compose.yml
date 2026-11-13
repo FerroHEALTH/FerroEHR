@@ -882,8 +882,11 @@ configs:
       audience = ["ferroehr-scim"]
       token_types = ["JWT"]
 
-      [auth.scim]
+      # The URL clients reach the server at, which every SCIM location names.
+      [server]
       public_base_url = "http://localhost:8080"
+
+      [auth.scim]
 
       # The ferroehr-grant one-shot grants that client scim_provision in the
       # CDR, which the grant ceiling admits beside a system client's commit.
@@ -1014,8 +1017,11 @@ configs:
       audience = ["ferroehr-scim"]
       token_types = ["JWT"]
 
-      [auth.scim]
+      # The URL clients reach the server at, which every SCIM location names.
+      [server]
       public_base_url = "http://localhost:8080"
+
+      [auth.scim]
 
       # The ferroehr-grant one-shot grants that client scim_provision in the
       # CDR, which the grant ceiling admits beside a system client's commit.

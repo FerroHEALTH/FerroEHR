@@ -98,12 +98,11 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
             party_binding: binding(),
             ..AppConfig::default()
         };
-        c.auth.scim = Some(ScimConfig {
-            public_base_url: Some(ferrohealth_secret::secret_url::SecretUrl::new(
-                "https://cdr.example.com",
-            )),
-            ..ScimConfig::default()
-        });
+        c.public_root = Some(
+            ferroehr::config::server::PublicRoot::new("https://cdr.example.com", "")
+                .expect("a public root"),
+        );
+        c.auth.scim = Some(ScimConfig::default());
         c
     }
 }
@@ -201,6 +200,34 @@ async fn the_service_provider_config_is_readable_without_a_token() {
     assert_eq!(
         body["meta"]["location"],
         "https://cdr.example.com/scim/v2/ServiceProviderConfig"
+    );
+}
+
+/// Every `meta.location` hangs off the one public URL of `[server]`, after the
+/// mount path the server serves every route under (#5465).
+#[tokio::test]
+async fn the_locations_hang_off_the_server_s_public_url_and_mount_path() {
+    let (_db, service) = common::test_service().await;
+    let mut config = config(None);
+    let server = ferroehr::config::server::ServerConfig {
+        shared: ferrohealth_server::section::ServerSection {
+            base_path: ferrohealth_server::section::BasePath::new("/ehr").expect("a mount path"),
+            ..config.server.clone()
+        },
+        public_base_url: Some(ferrohealth_secret::secret_url::SecretUrl::new(
+            "https://gw.example/cdr",
+        )),
+    };
+    config.public_root = server.public_root();
+    config.server = server.shared;
+    let app = common::router_with(config, service).await;
+    let request = common::req("GET", "/ehr/scim/v2/ServiceProviderConfig").build();
+    let (status, _headers, body) = common::send(&app, request).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let body: Value = serde_json::from_str(&body).expect("a JSON body");
+    assert_eq!(
+        body["meta"]["location"],
+        "https://gw.example/cdr/ehr/scim/v2/ServiceProviderConfig"
     );
 }
 
@@ -358,6 +385,7 @@ async fn off_by_default_nothing_is_served() {
     let config = {
         let mut c = AppConfig { ..config(None) };
         c.auth.scim = Some(ScimConfig::default());
+        c.public_root = None;
         c
     };
     let app = common::router_with(config, service).await;

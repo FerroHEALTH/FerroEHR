@@ -167,13 +167,16 @@ user = "ferroehr-readonly"
 key_issuer = "urn:ferroehr:basic-user"
 key = "ferroehr-readonly"
 
+# The URL clients reach the server at, which every SCIM location names.
+[server]
+public_base_url = "http://localhost:8080"
+
 # The SCIM endpoint the lanes provision their persons through. Who
 # provisions is a scim_provision grant in the CDR: scripts/scim-provision.sh
 # grants the `basic-users` client the three Basic users' binding issuer, and
 # an overlay that adds a persons issuer has its own client granted, since no
 # two clients share a binding_issuer.
 [auth.scim]
-public_base_url = "http://localhost:8080"
 
 # The in-instance subject-to-EHR map, the explicit opt-in of a FerroEHR run
 # on its own: development, the UI journeys and the conformance lanes ask no

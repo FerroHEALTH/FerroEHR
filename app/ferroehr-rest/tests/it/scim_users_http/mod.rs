@@ -301,12 +301,11 @@ fn config() -> AppConfig {
             party_binding: binding(),
             ..AppConfig::default()
         };
-        c.auth.scim = Some(ScimConfig {
-            public_base_url: Some(ferrohealth_secret::secret_url::SecretUrl::new(
-                "https://cdr.example.com",
-            )),
-            ..ScimConfig::default()
-        });
+        c.public_root = Some(
+            ferroehr::config::server::PublicRoot::new("https://cdr.example.com", "")
+                .expect("a public root"),
+        );
+        c.auth.scim = Some(ScimConfig::default());
         c
     }
 }

@@ -350,8 +350,9 @@ async fn same_key_tags_on_different_target_paths_coexist() {
 }
 
 /// A party of `kind` (`agent`, `group`, `organisation`, `person`, `role`), the
-/// PERSON body retyped; a ROLE also names its performer.
-fn party_body(kind: &str) -> Value {
+/// PERSON body retyped; a ROLE also names its performer, the Actor container
+/// `performer` (RM demographic `role.adoc` `performer`).
+fn party_body(kind: &str, performer: &str) -> Value {
     let rm_type = kind.to_uppercase();
     let archetype = format!("openEHR-DEMOGRAPHIC-{rm_type}.{kind}.v1");
     let mut body = person_body();
@@ -371,7 +372,7 @@ fn party_body(kind: &str) -> Value {
             "performer".to_owned(),
             json!({
                 "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
-                "id": { "_type": "HIER_OBJECT_ID", "value": "cccccccc-cccc-4ccc-8ccc-cccccccccccc" }
+                "id": { "_type": "HIER_OBJECT_ID", "value": performer }
             }),
         );
     }
@@ -384,9 +385,10 @@ fn party_body(kind: &str) -> Value {
 #[tokio::test]
 async fn a_party_tag_put_preferring_an_identifier_answers_the_stored_list() {
     let (_pg, app) = common::app(common::api_config(false)).await;
+    let mut performer = String::new();
     for kind in ["agent", "group", "organisation", "person", "role"] {
         let req = common::req("POST", format!("{BASE}/demographic/{kind}"))
-            .json(party_body(kind).to_string())
+            .json(party_body(kind, &performer).to_string())
             .build();
         let (status, h, body) = send(&app, req).await;
         assert_eq!(status, StatusCode::CREATED, "{kind}: {body}");
@@ -397,6 +399,9 @@ async fn a_party_tag_put_preferring_an_identifier_answers_the_stored_list() {
             .trim_start_matches("W/")
             .trim_matches('"')
             .to_owned();
+        if kind == "person" {
+            performer = vo_of(&ovid).to_owned();
+        }
         let req = common::req(
             "PUT",
             format!("{BASE}/demographic/{kind}/{}/tags", vo_of(&ovid)),

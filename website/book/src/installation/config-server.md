@@ -32,6 +32,7 @@ trusted_proxies = []
 forwarded_header = "forwarded"
 compression = true
 compression_min_size = "1KiB"
+# public_base_url = "https://cdr.example.com"
 ```
 
 | Key | Type | Default | Description |
@@ -50,6 +51,7 @@ compression_min_size = "1KiB"
 | `forwarded_header` | enum{forwarded,x-forwarded-for} | `forwarded` | The header a trusted proxy names the client in (`Forwarded` is RFC 7239). |
 | `compression` | bool | `true` | Compress a response with gzip or Brotli when the client accepts one. |
 | `compression_min_size` | size | `"1KiB"` | The smallest response body that is compressed. |
+| `public_base_url` | string | unset | The URL clients reach the server at, through any proxy in front of it: `https://cdr.example.com`, or with the path a proxy serves it under (`https://gw.example.com/cdr`). FerroEHR's own key beside the shared section, and the one place a deployment names its public URL; see [below](#public_base_url-the-one-public-url). An absolute `http(s)` URL with no userinfo, query or fragment. Required with `auth.smart.discovery`, `[auth.scim]` or `[auth.dpop]` under `auth.enabled`. |
 
 A refusal the listener writes itself (`408`, `413`, `429`, `503`) and a handler
 that panics (`500`) answer the standard openEHR `{ error, message }` body. `413`
@@ -57,6 +59,27 @@ and `429` are not in the ITS-REST status table; ITS-REST admits them as
 additional, non-conflicting codes, and they are what RFC 9110 §15.5.14 and
 RFC 6585 §4 define for these refusals. A panic's message reaches neither the
 body nor the log.
+
+### `public_base_url`: the one public URL
+
+A server behind a proxy cannot read from a request the URL its client
+addressed, so three things that publish or check an absolute URL take it from
+`public_base_url`. Each derives its URL from it and `server.base_path`, the
+path the server mounts every route under:
+
+| Consumer | URL |
+|---|---|
+| The SMART discovery document's `services.org.openehr.rest.baseUrl` | `public_base_url` + `server.base_path` + `api.base_path` |
+| Every SCIM `meta.location` and the SCIM discovery documents | `public_base_url` + `server.base_path` + `/scim/v2` |
+| The URL a DPoP proof's `htu` is compared with (RFC 9449 §4.3, check 9) | `public_base_url` + `server.base_path` + the request path |
+
+With `public_base_url = "https://gw.example.com/cdr"` and
+`base_path = "/ehr"`, the discovery document names
+`https://gw.example.com/cdr/ehr/ferroehr/rest/openehr/v1`, a SCIM User lives at
+`https://gw.example.com/cdr/ehr/scim/v2/Users/<id>`, and a DPoP proof for
+`GET /ehr/ferroehr/rest/openehr/v1/ehr` names
+`https://gw.example.com/cdr/ehr/ferroehr/rest/openehr/v1/ehr`. A trailing `/`
+on either is ignored.
 
 Every request gets a request id the server mints, which the request log and the
 access record carry and the response returns in `X-Request-Id`. A client's own
@@ -234,8 +257,10 @@ FERROEHR__API__BASE_PATH=/ferroehr/v1
 which gives `https://cdr.example.org/cdr/ferroehr/v1/definition/template/adl1.4`.
 
 Whichever you choose, tell every client. The server builds its `Location`
-headers, its served OpenAPI paths and its SMART discovery document from its own
-`api.base_path`, and it cannot see a prefix the proxy adds. The
+headers and its served OpenAPI paths from its own `api.base_path`, and it
+cannot see a prefix the proxy adds. Name the prefix in
+[`server.public_base_url`](#public_base_url-the-one-public-url), which the
+SMART discovery document, the SCIM locations and the DPoP check read. The
 [FerroEHR Viewer](../viewer/index.md) has its own mirror key, `cdr.base_path`,
 which must match.
 

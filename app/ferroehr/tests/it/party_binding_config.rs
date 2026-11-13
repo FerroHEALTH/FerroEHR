@@ -508,8 +508,8 @@ fn every_organisation_agreement_refusal_is_named() {
             1,
         )
         .replacen(
-            "[authz.import]",
-            "[auth.dpop]\nexternal_url = \"https://ehr.example\"\n\n[authz.import]",
+            "[[authz.system_client]]",
+            "[server]\npublic_base_url = \"https://ehr.example\"\n\n[auth.dpop]\n\n[[authz.system_client]]",
             1,
         );
     let text = refusal(&contact);
@@ -537,8 +537,8 @@ fn a_contact_points_person_agreement_names_its_ehdsi_service() {
             1,
         )
         .replacen(
-            "[authz.import]",
-            "[auth.dpop]\nexternal_url = \"https://ehr.example\"\n\n[authz.import]",
+            "[[authz.system_client]]",
+            "[server]\npublic_base_url = \"https://ehr.example\"\n\n[auth.dpop]\n\n[[authz.system_client]]",
             1,
         );
     let start = contact
@@ -674,8 +674,7 @@ fn the_keys_the_cdr_now_holds_are_refused_as_unknown() {
             "readers",
         ),
         (
-            "[auth.scim]\npublic_base_url = \"https://cdr.example.com\"\n\
-             [[auth.scim.client]]\nclient_id = \"entra\"\n",
+            "[auth.scim]\n[[auth.scim.client]]\nclient_id = \"entra\"\n",
             "client",
         ),
     ] {
@@ -887,7 +886,7 @@ fn a_relationship_code_outside_subject_relationship_is_refused() {
 #[test]
 fn a_scim_table_with_no_client_loads() {
     let config = assemble(&bound(&format!(
-        "{}\n[auth.scim]\npublic_base_url = \"https://cdr.example.com\"\n",
+        "{}\n[server]\npublic_base_url = \"https://cdr.example.com\"\n\n[auth.scim]\n",
         full()
     )))
     .expect("assembles");

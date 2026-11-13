@@ -38,8 +38,8 @@ services:
       FERROEHR__AUTH__SMART__DISCOVERY: "true"
       FERROEHR__AUTH__SMART__ISSUER_METADATA_FILE: /etc/ferroehr/cnf-smart-issuer-metadata.json
       # master04 §Services: every services.*.baseUrl is an "Absolute URL to the
-      # root of the API (required)", so the server needs its external origin.
-      FERROEHR__AUTH__SMART__PUBLIC_BASE_URL: "http://localhost:8080"
+      # root of the API (required)", so the server needs its public URL.
+      FERROEHR__SERVER__PUBLIC_BASE_URL: "http://localhost:8080"
       # ── trust the committed CNF test issuer ───────────────────────────────
       # The lane validates the runner-minted tokens against a STATIC key set, so
       # no Authorization Server has to be running for the scope cases to

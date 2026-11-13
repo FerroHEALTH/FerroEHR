@@ -98,9 +98,43 @@ fn root(rm_type: &str, archetype: &str, name: &str, uid: &str) -> Value {
     })
 }
 
+/// Creates two PERSONs and returns their container ids: the parties a ROLE's
+/// `performer` and a relationship's ends name (RM demographic `role.adoc`
+/// `performer`, master02 §Party Relationships).
+async fn held_persons(app: &Router) -> (String, String) {
+    let mut ids = Vec::new();
+    for name in ["Performer", "Partner"] {
+        let mut person = root(
+            "PERSON",
+            "openEHR-DEMOGRAPHIC-PERSON.person.v1",
+            name,
+            &uuid::Uuid::now_v7().to_string(),
+        );
+        person["identities"] = json!([{
+            "_type": "PARTY_IDENTITY", "archetype_node_id": "at0001",
+            "name": { "_type": "DV_TEXT", "value": "legal name" }, "details": tree("at0002")
+        }]);
+        let request = common::req("POST", common::full("/demographic/person"))
+            .json(person.to_string())
+            .build();
+        let (status, headers, text) = common::send(app, request).await;
+        assert_eq!(status, StatusCode::CREATED, "{name}: {text}");
+        let uid = common::etag_uid(&headers);
+        ids.push(uid.split("::").next().expect("a container id").to_owned());
+    }
+    let partner = ids.pop().expect("two persons");
+    let performer = ids.pop().expect("two persons");
+    (performer, partner)
+}
+
 /// Every demographic `time_validity` set to `validity`, each as the route
-/// segment that takes the body, the body, and the attribute the refusal names.
-fn validity_bodies(validity: &Value) -> Vec<(&'static str, Value, &'static str)> {
+/// segment that takes the body, the body, and the attribute the refusal names;
+/// the ROLEs are performed by `performer`, and the relationship runs from it to
+/// `partner`.
+fn validity_bodies(
+    validity: &Value,
+    (performer, partner): (&str, &str),
+) -> Vec<(&'static str, Value, &'static str)> {
     let identities = json!([{
         "_type": "PARTY_IDENTITY", "archetype_node_id": "at0001",
         "name": { "_type": "DV_TEXT", "value": "legal name" }, "details": tree("at0002")
@@ -108,7 +142,7 @@ fn validity_bodies(validity: &Value) -> Vec<(&'static str, Value, &'static str)>
     let role = |uid: &str| {
         let mut role = root("ROLE", "openEHR-DEMOGRAPHIC-ROLE.role.v1", "clinician", uid);
         role["identities"] = identities.clone();
-        role["performer"] = person_ref("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+        role["performer"] = person_ref(performer);
         role
     };
     let mut role_validity = role("11111111-1111-4111-8111-111111111111");
@@ -141,8 +175,8 @@ fn validity_bodies(validity: &Value) -> Vec<(&'static str, Value, &'static str)>
         "parent-of",
         "44444444-4444-4444-8444-444444444444",
     );
-    relationship["source"] = person_ref("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
-    relationship["target"] = person_ref("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+    relationship["source"] = person_ref(performer);
+    relationship["target"] = person_ref(partner);
     relationship["time_validity"] = validity.clone();
     vec![
         ("role", role_validity, "$.time_validity.lower"),
@@ -163,12 +197,14 @@ fn validity_bodies(validity: &Value) -> Vec<(&'static str, Value, &'static str)>
 #[tokio::test]
 async fn a_time_validity_with_date_time_bounds_is_422() {
     let (_db, app) = common::app(common::api_config(false)).await;
+    let (performer, partner) = held_persons(&app).await;
+    let parties = (performer.as_str(), partner.as_str());
     let date_time = interval(
         "DV_DATE_TIME",
         "2026-01-01T08:00:00Z",
         "2026-12-31T17:00:00Z",
     );
-    for (segment, body, path) in validity_bodies(&date_time) {
+    for (segment, body, path) in validity_bodies(&date_time, parties) {
         let request = common::req("POST", common::full(&format!("/demographic/{segment}")))
             .json(body.to_string())
             .build();
@@ -184,7 +220,7 @@ async fn a_time_validity_with_date_time_bounds_is_422() {
         );
     }
     let date = interval("DV_DATE", "2026-01-01", "2026-12-31");
-    for (segment, body, path) in validity_bodies(&date) {
+    for (segment, body, path) in validity_bodies(&date, parties) {
         let request = common::req("POST", common::full(&format!("/demographic/{segment}")))
             .json(body.to_string())
             .build();
@@ -210,12 +246,13 @@ fn openehr_code(code: &str) -> Value {
 #[tokio::test]
 async fn an_incomplete_contribution_still_refuses_date_time_bounds() {
     let (_db, app) = common::app(common::api_config(false)).await;
+    let (performer, partner) = held_persons(&app).await;
     let date_time = interval(
         "DV_DATE_TIME",
         "2026-01-01T08:00:00Z",
         "2026-12-31T17:00:00Z",
     );
-    let parties = validity_bodies(&date_time)
+    let parties = validity_bodies(&date_time, (&performer, &partner))
         .into_iter()
         .filter(|(segment, _body, _path)| *segment != "party_relationship");
     for (_segment, body, path) in parties {

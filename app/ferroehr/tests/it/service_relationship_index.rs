@@ -42,6 +42,42 @@ fn relationship(name: &str, source: &str, target: &str) -> Value {
     })
 }
 
+/// Creates two PERSONs and returns their container ids: a relationship's
+/// `source` and `target` name party containers this server holds (RM
+/// demographic master02 §Party Relationships).
+async fn parties(svc: &FerroEhrService) -> (String, String) {
+    let mut ids = Vec::new();
+    for name in ["Source", "Target"] {
+        let body = json!({
+            "_type": "PERSON",
+            "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
+            "archetype_details": { "_type": "ARCHETYPED",
+                "archetype_id": { "_type": "ARCHETYPE_ID",
+                    "value": "openEHR-DEMOGRAPHIC-PERSON.person.v1" },
+                "rm_version": "1.1.0" },
+            "name": { "_type": "DV_TEXT", "value": name },
+            "identities": [{
+                "_type": "PARTY_IDENTITY",
+                "archetype_node_id": "at0001",
+                "name": { "_type": "DV_TEXT", "value": "legal name" },
+                "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002",
+                    "name": { "_type": "DV_TEXT", "value": "structure" }, "items": [] }
+            }]
+        });
+        let created = svc
+            .party_create(
+                ferroehr::service::demographic::types::PartyKind::Person,
+                WriteRequest::new(typed(&body)),
+            )
+            .await
+            .expect("create a party");
+        ids.push(vo_uuid(&created.body));
+    }
+    let target = ids.pop().expect("two parties");
+    let source = ids.pop().expect("two parties");
+    (source, target)
+}
+
 // ─── PARTY_RELATIONSHIP ───────────────────────────────────────────────────────
 
 /// Whether a live relationship is served under `vo_id`: the read answers a
@@ -60,8 +96,8 @@ async fn relationship_is_live(svc: &FerroEhrService, vo_id: ferroehr::ids::VoId)
 async fn relationship_typed_calls_round_trip() {
     let (_db, svc) = crate::fixtures::service().await;
 
-    let src = "11111111-1111-4111-8111-111111111111";
-    let tgt = "22222222-2222-4222-8222-222222222222";
+    let (src, tgt) = parties(&svc).await;
+    let (src, tgt) = (src.as_str(), tgt.as_str());
 
     // The create → the new VERSIONED_OBJECT's id.
     let vo_id = Box::pin(crate::fixtures::create_relationship(
@@ -145,8 +181,8 @@ async fn relationship_lifecycle_end_to_end() {
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
 
-    let src = "11111111-1111-4111-8111-111111111111";
-    let tgt = "22222222-2222-4222-8222-222222222222";
+    let (src, tgt) = parties(&svc).await;
+    let (src, tgt) = (src.as_str(), tgt.as_str());
 
     // create → v1
     let created = svc
@@ -310,8 +346,9 @@ async fn relationship_error_cases() {
     );
 
     // a PERSON is not a relationship → wrong-kind get is 404
+    let (a, b) = parties(&svc).await;
     let created = svc
-        .party_relationship_create(WriteRequest::new(typed(&relationship("r", "a", "b"))))
+        .party_relationship_create(WriteRequest::new(typed(&relationship("r", &a, &b))))
         .await
         .expect("create");
     let vo = vo_uuid(&created.body);
@@ -337,6 +374,7 @@ async fn relationship_error_cases() {
 #[tokio::test]
 async fn relationship_via_demographic_contribution() {
     let (_db, svc) = crate::fixtures::service().await;
+    let (p1, p2) = parties(&svc).await;
 
     // A demographic CONTRIBUTION accepts a PARTY_RELATIONSHIP version (the
     // ehr-less scope now covers relationships as well as party roots).
@@ -357,7 +395,7 @@ async fn relationship_via_demographic_contribution() {
                 },
                 "committer": committer("tester")
             },
-            "data": relationship("colleague-of", "p1", "p2")
+            "data": relationship("colleague-of", &p1, &p2)
         }],
         "audit": commit_audit("251", "modification", "tester")
     });

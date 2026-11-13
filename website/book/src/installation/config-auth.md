@@ -100,7 +100,7 @@ operator rule boot cannot see.
 | `[[auth.party]]` | One per `persons` issuer, keyed by `issuer`: where its logins are looked up. `identifier_issuer` and `identifier_type` (`guid` and `uuid` compare in lower case) name the identifiers the issuer profile's `person_key` is matched against; `group_claim` with `group_identifier_issuer` reads the groups a token asserts; `guests` looks a guest up. **Boot refuses a `persons` issuer without one**, a table that sets `claim` (the profile's `person_key` is the key), two tables sharing an issuer or an `identifier_issuer`, and a table whose `identifier_type` is the `type` of no [`[[authz.party_binding.person.template]]`](#authzparty_binding) `key`: SCIM and just-in-time creation write the key under that type and the lookup compares the type exactly, so no login of the issuer would bind. |
 | `[[auth.federation]]` | One per `federation` issuer: how its tokens' claims map to the fields of another party's professional or organisation (`mapping = "iua"`, `"ehdsi"` or per field), the countries, issuing authorities and provider prefixes that bound them, and `contact_point` for a MyHealth@EU contact point. `fields` maps a field to its claim (`{ claim = "..." }`) or `authorization_details` member, among them `consent.reference`, the consent decision reference of a consent-conditioned read, and `correlation_id`, the requester's id a `chained` organisation request carries. |
 | `[[auth.attributes]]` | At most one per `persons` issuer, keyed by `issuer`: where its tokens state the professional's attributes (`mapping = "iua"`, the IHE IUA claims under `extensions.ihe_iua`, or per field in `fields`), and `authorization_details_purposes`, whether the `purpose_of_use` of each RFC 9396 `authorization_details` entry is a purpose of use too. Its purposes of use and roles go into each [access record](../audit.md#where-the-purpose-of-use-comes-from), and a `[audit] purpose_header` naming a purpose the token does not state refuses the request with `403`. |
-| `[auth.dpop]` | The DPoP proof check of a sender-constrained issuer: `external_url` (required, the base URL clients address; a proof's `htu` is it plus the request path), `max_age` (`"60s"`), `clock_skew` (`"10s"`) and `algorithms`. Each accepted proof is recorded in the database every replica shares until its window ends, so a proof is accepted once across all of them (RFC 9449 §11.1), and a database that cannot record it refuses the request with `503`. |
+| `[auth.dpop]` | The DPoP proof check of a sender-constrained issuer: `max_age` (`"60s"`), `clock_skew` (`"10s"`) and `algorithms`. Each accepted proof is recorded in the database every replica shares until its window ends, so a proof is accepted once across all of them (RFC 9449 §11.1), and a database that cannot record it refuses the request with `503`. A proof's `htu` must name [`server.public_base_url`](config-server.md#public_base_url-the-one-public-url), `server.base_path` and the request path, so the table needs that key. |
 | `[auth.idp.entra]` | The Microsoft Graph access of the `idp-entra` adapter, which an issuer turns on with `adapter = "idp-entra"` to read the groups of an Entra ID groups overage: `base_url` (`https://graph.microsoft.com/v1.0`), `timeout` (`"2s"`), `max_response_size` (a size), `security_enabled_only` and the client credentials of `[auth.idp.entra.credentials]`. An issuer naming the adapter without this table refuses the start. |
 
 > [!WARNING]
@@ -721,7 +721,6 @@ by default.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `public_base_url` | string | none | The externally reachable origin, such as `https://cdr.example.com`, that every `meta.location` and discovery document names as `<public_base_url>/scim/v2` (RFC 7643 §3.1). Required; it carries no userinfo, query or fragment. |
 | `filter_max_results` | integer | `100` | The most resources one list response returns, which `ServiceProviderConfig` declares as `filter.maxResults`. At least 1. |
 | `max_deactivations` | integer | `100` | The most Users one client deactivates or deletes per window. Past it, a deactivation or deletion is **429** with `Retry-After` and logged at `error`. The count is kept in the database, so every replica shares one bound. At least 1. |
 | `deactivation_window` | duration | `"1h"` | The length of that window. At least `"1min"`. |
@@ -743,15 +742,22 @@ since no administrator can log in before the persons it provisions exist;
 [Operational policy](../operational-policy.md#what-the-grants-decide) has the
 grant's terms.
 
+Every `meta.location` and discovery document names the resource by its URI
+(RFC 7643 §3.1), under `<public_base_url>/scim/v2` with
+[`server.public_base_url`](config-server.md#public_base_url-the-one-public-url)
+and `server.base_path`, so the table needs that key.
+
 The table's presence turns the endpoint on; it has no `enabled` key, and
 setting one refuses the start. The start is refused when the table is present
-without `public_base_url`, and when the [party mapping](#authzparty_binding)
+without `server.public_base_url`, and when the [party mapping](#authzparty_binding)
 lacks what a User is written with: a default person template with a
 `user_name` selector, and `[authz.party_binding.professional_role]`.
 
 ```toml
-[auth.scim]
+[server]
 public_base_url = "https://cdr.example.com"
+
+[auth.scim]
 
 [authz.grants]
 allowed = ["commit_composition", "scim_provision"]
@@ -967,7 +973,7 @@ it, so the steps split between the two.
    the `--issuer` is your authorization server, an `[[auth.issuer]]` of kind
    `machines`, the `binding_issuer` element the `identifier_issuer` of the
    `[[auth.party]]` your professionals log in through, and the `token_scope`
-   element the scope its token holds. Set `public_base_url` to the origin
+   element the scope its token holds. Set `server.public_base_url` to the URL
    Entra reaches. In the Helm chart, a `config.auth.scim` value also adds the
    `/scim/v2` path to the Ingress. `ferroehr config check` refuses a mapping
    the endpoint cannot serve.
@@ -999,7 +1005,7 @@ it, so the steps split between the two.
    receives a token with the same `iss` and `aud` (RFC 9700 §2.3). A
    long-lived bearer token is not supported either.
 4. **Point Entra at FerroEHR.** Set the **Tenant URL** to
-   `<public_base_url>/scim/v2` and run **Test Connection**. Entra queries
+   `<server.public_base_url>/scim/v2` and run **Test Connection**. Entra queries
    `/Users` with `filter=externalId eq "<random guid>"`, which FerroEHR
    answers with an empty `ListResponse`, and fetches a random User and a
    random Group, each answered **404**.
@@ -1061,10 +1067,9 @@ whose grants count for what. See [SMART App Launch](../smart-app-launch.md).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `discovery` | bool | `false` | Serve `/.well-known/smart-configuration`. It is built from the metadata of one `[auth]` issuer, the [described issuer](#the-described-issuer), so it needs an issuer whose metadata names a `token_endpoint` (SMART App Launch 2.2.0, Conformance, §Metadata). |
+| `discovery` | bool | `false` | Serve `/.well-known/smart-configuration`. It is built from the metadata of one `[auth]` issuer, the [described issuer](#the-described-issuer), so it needs an issuer whose metadata names a `token_endpoint` (SMART App Launch 2.2.0, Conformance, §Metadata), and [`server.public_base_url`](config-server.md#public_base_url-the-one-public-url) for its absolute `services.*.baseUrl` values. |
 | `issuer_metadata_file` | path | unset | A JSON file holding the RFC 8414 §2 metadata of the `[auth]` issuer it names, whose key set is a `jwks_file`, read at boot. It must name an `[auth]` issuer, wherever it stands in the list, repeat no member name, and every endpoint it names must be `https` (a loopback host excepted); the discovery document takes its `token_endpoint` and the other endpoints from it. Set for an issuer whose metadata is read from the issuer, it is a boot error. |
 | `platform_base_url` | string | unset ⇒ the REST root | The path the discovery document hangs off, e.g. `/gateway/v1`. |
-| `public_base_url` | string | **required with `discovery`** | The server's externally reachable origin (e.g. `https://cdr.example.com`), from which the discovery document's absolute `services.*.baseUrl` values are built. |
 | `episode_launch` | bool | `false` | Advertise episode context and accept the `launch/episode` scope and `episodeId` claim; applies no episode-scoped filtering. |
 | `backend_clients` | list of string | `[]` | The `client_id`s a `system/aql-*` grant counts for: such a grant "would grant access to all registered and ad-hoc AQL queries system-wide" (master08 §Resource Scopes). |
 | `patient_issuers` | list of string | `[]` | The issuers whose `patient/` grants count, each confined to the EHR the token's `ehrId` claim names (master07 §Context Selection). Empty, a `patient/` grant grants nothing. |

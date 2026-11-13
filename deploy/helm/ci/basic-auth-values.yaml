@@ -26,6 +26,10 @@ config:
   # The chart has no default posture and refuses to render without one.
   deployment:
     profile: sandbox
+  # The URL clients reach the server at, named once: the SMART baseUrl and
+  # every SCIM location hang off it.
+  server:
+    public_base_url: http://127.0.0.1:18081
   # The in-instance EHR index, the opt-in of a FerroEHR run on its own:
   # this overlay renders another surface and runs no identity source.
   auth:
@@ -56,8 +60,7 @@ config:
         - user: clinician
           scopes: [user/composition-*.cruds, user/template-*.cruds, user/aql-*.cruds, __ferroehr.platform]
           roles: [USER]
-    scim:
-      public_base_url: http://127.0.0.1:18081
+    scim: {}
   authz:
     party_binding:
       # The healthcare provider this deployment acts for (an example id

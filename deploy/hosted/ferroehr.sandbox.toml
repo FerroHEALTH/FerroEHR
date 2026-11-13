@@ -82,8 +82,11 @@ kind = "machines"
 audience = ["ferroehr-scim"]
 token_types = ["JWT"]
 
-[auth.scim]
+# The URL clients reach the server at, which every SCIM location names.
+[server]
 public_base_url = "https://sandbox.ferroehr.eu"
+
+[auth.scim]
 
 # The operations the party store may grant: beside a system client's commit,
 # the scim_provision the ferroehr-grant service grants `sandbox-scim`.
