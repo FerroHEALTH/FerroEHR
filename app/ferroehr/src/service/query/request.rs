@@ -149,4 +149,20 @@ impl QueryOutcome {
             statement: None,
         }
     }
+
+    /// The outcome with the statement that ran named: the AQL text `aql` by
+    /// its digest, under the stored-query name `name` when it has one.
+    #[must_use]
+    pub fn naming(
+        mut self,
+        aql: &str,
+        name: Option<&openehr_its::rest::stored_query::QualifiedQueryName>,
+    ) -> Self {
+        self.statement = Some(crate::system_log::event::QueryNaming::of(
+            "AQL",
+            aql,
+            name.map(ToString::to_string),
+        ));
+        self
+    }
 }
