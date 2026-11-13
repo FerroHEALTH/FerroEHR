@@ -50,6 +50,7 @@ pub(crate) const FHIR: &str = "/ferroehr/rest/fhir/r4";
 /// route ITS-REST does not define that is no FHIR interface.
 const EXTENSION_ROOTS: &[&str] = &[
     "/admin/access-delay",
+    "/admin/access_log",
     "/admin/access-opt-out",
     "/admin/access-restriction",
     "/admin/archive",

@@ -273,6 +273,7 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
         .merge(admin::report::report_routes())
         .merge(admin::dump_load::dump_load_routes())
         .merge(admin::integrity::integrity_routes())
+        .merge(admin::access_log::access_log_routes())
         .merge(admin::marks::marks_routes())
         .merge(admin::access_delay::access_delay_routes())
         .merge(admin::access_restriction::access_restriction_routes())

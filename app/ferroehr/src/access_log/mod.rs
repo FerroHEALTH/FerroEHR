@@ -10,4 +10,9 @@
 //! FerroEHR's change proposal and no openEHR release, so no openEHR spec
 //! governs this module: our own design.
 
+pub mod chain;
+pub mod checkpoint;
+pub mod config;
+pub mod schedule;
 pub mod store;
+pub mod transfer;

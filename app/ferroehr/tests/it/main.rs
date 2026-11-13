@@ -39,6 +39,7 @@
 mod access_control_draft;
 mod access_delay_sinks;
 mod access_event_fail_closed;
+mod access_log_checkpoint;
 mod access_log_draft;
 mod access_log_store;
 mod access_origins;

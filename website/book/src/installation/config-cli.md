@@ -301,6 +301,25 @@ docker compose exec ferroehr /usr/local/bin/ferroehr party-binding grant \
   --element binding_issuer=urn:example:login --element token_scope=ferroehr/scim
 ```
 
+### `ferroehr access-log …`
+
+```text
+ferroehr access-log checkpoint                          # seal the head of the log, print the checkpoint
+ferroehr access-log verify [--checkpoint <file>]        # verify against the newest or a kept checkpoint
+ferroehr access-log export --ehr-id <id> [--output <file>]
+ferroehr access-log import --input <file>
+```
+
+The access log's integrity and transfer, described on the
+[audit page](../audit.md#checkpoints-and-the-transfer-of-a-log). `checkpoint`
+and `export` need the keyring's OpenPGP key (`record.signing.mode = "pgp"`).
+`verify` prints each finding and exits 1 when the log does not verify, so a
+scheduled job can alert on it; pass `--checkpoint` a checkpoint you kept
+outside this system to verify against it. `import` reads an export another
+system wrote, verifies it against its checkpoint and
+`[audit.access_log] trusted_key_files`, and records the import as an entry
+of this system's log.
+
 ### `ferroehr healthcheck`
 
 Asks the running server's `GET /health/readiness` and exits 0 on `200`, 1

@@ -324,6 +324,10 @@ pub(crate) struct RbacGate {
 ///   nothing and answers identifiers + defect classes only, strictly less
 ///   than the admin read routes already expose. A read-only integrity
 ///   auditor is exactly who runs it (adjudicated on #2692).
+/// - `POST /admin/access_log/verify` — the access log's verification against
+///   its checkpoint (#5129): it recomputes the chain and checks signatures,
+///   answers findings only, and moves no record; the verification cursor it
+///   advances is the one the scheduled chain check moves.
 /// - `POST /query/cohort` — the cohort query: AQL execution over a population
 ///   selected in the demographic domain. It selects and never commits, exactly
 ///   as the released `POST /query/aql` does, and travels as a body because its
@@ -333,6 +337,7 @@ pub(crate) struct RbacGate {
 const EXTENSION_READ_ROUTES: &[(&str, &str)] = &[
     ("POST", "/message/export"),
     ("POST", "/admin/integrity/verify"),
+    ("POST", "/admin/access_log/verify"),
     ("POST", "/query/cohort"),
 ];
 

@@ -132,6 +132,10 @@ pub struct FerroEhrService {
     /// retrieval; `crate::system_log::store`). `None` = the local store is
     /// off; the binary wires it via [`Self::with_audit_store`].
     pub(crate) audit_store: Option<crate::system_log::store::AuditStore>,
+    /// The access log's checkpoints, verification and transfer
+    /// ([`crate::access_log::checkpoint`]); `None` until the binary wires
+    /// them via [`Self::with_access_log`].
+    access_log: Option<crate::access_log::checkpoint::Checkpoints>,
     /// The optional FHIR R4B terminology server, built when a deployment opts
     /// in ([`TerminologyServerConfig`](crate::service::terminology::config::TerminologyServerConfig)).
     /// Consulted by the terminology calls the bundle does not
@@ -280,6 +284,7 @@ impl FerroEhrService {
             stamp: crate::licence::stamp::StampKey::fail_safe(),
             audit: None,
             audit_store: None,
+            access_log: None,
             terminology: None,
             #[cfg(feature = "multimedia")]
             multimedia: None,
@@ -469,6 +474,19 @@ impl FerroEhrService {
     pub fn with_audit_store(mut self, store: crate::system_log::store::AuditStore) -> Self {
         self.audit_store = Some(store);
         self
+    }
+
+    /// Install the access log's checkpoints, verification and transfer.
+    #[must_use]
+    pub fn with_access_log(mut self, log: crate::access_log::checkpoint::Checkpoints) -> Self {
+        self.access_log = Some(log);
+        self
+    }
+
+    /// The access log's checkpoints, verification and transfer, when wired.
+    #[must_use]
+    pub fn access_log(&self) -> Option<&crate::access_log::checkpoint::Checkpoints> {
+        self.access_log.as_ref()
     }
 
     /// Install the FHIR R4B terminology server (opt-in). Without it,

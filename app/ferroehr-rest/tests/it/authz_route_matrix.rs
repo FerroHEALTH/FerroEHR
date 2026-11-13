@@ -379,6 +379,10 @@ const ADMIN_READ: &[(&str, &str)] = &[
     // defect classes only — a pinned EXTENSION_READ_ROUTES read despite the
     // POST verb, so a read-only integrity auditor can run it (#2692).
     ("POST", "/admin/integrity/verify"),
+    // The access log's verification against its checkpoint moves no record
+    // (#5129), and its export reads the log.
+    ("POST", "/admin/access_log/verify"),
+    ("GET", "/admin/access_log/export"),
     // The legal registers, read side: the restriction sequence a controller
     // answers an Art. 18(3) notice from, the declared retention periods, and
     // what has fallen due. They carry ids, grounds and citations, never
@@ -454,6 +458,8 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     // REPLACES stored rows, so it stays out of EXTENSION_READ_ROUTES and a
     // read-only server refuses it (#3143).
     ("POST", "/admin/integrity/rebuild-nodes"),
+    // A checkpoint of the access log is a new, signed record (#5129).
+    ("POST", "/admin/access_log/checkpoint"),
     // The outbox acknowledgement moves the reader's cursor (#4786).
     ("POST", "/admin/outbox/{reader}/ack"),
     // A new version of an operational-policy register decides every request
