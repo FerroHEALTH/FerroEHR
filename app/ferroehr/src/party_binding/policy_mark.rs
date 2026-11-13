@@ -43,6 +43,11 @@ pub const TERMINOLOGY: &str = "ferroehr-operations";
 /// relationship.
 pub const ACTS_FOR: &str = "acts_for";
 
+/// The code of [`TERMINOLOGY`] that makes a `PARTY_RELATIONSHIP` a
+/// representation: its source acts for its target, the subject, on the
+/// subject's own record. It makes no policy party.
+pub const REPRESENTS: &str = "represents";
+
 /// The `DV_IDENTIFIER.type` of an OAuth 2.0 `client_id`.
 pub const CLIENT_ID: &str = "client_id";
 
@@ -110,15 +115,40 @@ fn first<T>(value: &Value, found: &mut impl FnMut(&Value) -> Option<T>) -> Optio
     }
 }
 
-/// Whether the `PARTY_RELATIONSHIP` `relationship` carries the acts-for code
-/// ([`ACTS_FOR`]) in its `name` or anywhere in its `details`.
-pub(crate) fn acts_for(relationship: &Value) -> bool {
-    let code = |item: &Value| (coded(item) == Some(ACTS_FOR)).then_some(());
+/// Whether the `PARTY_RELATIONSHIP` `relationship` carries `wanted`, a code of
+/// [`TERMINOLOGY`] such as [`ACTS_FOR`] or [`REPRESENTS`], in its `name` or
+/// anywhere in its `details`.
+pub(crate) fn carries(relationship: &Value, wanted: &str) -> bool {
+    let code = |item: &Value| (coded(item) == Some(wanted)).then_some(());
     relationship.get("name").and_then(code).is_some()
         || relationship
             .get("details")
             .and_then(|details| first(details, &mut |item| code(item)))
             .is_some()
+}
+
+/// The openEHR `subject_relationship` code `relationship` names: the first
+/// `DV_CODED_TEXT` of the `openehr` terminology in its `name` or its
+/// `details` whose code is of that group, `None` when it names none.
+pub(crate) fn subject_relationship(relationship: &Value) -> Option<String> {
+    relationship
+        .get("name")
+        .and_then(openehr_relationship)
+        .or_else(|| first(relationship.get("details")?, &mut openehr_relationship))
+}
+
+/// The code of `item` when it is a `DV_CODED_TEXT` of the `openehr`
+/// terminology's `subject_relationship` group.
+fn openehr_relationship(item: &Value) -> Option<String> {
+    let defining = item.get("defining_code")?;
+    let of = defining
+        .get("terminology_id")
+        .and_then(|id| text(id, "value"));
+    let code = text(defining, "code_string")?;
+    (text(item, "_type") == Some("DV_CODED_TEXT")
+        && of == Some("openehr")
+        && openehr_term::bundle::openehr().is_valid_code("subject_relationship", code))
+    .then(|| code.to_owned())
 }
 
 /// What makes the party body `body`, in canonical JSON, a policy party, or
@@ -130,7 +160,7 @@ pub fn policy_content(body: &Value) -> Option<PolicyContent> {
             coded(item).map(str::to_owned)
         })
         .map(PolicyContent::Grant),
-        "PARTY_RELATIONSHIP" => acts_for(value).then_some(PolicyContent::ActsFor),
+        "PARTY_RELATIONSHIP" => carries(value, ACTS_FOR).then_some(PolicyContent::ActsFor),
         "DV_IDENTIFIER" => {
             (text(value, "type") == Some(CLIENT_ID)).then_some(PolicyContent::Client)
         }
@@ -302,6 +332,44 @@ mod tests {
                 None,
             ),
         ]
+    }
+
+    /// A relationship names the openEHR `subject_relationship` code of its
+    /// name or its details, and no code outside that group: the rule that
+    /// held a mapped relationship type to the group.
+    #[test]
+    fn a_relationship_names_only_a_subject_relationship_code() {
+        let named = |name: &Value, items: &Value| {
+            subject_relationship(&json!({ "_type": "PARTY_RELATIONSHIP",
+                "archetype_node_id": "org.example::rel.v1", "name": name,
+                "details": { "_type": "ITEM_TREE", "archetype_node_id": "at6", "items": items } }))
+        };
+        let label = json!({ "_type": "DV_TEXT", "value": "guardian" });
+        assert_eq!(
+            named(&coded_text("264", "openehr"), &json!([])).as_deref(),
+            Some("264")
+        );
+        assert_eq!(
+            named(&label, &json!([element(&coded_text("254", "openehr"))])).as_deref(),
+            Some("254")
+        );
+        for outside in [coded_text("9999", "openehr"), coded_text("264", "local")] {
+            assert_eq!(
+                named(&label, &json!([element(&outside)])),
+                None,
+                "{outside}"
+            );
+        }
+        let representation = json!({ "_type": "PARTY_RELATIONSHIP",
+            "archetype_node_id": "at5", "name": coded_text(REPRESENTS, TERMINOLOGY) });
+        assert!(carries(&representation, REPRESENTS));
+        assert!(!carries(&representation, ACTS_FOR));
+        assert_eq!(
+            policy_content(&holding(&json!({ "_type": "PARTY_RELATIONSHIP",
+                "archetype_node_id": "at5", "name": coded_text(REPRESENTS, TERMINOLOGY) }))),
+            None,
+            "a representation makes no policy party"
+        );
     }
 
     #[test]

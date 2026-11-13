@@ -511,7 +511,8 @@ design.**
 The default demographic definitions of `deploy/definitions/` (the
 professional `PERSON` and `ROLE`, the care-team `GROUP`, the membership and
 representation `PARTY_RELATIONSHIP`s, the patient `PERSON` and the provider
-`ORGANISATION`) are carried and seeded the same way
+`ORGANISATION`; the representation is an example, recognised by its code) are
+carried and seeded the same way
 (`party_binding::shipped::DEFINITIONS`), and each `[authz.party_binding]`
 mapping section defaults to them (the `Default` of `PartyBindingConfig`), so
 an empty configuration boots with SCIM Users, Groups and representation. A
@@ -781,6 +782,35 @@ target and that identifier are side-table rows too (`binding_client.provider_id`
 `AGENT` and of the `ORGANISATION`, so the request path still adds no
 transaction. There is no data migration role: a migration is an `AGENT` whose
 `ROLE` holds the import and export operations. **Our own design.**
+
+**Representatives in the patient portal (#5446).** A representation is a
+`PARTY_RELATIONSHIP` from the representative's `PERSON` (its source) to the
+subject's (its target) whose `name` or `details` carry
+`ferroehr-operations::represents`, in any archetype, recognised by the code
+as the acts-for relationship is (§Party Relationships: a relationship lives in
+its source party). It names its openEHR `subject_relationship` code itself
+and makes no policy party. Besides the inline relationships of the
+representative's `PERSON`, a `PARTY_RELATIONSHIP` of its own is one: the
+patient writes it to authorise a proxy, and the party protection admits a
+patient's write only of a representation whose target is the subject of
+their launch EHR, before and after, changing only one they inserted
+themself (the EHDS Art. 5 rule, its committer naming their `PERSON`). The
+side table `binding_representation` holds both, the standalone rows keyed by
+their container (party migration `0037`). A `patients` token's representative,
+the RFC 8693 `act` of the patient's token or a login of their own naming the
+patient's EHR, is bound by FerroEHR itself after authentication
+(`service::demographic::portal`): the login under the token's issuer is the
+binding key of a representative's `PERSON`, which must hold a live
+representation of the EHR's subject; the request is then confined to that
+EHR, recorded bound to the representative naming the subject, and committed
+as a `PARTY_RELATED`. `ferrohealth-smart` classifies the `act` path as
+`CallerKind::PatientRepresentative` and binds no party to a `patients` caller,
+so the binding is FerroEHR's. Who may represent whom and until when, the age
+and legal-capacity rules of national law (EHDS Art. 4(2): "in accordance
+with national law"), reach FerroEHR as the representations and the
+`time_validity` the deployment records; FerroEHR holds no rule of its own.
+**Our own design**, as no openEHR spec governs resolving a login to a party
+or who may write a relationship.
 
 **Break-glass stays in the configuration.** Emergency access (EHDS Art.
 11(5)) must work when the party store does not answer, so

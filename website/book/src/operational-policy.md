@@ -237,6 +237,7 @@ in the element's `name`:
 | `binding_issuer` | On `scim_provision`: the `identifier_issuer` of the binding keys the client owns, exactly one |
 | `token_scope` | On `scim_provision`: a scope the client's access token must hold, at least one |
 | `acts_for` | On a `PARTY_RELATIONSHIP`: the source acts for the target |
+| `represents` | On a `PARTY_RELATIONSHIP`: the source represents the target, the subject, on the subject's own record ([Representatives in the patient portal](#representatives-in-the-patient-portal)); it makes no policy party |
 | `role` | A `DV_TEXT`: a role a `hold_roles` grant gives |
 | `scope` | A `DV_TEXT`: a SMART scope a `hold_scopes` grant gives |
 | `login_issuer` | A text or `DV_URI`: a token issuer whose first logins a `create_at_login` grant admits |
@@ -1456,6 +1457,143 @@ design:
 
 - **A federation agreement is a grant on the partner**, keyed by its client
   identifiers, and its rules are judged when it is written.
+
+## Representatives in the patient portal
+
+A parent, a guardian or a proxy the patient chose reads the patient's record
+through the patient portal as the patient's representative. Regulation (EU)
+2025/327 Art. 4(2) asks for proxy services that let natural persons
+authorise others to access their personal electronic health data on their
+behalf, and let legal representatives access the data of the persons whose
+affairs they administer, "in accordance with national law"; Member States
+set the rules for both. Who represents whom, and until when, is therefore
+data the deployment keeps in the CDR. FerroEHR builds in no country's rules.
+
+### The representation
+
+A representation is a `PARTY_RELATIONSHIP` from the representative's
+`PERSON`, its source, to the subject's `PERSON`, its target, whose `name` or
+`details` carry `ferroehr-operations::represents`. Any archetype may model
+it; FerroEHR reads the code, never the archetype id. It may also name the
+relationship with a `DV_CODED_TEXT` of the openEHR `subject_relationship`
+group (`254|parent|`, `264|guardian|`, `253|unknown|` for a proxy), which the
+committer and the access log carry. The shipped
+`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1` is an example: its
+name is the type (parent, guardian or authorised proxy) and its details hold
+both codes.
+
+It holds while its `time_validity` covers today's date in UTC. It is either
+inline, in the representative's `PERSON.relationships`, which an
+administrator writes, or a `PARTY_RELATIONSHIP` of its own
+(`POST /demographic/party_relationship`, FerroEHR's extension), which an
+administrator or the patient writes.
+
+The representative's `PERSON` is of a template
+`[[authz.party_binding.person.template]]` maps and carries a binding key: a
+`DV_IDENTIFIER` whose `issuer` is the token issuer of the patient portal and
+whose `id` is the representative's login there (their `sub`).
+
+### Legal capacity
+
+How old a minor must be before their parents no longer see their record, and
+when someone may act for an adult, is national law. It reaches FerroEHR as
+the representations the deployment records and the `time_validity` it gives
+them: the deployment, or the national identity or authorisation service it
+follows, ends a parent's representation on the date the child decides
+alone, and ends or adds a representation when a court or the patient changes
+who may act. FerroEHR checks only that a live representation covers today,
+so a change is effective on the next request, and holds no age band, no
+country table and no archetype id of its own.
+
+### Signing in
+
+A `patients` issuer names its patient by the EHR of the token's launch
+context (`ehrId`). A representative signs in one of two ways:
+
+- **As the actor of the patient's token.** The issuer sets
+  `act_represents_patient = true` and puts the representative in the
+  token's `act` claim (RFC 8693 §4.1): `sub` is the patient, `act.sub` the
+  representative.
+- **Under their own login.** The token's `sub` is the representative and its
+  launch context names the patient's EHR.
+
+Either way FerroEHR binds the login, under the token's issuer, to the
+`PERSON` whose binding key it is, and admits the request while that `PERSON`
+holds a live representation of the subject of the EHR's `EHR_STATUS`. The
+request is confined to that EHR. A login no representative's `PERSON` carries
+is the patient themself on the second path, and refused on the first. A
+representation that is not recorded or has ended is refused with `403`
+(`refused-representation-unrecorded`); a representative's `PERSON` that is
+`inactive` or `abandoned` with `refused-inactive`, and a login two `PERSON`s
+carry with `refused-ambiguous`. FerroEHR trusts a `patients` issuer for the
+patient its token names, so the issuer, not FerroEHR, decides which EHR a
+login may name; FerroEHR holds every login it knows as a representative to a
+live representation.
+
+Each access is recorded bound to the representative's `PERSON`, naming the
+subject they represent and the relationship (EHDS Annex II 3.2), and a commit
+records the representative as a `PARTY_RELATED` committer.
+
+### The patient authorises a proxy
+
+The patient authorises a proxy with a `PARTY_RELATIONSHIP` of its own, from
+the proxy's `PERSON` to their own:
+
+```sh
+curl -X POST "$BASE/ferroehr/rest/extensions/v1/demographic/party_relationship" \
+  -H "Authorization: Bearer $PATIENT_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "_type": "PARTY_RELATIONSHIP",
+    "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1",
+    "archetype_details": { "_type": "ARCHETYPED", "rm_version": "1.1.0",
+      "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1" } },
+    "name": { "_type": "DV_CODED_TEXT", "value": "Authorised proxy",
+      "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" }, "code_string": "at12" } },
+    "details": { "_type": "ITEM_TREE", "archetype_node_id": "id3",
+      "name": { "_type": "DV_TEXT", "value": "Details" },
+      "items": [
+        { "_type": "ELEMENT", "archetype_node_id": "id4", "name": { "_type": "DV_TEXT", "value": "Representation code" },
+          "value": { "_type": "DV_CODED_TEXT", "value": "represents",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "represents" } } },
+        { "_type": "ELEMENT", "archetype_node_id": "id6", "name": { "_type": "DV_TEXT", "value": "Relationship" },
+          "value": { "_type": "DV_CODED_TEXT", "value": "unknown",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "253" } } } ] },
+    "time_validity": { "_type": "DV_INTERVAL", "lower": { "_type": "DV_DATE", "value": "2026-11-13" },
+      "lower_unbounded": false, "upper_unbounded": true, "lower_included": true, "upper_included": false },
+    "source": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+      "id": { "_type": "HIER_OBJECT_ID", "value": "<the proxy PERSON>" } },
+    "target": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+      "id": { "_type": "HIER_OBJECT_ID", "value": "<the patient PERSON>" } }
+  }'
+```
+
+The patient's own credential reaches the writes of
+`/demographic/party_relationship`, and FerroEHR admits only a representation
+whose target is the subject of the patient's launch EHR, before and after
+the write. The committer is the patient, a `PARTY_IDENTIFIED` naming their
+`PERSON`. The patient revokes the authorisation with
+`DELETE /demographic/party_relationship/{uid}`, or ends it with a `PUT` whose
+`time_validity` ends; the proxy's next request is refused. The patient
+changes only a representation they inserted themself: one an administrator
+recorded, such as a court-appointed guardian's, is the administrator's
+(EHDS Art. 5).
+
+### Where the portal is our own design
+
+No openEHR specification governs these points; each is FerroEHR's own
+design:
+
+- **A representation is recognised by its code**, as the acts-for
+  relationship is, so a deployment models it in any archetype.
+- **Legal capacity is the recorded representations and their validity.**
+  The rules are national law (EHDS Art. 4(2)), so FerroEHR holds no rule of
+  its own.
+- **A portal login binds by the token issuer.** The representative's binding
+  key is a `DV_IDENTIFIER` under the issuer that signs their login, as a
+  client's `client_id` is.
+- **A patient writes the representation of themselves**, and the party
+  protection holds them to it.
 
 ## The admin registers
 

@@ -156,3 +156,27 @@ pub async fn representations(
     }
     Ok(out)
 }
+
+/// The live key rows of the representatives whose binding key is `value`
+/// under the identifier issuer `issuer`, of any type, compared in the
+/// canonical form its type declares, as `(party, lifecycle_state)`.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn representative_keys(
+    conn: &mut PgConnection,
+    issuer: &str,
+    value: &str,
+) -> Result<Vec<(Uuid, String)>, StorageError> {
+    Ok(sqlx::query_as(
+        "SELECT party_id, lifecycle_state FROM binding_identifier \
+         WHERE selector = 'key' AND issuer = $1 AND retired_at IS NULL AND representative \
+           AND value = CASE WHEN lower(identifier_type) IN ('guid', 'uuid') \
+                            THEN lower($2) ELSE $2 END \
+         ORDER BY party_id",
+    )
+    .bind(issuer)
+    .bind(value)
+    .fetch_all(&mut *conn)
+    .await?)
+}

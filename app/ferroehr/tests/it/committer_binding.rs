@@ -178,6 +178,7 @@ pub(crate) async fn bound(svc: &FerroEhrService, sub: &str, key: &str) -> Commit
             name,
             provider: Some((PROVIDER.0.to_owned(), PROVIDER.1.to_owned())),
             namespace: "demographic".to_owned(),
+            portal: None,
         }),
         system: false,
         agent: None,

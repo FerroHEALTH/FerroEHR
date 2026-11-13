@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 864 keys. A deployment that holds real data sets the 10
+# This file lists 862 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
@@ -1414,15 +1414,6 @@ profile = "sandbox"
 #? [authz.party_binding.membership]
 # A `PARTY_RELATIONSHIP` archetype. Optional.
 #? archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1"
-
-# The representation `PARTY_RELATIONSHIP` archetype.
-#? [authz.party_binding.representation]
-# A `PARTY_RELATIONSHIP` archetype whose `source` is the representative and
-# whose `target` is the subject. Optional.
-#? archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1"
-# Each relationship type code of the archetype, mapped to a code of the openEHR
-# `subject_relationship` group. Optional.
-#? relationship_codes = { at10 = "254", at11 = "264" }
 
 # The patient's `PERSON` template.
 #? [authz.party_binding.patient]

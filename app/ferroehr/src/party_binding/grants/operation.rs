@@ -30,7 +30,7 @@ use serde::{Deserialize, Serialize};
 use crate::party_binding::grants::admission::{
     ADMIT_ASSURANCE, ADMIT_GROUP, ADMIT_GUESTS, ADMIT_IDP, ADMIT_ROLE, LOGIN_ISSUER,
 };
-use crate::party_binding::policy_mark::ACTS_FOR;
+use crate::party_binding::policy_mark::{ACTS_FOR, REPRESENTS};
 
 /// The code naming the credentials element whose `DV_DATE_TIME` is the
 /// instant before which a grant does not hold.
@@ -129,11 +129,12 @@ pub const SCOPES: [&str; 8] = [
     TOKEN_SCOPE,
 ];
 
-/// Whether `code` names a grant's bound or scope element, or the acts-for
-/// relationship.
+/// Whether `code` names a grant's bound or scope element, or the acts-for or
+/// representation relationship.
 fn names_no_operation(code: &str) -> bool {
     [
         ACTS_FOR,
+        REPRESENTS,
         NOT_BEFORE,
         NOT_AFTER,
         ROLE,

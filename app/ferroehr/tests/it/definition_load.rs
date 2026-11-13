@@ -191,7 +191,6 @@ async fn the_lanes_boot_on_the_seeded_default_definitions() {
                 &binding.professional_role,
                 &binding.group,
                 &binding.membership,
-                &binding.representation,
                 &binding.patient,
             ),
             (
@@ -199,7 +198,6 @@ async fn the_lanes_boot_on_the_seeded_default_definitions() {
                 &default.professional_role,
                 &default.group,
                 &default.membership,
-                &default.representation,
                 &default.patient,
             ),
             "{lane} sets no mapping key, so it maps the whole default set"

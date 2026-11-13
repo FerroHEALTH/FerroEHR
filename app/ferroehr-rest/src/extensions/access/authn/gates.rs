@@ -83,7 +83,8 @@ pub(super) fn rbac_refusal(
 /// attributed to the caller. A composition operation is checked by the PEP once
 /// its template is known. The DEMOGRAPHIC API admits a client whose `ACTOR`
 /// the CDR grants `access_demographic` (`granted`), and otherwise needs the
-/// product scope.
+/// product scope; the write of a standalone relationship also admits the
+/// patient's own credential ([`writes_own_representation`]).
 ///
 /// The API router is nested under the base path, so the request URI this layer
 /// sees has the base stripped while the matched template carries it; the path
@@ -97,12 +98,13 @@ pub(super) fn smart_refusal(
     let (matched, uri) = route(req);
     let requirement = match layer.smart.need(req.method(), matched, uri.path()) {
         Need::Now(requirement) => requirement,
-        Need::Demographic(_)
+        Need::Demographic(_) | Need::Representation(_)
             if super::grants::client_holds(granted, Operation::AccessDemographic) =>
         {
             return None;
         }
-        Need::Demographic(product) => product,
+        Need::Representation(_) if writes_own_representation(principal) => return None,
+        Need::Demographic(product) | Need::Representation(product) => product,
         Need::Composition(_) => return None,
     };
     let reason = match crate::smart::routes::check(
@@ -127,6 +129,57 @@ pub(super) fn smart_refusal(
     );
     resp.extensions_mut().insert(principal.clone());
     Some(resp)
+}
+
+/// Whether `principal` is the patient themself on a credential naming the
+/// EHR of their launch context: such a caller writes the standalone
+/// representation of themselves that authorises a proxy, which the party
+/// protection holds it to.
+pub(super) fn writes_own_representation(principal: &Principal) -> bool {
+    let portal = principal
+        .represented
+        .as_ref()
+        .is_some_and(|represented| represented.portal.is_some());
+    !portal && principal.access.ehr_id().is_some() && crate::smart::acts_as_person(principal)
+}
+
+/// The `PERSON` the patient of `principal` is, when the route of `req`
+/// writes a standalone relationship and the patient writes it themself: the
+/// subject of the EHR of their launch context, read through `layer`'s
+/// service.
+///
+/// What it reads of `req` is read before it awaits anything, so the future
+/// holds no borrow of the request.
+///
+/// # Errors
+/// [`AuthError::PartyUnavailable`] when the clinical store cannot answer.
+pub(super) fn patient_person<'a>(
+    layer: &'a AuthLayer,
+    req: &Request,
+    principal: &'a Principal,
+) -> impl Future<Output = Result<Option<uuid::Uuid>, AuthError>> + Send + 'a {
+    let (matched, uri) = route(req);
+    let writes = matches!(
+        layer.smart.need(req.method(), matched, uri.path()),
+        Need::Representation(_)
+    ) && writes_own_representation(principal);
+    async move {
+        let ehr = principal.access.ehr_id().map(str::parse::<uuid::Uuid>);
+        let (true, Some(Ok(ehr))) = (writes, ehr) else {
+            return Ok(None);
+        };
+        layer
+            .service
+            .ehr_subject_person(ferroehr::ids::EhrId(ehr))
+            .await
+            .map_err(|error| {
+                tracing::warn!(
+                    error = %ferroehr::error::ErrorChain::new(&error),
+                    "the subject of the patient's EHR could not be read"
+                );
+                AuthError::PartyUnavailable { retry_after: None }
+            })
+    }
 }
 
 /// The route `req` matched, as its full template, and the URI it was sent

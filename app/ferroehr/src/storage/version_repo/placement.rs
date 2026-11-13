@@ -212,20 +212,22 @@ pub async fn next_placement(
 }
 
 /// The `_type` of the committer `PARTY_PROXY` of version `(t, b, v)` of
-/// `vo_id`, or `None` when no such version exists.
+/// `vo_id`, with the id its `external_ref` names, or `None` when no such
+/// version exists.
 ///
 /// No openEHR spec governs the SQL — our own design; the committer is
 /// `AUDIT_DETAILS.committer` (RM common master04 §Audit Details).
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
-pub async fn committer_type(
+pub async fn committer_of(
     tx: &mut PgConnection,
     vo_id: VoId,
     (t, b, v): (i32, i32, i32),
-) -> Result<Option<String>, StorageError> {
-    let committer: Option<Option<String>> = sqlx::query_scalar(
-        "SELECT a.committer ->> '_type' FROM version v \
+) -> Result<Option<(Option<String>, Option<String>)>, StorageError> {
+    Ok(sqlx::query_as(
+        "SELECT a.committer ->> '_type', a.committer -> 'external_ref' -> 'id' ->> 'value' \
+         FROM version v \
          JOIN commit_audit a ON a.id = v.commit_audit_id \
          WHERE v.vo_id = $1 AND v.trunk_version = $2 \
            AND v.branch_number = $3 AND v.branch_version = $4",
@@ -235,8 +237,7 @@ pub async fn committer_type(
     .bind(b)
     .bind(v)
     .fetch_optional(&mut *tx)
-    .await?;
-    Ok(committer.flatten())
+    .await?)
 }
 
 /// The template id the head of `vo_id` names, or `None` for an unknown
