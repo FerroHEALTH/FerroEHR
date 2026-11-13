@@ -388,8 +388,6 @@ pub struct AuthzConfig {
     pub party_binding: crate::config::binding::PartyBindingConfig,
     /// The system clients that commit (`[[authz.system_client]]`).
     pub system_client: Vec<crate::config::clients::SystemClient>,
-    /// The federation agreements (`[authz.federation]`).
-    pub federation: crate::config::agreement::FederationConfig,
     /// The operations the policy grants may grant (`[authz.grants]`).
     pub grants: GrantsConfig,
 }

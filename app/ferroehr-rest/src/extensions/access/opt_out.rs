@@ -27,10 +27,10 @@
 //! surfaces, read the record as before.
 
 use axum::response::{IntoResponse, Response};
-use ferroehr::config::agreement::Accessor;
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::Missing;
 use ferroehr::ids::EhrId;
+use ferroehr::party_binding::grants::agreement::Accessor;
 use uuid::Uuid;
 
 use super::authn::{Principal, current_principal};
@@ -62,9 +62,7 @@ pub(crate) fn applies(state: &AppState, op: &str) -> OptOut {
     // NOTE: an external person may override only where its agreement sets
     // opt_out_override, and an organisation never; our own design under EHDS Art. 10(2).
     let overridable = match super::authn::declared::admitted(&principal.access) {
-        Some(agreement) => {
-            agreement.opt_out_override && agreement.accessor == Some(Accessor::Person)
-        }
+        Some(agreement) => agreement.opt_out_override && agreement.accessor == Accessor::Person,
         None if is_access_service(state, &principal) => true,
         None => return OptOut::Untouched,
     };

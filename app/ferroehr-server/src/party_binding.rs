@@ -131,7 +131,8 @@ pub struct CheckArgs {
 }
 
 /// Returns `service` with the import rules, the grant ceiling
-/// (`[authz.grants] allowed`) and the configured party mapping installed.
+/// (`[authz.grants] allowed`), the trust the federation agreements are
+/// judged against and the configured party mapping installed.
 ///
 /// The mapping is the templates a mapped party is validated against and the
 /// mapping the side table is derived under: the shipped default definitions
@@ -158,7 +159,11 @@ pub fn install(
             config.authz.rbac.import_role.clone(),
             logins,
         ))
-        .with_grant_ceiling(config.authz.grants.ceiling(&config.authz.rbac));
+        .with_grant_ceiling(config.authz.grants.ceiling(&config.authz.rbac))
+        .with_federation_trust(ferroehr::config::federation::trust(
+            &config.auth.shared,
+            config.audit.store.horizon(),
+        ));
     let sections = config.authz.party_binding.sections();
     let mapping = sections
         .binding_mapping(&key_issuers, &config.authz.rbac.admin_role)
@@ -171,7 +176,8 @@ pub fn install(
 /// Prepares this replica's party store before it takes traffic.
 ///
 /// Seeds the default policy and demographic definitions, reads the policy
-/// grants and starts their listener, judges the mapping against its
+/// grants, starts their listener and logs the federation agreements in
+/// force, judges the mapping against its
 /// templates, prepares the side table and takes this replica's lease,
 /// renewed in the background until it is released.
 ///
@@ -192,6 +198,7 @@ pub async fn prepare(
         .await
         .context("reading the policy grants")?;
     service.grants().listened().spawn_listener();
+    service.grants().log_agreements();
     service
         .grants()
         .spawn_refresher(std::time::Duration::from_secs(60));

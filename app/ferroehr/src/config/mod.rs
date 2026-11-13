@@ -26,7 +26,6 @@
 pub mod loader;
 
 pub mod abac_rules;
-pub mod agreement;
 pub mod auth;
 pub mod auth_section;
 pub mod authz;
@@ -34,6 +33,7 @@ mod beside;
 pub mod binding;
 pub mod clients;
 pub mod deployment;
+pub mod federation;
 pub mod management;
 pub mod profile;
 pub mod record;
@@ -87,7 +87,7 @@ pub struct FerroEhrConfig {
     /// `[auth.smart]` and `[auth.scim]`.
     pub auth: auth_section::AuthConfig,
     /// `[authz]` — RBAC, ABAC, assurance, the party binding, the system
-    /// clients, the federation agreements and the grant ceiling.
+    /// clients and the grant ceiling.
     pub authz: authz::AuthzConfig,
     /// `[api]` — the openEHR REST API: the base path, the system identifier,
     /// the `OPTIONS` identity, the `OpenAPI` UI, CORS, the clinical body tier

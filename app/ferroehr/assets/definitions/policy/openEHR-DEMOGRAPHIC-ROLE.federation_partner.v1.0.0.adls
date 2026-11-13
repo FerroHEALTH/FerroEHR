@@ -64,11 +64,7 @@ definition
                                 value matches { DV_TEXT[id43] }
                             }
                             ELEMENT[id13] occurrences matches {0..1} matches {
-                                value matches {
-                                    DV_CODED_TEXT[id44] matches {
-                                        defining_code matches {[ac2]}
-                                    }
-                                }
+                                value matches { DV_CODED_TEXT[id44] }
                             }
                             CLUSTER[id14] occurrences matches {0..1} matches {
                                 items matches {
@@ -84,11 +80,7 @@ definition
                                 }
                             }
                             ELEMENT[id18] occurrences matches {0..1} matches {
-                                value matches {
-                                    DV_CODED_TEXT[id48] matches {
-                                        defining_code matches {[ac3]}
-                                    }
-                                }
+                                value matches { DV_CODED_TEXT[id48] }
                             }
                             ELEMENT[id19] occurrences matches {0..*} matches {
                                 value matches { DV_TEXT[id49] }
@@ -96,18 +88,11 @@ definition
                             ELEMENT[id20] occurrences matches {0..*} matches {
                                 value matches { DV_TEXT[id50] }
                             }
-                            ELEMENT[id21] occurrences matches {0..1} matches {
-                                value matches { DV_BOOLEAN[id51] }
-                            }
                             ELEMENT[id22] occurrences matches {0..1} matches {
                                 value matches { DV_DURATION[id52] }
                             }
                             ELEMENT[id23] occurrences matches {0..1} matches {
-                                value matches {
-                                    DV_CODED_TEXT[id53] matches {
-                                        defining_code matches {[ac4]}
-                                    }
-                                }
+                                value matches { DV_CODED_TEXT[id53] }
                             }
                             CLUSTER[id24] occurrences matches {1} matches {
                                 items matches {
@@ -123,11 +108,7 @@ definition
                                 value matches { DV_BOOLEAN[id56] }
                             }
                             ELEMENT[id28] occurrences matches {0..1} matches {
-                                value matches {
-                                    DV_CODED_TEXT[id57] matches {
-                                        defining_code matches {[ac5]}
-                                    }
-                                }
+                                value matches { DV_CODED_TEXT[id57] }
                             }
                             ELEMENT[id29] occurrences matches {0..1} matches {
                                 value matches { DV_DURATION[id58] }
@@ -163,22 +144,21 @@ terminology
             ["id10"] = <text = <"Agreement version"> description = <"The version of the agreement.">>
             ["id11"] = <text = <"Jurisdiction"> description = <"The ISO 3166-1 alpha-2 code of the jurisdiction the agreement is made under.">>
             ["id12"] = <text = <"Exchange"> description = <"The kind of exchange the agreement covers.">>
-            ["id13"] = <text = <"Purpose"> description = <"What the exchange is for.">>
+            ["id13"] = <text = <"Purpose"> description = <"What the exchange is for, a code the agreement names.">>
             ["id14"] = <text = <"Legal ground"> description = <"The legal ground of the processing.">>
             ["id15"] = <text = <"GDPR Article 6(1) point"> description = <"The point of GDPR Article 6(1), a to f.">>
             ["id16"] = <text = <"GDPR Article 9(2) point"> description = <"The point of GDPR Article 9(2), a to j.">>
-            ["id17"] = <text = <"National provision"> description = <"The national provision the processing rests on.">>
-            ["id18"] = <text = <"Consent source"> description = <"The source of the consent the exchange is conditioned on.">>
+            ["id17"] = <text = <"National provision"> description = <"The provision of the law that applies, which the processing rests on.">>
+            ["id18"] = <text = <"Consent source"> description = <"The source of the consent the exchange is conditioned on, the ferroehr-operations code registry (an external consent registry, whose question names the responsible professional) or local (a consent this provider records).">>
             ["id19"] = <text = <"Read scope"> description = <"A patient/ scope the partner's callers may read under.">>
             ["id20"] = <text = <"Template written"> description = <"The id of a template whose COMPOSITIONs an external person may commit.">>
-            ["id21"] = <text = <"Discard"> description = <"Whether an external person may discard a dispensation of the same point of care within the discard window.">>
-            ["id22"] = <text = <"Discard window"> description = <"The window within which a discard is admitted.">>
-            ["id23"] = <text = <"MyHealth@EU service"> description = <"The MyHealth@EU service a national contact point's person agreement serves.">>
+            ["id22"] = <text = <"Discard window"> description = <"The window, in whole hours, within which an external person may discard a dispensation of the same point of care; without it no discard is admitted.">>
+            ["id23"] = <text = <"MyHealth@EU service"> description = <"The MyHealth@EU service a national contact point's person agreement serves, the ferroehr-operations code patient_summary, eprescription or orcd.">>
             ["id24"] = <text = <"Caller rate"> description = <"The rate one caller of the partner may send requests at.">>
             ["id25"] = <text = <"Requests per second"> description = <"The requests per second a caller may send once its burst is spent.">>
             ["id26"] = <text = <"Burst"> description = <"The requests a caller may send at once.">>
-            ["id27"] = <text = <"Opt-out override"> description = <"Whether a professional of the partner may read an opted-out EHR where national law provides the vital-interest access.">>
-            ["id28"] = <text = <"Access class"> description = <"For an organisation accessor: whether no natural person views the data, or the requester logs the person.">>
+            ["id27"] = <text = <"Opt-out override"> description = <"Whether a professional of the partner may read an opted-out EHR where the law provides the vital-interest access.">>
+            ["id28"] = <text = <"Access class"> description = <"For an organisation accessor, the ferroehr-operations code automated (no natural person views the data) or chained (the requester logs the person).">>
             ["id29"] = <text = <"Chained log retention"> description = <"For a chained access: how long the requester keeps its log.">>
             ["id30"] = <text = <"Not before"> description = <"The instant before which the grant does not hold, for a bound finer than the day of time_validity.">>
             ["id31"] = <text = <"Not after"> description = <"The instant after which the grant does not hold, for a bound finer than the day of time_validity.">>
@@ -186,40 +166,11 @@ terminology
             ["ac1"] = <text = <"Accessors"> description = <"Who the agreement admits.">>
             ["at10"] = <text = <"Person"> description = <"Named persons of the partner.">>
             ["at11"] = <text = <"Organisation"> description = <"The partner organisation itself.">>
-            ["ac2"] = <text = <"Purposes"> description = <"What an exchange is for.">>
-            ["at20"] = <text = <"Care"> description = <"The care of the patient.">>
-            ["at21"] = <text = <"Keuring"> description = <"A medical examination for a third party, which the Dutch Wabvpz Article 15f(2) excludes.">>
-            ["ac3"] = <text = <"Consent sources"> description = <"Where the consent an exchange is conditioned on is recorded.">>
-            ["at30"] = <text = <"Mitz"> description = <"The Dutch national consent register Mitz.">>
-            ["at31"] = <text = <"Local"> description = <"A consent this provider records.">>
-            ["ac4"] = <text = <"MyHealth@EU services"> description = <"The MyHealth@EU services a contact point serves.">>
-            ["at40"] = <text = <"Patient Summary"> description = <"The Patient Summary service.">>
-            ["at41"] = <text = <"ePrescription"> description = <"The ePrescription and eDispensation service.">>
-            ["at42"] = <text = <"Original clinical document"> description = <"The original clinical document service.">>
-            ["ac5"] = <text = <"Access classes"> description = <"How an organisation's access is attributed.">>
-            ["at50"] = <text = <"Automated"> description = <"No natural person views the data.">>
-            ["at51"] = <text = <"Chained"> description = <"The requester logs the natural person who views the data.">>
         >
     >
     value_sets = <
         ["ac1"] = <
             id = <"ac1">
             members = <"at10", "at11">
-        >
-        ["ac2"] = <
-            id = <"ac2">
-            members = <"at20", "at21">
-        >
-        ["ac3"] = <
-            id = <"ac3">
-            members = <"at30", "at31">
-        >
-        ["ac4"] = <
-            id = <"ac4">
-            members = <"at40", "at41", "at42">
-        >
-        ["ac5"] = <
-            id = <"ac5">
-            members = <"at50", "at51">
         >
     >

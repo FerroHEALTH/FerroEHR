@@ -5,8 +5,9 @@
 //! capabilities resolved from this replica's copy of the grant rows, and the
 //! request run inside them.
 //!
-//! A system client is resolved by the issuer of its token and its
-//! `client_id` to the `ACTOR` carrying that client identifier, and a
+//! A system client, and a verified external caller of a federation partner,
+//! is resolved by the issuer of its token and its `client_id` to the `ACTOR`
+//! carrying that client identifier, and a
 //! caller the login binding bound to a party by that party; every other
 //! caller has none and reads nothing. The copy is read only when a
 //! notification or a lost listener asks for it, so a request adds no
@@ -16,9 +17,10 @@
 //! grant reads the copy again before it answers, so the caller's next request
 //! runs under the change. A Basic user holds the roles and scopes its
 //! `hold_roles` and `hold_scopes` grants name ([`basic`]), resolved before any
-//! gate reads them; a check reads the rest through [`Capabilities::current`].
-//! No openEHR spec gives a capability an authorization meaning: our own
-//! design.
+//! gate reads them, the admission of an external caller reads its federation
+//! agreement from them ([`admit`]), and a check reads the rest through
+//! [`Capabilities::current`]. No openEHR spec gives a capability an
+//! authorization meaning: our own design.
 
 use std::future::Future;
 use std::sync::Arc;
@@ -31,7 +33,7 @@ use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::Outcome;
 use ferrohealth_smart::resource::{Access, Caller, Via};
 
-use super::{AuthError, Principal, upper_cased};
+use super::{AuthError, AuthLayer, Principal, upper_cased};
 
 /// The capabilities of the caller of `principal` under `grants`, after
 /// reading the grant rows when this replica's copy is stale.
@@ -53,9 +55,14 @@ pub(crate) async fn resolve(
         .and_then(Outcome::bound)
         .and_then(|bound| bound.party.id().parse::<uuid::Uuid>().ok());
     let actor = match (caller.kind(), caller.issuer(), caller.client_id(), bound) {
-        (CallerKind::System, Some(issuer), Some(client_id), _) => {
-            Actor::Client { issuer, client_id }
-        }
+        (
+            CallerKind::System
+            | CallerKind::ExternalPerson(_)
+            | CallerKind::ExternalOrganisation(_),
+            Some(issuer),
+            Some(client_id),
+            _,
+        ) => Actor::Client { issuer, client_id },
         (_, _, _, Some(party)) => Actor::Party(party),
         _ => return Ok(Arc::default()),
     };
@@ -67,6 +74,61 @@ pub(crate) async fn resolve(
         return Err(AuthError::PartyUnavailable { retry_after: None });
     }
     Ok(Arc::new(grants.capabilities(actor, jiff::Timestamp::now())))
+}
+
+/// The principal of `principal` under its capabilities `granted`: a Basic
+/// user holding its granted roles and scopes ([`basic`]), and an external
+/// caller admitted under its federation agreement ([`admit`]).
+///
+/// # Errors
+/// The response refusing an external caller outside its agreement.
+pub(super) fn bound(
+    layer: &AuthLayer,
+    principal: Principal,
+    granted: &Capabilities,
+    headers: &http::HeaderMap,
+) -> Result<Principal, Box<Response>> {
+    let issuers = &layer.authenticator.role_issuers;
+    let mut principal = basic(principal, granted, |role| issuers.is_privileged(role));
+    admit(layer, &mut principal, granted, headers)?;
+    Ok(principal)
+}
+
+/// Admits the caller of `principal` under its capabilities `granted`
+/// ([`super::declared::Declared::admit`]), so `principal` carries the
+/// agreement an external caller was admitted under.
+///
+/// # Errors
+/// The response refusing an external caller outside its agreement, recorded
+/// as its failed authentication.
+fn admit(
+    layer: &AuthLayer,
+    principal: &mut Principal,
+    granted: &Capabilities,
+    headers: &http::HeaderMap,
+) -> Result<(), Box<Response>> {
+    let auth = &layer.authenticator;
+    let trust = layer.service.grants().federation();
+    match auth
+        .declared
+        .admit(principal.access.clone(), granted, &trust)
+    {
+        Ok(admitted) => {
+            principal.access = admitted;
+            Ok(())
+        }
+        Err(AuthError::KindRefused { code, message, .. }) => {
+            let refused = AuthError::KindRefused {
+                code,
+                message,
+                principal: Some(Box::new(principal.clone())),
+            };
+            Err(Box::new(super::refusal::refusal_of(
+                auth, headers, &refused,
+            )))
+        }
+        Err(e) => Err(Box::new(super::refusal::refusal_of(auth, headers, &e))),
+    }
 }
 
 /// Whether the caller of `granted` is a client whose `ACTOR` holds a grant of

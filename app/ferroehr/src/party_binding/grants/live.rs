@@ -23,11 +23,13 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::party_binding::grants::admission::Admission;
+use crate::party_binding::grants::agreement::{Accessor, Agreement};
 use crate::party_binding::grants::capabilities::{
     Actor, Capabilities, Client, ClientState, Credentials, Grant,
 };
 use crate::party_binding::grants::operation::{GrantCeiling, Operation};
 use crate::party_binding::grants::store::{self, CHANNEL, CapabilityRow, Loaded};
+use crate::party_binding::grants::trust::{AgreementPosture, FederationTrust};
 use crate::policy_register::listen::Listened;
 use crate::storage::error::StorageError;
 
@@ -87,6 +89,7 @@ struct Held {
 pub struct LiveGrants {
     pool: PgPool,
     ceiling: RwLock<Arc<GrantCeiling>>,
+    federation: RwLock<Arc<FederationTrust>>,
     held: RwLock<Arc<Held>>,
     /// Serializes the reads that install a new revision.
     installing: tokio::sync::Mutex<()>,
@@ -111,6 +114,7 @@ impl LiveGrants {
             listened: Arc::new(Listened::new(pool.clone(), CHANNEL)),
             pool,
             ceiling: RwLock::new(Arc::new(GrantCeiling::default())),
+            federation: RwLock::new(Arc::default()),
             held: RwLock::new(Arc::default()),
             installing: tokio::sync::Mutex::new(()),
         }
@@ -125,6 +129,24 @@ impl LiveGrants {
     #[must_use]
     pub fn ceiling(&self) -> Arc<GrantCeiling> {
         self.ceiling
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
+    /// Judge the federation agreements against `trust`: the `federation`
+    /// issuers and how long this node keeps its access records.
+    pub fn set_federation(&self, trust: FederationTrust) {
+        *self
+            .federation
+            .write()
+            .unwrap_or_else(PoisonError::into_inner) = Arc::new(trust);
+    }
+
+    /// What the federation agreements are judged against.
+    #[must_use]
+    pub fn federation(&self) -> Arc<FederationTrust> {
+        self.federation
             .read()
             .unwrap_or_else(PoisonError::into_inner)
             .clone()
@@ -275,6 +297,77 @@ impl LiveGrants {
             })
             .collect();
         Capabilities::new(client, grants)
+    }
+
+    /// Every federation agreement in force at `now`, once per client
+    /// identifier of its partner, from the copy held: what the boot line and
+    /// `/management/info` list.
+    #[must_use]
+    pub fn agreements(&self, now: jiff::Timestamp) -> Vec<AgreementPosture> {
+        let held = self.held();
+        let ceiling = self.ceiling();
+        let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
+        let mut out = Vec::new();
+        for ((issuer, client_id), client) in &held.clients {
+            if !client.state.grants() {
+                continue;
+            }
+            for row in held.capabilities.get(&client.party).into_iter().flatten() {
+                let Some(accessor) = in_force(row, &ceiling, today, now).and_then(Accessor::of)
+                else {
+                    continue;
+                };
+                let grant = Grant::new(
+                    accessor.operation(),
+                    row.role_id,
+                    row.credentials.clone().map(Arc::new),
+                );
+                // NOTE: an agreement that does not read is listed without its terms,
+                // and the admission refuses every caller under it.
+                let agreement = Agreement::read(accessor, grant.credentials()).ok();
+                out.push(AgreementPosture {
+                    issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.as_str())
+                        .redacted(),
+                    client_id: client_id.clone(),
+                    accessor,
+                    name: agreement
+                        .as_ref()
+                        .map(|agreement| agreement.name.clone())
+                        .unwrap_or_default(),
+                    legal_ground: agreement
+                        .and_then(|agreement| agreement.legal_ground)
+                        .map(|ground| ground.to_string()),
+                });
+            }
+        }
+        out
+    }
+
+    /// Logs the federation agreements in force: one line each, a `warn` for
+    /// one that runs without a named person.
+    pub fn log_agreements(&self) {
+        for agreement in self.agreements(jiff::Timestamp::now()) {
+            let ground = agreement.legal_ground.as_deref().unwrap_or("-");
+            if agreement.accessor == Accessor::Organisation {
+                tracing::warn!(
+                    issuer = %agreement.issuer,
+                    client_id = %agreement.client_id,
+                    agreement = %agreement.name,
+                    accessor = %agreement.accessor,
+                    legal_ground = %ground,
+                    "a federation agreement admits an organisation without a named person"
+                );
+            } else {
+                tracing::info!(
+                    issuer = %agreement.issuer,
+                    client_id = %agreement.client_id,
+                    agreement = %agreement.name,
+                    accessor = %agreement.accessor,
+                    legal_ground = %ground,
+                    "federation agreement in force"
+                );
+            }
+        }
     }
 
     /// The admission rules in force at `now` for the first logins of the

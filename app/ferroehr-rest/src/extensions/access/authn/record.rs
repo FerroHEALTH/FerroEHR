@@ -9,7 +9,7 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, PoisonError};
 
-use ferroehr::config::agreement::Agreement;
+use ferroehr::party_binding::grants::agreement::Agreement;
 use ferroehr::system_log::binding::{
     AgreementRecord, BindingRecord, Identified, PartyTriple, Representation,
 };
@@ -201,16 +201,10 @@ fn external_record(
         name: agreement.name.clone(),
         version: agreement.version.clone(),
         legal_ground: agreement.legal_ground.as_ref().map(ToString::to_string),
-        accessor: agreement
-            .accessor
-            .map_or_else(String::new, |accessor| accessor.to_string()),
-        access_class: agreement.access_class.map(|class| {
-            match class {
-                ferroehr::config::agreement::AccessClass::Automated => "automated",
-                ferroehr::config::agreement::AccessClass::Chained => "chained",
-            }
-            .to_owned()
-        }),
+        accessor: agreement.accessor.to_string(),
+        access_class: agreement
+            .access_class
+            .map(|class| class.as_str().to_owned()),
         correlation_id: external.correlation_id().map(|id| id.as_str().to_owned()),
         correlation_source: external
             .correlation_id()
