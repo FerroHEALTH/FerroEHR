@@ -198,7 +198,7 @@ pub enum AbacParam {
     Template,
     /// The EHDS categories of the resource's data (EHDS Annex II 3.4).
     Category,
-    /// The origins of the resource's data (EHDS Annex II 3.4, `[[authz.origin]]`).
+    /// The origins of the resource's data (EHDS Annex II 3.4, a `data_origin` grant).
     Origin,
 }
 
@@ -343,16 +343,12 @@ pub struct GrantsConfig {
     /// The operations the party store may grant
     /// (`FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated).
     ///
-    /// The operations are `commit_composition`, `import_ehr`,
-    /// `import_ehr_extract`, `export_ehr_extract`, `federated_person_access`,
-    /// `federated_organisation_access`, `read_subject_audit`,
-    /// `access_service`, `read_identifiers`, `hold_roles`, `hold_scopes` and
-    /// `create_at_login`. The default allows only `commit_composition`, which
-    /// lets a client write the templates its grant names and nothing else: an
-    /// import, an export, a federation agreement, every privilege and the
-    /// creation of a `PERSON` at a first login reach beyond one system's own
-    /// writes, so each is allowed by name. An empty list lets the store grant
-    /// nothing.
+    /// The operations are the codes of `ferroehr-operations`
+    /// ([`crate::party_binding::grants::operation::Operation`]). The default
+    /// allows only `commit_composition`, which lets a client write the
+    /// templates its grant names and nothing else: every other operation
+    /// reaches beyond one system's own writes, so each is allowed by name. An
+    /// empty list lets the store grant nothing.
     pub allowed: Vec<crate::party_binding::grants::operation::Operation>,
 }
 
@@ -390,14 +386,6 @@ pub struct AuthzConfig {
     /// The party binding: the provider, the namespace and the Basic users'
     /// keys (`[authz.party_binding]`).
     pub party_binding: crate::config::binding::PartyBindingConfig,
-    /// The systems whose imported committers are trusted (`[authz.import]`).
-    pub import: crate::config::clients::ImportConfig,
-    /// The federation agreements (`[authz.federation]`).
-    pub federation: crate::config::agreement::FederationConfig,
-    /// The origins of data this deployment recognises, which a retention
-    /// period and an access rule may name (`[[authz.origin]]`, EHDS Annex II
-    /// 3.4).
-    pub origin: Vec<crate::origins::RegisteredOrigin>,
     /// The operations the policy grants may grant (`[authz.grants]`).
     pub grants: GrantsConfig,
 }

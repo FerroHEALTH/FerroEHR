@@ -111,7 +111,12 @@ async fn booted(
         .expect("the mapping compiles");
     let service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
         .with_mapped_party_templates(sections.mapped_templates())
-        .with_binding_mapping(mapping);
+        .with_binding_mapping(mapping)
+        .with_grant_ceiling(
+            ferroehr::party_binding::grants::operation::GrantCeiling::new(
+                ferroehr::party_binding::grants::operation::Operation::ALL,
+            ),
+        );
     let errors = service
         .party_mapping_errors(&sections)
         .await
@@ -122,6 +127,7 @@ async fn booted(
         .await
         .expect("the side table is prepared")
         .expect("the mapping derives rows");
+    super::grant_clients(&service).await;
     Arc::new(service)
 }
 

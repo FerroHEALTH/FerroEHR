@@ -60,12 +60,7 @@ config:
         - user: clinician
           scopes: [user/composition-*.cruds, user/template-*.cruds, user/aql-*.cruds, __ferroehr.platform]
           roles: [USER]
-    scim:
-      client:
-        - issuer: https://scim.ferroehr.invalid
-          client_id: basic-users
-          scope: ferroehr/scim
-          binding_issuer: urn:ferroehr:basic-user
+    scim: {}
   authz:
     party_binding:
       # The healthcare provider this deployment acts for (an example id
@@ -75,6 +70,10 @@ config:
         - user: clinician
           key_issuer: urn:ferroehr:basic-user
           key: clinician
+    # The SCIM client that provisions `clinician` is granted scim_provision in
+    # the CDR by the deploy probe (scripts/deploy-probes/kubernetes.sh).
+    grants:
+      allowed: [commit_composition, scim_provision]
   # The SCIM endpoint `clinician` is provisioned through before the deploy
   # probe logs in (scripts/deploy-probes/kubernetes.sh).
   files:

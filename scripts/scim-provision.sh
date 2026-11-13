@@ -6,19 +6,26 @@
 # SCIM endpoint (RFC 7644 §3.3), so each login is bound to a demographic
 # PERSON before the lane's run starts.
 #
-# It mints an RFC 9068 client credentials access token with the committed
-# SCIM test key (docs/conformance/party/scim/README.md: TEST MATERIAL, never
-# production) using openssl alone, then creates each User with POST
-# /scim/v2/Users. A User whose userName exists already (409 `uniqueness`) is
-# taken as provisioned, so the step runs again on a kept volume. No openEHR
-# spec governs provisioning a lane: our own design.
+# A client provisions only under a scim_provision grant in the CDR. With
+# SCIM_GRANT set, the script first grants the client through
+# `ferroehr party-binding grant` on the operator's authority, since no
+# administrator can log in before the persons it provisions exist; a client
+# that holds the grant already gets nothing. It then mints an RFC 9068 client
+# credentials access token with the committed SCIM test key
+# (docs/conformance/party/scim/README.md: TEST MATERIAL, never production)
+# using openssl alone, and creates each User with POST /scim/v2/Users. A User
+# whose userName exists already (409 `uniqueness`) is taken as provisioned, so
+# the step runs again on a kept volume. No openEHR spec governs provisioning a
+# lane: our own design.
 #
 # Usage:
-#   scripts/scim-provision.sh <base-url> <client-id> [--name <formatted>] <user>[=<login-key>]...
+#   scripts/scim-provision.sh <base-url> <client-id> <binding-issuer> [--name <formatted>] <user>[=<login-key>]...
 #
 #   <base-url>   the server origin, such as http://localhost:8080
-#   <client-id>  the [[auth.scim.client]] the token names; its binding_issuer
-#                issues every key this call provisions
+#   <client-id>  the client the token names
+#   <binding-issuer>
+#                the identifier issuer of every key this call provisions, the
+#                binding_issuer of the client's scim_provision grant
 #   <user>       the SCIM userName; <login-key> is the binding key the login
 #                carries (loginIdentifier), the userName when omitted
 #   --name       the User's name.formatted, the PERSON's name the server
@@ -32,24 +39,36 @@
 #   SCIM_AUDIENCE   the token's `aud` (ferroehr-scim)
 #   SCIM_SCOPE      the client's scope (ferroehr/scim)
 #   SCIM_KID        the key id the JWKS names (scim-test)
+#   SCIM_GRANT      the command that runs the server's binary against its
+#                   database, such as `docker compose exec -T ferroehr ferroehr`;
+#                   unset, the client is taken as granted already
 set -euo pipefail
 
 usage() {
-  echo "usage: scim-provision.sh <base-url> <client-id> [--name <formatted>] <user>[=<login-key>]..." >&2
+  echo "usage: scim-provision.sh <base-url> <client-id> <binding-issuer> [--name <formatted>] <user>[=<login-key>]..." >&2
   exit 2
 }
-[[ $# -ge 3 ]] || usage
+[[ $# -ge 4 ]] || usage
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 base_url="${1%/}"
 client_id="$2"
-shift 2
+binding_issuer="$3"
+shift 3
 key_file="${SCIM_KEY_FILE:-$root/docs/conformance/party/scim/scim-test.key.pem}"
 issuer="${SCIM_ISSUER:-https://scim.ferroehr.invalid}"
 audience="${SCIM_AUDIENCE:-ferroehr-scim}"
 scope="${SCIM_SCOPE:-ferroehr/scim}"
 kid="${SCIM_KID:-scim-test}"
 extension="urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User"
+
+if [[ -n "${SCIM_GRANT:-}" ]]; then
+  read -ra grant <<<"$SCIM_GRANT"
+  "${grant[@]}" party-binding grant --issuer "$issuer" --client-id "$client_id" \
+    --operation scim_provision --element "binding_issuer=$binding_issuer" \
+    --element "token_scope=$scope" >/dev/null
+  echo "scim-provision: $client_id holds scim_provision for $binding_issuer"
+fi
 
 # RFC 7515 §2: base64url without padding.
 b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }

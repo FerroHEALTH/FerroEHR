@@ -23,11 +23,13 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::party_binding::grants::admission::Admission;
+use crate::party_binding::grants::agreement::{Accessor, Agreement};
 use crate::party_binding::grants::capabilities::{
     Actor, Capabilities, Client, ClientState, Credentials, Grant, Provider,
 };
 use crate::party_binding::grants::operation::{GrantCeiling, Operation};
 use crate::party_binding::grants::store::{self, CHANNEL, CapabilityRow, Loaded};
+use crate::party_binding::grants::trust::{AgreementPosture, FederationTrust};
 use crate::policy_register::listen::Listened;
 use crate::storage::error::StorageError;
 
@@ -87,6 +89,7 @@ struct Held {
 pub struct LiveGrants {
     pool: PgPool,
     ceiling: RwLock<Arc<GrantCeiling>>,
+    federation: RwLock<Arc<FederationTrust>>,
     held: RwLock<Arc<Held>>,
     /// Serializes the reads that install a new revision.
     installing: tokio::sync::Mutex<()>,
@@ -111,6 +114,7 @@ impl LiveGrants {
             listened: Arc::new(Listened::new(pool.clone(), CHANNEL)),
             pool,
             ceiling: RwLock::new(Arc::new(GrantCeiling::default())),
+            federation: RwLock::new(Arc::default()),
             held: RwLock::new(Arc::default()),
             installing: tokio::sync::Mutex::new(()),
         }
@@ -130,11 +134,38 @@ impl LiveGrants {
             .clone()
     }
 
+    /// Judge the federation agreements against `trust`: the `federation`
+    /// issuers and how long this node keeps its access records.
+    pub fn set_federation(&self, trust: FederationTrust) {
+        *self
+            .federation
+            .write()
+            .unwrap_or_else(PoisonError::into_inner) = Arc::new(trust);
+    }
+
+    /// What the federation agreements are judged against.
+    #[must_use]
+    pub fn federation(&self) -> Arc<FederationTrust> {
+        self.federation
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
     /// The listener that says when the copy must be read again;
     /// [`Listened::spawn_listener`] starts it.
     #[must_use]
     pub fn listened(&self) -> &Arc<Listened> {
         &self.listened
+    }
+
+    /// Read the copy again in a detached task whenever a notification marks
+    /// it stale, and at least every `every` while the listener is down, so a
+    /// commit of a request that resolves no caller, or of no request at all,
+    /// decides under the grants in force (whether it writes its outbox row)
+    /// without a read on its own path.
+    pub fn spawn_refresher(self: &Arc<Self>, every: std::time::Duration) {
+        tokio::spawn(refresher(Arc::clone(self), every));
     }
 
     /// The revision this replica holds; `None` before its first read.
@@ -273,6 +304,77 @@ impl LiveGrants {
         Capabilities::new(client, grants)
     }
 
+    /// Every federation agreement in force at `now`, once per client
+    /// identifier of its partner, from the copy held: what the boot line and
+    /// `/management/info` list.
+    #[must_use]
+    pub fn agreements(&self, now: jiff::Timestamp) -> Vec<AgreementPosture> {
+        let held = self.held();
+        let ceiling = self.ceiling();
+        let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
+        let mut out = Vec::new();
+        for ((issuer, client_id), client) in &held.clients {
+            if !client.state.grants() {
+                continue;
+            }
+            for row in held.capabilities.get(&client.party).into_iter().flatten() {
+                let Some(accessor) = in_force(row, &ceiling, today, now).and_then(Accessor::of)
+                else {
+                    continue;
+                };
+                let grant = Grant::new(
+                    accessor.operation(),
+                    row.role_id,
+                    row.credentials.clone().map(Arc::new),
+                );
+                // NOTE: an agreement that does not read is listed without its terms,
+                // and the admission refuses every caller under it.
+                let agreement = Agreement::read(accessor, grant.credentials()).ok();
+                out.push(AgreementPosture {
+                    issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.as_str())
+                        .redacted(),
+                    client_id: client_id.clone(),
+                    accessor,
+                    name: agreement
+                        .as_ref()
+                        .map(|agreement| agreement.name.clone())
+                        .unwrap_or_default(),
+                    legal_ground: agreement
+                        .and_then(|agreement| agreement.legal_ground)
+                        .map(|ground| ground.to_string()),
+                });
+            }
+        }
+        out
+    }
+
+    /// Logs the federation agreements in force: one line each, a `warn` for
+    /// one that runs without a named person.
+    pub fn log_agreements(&self) {
+        for agreement in self.agreements(jiff::Timestamp::now()) {
+            let ground = agreement.legal_ground.as_deref().unwrap_or("-");
+            if agreement.accessor == Accessor::Organisation {
+                tracing::warn!(
+                    issuer = %agreement.issuer,
+                    client_id = %agreement.client_id,
+                    agreement = %agreement.name,
+                    accessor = %agreement.accessor,
+                    legal_ground = %ground,
+                    "a federation agreement admits an organisation without a named person"
+                );
+            } else {
+                tracing::info!(
+                    issuer = %agreement.issuer,
+                    client_id = %agreement.client_id,
+                    agreement = %agreement.name,
+                    accessor = %agreement.accessor,
+                    legal_ground = %ground,
+                    "federation agreement in force"
+                );
+            }
+        }
+    }
+
     /// The admission rules in force at `now` for the first logins of the
     /// token issuer `issuer`, from the copy held: each
     /// [`Operation::CreateAtLogin`] grant naming it that holds on the date of
@@ -292,6 +394,81 @@ impl LiveGrants {
             .filter_map(|row| Admission::read(Credentials::of(row.credentials.as_ref())).ok())
             .filter(|admission| admission.names(issuer))
             .collect()
+    }
+}
+
+impl LiveGrants {
+    /// Every grant of `operation` in force at `now`, of any performer, with
+    /// its performer, from the copy held: what a store-wide reading such as
+    /// the registered origins or the change-feed readers ranges over. A
+    /// performer that is a client `ACTOR` in a state that holds no grant
+    /// holds none here either.
+    #[must_use]
+    pub fn all_in_force(&self, operation: Operation, now: jiff::Timestamp) -> Vec<(Uuid, Grant)> {
+        let held = self.held();
+        let ceiling = self.ceiling();
+        let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
+        let silenced: std::collections::BTreeSet<Uuid> = held
+            .clients
+            .values()
+            .filter(|client| !client.state.grants())
+            .map(|client| client.party)
+            .collect();
+        held.capabilities
+            .iter()
+            .filter(|(performer, _)| !silenced.contains(performer))
+            .flat_map(|(performer, rows)| rows.iter().map(move |row| (*performer, row)))
+            .filter(|(_, row)| in_force(row, &ceiling, today, now) == Some(operation))
+            .map(|(performer, row)| {
+                (
+                    performer,
+                    Grant::new(
+                        operation,
+                        row.role_id,
+                        row.credentials.clone().map(Arc::new),
+                    ),
+                )
+            })
+            .collect()
+    }
+
+    /// Every stored grant of `operation`, of any performer, whether or not it
+    /// is in force or above the ceiling: what must still be honoured once a
+    /// grant has ended, such as the erasure of the contacts of the Users a
+    /// former SCIM client deleted.
+    #[must_use]
+    pub fn all_stored(&self, operation: Operation) -> Vec<Grant> {
+        self.held()
+            .capabilities
+            .values()
+            .flatten()
+            .filter(|row| Operation::of(&row.operation) == Some(operation))
+            .map(|row| {
+                Grant::new(
+                    operation,
+                    row.role_id,
+                    row.credentials.clone().map(Arc::new),
+                )
+            })
+            .collect()
+    }
+}
+
+/// The refresher loop of [`LiveGrants::spawn_refresher`].
+#[expect(
+    clippy::infinite_loop,
+    reason = "a detached task that lives as long as the runtime"
+)]
+async fn refresher(grants: Arc<LiveGrants>, every: std::time::Duration) {
+    loop {
+        let seen = grants.listened.notifications();
+        let _notified = grants.listened.notified_after(seen, every).await;
+        if let Err(error) = grants.refresh_if_stale().await {
+            tracing::warn!(
+                error = %crate::error::ErrorChain::new(&error),
+                "the policy grants could not be read; the next notification reads them again"
+            );
+        }
     }
 }
 

@@ -7,15 +7,17 @@
 //! a grant an administrator changes through the Demographic API decides the
 //! caller's next request on every replica with no restart, a capability
 //! above `[authz.grants] allowed` is refused at its commit, and a party store
-//! that cannot answer is `503`. No openEHR spec gives a capability an
-//! authorization meaning: our own design.
+//! that cannot answer is `503`. A client's `query_system_wide` grant makes
+//! its `system/aql-*` scope count and its `access_demographic` grant admits
+//! it to the DEMOGRAPHIC API, each read per request (#5437). No openEHR spec
+//! gives a capability an authorization meaning: our own design.
 
 use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
-use ferroehr::party_binding::grants::operation::Operation;
+use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::FerroEhrService;
 use ferrohealth_smart::profile::Preset;
@@ -32,9 +34,15 @@ const MACHINES: &str = "https://grants.machines.example";
 
 /// One replica over `pool`: the policy definitions seeded and the policy
 /// parties guarded as the server installs them, `root` an administrator over
-/// Basic, and the system clients of [`MACHINES`] admitted. Its party pool is
-/// `party` when given, and it listens for grant changes when `listen`.
-async fn replica(pool: &PgPool, party: Option<PgPool>, listen: bool) -> Router {
+/// Basic, and the system clients of [`MACHINES`] admitted, honouring the
+/// grants `ceiling` allows. Its party pool is `party` when given, and it
+/// listens for grant changes when `listen`.
+async fn replica(
+    pool: &PgPool,
+    party: Option<PgPool>,
+    listen: bool,
+    ceiling: GrantCeiling,
+) -> Router {
     let mut svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool));
     svc.seed_default_definitions()
         .await
@@ -46,7 +54,8 @@ async fn replica(pool: &PgPool, party: Option<PgPool>, listen: bool) -> Router {
         .expect("the mapping compiles");
     svc = svc
         .with_mapped_party_templates(sections.mapped_templates())
-        .with_binding_mapping(mapping);
+        .with_binding_mapping(mapping)
+        .with_grant_ceiling(ceiling);
     if let Some(party) = party {
         svc = svc.with_demographic_pool(party);
     }
@@ -247,7 +256,7 @@ fn yesterday() -> String {
 #[tokio::test]
 async fn a_grant_changed_through_the_demographic_api_decides_the_next_request() {
     let (_db, pool) = common::migrated_pool().await;
-    let app = Box::pin(replica(&pool, None, true)).await;
+    let app = Box::pin(replica(&pool, None, true, GrantCeiling::default())).await;
     let (role_uid, lab) = granted_client(&app, "lab", "Lab.v1").await;
     let lab_request = capabilities(&app, &system("lab")).await;
     assert_eq!(
@@ -288,7 +297,7 @@ async fn a_grant_changed_through_the_demographic_api_decides_the_next_request() 
 #[tokio::test]
 async fn a_capability_above_the_ceiling_is_refused_at_the_wire() {
     let (_db, pool) = common::migrated_pool().await;
-    let app = Box::pin(replica(&pool, None, false)).await;
+    let app = Box::pin(replica(&pool, None, false, GrantCeiling::default())).await;
     let (_, lab) = granted_client(&app, "lab", "Lab.v1").await;
     let privilege = role(&lab, "read_subject_audit", "Lab.v1", None);
     let (status, _, body) = write(&app, "POST", "role", None, &privilege).await;
@@ -307,8 +316,8 @@ async fn a_capability_above_the_ceiling_is_refused_at_the_wire() {
 #[tokio::test]
 async fn a_grant_written_through_one_replica_decides_the_next_request_on_another() {
     let (_db, pool) = common::migrated_pool().await;
-    let writer = Box::pin(replica(&pool, None, true)).await;
-    let reader = Box::pin(replica(&pool, None, true)).await;
+    let writer = Box::pin(replica(&pool, None, true, GrantCeiling::default())).await;
+    let reader = Box::pin(replica(&pool, None, true, GrantCeiling::default())).await;
     assert_eq!(capabilities(&reader, &system("lab")).await.grants(), []);
     granted_client(&writer, "lab", "Lab.v1").await;
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
@@ -328,15 +337,132 @@ async fn a_grant_written_through_one_replica_decides_the_next_request_on_another
 #[tokio::test]
 async fn a_party_store_that_cannot_answer_is_503() {
     let (db, pool) = common::migrated_pool().await;
-    let healthy = Box::pin(replica(&pool, None, false)).await;
+    let healthy = Box::pin(replica(&pool, None, false, GrantCeiling::default())).await;
     assert_eq!(granted(&healthy, &system("lab")).await.0, StatusCode::OK);
     let closed = sqlx::postgres::PgPoolOptions::new()
         .connect(db.url())
         .await
         .expect("a party pool");
     closed.close().await;
-    let unavailable = Box::pin(replica(&pool, Some(closed), false)).await;
+    let unavailable = Box::pin(replica(&pool, Some(closed), false, GrantCeiling::default())).await;
     let (status, capabilities) = granted(&unavailable, &system("lab")).await;
     assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
     assert!(capabilities.is_none());
+}
+
+/// The app-only token of the client `client_id`, carrying `scope`.
+fn system_with(client_id: &str, scope: &str) -> String {
+    bearer(
+        MACHINES,
+        &audience(MACHINES),
+        &json!({ "sub": client_id, "client_id": client_id, "scope": scope }),
+    )
+}
+
+/// Commits the `AGENT` of `client_id` and a `ROLE` granting it `operation`
+/// through `app`; the `ROLE`'s version uid and the `AGENT`'s container.
+async fn client_granted(app: &Router, client_id: &str, operation: &str) -> (String, String) {
+    let (status, agent_uid, body) = write(app, "POST", "agent", None, &agent(client_id)).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let party = vo(&agent_uid).to_owned();
+    let grant = role(&party, operation, "Any.v1", None);
+    let (status, role_uid, body) = write(app, "POST", "role", None, &grant).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    (role_uid, party)
+}
+
+/// Ends the grant of the `ROLE` `role_uid` performed by `party`, which
+/// granted `operation`, as of yesterday.
+async fn end_grant(app: &Router, role_uid: &str, party: &str, operation: &str) {
+    let ended = role(party, operation, "Any.v1", Some(&yesterday()));
+    let (status, _, body) = write(
+        app,
+        "PUT",
+        &format!("role/{}", vo(role_uid)),
+        Some(role_uid),
+        &ended,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+}
+
+/// The status of an ad-hoc AQL query over every EHR by `credential`.
+async fn system_wide_query(app: &Router, credential: &str) -> StatusCode {
+    common::send_status(
+        app,
+        common::req("POST", format!("{BASE}/query/aql"))
+            .auth(credential)
+            .accept("application/json")
+            .json(json!({ "q": "SELECT e/ehr_id/value FROM EHR e" }).to_string())
+            .build(),
+    )
+    .await
+}
+
+/// The status of a DEMOGRAPHIC API read by `credential` of a party no
+/// version names, so a caller the API admits is answered `404`.
+async fn demographic_read(app: &Router, credential: &str) -> StatusCode {
+    common::send_status(
+        app,
+        common::req(
+            "GET",
+            format!("{BASE}/demographic/person/{}", uuid::Uuid::now_v7()),
+        )
+        .auth(credential)
+        .accept("application/json")
+        .build(),
+    )
+    .await
+}
+
+#[tokio::test]
+async fn a_system_wide_aql_grant_counts_for_a_client_granted_query_system_wide() {
+    let (_db, pool) = common::migrated_pool().await;
+    let ceiling = GrantCeiling::new([Operation::QuerySystemWide]);
+    let app = Box::pin(replica(&pool, None, true, ceiling)).await;
+    let etl = system_with("etl", "system/aql-*.s");
+    assert_eq!(
+        system_wide_query(&app, &etl).await,
+        StatusCode::FORBIDDEN,
+        "a system/aql-* grant counts for no client the CDR grants nothing"
+    );
+    let (role_uid, party) = client_granted(&app, "etl", "query_system_wide").await;
+    assert_eq!(system_wide_query(&app, &etl).await, StatusCode::OK);
+    assert_eq!(
+        system_wide_query(&app, &system_with("other", "system/aql-*.s")).await,
+        StatusCode::FORBIDDEN,
+        "another client's grant counts for no one else"
+    );
+    end_grant(&app, &role_uid, &party, "query_system_wide").await;
+    assert_eq!(
+        system_wide_query(&app, &etl).await,
+        StatusCode::FORBIDDEN,
+        "the ended grant no longer counts on the next request"
+    );
+}
+
+#[tokio::test]
+async fn the_demographic_api_admits_a_client_granted_access_demographic() {
+    let (_db, pool) = common::migrated_pool().await;
+    let ceiling = GrantCeiling::new([Operation::AccessDemographic]);
+    let app = Box::pin(replica(&pool, None, true, ceiling)).await;
+    let mpi = system_with("mpi", "system/composition-*.r");
+    assert_eq!(
+        demographic_read(&app, &mpi).await,
+        StatusCode::FORBIDDEN,
+        "a client the CDR grants nothing reaches no demographic data"
+    );
+    let (role_uid, party) = client_granted(&app, "mpi", "access_demographic").await;
+    assert_eq!(demographic_read(&app, &mpi).await, StatusCode::NOT_FOUND);
+    assert_eq!(
+        demographic_read(&app, &system_with("other", "system/composition-*.r")).await,
+        StatusCode::FORBIDDEN,
+        "another client's grant admits no one else"
+    );
+    end_grant(&app, &role_uid, &party, "access_demographic").await;
+    assert_eq!(
+        demographic_read(&app, &mpi).await,
+        StatusCode::FORBIDDEN,
+        "the ended grant no longer admits the client on the next request"
+    );
 }

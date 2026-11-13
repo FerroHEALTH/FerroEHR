@@ -43,12 +43,13 @@ start from, so it starts in this order:
    templates of your own needs them stored first: run
    `ferroehr definitions load` on them before the server starts, since boot
    refuses a mapping whose templates the store lacks.
-2. **Declare the identity provider's SCIM client.** It is an OAuth 2.0
+2. **Grant the identity provider's SCIM client.** It is an OAuth 2.0
    client-credentials client (RFC 6749 §4.4) of the deployment's
    authorization server with the provisioning scope: an `[[auth.issuer]]`
-   of kind `machines` that issues its tokens, and a `[[auth.scim.client]]`
-   naming that issuer, the client, the scope and the `binding_issuer` its
-   Users' keys are written under.
+   of kind `machines` issues its tokens, and `ferroehr party-binding grant`
+   grants it `scim_provision` in the CDR with the scope as `token_scope` and
+   the `binding_issuer` its Users' keys are written under
+   ([The first grant](../operational-policy.md#the-first-grant)).
 3. **Provision the first person through `/scim/v2/`.** The identity
    provider, or you through that client, sends `POST /scim/v2/Users`
    (RFC 7644 §3.3). FerroEHR creates the `PERSON` and its professional
@@ -142,7 +143,8 @@ persons that perform no professional `ROLE` (which `adopt` has not
 reached), and every mapped Basic user with the `PERSON` it binds.
 
 For each key it reports the committer of the version that introduced the
-key, and fails unless that committer was a `[[auth.scim.client]]`, an
+key, and fails unless that committer was a SCIM client (one whose `ACTOR`
+holds or held a `scim_provision` grant), an
 administrator you name, a migration you declare, or just-in-time creation
 on a `persons` issuer an `[[auth.party]]` table binds. A stored version records no role its
 committer held, so you name the administrators (`--admin`, `--admin-key`),

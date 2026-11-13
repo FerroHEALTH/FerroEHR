@@ -11,12 +11,15 @@
 //! make a version read as a local colleague's original act, so a wrapped
 //! committer naming a local `VERSIONED_PARTY`, or carrying a login identifier
 //! of this deployment's issuers, is refused unless the version's
-//! `creating_system_id` is a system the deployment declares trusted. Importing
-//! needs the declared import role, or a policy grant of the import's
-//! operation (`import_ehr`, `import_ehr_extract`) covering the subject
-//! namespace of the EHR it touches; exporting by a system caller needs an
-//! `export_ehr_extract` grant covering the EHR the same way. No openEHR spec
-//! governs who may import or export: our own design (#5005, #5432, #5438).
+//! `creating_system_id` is a system the importing caller's grant vouches for:
+//! a `creating_system` element of its grant of the import operation in
+//! [`crate::party_binding::policy_mark::TERMINOLOGY`], read per request from
+//! [`Capabilities::current`], and never this node's own system id. Importing
+//! needs the declared import role, or a grant of the import's operation
+//! (`import_ehr`, `import_ehr_extract`) covering the subject namespace of the
+//! EHR it touches; exporting by a system caller needs an `export_ehr_extract`
+//! grant covering the EHR the same way. No openEHR spec governs who may
+//! import or export: our own design (#5005, #5432, #5438, #5439).
 
 #![expect(
     clippy::disallowed_types,
@@ -32,7 +35,7 @@ use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
 use crate::party_binding::grants::capabilities::Capabilities;
-use crate::party_binding::grants::operation::Operation;
+use crate::party_binding::grants::operation::{CREATING_SYSTEM, Operation};
 use crate::service::FerroEhrService;
 use crate::versioning::Kind;
 use crate::versioning::import::ImportContainer;
@@ -45,28 +48,21 @@ pub struct ImportPolicy {
     enforced: bool,
     /// `[authz.rbac] import_role`.
     role: Option<String>,
-    /// `[authz.import] trusted_systems`.
-    trusted: BTreeSet<String>,
     /// The issuers whose logins a wrapped committer may not carry: every
     /// trusted issuer, its `identifier_issuer`, and `ferroehr`.
     issuers: BTreeSet<String>,
 }
 
 impl ImportPolicy {
-    /// Returns the policy importing under `role`, trusting `trusted` systems,
-    /// with `issuers` the deployment's own login issuers.
+    /// Returns the policy importing under `role`, with `issuers` the
+    /// deployment's own login issuers.
     #[must_use]
-    pub fn new(
-        role: Option<String>,
-        trusted: impl IntoIterator<Item = String>,
-        issuers: impl IntoIterator<Item = String>,
-    ) -> Self {
+    pub fn new(role: Option<String>, issuers: impl IntoIterator<Item = String>) -> Self {
         let mut issuers: BTreeSet<String> = issuers.into_iter().collect();
         issuers.insert("ferroehr".to_owned());
         Self {
             enforced: true,
             role,
-            trusted: trusted.into_iter().collect(),
             issuers,
         }
     }
@@ -80,9 +76,8 @@ impl FerroEhrService {
         self
     }
 
-    /// The containers and parties of `extract`, once their import as
-    /// `operation` by the request's caller is admitted
-    /// ([`Self::admit_import`]).
+    /// The containers and parties of `extract`, once their import by the
+    /// request's caller as `operation` is admitted ([`Self::admit_import`]).
     ///
     /// # Errors
     /// The parse refusals of an extract and the [`Self::admit_import`] ones.
@@ -96,6 +91,20 @@ impl FerroEhrService {
         Ok((containers, parties))
     }
 
+    /// The `creating_system_id`s whose wrapped committers the request's
+    /// caller may import as `operation`: the `creating_system` elements of
+    /// its grants of that operation, never this node's own system id.
+    fn trusted_systems(&self, operation: Operation) -> BTreeSet<String> {
+        let own = self.effective_system_id();
+        let capabilities = Capabilities::current();
+        capabilities
+            .of(operation)
+            .flat_map(|grant| grant.credentials().identified(CREATING_SYSTEM))
+            .filter(|system| !system.is_empty() && *system != own)
+            .map(str::to_owned)
+            .collect()
+    }
+
     /// Admits an import of `containers` and `parties`, the operation
     /// `operation`, by the request's caller: one holding the import role, or
     /// a grant of `operation` naming the subject namespace of each
@@ -106,7 +115,8 @@ impl FerroEhrService {
     /// # Errors
     /// [`ServiceError::Forbidden`] (`403`) when the caller holds neither the
     /// import role nor such a grant, or a wrapped committer names a local
-    /// party or login from an untrusted system; a storage failure.
+    /// party or login from a system its grant does not vouch for; a storage
+    /// failure.
     pub(super) async fn admit_import(
         &self,
         containers: &[ImportContainer],
@@ -131,10 +141,11 @@ impl FerroEhrService {
                 return Err(refused_import(operation));
             }
         }
+        let trusted = self.trusted_systems(operation);
         let mut committers: Vec<&Value> = Vec::new();
         for container in containers.iter().chain(parties) {
             for version in &container.versions {
-                if policy.trusted.contains(&version.creating_system_id) {
+                if trusted.contains(&version.creating_system_id) {
                     continue;
                 }
                 committers.extend(version.commit_audit.get("committer"));
@@ -261,7 +272,8 @@ impl FerroEhrService {
         if login || local {
             return Err(ServiceError::not_permitted(
                 "a wrapped AUDIT_DETAILS.committer names a party or a login of this deployment, \
-                 and its version was created by no system [authz.import] trusted_systems lists",
+                 and its version was created by no system a creating_system element of the \
+                 caller's import grant names",
             ));
         }
         Ok(())

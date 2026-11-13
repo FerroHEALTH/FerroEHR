@@ -40,10 +40,57 @@ pub const NOT_BEFORE: &str = "not_before";
 /// instant after which a grant does not hold.
 pub const NOT_AFTER: &str = "not_after";
 
-/// The codes naming a grant's scope elements, which a check reads with
-/// [`crate::party_binding::grants::capabilities::Credentials::named`]: a
-/// template written, a facility, a subject namespace.
-pub const SCOPES: [&str; 3] = ["template", "facility", "subject_namespace"];
+/// The code naming a grant's scope element that names a template written.
+pub const TEMPLATE: &str = "template";
+
+/// The code naming a grant's scope element or `CLUSTER` that names a facility.
+pub const FACILITY: &str = "facility";
+
+/// The code naming a grant's scope element that names a subject namespace.
+pub const SUBJECT_NAMESPACE: &str = "subject_namespace";
+
+/// The code naming an import grant's scope element that names a
+/// `creating_system_id` whose wrapped committers the import may carry.
+pub const CREATING_SYSTEM: &str = "creating_system";
+
+/// The code naming a [`Operation::DataOrigin`] grant's element that names
+/// the origin id the party's data carry, and a `commit_composition` grant's
+/// element that names what it commits: [`RELAY`] or [`DEVICE`].
+pub const ORIGIN: &str = "origin";
+
+/// The code naming a [`Operation::ReadChangeFeed`] grant's element that
+/// names the reader of the commit-event outbox.
+pub const READER: &str = "reader";
+
+/// The code naming a [`Operation::ScimProvision`] grant's element that names
+/// the identifier issuer of the binding keys the client provisions.
+pub const BINDING_ISSUER: &str = "binding_issuer";
+
+/// The code naming a [`Operation::ScimProvision`] grant's element that names
+/// a scope the client's token must hold.
+pub const TOKEN_SCOPE: &str = "token_scope";
+
+/// The codes naming the elements of a federation agreement's credentials,
+/// which [`crate::party_binding::grants::agreement::Agreement`] reads.
+pub const AGREEMENT: [&str; 17] = [
+    "agreement_name",
+    "agreement_version",
+    "jurisdiction",
+    "exchange",
+    "purpose",
+    "gdpr_art_6_1",
+    "gdpr_art_9_2",
+    "national_provision",
+    "consent",
+    "read_scope",
+    "discard_window",
+    "ehdsi_service",
+    "requests_per_second",
+    "burst",
+    "opt_out_override",
+    "access_class",
+    "requester_log_retention",
+];
 
 /// The code naming the credentials element whose text is a role a
 /// [`Operation::HoldRoles`] grant gives a Basic user.
@@ -57,44 +104,56 @@ pub const SCOPE: &str = "scope";
 /// the facility identifier, and the identifier or a prefix of it.
 pub const FACILITY_PARTS: [&str; 3] = ["issuer", "identifier", "identifier_prefix"];
 
-/// The code naming the element whose `DV_CODED_TEXT` value is the origin of
-/// what a `commit_composition` grant commits: [`RELAY`] or [`DEVICE`].
-pub const ORIGIN: &str = "origin";
-
-/// The origin of a relayed record of a person's act, such as HL7 v2.
+/// The origin of a relayed record of a person's act, such as HL7 v2: an
+/// [`ORIGIN`] of a `commit_composition` grant.
 pub const RELAY: &str = "relay";
 
-/// The origin of a device's registration, which no person made.
+/// The origin of a device's registration, which no person made: an
+/// [`ORIGIN`] of a `commit_composition` grant.
 pub const DEVICE: &str = "device";
 
 /// The code naming the element whose text is the issuer of a device
 /// identifier a [`DEVICE`] grant may name as its composer.
 pub const DEVICE_IDENTIFIER_ISSUER: &str = "device_identifier_issuer";
 
-/// The codes of the terminology that name no operation.
-const QUALIFIERS: [&str; 21] = [
-    ACTS_FOR,
-    NOT_BEFORE,
-    NOT_AFTER,
-    SCOPES[0],
-    SCOPES[1],
-    SCOPES[2],
-    FACILITY_PARTS[0],
-    FACILITY_PARTS[1],
-    FACILITY_PARTS[2],
+/// The codes naming a grant's scope elements, which a check reads with
+/// [`crate::party_binding::grants::capabilities::Credentials::named`].
+pub const SCOPES: [&str; 8] = [
+    TEMPLATE,
+    FACILITY,
+    SUBJECT_NAMESPACE,
+    CREATING_SYSTEM,
     ORIGIN,
-    RELAY,
-    DEVICE,
-    DEVICE_IDENTIFIER_ISSUER,
-    ROLE,
-    SCOPE,
-    LOGIN_ISSUER,
-    ADMIT_IDP,
-    ADMIT_GROUP,
-    ADMIT_ROLE,
-    ADMIT_ASSURANCE,
-    ADMIT_GUESTS,
+    READER,
+    BINDING_ISSUER,
+    TOKEN_SCOPE,
 ];
+
+/// Whether `code` names a grant's bound or scope element, or the acts-for
+/// relationship.
+fn names_no_operation(code: &str) -> bool {
+    [
+        ACTS_FOR,
+        NOT_BEFORE,
+        NOT_AFTER,
+        ROLE,
+        SCOPE,
+        LOGIN_ISSUER,
+        ADMIT_IDP,
+        ADMIT_GROUP,
+        ADMIT_ROLE,
+        ADMIT_ASSURANCE,
+        ADMIT_GUESTS,
+        FACILITY_PARTS[0],
+        FACILITY_PARTS[1],
+        FACILITY_PARTS[2],
+        RELAY,
+        DEVICE,
+        DEVICE_IDENTIFIER_ISSUER,
+    ]
+    .contains(&code)
+        || SCOPES.contains(&code)
+}
 
 /// One operation a capability may grant.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -122,6 +181,17 @@ pub enum Operation {
     AccessService,
     /// Read a party's protected national identifiers.
     ReadIdentifiers,
+    /// Be an origin of data (EHDS Annex II 3.4): the grant's `origin`
+    /// element is the id the party's data carry, which a retention period
+    /// and an access rule may name, and the origin its direct commits are
+    /// stamped with.
+    DataOrigin,
+    /// Read the commit-event outbox as the reader the grant's `reader`
+    /// element names.
+    ReadChangeFeed,
+    /// Provision Users and Groups over SCIM 2.0, owning the binding keys of
+    /// the grant's `binding_issuer`.
+    ScimProvision,
     /// Hold, as a Basic user, the roles the grant's [`ROLE`] elements name.
     HoldRoles,
     /// Hold, as a Basic user, the SMART scopes the grant's [`SCOPE`] elements
@@ -131,11 +201,18 @@ pub enum Operation {
     /// carries, under the admission conditions the grant's credentials name
     /// ([`crate::party_binding::grants::admission`]).
     CreateAtLogin,
+    /// Count a `system/aql-*` grant of the client's token, which "would
+    /// grant access to all registered and ad-hoc AQL queries system-wide"
+    /// (SMART on openEHR, `master08-scopes.adoc` §Resource Scopes).
+    QuerySystemWide,
+    /// Reach the DEMOGRAPHIC API, which no SMART on openEHR resource family
+    /// covers.
+    AccessDemographic,
 }
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 17] = [
         Self::CommitComposition,
         Self::ImportEhr,
         Self::ImportEhrExtract,
@@ -145,9 +222,14 @@ impl Operation {
         Self::ReadSubjectAudit,
         Self::AccessService,
         Self::ReadIdentifiers,
+        Self::DataOrigin,
+        Self::ReadChangeFeed,
+        Self::ScimProvision,
         Self::HoldRoles,
         Self::HoldScopes,
         Self::CreateAtLogin,
+        Self::QuerySystemWide,
+        Self::AccessDemographic,
     ];
 
     /// The operation's code in [`crate::party_binding::policy_mark::TERMINOLOGY`].
@@ -163,9 +245,14 @@ impl Operation {
             Self::ReadSubjectAudit => "read_subject_audit",
             Self::AccessService => "access_service",
             Self::ReadIdentifiers => "read_identifiers",
+            Self::DataOrigin => "data_origin",
+            Self::ReadChangeFeed => "read_change_feed",
+            Self::ScimProvision => "scim_provision",
             Self::HoldRoles => "hold_roles",
             Self::HoldScopes => "hold_scopes",
             Self::CreateAtLogin => "create_at_login",
+            Self::QuerySystemWide => "query_system_wide",
+            Self::AccessDemographic => "access_demographic",
         }
     }
 
@@ -186,10 +273,11 @@ impl fmt::Display for Operation {
 }
 
 /// Whether `code` of [`crate::party_binding::policy_mark::TERMINOLOGY`] is a qualifier rather than an
-/// operation: the acts-for code, a bound or a scope.
+/// operation: the acts-for code, a bound, a scope or an agreement element.
 #[must_use]
 pub(crate) fn is_qualifier(code: &str) -> bool {
-    QUALIFIERS.contains(&code.trim())
+    let code = code.trim();
+    names_no_operation(code) || AGREEMENT.contains(&code)
 }
 
 /// The operations the CDR may grant (`[authz.grants] allowed`), and the
@@ -268,6 +356,7 @@ mod tests {
         }
         assert_eq!(Operation::of("import_everything"), None);
         assert!(is_qualifier(ACTS_FOR) && is_qualifier("template"));
+        assert!(AGREEMENT.iter().all(|code| is_qualifier(code)));
         assert!(is_qualifier(RELAY) && is_qualifier(DEVICE) && is_qualifier("identifier_prefix"));
         assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_GUESTS));
     }

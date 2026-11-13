@@ -151,7 +151,7 @@ fn of_origin<'a>(grants: &[Credentials<'a>], origin: &str) -> Vec<Credentials<'a
     grants
         .iter()
         .copied()
-        .filter(|grant| grant.terms(ORIGIN).contains(&origin))
+        .filter(|grant| grant.words(ORIGIN).contains(&origin))
         .collect()
 }
 

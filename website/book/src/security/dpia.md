@@ -44,7 +44,7 @@ the Art. 30 fields, in
 5. **Access logging**: one record per access, in DICOM PS3.15 and FHIR
    `AuditEvent` renderings.
 6. **Change-event feed**: a PHI-free envelope per commit, served to the
-   readers `[record.change_feed] readers` names.
+   readers the `read_change_feed` grants in the CDR name.
 7. **Workforce identity**: the professionals' `PERSON`s, their groups and
    their professional `ROLE`s, provisioned through SCIM or created at a
    first login, which each version's committer and each access record name.

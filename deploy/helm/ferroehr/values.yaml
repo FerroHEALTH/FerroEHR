@@ -721,34 +721,27 @@ config:
     #     basic_user:
     #       - { user: clinician, key_issuer: urn:example:staff-login, key: "<binding key>" }
     # A system client, such as FerroBRIDGE, is authorized by the CDR itself:
-    # an AGENT carrying its client_id, acting for its provider and performing
-    # a ROLE whose capabilities grant what it may commit, import or export,
-    # written through the Demographic API (the book's "Operational policy").
-    # What a federation issuer's external persons or organisation may do here,
-    # one agreement per issuer and accessor (person | organisation), with its
-    # legal ground, consent source, patient/ reads, caller_rate and, for an
-    # organisation, its access_class (automated | chained). See the
-    # configuration reference for every key.
-    federation:
-      agreement: []
+    # an AGENT carrying its client_id and performing a ROLE whose capabilities
+    # grant what it may commit, import or export, written through the
+    # Demographic API (the book's "Operational policy").
+    # The federation agreements are CDR data, written through the Demographic
+    # API (Operational policy in the book), and no configuration key.
 
   # [auth.scim] — the SCIM 2.0 service provider at /scim/v2 (RFC 7644),
   # through which an identity provider such as Microsoft Entra ID provisions
   # each professional as a demographic PERSON. Absent by default, and the
   # table's presence serves it. It needs a machines [[auth.issuer]] (the
-  # deployment's own authorization server) and an [[auth.party]] whose
-  # identifier_issuer each client's binding_issuer names; the party mapping
-  # under authz.party_binding defaults to FerroEHR's default definitions.
+  # deployment's own authorization server); the party mapping under
+  # authz.party_binding defaults to FerroEHR's default definitions.
   # config.server.public_base_url is required, and the Ingress then routes
-  # /scim/v2 on every host. Under config.auth:
+  # /scim/v2 on every host. Who provisions is CDR data, not a value: a
+  # scim_provision grant on the client's AGENT names its binding_issuer (the
+  # identifier_issuer of an [[auth.party]]) and its token_scope, and
+  # config.authz.grants.allowed must admit scim_provision (the book's
+  # "Operational policy" page). Under config.auth:
   #   scim:
   #     max_deactivations: 100           # per client per window, else 429
   #     deactivation_window: 1h
-  #     client:
-  #       - issuer: https://as.example.com
-  #         client_id: entra-provisioning
-  #         scope: ferroehr/scim
-  #         binding_issuer: urn:example:login
 
   # [management] — ops-introspection surface (info / prometheus / metrics / env /
   # loggers / flamegraph). The master switch is ON here (unlike the bare binary)
@@ -764,12 +757,13 @@ config:
   # [record] — the record itself: the subject index, signing, the query
   # engine, the change feed and multimedia. Every key has a server default.
   #   record:
-    # [record.change_feed] — the commit-event outbox and its cursor feed. Our
-    # own extension; no openEHR spec governs it. Off until a reader is named:
-    # FerroBRIDGE reads the feed (scope __ferroehr.outbox) and delivers the
-    # PHI-free events to a message broker.
+    # [record.change_feed] — how long the commit-event outbox keeps a row. Our
+    # own extension; no openEHR spec governs it. Off until a read_change_feed
+    # grant in the CDR names a reader (config.authz.grants.allowed must admit
+    # it): FerroBRIDGE reads the feed (scope __ferroehr.outbox) and delivers
+    # the PHI-free events to a message broker.
     #   change_feed:
-    #     readers: [ferrobridge]
+    #     retention: 7d
     # subject_index — who holds the subject-to-EHR cross-reference: "pixm",
     # an IHE patient identity source asked over PIXm (ITI-83, config.pixm), or
     # "local", the in-instance map. With `ferropix.enabled` the chart INJECTS

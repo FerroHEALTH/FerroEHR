@@ -198,8 +198,8 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `ehr_folder` and `item_tag`, which stand outside change control; the
   definition stores `template_ref`, `template_store`, `archetype_store`,
   `adl2_artefact` and `stored_query`; the change-event `event_outbox` with its
-  `event_outbox_reader` cursors, which the readers `[record.change_feed] readers` names
-  move over the outbox feed (`extensions::outbox`); and
+  `event_outbox_reader` cursors, which the readers the `read_change_feed`
+  grants name move over the outbox feed (`extensions::outbox`); and
   `blob_ref`, which records that a version references an externalized
   multimedia blob so collection is an index probe rather than a scan of `node`.
   Every write emits contribution + commit audit in the same transaction
@@ -519,7 +519,7 @@ section a deployment sets replaces that section's default whole, and nothing
 is seeded under a deployment's own ids. A SCIM client whose `[[auth.party]]`
 table names no `group_identifier_issuer` writes its Groups' `externalId`s
 under its `binding_issuer` with `/groups` appended
-(`ScimClient::group_issuer`). **Our own design.**
+(`config::scim::group_issuer`). **Our own design.**
 
 **Who writes and reads a policy party.** A party is a policy party once a
 version of it holds the coded content above, inline or on our own
@@ -556,14 +556,17 @@ its `credentials` hold, at any depth, an element whose value is a
 (`commit_composition`, `import_ehr`, `import_ehr_extract`,
 `export_ehr_extract`, `federated_person_access`,
 `federated_organisation_access`, `read_subject_audit`, `access_service`,
-`read_identifiers`, `hold_roles`, `hold_scopes`, `create_at_login`); elements named by the
+`read_identifiers`, `data_origin`, `read_change_feed`, `scim_provision`,
+`hold_roles`, `hold_scopes`, `create_at_login`, `query_system_wide`,
+`access_demographic`); elements named by the
 qualifier codes `not_before` and `not_after` bound it finer than a day,
 `template`, `facility` (an element of a `DV_IDENTIFIER`, or a cluster of
-`issuer` with `identifier` or `identifier_prefix`) and `subject_namespace`
-scope it, `origin` (a value of `relay` or `device`) and
-`device_identifier_issuer` qualify a `commit_composition` grant, and `role`
-and `scope` name what a `hold_roles` or `hold_scopes` grant gives; `acts_for`
-codes the acts-for relationship.
+`issuer` with `identifier` or `identifier_prefix`), `subject_namespace`,
+`creating_system`, `origin`, `reader`, `binding_issuer` and `token_scope`
+scope it, `origin` (`relay` or `device`) and `device_identifier_issuer`
+qualify a `commit_composition` grant, and `role` and `scope` name what a
+`hold_roles` or `hold_scopes` grant gives; `acts_for` codes the acts-for
+relationship.
 That is the RM's `ITEM_STRUCTURE` with a terminology binding, which any
 modeller produces (RM `data_types` `DV_CODED_TEXT`, `CODE_PHRASE`). A client
 is any `ACTOR` carrying a `DV_IDENTIFIER` of type `client_id` in its
@@ -613,6 +616,25 @@ which the program first named, would add a transaction to every request,
 which the performance gate's transactions-per-request measure refuses
 (#5459).
 
+**The client lists are grants** (#5437). A backend client, whose
+`system/aql-*` scope "would grant access to all registered and ad-hoc AQL
+queries system-wide" (SMART on openEHR `master08-scopes.adoc` §Resource
+Scopes), is a client whose `ACTOR` holds `query_system_wide`; a client that
+reaches the DEMOGRAPHIC API, which no SMART on openEHR resource family
+covers, holds `access_demographic`. The middleware resolves the caller's
+grants before the RBAC and SMART gates and reads both from them
+(`authn::grants::client_holds`), so `[auth.smart] backend_clients` and
+`demographic_clients` are gone. A grant counts only for a caller resolved as
+a client, the app-only token of a `machines` issuer; a person signed in
+through that client holds the person's grants. `[auth.smart]
+patient_issuers` stays in the file: it is trust, the issuers whose `ehrId`
+claim names an EHR of this platform (master07 §Context Selection), which the
+server needs before it believes a `patient/` token. The person-token client
+lists (`[[auth.issuer]] first_party_clients` and `delegates`) and
+`[auth] scopeless_subjects` are read inside `ferrohealth-smart`'s token
+classification, before any FerroEHR code sees the caller, so they move once
+the crate takes the decision from the product. **Our own design.**
+
 **The grant ceiling.** `[authz.grants] allowed` bounds the operations the
 party store may grant, so a compromised administrator account cannot grant
 more than the operator allows. A `ROLE` commit with a capability coding an
@@ -624,6 +646,44 @@ alone, which reaches only the templates the grant names: an import, an
 export, a federation agreement and every privilege reach beyond one system's
 own writes, so the operator admits each by name. It is the one key this
 program adds. **Our own design.**
+
+**Trusted import systems, origins, change-feed readers and SCIM clients**
+(#5439) are grants read per request through `Capabilities::current` or, for a
+store-wide reading, `LiveGrants::all_in_force`; their TOML keys
+(`[authz.import] trusted_systems`, `[[authz.origin]]`, `[record.change_feed]
+readers`, `[[auth.scim.client]]`) are gone. A wrapped committer of an import
+may name a local party only when the version's `creating_system_id` is a
+`creating_system` element of the importer's grant of that import operation,
+never this node's own (`service::message::import_policy`); the RM keeps an
+imported audit as received (`IMPORTED_VERSION`), so the trust is the
+importer's. An origin is the `origin` element of a `data_origin` grant: the
+registered origins a retention period may name are those in force
+(`origins::registered`), and a direct commit is stamped with its committer's
+one origin, a committer with two refused for a body with no `FEEDER_AUDIT`
+(`origins::DirectOrigin`), which serves EHDS Annex II 3.4. A change-feed
+reader is the `reader` element of a `read_change_feed` grant: the binary's
+`OutboxGate::WhileGranted` writes the outbox row while one is in force, and
+the registry is reconciled with the grants at boot, on every feed call and
+before every prune; only a caller whose own grant names a reader reads it. A
+SCIM client is a client `ACTOR` holding `scim_provision`, whose
+`binding_issuer` is an `[[auth.party]]` identifier issuer no other client's
+grant names and whose `token_scope` its token holds; the contact erasure
+reaches the binding issuers of every stored grant, ended ones included, so
+revoking a client stops no GDPR Art. 17 erasure. The `ROLE` commit refuses a
+capability that names `origin`, `reader` or `binding_issuer` other than once
+(`grants::check_role`). Each replica's refresher reads the grant copy on
+every notification (`LiveGrants::spawn_refresher`), so a commit of a request
+that resolves no caller still sees the change-feed grants in force, with no
+read on its path. **Our own design:** no openEHR spec defines a change feed,
+SCIM, or an authorization meaning for these.
+
+**The first grant is the operator's.** An administrator is a person bound to
+a `PERSON`, and a new deployment's `PERSON`s arrive through a SCIM client
+that needs a grant, so `ferroehr party-binding grant`
+(`party_binding::grants::bootstrap`) commits the client's `AGENT` and a
+`ROLE` granting one operation offline, through `party_create` with the
+server's own committer, under the ceiling and the element rules. It is
+idempotent per client and operation. **Our own design.**
 
 **Basic users' roles and scopes, and the privileged grants** (#5438). A
 Basic user bound to a `PERSON` holds, beside its `[[auth.basic.users]]`
@@ -662,11 +722,34 @@ are gone. **Our own design:** the RM (Incomplete Content) allows an
 incomplete demographic version, and no specification governs when a login
 creates one.
 
+**Federation agreements are grants on the partner** (#5440). An agreement
+is a capability coding `federated_person_access` or
+`federated_organisation_access` in a `ROLE` the partner's `ACTOR` performs;
+that `ACTOR` carries a `client_id` identifier per client of its `federation`
+issuer, so a verified external caller resolves to its partner as a system
+client does, and the agreement is one of its grants, read per request from
+the in-memory copy. Its terms are credentials elements named by codes of
+the same terminology (`agreement_name` to `requester_log_retention`), whose
+values are never operations, and its validity is the grant's. The rules the
+configuration loader once applied at boot run at the `ROLE`'s commit
+(`party_binding::grants::check_agreements`, `422` naming each rule), judged
+against `ferroehr::config::federation::trust`, what `[auth]` trusts of each
+`federation` issuer and `[audit.store]`'s horizon: the partner's issuers are
+`federation` ones, one agreement per partner and accessor, a caller rate and
+`patient/` reads on every agreement, a contact point's `ehdsi_service`, and
+the EHDS Art. 13(4) and Annex II 3.2(b) rules of an organisation and of a
+`chained` access. The admission judges the agreement again for the caller's
+own issuer, so one that no longer keeps them, after its partner changed,
+admits nobody. No rule is a country's: the jurisdiction is the agreement's
+element and the consent source is `registry` or `local`. `/management/info`
+reads the agreements in force from the copy on each request. **Our own
+design:** no specification gives a capability an authorization meaning or
+governs a data-sharing agreement's form.
+
 **System clients from the CDR** (#5436, #5432). The
 `[[authz.system_client]]` table is gone: a system caller
 (`CallerKind::System`) is what the policy parties say. Its commit into an EHR
-(`versioning::system`) needs a `commit_composition` grant, or it is `403`, and
-a
+(`versioning::system`) needs a `commit_composition` grant, or it is `403`, and a
 `COMPOSITION` is admitted when one grant lists its template, has the origin
 the act needs (a device's registration under `device`, recognised by a
 composer identifier of a `device_identifier_issuer` equal to

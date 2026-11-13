@@ -564,6 +564,45 @@ services:
       retries: 5
       start_period: 20s
 
+  # Grants the `quickstart-scim` client scim_provision in the CDR, on the
+  # operator's authority (`ferroehr party-binding grant`), since no
+  # administrator can log in before the quickstart user it provisions exists:
+  # an AGENT carrying the client identifier and a ROLE whose capability names
+  # the binding issuer and the token scope. A client that holds the grant
+  # already gets nothing, so it runs again on a kept volume.
+  ferroehr-grant:
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:main}
+    network_mode: service:identity-issuer
+    depends_on:
+      ferroehr:
+        condition: service_healthy
+    environment:
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
+      FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
+      FERROEHR__USAGE_REPORT__ENABLED: "false"
+    configs:
+      - source: ferroehr-config${FERROEHR_EHR_INDEX:+-${FERROEHR_EHR_INDEX}}
+        target: /etc/ferroehr/ferroehr.toml
+    command:
+      - party-binding
+      - grant
+      - --issuer
+      - http://localhost:8180/quickstart
+      - --client-id
+      - quickstart-scim
+      - --operation
+      - scim_provision
+      - --element
+      - binding_issuer=urn:ferroehr:basic-user
+      - --element
+      - token_scope=ferroehr/scim
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+
   # Provisions the quickstart user `ferroehr` as a professional PERSON through
   # FerroEHR's SCIM endpoint (RFC 7644 §3.3), so the Basic login is bound to
   # a demographic party: the development issuer signs the `quickstart-scim`
@@ -577,6 +616,8 @@ services:
     depends_on:
       ferroehr:
         condition: service_healthy
+      ferroehr-grant:
+        condition: service_completed_successfully
     entrypoint:
       - sh
       - -c
@@ -846,11 +887,11 @@ configs:
       public_base_url = "http://localhost:8080"
 
       [auth.scim]
-      [[auth.scim.client]]
-      issuer = "http://localhost:8180/quickstart"
-      client_id = "quickstart-scim"
-      scope = "ferroehr/scim"
-      binding_issuer = "urn:ferroehr:basic-user"
+
+      # The ferroehr-grant one-shot grants that client scim_provision in the
+      # CDR, which the grant ceiling admits beside a system client's commit.
+      [authz.grants]
+      allowed = ["commit_composition", "scim_provision"]
 
       # Quickstart: authentication only, no role gate — the one user above can
       # use the clinical API, the admin API and the management endpoints.
@@ -981,11 +1022,11 @@ configs:
       public_base_url = "http://localhost:8080"
 
       [auth.scim]
-      [[auth.scim.client]]
-      issuer = "http://localhost:8180/quickstart"
-      client_id = "quickstart-scim"
-      scope = "ferroehr/scim"
-      binding_issuer = "urn:ferroehr:basic-user"
+
+      # The ferroehr-grant one-shot grants that client scim_provision in the
+      # CDR, which the grant ceiling admits beside a system client's commit.
+      [authz.grants]
+      allowed = ["commit_composition", "scim_provision"]
 
       # Quickstart: authentication only, no role gate — the one user above can
       # use the clinical API, the admin API and the management endpoints.

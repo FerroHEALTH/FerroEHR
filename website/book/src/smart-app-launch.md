@@ -65,7 +65,7 @@ route.
 | operational templates, archetypes and artefacts | `template-<template>` with the operation's permission, the template from the `{template_id}` path parameter |
 | query execution | `aql-<query>` with `s`, the query from the `{qualified_query_name}` path parameter |
 | stored-query definitions | `aql-<query>` with the operation's permission |
-| the DEMOGRAPHIC API | a client listed in `[auth.smart] demographic_clients`, or the `[auth] product_scope`: no SMART on openEHR scope covers demographic data |
+| the DEMOGRAPHIC API | a client the CDR grants `access_demographic`, or the `[auth] product_scope`: no SMART on openEHR scope covers demographic data |
 | the ADMIN API | the `[auth] product_scope` |
 | the terminology API, the ITI-81 audit retrieval | an authenticated caller |
 
@@ -77,7 +77,16 @@ route.
 
 A `system/aql-*` grant "would grant access to all registered and ad-hoc AQL
 queries system-wide" (master08 §Resource Scopes), so it counts only for a
-backend client listed in `[auth.smart] backend_clients`.
+backend client: a client the CDR grants `query_system_wide`.
+
+Both client grants are policy the CDR holds, read on every request with no
+restart: a capability of a `ROLE` the client's `AGENT` performs, coded
+`ferroehr-operations::query_system_wide` or
+`ferroehr-operations::access_demographic`, under an `[authz.grants] allowed`
+that admits the code. See
+[Operational policy](operational-policy.md#a-backend-client-and-a-demographic-client)
+for a worked example. A grant counts for a client's own app-only token; a
+person signed in through that client holds the person's grants.
 
 ## Launch context: binding to one EHR
 
@@ -208,11 +217,9 @@ The keys live in `[auth]` and `[auth.smart]`; see the
 | `FERROEHR__AUTH__SMART__DISCOVERY` | `false` | Serve the discovery document. |
 | `FERROEHR__SERVER__PUBLIC_BASE_URL` | unset (**required when enabled**) | The URL clients reach the server at, e.g. `https://cdr.example.com`: the absolute `services.*.baseUrl` values are it, `server.base_path` and `api.base_path`. |
 | `FERROEHR__AUTH__SMART__PLATFORM_BASE_URL` | unset | Base the discovery document hangs off. Unset = the REST root (`/ferroehr/rest`). A leading path is honoured (`/gateway/v1` → `/gateway/v1/.well-known/smart-configuration`). |
-| `FERROEHR__AUTH__SMART__BACKEND_CLIENTS` | `[]` | The `client_id`s a `system/aql-*` grant counts for. |
 | `FERROEHR__AUTH__SMART__PATIENT_ISSUERS` | `[]` | The issuers whose `patient/` grants count. |
-| `FERROEHR__AUTH__SMART__DEMOGRAPHIC_CLIENTS` | `[]` | The `client_id`s that reach the DEMOGRAPHIC API. |
 | `FERROEHR__AUTH__SMART__EPISODE_LAUNCH` | `false` | Advertise and accept episode launch context (experimental; advisory only, no episode filtering). |
-| `FERROEHR__AUTH__PRODUCT_SCOPE` | `__ferroehr.platform` | The scope that admits the ADMIN API and the DEMOGRAPHIC API. |
+| `FERROEHR__AUTH__PRODUCT_SCOPE` | `__ferroehr.platform` | The scope that admits the ADMIN API and, beside a client the CDR grants `access_demographic`, the DEMOGRAPHIC API. |
 | `FERROEHR__AUTH__CAPABILITIES` | `[]` | Capabilities the discovery document adds. |
 | `FERROEHR__AUTH__SCOPES_SUPPORTED` | `[]` | The scopes the discovery document lists. |
 

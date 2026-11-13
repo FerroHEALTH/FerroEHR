@@ -16,10 +16,11 @@ access, is openEHR demographic data in the party store: the
 with every change a version with its committer. Policy that has no home in
 the openEHR demographic model is an [admin register](#the-admin-registers).
 FerroEHR stores, validates and protects the policy parties, and every
-request resolves its caller's grants from them before any check runs
-([Which checks read a grant](#which-checks-read-a-grant)). A system client's
-commits, imports and exports are decided by its grants, as
-[What a system client may do](#what-a-system-client-may-do) describes.
+request resolves its caller's grants from them before any check runs. The
+checks that decide on a grant are listed under
+[What the grants decide](#what-the-grants-decide),
+[Which checks read a grant](#which-checks-read-a-grant) and
+[What a system client may do](#what-a-system-client-may-do).
 
 No openEHR specification governs operational policy or where it is kept, and
 none gives a party an authorization meaning. The classes are the openEHR
@@ -134,7 +135,7 @@ other caller is answered `403`, and the answer names what makes it one, for
 example `the ROLE … is a policy party, as it holds a capability granting
 ferroehr-operations::import_ehr: only an administrator writes it`. A
 SCIM client never writes one, even for a `PERSON` it provisioned, and
-neither does a holder of a `demographic_clients` grant, so no client grants
+neither does a holder of an `access_demographic` grant, so no client grants
 itself a capability. The rule judges the version before the write as well
 as the new one, so a non-administrator can neither change nor delete a
 policy party, nor turn one into an ordinary party. Once a version of a party
@@ -201,9 +202,14 @@ client identifier type are the stable contract.
 | `read_subject_audit` | Read the access log of one subject |
 | `access_service` | Act as an EHDS Article 10 access service, held to a subject's opt-out |
 | `read_identifiers` | Read a party's protected national identifiers |
+| `data_origin` | Be an origin of data: the grant's `origin` is the id the party's data carry |
+| `read_change_feed` | Read the commit-event outbox as the reader the grant's `reader` names |
+| `scim_provision` | Provision Users and Groups over SCIM, owning the binding keys of the grant's `binding_issuer` |
 | `hold_roles` | Hold, as a Basic user, the roles its `role` elements name |
 | `hold_scopes` | Hold, as a Basic user, the SMART scopes its `scope` elements name |
 | `create_at_login` | Create a provisional `PERSON` at the first login of a person no party carries, under the admission conditions the grant names ([Just-in-time admission](#just-in-time-admission)) |
+| `query_system_wide` | Count the client's `system/aql-*` scope, which reaches every query over every EHR (SMART on openEHR, master08 §Resource Scopes) |
+| `access_demographic` | Reach the DEMOGRAPHIC API, which no SMART on openEHR scope covers |
 
 The same terminology names the elements that qualify a grant, by the code
 in the element's `name`:
@@ -222,6 +228,11 @@ in the element's `name`:
 | `device` | As an `origin`: the grant commits a device's registrations, which no person made |
 | `device_identifier_issuer` | The issuer of a device identifier a `device` grant may name as its composer |
 | `subject_namespace` | The `EHR_STATUS.subject.external_ref.namespace` of the EHRs it touches |
+| `creating_system` | On an import grant: a `creating_system_id` whose wrapped committers the import may carry |
+| `origin` | On `data_origin`: the origin id, exactly one |
+| `reader` | On `read_change_feed`: the reader's name, exactly one, matching `^[a-z][a-z0-9-]{0,62}$` |
+| `binding_issuer` | On `scim_provision`: the `identifier_issuer` of the binding keys the client owns, exactly one |
+| `token_scope` | On `scim_provision`: a scope the client's access token must hold, at least one |
 | `acts_for` | On a `PARTY_RELATIONSHIP`: the source acts for the target |
 | `role` | A `DV_TEXT`: a role a `hold_roles` grant gives |
 | `scope` | A `DV_TEXT`: a SMART scope a `hold_scopes` grant gives |
@@ -232,9 +243,16 @@ in the element's `name`:
 | `admit_assurance` | A text, `low`, `substantial` or `high`: the lowest assurance level an admitted login carries |
 | `admit_guests` | A `DV_BOOLEAN`: whether a guest is admitted too |
 
-A code of another terminology grants nothing, and a code of
-`ferroehr-operations` that the table does not define is refused at commit.
-A capability that codes several operations grants each of them.
+The terms of a federation agreement are named by codes of the same
+terminology ([Federation agreements](#federation-agreements)), and the value of
+an element any of these codes names is that element's value, never an
+operation. A code of another terminology grants nothing, and a code of
+`ferroehr-operations` that no table defines is refused at commit.
+A capability that codes several operations grants each of them. A scope
+element holds a `DV_TEXT`, a `DV_CODED_TEXT` or a `DV_IDENTIFIER`, whose `id`
+is read. A `ROLE` whose `data_origin`, `read_change_feed` or `scim_provision`
+capability names its element other than as the table says is refused with
+`400` at its commit.
 
 **Who acts.** A client is any `ACTOR` (`AGENT`, `PERSON`, `ORGANISATION` or
 `GROUP`) that carries, anywhere in its `details` or `identities`, a
@@ -244,8 +262,9 @@ a second party carrying the same issuer and `client_id` is refused with
 `409`.
 
 **Whose grants.** Every authenticated request resolves its caller's grants
-once: a system client, a token of a `machines` issuer, by its issuer and
-`client_id`; a person the login binding bound to a `PERSON`, by that party;
+once: a system client, a token of a `machines` issuer, and a verified
+external caller of a `federation` issuer, by its issuer and `client_id`; a
+person the login binding bound to a `PERSON`, by that party;
 anyone else to no grants. Its grants are the operations the capabilities of
 the `ROLE`s whose `performer` names that party grant, when:
 
@@ -269,6 +288,105 @@ and the database cannot answer, the request is answered `503`.
 
 `ferroehr party-binding refill` rebuilds the grants from the party versions,
 with the rest of the binding side table.
+
+### What the grants decide
+
+Each check below reads the grants in force on the request, so a change an
+administrator commits decides the next request on every replica with no
+restart. Each operation must also be in `[authz.grants] allowed`.
+
+**The committers an import may carry.** An `IMPORTED_VERSION` keeps the
+original's `commit_audit`, so an import could make a version read as a local
+colleague's act. A wrapped committer naming a party of this CDR, or carrying a
+login of its issuers, is refused with `403` unless the version's
+`creating_system_id` is one a `creating_system` element of the caller's
+`import_ehr` grant (for `POST /ehr` with an extract) or `import_ehr_extract`
+grant (for an extract import into an existing EHR) names. This node's own
+system id is never trusted that way.
+
+**The origins of data** (EHDS Annex II 3.4). An origin is recognised when a
+`data_origin` grant in force names it in its `origin` element: a retention
+period may be keyed on it (`PUT {ext}/admin/retention/policy`), and an ABAC
+rule may name it. A body with no `FEEDER_AUDIT`, committed by the holder of
+such a grant, is stamped with that origin in `version.origins`; any other
+direct commit keeps this server's `system_id`. A system that only sends data
+through a feed, and never commits itself, holds the grant on an `AGENT` of
+its own with no client identifier. A committer whose grants name two origins
+commits no body without a `FEEDER_AUDIT` (`403`), since that body would come
+from neither.
+
+**The readers of the change feed.** A reader of the commit-event outbox is
+named by the `reader` element of a `read_change_feed` grant in force. While
+one is, every commit writes its outbox row; with none, no commit does. The
+reader registry is reconciled with the grants at boot, on every feed call and
+before every prune, so a reader no grant names any more is inactive and holds
+the prune back no longer. `GET {ext}/admin/outbox/{reader}` and its
+acknowledgement answer `404` for a reader no grant names, and `403` to a caller
+whose own `read_change_feed` grant does not name it.
+
+**The SCIM provisioning clients.** A request to `/scim/v2/` is admitted for a
+client-credentials token whose client's `ACTOR` holds a `scim_provision` grant
+in force. Its `binding_issuer` is the `identifier_issuer` of an
+`[[auth.party]]` table that no other client's grant names, and the token must
+hold one of its `token_scope` values (`403` with `insufficient_scope`
+otherwise). The client owns the Users whose binding key that issuer issues.
+The contacts of a deleted User are erased for every client that ever held the
+grant, so ending a grant stops no erasure.
+
+A capability of each, on a `ROLE` of your own archetype with no template (the
+element names carry the codes):
+
+```json
+{ "_type": "CAPABILITY", "archetype_node_id": "at0020",
+  "name": { "_type": "DV_TEXT", "value": "Provisioning" },
+  "credentials": { "_type": "ITEM_TREE", "archetype_node_id": "at0021",
+    "name": { "_type": "DV_TEXT", "value": "Terms" },
+    "items": [
+      { "_type": "ELEMENT", "archetype_node_id": "at0022",
+        "name": { "_type": "DV_TEXT", "value": "Operation" },
+        "value": { "_type": "DV_CODED_TEXT", "value": "scim_provision",
+          "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+            "code_string": "scim_provision" } } },
+      { "_type": "ELEMENT", "archetype_node_id": "at0023",
+        "name": { "_type": "DV_CODED_TEXT", "value": "binding_issuer",
+          "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+            "code_string": "binding_issuer" } },
+        "value": { "_type": "DV_TEXT", "value": "urn:example:login" } },
+      { "_type": "ELEMENT", "archetype_node_id": "at0024",
+        "name": { "_type": "DV_CODED_TEXT", "value": "token_scope",
+          "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+            "code_string": "token_scope" } },
+        "value": { "_type": "DV_TEXT", "value": "ferroehr/scim" } }
+    ] } }
+```
+
+A change-feed reader's capability codes `read_change_feed` with a `reader`
+element (`ferrobridge`), an origin's codes `data_origin` with an `origin`
+element (`lab.example`), and an importer's `import_ehr` grant adds a
+`creating_system` element (`legacy.example`) for each system it vouches for.
+
+### The first grant
+
+An administrator is a person bound to a `PERSON`, and the `PERSON`s of a new
+deployment usually arrive through a SCIM client, which itself needs a
+`scim_provision` grant. `ferroehr party-binding grant` breaks that circle on
+the operator's authority: it commits, through the same path a Demographic
+API write takes, an `AGENT` carrying the client identifier (unless an `ACTOR`
+names the client already) and a `ROLE` it performs whose capability grants
+the operation with the elements given. The commits carry the server's own
+committer, the ceiling and the element rules apply, and a client that holds
+the operation already gets nothing, so it runs again safely:
+
+```console
+ferroehr party-binding grant --issuer https://login.example.org/machines \
+  --client-id entra-provisioning --operation scim_provision \
+  --element binding_issuer=urn:example:login --element token_scope=ferroehr/scim
+```
+
+Every later grant is an administrator's write through the Demographic API.
 
 ### The grant ceiling
 
@@ -355,6 +473,72 @@ A `hold_scopes` capability is built the same way, with one `scope` element
 per SMART scope. Both operations are allowed by name in
 `[authz.grants] allowed`, as every other operation.
 
+### Federation agreements
+
+A federation agreement says what a partner's verified external persons, or
+the partner organisation itself, may do here and on which legal ground. It is
+a grant on the partner: the partner's `ACTOR` (usually an `ORGANISATION`)
+carries a `client_id` identifier for each client its `federation` issuer
+issues tokens to, and a `ROLE` it performs holds one capability per accessor.
+A capability coding `federated_person_access` admits the partner's named
+persons; one coding `federated_organisation_access` admits the organisation
+itself, with no named person. The agreement holds while the grant does: its
+`time_validity` and its `not_before` and `not_after` elements. An external
+caller is admitted only under the agreement of its accessor kind that its
+partner holds on the request, read from the CDR, so a new, changed or ended
+agreement takes effect on the next request.
+
+The agreement's terms are elements of the capability's `credentials`, each
+named by its `ferroehr-operations` code:
+
+| Code | Element |
+|---|---|
+| `agreement_name`, `agreement_version` | `DV_TEXT`: the agreement's name and version |
+| `jurisdiction` | `DV_TEXT` or `DV_CODED_TEXT`: the ISO 3166-1 alpha-2 code of the jurisdiction |
+| `exchange` | `DV_TEXT`: the kind of exchange |
+| `purpose` | `DV_CODED_TEXT` or `DV_TEXT`: what the exchange is for |
+| `gdpr_art_6_1`, `gdpr_art_9_2` | `DV_TEXT` or `DV_CODED_TEXT`: the point of GDPR Art. 6(1), `a` to `f`, and of Art. 9(2), `a` to `j` |
+| `national_provision` | `DV_TEXT`: the provision of the law that applies |
+| `consent` | `registry` (an external consent registry, whose question names the responsible professional) or `local`: the source of the consent a read is conditioned on; a read must then carry its consent decision reference |
+| `read_scope` | `DV_TEXT`, one per scope: a `patient/` scope the callers may read |
+| `template` | `DV_TEXT`, one per template: a template an external person may commit |
+| `discard_window` | `DV_DURATION` of whole hours, such as `PT24H`: an external person may discard a dispensation of its own point of care within it |
+| `ehdsi_service` | `patient_summary`, `eprescription` or `orcd`: the MyHealth@EU service a contact point's person agreement serves |
+| `requests_per_second`, `burst` | `DV_COUNT`: the admission rate per caller |
+| `opt_out_override` | `DV_BOOLEAN`: a professional may read an opted-out EHR under an emergency purpose |
+| `access_class` | `automated` or `chained`: how an organisation's access is attributed |
+| `requester_log_retention` | `DV_DURATION` of whole years or days, such as `P5Y`: how long a `chained` requester keeps its log |
+
+A coded value is read by its `code_string` in any terminology, a text by its
+`value`. A `ROLE` whose agreement breaks one of these rules is refused at its
+commit with `422`, and the problem names every rule it breaks:
+
+- the partner carries a `client_id` identifier, and each identifier's issuer
+  is an `[[auth.issuer]]` of kind `federation`;
+- a partner holds one agreement per accessor: a second capability for the same
+  accessor, in this `ROLE` or another, is refused;
+- every element holds a value of its kind;
+- every agreement sets `requests_per_second` and `burst`, reads only
+  `patient/` scopes, and codes its GDPR points within their articles;
+- a contact point's person agreement names its `ehdsi_service`, and no other
+  agreement does;
+- an organisation agreement names its `agreement_name`, `agreement_version`,
+  GDPR points and `access_class`, writes no template (EHDS Art. 13(4)), sets
+  no `opt_out_override`, takes no consent from a `registry`, and its partner
+  is no contact point;
+- a `chained` organisation agreement sets a `requester_log_retention` at
+  least as long as `[audit.store] retention`, and its issuer's
+  `[[auth.federation]]` table maps `correlation_id` from the token, never from
+  a constant.
+
+The partner's client identifiers are read when the `ROLE` commits, so commit
+the partner first; a contribution lists it before the `ROLE`. An agreement
+that no longer keeps the rules, for example after its partner gained an
+identifier of a contact point, admits no caller, and the server logs why.
+`/management/info` lists every agreement in force under `binding.agreements`,
+with its partner's issuer and client, its accessor, name and legal ground, and
+the boot line names each one.
+
 ### For a check that reads a grant
 
 A check inside a request reads the caller's grants with
@@ -404,8 +588,8 @@ names in `subject_namespace` the subject namespace of the EHR: of each
 `EHR_STATUS` the extract carries and, for an extract into an existing EHR,
 of that EHR. A caller holding `[authz.rbac] import_role` imports as before.
 Any other import is `403`. The versions inside an extract keep their
-original committers only when their `creating_system_id` is in
-`[authz.import] trusted_systems`.
+original committers only when a `creating_system` element of the grant names
+their `creating_system_id`.
 
 **Export.** A system client exports an EHR with `message_export_ehrs` or
 `message_export_ehr_extracts` only under an `export_ehr_extract` grant whose
@@ -486,16 +670,16 @@ credentials at `/capabilities[id6]/credentials[id8]`, and its `time_validity` th
 | `ROLE.system_client` | Subject namespace, named `subject_namespace` | `/capabilities[id6]/credentials[id8]/items[id19]` | `DV_TEXT` |
 | `ROLE.federation_partner` | Kind (accessor) | `at10` person, `at11` organisation | |
 | `ROLE.federation_partner` | Agreement name, version, jurisdiction, exchange | `/capabilities[id6]/credentials[id8]/items[id9]`, `[id10]`, `[id11]`, `[id12]` | `DV_TEXT` |
-| `ROLE.federation_partner` | Purpose | `/capabilities[id6]/credentials[id8]/items[id13]`: `at20` care, `at21` keuring | `DV_CODED_TEXT` |
-| `ROLE.federation_partner` | Legal ground: GDPR Art. 6(1), Art. 9(2), national provision | `/capabilities[id6]/credentials[id8]/items[id14]/items[id15]`, `[id16]`, `[id17]` | `DV_TEXT` |
-| `ROLE.federation_partner` | Consent source | `/capabilities[id6]/credentials[id8]/items[id18]`: `at30` Mitz, `at31` local | `DV_CODED_TEXT` |
+| `ROLE.federation_partner` | Purpose | `/capabilities[id6]/credentials[id8]/items[id13]` | `DV_CODED_TEXT` |
+| `ROLE.federation_partner` | Legal ground: GDPR Art. 6(1), Art. 9(2), the provision of the law that applies | `/capabilities[id6]/credentials[id8]/items[id14]/items[id15]`, `[id16]`, `[id17]` | `DV_TEXT` |
+| `ROLE.federation_partner` | Consent source: `registry` or `local` | `/capabilities[id6]/credentials[id8]/items[id18]` | `DV_CODED_TEXT` |
 | `ROLE.federation_partner` | Read scope, template written | `/capabilities[id6]/credentials[id8]/items[id19]`, `[id20]` | `DV_TEXT` |
-| `ROLE.federation_partner` | Discard, discard window | `/capabilities[id6]/credentials[id8]/items[id21]`, `[id22]` | `DV_BOOLEAN`, `DV_DURATION` |
-| `ROLE.federation_partner` | MyHealth@EU service | `/capabilities[id6]/credentials[id8]/items[id23]`: `at40` Patient Summary, `at41` ePrescription, `at42` original clinical document | `DV_CODED_TEXT` |
+| `ROLE.federation_partner` | Discard window | `/capabilities[id6]/credentials[id8]/items[id22]` | `DV_DURATION` |
+| `ROLE.federation_partner` | MyHealth@EU service: `patient_summary`, `eprescription` or `orcd` | `/capabilities[id6]/credentials[id8]/items[id23]` | `DV_CODED_TEXT` |
 | `ROLE.federation_partner` | Caller rate: requests per second, burst | `/capabilities[id6]/credentials[id8]/items[id24]/items[id25]`, `[id26]` | `DV_COUNT` |
 | `ROLE.federation_partner` | Opt-out override | `/capabilities[id6]/credentials[id8]/items[id27]` | `DV_BOOLEAN` |
-| `ROLE.federation_partner` | Access class | `/capabilities[id6]/credentials[id8]/items[id28]`: `at50` automated, `at51` chained | `DV_CODED_TEXT` |
-| `ROLE.federation_partner` | Chained log retention | `/capabilities[id6]/credentials[id8]/items[id29]` | `DV_DURATION` |
+| `ROLE.federation_partner` | Access class: `automated` or `chained` | `/capabilities[id6]/credentials[id8]/items[id28]` | `DV_CODED_TEXT` |
+| `ROLE.federation_partner` | Requester log retention | `/capabilities[id6]/credentials[id8]/items[id29]` | `DV_DURATION` |
 | `ROLE.federation_partner` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id30]`, `[id31]`, `[id32]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
 | `ROLE.privileged` | Kind (privilege) | `at10` subject audit, `at11` access service, `at12` identifier reader, `at13` import | |
 | `ROLE.privileged` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id9]`, `[id10]`, `[id11]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
@@ -711,6 +895,89 @@ relationship goes in this second version.
 }
 ```
 
+#### A backend client and a demographic client
+
+A reporting job queries every EHR with a `system/aql-*` scope, and a master
+patient index reads and writes persons through the DEMOGRAPHIC API. Neither
+is a key in `ferroehr.toml`: each is a grant of the client's `AGENT`, read on
+every request. A `system/aql-*` scope "would grant access to all registered
+and ad-hoc AQL queries system-wide" (SMART on openEHR, master08 §Resource
+Scopes), so it counts only for a client granted `query_system_wide`; no
+SMART on openEHR scope covers demographic data, so the DEMOGRAPHIC API admits
+a client granted `access_demographic`, or a caller holding the
+`[auth] product_scope`.
+
+Both operations reach beyond one system's own writes, so the ceiling admits
+each by name:
+
+```toml
+[authz.grants]
+allowed = ["commit_composition", "query_system_wide", "access_demographic"]
+```
+
+The client's `AGENT` is written as above, and its grant is a `ROLE` it
+performs, `POST /demographic/role`. One `ROLE` can carry both operations; a
+deployment that runs the two as separate clients gives each its own `AGENT`
+and `ROLE`.
+
+<!-- policy-example: backend-client-role -->
+```json
+{
+  "_type": "ROLE",
+  "archetype_node_id": "openEHR-DEMOGRAPHIC-ROLE.system_client.v1",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-ROLE.system_client.v1" },
+    "template_id": { "_type": "TEMPLATE_ID", "value": "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0" },
+    "rm_version": "1.1.0"
+  },
+  "name": { "_type": "DV_TEXT", "value": "System client" },
+  "identities": [{
+    "_type": "PARTY_IDENTITY", "archetype_node_id": "id2", "name": { "_type": "DV_TEXT", "value": "Role name" },
+    "details": {
+      "_type": "ITEM_TREE", "archetype_node_id": "id3", "name": { "_type": "DV_TEXT", "value": "Name" },
+      "items": [{
+        "_type": "ELEMENT", "archetype_node_id": "id4", "name": { "_type": "DV_TEXT", "value": "Full name" },
+        "value": { "_type": "DV_TEXT", "value": "Reporting and patient index" }
+      }]
+    }
+  }],
+  "performer": {
+    "_type": "PARTY_REF", "namespace": "demographic", "type": "AGENT",
+    "id": { "_type": "HIER_OBJECT_ID", "value": "5b8e2c91-7d4a-4f3e-8a1c-6e9f0b2d4c73" }
+  },
+  "capabilities": [{
+    "_type": "CAPABILITY", "archetype_node_id": "id6", "name": { "_type": "DV_TEXT", "value": "Reporting" },
+    "credentials": {
+      "_type": "ITEM_TREE", "archetype_node_id": "id8", "name": { "_type": "DV_TEXT", "value": "Grant" },
+      "items": [
+        {
+          "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
+          "value": {
+            "_type": "DV_CODED_TEXT", "value": "Query system-wide",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "query_system_wide" }
+          }
+        },
+        {
+          "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
+          "value": {
+            "_type": "DV_CODED_TEXT", "value": "Access demographic",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "access_demographic" }
+          }
+        }
+      ]
+    }
+  }]
+}
+```
+
+The client's next request runs under the grant, on every replica, with no
+restart. The grant counts for the client's own app-only token, a token of a
+`machines` issuer whose `client_id` the `AGENT` carries. A person signed in
+through the same client holds the person's own grants, never the client's.
+To withdraw it, end the `ROLE`'s `time_validity` or delete the `ROLE`
+([Ending a grant](#ending-a-grant)).
+
 #### A migration
 
 A migration is a system client like any other: its `AGENT` is written as
@@ -802,16 +1069,24 @@ The job then calls `POST /message/import` (`message_import_ehr`) and
 token, and `POST /message/export` to read the result back. Each
 import is committed under the job's `ACTOR` and is an access record that names
 it and the provider it acts for. The versions of an extract keep their legacy
-committers when `[authz.import] trusted_systems` lists the legacy system's
-`creating_system_id`; otherwise an extract naming a local party is refused.
+committers when a `creating_system` element of the grant names the legacy
+system's `creating_system_id`; otherwise an extract naming a local party is
+refused.
 When the night ends the grant holds no longer, with no change to anything.
 
 #### A federation partner
 
 A partner organisation's professionals read patient summaries under a
-data-sharing agreement. The grant is a `ROLE` of the federation partner
-template performed by the partner's `ORGANISATION`, with one capability per
-accessor, here `person`.
+data-sharing agreement. The partner is an `ORGANISATION` that carries a
+`client_id` identifier for each client its `federation` issuer issues tokens
+to, for example `{ "_type": "DV_IDENTIFIER", "issuer":
+"https://federation.example", "id": "remote-portal", "type": "client_id" }`
+in its `details`; committing it is an administrator's write, because the
+identifier makes it a policy party. The agreement is a `ROLE` of the
+federation partner template the partner performs, with one capability per
+accessor, here `person`. Each term is an element whose `name` is its
+`ferroehr-operations` code, which is how FerroEHR reads it in any archetype
+(see [Federation agreements](#federation-agreements)).
 
 <!-- policy-example: federation-partner-role -->
 ```json
@@ -841,8 +1116,8 @@ accessor, here `person`.
   },
   "time_validity": {
     "_type": "DV_INTERVAL",
-    "lower": { "_type": "DV_DATE", "value": "2027-01-01" },
-    "upper": { "_type": "DV_DATE", "value": "2027-12-31" },
+    "lower": { "_type": "DV_DATE", "value": "2026-01-01" },
+    "upper": { "_type": "DV_DATE", "value": "2036-12-31" },
     "lower_unbounded": false, "upper_unbounded": false,
     "lower_included": true, "upper_included": true
   },
@@ -857,71 +1132,74 @@ accessor, here `person`.
       "items": [
         {
           "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
-          "value": {
-            "_type": "DV_CODED_TEXT", "value": "Federated person access",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "federated_person_access" }
-          }
+          "value": { "_type": "DV_CODED_TEXT", "value": "Federated person access", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "federated_person_access" } }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id9", "name": { "_type": "DV_TEXT", "value": "Agreement name" },
+          "_type": "ELEMENT", "archetype_node_id": "id9",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Agreement name", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "agreement_name" } },
           "value": { "_type": "DV_TEXT", "value": "Regional care network exchange" }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id10", "name": { "_type": "DV_TEXT", "value": "Agreement version" },
+          "_type": "ELEMENT", "archetype_node_id": "id10",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Agreement version", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "agreement_version" } },
           "value": { "_type": "DV_TEXT", "value": "2.1" }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id11", "name": { "_type": "DV_TEXT", "value": "Jurisdiction" },
-          "value": { "_type": "DV_TEXT", "value": "NL" }
+          "_type": "ELEMENT", "archetype_node_id": "id11",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Jurisdiction", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "jurisdiction" } },
+          "value": { "_type": "DV_TEXT", "value": "DE" }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id12", "name": { "_type": "DV_TEXT", "value": "Exchange" },
+          "_type": "ELEMENT", "archetype_node_id": "id12",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Exchange", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "exchange" } },
           "value": { "_type": "DV_TEXT", "value": "patient summary" }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id13", "name": { "_type": "DV_TEXT", "value": "Purpose" },
-          "value": {
-            "_type": "DV_CODED_TEXT", "value": "Care",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" }, "code_string": "at20" }
-          }
+          "_type": "ELEMENT", "archetype_node_id": "id13",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Purpose", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "purpose" } },
+          "value": { "_type": "DV_CODED_TEXT", "value": "treatment", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_PurposeOfUse" }, "code_string": "TREAT" } }
         },
         {
           "_type": "CLUSTER", "archetype_node_id": "id14", "name": { "_type": "DV_TEXT", "value": "Legal ground" },
           "items": [
             {
-              "_type": "ELEMENT", "archetype_node_id": "id15", "name": { "_type": "DV_TEXT", "value": "GDPR Article 6(1) point" },
-              "value": { "_type": "DV_TEXT", "value": "c" }
+              "_type": "ELEMENT", "archetype_node_id": "id15",
+              "name": { "_type": "DV_CODED_TEXT", "value": "GDPR Article 6(1) point", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "gdpr_art_6_1" } },
+              "value": { "_type": "DV_TEXT", "value": "e" }
             },
             {
-              "_type": "ELEMENT", "archetype_node_id": "id16", "name": { "_type": "DV_TEXT", "value": "GDPR Article 9(2) point" },
+              "_type": "ELEMENT", "archetype_node_id": "id16",
+              "name": { "_type": "DV_CODED_TEXT", "value": "GDPR Article 9(2) point", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "gdpr_art_9_2" } },
               "value": { "_type": "DV_TEXT", "value": "h" }
             },
             {
-              "_type": "ELEMENT", "archetype_node_id": "id17", "name": { "_type": "DV_TEXT", "value": "National provision" },
-              "value": { "_type": "DV_TEXT", "value": "UAVG Art. 30(3)(a)" }
+              "_type": "ELEMENT", "archetype_node_id": "id17",
+              "name": { "_type": "DV_CODED_TEXT", "value": "National provision", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "national_provision" } },
+              "value": { "_type": "DV_TEXT", "value": "the provision the agreement names" }
             }
           ]
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id18", "name": { "_type": "DV_TEXT", "value": "Consent source" },
-          "value": {
-            "_type": "DV_CODED_TEXT", "value": "Mitz",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" }, "code_string": "at30" }
-          }
+          "_type": "ELEMENT", "archetype_node_id": "id18",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Consent source", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "consent" } },
+          "value": { "_type": "DV_CODED_TEXT", "value": "Local", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "local" } }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id19", "name": { "_type": "DV_TEXT", "value": "Read scope" },
+          "_type": "ELEMENT", "archetype_node_id": "id19",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Read scope", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "read_scope" } },
           "value": { "_type": "DV_TEXT", "value": "patient/composition-openEHR-EHR-COMPOSITION.patient_summary.v1.r" }
         },
         {
           "_type": "CLUSTER", "archetype_node_id": "id24", "name": { "_type": "DV_TEXT", "value": "Caller rate" },
           "items": [
             {
-              "_type": "ELEMENT", "archetype_node_id": "id25", "name": { "_type": "DV_TEXT", "value": "Requests per second" },
+              "_type": "ELEMENT", "archetype_node_id": "id25",
+              "name": { "_type": "DV_CODED_TEXT", "value": "Requests per second", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "requests_per_second" } },
               "value": { "_type": "DV_COUNT", "magnitude": 5 }
             },
             {
-              "_type": "ELEMENT", "archetype_node_id": "id26", "name": { "_type": "DV_TEXT", "value": "Burst" },
+              "_type": "ELEMENT", "archetype_node_id": "id26",
+              "name": { "_type": "DV_CODED_TEXT", "value": "Burst", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "burst" } },
               "value": { "_type": "DV_COUNT", "magnitude": 20 }
             }
           ]
@@ -1148,9 +1426,24 @@ design:
   `roles` list need not name the `ROLE`.
 - **Break-glass stays in the configuration**, so emergency access works when
   the party store does not answer.
+- **Trust in imported committers is the importer's.** The RM keeps an
+  imported version's audit as received (`IMPORTED_VERSION`); which systems'
+  committers may name a local party is a scope of the importer's grant.
+- **An origin is a party's grant.** RM `FEEDER_AUDIT_DETAILS.system_id` names
+  where data came from as free text; which ids a deployment recognises, and
+  which origin a direct commit takes, is the `data_origin` grant.
+- **The change feed and SCIM are grants.** No openEHR spec defines a change
+  feed or SCIM provisioning, so who reads the one and who provisions through
+  the other is FerroEHR's own reading of a capability.
+- **The first grant is the operator's.** `ferroehr party-binding grant`
+  commits it offline with the server's own committer, since no
+  administrator can log in before the persons a provisioning client creates.
 - **A `create_at_login` grant admits logins by its credentials, whoever
   performs its `ROLE`,** and must declare a condition: the RM and the
   Demographic API say nothing about creating a party at a login.
+
+- **A federation agreement is a grant on the partner**, keyed by its client
+  identifiers, and its rules are judged when it is written.
 
 ## The admin registers
 

@@ -26,14 +26,13 @@
 pub mod loader;
 
 pub mod abac_rules;
-pub mod agreement;
 pub mod auth;
 pub mod auth_section;
 pub mod authz;
 mod beside;
 pub mod binding;
-pub mod clients;
 pub mod deployment;
+pub mod federation;
 pub mod management;
 pub mod profile;
 pub mod record;
@@ -87,7 +86,7 @@ pub struct FerroEhrConfig {
     /// `[auth.smart]` and `[auth.scim]`.
     pub auth: auth_section::AuthConfig,
     /// `[authz]` — RBAC, ABAC, assurance, the party binding, the system
-    /// clients, the federation agreements and the registered origins.
+    /// clients and the grant ceiling.
     pub authz: authz::AuthzConfig,
     /// `[api]` — the openEHR REST API: the base path, the system identifier,
     /// the `OPTIONS` identity, the `OpenAPI` UI, CORS, the clinical body tier
@@ -154,14 +153,6 @@ impl Default for FerroEhrConfig {
 pub const DEFAULT_TEMPLATE: &str = include_str!("../../assets/ferroehr.default.toml");
 
 impl FerroEhrConfig {
-    /// The registered origins `[[authz.origin]]` declares.
-    #[must_use]
-    pub fn origins(&self) -> crate::origins::OriginsConfig {
-        crate::origins::OriginsConfig {
-            registered: self.authz.origin.clone(),
-        }
-    }
-
     /// Returns the redacted configuration as a TOML table, the tree
     /// `ferroehr report` records.
     ///
@@ -566,13 +557,10 @@ mod tests {
                 ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr"),
                 ("FERROEHR__AUTH__ISSUER__0__ALGORITHMS", "ES256"),
                 ("FERROEHR__AUTH__SCOPES_SUPPORTED", "openid"),
-                ("FERROEHR__AUTH__SMART__BACKEND_CLIENTS", "etl"),
                 (
                     "FERROEHR__AUTH__SMART__PATIENT_ISSUERS",
                     "https://as.example",
                 ),
-                ("FERROEHR__AUTH__SMART__DEMOGRAPHIC_CLIENTS", "mpi"),
-                ("FERROEHR__RECORD__CHANGE_FEED__READERS", "ferrobridge"),
             ]),
             &[],
         );
@@ -588,13 +576,10 @@ mod tests {
         assert_eq!(issuer.audience, vec!["ferroehr".to_owned()]);
         assert_eq!(issuer.algorithms.len(), 1);
         assert_eq!(c.auth.shared.scopes_supported, vec!["openid".to_owned()]);
-        assert_eq!(c.auth.smart.backend_clients, vec!["etl".to_owned()]);
         assert_eq!(
             c.auth.smart.patient_issuers,
             vec![SecretUrl::new("https://as.example")]
         );
-        assert_eq!(c.auth.smart.demographic_clients, vec!["mpi".to_owned()]);
-        assert_eq!(c.record.change_feed.readers, vec!["ferrobridge".to_owned()]);
     }
 
     /// A list nested under a MAP key is addressable from the environment too,

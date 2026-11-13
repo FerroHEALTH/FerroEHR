@@ -119,11 +119,8 @@ services:
       # A person is refused until a demographic party carries their login, so
       # the realm's four users are provisioned through SCIM under that
       # identifier issuer by the ferroehr-provision-keycloak one-shot below,
-      # with a second client of the development issuer.
-      FERROEHR__AUTH__SCIM__CLIENT__1__ISSUER: http://localhost:8180/quickstart
-      FERROEHR__AUTH__SCIM__CLIENT__1__CLIENT_ID: quickstart-scim-keycloak
-      FERROEHR__AUTH__SCIM__CLIENT__1__SCOPE: ferroehr/scim
-      FERROEHR__AUTH__SCIM__CLIENT__1__BINDING_ISSUER: urn:ferroehr:keycloak-quickstart-login
+      # as a second client of the development issuer, which the
+      # ferroehr-grant-keycloak one-shot grants scim_provision in the CDR.
       # The development CA, trusted for the issuer's metadata and key set
       # beside the platform roots (`[auth.tls] trust_roots_file`) on every platform. It
       # needs a 5.5.0 or later image: 5.4.2 refuses the key.
@@ -135,9 +132,12 @@ services:
       # authenticated caller may use every surface and the four users below are
       # decoration.
       FERROEHR__AUTHZ__RBAC__ENABLED: "true"
-      # The realm's service client, whose system/aql-* grant counts only when
-      # it is named here (SMART on openEHR §Resource Scopes).
-      FERROEHR__AUTH__SMART__BACKEND_CLIENTS: ferroehr-service
+      # The realm's service client's system/aql-* grant counts only for a
+      # client the CDR grants query_system_wide (SMART on openEHR §Resource
+      # Scopes), and it creates EHRs only under a commit_composition grant:
+      # ferroehr-provision-keycloak writes its AGENT and ROLE, and the ceiling
+      # admits both operations beside the SCIM clients' scim_provision.
+      FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,query_system_wide,scim_provision
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 
@@ -160,14 +160,10 @@ services:
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 
-  # Grants the realm's service client `ferroehr-service` commit_composition
-  # in the CDR, on the operator's authority (`ferroehr party-binding grant`):
-  # an AGENT carrying its client_id and a ROLE whose capability grants the
-  # operation with the origin relay, the only way a caller acting for no
-  # person commits into an EHR. It names no template, so the service creates
-  # EHRs and reads, for the provider the deployment acts for. A client that
-  # holds the grant already gets nothing, so it runs again on a kept volume.
-  ferroehr-grant-service:
+  # Grants the `quickstart-scim-keycloak` client scim_provision in the CDR
+  # for the realm's identifier issuer, on the operator's authority, as the
+  # base file's ferroehr-grant does for the Basic user's client.
+  ferroehr-grant-keycloak:
     image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:main}
     network_mode: service:identity-issuer
     depends_on:
@@ -184,13 +180,15 @@ services:
       - party-binding
       - grant
       - --issuer
-      - ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
+      - http://localhost:8180/quickstart
       - --client-id
-      - ferroehr-service
+      - quickstart-scim-keycloak
       - --operation
-      - commit_composition
+      - scim_provision
       - --element
-      - origin=relay
+      - binding_issuer=urn:ferroehr:keycloak-quickstart-login
+      - --element
+      - token_scope=ferroehr/scim
     tmpfs:
       - /tmp
     cap_drop: [ALL]
@@ -202,19 +200,25 @@ services:
   # FerroEHR's SCIM endpoint (RFC 7644 §3.3), as the base file's
   # ferroehr-provision does for the Basic user: each User's loginIdentifier is
   # the fixed `id` the realm import gives that user, which Keycloak puts in
-  # `sub`. The service account is a system client, which the
-  # ferroehr-grant-service one-shot grants in the CDR, and binds to no party.
-  # A User that exists already (409) is kept, and the one-shot then stays up
-  # and reports healthy, so `up --wait` returns once every login is bound and
-  # the service client is granted.
+  # `sub`. The service account is a system client and binds to no party:
+  # the quickstart administrator writes its AGENT, which carries its
+  # `client_id`, and a ROLE granting `query_system_wide`, so its system/aql-*
+  # grant counts, and `commit_composition` with the origin relay and no
+  # template, so it creates EHRs and commits no COMPOSITION, for the provider
+  # the deployment acts for, through the Demographic API. A User or an AGENT that
+  # exists already (409) is kept, and the one-shot then stays up and reports
+  # healthy, so `up --wait` returns once every login is bound and the grant is
+  # written.
   ferroehr-provision-keycloak:
     image: ${FERROEHR_CURL_IMAGE:-curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777}
     network_mode: service:identity-issuer
     depends_on:
       ferroehr:
         condition: service_healthy
-      ferroehr-grant-service:
+      ferroehr-grant-keycloak:
         condition: service_completed_successfully
+      ferroehr-provision:
+        condition: service_healthy
     entrypoint:
       - sh
       - -c
@@ -235,7 +239,21 @@ services:
         http://localhost:8080/scim/v2/Users);
         case $$status in 201|409) ;; *) echo "provisioning $$1 answered $$status" >&2; cat /tmp/answer >&2; exit 1;; esac;
         done;
-        touch /tmp/provisioned; echo 'the realm users are provisioned'; exec sleep infinity
+        demographic=http://localhost:8080/ferroehr/rest/openehr/v1/demographic;
+        printf '%s' '{"_type":"AGENT","archetype_node_id":"openEHR-DEMOGRAPHIC-AGENT.quickstart_service.v1","archetype_details":{"_type":"ARCHETYPED","archetype_id":{"_type":"ARCHETYPE_ID","value":"openEHR-DEMOGRAPHIC-AGENT.quickstart_service.v1"},"rm_version":"1.1.0"},"name":{"_type":"DV_TEXT","value":"Quickstart service"},"details":{"_type":"ITEM_TREE","archetype_node_id":"at0010","name":{"_type":"DV_TEXT","value":"details"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0011","name":{"_type":"DV_TEXT","value":"client"},"value":{"_type":"DV_IDENTIFIER","issuer":"${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr","id":"ferroehr-service","type":"client_id"}}]},"identities":[{"_type":"PARTY_IDENTITY","archetype_node_id":"at0001","name":{"_type":"DV_TEXT","value":"name"},"details":{"_type":"ITEM_TREE","archetype_node_id":"at0002","name":{"_type":"DV_TEXT","value":"details"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0003","name":{"_type":"DV_TEXT","value":"name"},"value":{"_type":"DV_TEXT","value":"ferroehr-service"}}]}}]}' > /tmp/agent.json;
+        status=$$(curl -sS -o /tmp/answer -D /tmp/headers -w '%{http_code}' -X POST -u ferroehr:ferroehr
+        -H 'Content-Type: application/json' --data @/tmp/agent.json $$demographic/agent);
+        case $$status in
+        201)
+        agent=$$(sed -n 's|^[Ee][Tt][Aa][Gg]:.*"\([0-9a-f-]*\)::.*|\1|p' /tmp/headers);
+        printf '%s%s%s' '{"_type":"ROLE","archetype_node_id":"openEHR-DEMOGRAPHIC-ROLE.quickstart_query.v1","archetype_details":{"_type":"ARCHETYPED","archetype_id":{"_type":"ARCHETYPE_ID","value":"openEHR-DEMOGRAPHIC-ROLE.quickstart_query.v1"},"rm_version":"1.1.0"},"name":{"_type":"DV_TEXT","value":"System-wide query"},"identities":[{"_type":"PARTY_IDENTITY","archetype_node_id":"at0001","name":{"_type":"DV_TEXT","value":"name"},"details":{"_type":"ITEM_TREE","archetype_node_id":"at0002","name":{"_type":"DV_TEXT","value":"details"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0003","name":{"_type":"DV_TEXT","value":"name"},"value":{"_type":"DV_TEXT","value":"system-wide query"}}]}}],"performer":{"_type":"PARTY_REF","namespace":"demographic","type":"AGENT","id":{"_type":"HIER_OBJECT_ID","value":"' "$$agent" '"}},"capabilities":[{"_type":"CAPABILITY","archetype_node_id":"at0020","name":{"_type":"DV_TEXT","value":"grant"},"credentials":{"_type":"ITEM_TREE","archetype_node_id":"at0021","name":{"_type":"DV_TEXT","value":"terms"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0022","name":{"_type":"DV_TEXT","value":"operation"},"value":{"_type":"DV_CODED_TEXT","value":"query_system_wide","defining_code":{"_type":"CODE_PHRASE","terminology_id":{"_type":"TERMINOLOGY_ID","value":"ferroehr-operations"},"code_string":"query_system_wide"}}}]}},{"_type":"CAPABILITY","archetype_node_id":"at0020","name":{"_type":"DV_TEXT","value":"grant"},"credentials":{"_type":"ITEM_TREE","archetype_node_id":"at0021","name":{"_type":"DV_TEXT","value":"terms"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0022","name":{"_type":"DV_TEXT","value":"operation"},"value":{"_type":"DV_CODED_TEXT","value":"commit_composition","defining_code":{"_type":"CODE_PHRASE","terminology_id":{"_type":"TERMINOLOGY_ID","value":"ferroehr-operations"},"code_string":"commit_composition"}}},{"_type":"ELEMENT","archetype_node_id":"at0023","name":{"_type":"DV_CODED_TEXT","value":"origin","defining_code":{"_type":"CODE_PHRASE","terminology_id":{"_type":"TERMINOLOGY_ID","value":"ferroehr-operations"},"code_string":"origin"}},"value":{"_type":"DV_TEXT","value":"relay"}}]}}]}' > /tmp/role.json;
+        status=$$(curl -sS -o /tmp/answer -w '%{http_code}' -X POST -u ferroehr:ferroehr
+        -H 'Content-Type: application/json' --data @/tmp/role.json $$demographic/role);
+        case $$status in 201) ;; *) echo "granting ferroehr-service answered $$status" >&2; cat /tmp/answer >&2; exit 1;; esac;;
+        409) ;;
+        *) echo "writing the ferroehr-service AGENT answered $$status" >&2; cat /tmp/answer >&2; exit 1;;
+        esac;
+        touch /tmp/provisioned; echo 'the realm users are provisioned and the service client is granted'; exec sleep infinity
     healthcheck:
       test: ["CMD", "test", "-f", "/tmp/provisioned"]
       interval: 2s
@@ -385,7 +403,7 @@ configs:
   # password grant for curl-friendly token fetching. `ferroehr-service`
   # (ferroehr-service-quickstart-secret) has only the client-credentials grant,
   # a service account holding USER, the `system/` scopes and a `client_id`
-  # claim, which `[smart] backend_clients` matches. A realm that declares
+  # claim, which its AGENT's `client_id` identifier matches. A realm that declares
   # `clientScopes` gets none of Keycloak's built-in ones, so the two the CDR
   # reads are declared as Keycloak defines them: `basic` (the `sub` claim) and
   # `roles` (the realm roles in `realm_access.roles`, the CDR's default role

@@ -9,8 +9,8 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, PoisonError};
 
-use ferroehr::config::agreement::Agreement;
-use ferroehr::party_binding::grants::capabilities::Client;
+use ferroehr::party_binding::grants::agreement::Agreement;
+use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::system_log::binding::{
     AgreementRecord, BindingRecord, Identified, PartyTriple, Representation,
 };
@@ -67,9 +67,9 @@ pub(super) fn refused(
 }
 
 /// The binding record of the request `principal` commits as `committer`,
-/// whose client `ACTOR` the policy parties name as `client` when it is a
-/// system caller, in a deployment acting for `deployment`; `None` for a
-/// caller the binding names nothing about.
+/// holding `granted`, whose client `ACTOR` they name when it is a system
+/// caller, under `auth`, whose login binding names the provider the
+/// deployment acts for; `None` for a caller the binding names nothing about.
 ///
 /// A system caller's record names its client `ACTOR` as the party, and the
 /// identifier of the provider its acts-for relationship targets or, when it
@@ -77,10 +77,14 @@ pub(super) fn refused(
 pub(super) fn of_request(
     principal: &super::Principal,
     committer: &ferroehr::versioning::committer::CommitterIdentity,
-    client: Option<&Client>,
-    deployment: Option<(String, String)>,
+    granted: &Capabilities,
+    auth: Option<&super::Authenticator>,
 ) -> Option<BindingRecord> {
-    let client = client.filter(|_| committer.system);
+    let client = granted.client().filter(|_| committer.system);
+    let deployment = auth
+        .and_then(|auth| auth.party.as_deref())
+        .zip(principal.access.caller())
+        .and_then(|(binding, caller)| binding.provider_of(caller));
     let provider = client
         .and_then(|client| client.provider.as_ref())
         .and_then(|provider| provider.identifier.clone())
@@ -218,16 +222,10 @@ fn external_record(
         name: agreement.name.clone(),
         version: agreement.version.clone(),
         legal_ground: agreement.legal_ground.as_ref().map(ToString::to_string),
-        accessor: agreement
-            .accessor
-            .map_or_else(String::new, |accessor| accessor.to_string()),
-        access_class: agreement.access_class.map(|class| {
-            match class {
-                ferroehr::config::agreement::AccessClass::Automated => "automated",
-                ferroehr::config::agreement::AccessClass::Chained => "chained",
-            }
-            .to_owned()
-        }),
+        accessor: agreement.accessor.to_string(),
+        access_class: agreement
+            .access_class
+            .map(|class| class.as_str().to_owned()),
         correlation_id: external.correlation_id().map(|id| id.as_str().to_owned()),
         correlation_source: external
             .correlation_id()

@@ -64,8 +64,8 @@ fn jit_config() -> AppConfig {
 
 /// The router of `config` over a fresh audited database, whose party source
 /// creates a provisional `PERSON` through the service, with the store's pool
-/// and the service; `[authz.grants] allowed` admits `create_at_login`, and
-/// the CDR holds no admission.
+/// and the service; `[authz.grants] allowed` admits `create_at_login` and the
+/// harness clients' `scim_provision`, and the CDR holds no admission.
 async fn bare_app(
     config: AppConfig,
 ) -> (testkit::TestDb, sqlx::PgPool, Arc<FerroEhrService>, Router) {
@@ -73,6 +73,7 @@ async fn bare_app(
     service.grants().set_ceiling(GrantCeiling::new([
         Operation::CommitComposition,
         Operation::CreateAtLogin,
+        Operation::ScimProvision,
     ]));
     let source = Arc::new(
         service

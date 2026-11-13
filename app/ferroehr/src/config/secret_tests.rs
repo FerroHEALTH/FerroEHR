@@ -481,15 +481,19 @@ fn a_scopeless_subject_issuer_never_renders_its_userinfo() {
     );
 }
 
-/// An `[[authz.federation.agreement]]` issuer renders and refuses with its
-/// userinfo masked.
+/// The removed `[[authz.federation.agreement]]` table, whose agreements are
+/// now CDR data, is refused as an unknown key, and the refusal never renders
+/// the password of the issuer it held (#5440).
 #[test]
-fn an_agreement_issuer_never_renders_its_userinfo() {
-    assert_table_issuer_masked(
-        "[[authz.federation.agreement]]\nissuer = \"https://u:AGREEMENT_PW_SENTINEL@agreement.example/realms/ferroehr\"\naccessor = \"person\"\nname = \"cross-border\"\n",
-        "AGREEMENT_PW_SENTINEL",
-        "agreement.example",
-    );
+fn a_removed_agreement_table_is_refused_without_rendering_its_userinfo() {
+    let file = toml_file(&format!(
+        "{NAMED_ISSUER}\n[[authz.federation.agreement]]\nissuer = \"https://u:AGREEMENT_PW_SENTINEL@agreement.example/realms/ferroehr\"\n"
+    ));
+    let refused = assemble(Some(file.path()), &env(&[]), &[])
+        .expect_err("the removed table is an unknown key")
+        .to_string();
+    assert!(refused.contains("federation"), "{refused}");
+    assert!(!refused.contains("AGREEMENT_PW_SENTINEL"), "{refused}");
 }
 
 /// An `[[authz.party_binding.issuer]]` issuer renders and refuses with its
@@ -512,17 +516,6 @@ fn a_removed_system_client_table_is_refused_without_its_userinfo() {
     ));
     assert!(refused.contains("system_client"), "{refused}");
     assert!(!refused.contains("SYSTEM_PW_SENTINEL"), "{refused}");
-}
-
-/// An `[[auth.scim.client]]` issuer renders and refuses with its userinfo
-/// masked.
-#[test]
-fn a_scim_client_issuer_never_renders_its_userinfo() {
-    assert_table_issuer_masked(
-        "[[auth.scim.client]]\nissuer = \"https://u:SCIM_PW_SENTINEL@scim.example/realms/ferroehr\"\nclient_id = \"idm\"\nscope = \"scim\"\nbinding_issuer = \"urn:example:login\"\n",
-        "SCIM_PW_SENTINEL",
-        "scim.example",
-    );
 }
 
 /// An `authz.rbac.role_issuers` issuer renders and refuses with its userinfo

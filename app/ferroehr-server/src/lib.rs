@@ -29,7 +29,7 @@ use ferroehr::config::management::EndpointLevels;
 use ferroehr::config::management::ManagementConfig;
 use ferroehr::db::domain::{Domain, DomainPools};
 use ferroehr::error::ServiceError;
-use ferroehr::extensions::outbox;
+use ferroehr::extensions::outbox::{self, OutboxGate};
 use ferroehr::ids::EhrId;
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::Report;
@@ -440,7 +440,6 @@ fn assemble_service(
     config: &ferroehr::config::FerroEhrConfig,
     pools: &DomainPools,
     audit_sender: Option<AuditSender>,
-    outbox_enabled: bool,
     signer: Arc<Signer>,
     deployment: DeploymentPosture,
     ehr_index: EhrIndexProvider,
@@ -475,11 +474,10 @@ fn assemble_service(
         .with_signer(signer)
         .with_licence(licence)
         .with_deployment(deployment)
-        .with_outbox_enabled(outbox_enabled)
+        .with_outbox_gate(OutboxGate::WhileGranted)
         .with_skip_identical_resend(config.record.versioning.idempotent_resend)
         .with_privacy(Arc::new(privacy))
         .with_cohort(config.privacy.cohort.clone())
-        .with_origins(config.origins())
         .with_identifier_protection_opt(identifiers.map(Arc::new))
         .with_query_config(&config.record.query)
         .with_required_category_map(DeploymentPosture::requires_category_map(config))
@@ -522,7 +520,6 @@ fn wire_authz(
     let registers = Arc::clone(service.policy_registers());
     let content = ContentRules {
         registers: Some(Arc::clone(&registers)),
-        origins: config.origins(),
         system_id: config.api.system_id.clone(),
     };
     let authz = build_authz(
@@ -960,19 +957,6 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     let audit_config: AuditConfig = config.audit.clone();
     let (audit_sender, audit_handle) = start_audit(&audit_config, &pool, &pools.audit).await;
 
-    // The commit-event outbox: a commit writes its row only while a reader is
-    // named, and every reader the configuration no longer names is marked
-    // inactive, so it holds the prune back no longer.
-    let outbox_enabled = config.record.change_feed.enabled();
-    outbox::reconcile_domains(&pools, &config.record.change_feed.readers)
-        .await
-        .context("reconciling the outbox readers with [record.change_feed] readers")?;
-    let outbox_prune = tokio::spawn(outbox::scheduled_prune(
-        pools.clone(),
-        config.record.change_feed.retention.get(),
-        config.record.change_feed.prune_interval.get(),
-    ));
-
     // Health indicators.
     let mut indicators: Vec<Arc<dyn HealthIndicator>> = vec![
         Arc::new(indicators::DbHealth::new(pool.clone())),
@@ -1037,7 +1021,6 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         &config,
         &pools,
         audit_sender,
-        outbox_enabled,
         signer,
         deployment,
         ehr_index,
@@ -1052,7 +1035,6 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         )?;
     }
 
-    service.unheld_written_templates(&config.authz).await??;
     let binding_lease = party_binding::prepare(&service, &config).await?;
     // The policy registers in force before the listener takes traffic, and the
     // retention register keyed on the category register in force.
@@ -1067,6 +1049,18 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         .context("mirroring the audit category register into the retention register")?;
     // NOTE: EHDS Art. 3(3), a hold stops withholding at its limit; this only writes the record.
     service.spawn_access_delay_expiries(Duration::from_secs(60));
+    // The commit-event outbox: a commit writes its row only while a change-feed
+    // grant names a reader, and every reader no grant names any more is marked
+    // inactive, so it holds the prune back no longer.
+    service
+        .reconcile_change_feed()
+        .await
+        .context("reconciling the outbox readers with the change-feed grants")?;
+    let outbox_prune = tokio::spawn(outbox::scheduled_prune(
+        Arc::clone(&service),
+        config.record.change_feed.retention.get(),
+        config.record.change_feed.prune_interval.get(),
+    ));
 
     // Outbound only and detached: neither boot, health nor readiness waits on
     // it, and a slow or unreachable collector reaches none of them.

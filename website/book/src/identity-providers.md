@@ -110,7 +110,7 @@ profile, and the server acts on the kind:
   it holds `system/` scopes only, and a token with a `user/` or `patient/` scope
   is refused with `403`. It reads under its `system/` scopes. It commits into an
   EHR only as a client the CDR grants `commit_composition`: an `ACTOR`
-  carrying its `client_id`, acting for a provider and performing a `ROLE`
+  carrying its `client_id` and performing a `ROLE`
   whose capability grants it
   ([Operational policy](operational-policy.md#what-a-system-client-may-do)),
   under the committer `PARTY_IDENTIFIED{name = <client>, identifiers =
@@ -119,8 +119,11 @@ profile, and the server acts on the kind:
   it writes at and whether it relays a person's act or registers a device's;
   an import or an export needs a grant of its own.
 - **A verified external person or organisation** of a `federation` issuer is
-  admitted only under the `[[authz.federation.agreement]]` of its issuer and
-  accessor, and refused with `403` without one or under the other accessor's.
+  admitted only under the federation agreement its partner holds in the CDR
+  for its accessor kind, the partner being the party that carries the
+  token's issuer and `client_id` as a `client_id` identifier
+  ([Operational policy](operational-policy.md#federation-agreements)), and
+  refused with `403` without one or under the other accessor's.
   Its rights come from the agreement, never from a role:
   - it holds only the `patient/` scopes the agreement `reads` (beside
     `openid`, `profile`, `fhirUser`, `online_access` and `launch`), so a token
@@ -284,9 +287,9 @@ the issuer table, which wins over the preset.
 3. **The SCIM client.** Your authorization server issues the provisioning
    client an access token by the client credentials grant (RFC 6749 §4.4), or
    in exchange for a client assertion (RFC 7523 §2.2). Declare the
-   authorization server as an issuer of kind `machines`, and the client in
-   [`[[auth.scim.client]]`](installation/config-auth.md#authscim) with the
-   `binding_issuer` of step 2. The SCIM client sends the key as
+   authorization server as an issuer of kind `machines`, and grant the client
+   [`scim_provision`](installation/config-auth.md#authscim) in the CDR with
+   the `binding_issuer` of step 2. The SCIM client sends the key as
    `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier`
    (RFC 7644).
 4. **An onward caller.** A service that calls FerroEHR for a signed-in

@@ -200,6 +200,22 @@ impl<'a> Credentials<'a> {
             .collect()
     }
 
+    /// What each element `code` names identifies: the text of a `DV_TEXT` or
+    /// `DV_CODED_TEXT` value, or the `id` of a `DV_IDENTIFIER` value, trimmed,
+    /// such as the origin of a [`Operation::DataOrigin`] grant.
+    #[must_use]
+    pub fn identified(self, code: &str) -> Vec<&'a str> {
+        self.values(code)
+            .filter_map(|value| {
+                value
+                    .get("value")
+                    .or_else(|| value.get("id"))
+                    .and_then(Value::as_str)
+            })
+            .map(str::trim)
+            .collect()
+    }
+
     /// The code of each `DV_CODED_TEXT` element `code` names.
     #[must_use]
     pub fn codes(self, code: &str) -> Vec<&'a str> {
@@ -208,15 +224,15 @@ impl<'a> Credentials<'a> {
             .collect()
     }
 
-    /// The term of each element `code` names: the code of a `DV_CODED_TEXT`
-    /// value, or the text of a `DV_TEXT` one, such as an origin written
-    /// either way.
+    /// The word of each element `code` names: the `code_string` of a
+    /// `DV_CODED_TEXT` in any terminology, the `value` of a `DV_TEXT`.
     #[must_use]
-    pub fn terms(self, code: &str) -> Vec<&'a str> {
+    pub fn words(self, code: &str) -> Vec<&'a str> {
         self.values(code)
             .filter_map(|value| {
                 value
-                    .pointer("/defining_code/code_string")
+                    .get("defining_code")
+                    .and_then(|code| code.get("code_string"))
                     .or_else(|| value.get("value"))
                     .and_then(Value::as_str)
             })
@@ -348,6 +364,7 @@ mod tests {
         let grant = Grant::new(Operation::ImportEhr, Uuid::nil(), Some(Arc::new(tree)));
         let credentials = grant.credentials();
         assert_eq!(credentials.texts("template"), vec!["T.v1", "U.v1"]);
+        assert_eq!(credentials.identified("template"), vec!["T.v1", "U.v1"]);
         let [facility] = credentials.clusters("facility")[..] else {
             panic!("one facility");
         };

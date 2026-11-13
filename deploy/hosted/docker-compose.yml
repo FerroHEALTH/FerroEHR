@@ -140,6 +140,46 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  # Grants the `sandbox-scim` client scim_provision in the CDR, on the
+  # operator's authority (`ferroehr party-binding grant`), since no
+  # administrator can log in before the demo user it provisions exists. A
+  # client that holds the grant already gets nothing; the nightly wipe drops
+  # it with every other party, and the deploy after it starts this service
+  # again.
+  ferroehr-grant:
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:latest}
+    container_name: ferroehr-sandbox-grant
+    restart: on-failure
+    depends_on:
+      ferroehr:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    environment:
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set in /opt/ferroehr-sandbox/.env}
+      FERROEHR__USAGE_REPORT__ENABLED: "false"
+    volumes:
+      - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
+    command:
+      - party-binding
+      - grant
+      - --issuer
+      - http://localhost:8180/sandbox
+      - --client-id
+      - sandbox-scim
+      - --operation
+      - scim_provision
+      - --element
+      - binding_issuer=urn:ferroehr:basic-user
+      - --element
+      - token_scope=ferroehr/scim
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
   # Provisions the demo user `ferroehr` as a professional PERSON through the
   # CDR's SCIM endpoint (RFC 7644 §3.3), the way an identity provider
   # provisions people, so the Basic login is bound to the PERSON FerroEHR

@@ -91,14 +91,10 @@ config:
       # Serves the discovery document, built at boot from the [auth] issuer's
       # metadata, so it needs no endpoint list of its own.
       discovery: true
-      demographic_clients: [ferroehr-mpi]
       patient_issuers: [https://keycloak.example.com/realms/ferroehr]
-    scim:
-      client:
-        - issuer: https://machines.example.org/realms/ferroehr
-          client_id: entra-provisioning
-          scope: ferroehr/scim
-          binding_issuer: urn:example:ferroehr-login
+    # Who provisions is a scim_provision grant in the CDR, written through the
+    # Demographic API; the table only serves the endpoint.
+    scim: {}
   authz:
     party_binding:
       # The healthcare provider this deployment acts for (an example id
@@ -126,6 +122,10 @@ config:
         template_id: FerroEHR professional role
     rbac:
       role_issuers: [https://keycloak.example.com/realms/ferroehr]
+    # The operations the party store may grant: FerroBRIDGE reads the change
+    # feed and Entra ID provisions under grants in the CDR.
+    grants:
+      allowed: [commit_composition, read_change_feed, scim_provision]
     abac:
       enabled: true
   # Microsoft Entra ID provisions the professionals through SCIM with a
@@ -181,8 +181,6 @@ config:
       verify_on_read: strict
     query:
       timeout: "30000ms"
-    change_feed:
-      readers: [ferrobridge]
     multimedia:
       enabled: true
       threshold: "262144B"

@@ -18,7 +18,8 @@
 # reads the server's cgroup and counts the transactions of its database.
 # The server stores its default demographic definitions at boot (a base tree
 # that predates that has them loaded before serve), and once it is ready the
-# Basic user is bound to a PERSON through SCIM (scripts/scim-provision.sh). The seed writes one EHR the reads use and
+# Basic user is bound to a PERSON through SCIM (scripts/scim-provision.sh, which grants
+# the client scim_provision through the server first). The seed writes one EHR the reads use and
 # never changes, one EHR the commits write into, the lab-results template with
 # a result, and a PERSON, and the plan is rendered with their ids
 # (perf/plan.toml, `@NAME@`).
@@ -173,7 +174,15 @@ up() {
   DATABASE_URL="postgres://postgres:${PG_SUPER_SECRET}@127.0.0.1:${pg_port}/ferroehr"
   TARGET=(--container "$(docker inspect -f '{{.Id}}' "$server")")
   wait_for "FerroEHR$suffix" 120 curl -fsS "$SERVER_URL/health/readiness"
-  bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users ferroehr >/dev/null
+  # A tree whose SCIM clients are grants in the CDR grants its client through
+  # the server first; an older tree declares it in its configuration.
+  if grep -q 'binding-issuer' "$tree/scripts/scim-provision.sh"; then
+    SCIM_GRANT="docker exec $server /usr/local/bin/ferroehr" \
+      bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users urn:ferroehr:basic-user \
+      ferroehr >/dev/null
+  else
+    bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users ferroehr >/dev/null
+  fi
   seed "$tree"
 }
 

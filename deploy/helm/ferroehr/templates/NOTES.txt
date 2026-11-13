@@ -203,7 +203,7 @@ SECURITY POSTURE
 {{ end }}
 Optional integrations currently ON:
   admin API:        {{ dig "api" "admin" false .Values.config }}
-  outbox readers:   {{ dig "record" "change_feed" "readers" list .Values.config | join ", " | default "none" }}
+  outbox readers:   the read_change_feed grants in the CDR
   S3 multimedia:    {{ dig "record" "multimedia" "enabled" false .Values.config }}
   ATNA audit:       {{ .Values.config.audit.enabled }}
   {{- /* The INJECTED state, not the values one: terminology.enabled writes

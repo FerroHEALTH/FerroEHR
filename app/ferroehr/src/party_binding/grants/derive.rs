@@ -135,13 +135,17 @@ impl CapabilityFacts {
         let mut codes: Vec<String> = Vec::new();
         let (mut before, mut after) = (Bound::Open, Bound::Open);
         walk(credentials, &mut |node| {
+            let name = node.get("name").and_then(coded);
+            // NOTE: the value of an element a qualifier names is that qualifier's
+            // value, such as an agreement's access class, and never an operation.
             if let Some(code) = node.get("value").and_then(coded)
+                && !name.is_some_and(is_qualifier)
                 && !is_qualifier(code)
                 && !codes.iter().any(|held| held == code)
             {
                 codes.push(code.to_owned());
             }
-            match node.get("name").and_then(coded) {
+            match name {
                 Some(NOT_BEFORE) if before == Bound::Open => before = bound(node),
                 Some(NOT_AFTER) if after == Bound::Open => after = bound(node),
                 _ => {}
@@ -291,7 +295,8 @@ mod tests {
                             &json!({"_type": "DV_DATE_TIME", "value": "2026-12-05T22:00:00+01:00"})),
                     element(&coded_text(NOT_AFTER, TERMINOLOGY),
                             &json!({"_type": "DV_DATE_TIME", "value": "not a time"})),
-                    element(&coded_text("template", TERMINOLOGY), &json!({"_type": "DV_TEXT", "value": "T.v1"}))
+                    element(&coded_text("template", TERMINOLOGY), &json!({"_type": "DV_TEXT", "value": "T.v1"})),
+                    element(&coded_text("access_class", TERMINOLOGY), &coded_text("automated", TERMINOLOGY))
                 ]}},
                 {"_type": "CAPABILITY", "credentials": {"items": []}}
             ]

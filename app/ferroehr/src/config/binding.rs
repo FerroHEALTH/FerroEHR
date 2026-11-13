@@ -501,12 +501,10 @@ fn tenants(tables: &[TenantProvider], resolved: &Resolved, errors: &mut Vec<Stri
 }
 
 impl crate::config::FerroEhrConfig {
-    /// The boot refusals of the party binding, the federation agreements and
-    /// `[authz.import]`; the section rules of `[auth]` itself are
-    /// [`crate::config::auth::validate`]'s.
+    /// The boot refusals of the party binding; the section rules of `[auth]`
+    /// itself are [`crate::config::auth::validate`]'s.
     pub(crate) fn identity_errors(&self) -> Vec<String> {
-        let mut errors =
-            crate::config::clients::import_errors(&self.authz.import, &self.api.system_id);
+        let mut errors = Vec::new();
         let Ok(resolved) = crate::config::auth::resolve(&self.auth.shared) else {
             return errors;
         };
@@ -525,12 +523,6 @@ impl crate::config::FerroEhrConfig {
                 .sections()
                 .errors(&key_issuers(&resolved), protected),
         );
-        errors.extend(crate::config::agreement::errors(
-            &self.authz.federation.agreement,
-            &self.auth.shared,
-            &resolved,
-            self.audit.store.horizon(),
-        ));
         errors
     }
 }
@@ -563,8 +555,8 @@ pub(crate) fn one_provider() -> Providers {
 /// state it.
 ///
 /// It carries the issuers with their kind and identifier issuer, the
-/// provider, and every federation agreement with its accessor and legal
-/// ground.
+/// provider, and every federation agreement in force with its accessor and
+/// legal ground, which `/management/info` reads from the CDR on each request.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BindingPosture {
     /// Every trusted issuer.
@@ -573,8 +565,9 @@ pub struct BindingPosture {
     pub provider: Option<Providers>,
     /// The `PARTY_REF.namespace` a bound party is written under.
     pub namespace: String,
-    /// The federation agreements.
-    pub agreements: Vec<AgreementPosture>,
+    /// The federation agreements in force, read from the CDR; empty in the
+    /// posture the configuration alone states.
+    pub agreements: Vec<crate::party_binding::grants::trust::AgreementPosture>,
     /// The mapped Basic users, while `[authz.assurance] minimum` is unset: a
     /// Basic credential carries no assurance level, so nothing refuses them
     /// on patient data.
@@ -591,17 +584,6 @@ pub struct BoundIssuer {
     pub kind: Option<IssuerKind>,
     /// The identifier issuer its logins are bound under, for a bound issuer.
     pub identifier_issuer: Option<String>,
-}
-
-/// One federation agreement of the binding posture.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct AgreementPosture {
-    /// The federation issuer.
-    pub issuer: String,
-    /// Who it admits.
-    pub accessor: Option<crate::config::agreement::Accessor>,
-    /// Its legal ground, rendered.
-    pub legal_ground: Option<String>,
 }
 
 impl BindingPosture {
@@ -623,17 +605,6 @@ impl BindingPosture {
                     .map(|table| table.identifier_issuer.clone()),
             })
             .collect();
-        let agreements = config
-            .authz
-            .federation
-            .agreement
-            .iter()
-            .map(|agreement| AgreementPosture {
-                issuer: agreement.issuer.redacted(),
-                accessor: agreement.accessor,
-                legal_ground: agreement.legal_ground.as_ref().map(ToString::to_string),
-            })
-            .collect();
         let unassured_basic = if config.authz.assurance.minimum.is_none() {
             config
                 .authz
@@ -649,14 +620,15 @@ impl BindingPosture {
             issuers,
             provider: config.authz.party_binding.provider.clone(),
             namespace: config.authz.party_binding.namespace.clone(),
-            agreements,
+            agreements: Vec::new(),
             unassured_basic,
         }
     }
 
-    /// Logs the posture: one line for the binding, one per agreement, a
-    /// `warn` for every agreement that runs without a named person, and a
-    /// `warn` while a mapped Basic user exists with no assurance minimum.
+    /// Logs the posture: one line for the binding and a `warn` while a mapped
+    /// Basic user exists with no assurance minimum. The agreements are
+    /// logged once the grants are read
+    /// ([`crate::party_binding::grants::live::LiveGrants::log_agreements`]).
     pub fn log(&self) {
         let issuers: Vec<String> = self
             .issuers
@@ -684,27 +656,6 @@ impl BindingPosture {
                 "mapped Basic users sign in with no assurance level while \
                  [authz.assurance] minimum is unset"
             );
-        }
-        for agreement in &self.agreements {
-            let accessor = agreement
-                .accessor
-                .map_or_else(|| "-".to_owned(), |a| a.to_string());
-            let ground = agreement.legal_ground.as_deref().unwrap_or("-");
-            if agreement.accessor == Some(crate::config::agreement::Accessor::Organisation) {
-                tracing::warn!(
-                    issuer = %agreement.issuer,
-                    accessor = %accessor,
-                    legal_ground = %ground,
-                    "a federation agreement admits an organisation without a named person"
-                );
-            } else {
-                tracing::info!(
-                    issuer = %agreement.issuer,
-                    accessor = %accessor,
-                    legal_ground = %ground,
-                    "federation agreement configured"
-                );
-            }
         }
     }
 }
@@ -744,7 +695,6 @@ mod tests {
             ),
             ("FERROEHR__AUTHZ__RBAC__IMPORT_ROLE", "IMPORTER"),
             ("FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS", "https://a,https://b"),
-            ("FERROEHR__AUTHZ__IMPORT__TRUSTED_SYSTEMS", "sys-a"),
         ]);
         assert_eq!(c.authz.assurance.claim, "loa");
         assert_eq!(
@@ -771,6 +721,5 @@ mod tests {
                 ferrohealth_secret::secret_url::SecretUrl::new("https://b")
             ]
         );
-        assert_eq!(c.authz.import.trusted_systems, ["sys-a"]);
     }
 }

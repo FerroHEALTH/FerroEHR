@@ -126,11 +126,7 @@ async fn a_migration_agent_imports_and_exports_only_its_granted_namespaces() {
     let (_source_db, source) = crate::fixtures::service().await;
     let (_target_db, target) = crate::fixtures::service().await;
     let target = target
-        .with_import_policy(ImportPolicy::new(
-            Some("IMPORTER".to_owned()),
-            Vec::new(),
-            Vec::new(),
-        ))
+        .with_import_policy(ImportPolicy::new(Some("IMPORTER".to_owned()), Vec::new()))
         .with_grant_ceiling(GrantCeiling::new(Operation::ALL));
 
     let legacy = create_ehr_subject(&source, &subject("pt-1")).await;
@@ -219,11 +215,8 @@ async fn a_migration_agent_imports_and_exports_only_its_granted_namespaces() {
 async fn the_import_role_imports_without_a_grant() {
     let (_source_db, source) = crate::fixtures::service().await;
     let (_target_db, target) = crate::fixtures::service().await;
-    let target = target.with_import_policy(ImportPolicy::new(
-        Some("IMPORTER".to_owned()),
-        Vec::new(),
-        Vec::new(),
-    ));
+    let target =
+        target.with_import_policy(ImportPolicy::new(Some("IMPORTER".to_owned()), Vec::new()));
     let legacy = create_ehr_subject(&source, &subject("pt-1")).await;
     commit(&source, legacy, "a note").await;
     let whole: Extract = openehr_its::json::from_canonical_value(

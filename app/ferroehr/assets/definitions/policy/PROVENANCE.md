@@ -69,10 +69,15 @@ its modification time.
   an optional `Authorisation reference`.
 - **The `AGENT` carries its identifier.** Its `details` are mandatory, since
   the identifier is what names the system.
-- **The value sets** (operations, accessors, purposes, consent
-  sources, MyHealth@EU services, access classes, privileges) are FerroEHR's
-  own, and so is the name of the acts-for relationship, its type (RM
-  `PARTY_RELATIONSHIP` `Type_validity`).
+- **The value sets** (operations, accessors, privileges) are
+  FerroEHR's own, and so is the name of the acts-for relationship, its type
+  (RM `PARTY_RELATIONSHIP` `Type_validity`).
+- **The federation partner's coded terms carry `ferroehr-operations` codes**
+  (#5440). Its purpose, consent source, MyHealth@EU service and access class
+  are `DV_CODED_TEXT` with no local value set, since FerroEHR reads an
+  agreement's terms by the codes of that terminology in any archetype, and
+  the presence of a discard window admits a discard, so the template has no
+  separate discard flag.
 - The node ids are ADL 2 id-codes and the terminology is English only.
 
 They were written by hand, never produced by FerroEHR's ADL 1.4 to ADL 2

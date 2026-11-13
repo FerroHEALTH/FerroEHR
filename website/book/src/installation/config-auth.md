@@ -50,7 +50,7 @@ The section keys:
 | `capabilities` | list of string | `[]` | SMART capabilities the discovery document adds: one SMART App Launch or the SMART on openEHR draft lists, or a full URI. |
 | `scopes_supported` | list of string | `[]` | The scopes the discovery document lists. Empty, it lists the scopes the route table honours. |
 | `described_issuer` | string | unset | The issuer the discovery document describes: one of kind `persons`, `patients` or `federation` whose metadata FerroEHR has, read from it, introspected, or supplied by [`[auth.smart] issuer_metadata_file`](#authsmart). Read only with `[auth.smart] discovery = true`, where naming an unknown issuer, a `machines` issuer or one without metadata is a boot error. Required with discovery when more than one issuer could be described. It renders with any userinfo masked. See [the described issuer](#the-described-issuer). |
-| `product_scope` | string | `""` ⇒ `__ferroehr.platform` | FerroEHR's own scope. It admits the ADMIN API and, beside the bearer clients in `[auth.smart] demographic_clients`, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility). |
+| `product_scope` | string | `""` ⇒ `__ferroehr.platform` | FerroEHR's own scope. It admits the ADMIN API and, beside the clients the CDR grants `access_demographic`, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility). |
 
 The keys `audience`, `algorithms`, `token_profile`, `clock_skew_seconds`,
 `jwks_max_age_seconds`, `jwks_refresh_interval_seconds`, `jwks_file`,
@@ -564,11 +564,11 @@ creates persons, make the name attributes administrator-controlled, as the key
 is; [Enterprise identity providers](../identity-providers.md#just-in-time-creation)
 shows the settings per identity provider.
 
-### `[authz.import]`
+### Imports and system clients
 
-`[authz.import] trusted_systems` lists the `creating_system_id` values whose
-wrapped committers may name a local party on import; this node's own
-`[api] system_id` is refused.
+The systems whose wrapped committers an import may carry are no key: a
+`creating_system` element of the importer's import grant names each one
+([What the grants decide](../operational-policy.md#what-the-grants-decide)).
 
 The system clients are not configuration. An OAuth client-credentials client
 is granted what it may commit, import or export in the CDR, as an `ACTOR`
@@ -578,35 +578,18 @@ capabilities grant the operations; see
 The former `[[authz.system_client]]` table is an unknown key and refuses the
 start.
 
-### `[[authz.federation.agreement]]`
+### Federation agreements
 
-What a `federation` issuer's verified external persons, or its organisation,
-may do here. Each table is keyed by `issuer` and `accessor` and admits only its
-own accessor kind; every agreement is listed on the boot line and in
-`GET /management/info`, and one that runs without a named person is logged at
-`warn` on every boot.
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `issuer` | string | required | The `federation` issuer. |
-| `accessor` | `person` or `organisation` | required | Named persons, or the organisation without a named person. A duplicate (issuer, accessor) pair refuses the start. |
-| `name`, `version` | string | `""` | The agreement; required for an organisation. |
-| `jurisdiction` | ISO 3166-1 alpha-2 | `""` | An issuer with `profile = "nl"` implies `NL`. |
-| `exchange` | string | `""` | The kind of exchange the agreement covers. |
-| `purpose` | `care` or `keuring` | unset | What the exchange is for. Required for every NL agreement, and an NL agreement for a `keuring` (a medical examination for employment, insurance or a licence) refuses the start, since a keurend arts has no access to an exchange system (Wabvpz Art. 15f(2)). |
-| `legal_ground` | `{ gdpr_6_1, gdpr_9_2, national }` | unset | The GDPR Art. 6(1) point (`a` to `f`), the Art. 9(2) point (`a` to `j`) and the national provision; in the Netherlands Art. 9(2)(h) with UAVG Art. 30(3)(a). Required for an organisation. |
-| `consent` | `mitz` or `local` | unset | The source of the consent the exchange is conditioned on, never its legal ground. A read under it needs the consent decision reference the token carries in the field its `[[auth.federation]]` table maps to `consent.reference`, and is refused with `403` without it. Required for every NL agreement with `reads` (Wabvpz Art. 15a(1)); an organisation may not take it from Mitz, whose closed question needs a responsible professional. |
-| `reads` | list of `patient/` scopes | `[]` | The most an external caller may read; a `user/` or `system/` scope refuses the start. |
-| `writes` | list of template ids | `[]` | The templates an external person may commit; an organisation agreement takes none (EHDS Art. 13(4)), and a template the store does not hold refuses the start. |
-| `discard`, `discard_window` | bool, duration | `false`, `"1d"` | Whether an external person may discard a dispensation of the same point of care within the window (MyHealth@EU Requirements Catalogue 10.0.0, requirement 07.04). With `discard` set, a window that is not a whole number of hours greater than zero, such as `"90min"`, refuses the start. |
-| `ehdsi_service` | `patient_summary`, `eprescription` or `orcd` | unset | The MyHealth@EU service a `contact_point` issuer's person agreement serves, whose `*_NOT_FOUND` code a request outside the patient of the treatment relationship confirmation answers ([the contact-point route](../identity-providers.md#the-myhealtheu-contact-point-route)). Required on a contact point's person agreement; on any other agreement it refuses the start. |
-| `caller_rate` | `{ requests_per_second, burst }` | **required** | The admission rate per caller, keyed on the token's subject and kept per replica: each caller gets `burst` requests at once and `requests_per_second` after that, and a request above it is answered `429` with `Retry-After` before any patient lookup, a contact point's included, and counted into the caller's [summary record](../audit.md#refusal-records-and-their-budgets). |
-| `opt_out_override` | bool | `false` | Whether a professional may read an opted-out EHR under national vital-interest access (EHDS Art. 10(2)); never on an organisation agreement. |
-| `access_class` | `automated` or `chained` | unset | For an organisation, required: no natural person views the data, or the requester logs the person and every request carries its correlation id as an attested claim. A `chained` agreement needs its issuer's `[[auth.federation]]` table to map `correlation_id` from a claim or an attested `authorization_details` member (a constant refuses the start); a request without the id is refused with `403` and recorded as `refused-correlation-missing`, a request header never stands in for it, and the access record carries the id with its source. |
-| `chained_log_retention` | calendar period | unset | For `chained`, required: how long the requester keeps its log (`"P5Y"`), at least `[audit.store]`'s retention. |
-
-An organisation agreement on a MyHealth@EU `contact_point` issuer refuses the
-start.
+A federation agreement is CDR data, not a configuration key: a grant of
+`federated_person_access` or `federated_organisation_access` on the partner's
+party, read on every request and judged when it is written. The configuration
+keeps what the agreements are judged against: the `federation` issuers, their
+`[[auth.federation]]` tables, `[authz.grants] allowed` (which must name both
+codes before an agreement can be written) and `[audit.store] retention`. The
+model, the codes and the rules are on
+[Operational policy](../operational-policy.md#federation-agreements). The
+`[[authz.federation.agreement]]` table is removed, and a configuration that
+still holds it is refused at boot as an unknown key.
 
 ### `[authz.grants]`
 
@@ -725,14 +708,20 @@ by default.
 | `contact_erasure_delay` | duration | `"0s"` | How long after a User's deletion the contacts of every version of its `PERSON` are erased (GDPR Art. 17). `"0s"` erases them in the deletion itself; at most `"30d"`. |
 | `max_group_members` | integer | `5000` | The most members one Group holds. An add past it is **400** `invalidValue`. A membership change versions only the member's `PERSON`, so its cost does not grow with the Group. At least 1. |
 
-Each `[[auth.scim.client]]` table declares one provisioning client:
-
-| Key | Description |
-|---|---|
-| `issuer` | The issuer of the client's access tokens: your own authorization server, an `[[auth.issuer]]` of kind `machines`. FerroEHR issues no tokens. |
-| `client_id` | The client the token names (`client_id`, failing that `azp`). |
-| `scope` | The one scope a token of the client must hold. SMART on openEHR defines none for SCIM, so the value is yours to choose. |
-| `binding_issuer` | The identifier issuer of the binding keys the client provisions: the `identifier_issuer` of an `[[auth.party]]` table. Each User belongs to the one client whose `binding_issuer` issues its key, so no two clients share one. |
+Who provisions is CDR data, read on every request: a provisioning client is
+an OAuth client-credentials client of your own authorization server (an
+`[[auth.issuer]]` of kind `machines`) whose `ACTOR` holds a `scim_provision`
+grant in force. The grant's `binding_issuer` is the identifier issuer of the
+binding keys the client provisions, the `identifier_issuer` of an
+`[[auth.party]]` table, and its `token_scope` the scope a token of the client
+must hold; SMART on openEHR defines none for SCIM, so the value is yours to
+choose. Each User belongs to the one client whose `binding_issuer` issues its
+key, so no two clients' grants name one. `[authz.grants] allowed` must admit
+`scim_provision`. The first such grant is written with
+[`ferroehr party-binding grant`](../operational-policy.md#the-first-grant),
+since no administrator can log in before the persons it provisions exist;
+[Operational policy](../operational-policy.md#what-the-grants-decide) has the
+grant's terms.
 
 Every `meta.location` and discovery document names the resource by its URI
 (RFC 7643 §3.1), under `<public_base_url>/scim/v2` with
@@ -740,35 +729,33 @@ Every `meta.location` and discovery document names the resource by its URI
 and `server.base_path`, so the table needs that key.
 
 The table's presence turns the endpoint on; it has no `enabled` key, and
-setting one refuses the start. The start is refused when the table is present without
-`server.public_base_url` or without a client, and for a client that misses a key, is declared twice,
-shares a `binding_issuer`, names an issuer that is not of kind `machines`, or
-names a `binding_issuer` no `[[auth.party]]` table carries. It is refused too
-when the [party mapping](#authzparty_binding) lacks what a User is written
-with: a default person template with a `user_name` selector, and
-`[authz.party_binding.professional_role]`.
+setting one refuses the start. The start is refused when the table is present
+without `server.public_base_url`, and when the [party mapping](#authzparty_binding)
+lacks what a User is written with: a default person template with a
+`user_name` selector, and `[authz.party_binding.professional_role]`.
 
 ```toml
 [server]
 public_base_url = "https://cdr.example.com"
 
 [auth.scim]
-[[auth.scim.client]]
-issuer = "https://as.example.com"
-client_id = "entra-provisioning"
-scope = "ferroehr/scim"
-binding_issuer = "urn:example:staff-login"
+
+[authz.grants]
+allowed = ["commit_composition", "scim_provision"]
 ```
 
 `/scim/v2/ServiceProviderConfig` answers without a token, so a client can read
 the authentication scheme before it holds one. Every other path needs a
-bearer token of a declared client that acts for nobody and holds its `scope`:
+bearer token of a client that acts for nobody and holds a `scim_provision`
+grant in force:
 
 - no token, or one that does not verify, is **401** with
   `WWW-Authenticate: Bearer`;
-- a person's token, a client no table declares, and a token without the
-  scope are **403**, the last with `WWW-Authenticate: Bearer
-  error="insufficient_scope"` (RFC 6750 §3.1).
+- a person's token, a client with no grant in force, a grant whose
+  `binding_issuer` no `[[auth.party]]` table issues or another client's grant
+  names too, and a token without the grant's `token_scope` are **403**, the
+  last with `WWW-Authenticate: Bearer error="insufficient_scope"` (RFC 6750
+  §3.1).
 
 Every refusal is an RFC 7644 §3.12 `Error` message in `application/scim+json`.
 The client's requests count against
@@ -861,7 +848,8 @@ serve no attribution, so FerroEHR erases them (GDPR Art. 5(1)(e)): with
 `auth.scim.contact_erasure_delay = 0` the deletion removes the `contacts` of every
 version of the `PERSON` in the same transaction, and with a period a sweep
 that runs every minute removes them once the period has passed. The sweep
-reaches every deleted `PERSON` whose binding key a `[[auth.scim.client]]` issues,
+reaches every deleted `PERSON` whose binding key the `binding_issuer` of a
+`scim_provision` grant issues, one that has ended included,
 an administrator's demographic `DELETE` included. Each version keeps its uid,
 audit and contribution, and its node rows are derived again from the erased
 body. A server signature on such a version is removed, because it was taken
@@ -961,10 +949,12 @@ it, so the steps split between the two.
    its `type`. FerroEHR holds one value per `type` and no preference among
    them, so `/scim/v2/Schemas` declares `primary` read-only and the `primary`
    Entra sends is ignored (RFC 7644 §3.3).
-2. **Declare the client.** Add a `[[auth.scim.client]]` whose `issuer` is your
-   authorization server, an `[[auth.issuer]]` of kind `machines`, and whose
-   `binding_issuer` is the `identifier_issuer` of the `[[auth.party]]` your
-   professionals log in through. Set `server.public_base_url` to the URL
+2. **Grant the client.** Grant its client `scim_provision`, with `ferroehr
+   party-binding grant` or as an administrator through the Demographic API:
+   the `--issuer` is your authorization server, an `[[auth.issuer]]` of kind
+   `machines`, the `binding_issuer` element the `identifier_issuer` of the
+   `[[auth.party]]` your professionals log in through, and the `token_scope`
+   element the scope its token holds. Set `server.public_base_url` to the URL
    Entra reaches. In the Helm chart, a `config.auth.scim` value also adds the
    `/scim/v2` path to the Ingress. `ferroehr config check` refuses a mapping
    the endpoint cannot serve.
@@ -983,7 +973,7 @@ it, so the steps split between the two.
      service.
    - [ ] `uti` is cached for the lifetime of the assertion, and an assertion
      whose `uti` was seen before is refused as a replay.
-   - [ ] The access token it issues holds the client's `scope`, names the
+   - [ ] The access token it issues holds the grant's `token_scope`, names the
      client in `client_id`, and lives between 1 and 6 hours, the range
      Microsoft's guide asks for.
 
@@ -1062,14 +1052,20 @@ whose grants count for what. See [SMART App Launch](../smart-app-launch.md).
 | `issuer_metadata_file` | path | unset | A JSON file holding the RFC 8414 §2 metadata of the `[auth]` issuer it names, whose key set is a `jwks_file`, read at boot. It must name an `[auth]` issuer, wherever it stands in the list, repeat no member name, and every endpoint it names must be `https` (a loopback host excepted); the discovery document takes its `token_endpoint` and the other endpoints from it. Set for an issuer whose metadata is read from the issuer, it is a boot error. |
 | `platform_base_url` | string | unset ⇒ the REST root | The path the discovery document hangs off, e.g. `/gateway/v1`. |
 | `episode_launch` | bool | `false` | Advertise episode context and accept the `launch/episode` scope and `episodeId` claim; applies no episode-scoped filtering. |
-| `backend_clients` | list of string | `[]` | The `client_id`s a `system/aql-*` grant counts for: such a grant "would grant access to all registered and ad-hoc AQL queries system-wide" (master08 §Resource Scopes). |
 | `patient_issuers` | list of string | `[]` | The issuers whose `patient/` grants count, each confined to the EHR the token's `ehrId` claim names (master07 §Context Selection). Empty, a `patient/` grant grants nothing. |
-| `demographic_clients` | list of string | `[]` | The bearer `client_id`s that reach the DEMOGRAPHIC API, which no SMART on openEHR scope covers. A Basic user-id never matches an entry. A caller holding `[auth] product_scope` reaches it too. |
 
 The `launch-base64-json` capability (master09) is advertised by listing it in
 `[auth] capabilities`; the base64 JSON launch object is the application's to
-consume. The table is always read, since its lists apply whether or not the
-document is served; `discovery` alone turns the document on.
+consume. The table is always read, since `patient_issuers` applies whether or
+not the document is served; `discovery` alone turns the document on.
+
+Which clients count as backend clients and which reach the DEMOGRAPHIC API is
+policy the CDR holds, never a key here: the `query_system_wide` and
+`access_demographic` grants of the client's `AGENT`
+([Operational policy](../operational-policy.md#a-backend-client-and-a-demographic-client)).
+`patient_issuers` stays in the file because it is trust: it says which
+issuer's `ehrId` claim names an EHR of this platform, which the server needs
+before it can believe a `patient/` token at all.
 
 No `smart` URL may carry a user name or password, whether or not the document
 is served: the discovery document publishes these URLs to every application,

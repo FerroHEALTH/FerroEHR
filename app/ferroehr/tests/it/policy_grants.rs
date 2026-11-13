@@ -953,11 +953,11 @@ async fn an_import_grant_admits_an_import_the_caller_holds_no_role_for() {
     let extract: openehr_rm::prelude::Extract =
         openehr_its::json::from_canonical_value(&extracts[0]).expect("an EXTRACT");
     let db = testkit::db().await.expect("testkit database");
+    let source_system = crate::committer_binding::source_system_id(&extracts[0]);
     let target = replica(&db.pool(), GrantCeiling::new([Operation::ImportEhr]))
         .await
         .with_import_policy(ImportPolicy::new(
             Some("IMPORTER".to_owned()),
-            vec![crate::committer_binding::source_system_id(&extracts[0])],
             vec![ISSUER.to_owned()],
         ));
     let (migrator, _) = create(&target, PartyKind::Agent, &agent("migrator"))
@@ -973,7 +973,10 @@ async fn an_import_grant_admits_an_import_the_caller_holds_no_role_for() {
             None,
             &[capability(
                 &["import_ehr"],
-                &[named("subject_namespace", &text("local"))],
+                &[
+                    crate::policy_fixtures::scope("creating_system", &source_system),
+                    named("subject_namespace", &text("local")),
+                ],
                 None,
             )],
         ),
