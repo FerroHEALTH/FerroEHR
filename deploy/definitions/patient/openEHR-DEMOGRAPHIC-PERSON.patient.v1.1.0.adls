@@ -1,0 +1,276 @@
+archetype (adl_version=2.0.6; rm_release=1.1.0)
+    openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"FerroEHR">
+        ["organisation"] = <"Cadasto B.V.">
+    >
+    lifecycle_state = <"unmanaged">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A patient's PERSON: the subject of an EHR, and the target of a representation relationship.">
+            use = <"Its patient identifiers, date of birth and sex in details, its names in identities named by their usage, a postal and an electronic address, and its relationships to personal contacts, third-party payers and healthcare providers, each payer and provider with the patient identifiers it issues, and its care relationships to the care teams and units it is under the care of. Adapted from the openEHR CKM archetypes the derived_from entry names.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+    other_details = <
+        ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+        ["derived_from"] = <"openEHR-DEMOGRAPHIC-PERSON.person-patient.v0 (openEHR CKM 1013.1.821, modified 2019-08-09), openEHR-DEMOGRAPHIC-PERSON.person.v0 (openEHR CKM 1013.1.479, modified 2022-01-20), openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v0 (openEHR CKM 1013.1.470, modified 2018-12-20), openEHR-DEMOGRAPHIC-CLUSTER.person_birth_data_iso.v0 (openEHR CKM 1013.1.491, modified 2025-09-02), openEHR-DEMOGRAPHIC-CLUSTER.person_additional_data_iso.v0 (openEHR CKM 1013.1.503, modified 2019-08-12), openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0 (openEHR CKM 1013.1.477, modified 2019-08-09), openEHR-DEMOGRAPHIC-ADDRESS.address.v0 (openEHR CKM 1013.1.484, modified 2019-08-08), openEHR-DEMOGRAPHIC-ADDRESS.electronic_communication.v0 (openEHR CKM 1013.1.486, modified 2019-08-08)">
+        ["revision_history"] = <"1.1.0: adds the optional care relationship id32, the patient's relationship to a care team or unit carrying ferroehr-operations::under_care_of; a backward-compatible addition, so a minor version. 1.0.0: first release, FerroEHR v5.7.1-rc1.">
+    >
+
+definition
+    PERSON[id1] matches {
+        details matches {
+            ITEM_TREE[id2] matches {
+                items matches {
+                    ELEMENT[id3] occurrences matches {0..*} matches {
+                        value matches { DV_IDENTIFIER[id40] }
+                    }
+                    ELEMENT[id4] occurrences matches {0..1} matches {
+                        value matches { DV_DATE[id41] }
+                    }
+                    ELEMENT[id5] occurrences matches {0..1} matches {
+                        value matches {
+                            DV_CODED_TEXT[id42] matches {
+                                defining_code matches {[ac1]}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        identities matches {
+            PARTY_IDENTITY[id6] matches {
+                name matches {
+                    DV_TEXT[id43]
+                    DV_CODED_TEXT[id44] matches {
+                        defining_code matches {[ac2]}
+                    }
+                }
+                details matches {
+                    ITEM_TREE[id7] matches {
+                        items matches {
+                            ELEMENT[id8] occurrences matches {0..1} matches {
+                                value matches { DV_TEXT[id45] }
+                            }
+                            ELEMENT[id9] occurrences matches {0..1} matches {
+                                value matches { DV_TEXT[id46] }
+                            }
+                            ELEMENT[id10] occurrences matches {0..1} matches {
+                                value matches { DV_TEXT[id47] }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        contacts matches {
+            CONTACT[id11] occurrences matches {0..*} matches {
+                addresses matches {
+                    ADDRESS[id12] matches {
+                        name matches {
+                            DV_TEXT[id53]
+                            DV_CODED_TEXT[id54] matches {
+                                defining_code matches {[ac3]}
+                            }
+                        }
+                        details matches {
+                            ITEM_TREE[id13] matches {
+                                items matches {
+                                    ELEMENT[id14] occurrences matches {0..*} matches {
+                                        value matches { DV_TEXT[id48] }
+                                    }
+                                    ELEMENT[id15] occurrences matches {0..1} matches {
+                                        value matches { DV_TEXT[id49] }
+                                    }
+                                    ELEMENT[id16] occurrences matches {0..1} matches {
+                                        value matches { DV_TEXT[id50] }
+                                    }
+                                    ELEMENT[id17] occurrences matches {0..1} matches {
+                                        value matches { DV_TEXT[id51] }
+                                    }
+                                    ELEMENT[id18] occurrences matches {0..1} matches {
+                                        value matches { DV_TEXT[id52] }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    ADDRESS[id19] matches {
+                        name matches {
+                            DV_TEXT[id55]
+                            DV_CODED_TEXT[id56] matches {
+                                defining_code matches {[ac4]}
+                            }
+                        }
+                        details matches {
+                            ITEM_TREE[id20] matches {
+                                items matches {
+                                    ELEMENT[id21] occurrences matches {0..1} matches {
+                                        value matches {
+                                            DV_TEXT[id57]
+                                            DV_CODED_TEXT[id58] matches {
+                                                defining_code matches {[ac5]}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[id22] occurrences matches {1} matches {
+                                        value matches { DV_TEXT[id59] }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        relationships matches {
+            PARTY_RELATIONSHIP[id23] occurrences matches {0..*} matches {
+                details matches {
+                    ITEM_TREE[id24] matches {
+                        items matches {
+                            ELEMENT[id25] occurrences matches {0..1} matches {
+                                value matches { DV_TEXT[id60] }
+                            }
+                        }
+                    }
+                }
+            }
+            PARTY_RELATIONSHIP[id26] occurrences matches {0..*} matches {
+                details matches {
+                    ITEM_TREE[id27] matches {
+                        items matches {
+                            ELEMENT[id28] occurrences matches {0..*} matches {
+                                value matches { DV_IDENTIFIER[id61] }
+                            }
+                        }
+                    }
+                }
+            }
+            PARTY_RELATIONSHIP[id29] occurrences matches {0..*} matches {
+                details matches {
+                    ITEM_TREE[id30] matches {
+                        items matches {
+                            ELEMENT[id31] occurrences matches {0..*} matches {
+                                value matches { DV_IDENTIFIER[id62] }
+                            }
+                        }
+                    }
+                }
+            }
+            PARTY_RELATIONSHIP[id32] occurrences matches {0..*} matches {
+                details matches {
+                    ITEM_TREE[id33] matches {
+                        items matches {
+                            ELEMENT[id34] occurrences matches {1} matches {
+                                value matches { DV_CODED_TEXT[id63] }
+                            }
+                            ELEMENT[id35] occurrences matches {0..1} matches {
+                                value matches { DV_DATE_TIME[id64] }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["id1"] = <text = <"Patient"> description = <"A person who receives care: the subject of an EHR.">>
+            ["id2"] = <text = <"Details"> description = <"The identifiers and the demographic data of the patient.">>
+            ["id3"] = <text = <"Patient identifier"> description = <"An identifier of the patient issued by an organisation or the state, such as a national patient identifier.">>
+            ["id4"] = <text = <"Date of birth"> description = <"The date the patient was born.">>
+            ["id5"] = <text = <"Sex"> description = <"The sex of the patient, as recorded for administration.">>
+            ["id6"] = <text = <"Name"> description = <"A name of the patient, named by its usage.">>
+            ["id7"] = <text = <"Name structure"> description = <"The structure of the name.">>
+            ["id8"] = <text = <"Full name"> description = <"The name as it is written in full.">>
+            ["id9"] = <text = <"Given name"> description = <"The given name.">>
+            ["id10"] = <text = <"Family name"> description = <"The family name.">>
+            ["id11"] = <text = <"Contact"> description = <"A way to reach the patient.">>
+            ["id12"] = <text = <"Postal address"> description = <"A postal or residential address.">>
+            ["id13"] = <text = <"Address details"> description = <"The structure of the address.">>
+            ["id14"] = <text = <"Address line"> description = <"A line of the address, the street and number first.">>
+            ["id15"] = <text = <"Postal code"> description = <"The postal code.">>
+            ["id16"] = <text = <"Suburb/town/locality"> description = <"The town or locality.">>
+            ["id17"] = <text = <"State/territory/province"> description = <"The state, territory or province.">>
+            ["id18"] = <text = <"Country"> description = <"The country.">>
+            ["id19"] = <text = <"Electronic address"> description = <"An electronic address, its type its name.">>
+            ["id20"] = <text = <"Components"> description = <"The structure of the electronic address.">>
+            ["id21"] = <text = <"Usage"> description = <"What the address is used for.">>
+            ["id22"] = <text = <"Details"> description = <"The address itself, such as an e-mail address or a telephone number.">>
+            ["id23"] = <text = <"Personal relationship"> description = <"A relationship of the patient to a personal contact, such as a relative.">>
+            ["id24"] = <text = <"Relationship details"> description = <"The details of the personal relationship.">>
+            ["id25"] = <text = <"Type of relationship"> description = <"The type of the personal relationship.">>
+            ["id26"] = <text = <"Third-party payer"> description = <"The relationship of the patient to a third-party payer, such as an insurer.">>
+            ["id27"] = <text = <"Payer details"> description = <"The details of the relationship to the payer.">>
+            ["id28"] = <text = <"Payer patient identifier"> description = <"An identifier the payer issued to the patient.">>
+            ["id29"] = <text = <"Healthcare provider"> description = <"The relationship of the patient to a healthcare provider organisation or an individual provider.">>
+            ["id30"] = <text = <"Provider details"> description = <"The details of the relationship to the provider.">>
+            ["id31"] = <text = <"Provider patient identifier"> description = <"An identifier the provider issued to the patient.">>
+            ["id32"] = <text = <"Care relationship"> description = <"The care of the patient by a care team or an organisational unit, its target, such as a ward during an admission, with the admission as time_validity. Written by the care delivery environment under a write_care_relationship grant.">>
+            ["id33"] = <text = <"Care details"> description = <"The details of the care relationship.">>
+            ["id34"] = <text = <"Care relationship code"> description = <"The code that makes the relationship a care relationship: under_care_of of FerroEHR's terminology ferroehr-operations.">>
+            ["id35"] = <text = <"Discharge time"> description = <"The time the patient left the care of the team or unit, when a bound finer than the date of time_validity is needed.">>
+            ["ac1"] = <text = <"Sexes"> description = <"The sexes a patient is recorded with.">>
+            ["ac2"] = <text = <"Name usages"> description = <"The usages of a person's name.">>
+            ["ac3"] = <text = <"Address types"> description = <"The types of a postal address.">>
+            ["ac4"] = <text = <"Electronic address types"> description = <"The types of an electronic address.">>
+            ["ac5"] = <text = <"Address usages"> description = <"What an address is used for.">>
+            ["at10"] = <text = <"Male"> description = <"Male.">>
+            ["at11"] = <text = <"Female"> description = <"Female.">>
+            ["at12"] = <text = <"Intersex or indeterminate"> description = <"Intersex or indeterminate.">>
+            ["at13"] = <text = <"Not declared/inadequately described"> description = <"Not declared or inadequately described.">>
+            ["at20"] = <text = <"Reporting name"> description = <"The name used for reporting.">>
+            ["at21"] = <text = <"Newborn name"> description = <"The name of a newborn before a name is given.">>
+            ["at22"] = <text = <"Professional or business name"> description = <"The name used in professional or business life.">>
+            ["at23"] = <text = <"Maiden name"> description = <"The family name before a change at marriage.">>
+            ["at24"] = <text = <"Legal name"> description = <"The name registered by law.">>
+            ["at25"] = <text = <"Other name"> description = <"Another name.">>
+            ["at30"] = <text = <"Business"> description = <"A business address.">>
+            ["at31"] = <text = <"Mailing or postal"> description = <"A mailing or postal address.">>
+            ["at32"] = <text = <"Temporary accommodation"> description = <"A temporary address.">>
+            ["at33"] = <text = <"Residential"> description = <"A residential address.">>
+            ["at34"] = <text = <"No fixed address"> description = <"The party has no fixed address.">>
+            ["at35"] = <text = <"Unknown/not stated/inadequately described"> description = <"The type is not known.">>
+            ["at40"] = <text = <"Telephone"> description = <"A telephone number.">>
+            ["at41"] = <text = <"Fax"> description = <"A fax number.">>
+            ["at42"] = <text = <"Mobile"> description = <"A mobile telephone number.">>
+            ["at43"] = <text = <"Pager"> description = <"A pager number.">>
+            ["at44"] = <text = <"E-mail"> description = <"An e-mail address.">>
+            ["at45"] = <text = <"URL"> description = <"A web address.">>
+            ["at50"] = <text = <"Personal"> description = <"For personal use.">>
+            ["at51"] = <text = <"Business"> description = <"For business use.">>
+            ["at52"] = <text = <"Personal/Business"> description = <"For personal and business use.">>
+            ["at53"] = <text = <"Other use"> description = <"For another use.">>
+        >
+    >
+    value_sets = <
+        ["ac1"] = <
+            id = <"ac1">
+            members = <"at10", "at11", "at12", "at13">
+        >
+        ["ac2"] = <
+            id = <"ac2">
+            members = <"at20", "at21", "at22", "at23", "at24", "at25">
+        >
+        ["ac3"] = <
+            id = <"ac3">
+            members = <"at30", "at31", "at32", "at33", "at34", "at35">
+        >
+        ["ac4"] = <
+            id = <"ac4">
+            members = <"at40", "at41", "at42", "at43", "at44", "at45">
+        >
+        ["ac5"] = <
+            id = <"ac5">
+            members = <"at50", "at51", "at52", "at53">
+        >
+    >
