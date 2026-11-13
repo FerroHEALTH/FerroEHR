@@ -1,0 +1,38 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_ACTOR_SCOPE*
+
+h|*Description*
+2+a|A description of callers. A caller matches when it matches every attribute that is set.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*0..1*
+|*party*: `xref:{class_party_ref}[PARTY_REF]`
+a|A party in the demographic service: a `PERSON` or `AGENT` matches itself; an `ORGANISATION` or `GROUP` matches every caller that acts for it or is a member of it.
+
+h|*0..1*
+|*role*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|A functional role the caller holds, coded as the role's capability or the caller's token states it, such as a professional role code.
+
+h|*0..1*
+|*relationship*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|A relationship the caller must hold to the subject of the EHR, coded in the `access relationship` group: `care` (a live care relationship), `representative` or `proxy`.
+
+h|*0..1*
+|*caller_kind*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|The kind of caller, coded in the `access caller kind` group: `professional`, `access_service`, `subject`, `representative` or `system`.
+
+h|*Invariants*
+2+a|__Not_empty__: `party /= Void or role /= Void or relationship /= Void or caller_kind /= Void`
+
+h|
+2+a|__Relationship_valid__: `relationship /= Void implies terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_relationship, relationship.defining_code)`
+
+h|
+2+a|__Caller_kind_valid__: `caller_kind /= Void implies terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)`
+
+|===

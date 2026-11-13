@@ -1,0 +1,32 @@
+include::partial$module_vars.adoc[]
+
+= ITS-REST Resources
+
+include::partial$draft_notice.adoc[]
+
+NOTE: This page proposes an addition to the xref:ITS-REST::index.adoc[openEHR REST API] (SPECITS). ITS-REST 1.1.0 has no resource for `EHR_ACCESS` and none for a controller policy. The resources below follow its `EHR_STATUS` resources: `If-Match` on update, `ETag` with the version uid, and the `versioned_` resources for the history.
+
+[cols="2,3", options="header"]
+|===
+|Resource |Behaviour
+
+|`GET {baseUrl}/ehr/{ehr_id}/ehr_access`
+|The current `EHR_ACCESS`, to the parties xref:decision_procedure.adoc#_reading_and_writing_the_settings[Reading and Writing the Settings] admits; `404` to everyone else.
+
+|`PUT {baseUrl}/ehr/{ehr_id}/ehr_access`
+|Commits a new version, with `If-Match` naming the current version uid. A body that fails an invariant or a terminology check is refused `400` naming the first defect.
+
+|`GET {baseUrl}/ehr/{ehr_id}/versioned_ehr_access`, `.../revision_history`, `.../version/{version_uid}`
+|The versioned object, its revision history and one version, to the same parties.
+
+|`GET {baseUrl}/access_policy`
+|The current `ACCESS_POLICY` of the controller the caller acts for.
+
+|`PUT {baseUrl}/access_policy`
+|Commits a new version, with `If-Match`, checked as above.
+
+|`GET {baseUrl}/versioned_access_policy`, `.../revision_history`, `.../version/{version_uid}`
+|The versioned object, its revision history and one version.
+|===
+
+Each body is the ITS-JSON form of the class, with `_type`. A change to either object is a `CONTRIBUTION` with its `AUDIT_DETAILS`, as for any versioned object.

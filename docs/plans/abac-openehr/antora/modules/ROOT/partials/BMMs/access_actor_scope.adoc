@@ -1,0 +1,38 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_ACTOR_SCOPE",
+  "documentation": "A description of callers. A caller matches when it matches every attribute that is set.",
+  "properties": {
+    "party": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "party",
+      "documentation": "A party in the demographic service: a `PERSON` or `AGENT` matches itself; an `ORGANISATION` or `GROUP` matches every caller that acts for it or is a member of it.",
+      "type": "PARTY_REF"
+    },
+    "role": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "role",
+      "documentation": "A functional role the caller holds, coded as the role's capability or the caller's token states it, such as a professional role code.",
+      "type": "DV_CODED_TEXT"
+    },
+    "relationship": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "relationship",
+      "documentation": "A relationship the caller must hold to the subject of the EHR, coded in the `access relationship` group: `care` (a live care relationship), `representative` or `proxy`.",
+      "type": "DV_CODED_TEXT"
+    },
+    "caller_kind": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "caller_kind",
+      "documentation": "The kind of caller, coded in the `access caller kind` group: `professional`, `access_service`, `subject`, `representative` or `system`.",
+      "type": "DV_CODED_TEXT"
+    }
+  },
+  "invariants": {
+    "Not_empty": "party /= Void or role /= Void or relationship /= Void or caller_kind /= Void",
+    "Relationship_valid": "relationship /= Void implies terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_relationship, relationship.defining_code)",
+    "Caller_kind_valid": "caller_kind /= Void implies terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)"
+  }
+}
+--------

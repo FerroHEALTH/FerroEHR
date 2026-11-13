@@ -1,0 +1,207 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_DIRECTIVE",
+  "documentation": "One instruction about access to the data of one EHR, given by the subject, their representative or the controller on their instruction: a consent permit or deny, an EHDS Art. 8 restriction, an EHDS Art. 10 opt-out, or the scope of a delegation. A directive applies to an access when every attribute it sets matches the access (the actor, the operation, the purpose, the data, the time), and none of its exceptions applies. Where a permit and a deny both apply, the deny wins.",
+  "ancestors": [
+    "LOCATABLE"
+  ],
+  "properties": {
+    "kind": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "kind",
+      "documentation": "What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).",
+      "is_mandatory": true,
+      "type": "DV_CODED_TEXT"
+    },
+    "effect": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "effect",
+      "documentation": "Whether the directive permits or denies the access it applies to, coded in the `access effect` group: `permit` or `deny`.",
+      "is_mandatory": true,
+      "type": "DV_CODED_TEXT"
+    },
+    "applies_to": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "applies_to",
+      "documentation": "The callers the directive applies to; any one matching scope is enough. Empty applies to every caller the kind can bind.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_ACTOR_SCOPE"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "operations": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "operations",
+      "documentation": "The operations the directive applies to, coded in the operation terminology the system documents (such as `read`, `write`, `export`). Empty applies to every operation.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "purposes": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "purposes",
+      "documentation": "The purposes of use the directive applies to, coded in the purpose-of-use terminology the system accepts. Empty applies to every purpose.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "data": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "data",
+      "documentation": "The data the directive applies to; data in any one scope is covered. Empty applies to the whole EHR, including data recorded after the directive.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_DATA_SCOPE"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "time_validity": {
+      "_type": "P_BMM_GENERIC_PROPERTY",
+      "name": "time_validity",
+      "documentation": "When the directive is in force. Void is in force from the commit of the version that adds it until a later version removes it.",
+      "type_def": {
+        "root_type": "DV_INTERVAL",
+        "generic_parameters": [
+          "DV_DATE_TIME"
+        ]
+      }
+    },
+    "emergency_override": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "emergency_override",
+      "documentation": "Whether a caller declaring an emergency purpose of use, under the system's emergency rules, is exempt from this directive (EHDS Art. 11(5) for a restriction; Art. 10(2) for an opt-out where national law allows it).",
+      "is_mandatory": true,
+      "type": "Boolean"
+    },
+    "exceptions": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "exceptions",
+      "documentation": "Narrower directives of the opposite effect inside this one, such as 'deny mental health data, except to my GP'. An access an exception applies to is not decided by this directive.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_DIRECTIVE"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "instructed_by": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "instructed_by",
+      "documentation": "Who gave the instruction: `PARTY_SELF` for the subject, otherwise their representative or the professional who recorded it on their behalf.",
+      "type": "PARTY_PROXY"
+    },
+    "instructed": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "instructed",
+      "documentation": "When the instruction was given.",
+      "type": "DV_DATE_TIME"
+    },
+    "legal_grounds": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "legal_grounds",
+      "documentation": "The legal provisions the directive rests on, such as GDPR Art. 9(2)(a), EHDS Art. 8 or a national provision, coded in a terminology the jurisdiction names.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "evidence": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "evidence",
+      "documentation": "The record of the instruction in the EHR, such as the `ADMIN_ENTRY` that holds the signed consent (RM EHR IM, Entry package, Standard Clinical Types of Data).",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_EHR_URI"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "identifiers": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "identifiers",
+      "documentation": "Identifiers of the directive in other systems, such as a FHIR `Consent.identifier`, an IHE BPPC or APPC policy identifier, or a national consent registry reference.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_IDENTIFIER"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "details": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "details",
+      "documentation": "Further archetyped detail the deployment records with the directive. The decision procedure never reads it.",
+      "type": "ITEM_STRUCTURE"
+    }
+  },
+  "functions": {
+    "is_deny": {
+      "name": "is_deny",
+      "documentation": "True when `_effect_` is the `deny` code of the `access effect` group.",
+      "result": {
+        "_type": "P_BMM_SIMPLE_TYPE",
+        "type": "Boolean"
+      }
+    },
+    "is_restriction": {
+      "name": "is_restriction",
+      "documentation": "True when `_kind_` is the `restriction` code of the `access directive kind` group.",
+      "result": {
+        "_type": "P_BMM_SIMPLE_TYPE",
+        "type": "Boolean"
+      }
+    },
+    "is_opt_out": {
+      "name": "is_opt_out",
+      "documentation": "True when `_kind_` is the `opt_out` code of the `access directive kind` group.",
+      "result": {
+        "_type": "P_BMM_SIMPLE_TYPE",
+        "type": "Boolean"
+      }
+    }
+  },
+  "invariants": {
+    "Kind_valid": "terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_directive_kind, kind.defining_code)",
+    "Effect_valid": "terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_effect, effect.defining_code)",
+    "Restriction_denies": "is_restriction implies is_deny",
+    "Opt_out_denies_whole_record": "is_opt_out implies (is_deny and data = Void)",
+    "Exceptions_opposite": "exceptions /= Void implies exceptions.for_all (e | e.is_deny /= is_deny and e.exceptions = Void)",
+    "Applies_to_valid": "applies_to /= Void implies not applies_to.is_empty",
+    "Operations_valid": "operations /= Void implies not operations.is_empty",
+    "Purposes_valid": "purposes /= Void implies not purposes.is_empty",
+    "Data_valid": "data /= Void implies not data.is_empty",
+    "Exceptions_valid": "exceptions /= Void implies not exceptions.is_empty",
+    "Legal_grounds_valid": "legal_grounds /= Void implies not legal_grounds.is_empty",
+    "Evidence_valid": "evidence /= Void implies not evidence.is_empty",
+    "Identifiers_valid": "identifiers /= Void implies not identifiers.is_empty"
+  }
+}
+--------

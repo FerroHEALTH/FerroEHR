@@ -1,0 +1,13 @@
+=== ACCESS_DIRECTIVE Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_directive.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_directive.adoc[]
+
+====

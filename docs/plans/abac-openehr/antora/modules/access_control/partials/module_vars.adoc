@@ -1,0 +1,11 @@
+include::ROOT:partial$component_vars.adoc[]
+
+:spec_title: Access Control Information Model
+:copyright_year: 2026
+:spec_status: DEVELOPMENT
+:keywords: access control, consent, EHR_ACCESS, ABAC, openehr
+:description: openEHR Access Control Information Model specification (draft)
+
+:latest_issue: 0.1.0
+:latest_issue_date: 13 Nov 2026
+:pkg: org.openehr.rm.access_control.
