@@ -231,6 +231,20 @@ impl FerroEhrService {
             .map_or(EmitOutcome::Dropped, |s| s.emit(event))
     }
 
+    /// Record `event` as one act on one object of the current request: one
+    /// result, under the request's purpose and permit and the deployment's
+    /// legal basis.
+    ///
+    /// # Errors
+    /// As [`Self::record_access`].
+    pub fn record_one_access(&self, mut event: AuditEvent) -> Result<(), ServiceError> {
+        event.result_count = Some(1);
+        event.purpose = access_context::current_purpose();
+        event.permit = access_context::current_permit();
+        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
+        self.record_access(event)
+    }
+
     /// Record an access event and honour the configured fail mode.
     ///
     /// The service-layer twin of the REST middleware's rejection: under

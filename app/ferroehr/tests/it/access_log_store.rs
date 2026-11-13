@@ -25,7 +25,7 @@ use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecor
 
 /// The example entry of the access-log proposal, the fixture the draft's own
 /// tests in `openehr-rm` read.
-fn example() -> Value {
+pub(crate) fn example() -> Value {
     serde_json::from_str(include_str!(
         "../../../../crates/openehr-rm/tests/fixtures/draft/access_log_entry.json"
     ))
