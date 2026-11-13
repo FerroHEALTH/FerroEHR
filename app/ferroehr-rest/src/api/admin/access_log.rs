@@ -52,9 +52,9 @@ pub(crate) fn access_log_routes() -> OpenApiRouter<AppState> {
 
 guarded_handler! {
     /// Seal the head of the access log in a signed checkpoint
-    /// (`POST /admin/access_log/checkpoint`). **Our own extension.**
+    /// (`POST /admin/access-log/checkpoint`). **Our own extension.**
     #[utoipa::path(
-        post, path = "/admin/access_log/checkpoint", tag = "admin-access-log",
+        post, path = "/admin/access-log/checkpoint", tag = "admin-access-log",
         responses(
             (status = 200, description = "The checkpoint of the head of the chain, as its \
                                           ITS-JSON `ACCESS_LOG_CHECKPOINT`. A head already \
@@ -72,13 +72,13 @@ guarded_handler! {
 
 guarded_handler! {
     /// Verify the access log against its newest checkpoint
-    /// (`POST /admin/access_log/verify`). **Our own extension.**
+    /// (`POST /admin/access-log/verify`). **Our own extension.**
     ///
     /// The whole chain is recomputed, tombstones taken as recorded; the
     /// checkpoint's proof, the link it seals and every signed link are
     /// checked. A finding is not a request failure.
     #[utoipa::path(
-        post, path = "/admin/access_log/verify", tag = "admin-access-log",
+        post, path = "/admin/access-log/verify", tag = "admin-access-log",
         responses(
             (status = 200, description = "The verification ran. `intact` is true when a \
                                           checkpoint was there to verify against and nothing \
@@ -101,9 +101,9 @@ guarded_handler! {
 
 guarded_handler! {
     /// Export one EHR's access log for its transfer to another system
-    /// (`GET /admin/access_log/export?ehr_id=`). **Our own extension.**
+    /// (`GET /admin/access-log/export?ehr_id=`). **Our own extension.**
     #[utoipa::path(
-        get, path = "/admin/access_log/export", tag = "admin-access-log",
+        get, path = "/admin/access-log/export", tag = "admin-access-log",
         params(
             ("ehr_id" = String, Query, description = "The EHR whose log is exported."),
         ),

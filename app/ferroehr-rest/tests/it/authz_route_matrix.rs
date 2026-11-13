@@ -381,8 +381,8 @@ const ADMIN_READ: &[(&str, &str)] = &[
     ("POST", "/admin/integrity/verify"),
     // The access log's verification against its checkpoint moves no record
     // (#5129), and its export reads the log.
-    ("POST", "/admin/access_log/verify"),
-    ("GET", "/admin/access_log/export"),
+    ("POST", "/admin/access-log/verify"),
+    ("GET", "/admin/access-log/export"),
     // The legal registers, read side: the restriction sequence a controller
     // answers an Art. 18(3) notice from, the declared retention periods, and
     // what has fallen due. They carry ids, grounds and citations, never
@@ -454,12 +454,15 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     // The repair of an EHR held closed by access settings that do not parse
     // commits a new EHR_ACCESS version (#4853).
     ("POST", "/admin/ehr-access/repair"),
+    // The erasure of an access-log entry a law orders replaces it by its
+    // tombstone (#5128).
+    ("POST", "/admin/access-log/erase"),
     // The repair the parity sweep is the diagnosis for. Unlike the sweep it
     // REPLACES stored rows, so it stays out of EXTENSION_READ_ROUTES and a
     // read-only server refuses it (#3143).
     ("POST", "/admin/integrity/rebuild-nodes"),
     // A checkpoint of the access log is a new, signed record (#5129).
-    ("POST", "/admin/access_log/checkpoint"),
+    ("POST", "/admin/access-log/checkpoint"),
     // The outbox acknowledgement moves the reader's cursor (#4786).
     ("POST", "/admin/outbox/{reader}/ack"),
     // A new version of an operational-policy register decides every request

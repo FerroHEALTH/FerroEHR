@@ -27,7 +27,9 @@
 //!   Art. 21(6) objection at EHR grain.
 //! - `retention_policy` / `retention_anchor` and the `retention_due` view hold
 //!   the periods, their citations, and what has fallen due — a list, never a
-//!   disposal.
+//!   disposal. The register covers EHR content only: an access-log entry
+//!   states its own period and is replaced by its tombstone when it ends
+//!   ([`crate::access_log::retention`], [`crate::access_log::expiry`]).
 //! - `access_restriction` records the person's EHDS Art. 8 restriction of
 //!   access by health professionals, and `ehr.access_restricted_at` /
 //!   `vo_head.access_restricted_at` are its marks, recomputed by

@@ -339,6 +339,340 @@
         }
       }
     },
+    "/ferroehr/rest/extensions/v1/admin/access-log/checkpoint": {
+      "post": {
+        "tags": [
+          "admin-access-log"
+        ],
+        "summary": "Seal the head of the access log in a signed checkpoint\n(`POST /admin/access-log/checkpoint`). **Our own extension.**",
+        "operationId": "admin_seal_access_log_checkpoint",
+        "responses": {
+          "200": {
+            "description": "The checkpoint of the head of the chain, as its ITS-JSON `ACCESS_LOG_CHECKPOINT`. A head already sealed answers its stored checkpoint.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The chain is empty.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The keyring holds no OpenPGP key to sign with.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/access-log/erase": {
+      "post": {
+        "tags": [
+          "admin-marks"
+        ],
+        "summary": "Replace an access-log entry by its tombstone on the grounds of the law\nthat orders its erasure (`POST /admin/access-log/erase`).",
+        "description": "**Our own extension: no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_access_log_erase",
+        "requestBody": {
+          "description": "`{ \"uid\": …, \"grounds\": [ … ] }`: the uid of the access-log entry and one or more `DV_CODED_TEXT` naming the provisions that order its erasure.",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The `ACCESS_LOG_TOMBSTONE` that replaced the entry, with its uid, `system_id`, `time_recorded`, chain link, `time_removed` and grounds.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "The body names no uid, gives no grounds, or a ground is no `DV_CODED_TEXT` the model admits.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No access-log record has the uid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record is a tombstone already, or the local audit store, which keeps the access log, is off.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not `application/json`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/access-log/export": {
+      "get": {
+        "tags": [
+          "admin-access-log"
+        ],
+        "summary": "Export one EHR's access log for its transfer to another system\n(`GET /admin/access-log/export?ehr_id=`). **Our own extension.**",
+        "operationId": "admin_export_access_log",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "query",
+            "description": "The EHR whose log is exported.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The EHR's records with their links, every link from the first of them to the checkpoint they verify against, and that checkpoint, verified before it is answered. `ferroehr access-log import` reads this document.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`ehr_id` is missing.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The log holds no record of the EHR.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No checkpoint covers the records and the keyring holds no OpenPGP key to seal one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The span holds `audit_event` records, which cannot be verified apart from this database.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/access-log/verify": {
+      "post": {
+        "tags": [
+          "admin-access-log"
+        ],
+        "summary": "Verify the access log against its newest checkpoint\n(`POST /admin/access-log/verify`). **Our own extension.**",
+        "description": "The whole chain is recomputed, tombstones taken as recorded; the\ncheckpoint's proof, the link it seals and every signed link are\nchecked. A finding is not a request failure.",
+        "operationId": "admin_verify_access_log",
+        "responses": {
+          "200": {
+            "description": "The verification ran. `intact` is true when a checkpoint was there to verify against and nothing failed; `findings` names each failure of the checkpoint and the signed links, `chain` each damaged record or boundary of the chain.",
+            "content": {
+              "application/json": {
+                "schema": {},
+                "example": {
+                  "intact": false,
+                  "checkpoint": {
+                    "sequence": 48213,
+                    "digest": "<64 hex>"
+                  },
+                  "findings": [
+                    "the checkpoint at 48213 is not signed by a trusted key"
+                  ],
+                  "chain": [
+                    {
+                      "chain_seq": 48190,
+                      "finding": "record content was modified after it was written"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ferroehr/rest/extensions/v1/admin/access-opt-out": {
       "get": {
         "tags": [
@@ -836,241 +1170,6 @@
           },
           "415": {
             "description": "The request `Content-Type` is not `application/json`.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/ferroehr/rest/extensions/v1/admin/access_log/checkpoint": {
-      "post": {
-        "tags": [
-          "admin-access-log"
-        ],
-        "summary": "Seal the head of the access log in a signed checkpoint\n(`POST /admin/access_log/checkpoint`). **Our own extension.**",
-        "operationId": "admin_seal_access_log_checkpoint",
-        "responses": {
-          "200": {
-            "description": "The checkpoint of the head of the chain, as its ITS-JSON `ACCESS_LOG_CHECKPOINT`. A head already sealed answers its stored checkpoint.",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthenticated.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not in the Admin class.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "The chain is empty.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "The admin API is disabled on this server.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The keyring holds no OpenPGP key to sign with.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/ferroehr/rest/extensions/v1/admin/access_log/export": {
-      "get": {
-        "tags": [
-          "admin-access-log"
-        ],
-        "summary": "Export one EHR's access log for its transfer to another system\n(`GET /admin/access_log/export?ehr_id=`). **Our own extension.**",
-        "operationId": "admin_export_access_log",
-        "parameters": [
-          {
-            "name": "ehr_id",
-            "in": "query",
-            "description": "The EHR whose log is exported.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The EHR's records with their links, every link from the first of them to the checkpoint they verify against, and that checkpoint, verified before it is answered. `ferroehr access-log import` reads this document.",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "400": {
-            "description": "`ehr_id` is missing.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthenticated.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not in the Admin class.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "The log holds no record of the EHR.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "The admin API is disabled on this server.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "No checkpoint covers the records and the keyring holds no OpenPGP key to seal one.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "The span holds `audit_event` records, which cannot be verified apart from this database.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/ferroehr/rest/extensions/v1/admin/access_log/verify": {
-      "post": {
-        "tags": [
-          "admin-access-log"
-        ],
-        "summary": "Verify the access log against its newest checkpoint\n(`POST /admin/access_log/verify`). **Our own extension.**",
-        "description": "The whole chain is recomputed, tombstones taken as recorded; the\ncheckpoint's proof, the link it seals and every signed link are\nchecked. A finding is not a request failure.",
-        "operationId": "admin_verify_access_log",
-        "responses": {
-          "200": {
-            "description": "The verification ran. `intact` is true when a checkpoint was there to verify against and nothing failed; `findings` names each failure of the checkpoint and the signed links, `chain` each damaged record or boundary of the chain.",
-            "content": {
-              "application/json": {
-                "schema": {},
-                "example": {
-                  "intact": false,
-                  "checkpoint": {
-                    "sequence": 48213,
-                    "digest": "<64 hex>"
-                  },
-                  "findings": [
-                    "the checkpoint at 48213 is not signed by a trusted key"
-                  ],
-                  "chain": [
-                    {
-                      "chain_seq": 48190,
-                      "finding": "record content was modified after it was written"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthenticated.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not in the Admin class.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "The admin API is disabled on this server.",
             "content": {
               "application/problem+json": {
                 "schema": {

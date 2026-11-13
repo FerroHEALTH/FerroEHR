@@ -119,7 +119,7 @@ async fn a_source_the_upload_refuses_is_refused_and_not_stored() {
 
 /// The default demographic definitions, each under `deploy/definitions/` in
 /// the order the binary seeds them.
-const DEFAULT_SET: [&str; 9] = [
+const DEFAULT_SET: [&str; 10] = [
     "professional/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls",
     "professional/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls",
     "care-team/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls",
@@ -128,6 +128,7 @@ const DEFAULT_SET: [&str; 9] = [
     "care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1.0.0.adls",
     "representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls",
     "patient/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls",
+    "patient/openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0.adls",
     "provider/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls",
 ];
 
@@ -412,7 +413,7 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
             .await
             .unwrap_or_else(|e| panic!("{file} loads: {e:?}"));
     }
-    let patient_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0";
+    let patient_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0";
     let me = "3e7a1d5c-9b2f-4c8e-a6d0-1f4b8e2c7a95";
     let identifier = |issuer: &str, id: &str| json!({ "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id, "type": "NNNLD" });
     let relationship = |at: &str, tree: &str, item: &str, class: &str, target: &str| {
@@ -558,4 +559,52 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
         .await
         .expect("the professional's registration fits");
     assert_eq!(fit, TemplateFit::Complete);
+}
+
+/// A shipped definition never changes its content under its id: openEHR
+/// versions an archetype by its id (AM `ARCHETYPE_HRID`, `release_version`),
+/// and a deployment stores a shipped definition only when its id is absent,
+/// so a change under a stored id never reaches it. `deploy/definitions/published.sha256`
+/// records the SHA-256 of every definition the binary carries, in the
+/// `sha256sum` format; a changed definition takes a new version and a new
+/// line, and no line is ever edited or removed.
+#[test]
+fn a_shipped_definition_never_changes_under_its_id() {
+    let manifest = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../deploy/definitions/published.sha256"),
+    )
+    .expect("deploy/definitions/published.sha256 is readable");
+    let published: std::collections::BTreeMap<&str, &str> = manifest
+        .lines()
+        .map(|line| line.split_once("  ").expect("a sha256sum line"))
+        .map(|(digest, name)| (name, digest))
+        .collect();
+    let carried: Vec<(&str, &str)> = ferroehr::party_binding::shipped::DEFINITIONS
+        .iter()
+        .chain(&ferroehr::party_binding::policy::DEFINITIONS)
+        .copied()
+        .collect();
+    for (name, text) in &carried {
+        let digest = crate::access_log_store::sha256_hex(text);
+        let id = name.strip_suffix(".adls").expect("an .adls file name");
+        assert_eq!(
+            text.lines().nth(1).map(str::trim),
+            Some(id),
+            "{name} declares another id than its file name"
+        );
+        assert_eq!(
+            published.get(name).copied(),
+            Some(digest.as_str()),
+            "{name} is not recorded with this content in published.sha256: a shipped \
+             definition never changes under its id, so ship the change under a new version \
+             and add its line"
+        );
+    }
+    for name in published.keys() {
+        assert!(
+            carried.iter().any(|(carried, _)| carried == name),
+            "{name} was published and is no longer carried: a published definition stays"
+        );
+    }
 }

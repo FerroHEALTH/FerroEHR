@@ -248,7 +248,7 @@ spool, so a restart loses what the spool holds.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `checkpoints` | bool | `false` | Seal the head of the access log in an `ACCESS_LOG_CHECKPOINT` signed with the keyring's OpenPGP key. On, `record.signing.mode` must be `"pgp"` with a `key_file`, or the server refuses to start. |
-| `checkpoint_interval` | duration | `"1h"` | The time between two scheduled checkpoints; a run writes one only when the chain grew. `"0s"` leaves checkpoints to `ferroehr access-log checkpoint` and `POST /admin/access_log/checkpoint`. |
+| `checkpoint_interval` | duration | `"1h"` | The time between two scheduled checkpoints; a run writes one only when the chain grew. `"0s"` leaves checkpoints to `ferroehr access-log checkpoint` and `POST /admin/access-log/checkpoint`. |
 | `sign_links` | bool | `false` | Sign the digest of each new link with the keyring's key (`ACCESS_LOG_LINK.signature`). It costs one signature per record. Needs the same key as `checkpoints`. |
 | `trusted_key_files` | list of paths | `[]` | Armored OpenPGP public certificates of the systems whose exported logs this deployment imports. An import is refused when neither these nor the keyring's own key signed its checkpoint. |
 

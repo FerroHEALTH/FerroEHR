@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! End-to-end HTTP tests for the ADMIN access-log routes (#5129):
-//! `POST /admin/access_log/checkpoint`, `POST /admin/access_log/verify` and
-//! `GET /admin/access_log/export`. **Our own extension**; no ITS-REST
+//! `POST /admin/access-log/checkpoint`, `POST /admin/access-log/verify` and
+//! `GET /admin/access-log/export`. **Our own extension**; no ITS-REST
 //! operation governs them. The signing and the transfer themselves are
 //! proven in the platform crate's `access_log_checkpoint` suite; these prove
 //! the routes and their answers.
@@ -60,7 +60,7 @@ fn entry(system_id: &str) -> AccessLogEntry {
 fn request(method: &str, path: &str) -> Request<Body> {
     Request::builder()
         .method(method)
-        .uri(format!("{EXT}/admin/access_log{path}"))
+        .uri(format!("{EXT}/admin/access-log{path}"))
         .body(Body::empty())
         .expect("request")
 }

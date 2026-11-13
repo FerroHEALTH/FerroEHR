@@ -1022,7 +1022,7 @@ profile = "sandbox"
 #? [authz.party_binding.patient]
 # An operational template rooted at `PERSON`: the subject of an EHR and the
 # target of a representation. Optional.
-#? template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0"
+#? template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0"
 # The path of the `ELEMENT` holding the patient's identifiers, each a
 # `DV_IDENTIFIER` in `details` of any type and issuer. Optional.
 #? identifier = "/details[id2]/items[id3]"
@@ -1758,7 +1758,7 @@ system_id = "ferroehr.local"
 # The time between two scheduled checkpoints
 # (`FERROEHR__AUDIT__ACCESS_LOG__CHECKPOINT_INTERVAL`); a run writes one only
 # when the chain has grown since the last. `"0s"` leaves checkpoints to
-# `ferroehr access-log checkpoint` and `POST /admin/access_log/checkpoint`.
+# `ferroehr access-log checkpoint` and `POST /admin/access-log/checkpoint`.
 # Default one hour. Optional.
 #? checkpoint_interval = "1h"
 # Sign the digest of each new link with the keyring's key

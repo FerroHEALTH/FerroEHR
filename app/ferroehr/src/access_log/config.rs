@@ -39,7 +39,7 @@ pub struct AccessLogConfig {
     /// (`FERROEHR__AUDIT__ACCESS_LOG__CHECKPOINT_INTERVAL`); a run writes one
     /// only when the chain has grown since the last. `"0s"` leaves
     /// checkpoints to `ferroehr access-log checkpoint` and
-    /// `POST /admin/access_log/checkpoint`. Default one hour.
+    /// `POST /admin/access-log/checkpoint`. Default one hour.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub checkpoint_interval: Duration,
     /// Sign the digest of each new link with the keyring's key

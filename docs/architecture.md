@@ -293,8 +293,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   walk both in position order. An entry changes only by its replacement with
   its own tombstone, which keeps its uid, time and link, so the chain verifies
   after its content is gone (`audit/0027_access_log_record.sql`,
-  `access_log::store`). `access_log_checkpoint` keeps the signed
-  `ACCESS_LOG_CHECKPOINT`s of the head, signed with the version-signing
+  `access_log::store`). Each entry states its retention when it is written
+  (`access_log::retention`: `retain_until` and the grounds `ehds-logging`'s
+  policy computes from its categories and origins, the longest when they
+  differ), and the audit store's hourly worker replaces every entry past its
+  `retain_until` by its tombstone, in any order of expiry
+  (`access_log::expiry`); an erasure a law orders takes the same path through
+  `POST /admin/access-log/erase`, which writes an access record. `access_log_checkpoint` keeps the
+  signed `ACCESS_LOG_CHECKPOINT`s of the head, signed with the version-signing
   keyring's OpenPGP key; a link's `signature` may be set once, after the
   insert that computed its digest. `access_log::checkpoint` seals and verifies
   (the chain through `audit.verify_audit_chain()`, the checkpoint and the link

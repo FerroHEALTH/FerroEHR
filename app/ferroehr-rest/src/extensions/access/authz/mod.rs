@@ -324,7 +324,7 @@ pub(crate) struct RbacGate {
 ///   nothing and answers identifiers + defect classes only, strictly less
 ///   than the admin read routes already expose. A read-only integrity
 ///   auditor is exactly who runs it (adjudicated on #2692).
-/// - `POST /admin/access_log/verify` — the access log's verification against
+/// - `POST /admin/access-log/verify` — the access log's verification against
 ///   its checkpoint (#5129): it recomputes the chain and checks signatures,
 ///   answers findings only, and moves no record; the verification cursor it
 ///   advances is the one the scheduled chain check moves.
@@ -337,7 +337,7 @@ pub(crate) struct RbacGate {
 const EXTENSION_READ_ROUTES: &[(&str, &str)] = &[
     ("POST", "/message/export"),
     ("POST", "/admin/integrity/verify"),
-    ("POST", "/admin/access_log/verify"),
+    ("POST", "/admin/access-log/verify"),
     ("POST", "/query/cohort"),
 ];
 

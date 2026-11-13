@@ -313,7 +313,7 @@ impl AccessLogStore {
     /// The tombstone keeps the entry's uid, `system_id`, `time_recorded` and
     /// link, so the chain verifies after the entry's content is gone. `None`
     /// when no entry has the uid, which is also the answer for one already
-    /// replaced.
+    /// replaced: a tombstone is never replaced again.
     ///
     /// # Errors
     /// [`AccessLogError::Invalid`] for a tombstone that breaks an invariant,
@@ -337,25 +337,115 @@ impl AccessLogStore {
         let Some(row) = row else {
             return Ok(None);
         };
-        let chain_seq: i64 = row.try_get("chain_seq")?;
         let entry: AccessLogEntry = stored(&row)?;
-        let tombstone = AccessLogTombstone {
-            uid: entry.uid,
-            system_id: entry.system_id,
-            time_recorded: entry.time_recorded,
-            link: entry.link,
-            time_removed,
-            grounds,
-        };
-        check_tombstone(&tombstone)?;
-        sqlx::query("UPDATE audit.access_log_record SET content = $2 WHERE chain_seq = $1")
-            .bind(chain_seq)
-            .bind(canonical_form(&tombstone)?)
-            .execute(&mut *tx)
-            .await?;
+        let tombstone = tombstone_of(entry, time_removed, grounds);
+        let replaced = replace(&mut tx, &[(row.try_get("chain_seq")?, &tombstone)]).await?;
         tx.commit().await?;
-        Ok(Some(tombstone))
+        Ok(replaced.then_some(tombstone))
     }
+
+    /// Replace up to `limit` entries whose retention has ended by their
+    /// tombstones, removed at `time_removed`, and return the tombstones.
+    ///
+    /// An entry has expired once `today` is past its `retain_until`, the last
+    /// day it is kept (`docs/plans/access-log.md` §Retention); an entry that
+    /// states none is kept without end. Entries expire in any order, in the
+    /// middle of the log as at its start, and each tombstone names the grounds
+    /// of the period that ended. The entries come oldest end first and one
+    /// call replaces them in one transaction; a caller repeats it until fewer
+    /// than `limit` come back. Rows another run holds are skipped, so two
+    /// replicas never replace the same entry.
+    ///
+    /// # Errors
+    /// [`AccessLogError::Invalid`] for a tombstone that breaks an invariant,
+    /// and the store and read errors of [`Self::read`].
+    pub async fn tombstone_expired(
+        &self,
+        today: jiff::civil::Date,
+        time_removed: &DvDateTime,
+        limit: u16,
+    ) -> Result<Vec<AccessLogTombstone>, AccessLogError> {
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
+        let rows = sqlx::query(
+            "SELECT chain_seq, content, algorithm, previous_digest, content_digest, digest, \
+             signature FROM audit.access_log_record \
+             WHERE record_type = 'ACCESS_LOG_ENTRY' AND retain_until < $1::text::date \
+             ORDER BY retain_until, chain_seq LIMIT $2 FOR UPDATE SKIP LOCKED",
+        )
+        .bind(today.to_string())
+        .bind(i64::from(limit))
+        .fetch_all(&mut *tx)
+        .await?;
+        let mut tombstones = Vec::with_capacity(rows.len());
+        for row in &rows {
+            let entry: AccessLogEntry = stored(row)?;
+            let grounds = entry.retention.grounds.clone();
+            tombstones.push((
+                row.try_get::<i64, _>("chain_seq")?,
+                tombstone_of(entry, time_removed.clone(), grounds),
+            ));
+        }
+        let replacing = tombstones
+            .iter()
+            .map(|(chain_seq, tombstone)| (*chain_seq, tombstone))
+            .collect::<Vec<_>>();
+        replace(&mut tx, &replacing).await?;
+        tx.commit().await?;
+        Ok(tombstones
+            .into_iter()
+            .map(|(_, tombstone)| tombstone)
+            .collect())
+    }
+}
+
+/// The tombstone of `entry`, removed at `time_removed` on `grounds`: its uid,
+/// `system_id`, `time_recorded` and link, and nothing else of it.
+fn tombstone_of(
+    entry: AccessLogEntry,
+    time_removed: DvDateTime,
+    grounds: NonEmptyVec<DvCodedText>,
+) -> AccessLogTombstone {
+    AccessLogTombstone {
+        uid: entry.uid,
+        system_id: entry.system_id,
+        time_recorded: entry.time_recorded,
+        link: entry.link,
+        time_removed,
+        grounds,
+    }
+}
+
+/// Write each tombstone over the entry at its chain position on `tx`, in one
+/// statement, after checking every one against the draft's invariants;
+/// whether any was written.
+///
+/// The table's update trigger admits the change only from an entry to its
+/// own tombstone (`migrations/audit/0027_access_log_record.sql`).
+async fn replace(
+    tx: &mut PgConnection,
+    tombstones: &[(i64, &AccessLogTombstone)],
+) -> Result<bool, AccessLogError> {
+    if tombstones.is_empty() {
+        return Ok(false);
+    }
+    let mut positions = Vec::with_capacity(tombstones.len());
+    let mut contents = Vec::with_capacity(tombstones.len());
+    for (chain_seq, tombstone) in tombstones {
+        check_tombstone(tombstone)?;
+        positions.push(*chain_seq);
+        contents.push(canonical_form(*tombstone)?);
+    }
+    sqlx::query(
+        "UPDATE audit.access_log_record r SET content = t.content \
+         FROM unnest($1::bigint[], $2::text[]) AS t(chain_seq, content) \
+         WHERE r.chain_seq = t.chain_seq",
+    )
+    .bind(&positions)
+    .bind(&contents)
+    .execute(&mut *tx)
+    .await?;
+    Ok(true)
 }
 
 /// The link the columns of `row` hold.
