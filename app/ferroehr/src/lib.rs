@@ -47,6 +47,8 @@
 // Doctests are copy-paste templates: they must use `?`, never unwrap
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
 #![doc(test(attr(deny(warnings))))]
+pub mod access_control_draft;
+pub mod access_control_invariants;
 pub mod access_log_draft;
 pub mod access_log_invariants;
 pub mod aql;
@@ -54,6 +56,7 @@ pub mod banner;
 pub mod config;
 pub mod db;
 pub mod decommission;
+pub mod draft_invariants;
 pub mod error;
 pub mod extensions;
 pub mod identifier_protection;

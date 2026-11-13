@@ -36,6 +36,7 @@
               approval 2026-11-02, #4767)"
 )]
 
+mod access_control_draft;
 mod access_delay_sinks;
 mod access_event_fail_closed;
 mod access_log_draft;
