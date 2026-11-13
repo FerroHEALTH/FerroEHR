@@ -105,6 +105,11 @@ pub(crate) struct Facts {
     pub(crate) performer: Option<String>,
     /// The `time_validity` of a `ROLE`.
     pub(crate) validity: Option<Value>,
+    /// The client identifiers and granted operations the grant rows read.
+    pub(crate) grants: super::grants::derive::GrantFacts,
+    /// What makes the version a policy party, whatever the mapping
+    /// ([`crate::party_binding::policy_mark::policy_content`]).
+    pub(crate) policy: Option<crate::party_binding::policy_mark::PolicyContent>,
 }
 
 impl Facts {
@@ -118,6 +123,8 @@ impl Facts {
             .map(canonical_key);
         let mut facts = Self {
             template,
+            grants: super::grants::derive::GrantFacts::of(kind, body),
+            policy: crate::party_binding::policy_mark::policy_content(body),
             ..Self::default()
         };
         facts.relationships(kind, body, mapping);
@@ -132,6 +139,15 @@ impl Facts {
                     .and_then(Value::as_str)
                     .map(str::to_owned);
                 facts.validity = body.get("time_validity").cloned();
+            }
+            // NOTE: a standalone relationship container is listed at its target
+            // like an inline one (RM demographic master02 §Party Relationships): our own design.
+            Kind::PartyRelationship => {
+                facts.targets.extend(
+                    body.pointer("/target/id/value")
+                        .and_then(Value::as_str)
+                        .and_then(container),
+                );
             }
             _ => {}
         }

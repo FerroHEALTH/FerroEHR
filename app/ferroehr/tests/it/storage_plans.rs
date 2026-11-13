@@ -76,6 +76,11 @@ struct Seeded {
 /// pruned the partition or merely found nothing in it — so the archived EHR is
 /// part of the fixture, not decoration.
 async fn seed(svc: &FerroEhrService, pool: &PgPool) -> Seeded {
+    seed_with_history(svc, pool, 2).await
+}
+
+/// [`seed`] with `supersessions` superseding versions on each composition.
+async fn seed_with_history(svc: &FerroEhrService, pool: &PgPool, supersessions: u32) -> Seeded {
     let mut first: Option<Seeded> = None;
     for index in 0..8 {
         let ehr = crate::fixtures::create_ehr(svc).await;
@@ -89,7 +94,7 @@ async fn seed(svc: &FerroEhrService, pool: &PgPool) -> Seeded {
         // Each supersession carries content of its own, so every version
         // holds its own node rows: content equal to the preceding tip's would
         // share that tip's rows (#4415) and leave the seed one tree per object.
-        for supersession in 1..=2 {
+        for supersession in 1..=supersessions {
             let body = composition(&format!("plan shapes {index} supersession {supersession}"));
             committed = svc
                 .update_composition(ehr, committed.vo_id, uv(&body, "251", Some(&latest)))
@@ -161,6 +166,8 @@ struct Scan {
     relation: String,
     /// The index the node used, where it used one.
     index: Option<String>,
+    /// The condition the node bound that index with, where it used one.
+    index_cond: Option<String>,
     /// Rows the node returned, averaged over its loops — `PostgreSQL` 18
     /// reports this as a fraction rather than an integer
     /// (<https://www.postgresql.org/docs/18/sql-explain.html>).
@@ -197,6 +204,10 @@ fn scans(plan: &Value) -> Vec<Scan> {
                     .get("Index Name")
                     .and_then(Value::as_str)
                     .map(ToOwned::to_owned),
+                index_cond: node
+                    .get("Index Cond")
+                    .and_then(Value::as_str)
+                    .map(ToOwned::to_owned),
                 rows: node
                     .get("Actual Rows")
                     .and_then(Value::as_f64)
@@ -224,6 +235,10 @@ fn scans(plan: &Value) -> Vec<Scan> {
             && last.index.is_none()
         {
             last.index = Some(index.to_owned());
+            last.index_cond = node
+                .get("Index Cond")
+                .and_then(Value::as_str)
+                .map(ToOwned::to_owned);
         }
         for child in node
             .get("Plans")
@@ -250,11 +265,16 @@ fn render(scans: &[Scan]) -> String {
         .iter()
         .map(|scan| {
             format!(
-                "  {} on {} via {} → {} rows{}",
+                "  {} on {} via {}{} → {} rows over {} loops{}",
                 scan.node_type,
                 scan.relation,
                 scan.index.as_deref().unwrap_or("(no index)"),
+                scan.index_cond
+                    .as_deref()
+                    .map(|cond| format!(" {cond}"))
+                    .unwrap_or_default(),
                 scan.rows,
+                scan.loops,
                 if scan.executed {
                     ""
                 } else {
@@ -818,6 +838,21 @@ fn aql_sql_with(
     ehr_ids: Vec<EhrId>,
     limit: Option<i64>,
 ) -> ferroehr::aql::sql::PreparedQuery {
+    aql_sql_for(
+        aql,
+        params,
+        (ehr_ids, limit),
+        ferroehr::aql::sql::PolicyParties::Served,
+    )
+}
+
+/// [`aql_sql_with`] for a caller `policy_parties` describes.
+fn aql_sql_for(
+    aql: &str,
+    params: &Params,
+    (ehr_ids, limit): (Vec<EhrId>, Option<i64>),
+    policy_parties: ferroehr::aql::sql::PolicyParties,
+) -> ferroehr::aql::sql::PreparedQuery {
     let ast = openehr_query::parser::parse_str(aql).expect("the AQL parses");
     let ir = ferroehr::aql::plan(&ast, params, SpecProfile::default()).expect("the AQL plans");
     let ctx = SqlCtx {
@@ -829,6 +864,7 @@ fn aql_sql_with(
         limit,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties,
     };
     ferroehr::aql::sql::build(&ir, params, &ctx).expect("the AQL lowers to SQL")
 }
@@ -846,6 +882,13 @@ async fn explain_aql(pool: &PgPool, prepared: ferroehr::aql::sql::PreparedQuery)
     tx.rollback().await.expect("roll the explain back");
     plan
 }
+
+/// Supersessions of each composition in the population test's seed: a
+/// history long enough that reading every version costs the planner more
+/// than probing one per object, as it does on a store whose objects are
+/// edited (#3453). Over the default seed the two plans tie, and the
+/// planner read the whole partition once (#5464).
+const LONG_HISTORY: u32 = 12;
 
 /// The CONTAINS chain both AQL tests run: every COMPOSITION of the store.
 const CONTAINS_AQL: &str = "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c";
@@ -903,7 +946,7 @@ async fn aql_over_the_population_reads_the_hot_partition_only() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
-    seed(&svc, &pool).await;
+    seed_with_history(&svc, &pool, LONG_HISTORY).await;
 
     let plan = explain_aql(&pool, aql_sql(CONTAINS_AQL, Vec::new())).await;
     let scans = scans(&plan);
@@ -922,6 +965,7 @@ async fn aql_over_the_population_reads_the_hot_partition_only() {
         render(&scans)
     );
     assert_head_join_by_key(&scans);
+    assert_version_probed_per_object(&scans);
     // H9: nothing attaches a row-security qual to the population scan.
     assert_no_policy_qual(&plan, &scans);
 }
@@ -1000,11 +1044,10 @@ async fn a_population_count_of_whole_objects_reads_no_node() {
 /// The `LATEST_VERSION` binding under `CONTAINS` costs one key probe per
 /// object, not a walk of its trunk (#3453).
 ///
-/// The head row is reached by `pk_vo_head`, and the version row through its
-/// primary key with `sys_version` bound, never through the at-time index,
-/// which is the only index a `vo_id`-alone probe can use and which made the
-/// planner read every trunk version of the object per node row (75 601 of
-/// 93 255 buffers in the class-`s` population `CONTAINS` recorded on #3350).
+/// The head row is reached by `pk_vo_head`, and the version row by a key
+/// probe, never through the at-time index, which made the planner read every
+/// trunk version of the object per node row (75 601 of 93 255 buffers in the
+/// class-`s` population `CONTAINS` recorded on #3350).
 /// A probe of a row by a three-column key touches the index's root and leaf
 /// and the heap page: a ceiling of eight buffers a loop holds that reading
 /// and fails the walk, whose per-loop cost was about twenty-two.
@@ -1032,6 +1075,28 @@ fn assert_head_join_by_key(scans: &[Scan]) {
             render(scans)
         );
     }
+}
+
+/// The version row of each head is probed with its object's `vo_id` bound
+/// (#3453, #5464).
+///
+/// [`assert_head_join_by_key`] prices a probe at eight buffers a loop, so the
+/// scan it prices must be one: a scan of the partition, run once, costs per
+/// loop the partition's size, which no key lookup decides.
+fn assert_version_probed_per_object(scans: &[Scan]) {
+    let versions = on(scans, "version_hot");
+    assert!(
+        !versions.is_empty()
+            && versions.iter().all(|version| {
+                version
+                    .index_cond
+                    .as_deref()
+                    .is_some_and(|cond| cond.contains("(vo_id = "))
+            }),
+        "#3453: the version row is probed by its object's key, not read off a scan of \
+         every version:\n{}",
+        render(scans)
+    );
 }
 
 /// The newest compositions of the population, the first page: the ordering
@@ -1838,6 +1903,134 @@ async fn a_lookup_by_a_person_identifier_reads_the_one_person() {
         let prepared = aql_sql_with(PERSON_LOOKUP_AQL, &params, Vec::new(), limit);
         let plan = explain_aql(&pools.party, prepared).await;
         assert_value_lookup(name, &plan, PERSONS);
+    }
+}
+
+/// The party classes the root lookup seeds, each with its kind.
+const SEEDED_PARTIES: [(&str, ferroehr::service::demographic::types::PartyKind); 4] = [
+    (
+        "PERSON",
+        ferroehr::service::demographic::types::PartyKind::Person,
+    ),
+    (
+        "ORGANISATION",
+        ferroehr::service::demographic::types::PartyKind::Organisation,
+    ),
+    (
+        "GROUP",
+        ferroehr::service::demographic::types::PartyKind::Group,
+    ),
+    (
+        "AGENT",
+        ferroehr::service::demographic::types::PartyKind::Agent,
+    ),
+];
+
+/// [`person_with_identifier`] as a party of `class`.
+fn party_with_identifier(class: &str, index: u32) -> Value {
+    let mut body = person_with_identifier(index);
+    let archetype = format!(
+        "openEHR-DEMOGRAPHIC-{class}.{}.v1",
+        class.to_ascii_lowercase()
+    );
+    body["_type"] = json!(class);
+    body["archetype_node_id"] = json!(archetype);
+    body["archetype_details"]["archetype_id"]["value"] = json!(archetype);
+    body
+}
+
+/// A standalone `PARTY_RELATIONSHIP` from and to the PERSON `person`,
+/// carrying the identifier of `index` in its `details`.
+fn relationship_with_identifier(person: VoId, index: u32) -> Value {
+    let archetype = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.relationship.v1";
+    let reference = json!({ "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+        "id": { "_type": "HIER_OBJECT_ID", "value": person.to_string() } });
+    json!({
+        "_type": "PARTY_RELATIONSHIP",
+        "archetype_node_id": archetype,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "rm_version": "1.1.0" },
+        "name": { "_type": "DV_TEXT", "value": format!("Relationship {index}") },
+        "details": person_with_identifier(index)["details"].clone(),
+        "source": reference.clone(),
+        "target": reference
+    })
+}
+
+/// A lookup by an identifier value under each demographic root, concrete,
+/// abstract and the standalone `PARTY_RELATIONSHIP`, reads the one object
+/// through `idx_node_hot_value_search` (#5474), for an administrator and,
+/// under the policy filter, for any other caller.
+///
+/// The store holds fifty objects of each class, numbered apart, and the
+/// statistics are taken after they land, so the plan is the one they choose.
+#[tokio::test]
+async fn a_lookup_under_every_demographic_root_reads_the_one_object() {
+    use ferroehr::aql::sql::PolicyParties;
+    const EACH: u32 = 50;
+    const MIDDLE: u32 = 25;
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let pools = ferroehr::db::domain::DomainPools::from_shared(&pool);
+    let svc = FerroEhrService::new(&pools);
+    let mut index = 0;
+    let mut anchor = None;
+    for (class, kind) in SEEDED_PARTIES {
+        for _ in 0..EACH {
+            let created = svc
+                .party_create(
+                    kind,
+                    WriteRequest::new(
+                        openehr_its::json::from_canonical_value(&party_with_identifier(
+                            class, index,
+                        ))
+                        .expect("the fixture is a party"),
+                    ),
+                )
+                .await
+                .expect("create a party");
+            anchor.get_or_insert(crate::fixtures::written_vo(&created));
+            index += 1;
+        }
+    }
+    let person = anchor.expect("a PERSON was seeded");
+    for _ in 0..EACH {
+        svc.party_relationship_create(WriteRequest::new(
+            openehr_its::json::from_canonical_value(&relationship_with_identifier(person, index))
+                .expect("the fixture is a PARTY_RELATIONSHIP"),
+        ))
+        .await
+        .expect("create a relationship");
+        index += 1;
+    }
+    pools
+        .party
+        .execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seeded parties");
+
+    // One object of each class sits in the middle of its class's numbers.
+    for (class, wanted) in [
+        ("GROUP", 2 * EACH + MIDDLE),
+        ("AGENT", 3 * EACH + MIDDLE),
+        ("ACTOR", 2 * EACH + MIDDLE),
+        ("PARTY", MIDDLE),
+        ("PARTY_RELATIONSHIP", 4 * EACH + MIDDLE),
+    ] {
+        let aql = format!(
+            "SELECT p/uid/value, id/items[at0001]/value/type \
+             FROM {class} p CONTAINS CLUSTER id[{PERSON_IDENTIFIER_CLUSTER}] \
+             WHERE id/items[at0001]/value/id = $v"
+        );
+        let params = Params::default().with("v", ParamValue::Str(person_identifier(wanted)));
+        for policy in [PolicyParties::Served, PolicyParties::Hidden] {
+            for limit in [None, Some(10)] {
+                let prepared = aql_sql_for(&aql, &params, (Vec::new(), limit), policy);
+                let plan = explain_aql(&pools.party, prepared).await;
+                assert_value_lookup(&format!("{class} ({policy:?}, {limit:?})"), &plan, index);
+            }
+        }
     }
 }
 

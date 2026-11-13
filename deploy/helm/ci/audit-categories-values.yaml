@@ -2,9 +2,9 @@
 # shape that needs the access-log horizon in calendar years: the EHDS floor
 # (three years in every Member State) and the SGB V § 309 Abs. 1 ceiling (three
 # years) leave no day count that satisfies both, so the horizon is
-# `retention_years: 3`. It also carries an EHDS priority-category map, so the
-# render and the boot check exercise `[audit.categories]` with keys that need
-# TOML quoting (a template id with spaces, archetype ids with dots).
+# `retention_years: 3`. The EHDS priority-category map it once carried is the
+# audit category admin register now, written through the admin API once the
+# server runs, so no chart value carries it.
 #
 # The identifier rules are narrowed to the German one on purpose: the shipped
 # set names NL as well, whose five-year floor would refuse a three-year horizon.
@@ -23,12 +23,11 @@ config:
   # this overlay renders another surface and runs no identity source.
   auth:
     issuer:
-      # One table per issuer: `kind` says whose tokens it signs, `profile`
-      # the preset of their shape, and a persons token is admitted only
-      # through a client in `first_party_clients`.
+      # One table per issuer: `kind` says whose tokens it signs, and a
+      # persons token is admitted only through a client in
+      # `first_party_clients`.
       - issuer: https://idp.example.com/realms/ferroehr
         kind: persons
-        profile: rfc9068
         audience: [ferroehr]
         first_party_clients: [ferroehr-viewer]
     # The issuer's logins bind to the PERSON carrying their `sub` under this
@@ -44,11 +43,10 @@ config:
       # The healthcare provider this deployment acts for (an example id
       # under the OID arc 2.999).
       provider: { issuer: "urn:oid:2.999.7.9", id: "audit-categories" }
-      # The party mapping over the professional PERSON and ROLE pair of
-      # deploy/definitions/professional/, which an install stores before boot
-      # through `definitions.files` (basic-auth-values.yaml carries them). The
-      # key is written under the identifier_type the [[auth.party]] table above
-      # looks logins up under, or no login of the issuer binds.
+      # The professional PERSON of the default party mapping, its key written
+      # under the identifier_type the [[auth.party]] table above looks logins
+      # up under, or no login of the issuer binds; the rest of the mapping is
+      # the default.
       person:
         template:
           - template_id: openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0
@@ -56,8 +54,6 @@ config:
             key: { path: "/details[id2]/items[id3]", type: uuid }
             user_name: { path: "/details[id2]/items[id3]", type: scim_user_name }
             external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
-      professional_role:
-        template_id: openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0
   privacy:
     identifier_scan:
       rules: [de-kvnr]
@@ -65,13 +61,6 @@ config:
     store:
       retention: P3Y
       sgb_v_309_controller: true
-    categories:
-      templates:
-        "International Patient Summary": [Patient-Summaries]
-        "Laboratory Report": [Laboratory-Reports]
-      archetypes:
-        openEHR-EHR-COMPOSITION.report-result.v1: [Laboratory-Reports]
-        openEHR-EHR-COMPOSITION.encounter.v1: none
   record:
     subject_index: local
 

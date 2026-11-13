@@ -37,11 +37,9 @@ services:
     environment:
       # Traces AND metrics to the LGTM collector ([telemetry.otlp]). With no
       # endpoint nothing is exported.
-      FERROEHR__TELEMETRY__OTLP__ENDPOINT: http://otel-lgtm:4317
       # The push carries every family the Prometheus surface exposes: one meter
       # provider feeds both, so a metric cannot reach one and not the other.
-      FERROEHR__TELEMETRY__OTLP__METRICS: "true"
-      FERROEHR__TELEMETRY__OTLP__SAMPLE_RATIO: "1.0"
+      FERROEHR__TELEMETRY__OTLP__ENDPOINT: http://otel-lgtm:4317
       FERROEHR__TELEMETRY__ENVIRONMENT: dev
       # Structured stdout so the bundled log pipeline ingests fields, not text
       # (overrides the root stack's dev-friendly `pretty`).

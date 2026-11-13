@@ -540,6 +540,7 @@ fn app_config() -> AppConfig {
     {
         let mut c = AppConfig {
             server: ferrohealth_server::section::ServerSection::default(),
+            public_root: None,
             api: ApiConfig {
                 openapi_ui: AccessLevel::Public,
                 ..Default::default()
@@ -550,8 +551,6 @@ fn app_config() -> AppConfig {
             assurance: ferrohealth_smart::assurance::AssuranceSection::default(),
             spec_profile: ferroehr::config::profile::SpecProfile::default(),
             party_binding: ferroehr::config::binding::PartyBindingConfig::default(),
-            system_clients: Vec::new(),
-            agreements: Vec::new(),
         };
         c.api.admin = true;
         c.auth.smart = SmartConfig {

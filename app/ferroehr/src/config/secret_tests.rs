@@ -276,13 +276,10 @@ fn url_userinfo_reaches_no_rendering() {
         ..crate::system_log::config::SyslogConfig::default()
     });
     c.auth.smart.platform_base_url = Some(leaky(17));
-    c.auth.smart.public_base_url = Some(leaky(18));
-    c.auth.scim = Some(scim::ScimConfig {
-        public_base_url: Some(leaky(19)),
-        ..scim::ScimConfig::default()
-    });
+    c.server.public_base_url = Some(leaky(18));
     // URL 11 was the usage report endpoint, whose type refuses userinfo, so it
-    // can hold no sentinel; URL 7 was the removed event broker.
+    // can hold no sentinel; URL 7 was the removed event broker; URL 19 was
+    // `[auth.scim] public_base_url`, which URL 18 replaces.
     assert!(
         ferrohealth_usage_report::section::Endpoint::new(
             "https://u11:URL_PW_SENTINEL_11@h11:1/p11"
@@ -291,21 +288,12 @@ fn url_userinfo_reaches_no_rendering() {
         "the usage report endpoint refuses userinfo"
     );
 
-    let toml = rendered(&c);
-    let table = c.to_redacted_table().expect("table").to_string();
-    let json = serde_json::to_string(&c.to_redacted_json().expect("json")).expect("json");
-    let debug = format!("{c:?}");
-    for (surface, rendered) in [
-        ("toml", &toml),
-        ("table", &table),
-        ("json", &json),
-        ("debug", &debug),
-    ] {
+    for (surface, rendered) in surfaces(&c) {
         assert!(
             !rendered.contains("URL_PW_SENTINEL"),
             "URL userinfo leaked into the {surface} rendering: {rendered}"
         );
-        for n in (1..=21).filter(|n| *n != 7 && *n != 11) {
+        for n in (1..=21).filter(|n| ![7, 11, 19].contains(n)) {
             assert!(
                 rendered.contains(&format!("https://***@h{n}:1/p{n}")),
                 "URL {n} lost its host and path in the {surface} rendering: {rendered}"
@@ -314,13 +302,27 @@ fn url_userinfo_reaches_no_rendering() {
     }
 }
 
-/// A refusal of an issuer or a published SMART URL never prints the
+/// Every rendering of `c` an operator reads, by name: the TOML of `config
+/// check`, the redacted table and JSON, and `Debug`.
+fn surfaces(c: &FerroEhrConfig) -> [(&'static str, String); 4] {
+    [
+        ("toml", rendered(c)),
+        ("table", c.to_redacted_table().expect("table").to_string()),
+        (
+            "json",
+            serde_json::to_string(&c.to_redacted_json().expect("json")).expect("json"),
+        ),
+        ("debug", format!("{c:?}")),
+    ]
+}
+
+/// A refusal of an issuer or the published public URL never prints the
 /// userinfo it carries.
 #[test]
 fn an_issuer_refusal_masks_userinfo() {
     let mut c = standalone();
     c.auth.smart.discovery = true;
-    c.auth.smart.public_base_url = Some(SecretUrl::new("https://a:SMART_PW_SENTINEL@cdr.example"));
+    c.server.public_base_url = Some(SecretUrl::new("https://a:SMART_PW_SENTINEL@cdr.example"));
     c.auth.shared.issuer = auth_section::machines("https://b:OIDC_PW_SENTINEL@idp.example/r");
     let text = c.validate().expect_err("refused").to_string();
     assert!(!text.contains("SMART_PW_SENTINEL"), "{text}");
@@ -395,4 +397,151 @@ fn redacted_json_masks_every_secret_field() {
         value["record"]["multimedia"]["access_key_id"],
         "AKIA_PUBLIC_ID"
     );
+}
+
+/// The `[auth]` section every key that names an issuer is written under:
+/// one trusted persons issuer, with no userinfo.
+const NAMED_ISSUER: &str = "[auth]\nenabled = true\n\n[[auth.issuer]]\nissuer = \"https://idp.example/realms/ferroehr\"\nkind = \"persons\"\naudience = [\"ferroehr\"]\n";
+
+/// Loads `[auth]` with `table` beside its trusted issuer, and asserts the
+/// password `sentinel` in the table's issuer reaches no rendering of the
+/// tree and no refusal, while the issuer still renders under `host` with
+/// its userinfo masked (RFC 3986 §3.2.1).
+fn assert_table_issuer_masked(table: &str, sentinel: &str, host: &str) {
+    let refused = rendered_masked(table, sentinel, host)
+        .validate()
+        .expect_err("the issuer is not trusted")
+        .to_string();
+    assert!(
+        refused.contains(host),
+        "the refusal names the issuer: {refused}"
+    );
+    assert!(!refused.contains(sentinel), "{refused}");
+}
+
+/// Loads `[auth]` with `table` beside its trusted issuer, asserts every
+/// rendering shows the issuer under `host` with its userinfo masked and
+/// never the password `sentinel`, and returns the configuration.
+fn rendered_masked(table: &str, sentinel: &str, host: &str) -> FerroEhrConfig {
+    let file = toml_file(&format!("{NAMED_ISSUER}\n{table}"));
+    let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
+    for (surface, shown) in surfaces(&c) {
+        assert!(
+            !shown.contains(sentinel),
+            "the issuer's password leaked into the {surface} rendering: {shown}"
+        );
+        assert!(
+            shown.contains(&format!("https://***@{host}/realms/ferroehr")),
+            "the issuer lost its host in the {surface} rendering: {shown}"
+        );
+    }
+    c
+}
+
+/// An `[[auth.attributes]]` issuer renders and refuses with its userinfo
+/// masked.
+#[test]
+fn an_attributes_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[[auth.attributes]]\nissuer = \"https://u:ATTRIBUTES_PW_SENTINEL@attributes.example/realms/ferroehr\"\nmapping = \"iua\"\n",
+        "ATTRIBUTES_PW_SENTINEL",
+        "attributes.example",
+    );
+}
+
+/// An `[[auth.federation]]` issuer renders and refuses with its userinfo
+/// masked.
+#[test]
+fn a_federation_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[[auth.federation]]\nissuer = \"https://u:FEDERATION_PW_SENTINEL@federation.example/realms/ferroehr\"\ncontact_point = false\n",
+        "FEDERATION_PW_SENTINEL",
+        "federation.example",
+    );
+}
+
+/// An `[[auth.party]]` issuer renders and refuses with its userinfo masked.
+#[test]
+fn a_party_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[[auth.party]]\nissuer = \"https://u:PARTY_PW_SENTINEL@party.example/realms/ferroehr\"\nidentifier_issuer = \"urn:example:login\"\nidentifier_type = \"guid\"\n",
+        "PARTY_PW_SENTINEL",
+        "party.example",
+    );
+}
+
+/// An `auth.scopeless_subjects` issuer renders and refuses with its
+/// userinfo masked.
+#[test]
+fn a_scopeless_subject_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[[auth.scopeless_subjects]]\nissuer = \"https://u:SCOPELESS_PW_SENTINEL@scopeless.example/realms/ferroehr\"\nsub = \"svc\"\n",
+        "SCOPELESS_PW_SENTINEL",
+        "scopeless.example",
+    );
+}
+
+/// The removed `[[authz.federation.agreement]]` table, whose agreements are
+/// now CDR data, is refused as an unknown key, and the refusal never renders
+/// the password of the issuer it held (#5440).
+#[test]
+fn a_removed_agreement_table_is_refused_without_rendering_its_userinfo() {
+    let file = toml_file(&format!(
+        "{NAMED_ISSUER}\n[[authz.federation.agreement]]\nissuer = \"https://u:AGREEMENT_PW_SENTINEL@agreement.example/realms/ferroehr\"\n"
+    ));
+    let refused = assemble(Some(file.path()), &env(&[]), &[])
+        .expect_err("the removed table is an unknown key")
+        .to_string();
+    assert!(refused.contains("federation"), "{refused}");
+    assert!(!refused.contains("AGREEMENT_PW_SENTINEL"), "{refused}");
+}
+
+/// An `[[authz.party_binding.issuer]]` issuer renders and refuses with its
+/// userinfo masked.
+#[test]
+fn a_party_binding_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[[authz.party_binding.issuer]]\nissuer = \"https://u:BINDING_PW_SENTINEL@binding.example/realms/ferroehr\"\nidp_claim = \"idp\"\n",
+        "BINDING_PW_SENTINEL",
+        "binding.example",
+    );
+}
+
+/// The removed `[[authz.system_client]]` table is refused as an unknown key,
+/// and the refusal never carries its issuer's userinfo (#5436).
+#[test]
+fn a_removed_system_client_table_is_refused_without_its_userinfo() {
+    let refused = tests::file_refusal(&format!(
+        "{NAMED_ISSUER}\n[[authz.system_client]]\nissuer = \"https://u:SYSTEM_PW_SENTINEL@system.example/realms/ferroehr\"\nclient_id = \"lab\"\n"
+    ));
+    assert!(refused.contains("system_client"), "{refused}");
+    assert!(!refused.contains("SYSTEM_PW_SENTINEL"), "{refused}");
+}
+
+/// An `authz.rbac.role_issuers` issuer renders and refuses with its userinfo
+/// masked.
+#[test]
+fn a_role_issuer_never_renders_its_userinfo() {
+    assert_table_issuer_masked(
+        "[authz.rbac]\nrole_issuers = [\"https://u:ROLE_PW_SENTINEL@role.example/realms/ferroehr\"]\n",
+        "ROLE_PW_SENTINEL",
+        "role.example",
+    );
+}
+
+/// An `auth.smart.patient_issuers` issuer renders with its userinfo masked,
+/// and no refusal of the configuration carries it.
+#[test]
+fn a_patient_issuer_never_renders_its_userinfo() {
+    let c = rendered_masked(
+        "[auth.smart]\npatient_issuers = [\"https://u:PATIENT_PW_SENTINEL@patient.example/realms/ferroehr\"]\n",
+        "PATIENT_PW_SENTINEL",
+        "patient.example",
+    );
+    if let Err(refused) = c.validate() {
+        assert!(
+            !refused.to_string().contains("PATIENT_PW_SENTINEL"),
+            "{refused}"
+        );
+    }
 }

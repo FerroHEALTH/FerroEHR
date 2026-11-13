@@ -9,6 +9,8 @@
 
 use axum::extract::{MatchedPath, OriginalUri, Request};
 use axum::response::{IntoResponse, Response};
+use ferroehr::party_binding::grants::capabilities::Capabilities;
+use ferroehr::party_binding::grants::operation::Operation;
 use http::header;
 use openehr_its::rest::runtime::ApiError;
 
@@ -22,7 +24,7 @@ use ferroehr::system_log::event::ActorAuthentication;
 
 use super::assurance::{PatientDataGate, PatientDataRefusal};
 use super::refusal::count_auth_failure;
-use super::{AuthError, AuthLayer, AuthMethod, Principal, mechanism_label};
+use super::{AuthError, AuthLayer, AuthMethod, Principal};
 
 /// Runs the RBAC gate over an authenticated caller: the matched operation's
 /// class against the caller's roles, then the read-only restriction.
@@ -79,7 +81,9 @@ pub(super) fn rbac_refusal(
 /// target is not the EHR of the token's launch context, is a `403` with the
 /// `insufficient_scope` challenge (RFC 6750 §3.1) that names no scope,
 /// attributed to the caller. A composition operation is checked by the PEP once
-/// its template is known.
+/// its template is known. The DEMOGRAPHIC API admits a client whose `ACTOR`
+/// the CDR grants `access_demographic` (`granted`), and otherwise needs the
+/// product scope.
 ///
 /// The API router is nested under the base path, so the request URI this layer
 /// sees has the base stripped while the matched template carries it; the path
@@ -88,11 +92,18 @@ pub(super) fn smart_refusal(
     layer: &AuthLayer,
     req: &Request,
     principal: &Principal,
+    granted: &Capabilities,
 ) -> Option<Response> {
     let (matched, uri) = route(req);
-    let need = layer.smart.need(req.method(), matched, uri.path());
-    let Need::Now(requirement) = need else {
-        return None;
+    let requirement = match layer.smart.need(req.method(), matched, uri.path()) {
+        Need::Now(requirement) => requirement,
+        Need::Demographic(_)
+            if super::grants::client_holds(granted, Operation::AccessDemographic) =>
+        {
+            return None;
+        }
+        Need::Demographic(product) => product,
+        Need::Composition(_) => return None,
     };
     let reason = match crate::smart::routes::check(
         &requirement,
@@ -166,4 +177,12 @@ pub(super) fn patient_data_refusal(
     resp.extensions_mut().insert(principal.clone());
     resp.extensions_mut().insert(actor);
     resp
+}
+
+/// The `mechanism` metric label for a known authenticated principal.
+fn mechanism_label(method: AuthMethod) -> &'static str {
+    match method {
+        AuthMethod::Basic => "basic",
+        AuthMethod::Bearer => "bearer",
+    }
 }

@@ -1,0 +1,245 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4d38c5c3-f6d0-48cb-8efe-cde95b2b5933; build_uid=f16d2ce0-a394-46c0-958f-7d3e35276c63)
+    openEHR-EHR-CLUSTER.dimensions.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jasmin Buck, Sebastian Garde">
+                ["organisation"] = <"University of Heidelberg, Central Queensland University">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F9C10204A73C060AE804A67360E2F34D">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Beschreibung der Ausmaße eines betrachteten Teils.">
+            keywords = <"Größe", "Volumen">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the dimensions of a body part examined or viewed.">
+            keywords = <"size", "volume", "area", "width", "length">
+            use = <"Use as a re-useable cluster in Entry archetypes and other cluster archetypes that record measurment of body parts.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Dimensions
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Circumference
+                value matches {
+                    DV_QUANTITY[at9004] matches {
+                        property matches {[at9000]}    -- Length
+                        [units] matches {
+                            [{"µm"}],
+                            [{"mm"}],
+                            [{"cm"}],
+                            [{"m"}],
+                            [{"ft"}],
+                            [{"in"}],
+                            [{"yd"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Length
+                value matches {
+                    DV_QUANTITY[at9005] matches {
+                        property matches {[at9000]}    -- Length
+                        [units] matches {
+                            [{"µm"}],
+                            [{"mm"}],
+                            [{"cm"}],
+                            [{"m"}],
+                            [{"ft"}],
+                            [{"in"}],
+                            [{"yd"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Breadth
+                value matches {
+                    DV_QUANTITY[at9006] matches {
+                        property matches {[at9000]}    -- Length
+                        [units] matches {
+                            [{"µm"}],
+                            [{"mm"}],
+                            [{"cm"}],
+                            [{"m"}],
+                            [{"ft"}],
+                            [{"in"}],
+                            [{"yd"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Depth
+                value matches {
+                    DV_QUANTITY[at9007] matches {
+                        property matches {[at9000]}    -- Length
+                        [units] matches {
+                            [{"µm"}],
+                            [{"mm"}],
+                            [{"cm"}],
+                            [{"m"}],
+                            [{"in"}],
+                            [{"ft"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Area
+                value matches {
+                    DV_QUANTITY[at9008] matches {
+                        property matches {[at9001]}    -- Area
+                        [units] matches {
+                            [{"mm2"}],
+                            [{"cm2"}],
+                            [{"% body"}],
+                            [{"% head, neck"}],
+                            [{"% lower limb"}],
+                            [{"% trunk"}],
+                            [{"% upper limb"}],
+                            [{"m2"}],
+                            [{"in2"}],
+                            [{"ft2"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Volume
+                value matches {
+                    DV_QUANTITY[at9009] matches {
+                        property matches {[at9002]}    -- Volume
+                        [units] matches {
+                            [{"mm3"}],
+                            [{"ml"}],
+                            [{"in3"}],
+                            [{"cc"}],
+                            [{"ft3"}]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Ausmaße">
+                description = <"Die Ausmaße eines betrachteten Teils.">
+            >
+            ["at0001"] = <
+                text = <"Umfang">
+                description = <"Der Umfang des betrachteten Teils">
+            >
+            ["at0002"] = <
+                text = <"Länge">
+                description = <"Die Länge des betrachteten Teils (longidudinale Körperachse).">
+            >
+            ["at0003"] = <
+                text = <"Breite">
+                description = <"Die Breite oder Weite (transversale Körperachse).">
+            >
+            ["at0004"] = <
+                text = <"Tiefe">
+                description = <"Die Tiefe des betrachteten Teils (dorsal-ventrale Körperachse).">
+            >
+            ["at0005"] = <
+                text = <"Fläche">
+                description = <"Die Fläche des betrachteten Teils.">
+            >
+            ["at0006"] = <
+                text = <"Volumen">
+                description = <"Das Volumen des betrachteten Teils.">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9002"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["at9001"] = <
+                text = <"* Area (en)">
+                description = <"* Area (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Dimensions">
+                description = <"The physical dimensions of a part examined.">
+            >
+            ["at0001"] = <
+                text = <"Circumference">
+                description = <"The circumference of the part examined.">
+            >
+            ["at0002"] = <
+                text = <"Length">
+                description = <"The length of the part examined (longitudinal anatomical axis).">
+            >
+            ["at0003"] = <
+                text = <"Breadth">
+                description = <"The width or breadth (transverse anatomical axis).">
+            >
+            ["at0004"] = <
+                text = <"Depth">
+                description = <"The depth of the part examined (dorso-ventral anatomical axis).">
+            >
+            ["at0005"] = <
+                text = <"Area">
+                description = <"The area of the part examined.">
+            >
+            ["at0006"] = <
+                text = <"Volume">
+                description = <"The volume of the part examined.">
+            >
+            ["at9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at9002"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["at9001"] = <
+                text = <"Area">
+                description = <"Area">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/122>
+            ["at9002"] = <http://openehr.org/id/129>
+            ["at9001"] = <http://openehr.org/id/335>
+        >
+    >

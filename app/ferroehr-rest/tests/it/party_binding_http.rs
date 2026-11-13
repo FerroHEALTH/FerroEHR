@@ -67,7 +67,7 @@ pub(crate) fn config(person_key: Option<&str>) -> AppConfig {
             ..common::entry(ISSUER, AUDIENCE)
         }],
         party: vec![PartySection {
-            issuer: ISSUER.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
             identifier_issuer: LOGIN.to_owned(),
             identifier_type: "guid".to_owned(),
             group_claim: "groups".to_owned(),
@@ -179,7 +179,7 @@ pub(crate) fn person(identifier_issuer: &str, key: &str) -> Value {
     })
 }
 
-fn write<T: serde::de::DeserializeOwned>(
+pub(crate) fn write<T: serde::de::DeserializeOwned>(
     body: &Value,
     lifecycle: &str,
     preceding: Option<&str>,
@@ -191,7 +191,7 @@ fn write<T: serde::de::DeserializeOwned>(
     write
 }
 
-fn uid(response: &ferroehr::service::response::ServiceResponse) -> String {
+pub(crate) fn uid(response: &ferroehr::service::response::ServiceResponse) -> String {
     response.meta.as_ref().expect("a version").uid.clone()
 }
 

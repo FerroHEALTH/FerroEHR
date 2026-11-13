@@ -1499,3 +1499,49 @@ text in scope:
 - The public sandbox runs 5.6.3 until the owner moves it to 5.7.0-rc3 for the reseed #5009 asks of the candidate. The release legs move it to 5.7.0 at the stable cut.
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #5258 for 5.9.0.
 - The performance page keeps its earlier figures until a record measured on the reference host replaces them.
+
+## The review of 2026-11-11, for 5.7.0-rc4
+
+Read on the tree after commit `43bb17040`, for the FerroEHR release candidate
+5.7.0-rc4. The reviews for 5.7.0-rc1 to 5.7.0-rc3 stand for everything those
+candidates carried. The facts added since, checked in every text in scope:
+
+- The hosted sandbox's configuration declares its SCIM service provider under `[auth.scim]`, and CI reads every server and viewer configuration the repository ships through the program built from the change (#5396). The [hosted sandbox README](https://github.com/FerroHEALTH/FerroEHR/blob/main/deploy/hosted/README.md) and the [bootstrap and migration](../installation/party-binding-migration.md) page name `[[auth.scim.client]]`.
+- The viewer's OpenID Provider issuer and redirect URIs render with their credentials masked, through `ferrohealth-session` 0.13.0 (#5394).
+- Chart 25.0.1-rc5 carries `appVersion` 5.7.0-rc4.
+
+### Read and kept on 2026-11-11, for 5.7.0-rc4
+
+- **The installation pins:** the [Kubernetes installation](../installation/kubernetes.md), the chart README and [verifying releases](../verifying-releases.md) name chart 25.0.1-rc5 and image 5.7.0-rc4 in the book of main.
+- **The landing page, the README, `SECURITY.md`, the crate READMEs, the [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the chart description** make no claim this release changes.
+
+### Left open on 2026-11-11, for 5.7.0-rc4
+
+- The public sandbox runs 5.6.3 until the owner moves it to 5.7.0-rc4 for the reseed #5009 asks of the candidate. The release legs move it to 5.7.0 at the stable cut.
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #5258 for 5.9.0.
+- The performance page keeps its earlier figures until a record measured on the reference host replaces them.
+
+## The review of 2026-11-11, for 5.7.0
+
+Read on the tree after commit `52733869b`, for the FerroEHR release 5.7.0.
+The reviews for 5.7.0-rc1 to 5.7.0-rc4 stand for everything those candidates
+carried. The facts added since, checked in every text in scope:
+
+- A `PERSON` binds a login only while it performs a professional `ROLE` of the party mapping's role template, and `ferroehr party-binding adopt` gives an existing `PERSON` its `ROLE` (#5004). The [bootstrap and migration](../installation/party-binding-migration.md) page says so and orders `adopt` before the first SCIM run.
+- The hosted sandbox's reseed brings the CDR up through the deploy script's `deploy` verb and names its EHR subjects by FerroPIX pseudonym (#5406, #5409).
+- Chart 25.0.1 carries `appVersion` 5.7.0.
+
+### Changed on 2026-11-11, for 5.7.0
+
+- **The [bootstrap and migration](../installation/party-binding-migration.md) page** named FerroFED v0.0.17 as the release whose gateway reaches the CDR under the caller, and said it would follow this release. FerroFED v0.0.17 was tagged without that change, FerroFED v0.0.19 does not carry it either, and FerroHEALTH/FerroFED#1615, which carries it, is open in the FerroFED milestone v0.0.20. The page now says no FerroFED release up to v0.0.19 reaches the CDR under the caller and names the issue, and the 5.7.0 changelog section says the same.
+
+### Read and kept on 2026-11-11, for 5.7.0
+
+- **The installation pins:** the [Kubernetes installation](../installation/kubernetes.md), the chart README and [verifying releases](../verifying-releases.md) name chart 25.0.1 and image 5.7.0 in the book of main, which the release freezes under `/docs/v5.7.0/`.
+- **The landing page, the README, `SECURITY.md`, the crate READMEs, the [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the chart description** make no claim this release changes.
+
+### Left open on 2026-11-11, for 5.7.0
+
+- The public sandbox follows the `latest` image tags, which the release legs move to 5.7.0 once its images are scanned and tagged.
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #5258 for 5.8.0.
+- The performance page keeps its earlier figures until a record measured on the reference host replaces them.

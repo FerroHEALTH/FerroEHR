@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -56,11 +56,7 @@ An instructional video demonstrating how to use the BBPS is available online at 
       <keywords>koloskopi, klyster, bbps, tarmtømming</keywords>
       <use>Brukes for å registrere tarmtømmingsgrad under koloskopi.&#xD;
 &#xD;
-Null-verdien "Not applicable" kan benyttes av programvaren dersom bruker har behov for å markere for at det ikke er mulig å oppgi en verdi i ett eller flere av de ulike dataelementene. Det kan skyldes for eksempel at et segment av kolon er fjernet kirurgisk, eller av årsaker som ikke er knyttet til forberedelsene til undersøkelsen. Dette kan for eksempel være tekniske utfordringer, eller ustabil pasient.&#xD;
-&#xD;
-&#xD;
-&#xD;
-</use>
+Null-verdien "Not applicable" kan benyttes av programvaren dersom bruker har behov for å markere for at det ikke er mulig å oppgi en verdi i ett eller flere av de ulike dataelementene. Det kan skyldes for eksempel at et segment av kolon er fjernet kirurgisk, eller av årsaker som ikke er knyttet til forberedelsene til undersøkelsen. Dette kan for eksempel være tekniske utfordringer, eller ustabil pasient.</use>
       <misuse />
       <copyright>© Nasjonal IKT HF, openEHR Foundation</copyright>
     </details>
@@ -539,4 +535,3 @@ such as technical difficulties or patient instability, use a null flavour for 'N
     </term_bindings>
   </ontology>
 </archetype>
-

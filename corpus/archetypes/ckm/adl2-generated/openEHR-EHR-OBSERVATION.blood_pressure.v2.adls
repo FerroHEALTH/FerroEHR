@@ -1,5 +1,5 @@
-archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1811b084-29c0-4bec-bde3-c70b7a5bc28e; build_uid=d5acda15-3468-4043-8e68-55b4507881b7)
-    openEHR-EHR-OBSERVATION.blood_pressure.v2.0.16
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1811b084-29c0-4bec-bde3-c70b7a5bc28e; build_uid=ac39a1a0-a269-4816-9391-7f475515f04e)
+    openEHR-EHR-OBSERVATION.blood_pressure.v2.0.17
 
 language
     original_language = <[ISO_639-1::en]>
@@ -113,6 +113,14 @@ Anna-Leena Karvonen, Tietoevry, Finland">
                 ["email"] = <"skoba@moss.gr.jp">
             >
         >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"Vanja Maravić, Lara Škufca, Anđela Marjanović, Ana Milošev, Vuk Radnić">
+                ["organisation"] = <"Better Deutschland GmbH, Better d.o.o.">
+                ["email"] = <"vanja.maravic@better.care, laras@better.care, andjela.marjanovic@better.care, ana.milosev@better.care, vuk.radnic@better.care">
+            >
+        >
         ["fa"] = <
             language = <[ISO_639-1::fa]>
             author = <
@@ -165,7 +173,7 @@ description
     >
     other_details = <
         ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
-        ["MD5-CAM-1.0.1"] = <"17D4965B19A8339F74AF049209818DF1">
+        ["MD5-CAM-1.0.1"] = <"537933EFC88246EA43F6C7F16751362E">
     >
     details = <
         ["de"] = <
@@ -388,14 +396,33 @@ Bruk OBSERVATION.intravascular_pressure og relaterte spesialiseringer i disse si
             keywords = <"観察", "測定", "血圧", "バイタルサイン", "平均動脈圧", "脈圧", "収縮期", "拡張期", "RR間隔", "非観血血圧">
             use = <"測定方法や身体部位を問わず、すべての血圧についての表現を記録するために使用される。このアーキタイプはすべての臨床シナリオを網羅することを目指している。以下に例を挙げる。
 - 家庭用血圧計で自己測定した血圧
-- 緊急時の評価として触診法で血圧計で測定された収縮期圧
+- 緊急時の評価として触診法により血圧計で測定された収縮期圧
 - 臨床上のコンサルテーションや運動負荷テストの間に測定されたもの
 - 集中治療において機械的に計測された一連の血圧などである。
 患者の体位や運動負荷、交絡因子やティルト台の角度など識別することにより、研究にて計測状態の解釈を手助けする豊富なステートモデルもある。
 24時間平均血圧だけが特定のイベントとして名前がつけられているが、テンプレートではデフォルトの「任意のイベント」にさらなる制約を加えることで、特定の時間や間隔を指定したり（数学的機能を追加したり、削除して）、血圧を記録するように、血圧測定に対する特定の要求を行ったイベントを指定することができる。">
-            misuse = <"たとえば、右肺動脈の血圧を特定の計測を行うように全身循環を表す指標としての代わりとならないような動脈血圧の測定には用いない。このような場合には、OBSERVATION.intravascular_pressureを利用すること。
+            misuse = <"全身循環を表す指標としての代わりとならない特定の動脈血圧、たとえば右肺動脈の血圧測定には用いない。このような場合には、OBSERVATION.intravascular_pressureを利用すること。
 血管内圧の測定には用いられない。このような場合には、適切に特殊化されたOBSERVATION.intravascular_pressureを利用すること">
             copyright = <"© openEHR Foundation">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"Za beleženje sistemskega arterijskega krvnega tlaka posameznika.">
+            keywords = <"opazovanja", "meritev", "krvni", "tlak", "vitalni", "znaki", "srednji", "arterijski", "tlak", "pulzni", "tlak", "sistolni", "diastolni", "RR", "NIBP">
+            use = <"Uporabiti za beleženje vseh predstavitev meritve sistemskega arterijskega krvnega tlaka, ne glede na to, katera metoda ali lokacija telesa se uporablja za njegovo beleženje.
+
+Arhetip je namenjen zajemanju meritev krvnega tlaka v vseh kliničnih scenarijih - na primer:
+- samomerjenje z domačim aparatom za merjenje krvnega tlaka;
+- ocena sistolnega tlaka v nujnih primerih s palpacijo in sfigmomanometrom;
+- meritve, opravljene med kliničnimi pregledi ali med obremenitvenim testiranjem; in
+- serija meritev, ki jih opravi naprava v intenzivni enoti.
+
+Obstaja bogat model stanja, ki podpira interpretacijo meritev z identifikacijo položaja pacienta, telesne aktivnosti, moteče dejavnike in kot nagibne mize pri raziskavah.
+
+Imenovani dogodki so bili omejeni na povprečje v 24-urnem obdobju, vendar lahko predloge dodatno omejijo privzeti dogodek \"katerikoli dogodek\" za specifične zahteve meritev krvnega tlaka, kot je beleženje krvnega tlaka ob specifičnih časovnih točkah ali skozi interval (+/- matematične funkcije).">
+            misuse = <"Ne uporabljati za beleženje meritve arterijskega krvnega tlaka, ki NI nadomestek za arterijski tlak v sistemskem obtoku, npr. specifična meritev tlaka desne pljučne arterije. V tej situaciji uporabite OBSERVATION.intravascular_pressure.
+
+Ne uporabljati za beleženje meritev intravenskega tlaka. V tej situaciji uporabite ustrezne specializacije OBSERVATION.intravascular_pressure.">
         >
         ["fa"] = <
             language = <[ISO_639-1::fa]>
@@ -4226,7 +4253,7 @@ terminology
             >
             ["at0008"] = <
                 text = <"体位">
-                description = <"計測のときの対象者の体位">
+                description = <"測定時の対象者の体位">
             >
             ["at0011"] = <
                 text = <"ツリー">
@@ -4453,7 +4480,7 @@ terminology
             >
             ["ac9061"] = <
                 text = <"体位 (synthesised)">
-                description = <"計測のときの対象者の体位 (synthesised)">
+                description = <"測定時の対象者の体位 (synthesised)">
             >
             ["ac9055"] = <
                 text = <"睡眠状況 (synthesised)">
@@ -4474,6 +4501,279 @@ terminology
             ["ac9009"] = <
                 text = <"拡張期終末 (synthesised)">
                 description = <"拡張期圧を決めるためにどのコロトコフ音が使用されたかについて記録. (synthesised)">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"Krvni tlak">
+                description = <"Lokalna meritev arterijskega krvnega tlaka, ki je nadomestek za arterijski tlak v sistemskem obtoku.">
+                comment = <"Najpogosteje se uporaba izraza 'krvni tlak' nanaša na meritev tlaka brahialne arterije v nadlakti.">
+            >
+            ["at0001"] = <
+                text = <"History">
+                description = <"History Structural node.">
+            >
+            ["at0004"] = <
+                text = <"Sistolni">
+                description = <"Najvišji sistemski arterijski krvni tlak - merjen v sistolni ali v fazi kontrakcije srčnega cikla.">
+            >
+            ["at0005"] = <
+                text = <"Diastolni">
+                description = <"Najnižji sistemski arterijski krvni tlak - merjen v diastolni ali v fazi relaksacije srčnega cikla.">
+            >
+            ["at0006"] = <
+                text = <"Katerikoli dogodek">
+                description = <"Privzeta, nespecificirana časovna točka ali intervalni dogodek, ki je lahko eksplicitno določen v predlogi ali med izvajanjem.">
+            >
+            ["at0008"] = <
+                text = <"Položaj">
+                description = <"Položaj posameznika v času meritve.">
+            >
+            ["at0011"] = <
+                text = <"Tree">
+                description = <"List structure.">
+            >
+            ["at0013"] = <
+                text = <"Velikost manšete">
+                description = <"Velikost manšete, uporabljene za merjenje krvnega tlaka.">
+                comment = <"Perloff D, Grim C, Flack J, Frohlich ED, Hill M, McDonald M, Morgenstern BZ. Human blood pressure determination by sphygmomanometry. Circulation 1993;88;2460-2470.">
+            >
+            ["at0014"] = <
+                text = <"Lokacija meritve">
+                description = <"Preprosta lokacija telesa, kjer je bil krvni tlak merjen.">
+            >
+            ["at0015"] = <
+                text = <"Stegno odraslega">
+                description = <"Manšeta za stegno odrasle osebe.">
+            >
+            ["at0016"] = <
+                text = <"Večja odrasla oseba">
+                description = <"Manšeta za odrasle z večjimi rokami.">
+            >
+            ["at0017"] = <
+                text = <"Odrasla oseba">
+                description = <"Manšeta, ki je standardna za odraslo osebo.">
+            >
+            ["at0025"] = <
+                text = <"Desna roka">
+                description = <"Desna roka posameznika.">
+            >
+            ["at0026"] = <
+                text = <"Leva roka">
+                description = <"Leva roka posameznika.">
+            >
+            ["at0027"] = <
+                text = <"Desno stegno">
+                description = <"Desno stegno posameznika.">
+            >
+            ["at0028"] = <
+                text = <"Levo stegno">
+                description = <"Levo stegno posameznika.">
+            >
+            ["at0033"] = <
+                text = <"Komentar">
+                description = <"Dodatno besedilo o meritvi, ki ni zajeto v drugih poljih.">
+            >
+            ["at1000"] = <
+                text = <"Stoje">
+                description = <"Stoje v času meritve krvnega tlaka.">
+            >
+            ["at1001"] = <
+                text = <"Sede">
+                description = <"Sede (na primer na postelji ali stolu) v času meritve krvnega tlaka.">
+            >
+            ["at1002"] = <
+                text = <"Polsede">
+                description = <"Polsede v času meritve krvnega tlaka.">
+            >
+            ["at1003"] = <
+                text = <"Leže">
+                description = <"Leže v času meritve krvnega tlaka.">
+            >
+            ["at1005"] = <
+                text = <"Nagib">
+                description = <"Kraniokavdalni nagib površine, na kateri oseba leži v času meritve.">
+            >
+            ["at1006"] = <
+                text = <"Srednji arterijski tlak">
+                description = <"Povprečni arterijski tlak, ki se pojavi v celotnem poteku cikla sistole in diastole srca.">
+            >
+            ["at1007"] = <
+                text = <"Pulzni tlak">
+                description = <"Razlika med sistolnim in diastolnim tlakom.">
+            >
+            ["at1008"] = <
+                text = <"Manjša odrasla oseba">
+                description = <"Manšeta za manjšo odraslo osebo.">
+            >
+            ["at1009"] = <
+                text = <"Pediatrična/otrok">
+                description = <"Manšeta, ki je primerna za otroka ali odraslo osebo s tanko roko.">
+            >
+            ["at1010"] = <
+                text = <"Diastolna končna točka">
+                description = <"Zabeležite, kateri Korotkov zvok se uporablja za določanje diastolnega tlaka z avskultacijsko metodo.">
+            >
+            ["at1011"] = <
+                text = <"Faza IV">
+                description = <"Četrti Korotkov zvok je zaznan kot nenaden pridušen zvok.">
+            >
+            ["at1012"] = <
+                text = <"Faza V">
+                description = <"Peti Korotkov zvok je zaznan z odsotnostjo zvokov, ko tlak manšete pade pod diastolni krvni tlak.">
+            >
+            ["at1014"] = <
+                text = <"Leže z nagibom v levo">
+                description = <"Leže z določenim lateralnim nagibom, običajno nagnjeno proti levi strani. Običajno potrebno v zadnjem trimesečju nosečnosti za olajšanje aortokavalne kompresije.">
+            >
+            ["at1018"] = <
+                text = <"Dojenček">
+                description = <"Manšeta za dojenčke.">
+            >
+            ["at1019"] = <
+                text = <"Novorojenček">
+                description = <"Manšeta za novorojenčka, ob predpostavki, da je manšeta ustrezne velikosti za zrelost in porodno težo novorojenčka.">
+            >
+            ["at1020"] = <
+                text = <"Desno zapestje">
+                description = <"Desno zapestje posameznika.">
+            >
+            ["at1021"] = <
+                text = <"Levo zapestje">
+                description = <"Levo zapestje posameznika.">
+            >
+            ["at1025"] = <
+                text = <"Naprava">
+                description = <"Podrobnosti o sfigmomanometru ali drugi napravi, uporabljeni za merjenje krvnega tlaka.">
+            >
+            ["at1026"] = <
+                text = <"Desni gleženj">
+                description = <"Desni gleženj posameznika.">
+            >
+            ["at1030"] = <
+                text = <"Napor">
+                description = <"Podrobnosti o telesni aktivnosti, opravljeni v času meritve krvnega tlaka.">
+            >
+            ["at1031"] = <
+                text = <"Levi gleženj">
+                description = <"Levi gleženj posameznika.">
+            >
+            ["at1032"] = <
+                text = <"Prst">
+                description = <"Prst posameznika.">
+            >
+            ["at1035"] = <
+                text = <"Metoda">
+                description = <"Metoda merjenja krvnega tlaka.">
+            >
+            ["at1036"] = <
+                text = <"Avskultacija">
+                description = <"Metoda zunanjega merjenja krvnega tlaka, z uporabo stetoskopa in Korotkov zvokov.">
+            >
+            ["at1037"] = <
+                text = <"Palpacija">
+                description = <"Metoda zunanjega merjenja krvnega tlaka, z uporabo palpacije (običajno brahialne ali radialne arterije).">
+            >
+            ["at1038"] = <
+                text = <"Formula srednjega arterijskega tlaka">
+                description = <"Formula, uporabljena za izračun srednjega arterijskega tlaka (če je zabeleženo v podatkih).">
+            >
+            ["at1039"] = <
+                text = <"Naprava">
+                description = <"Metoda zunanjega merjenja krvnega tlaka, z uporabo aparata za krvni tlak.">
+            >
+            ["at1040"] = <
+                text = <"Invazivno">
+                description = <"Metoda notranjega merjenja krvnega tlaka, tj. vključuje penetracijo kože in merjenje znotraj krvnih žil.">
+            >
+            ["at1042"] = <
+                text = <"24-urno povprečje">
+                description = <"Ocena povprečnega krvnega tlaka v 24-urnem obdobju.">
+            >
+            ["at1043"] = <
+                text = <"Status spanja">
+                description = <"Status spanja - podpira interpretacijo 24-urnih ambulantnih zapisov krvnega tlaka.">
+            >
+            ["at1044"] = <
+                text = <"Buden">
+                description = <"Posameznik je buden.">
+            >
+            ["at1045"] = <
+                text = <"Spi">
+                description = <"Posameznik spi.">
+            >
+            ["at1051"] = <
+                text = <"Prst na nogi">
+                description = <"Prst na nogi posameznika.">
+            >
+            ["at1052"] = <
+                text = <"Moteči dejavniki">
+                description = <"Komentar in beleženje drugih naključnih dejavnikov, ki lahko prispevajo k meritvi krvnega tlaka. Na primer, raven anksioznosti ali 'sindrom belega plašča'; bolečina ali vročina; spremembe v atmosferskem tlaku itd.">
+            >
+            ["at1053"] = <
+                text = <"Intra-arterijsko">
+                description = <"Invazivna meritev preko dostopne linije pretvornika znotraj arterije.">
+            >
+            ["at1054"] = <
+                text = <"Formula sistolnega tlaka">
+                description = <"Formula, uporabljena za izračun sistolnega tlaka iz srednjega arterijskega tlaka (če je zabeleženo v podatkih).">
+            >
+            ["at1055"] = <
+                text = <"Formula diastolnega tlaka">
+                description = <"Formula, uporabljena za izračun diastolnega tlaka iz srednjega arterijskega tlaka (če je zabeleženo v podatkih).">
+            >
+            ["at1057"] = <
+                text = <"Strukturirana lokacija meritve">
+                description = <"Strukturirana anatomska lokacija, kjer je bila meritev opravljena.">
+            >
+            ["at1058"] = <
+                text = <"Razširitev">
+                description = <"Dodatne informacije, potrebne za zajemanje lokalnega konteksta ali za uskladitev z drugimi referenčnimi modeli/formalizmi.">
+                comment = <"Na primer: informacije lokalnega bolnišničnega oddelka ali dodatni metapodatki za uskladitev z ekvivalenti FHIR ali CIMI.">
+            >
+            ["at1059"] = <
+                text = <"Klinična interpretacija">
+                description = <"Ena beseda, fraza ali kratek opis, ki predstavlja klinični pomen in pomembnost meritve krvnega tlaka.">
+            >
+            ["at1056"] = <
+                text = <"Hrbtišče stopala">
+                description = <"Dorzum stopala posameznika.">
+            >
+            ["at9000"] = <
+                text = <"* Pressure (en)">
+                description = <"* Pressure (en)">
+            >
+            ["at9056"] = <
+                text = <"* mean (en)">
+                description = <"* mean (en)">
+            >
+            ["at9004"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["ac9061"] = <
+                text = <"Položaj (synthesised)">
+                description = <"Položaj posameznika v času meritve. (synthesised)">
+            >
+            ["ac9055"] = <
+                text = <"Status spanja (synthesised)">
+                description = <"Status spanja - podpira interpretacijo 24-urnih ambulantnih zapisov krvnega tlaka. (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"Velikost manšete (synthesised)">
+                description = <"Velikost manšete, uporabljene za merjenje krvnega tlaka. (synthesised)">
+            >
+            ["ac9066"] = <
+                text = <"Lokacija meritve (synthesised)">
+                description = <"Preprosta lokacija telesa, kjer je bil krvni tlak merjen. (synthesised)">
+            >
+            ["ac9054"] = <
+                text = <"Metoda (synthesised)">
+                description = <"Metoda merjenja krvnega tlaka. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Diastolna končna točka (synthesised)">
+                description = <"Zabeležite, kateri Korotkov zvok se uporablja za določanje diastolnega tlaka z avskultacijsko metodo. (synthesised)">
             >
         >
         ["fa"] = <

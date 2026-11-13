@@ -24,13 +24,12 @@ use std::time::Duration;
 use anyhow::Context as _;
 use clap::{Parser, Subcommand};
 use ferroehr::aql::subject::ehr_subject;
-use ferroehr::config::access_delay::AccessDelayPolicy;
 use ferroehr::config::deployment::{DatabaseFacts, DeploymentPosture, DeploymentProfile};
 use ferroehr::config::management::EndpointLevels;
 use ferroehr::config::management::ManagementConfig;
 use ferroehr::db::domain::{Domain, DomainPools};
 use ferroehr::error::ServiceError;
-use ferroehr::extensions::outbox;
+use ferroehr::extensions::outbox::{self, OutboxGate};
 use ferroehr::ids::EhrId;
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::Report;
@@ -47,8 +46,9 @@ use ferroehr::usage_report::product::{self as usage_product, EventKind, FerroEhr
 use ferroehr::usage_report::store::PgStore;
 use ferroehr::versioning::signature::signer::Signer;
 use ferroehr_rest::config::AppConfig;
+use ferroehr_rest::extensions::access::authz::content::ContentRules;
 use ferroehr_rest::extensions::access::authz::{
-    AuthzHandle, AuthzResolvers, ContentRules, ResolveError, build_engine,
+    AuthzHandle, AuthzResolvers, ResolveError, build_engine,
 };
 use ferroehr_rest::extensions::management::{LogFilter, Observability};
 use ferrohealth_health::lifecycle::Lifecycle;
@@ -175,7 +175,7 @@ pub(crate) async fn dispatch(cli: Cli) -> anyhow::Result<()> {
     match cli.command {
         Some(Command::Common(Common::Healthcheck)) => {
             let loaded = ferroehr::config::load(config, set)?;
-            let outcome = healthcheck(&loaded.server).await;
+            let outcome = healthcheck(&loaded.server.shared).await;
             anyhow::ensure!(outcome.exit_code() == 0, "healthcheck: {outcome}");
             Ok(())
         }
@@ -440,7 +440,6 @@ fn assemble_service(
     config: &ferroehr::config::FerroEhrConfig,
     pools: &DomainPools,
     audit_sender: Option<AuditSender>,
-    outbox_enabled: bool,
     signer: Arc<Signer>,
     deployment: DeploymentPosture,
     ehr_index: EhrIndexProvider,
@@ -475,18 +474,17 @@ fn assemble_service(
         .with_signer(signer)
         .with_licence(licence)
         .with_deployment(deployment)
-        .with_outbox_enabled(outbox_enabled)
+        .with_outbox_gate(OutboxGate::WhileGranted)
         .with_skip_identical_resend(config.record.versioning.idempotent_resend)
         .with_privacy(Arc::new(privacy))
         .with_cohort(config.privacy.cohort.clone())
-        .with_origins(config.origins())
         .with_identifier_protection_opt(identifiers.map(Arc::new))
         .with_query_config(&config.record.query)
-        .with_access_delay(
-            AccessDelayPolicy::from_config(config)
-                .map_err(ferroehr::system_log::AuditError::CategoryMap)?,
-        )
+        .with_required_category_map(DeploymentPosture::requires_category_map(config))
         .with_ehr_index(ehr_index);
+    service
+        .policy_registers()
+        .set_cedar_check(ferroehr_rest::extensions::access::authz::cedar::check());
     if let Some(sender) = audit_sender {
         service = service.with_audit(sender);
     }
@@ -519,20 +517,15 @@ fn wire_authz(
     if !config.auth.shared.enabled {
         return Ok(None);
     }
-    // `validate` has already refused a category map that does not compile.
+    let registers = Arc::clone(service.policy_registers());
     let content = ContentRules {
-        categories: config
-            .audit
-            .categories
-            .compile()
-            .map_err(ferroehr::system_log::AuditError::CategoryMap)
-            .context("compiling the [audit.categories] map for the ABAC category attribute")?,
-        origins: config.origins(),
+        registers: Some(Arc::clone(&registers)),
         system_id: config.api.system_id.clone(),
     };
     let authz = build_authz(
         &config.authz,
         &config.api.base_path,
+        &registers,
         authz_resolvers(pool.clone(), Arc::clone(service), content),
     )?;
     if let Some(handle) = &authz {
@@ -582,9 +575,6 @@ fn log_resolved_posture(
             fail_mode = ?audit.fail_mode,
             resolve_subject = audit.resolve_subject,
             retention = %audit.store.horizon().describe(),
-            category_map = AuditPosture::of(audit)
-                .category_map
-                .map_or_else(|| "invalid".to_owned(), |digest| digest.to_string()),
             "IHE ATNA audit enabled"
         );
     }
@@ -967,19 +957,6 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     let audit_config: AuditConfig = config.audit.clone();
     let (audit_sender, audit_handle) = start_audit(&audit_config, &pool, &pools.audit).await;
 
-    // The commit-event outbox: a commit writes its row only while a reader is
-    // named, and every reader the configuration no longer names is marked
-    // inactive, so it holds the prune back no longer.
-    let outbox_enabled = config.record.change_feed.enabled();
-    outbox::reconcile_domains(&pools, &config.record.change_feed.readers)
-        .await
-        .context("reconciling the outbox readers with [record.change_feed] readers")?;
-    let outbox_prune = tokio::spawn(outbox::scheduled_prune(
-        pools.clone(),
-        config.record.change_feed.retention.get(),
-        config.record.change_feed.prune_interval.get(),
-    ));
-
     // Health indicators.
     let mut indicators: Vec<Arc<dyn HealthIndicator>> = vec![
         Arc::new(indicators::DbHealth::new(pool.clone())),
@@ -1044,7 +1021,6 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         &config,
         &pools,
         audit_sender,
-        outbox_enabled,
         signer,
         deployment,
         ehr_index,
@@ -1059,23 +1035,32 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         )?;
     }
 
-    service.unheld_written_templates(&config.authz).await??;
     let binding_lease = party_binding::prepare(&service, &config).await?;
-    // The retention register keys category periods on the map in force, so it
-    // is mirrored before the listener takes traffic. `validate` has already
-    // refused a map that does not compile.
-    let category_map = config
-        .audit
-        .categories
-        .compile()
-        .map_err(ferroehr::system_log::AuditError::CategoryMap)
-        .context("compiling the [audit.categories] map")?;
+    // The policy registers in force before the listener takes traffic, and the
+    // retention register keyed on the category register in force.
     service
-        .mirror_category_map(&category_map)
+        .read_policy_registers()
         .await
-        .context("mirroring the [audit.categories] map into the retention register")?;
+        .context("reading the operational-policy registers")?;
+    service.policy_registers().listened().spawn_listener();
+    service
+        .mirror_category_map()
+        .await
+        .context("mirroring the audit category register into the retention register")?;
     // NOTE: EHDS Art. 3(3), a hold stops withholding at its limit; this only writes the record.
     service.spawn_access_delay_expiries(Duration::from_secs(60));
+    // The commit-event outbox: a commit writes its row only while a change-feed
+    // grant names a reader, and every reader no grant names any more is marked
+    // inactive, so it holds the prune back no longer.
+    service
+        .reconcile_change_feed()
+        .await
+        .context("reconciling the outbox readers with the change-feed grants")?;
+    let outbox_prune = tokio::spawn(outbox::scheduled_prune(
+        Arc::clone(&service),
+        config.record.change_feed.retention.get(),
+        config.record.change_feed.prune_interval.get(),
+    ));
 
     // Outbound only and detached: neither boot, health nor readiness waits on
     // it, and a slow or unreachable collector reaches none of them.
@@ -1104,7 +1089,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         request_log: RequestLog::new(&config.telemetry.logged_query_parameters)
             .with_metrics(&telemetry.telemetry().meter(telemetry::metrics::SCOPE))
             .with_recorder(usage_window)
-            .serving_tls(config.server.tls.is_some()),
+            .serving_tls(config.server.shared.tls.is_some()),
         // NOTE: no specification governs this: our own design; each check keeps
         // the one-second bound the probes have always had.
         health: Registry::new(indicators).with_timeout(Duration::from_secs(1)),
@@ -1191,9 +1176,11 @@ async fn start_audit(
 pub fn build_authz(
     config: &ferroehr::config::authz::AuthzConfig,
     base_path: &str,
+    registers: &Arc<ferroehr::policy_register::LiveRegisters>,
     resolvers: AuthzResolvers,
 ) -> anyhow::Result<Option<Arc<AuthzHandle>>> {
-    let engine = build_engine(&config.abac).context("building the ABAC policy engine")?;
+    let engine =
+        build_engine(&config.abac, registers).context("building the ABAC policy engine")?;
     Ok(AuthzHandle::build(config, base_path, engine, resolvers).map(Arc::new))
 }
 

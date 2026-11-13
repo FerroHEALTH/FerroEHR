@@ -16,6 +16,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::Outcome;
 use ferrohealth_smart::party::binding::PartyBinding;
@@ -307,7 +308,7 @@ fn caller(subject: &str) -> CommitterIdentity {
         representative: false,
         bound: None,
         system: false,
-        system_client: None,
+        agent: None,
         external: None,
     }
 }
@@ -871,7 +872,7 @@ async fn an_administrator_rekeys_a_person_and_never_to_an_own_or_bound_key() {
 /// professional carrying `value`, resolved through the shared binding.
 async fn admin_bound_to(svc: &FerroEhrService, value: &str) -> CommitterIdentity {
     let table = PartySection {
-        issuer: "https://login.example".to_owned(),
+        issuer: SecretUrl::new("https://login.example"),
         identifier_issuer: LOGIN.to_owned(),
         identifier_type: GUID.to_owned(),
         ..PartySection::default()

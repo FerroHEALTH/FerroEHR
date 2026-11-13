@@ -1,0 +1,226 @@
+﻿archetype (adl_version=1.4; uid=3ab6126e-5186-4ac4-b979-a96b1f8ef079)
+	openEHR-EHR-OBSERVATION.postural_oedema.v1
+
+concept
+	[at0000]	-- Postural oedema
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"9/04/2007">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"Recording of clinical details of postural oedema">
+			use = <"">
+			keywords = <"postural oedema", "oedema", "postural">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["references"] = <"">
+		["build_uid"] = <"86634607-291a-43b0-898b-bd6231f31908">
+		["original_publisher"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"6DABD2916378400ADFE6769138478112">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	OBSERVATION[at0000] matches {	-- Postural oedema
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..1} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									CLUSTER[at0020] occurrences matches {0..1} matches {	-- Normal Statements
+										items cardinality matches {0..*; unordered} matches {
+											ELEMENT[at0021] occurrences matches {0..1} matches {	-- Normal Statement
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+										}
+									}
+									ELEMENT[at0022] occurrences matches {0..1} matches {	-- Object
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									CLUSTER[at0023] occurrences matches {0..1} matches {	-- Clinical Findings
+										items cardinality matches {0..*; unordered} matches {
+											ELEMENT[at0024] occurrences matches {0..1} matches {	-- Clinical Description
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+											allow_archetype CLUSTER[at0025] occurrences matches {0..1} matches {
+												include
+													archetype_id/value matches {/openEHR-EHR-CLUSTER\.oedema\.v1|openEHR-EHR-CLUSTER\.oedema\.v2/}
+												exclude
+													archetype_id/value matches {/.*/}
+											}
+										}
+									}
+								}
+							}
+						}
+						state matches {
+							ITEM_LIST[at0004] matches {	-- List
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0005] occurrences matches {0..1} matches {	-- Usual activity level
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0006, 	-- Active and mobile
+													at0009, 	-- Inactive and/or immobile
+													at0019]	-- Sedentary
+												}
+											}
+										}
+									}
+									ELEMENT[at0010] occurrences matches {0..1} matches {	-- Position
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0011, 	-- Sitting in bed
+													at0012, 	-- Lying, supine
+													at0013, 	-- Recumbent
+													at0014, 	-- Lying, prone
+													at0015, 	-- Lying, left lateral
+													at0016, 	-- Lying, right lateral
+													at0017]	-- Sitting in chair
+												}
+											}
+										}
+									}
+									ELEMENT[at0018] occurrences matches {0..1} matches {	-- Posture
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Postural oedema">
+					description = <"Recording of postural or dependant oedema">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"List">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Usual activity level">
+					description = <"Usual activity of patient">
+				>
+				["at0006"] = <
+					text = <"Active and mobile">
+					description = <"*">
+				>
+				["at0009"] = <
+					text = <"Inactive and/or immobile">
+					description = <"*">
+				>
+				["at0010"] = <
+					text = <"Position">
+					description = <"Usual position of person, if inactive">
+				>
+				["at0011"] = <
+					text = <"Sitting in bed">
+					description = <"*">
+				>
+				["at0012"] = <
+					text = <"Lying, supine">
+					description = <"*">
+				>
+				["at0013"] = <
+					text = <"Recumbent">
+					description = <"Lying, supported by pillow/s">
+				>
+				["at0014"] = <
+					text = <"Lying, prone">
+					description = <"*">
+				>
+				["at0015"] = <
+					text = <"Lying, left lateral">
+					description = <"*">
+				>
+				["at0016"] = <
+					text = <"Lying, right lateral">
+					description = <"*">
+				>
+				["at0017"] = <
+					text = <"Sitting in chair">
+					description = <"*">
+				>
+				["at0018"] = <
+					text = <"Posture">
+					description = <"Specific details about posture of patient that impact on the oedema findings eg person propped up on an angle in a chair">
+				>
+				["at0019"] = <
+					text = <"Sedentary">
+					description = <"*">
+				>
+				["at0020"] = <
+					text = <"Normal Statements">
+					description = <"*">
+				>
+				["at0021"] = <
+					text = <"Normal Statement">
+					description = <"*">
+				>
+				["at0022"] = <
+					text = <"Object">
+					description = <"Identify the object being examined for oedema">
+				>
+				["at0023"] = <
+					text = <"Clinical Findings">
+					description = <"*">
+				>
+				["at0024"] = <
+					text = <"Clinical Description">
+					description = <"Description of clinical findings">
+				>
+				["at0025"] = <
+					text = <"Cluster: Oedema">
+					description = <"Oedema">
+				>
+			>
+		>
+	>

@@ -1,0 +1,964 @@
+﻿archetype (adl_version=1.4; uid=cefbbda5-4372-48fb-8fbe-8e44f2f49c00)
+	openEHR-EHR-OBSERVATION.glasgow_coma-paed.v0
+specialise
+	openEHR-EHR-OBSERVATION.glasgow_coma.v1
+
+concept
+	[at0000.1]	-- Paediatric Glasgow Coma Scale
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["pt-br"] = <
+			language = <[ISO_639-1::pt-br]>
+			author = <
+				["name"] = <"Adriana Kitajima; Débora Farage, Fernanda Maia; Clovis Puttini; Ana Rodrigues">
+				["organisation"] = <"CORE Consulting">
+				["email"] = <"adrianakitajima@gmail.com">
+			>
+			accreditation = <"HAOC">
+		>
+		["sl"] = <
+			language = <[ISO_639-1::sl]>
+			author = <
+				["name"] = <"mag. Biljana Prinčič">
+				["organisation"] = <"Marand d.o.o., Ljubljana, Slovenija">
+				["email"] = <"biljana.princic@marand.si">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"2007-13-03">
+	>
+	details = <
+		["pt-br"] = <
+			language = <[ISO_639-1::pt-br]>
+			purpose = <"Para registrar observações clínicas sobre a capacidade de resposta a estímulos de um sujeito, como uma avaliação objetiva do estado consciência de uma criança.
+
+Também conhecido como JGCS (James 'GCS).">
+			use = <"Use em qualquer situação clínica para avaliar o nível de consciência de um sujeito, com exceção de bebês e crianças pequenas.
+Os três valores de resposta são considerados separadamente e sua soma. O valor mínimo possível da pontuação total é 3 e o máximo possível é 15.
+A pontuação total pode ser calculada como a soma das pontuações registradas para cada uma das respostas oculares, motoras e verbais.
+A pontuação OMV pode ser derivada como um composto de cada uma das pontuações de resposta registradas, por exemplo, O3 M2 V4 representa o estado consciente de um sujeito que abre os olhos para a fala, tem uma resposta extensora à dor e emite sons incompreensíveis.
+Se qualquer resposta ocular, motora ou verbal não puder ser avaliada - por exemplo, se o sujeito estiver intubado e não puder responder verbalmente, ou paralisado e incapaz de fornecer uma resposta motora - a pontuação registrada para a resposta será 1 e um modificador deve ser anexado. Se o sujeito estiver intubado, o componente de resposta verbal pode ser representado como V1t, em que t = tubo ou V1Intubado. Se o sujeito apresentar um inchaço ou lesões faciais / oculares graves e não conseguir abrir os olhos, o componente de resposta ocular poderá ser representado como O1c, onde c = fechado (no inglês closed). Freqüentemente, o numérico é omitido, de modo que o componente de resposta ocular pode ser expresso mais simplesmente como Oc, por exemplo, Oc M2 V4.
+O suporte à decisão clínica deve basear-se em cada um dos registros específicos de respostas ocular, motora e verbal e nas declarações explícitas de que uma resposta não pode ser avaliada, em vez da pontuação OMV derivada e composta.">
+			keywords = <"resposta", "motor", "verbal", "olho", "estímulo", "glasgow", "coma", "escala", "neurológico", "capacidade de resposta", "MV", "consciente", "pediátrico", "JGCS">
+			misuse = <"Não deve ser usado para avaliar adultos - use o OBSERVATION.glasgow_coma.v1.adl para garantir que as opções de resposta ocular, motora e verbal sejam adequadas.">
+			copyright = <"© copyright (c) 2010 openEHR Foundation, openEHR Foundation">
+		>
+		["sl"] = <
+			language = <[ISO_639-1::sl]>
+			purpose = <"
+
+Za opazovanje odzivnosti pacienta pri ocenjevanju zavesti le tega. 
+
+Lestvica je znana tudi kot JGCS (James GCS)
+
+">
+			use = <"Se uporablja v situacijah, ko je potrebno oceniti zavest pacienta. Lestvica je prilagojena oceni zavesti pri otrocih in tudi tistih otrocih, ki so mlajši od 2 let.
+Opazujejo se tri področja: govr, gibanje in premikanje oči. 
+Rezultat je seštevek vseh faktorjev iz vseh treh področij opazovanja
+odzivnosti in njihov rezultat
+">
+			keywords = <"odziv", "motorika", "govor", "oči", "glasgow", "lestvica za oceno zavesti", "nevrološka ocena", "EMV", "lestvica", "coma scale">
+			misuse = <"Se ne uporablja za oceno zavesti odraslih. V ta namen se uporablja OBSERVATION.glasgow_coma.v1.adl.">
+			copyright = <"© copyright (c) 2010 openEHR Foundation, openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record clinical observations regarding responsiveness of a subject to stimuli as an objective assessment of the conscious state of a child subject. 
+
+Also known as JGCS (James' GCS).">
+			use = <"Use in any clinical situation to assess the level of consciousness of a subject, with the exception of infants and young children.
+The three response values are considered separately as well as their sum. The minimum possible Total score value is 3 and the maximum possible is 15.
+The Total score can be derived as the sum of the recorded scores for each of the eye, motor and verbal responses. 
+The EMV score can be derived as a composite from each of the recorded response scores, for example E3 M2 V4 represents the conscious state of a subject who opens eyes to speech, has an extensor response to pain and utters incomprehensible sounds.
+If any one of the eye, motor or verbal responses cannot be assessed - for example if the subject is intubated and not able to respond verbally, or paralysed and not able to provide a motor response - the score recorded for the response is 1 and a modifier attached. If the subject is intubated the verbal response component can be represented as V1t, where t = tube, or V1Intubated. If the subject has severe facial/eye swelling or injuries and can't open their eyes, the eye response component can be represented as E1c, where c=closed. Often the numeric one is omitted, so the eye response component can be expressed more simply as Ec, for example Ec M2 V4.
+Clinical Decision support should be based upon each of the specific records of eye, motor and verbal responses and the explicit statements that a response cannot be assessed, rather than the derived and composite EMV score.">
+			keywords = <"response", "motor", "verbal", "eye", "stimulus", "glasgow", "coma", "scale", "neurological", "responsiveness", "EMV", "conscious", "paediatric", "JGCS">
+			misuse = <"Not to be used for assessing adults- use the OBSERVATION.glasgow_coma.v1.adl to ensure that the eye, motor and verbal response choices are appropriate.">
+			copyright = <"© copyright (c) 2010 openEHR Foundation, openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Ian McNicoll, Ocean Informatics, UK", ...>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"Teasdale G, Jennett B. Assessment of coma and impaired consciousness. A practical scale. Lancet 1974,2:81-84.
+
+Teasdale GM, Murray L. Revisiting the Glasgow Coma Scale and Coma Score. Intensive Care Medicine. 2000; 26: 153-154.
+
+Worrall K. Use of the Glasgow coma scale in infants. Paediatric nursing 2004;16(4):45-50.
+
+Tatman A, Warren A, Williams A, Powell JE, Whitehouse W. Development of a modified paediatric coma scale in intensive care clinical practice. Archives of disease in childhood 1997;77(6):519.">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"29AF19A1A1211C26E939E3570C3956B2">
+		["build_uid"] = <"d714c85e-4b24-48ab-886a-f1b85930823c">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	OBSERVATION[at0000.1] matches {	-- Paediatric Glasgow Coma Scale
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..1} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0009] occurrences matches {0..1} matches {	-- Best eye response (E)
+										value matches {
+											1|[local::at0010], 	-- No response
+											2|[local::at0011], 	-- Eyes open in response to pain
+											3|[local::at0012], 	-- Eyes open in response to speech
+											4|[local::at0013]  	-- Spontaneous eye opening
+										}
+									}
+									ELEMENT[at0034] occurrences matches {0..1} matches {	-- Not able to test eye response
+										value matches {
+											DV_BOOLEAN matches {
+												value matches {True}
+											}
+										}
+									}
+									ELEMENT[at0038] occurrences matches {0..1} matches {	-- Reason for inability to test eye response
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0008.1] occurrences matches {0..1} matches {	-- Best motor response - child (M)
+										value matches {
+											1|[local::at0019], 	-- No response
+											2|[local::at0020], 	-- Extensor response
+											3|[local::at0021], 	-- Flexor response
+											4|[local::at0022], 	-- Withdrawal response
+											5|[local::at0023], 	-- Localises pain
+											6|[local::at0024]  	-- Obeys commands
+										}
+									}
+									ELEMENT[at0.41] occurrences matches {0..1} matches {	-- Best motor response - infant (M)
+										value matches {
+											1|[local::at0.42], 	-- No response
+											2|[local::at0.43], 	-- Extensor response
+											3|[local::at0.44], 	-- Flexor response
+											4|[local::at0.45], 	-- Withdrawal response
+											5|[local::at0.46], 	-- Withdraws to touch
+											6|[local::at0.47]  	-- Moves spontaneously
+										}
+									}
+									ELEMENT[at0036] occurrences matches {0..1} matches {	-- Not able to test motor response
+										value matches {
+											DV_BOOLEAN matches {
+												value matches {True}
+											}
+										}
+									}
+									ELEMENT[at0040] occurrences matches {0..1} matches {	-- Reason for inability to test motor response
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0007.1] occurrences matches {0..1} matches {	-- Best verbal response - adult (V)
+										value matches {
+											1|[local::at0014], 	-- No response
+											2|[local::at0015], 	-- Incomprehensible sounds
+											3|[local::at0016], 	-- Inappropriate speech
+											4|[local::at0017], 	-- Confused conversation
+											5|[local::at0018]  	-- Oriented
+										}
+									}
+									ELEMENT[at0.48] occurrences matches {0..1} matches {	-- Best verbal response - child (V)
+										value matches {
+											1|[local::at0.50], 	-- No response
+											2|[local::at0.51], 	-- Incomprehensible words or nonspecific sounds
+											3|[local::at0.52], 	-- Inappropriate words
+											4|[local::at0.53], 	-- Confused
+											5|[local::at0.54]  	-- Oriented, appropriate
+										}
+									}
+									ELEMENT[at0.49] occurrences matches {0..1} matches {	-- Best verbal response - infant (V)
+										value matches {
+											1|[local::at0.55], 	-- No response
+											2|[local::at0.56], 	-- Moans
+											3|[local::at0.57], 	-- Cries
+											4|[local::at0.58], 	-- Irritable cries
+											5|[local::at0.59]  	-- Coos and babbles
+										}
+									}
+									ELEMENT[at0.60] occurrences matches {0..1} matches {	-- Best grimace response (G)
+										value matches {
+											1|[local::at0.61], 	-- No response
+											2|[local::at0.62], 	-- Mild grimace
+											3|[local::at0.63], 	-- Vigorous grimace
+											4|[local::at0.64], 	-- Less than usual spontaneous activity
+											5|[local::at0.65]  	-- Normal spontaneous facial/oro-motor activity
+										}
+									}
+									ELEMENT[at0035] occurrences matches {0..1} matches {	-- Not able to test verbal response
+										value matches {
+											DV_BOOLEAN matches {
+												value matches {True}
+											}
+										}
+									}
+									ELEMENT[at0039] occurrences matches {0..1} matches {	-- Reason for inability to test verbal response
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0026] occurrences matches {0..1} matches {	-- Total score
+										value matches {
+											DV_COUNT matches {
+												magnitude matches {|3..15|}
+											}
+										}
+									}
+									ELEMENT[at0030] occurrences matches {0..1} matches {	-- EMV profile
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0037] occurrences matches {0..*} matches {	-- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.41"] = <
+					text = <"Best motor response - infant (M)">
+					description = <"Best motor response to stumulus in infant less than 2 years old.">
+				>
+				["at0.42"] = <
+					text = <"No response">
+					description = <"No motor response; limbs flaccid.">
+				>
+				["at0.43"] = <
+					text = <"Extensor response">
+					description = <"Abnormal extension to pain.">
+				>
+				["at0.44"] = <
+					text = <"Flexor response">
+					description = <"Abnormal flexion to pain.">
+				>
+				["at0.45"] = <
+					text = <"Withdrawal response">
+					description = <"Withdraws in response to painful stimulus.">
+				>
+				["at0.46"] = <
+					text = <"Withdraws to touch">
+					description = <"Withdraws in response to touch.">
+				>
+				["at0.47"] = <
+					text = <"Moves spontaneously">
+					description = <"Moves spontaneously and purposefully.">
+				>
+				["at0.48"] = <
+					text = <"Best verbal response - child (V)">
+					description = <"Best verbal response to stimulus in a child older than 2 years.">
+				>
+				["at0.49"] = <
+					text = <"Best verbal response - infant (V)">
+					description = <"Best verbal response to stimulus in a infant younger than 2 years.">
+				>
+				["at0.50"] = <
+					text = <"No response">
+					description = <"No verbal response.">
+				>
+				["at0.51"] = <
+					text = <"Incomprehensible words or nonspecific sounds">
+					description = <"Moans or groans, but no recognisable words.">
+				>
+				["at0.52"] = <
+					text = <"Inappropriate words">
+					description = <"Intelligible speech, but inappropriate words.">
+				>
+				["at0.53"] = <
+					text = <"Confused">
+					description = <"Converses, but confused and disoriented in their environment.">
+				>
+				["at0.54"] = <
+					text = <"Oriented, appropriate">
+					description = <"Converses, oriented to their environment.">
+				>
+				["at0.55"] = <
+					text = <"No response">
+					description = <"No verbal response.">
+				>
+				["at0.56"] = <
+					text = <"Moans">
+					description = <"Occasionally whimpers or moans.">
+				>
+				["at0.57"] = <
+					text = <"Cries">
+					description = <"Cries inappropriately.">
+				>
+				["at0.58"] = <
+					text = <"Irritable cries">
+					description = <"Less than usual ability or spontaneous irritable cry.">
+				>
+				["at0.59"] = <
+					text = <"Coos and babbles">
+					description = <"The infant is alert babbles, coos or says words or sentences to
+their usual ability.">
+				>
+				["at0.60"] = <
+					text = <"Best grimace response (G)">
+					description = <"Best grimace response in response to pain. May be used instead of verbal response for intubated patients.">
+				>
+				["at0.61"] = <
+					text = <"No response">
+					description = <"No grimace response to pain.">
+				>
+				["at0.62"] = <
+					text = <"Mild grimace">
+					description = <"Mild grimace or some change in facial expression to pain.">
+				>
+				["at0.63"] = <
+					text = <"Vigorous grimace">
+					description = <"Vigorous grimace to pain.">
+				>
+				["at0.64"] = <
+					text = <"Less than usual spontaneous activity">
+					description = <"Less than usual spontaneous ability or only responds to touch.">
+				>
+				["at0.65"] = <
+					text = <"Normal spontaneous facial/oro-motor activity">
+					description = <"Spontaneous normal facial/oromotor activity.">
+				>
+				["at0000"] = <
+					text = <"Glasgow Coma Scale">
+					description = <"Fifteen point scale used to assess the level of consciousness of a subject. Also known as the Modified Glasgow Coma Scale.">
+				>
+				["at0000.1"] = <
+					text = <"Paediatric Glasgow Coma Scale">
+					description = <"Fifteen point scale used to assess the level of consciousness of a child subject. Also known as the Modified Glasgow Coma Scale for Infants and Children.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Any event.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0007"] = <
+					text = <"Best verbal response (V)">
+					description = <"Best verbal response to stimulus.">
+				>
+				["at0007.1"] = <
+					text = <"Best verbal response - adult (V)">
+					description = <"Best verbal response to stimulus in an adult.">
+				>
+				["at0008"] = <
+					text = <"Best motor response (M)">
+					description = <"Best motor response to stimulus.">
+				>
+				["at0008.1"] = <
+					text = <"Best motor response - child (M)">
+					description = <"Best motor response to stimulus in child over 2 years old.">
+				>
+				["at0009"] = <
+					text = <"Best eye response (E)">
+					description = <"Best eye response to stimulus.">
+				>
+				["at0010"] = <
+					text = <"No response">
+					description = <"Does not open eyes.">
+				>
+				["at0011"] = <
+					text = <"Eyes open in response to pain">
+					description = <"Opens eyes in response to painful stimuli in limbs.">
+				>
+				["at0012"] = <
+					text = <"Eyes open in response to speech">
+					description = <"Opens eyes in response to any verbal approach.">
+				>
+				["at0013"] = <
+					text = <"Spontaneous eye opening">
+					description = <"Opens eyes spontaneously.">
+				>
+				["at0014"] = <
+					text = <"No response">
+					description = <"No verbal response.">
+				>
+				["at0015"] = <
+					text = <"Incomprehensible sounds">
+					description = <"Moans or groans, but no recognisable words.">
+				>
+				["at0016"] = <
+					text = <"Inappropriate speech">
+					description = <"Intelligible speech, but no conversational exchange.">
+				>
+				["at0017"] = <
+					text = <"Confused conversation">
+					description = <"Converses, but confused and disoriented in their environment.">
+				>
+				["at0018"] = <
+					text = <"Oriented">
+					description = <"Converses, oriented to their environment.">
+				>
+				["at0019"] = <
+					text = <"No response">
+					description = <"No motor response; limbs flaccid.">
+				>
+				["at0020"] = <
+					text = <"Extensor response">
+					description = <"Abnormal extension to pain.">
+				>
+				["at0021"] = <
+					text = <"Flexor response">
+					description = <"Abnormal flexion to pain.">
+				>
+				["at0022"] = <
+					text = <"Withdrawal response">
+					description = <"Flexion withdrawal response to pain.">
+				>
+				["at0023"] = <
+					text = <"Localises pain">
+					description = <"Localised movement in response to pain.">
+				>
+				["at0024"] = <
+					text = <"Obeys commands">
+					description = <"Follows simple verbal commands.">
+				>
+				["at0026"] = <
+					text = <"Total score">
+					description = <"The sum of the 3 ordinal scores for each component parameter.">
+				>
+				["at0030"] = <
+					text = <"EMV profile">
+					description = <"Eye Motor Verbal profile expressing each component individually. This can be derived as a combination of the preceding elements.">
+				>
+				["at0034"] = <
+					text = <"Not able to test eye response">
+					description = <"Not possible to test eye responses - for example in the case of associated severe facial/eye swelling or damage.">
+				>
+				["at0035"] = <
+					text = <"Not able to test verbal response">
+					description = <"Not possible to test verbal responses - for example in the case of associated intubation.">
+				>
+				["at0036"] = <
+					text = <"Not able to test motor response">
+					description = <"Not possible to test motor responses - for example in the case of associated limb paralysis.">
+				>
+				["at0037"] = <
+					text = <"Comment">
+					description = <"Comment about measurement of the Scale, especially if it was not possible to assess a response.">
+				>
+				["at0038"] = <
+					text = <"Reason for inability to test eye response">
+					description = <"Reason for inability to test eye response.">
+				>
+				["at0039"] = <
+					text = <"Reason for inability to test verbal response">
+					description = <"Reason for inability to test verbal response.">
+				>
+				["at0040"] = <
+					text = <"Reason for inability to test motor response">
+					description = <"Reason for inability to test motor response.">
+				>
+			>
+		>
+		["sl"] = <
+			items = <
+				["at0.41"] = <
+					text = <"Gibanje (otroci mlajši od 2 let)">
+					description = <"Gibanje (otroci mlajši od 2 let)">
+				>
+				["at0.42"] = <
+					text = <"Ni odziva ">
+					description = <"Ni odziva">
+				>
+				["at0.43"] = <
+					text = <"Iztegnjena drža">
+					description = <"Iztegnjena drža kot odziv na bolečino">
+				>
+				["at0.44"] = <
+					text = <"Pokrčena drža">
+					description = <"Pokrčena drža kot odziv na bolečino">
+				>
+				["at0.45"] = <
+					text = <"Reakcija na bolečino">
+					description = <"Reakcija na bolečino">
+				>
+				["at0.46"] = <
+					text = <"Reakcija na dotik">
+					description = <"Reakcija na dotik">
+				>
+				["at0.47"] = <
+					text = <"Spontano">
+					description = <"Se giblje spontano in z namenom">
+				>
+				["at0.48"] = <
+					text = <"Govor (otroci mlajši od 2 let)">
+					description = <"Opazovanje govora pri otrocih starejših od 2 let">
+				>
+				["at0.49"] = <
+					text = <"Govor (otroci mlajši od 30 dni)">
+					description = <"Opazovanje govora pri otrocih mlajših od 30 let">
+				>
+				["at0.50"] = <
+					text = <"Ni odziva">
+					description = <"Ni odziva pri govoru">
+				>
+				["at0.51"] = <
+					text = <"Nerazločljivi glasovi">
+					description = <"Godrnjanje">
+				>
+				["at0.52"] = <
+					text = <"Odgovarja nerazumljive besede">
+					description = <"Odgovarja nerazumljive besede">
+				>
+				["at0.53"] = <
+					text = <"Zmeden, dezorientiran">
+					description = <"Govori, vendar je zmeden">
+				>
+				["at0.54"] = <
+					text = <"Orientiran, normalen pogovor">
+					description = <"Orientiran, normalen pogovor">
+				>
+				["at0.55"] = <
+					text = <"Ni odziva">
+					description = <"Ni verbalnega odziva">
+				>
+				["at0.56"] = <
+					text = <"Stokanje">
+					description = <"Občasno zastoka">
+				>
+				["at0.57"] = <
+					text = <"Jokanje">
+					description = <"Joka brez razloga ">
+				>
+				["at0.58"] = <
+					text = <"Razdražljiv jok">
+					description = <"Spontan razdražljiv jok">
+				>
+				["at0.59"] = <
+					text = <"Živahen">
+					description = <"Dojenček je živahen in poskuša komunicirati">
+				>
+				["at0.60"] = <
+					text = <"Izgled obraza">
+					description = <"Izgled obraza (grimase)">
+				>
+				["at0.61"] = <
+					text = <"Ni odziva">
+					description = <"Se ne odziva na bolečino s spakovanjem obraza">
+				>
+				["at0.62"] = <
+					text = <"Majhno spakovanje">
+					description = <"Majhno spakovanje">
+				>
+				["at0.63"] = <
+					text = <"Močno spakovanje">
+					description = <"Močno spakovanje">
+				>
+				["at0.64"] = <
+					text = <"Samo na dotik">
+					description = <"Spakovanje samo na dotik">
+				>
+				["at0.65"] = <
+					text = <"Normalen">
+					description = <"Ima normalen izgled obraza">
+				>
+				["at0000"] = <
+					text = <"Lestvica za oceno zavesti ">
+					description = <"Glasgow Coma Scale - 15 točkovna lestvica za oceno zavesti">
+				>
+				["at0000.1"] = <
+					text = <"Lestvica za oceno zavesti v pediatriji">
+					description = <"Pediatrična Glasgow Coma Scale - 15 točkovna lestvica za oceno zavesti pri otrocih in novorojenčkih">
+				>
+				["at0001"] = <
+					text = <"*Event Series(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"*Any event(en)">
+					description = <"*Any event(en)">
+				>
+				["at0003"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0007"] = <
+					text = <"Govor">
+					description = <"Opazovanje govora pri otrocih mlajših od 2 leti">
+				>
+				["at0007.1"] = <
+					text = <"Govor odrasli">
+					description = <"Opazovanje govora pri odraslih">
+				>
+				["at0008"] = <
+					text = <"Gibanje">
+					description = <"Gibanje pri starejših">
+				>
+				["at0008.1"] = <
+					text = <"Gibanje ">
+					description = <"Gibanje pri otrocih do 2 let">
+				>
+				["at0009"] = <
+					text = <"Odpiranje oči">
+					description = <"Opazovanje odpiranja oči">
+				>
+				["at0010"] = <
+					text = <"Ni odziva">
+					description = <"Ne odpira oči">
+				>
+				["at0011"] = <
+					text = <"Na bolečino">
+					description = <"Oči odpira samo na bolečino">
+				>
+				["at0012"] = <
+					text = <"Na govor">
+					description = <"Odpira oči kot odgovor na nagovarjanje">
+				>
+				["at0013"] = <
+					text = <"Spontano">
+					description = <"Spontano odpira oči">
+				>
+				["at0014"] = <
+					text = <"Ni odziva">
+					description = <"Ni verbalnega odziva">
+				>
+				["at0015"] = <
+					text = <"Nerazločljiv govor">
+					description = <"Godrnja, Mrmlja">
+				>
+				["at0016"] = <
+					text = <"Neprimeren govor">
+					description = <"Odgovarja nerazumljive besede">
+				>
+				["at0017"] = <
+					text = <"Zmeden pogovor">
+					description = <"Govori, vendar je zmeden">
+				>
+				["at0018"] = <
+					text = <"Orientiran, normalen pogovor">
+					description = <"Se pogovarja in je orientiran">
+				>
+				["at0019"] = <
+					text = <"Ni odziva">
+					description = <"Ni odziva v gibanju">
+				>
+				["at0020"] = <
+					text = <"Iztegnjena drža">
+					description = <"Nenormalna iztegnjena drža na bolečino">
+				>
+				["at0021"] = <
+					text = <"Pokrčena drža">
+					description = <"nenormalna pokrčena drža na bolečino">
+				>
+				["at0022"] = <
+					text = <"Reakcija na bolečino">
+					description = <"Reakcija n abolečino">
+				>
+				["at0023"] = <
+					text = <"Lokalizira bolečino">
+					description = <"Lokalizira bolečino">
+				>
+				["at0024"] = <
+					text = <"Uboga verbalna navodila">
+					description = <"Uboga verbalna navodila">
+				>
+				["at0026"] = <
+					text = <"Ocena">
+					description = <"Seštevek 3 ocen za vsako komponento ocenjevanja">
+				>
+				["at0030"] = <
+					text = <"EMV profil">
+					description = <"Eye Motor Verbal profil, ki ocenjuje vasko komponento posebej">
+				>
+				["at0034"] = <
+					text = <"Ni možno oceniti odzivnosti oči">
+					description = <"Ni možno oceniti odzivnosti oči">
+				>
+				["at0035"] = <
+					text = <"Ni možno oceniti govora">
+					description = <"Ni možno oceniti govora">
+				>
+				["at0036"] = <
+					text = <"Ni možno oceniti gibanja">
+					description = <"Ni možno oceniti gibanja">
+				>
+				["at0037"] = <
+					text = <"Opomba">
+					description = <"Opombe glede meritve, opazovanja">
+				>
+				["at0038"] = <
+					text = <"Razlog za ne zmožnost ocene odzivnosti oči">
+					description = <"Razlog za ne zmožnost ocene odzivnosti oči">
+				>
+				["at0039"] = <
+					text = <"Razlog za ne zmožnost ocene govora">
+					description = <"Razlog za ne zmožnost ocene govora">
+				>
+				["at0040"] = <
+					text = <"Razon za ne zmožnost ocene gibanja">
+					description = <"Razon za ne zmožnost ocene gibanja">
+				>
+			>
+		>
+		["pt-br"] = <
+			items = <
+				["at0.41"] = <
+					text = <"Melhor resposta motora - bebê (M)">
+					description = <"Melhor resposta motora ao estímulo em bebês com menos de 2 anos.">
+				>
+				["at0.42"] = <
+					text = <"Sem resposta">
+					description = <"Sem resposta motora; membros flácidos.">
+				>
+				["at0.43"] = <
+					text = <"Resposta do extensora">
+					description = <"Extensão anormal à dor.">
+				>
+				["at0.44"] = <
+					text = <"Resposta flexora">
+					description = <"Flexão anormal à dor.">
+				>
+				["at0.45"] = <
+					text = <"Resposta de retirada">
+					description = <"Retira em resposta a estímulos dolorosos.">
+				>
+				["at0.46"] = <
+					text = <"Retira ao tocar">
+					description = <"Retira em resposta ao toque.">
+				>
+				["at0.47"] = <
+					text = <"Move-se espontaneamente">
+					description = <"Move-se espontaneamente e de propósito.">
+				>
+				["at0.48"] = <
+					text = <"Melhor resposta verbal - criança (V)">
+					description = <"Melhor resposta verbal ao estímulo em uma criança com mais de 2 anos.">
+				>
+				["at0.49"] = <
+					text = <"Melhor resposta verbal - bebê (V)">
+					description = <"Melhor resposta verbal ao estímulo em um bebê com menos de 2 anos.">
+				>
+				["at0.50"] = <
+					text = <"Sem resposta">
+					description = <"Sem resposta verbal.">
+				>
+				["at0.51"] = <
+					text = <"Palavras incompreensíveis ou sons inespecíficos">
+					description = <"Gemidos ou lamento, mas nenhuma palavra reconhecível.">
+				>
+				["at0.52"] = <
+					text = <"Palavras inapropriadas">
+					description = <"Discurso compreensível, mas com palavras inapropriadas.">
+				>
+				["at0.53"] = <
+					text = <"Confusão">
+					description = <"Conversa, mas confuso e desorientado em seu ambiente.">
+				>
+				["at0.54"] = <
+					text = <"Orientado, apropriado">
+					description = <"Conversas, orientadas para o ambiente.">
+				>
+				["at0.55"] = <
+					text = <"Sem resposta">
+					description = <"Sem resposta verbal.">
+				>
+				["at0.56"] = <
+					text = <"Gemidos">
+					description = <"Ocasionalmente choraminga ou geme.">
+				>
+				["at0.57"] = <
+					text = <"Choro">
+					description = <"Chora de forma inadequada.">
+				>
+				["at0.58"] = <
+					text = <"Choro irritável">
+					description = <"Capacidade abaixo do normal ou choro irritável espontâneo.">
+				>
+				["at0.59"] = <
+					text = <"Murmúrio e balbucio">
+					description = <"O bebê está balbuciando alerta, murmurando ou diz palavras ou frases em sua habilidade usual.">
+				>
+				["at0.60"] = <
+					text = <"Melhor resposta de careta (C)">
+					description = <"Melhor resposta de careta em resposta à dor. Pode ser usado em vez de resposta verbal para pacientes intubados.">
+				>
+				["at0.61"] = <
+					text = <"Sem resposta">
+					description = <"Nenhuma resposta de careta à dor.">
+				>
+				["at0.62"] = <
+					text = <"Careta suave">
+					description = <"Careta leve ou alguma mudança na expressão facial para dor.">
+				>
+				["at0.63"] = <
+					text = <"Careta vigorosa">
+					description = <"Careta vigorosa para a dor.">
+				>
+				["at0.64"] = <
+					text = <"Atividade espontânea menor que o usual">
+					description = <"Capacidade espontânea menor que o usual ou responde apenas ao toque.">
+				>
+				["at0.65"] = <
+					text = <"Atividade facial / oromotora espontânea normal">
+					description = <"Atividade facial / oromotora normal espontânea.">
+				>
+				["at0000"] = <
+					text = <"Escala de Coma de Glasgow">
+					description = <"Escala de quinze pontos usada para avaliar o nível de consciência de um sujeito. Também conhecida como Escala de coma modificada de Glasgow.">
+				>
+				["at0000.1"] = <
+					text = <"Escala de coma de Glasgow Pediátrica">
+					description = <"Escala de quinze pontos usada para avaliar o nível de consciência de uma criança. Também conhecida como Escala de coma de Glasgow modificada para bebês e crianças.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Qualquer evento">
+					description = <"Qualquer evento">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0007"] = <
+					text = <"Melhor resposta verbal (V)">
+					description = <"Melhor resposta verbal ao estímulo.">
+				>
+				["at0007.1"] = <
+					text = <"Melhor resposta verbal - adulto (V)">
+					description = <"Melhor resposta verbal ao estímulo em um adulto.">
+				>
+				["at0008"] = <
+					text = <"Melhor resposta motora (M)">
+					description = <"Melhor resposta motora ao estímulo.">
+				>
+				["at0008.1"] = <
+					text = <"Melhor resposta motora - criança (M)">
+					description = <"Melhor resposta motora ao estímulo em criança acima de 2 anos.">
+				>
+				["at0009"] = <
+					text = <"Melhor resposta ocular (O)">
+					description = <"Melhor resposta ocular ao estímulo.">
+				>
+				["at0010"] = <
+					text = <"Sem resposta">
+					description = <"Não abre os olhos.">
+				>
+				["at0011"] = <
+					text = <"Olhos abertos em resposta à dor">
+					description = <"Abre os olhos em resposta a estímulos dolorosos nos membros.">
+				>
+				["at0012"] = <
+					text = <"Olhos abertos em resposta à fala">
+					description = <"Abre os olhos em resposta a qualquer abordagem verbal.">
+				>
+				["at0013"] = <
+					text = <"Abertura ocular espontânea">
+					description = <"Abre os olhos espontaneamente.">
+				>
+				["at0014"] = <
+					text = <"Sem resposta">
+					description = <"Sem resposta verbal.">
+				>
+				["at0015"] = <
+					text = <"Sons incompreensíveis">
+					description = <"Gemidos ou gemidos, mas nenhuma palavra reconhecível.">
+				>
+				["at0016"] = <
+					text = <"Discurso inadequado">
+					description = <"Discurso compreensível, mas mas nenhuma troca de conversação.">
+				>
+				["at0017"] = <
+					text = <"Conversa confusa">
+					description = <"Conversa, mas confuso e desorientado em seu ambiente.">
+				>
+				["at0018"] = <
+					text = <"Orientado">
+					description = <"Conversa orientada para o ambiente.">
+				>
+				["at0019"] = <
+					text = <"Sem resposta">
+					description = <"Sem resposta motora; membros flácidos.">
+				>
+				["at0020"] = <
+					text = <"Resposta extensora">
+					description = <"Extensão anormal à dor.">
+				>
+				["at0021"] = <
+					text = <"Resposta flexora">
+					description = <"Flexão anormal à dor.">
+				>
+				["at0022"] = <
+					text = <"Resposta de retirada">
+					description = <"Resposta de retirada da flexão à dor.">
+				>
+				["at0023"] = <
+					text = <"Localiza a dor">
+					description = <"Movimento localizado em resposta à dor.">
+				>
+				["at0024"] = <
+					text = <"Obedece a comandos">
+					description = <"Segue comandos verbais simples.">
+				>
+				["at0026"] = <
+					text = <"Pontuação total">
+					description = <"A soma das três pontuações ordinais para cada parâmetro do componente.">
+				>
+				["at0030"] = <
+					text = <"Perfil OMV">
+					description = <"Perfil ocular, motor e verbal que expressa cada componente individualmente. Isso pode ser derivado como uma combinação dos elementos anteriores.">
+				>
+				["at0034"] = <
+					text = <"Não é possível testar a resposta ocular">
+					description = <"Não é possível testar as respostas oculares - por exemplo, no caso de inchaço ou dano facial / ocular grave associado.">
+				>
+				["at0035"] = <
+					text = <"Não é possível testar a resposta verbal">
+					description = <"Não é possível testar respostas verbais - por exemplo, no caso de intubação associada.">
+				>
+				["at0036"] = <
+					text = <"Não é possível testar a resposta motora">
+					description = <"Não é possível testar as respostas motoras - por exemplo, no caso de paralisia de membro associada.">
+				>
+				["at0037"] = <
+					text = <"Comentário">
+					description = <"Comentário sobre a medição da Escala, especialmente se não foi possível avaliar uma resposta.">
+				>
+				["at0038"] = <
+					text = <"Motivo da incapacidade de testar a resposta ocular">
+					description = <"Motivo da incapacidade de testar a resposta ocular.">
+				>
+				["at0039"] = <
+					text = <"Motivo da incapacidade de testar a resposta verbal">
+					description = <"Motivo da incapacidade de testar a resposta verbal.">
+				>
+				["at0040"] = <
+					text = <"Motivo da incapacidade de testar a resposta motora">
+					description = <"Motivo da incapacidade de testar a resposta motora">
+				>
+			>
+		>
+	>

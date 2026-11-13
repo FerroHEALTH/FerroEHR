@@ -29,8 +29,9 @@ The HTTP Basic user list in `ferroehr.toml` holds persons only, and it is not
 a user store: each Basic user maps to the `PERSON` that carries its binding
 key, which the identity provider provisions through SCIM
 ([bootstrap and migration](installation/party-binding-migration.md)). A
-machine authenticates with OAuth 2.0 client credentials under a declared
-`[[authz.system_client]]`, and most people authenticate with bearer tokens
+machine authenticates with OAuth 2.0 client credentials and is granted what
+it may do in the CDR ([Operational policy](operational-policy.md#what-a-system-client-may-do)),
+and most people authenticate with bearer tokens
 from the IdP.
 
 > [!NOTE]
@@ -108,28 +109,21 @@ profile, and the server acts on the kind:
   `keycloak`. A Basic user is never one. A system caller acts for no person, so
   it holds `system/` scopes only, and a token with a `user/` or `patient/` scope
   is refused with `403`. It reads under its `system/` scopes. It commits into an
-  EHR only as a client an `[[authz.system_client]]` table declares
-  ([configuration](installation/config-auth.md#authzimport-and-authzsystem_client)),
+  EHR only as a client the CDR grants `commit_composition`: an `ACTOR`
+  carrying its `client_id` and performing a `ROLE`
+  whose capability grants it
+  ([Operational policy](operational-policy.md#what-a-system-client-may-do)),
   under the committer `PARTY_IDENTIFIED{name = <client>, identifiers =
-  [{issuer = <iss>, id = <client>, type = "client"}]}` with no `external_ref`.
-  - Each COMPOSITION it commits is of a template its `writes` lists, or the
-    commit is refused with `403`.
-  - It names a facility of its `facilities` in
-    `context.health_care_facility.identifiers`, or, for a COMPOSITION with no
-    context, in `feeder_audit.originating_system_audit.location.identifiers`.
-    Otherwise it is refused with `422` naming the element; the server fills
-    neither.
-  - A device act names the device in `composer`, with an identifier of one of
-    the client's `device_identifier_issuers` that is also
-    `feeder_audit.originating_system_audit.system_id`, and is accepted only
-    from a `device` client. Every other COMPOSITION records a person's act: it
-    is accepted only from a `relay` client (`403` otherwise) and names the
-    professional by an identifier in `composer` or in the `performer` of a
-    context participation (`422` otherwise). An organisation `composer` is
-    refused with `422`.
+  [{issuer = <iss>, id = <client>, type = "client"}]}` with an `external_ref`
+  to that `ACTOR`. The grant decides the templates it writes, the facilities
+  it writes at and whether it relays a person's act or registers a device's;
+  an import or an export needs a grant of its own.
 - **A verified external person or organisation** of a `federation` issuer is
-  admitted only under the `[[authz.federation.agreement]]` of its issuer and
-  accessor, and refused with `403` without one or under the other accessor's.
+  admitted only under the federation agreement its partner holds in the CDR
+  for its accessor kind, the partner being the party that carries the
+  token's issuer and `client_id` as a `client_id` identifier
+  ([Operational policy](operational-policy.md#federation-agreements)), and
+  refused with `403` without one or under the other accessor's.
   Its rights come from the agreement, never from a role:
   - it holds only the `patient/` scopes the agreement `reads` (beside
     `openid`, `profile`, `fhirUser`, `online_access` and `launch`), so a token
@@ -293,9 +287,9 @@ the issuer table, which wins over the preset.
 3. **The SCIM client.** Your authorization server issues the provisioning
    client an access token by the client credentials grant (RFC 6749 §4.4), or
    in exchange for a client assertion (RFC 7523 §2.2). Declare the
-   authorization server as an issuer of kind `machines`, and the client in
-   [`[[auth.scim.client]]`](installation/config-auth.md#authscim) with the
-   `binding_issuer` of step 2. The SCIM client sends the key as
+   authorization server as an issuer of kind `machines`, and grant the client
+   [`scim_provision`](installation/config-auth.md#authscim) in the CDR with
+   the `binding_issuer` of step 2. The SCIM client sends the key as
    `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier`
    (RFC 7644).
 4. **An onward caller.** A service that calls FerroEHR for a signed-in
@@ -597,7 +591,11 @@ An issuer can let a professional with no party work at their first login:
 FerroEHR then creates a provisional `PERSON` from the access token and binds
 the login to it, as
 [the configuration reference](installation/config-auth.md#just-in-time-creation)
-describes. It is off by default. What each identity provider must do for it:
+describes. It is off until an administrator writes a `create_at_login`
+grant for the issuer in the CDR, whose admission conditions read the
+claims below
+([Operational policy](operational-policy.md#just-in-time-admission)). What
+each identity provider must do for it:
 
 - **Put the name claims in the access token.** FerroEHR reads the person's
   data from the access token only (RFC 9068 §2.2.2 lets an authorization
@@ -609,8 +607,9 @@ describes. It is off by default. What each identity provider must do for it:
   `given_name` and `family_name` to the access token of your app
   registration and request the `profile` scope: Entra documents both as v2.0
   optional claims that "Requires the `profile` scope" (Microsoft identity
-  platform, *Optional claims reference*). Admit logins by group
-  (`admit_groups`, the object ids in `groups`) or by the `idp` claim, which
+  platform, *Optional claims reference*). Admit logins by group (an
+  `admit_group` element of the `create_at_login` grant, holding an object
+  id of `groups`) or by the `idp` claim (an `admit_idp` element), which
   "records the identity provider that authenticated the subject of the
   token" and differs from the issuer for a guest (*Access token claims
   reference*). The key is the object id `oid`, never `upn` or `email`, which

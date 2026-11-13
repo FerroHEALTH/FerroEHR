@@ -38,8 +38,8 @@ services:
       FERROEHR__AUTH__SMART__DISCOVERY: "true"
       FERROEHR__AUTH__SMART__ISSUER_METADATA_FILE: /etc/ferroehr/cnf-smart-issuer-metadata.json
       # master04 §Services: every services.*.baseUrl is an "Absolute URL to the
-      # root of the API (required)", so the server needs its external origin.
-      FERROEHR__AUTH__SMART__PUBLIC_BASE_URL: "http://localhost:8080"
+      # root of the API (required)", so the server needs its public URL.
+      FERROEHR__SERVER__PUBLIC_BASE_URL: "http://localhost:8080"
       # ── trust the committed CNF test issuer ───────────────────────────────
       # The lane validates the runner-minted tokens against a STATIC key set, so
       # no Authorization Server has to be running for the scope cases to
@@ -61,14 +61,10 @@ services:
       FERROEHR__AUTH__PARTY__1__ISSUER: "https://as.cnf.test"
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: "urn:ferroehr:cnf-smart-login"
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: "login"
-      # The SCIM client that provisions the runner's subject `cnf-smart-app`
-      # (docs/conformance/party/ferroehr/ixit.json `scoped_tokens.mint`) under
-      # this issuer's identifier issuer: a second client, since no two clients
-      # share a binding_issuer (docs/conformance/party/scim/README.md).
-      FERROEHR__AUTH__SCIM__CLIENT__1__ISSUER: "https://scim.ferroehr.invalid"
-      FERROEHR__AUTH__SCIM__CLIENT__1__CLIENT_ID: "cnf-smart"
-      FERROEHR__AUTH__SCIM__CLIENT__1__SCOPE: "ferroehr/scim"
-      FERROEHR__AUTH__SCIM__CLIENT__1__BINDING_ISSUER: "urn:ferroehr:cnf-smart-login"
+      # The group claim and its identifier issuer, under which a SCIM client's
+      # Groups are written once the party mapping provisions Groups.
+      FERROEHR__AUTH__PARTY__1__GROUP_CLAIM: "groups"
+      FERROEHR__AUTH__PARTY__1__GROUP_IDENTIFIER_ISSUER: "urn:ferroehr:cnf-smart-groups"
     volumes:
       - ./docs/conformance/party/smart/jwks.json:/etc/ferroehr/cnf-smart-jwks.json:ro
       - ./docs/conformance/party/smart/issuer-metadata.json:/etc/ferroehr/cnf-smart-issuer-metadata.json:ro

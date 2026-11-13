@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -529,63 +529,63 @@ Terms and conditions for use: https://www.healthmeasures.net/images/PROMIS/Terms
       </items>
       <items code="at0010">
         <items id="text">Not at all</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">A little bit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Somewhat</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Quite a bit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Very much</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Very poor</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Poor</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Fair</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Good</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Very good</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Not at all</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">A little bit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Somewhat</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Quite a bit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Very much</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="de">
@@ -615,65 +615,64 @@ Terms and conditions for use: https://www.healthmeasures.net/images/PROMIS/Terms
       </items>
       <items code="at0010">
         <items id="text">Überhaupt nicht</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Ein wenig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Mäßig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Ziemlich</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Sehr</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Sehr schlecht</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Schlecht</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Mäßig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Gut</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Sehr gut</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Überhaupt nicht</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Ein wenig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Mäßig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Ziemlich</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Sehr</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

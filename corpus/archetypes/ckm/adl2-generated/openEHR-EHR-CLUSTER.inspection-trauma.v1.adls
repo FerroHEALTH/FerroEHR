@@ -1,0 +1,85 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ab664ebf-bcf4-463b-9296-6406988230fb; build_uid=5dafd350-9e0d-44f3-83fb-0a59c325f89e)
+    openEHR-EHR-CLUSTER.inspection-trauma.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.inspection.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"23/04/2007">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"221EA736B068FFD39C4A8A08F7302EA9">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A generic archetype for recording the findings on inspection of blunt traumatic injury.">
+            keywords = <"inspect", "visual", "trauma", "injury">
+            use = <"For use with the exam clusters for recording findings on inspection">
+            misuse = <"Should only be used in the exam observation">
+            copyright = <"copyright (c) 2009 openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Inspection of blunt traumatic injury
+        /items[at0006]/items matches {
+            after [at0005]
+            ELEMENT[at0036]
+            ELEMENT[at0.52] occurrences matches {0..1} matches {    -- Bruising
+                value matches {
+                    DV_TEXT[at0.9000]
+                }
+            }
+            ELEMENT[at0.53] occurrences matches {0..1} matches {    -- Deformity
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.52"] = <
+                text = <"Bruising">
+                description = <"Details of bruising">
+            >
+            ["at0.53"] = <
+                text = <"Deformity">
+                description = <"Details of deformity">
+            >
+            ["at0.54"] = <
+                text = <"Foreign body">
+                description = <"*">
+            >
+            ["at0.55"] = <
+                text = <"Present">
+                description = <"*">
+            >
+            ["at0.56"] = <
+                text = <"Details">
+                description = <"*">
+            >
+            ["at0000.1"] = <
+                text = <"Inspection of blunt traumatic injury">
+                description = <"The findings on physical examination by inspection of blunt traumatic injury">
+            >
+        >
+    >

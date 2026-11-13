@@ -163,7 +163,6 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
             smart: Arc::new(smart::routes::SmartRoutes::new(
                 &namespaces,
                 ferroehr::config::auth::product_scope(&cfg.auth.shared),
-                cfg.auth.smart.demographic_clients.clone(),
             )),
             served: Arc::new(crate::api::served::ServedMethods::new(&namespaces)),
             service: state.backend_handle(),

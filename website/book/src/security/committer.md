@@ -67,13 +67,14 @@ A system client commits clinical content only as declared:
   COMPOSITION names the device in `composer`. Treating such a registration as
   outside Art. 13(4) is FerroEHR's reading of that article and of
   `COMPOSITION.composer`;
-- either one names a facility of its `facilities` in
+- either one names a facility its grant covers in
   `context.health_care_facility`, or, without a context, in
   `feeder_audit.originating_system_audit.location`. The server checks the
   facility and never fills it.
 
-The full rules are under
-[`[[authz.system_client]]`](../installation/config-auth.md#authzimport-and-authzsystem_client).
+The client's grant is policy data in the CDR, and the committer carries an
+`external_ref` to the client's `ACTOR`. The full rules are under
+[What a system client may do](../operational-policy.md#what-a-system-client-may-do).
 
 ## What a client may still send
 
@@ -110,7 +111,7 @@ header path, send no `openEHR-AUDIT_DETAILS` committer at all.
 | A system COMPOSITION outside its `writes`, or a person act from a client that is not `relay` | `403` |
 | A system COMPOSITION without a facility of its `facilities`, a relay act naming no professional, or an organisation `composer` | `422` naming the element |
 | A patient-context token's demographic write | `403` |
-| An import of a version whose committer names a local party, from a system `[authz.import] trusted_systems` does not list | `403` |
+| An import of a version whose committer names a local party, from a system no `creating_system` element of the importer's import grant names | `403` |
 
 A login the binding cannot use is refused before any commit; the codes are
 under [How a login is looked up](../installation/config-auth.md#how-a-login-is-looked-up).
@@ -129,12 +130,15 @@ deviation is reported upstream in
 
 ## Imports
 
-`POST /message/import…` needs the role `[authz.rbac] import_role` names, or a
-`system/` caller. An imported version keeps its wrapped `commit_audit` and
+`POST /message/import…` needs the role `[authz.rbac] import_role` names, an
+`import_ehr` or `import_ehr_extract` policy grant, or a `system/` caller. An imported version keeps its wrapped `commit_audit` and
 attestations as received, so an `IMPORTED_VERSION` names who committed at the
 source. A wrapped committer that names a `PERSON` of this server, or carries
 a login identifier of its issuers, is refused with `403` unless the version
-was created by a system `[authz.import] trusted_systems` lists.
+was created by a system a `creating_system` element of the caller's import
+grant names, read from the CDR on the request
+([Operational policy](../operational-policy.md#what-the-grants-decide)). This
+node's own system id is never trusted that way.
 
 ## What the access record adds
 
@@ -160,8 +164,9 @@ relationship. The identifier gets there in one of four ways:
    `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier`.
    FerroEHR creates the `PERSON` and its professional `ROLE` in one
    contribution.
-2. **Just-in-time creation** at the first login, off by default per issuer
-   ([configuration](../installation/config-auth.md#just-in-time-creation)).
+2. **Just-in-time creation** at the first login, off until an administrator
+   writes a `create_at_login` grant for the issuer in the CDR
+   ([Operational policy](../operational-policy.md#just-in-time-admission)).
 3. **The demographic API**, under the administrator role.
 4. **An existing `PERSON`** that already carries the identifier, adopted as
    [the migration](../installation/party-binding-migration.md) describes.

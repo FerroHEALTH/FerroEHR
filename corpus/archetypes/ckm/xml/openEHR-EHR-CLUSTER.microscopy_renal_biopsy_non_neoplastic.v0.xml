@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -30,9 +30,7 @@ Jennette JC, D'Agati VD, Olson JL, Silva F. Heptinstall's Pathology of the Kidne
 &#xD;
 Weening JJ, D'Agati VD, Schwartz MM, Seshan SV, Alpers CE, Appel GB, Balow JE, Bruijn JA, Cook T, Ferrario F, Fogo AB, Ginzler EM, Hebert L, Hill G, Hill P, Jennette JC, Kong NC, Lesavre P, Lockshin M, Looi LM, Makino H, Moura LA, Nagata M. The classification of glomerulonephritis in systemic lupus erythematosus revisited. J Am Soc Nephrol. 2004 Feb;15(2):241-50. Erratum in: J Am Soc Nephrol. 2004 Mar;15(3):835-6.&#xD;
 &#xD;
-Working Group of the International IgA Nephropathy Network and the Renal Pathology Society, Roberts IS, Cook HT, Troyanov S, Alpers CE, Amore A, Barratt J, Berthoux F, Bonsib S, Bruijn JA, Cattran DC, Coppo R, D'Agati V, D'Amico G, Emancipator S, Emma F, Feehally J, Ferrario F, Fervenza FC, Florquin S, Fogo A, Geddes CC, Groene HJ, Haas M, Herzenberg AM, Hill PA, Hogg RJ, Hsu SI, Jennette JC, Joh K, Julian BA, Kawamura T, Lai FM, Li LS, Li PK, Liu ZH, Mackinnon B, Mezzano S, Schena FP, Tomino Y, Walker PD, Wang H, Weening JJ, Yoshikawa N, Zhang H. The Oxford classification of IgA nephropathy: pathology definitions, correlations, and reproducibility. Kidney Int. 2009 Sep;76(5):546-56.&#xD;
-&#xD;
-</other_details>
+Working Group of the International IgA Nephropathy Network and the Renal Pathology Society, Roberts IS, Cook HT, Troyanov S, Alpers CE, Amore A, Barratt J, Berthoux F, Bonsib S, Bruijn JA, Cattran DC, Coppo R, D'Agati V, D'Amico G, Emancipator S, Emma F, Feehally J, Ferrario F, Fervenza FC, Florquin S, Fogo A, Geddes CC, Groene HJ, Haas M, Herzenberg AM, Hill PA, Hogg RJ, Hsu SI, Jennette JC, Joh K, Julian BA, Kawamura T, Lai FM, Li LS, Li PK, Liu ZH, Mackinnon B, Mezzano S, Schena FP, Tomino Y, Walker PD, Wang H, Weening JJ, Yoshikawa N, Zhang H. The Oxford classification of IgA nephropathy: pathology definitions, correlations, and reproducibility. Kidney Int. 2009 Sep;76(5):546-56.</other_details>
     <other_details id="current_contact">Sabine Leh, Haukeland University Hospital, sabine.leh@helse-bergen.no</other_details>
     <other_details id="original_namespace">no.nasjonalikt</other_details>
     <other_details id="original_publisher">Nasjonal IKT</other_details>
@@ -4864,7 +4862,7 @@ Working Group of the International IgA Nephropathy Network and the Renal Patholo
       </items>
       <items code="at0023">
         <items id="text">Glomeruli with global sclerosis</items>
-        <items id="description">The number of glomeruli showing scarring with obliteration of capillary lumen by extracellular matrix in the entire or nearly entire glomerular tuft. </items>
+        <items id="description">The number of glomeruli showing scarring with obliteration of capillary lumen by extracellular matrix in the entire or nearly entire glomerular tuft.</items>
       </items>
       <items code="at0024">
         <items id="text">Normal glomeruli</items>
@@ -5050,7 +5048,7 @@ openEHR-EHR-CLUSTER.glomerulus_segmental_glomerulosclerosis_classification.v1.</
         <items id="description">Findings related to amyloid deposition.</items>
       </items>
       <items code="at0076">
-        <items id="text">Details of amyloid deposition </items>
+        <items id="text">Details of amyloid deposition</items>
         <items id="description">Slot for detailed description of specific glomerular changes.&#xD;
 Include:&#xD;
 openEHR-EHR-CLUSTER.amyloid_deposition.v1</items>
@@ -5164,7 +5162,7 @@ openEHR-EHR-CLUSTER.amyloid_deposition.v1</items>
         <items id="description">Numerous podocytes with resorption droplets are present.</items>
       </items>
       <items code="at0111">
-        <items id="text">Equivocal </items>
+        <items id="text">Equivocal</items>
         <items id="description">It is uncertain whether podocytes with resorption droplets are present or not.</items>
       </items>
       <items code="at0112">
@@ -5317,7 +5315,7 @@ openEHR-EHR-CLUSTER.amyloid_deposition.v1</items>
         <items id="description">Capillary wall duplication is diffusely present.</items>
       </items>
       <items code="at0154">
-        <items id="text">Segmental </items>
+        <items id="text">Segmental</items>
         <items id="description">Capillary wall duplication is segmentally present.</items>
       </items>
       <items code="at0155">
@@ -5531,4 +5529,3 @@ openEHR-EHR-CLUSTER.amyloid_deposition.v1</items>
     </term_definitions>
   </ontology>
 </archetype>
-

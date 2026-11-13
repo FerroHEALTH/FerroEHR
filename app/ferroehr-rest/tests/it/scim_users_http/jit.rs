@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Just-in-time creation of a provisional `PERSON` at a first login (#5016),
-//! through the assembled router with the server's creating party source.
+//! through the assembled router with the server's creating party source,
+//! admitted by `create_at_login` grants held in the CDR (#5441).
 //!
-//! A first login of an issuer with `jit = true` that meets the admission
-//! condition commits one `553|incomplete|` `PERSON` (RM common
+//! A first login that a grant in force for its issuer admits commits one
+//! `553|incomplete|` `PERSON` (RM common
 //! `master06-change_control_package.adoc` §Incomplete Content) with its
 //! professional `ROLE` and is served bound to it; the cases it never runs for
-//! are refused; concurrent first requests commit one `PERSON`; and the SCIM
+//! are refused; a grant changed in the CDR decides the next login with no
+//! restart; concurrent first requests commit one `PERSON`; and the SCIM
 //! client of the key's issuer completes it. When a login creates a party is
 //! our own design.
 
@@ -17,8 +19,14 @@ use std::sync::Arc;
 use axum::Router;
 use ferroehr::config::binding::jit::IssuerBinding;
 use ferroehr::config::binding::{ProviderId, Providers};
+use ferroehr::ids::VoId;
+use ferroehr::party_binding::grants::admission::{ADMIT_GUESTS, ADMIT_IDP, LOGIN_ISSUER};
+use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
+use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::query::request::AqlQueryRequest;
+use ferroehr::service::version_update::WriteRequest;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::IssuerEntry;
 use ferrohealth_smart::kind::IssuerKind;
@@ -32,14 +40,18 @@ use crate::common;
 /// No `PERSON`.
 const NONE: [uuid::Uuid; 0] = [];
 
-/// The identity provider the issuer's table admits.
+/// The identity provider the admission admits.
 const IDP: &str = "https://sts.example/hospital";
 
-/// The SCIM harness's configuration with the name claims mapped and
-/// just-in-time creation on for `PERSONS`, admitting logins of `IDP`.
+/// The SCIM harness's configuration with the name claims mapped, so a
+/// provisional `PERSON` can be written.
 fn jit_config() -> AppConfig {
     let mut config = config();
-    let attributes = &mut config.party_binding.person.attribute;
+    let attributes = &mut config
+        .party_binding
+        .person
+        .get_or_insert_default()
+        .attribute;
     for (attribute, claim) in
         attributes
             .iter_mut()
@@ -47,22 +59,22 @@ fn jit_config() -> AppConfig {
     {
         attribute.oidc = Some(claim.to_owned());
     }
-    config.party_binding.issuer = vec![IssuerBinding {
-        issuer: PERSONS.to_owned(),
-        jit: true,
-        admit_idp: vec![IDP.to_owned()],
-        ..IssuerBinding::default()
-    }];
     config
 }
 
 /// The router of `config` over a fresh audited database, whose party source
 /// creates a provisional `PERSON` through the service, with the store's pool
-/// and the service.
-async fn jit_app(
+/// and the service; `[authz.grants] allowed` admits `create_at_login` and the
+/// harness clients' `scim_provision`, and the CDR holds no admission.
+async fn bare_app(
     config: AppConfig,
 ) -> (testkit::TestDb, sqlx::PgPool, Arc<FerroEhrService>, Router) {
     let (db, pool, service, _) = Box::pin(app_of(config.clone(), true)).await;
+    service.grants().set_ceiling(GrantCeiling::new([
+        Operation::CommitComposition,
+        Operation::CreateAtLogin,
+        Operation::ScimProvision,
+    ]));
     let source = Arc::new(
         service
             .party_source("demographic")
@@ -70,6 +82,118 @@ async fn jit_app(
     );
     let app = crate::party_binding_http::router_with(Arc::clone(&service), config, source).await;
     (db, pool, service, app)
+}
+
+/// [`bare_app`] whose CDR admits the logins of `PERSONS` from `IDP`.
+async fn jit_app(
+    config: AppConfig,
+) -> (testkit::TestDb, sqlx::PgPool, Arc<FerroEhrService>, Router) {
+    let (db, pool, service, app) = Box::pin(bare_app(config)).await;
+    admit(&service, &[], None).await;
+    (db, pool, service, app)
+}
+
+fn text(value: &str) -> Value {
+    json!({ "_type": "DV_TEXT", "value": value })
+}
+
+/// A `DV_CODED_TEXT` of the operation terminology.
+fn operation_code(code: &str) -> Value {
+    json!({ "_type": "DV_CODED_TEXT", "value": code,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY },
+                "code_string": code } })
+}
+
+/// A credentials element named by the terminology's `code`, holding `value`.
+fn element(code: &str, value: &Value) -> Value {
+    json!({ "_type": "ELEMENT", "archetype_node_id": "at0030", "name": operation_code(code),
+            "value": value })
+}
+
+/// The `ARCHETYPED` of the deployment's own `archetype`, with no template.
+fn archetyped(archetype: &str) -> Value {
+    json!({ "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "rm_version": "1.1.0" })
+}
+
+/// A name identity of `name`.
+fn identities(name: &str) -> Value {
+    json!([{ "_type": "PARTY_IDENTITY", "archetype_node_id": "at0001", "name": text("name"),
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": text("details"),
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003", "name": text("name"),
+                        "value": text(name) }] } }])
+}
+
+/// The write of `body` after `preceding`.
+fn write<T: serde::de::DeserializeOwned>(body: &Value, preceding: Option<&str>) -> WriteRequest<T> {
+    let mut write =
+        WriteRequest::new(openehr_its::json::from_canonical_value(body).expect("the body decodes"));
+    write.lifecycle_state = Some("532".to_owned());
+    write.preceding = preceding.map(|p| p.parse().expect("an OBJECT_VERSION_ID"));
+    write
+}
+
+/// The admission `ROLE` the identity provider's `ORGANISATION` `performer`
+/// performs: a capability granting `create_at_login` for `PERSONS` from
+/// `IDP`, with the further credentials `extra`, valid until `until` when
+/// given.
+fn admission(performer: VoId, extra: &[Value], until: Option<&str>) -> Value {
+    let archetype = "openEHR-DEMOGRAPHIC-ROLE.login_admission.v1";
+    let mut items = vec![
+        json!({ "_type": "ELEMENT", "archetype_node_id": "at0021", "name": text("operation"),
+                "value": operation_code(Operation::CreateAtLogin.code()) }),
+        element(
+            LOGIN_ISSUER,
+            &json!({ "_type": "DV_URI", "value": PERSONS }),
+        ),
+        element(ADMIT_IDP, &text(IDP)),
+    ];
+    items.extend_from_slice(extra);
+    let mut role = json!({
+        "_type": "ROLE", "archetype_node_id": archetype,
+        "archetype_details": archetyped(archetype), "name": text("Login admission"),
+        "identities": identities("login admission"),
+        "performer": { "_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
+                       "id": { "_type": "HIER_OBJECT_ID", "value": performer.to_string() } },
+        "capabilities": [{
+            "_type": "CAPABILITY", "archetype_node_id": "at0020", "name": text("admission"),
+            "credentials": { "_type": "ITEM_TREE", "archetype_node_id": "at0022",
+                             "name": text("terms"), "items": items }
+        }]
+    });
+    if let Some(until) = until {
+        role["time_validity"] = json!({ "_type": "DV_INTERVAL",
+            "upper": { "_type": "DV_DATE", "value": until },
+            "lower_unbounded": true, "upper_unbounded": false,
+            "lower_included": false, "upper_included": true });
+    }
+    role
+}
+
+/// Commits the identity provider's `ORGANISATION` and its admission `ROLE`
+/// with the further credentials `extra` through `service`, outside a
+/// request, as the server's own administration does; the `ROLE`'s version
+/// uid and the `ORGANISATION`'s container.
+async fn admit(service: &FerroEhrService, extra: &[Value], until: Option<&str>) -> (String, VoId) {
+    let archetype = "openEHR-DEMOGRAPHIC-ORGANISATION.identity_provider.v1";
+    let idp = json!({
+        "_type": "ORGANISATION", "archetype_node_id": archetype,
+        "archetype_details": archetyped(archetype), "name": text("Hospital identity provider"),
+        "identities": identities("hospital identity provider")
+    });
+    let created = Box::pin(service.party_create(PartyKind::Organisation, write(&idp, None)))
+        .await
+        .expect("the ORGANISATION commits");
+    let performer = crate::party_binding_http::vo(&created.meta.expect("a version").uid);
+    let role = Box::pin(service.party_create(
+        PartyKind::Role,
+        write(&admission(performer, extra, until), None),
+    ))
+    .await
+    .expect("the admission ROLE commits");
+    (role.meta.expect("a version").uid, performer)
 }
 
 /// A bearer of `PERSONS` whose key (`sub`) is `key`, with `extra` claims.
@@ -258,7 +382,13 @@ async fn a_provisional_record_names_the_declared_provider() {
 #[tokio::test]
 async fn an_attribute_marked_jit_is_written() {
     let mut config = jit_config();
-    if let Some(email) = config.party_binding.person.attribute.get_mut(3) {
+    if let Some(email) = config
+        .party_binding
+        .person
+        .get_or_insert_default()
+        .attribute
+        .get_mut(3)
+    {
         email.jit = true;
     }
     let (_db, _pool, _service, app) = Box::pin(jit_app(config)).await;
@@ -270,7 +400,7 @@ async fn an_attribute_marked_jit_is_written() {
 }
 
 /// A login that fails the admission condition, a token with no mapped name
-/// claim, an issuer without `jit`, and a key a SCIM client deleted or
+/// claim, an issuer the CDR admits no login of, and a key a SCIM client deleted or
 /// deactivated are each refused, and none creates a `PERSON`.
 #[tokio::test]
 async fn each_case_jit_never_runs_for_is_refused_and_creates_nothing() {
@@ -322,13 +452,85 @@ async fn each_case_jit_never_runs_for_is_refused_and_creates_nothing() {
     assert!(body.contains("refused-inactive"), "{body}");
     assert_eq!(persons_of(&pool, inactive).await.len(), 1);
 
-    let mut off = jit_config();
-    off.party_binding.issuer.clear();
-    let (_db, pool, _service, app) = Box::pin(jit_app(off)).await;
+    let (_db, pool, _service, app) = Box::pin(bare_app(jit_config())).await;
     let key = "6a1f6c1e-0000-4000-8000-00000000b005";
     let (status, body) = request(&app, &login(key, &named())).await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "off by default: {body}");
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "no admission in the CDR creates nobody: {body}"
+    );
     assert_eq!(persons_of(&pool, key).await, NONE);
+}
+
+/// The admission is read from the CDR on each first login: with none a
+/// login is refused, an admission committed while the server runs creates
+/// the next login's `PERSON`, an ended one creates none, and one that admits
+/// another identity provider refuses this one, each with no restart.
+#[tokio::test]
+async fn an_admission_changed_in_the_cdr_decides_the_next_login() {
+    let (_db, pool, service, app) = Box::pin(bare_app(jit_config())).await;
+    let before = "6a1f6c1e-0000-4000-8000-00000000b101";
+    let (status, body) = request(&app, &login(before, &named())).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    assert_eq!(persons_of(&pool, before).await, NONE);
+
+    let (role_uid, performer) = admit(&service, &[], None).await;
+    let admitted = "6a1f6c1e-0000-4000-8000-00000000b102";
+    let (status, body) = request(&app, &login(admitted, &named())).await;
+    assert_eq!(status, StatusCode::OK, "the next login is created: {body}");
+    assert_eq!(persons_of(&pool, admitted).await.len(), 1);
+
+    let yesterday = jiff::Timestamp::now()
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .date()
+        .yesterday()
+        .expect("a date")
+        .to_string();
+    let ended = Box::pin(
+        service.party_update(
+            PartyKind::Role,
+            crate::party_binding_http::vo(&role_uid),
+            ferroehr::service::demographic::precondition::Precondition::parse(
+                Some(&role_uid),
+                None,
+            )
+            .expect("an If-Match"),
+            write(
+                &admission(performer, &[], Some(&yesterday)),
+                Some(&role_uid),
+            ),
+        ),
+    )
+    .await
+    .expect("the admission ends");
+    let after = "6a1f6c1e-0000-4000-8000-00000000b103";
+    let (status, body) = request(&app, &login(after, &named())).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "the ended admission: {body}");
+    assert_eq!(persons_of(&pool, after).await, NONE);
+
+    let ended_uid = ended.meta.expect("a version").uid;
+    let mut elsewhere = admission(performer, &[], None);
+    elsewhere["capabilities"][0]["credentials"]["items"][2] =
+        element(ADMIT_IDP, &text("https://sts.example/elsewhere"));
+    Box::pin(
+        service.party_update(
+            PartyKind::Role,
+            crate::party_binding_http::vo(&ended_uid),
+            ferroehr::service::demographic::precondition::Precondition::parse(
+                Some(&ended_uid),
+                None,
+            )
+            .expect("an If-Match"),
+            write(&elsewhere, Some(&ended_uid)),
+        ),
+    )
+    .await
+    .expect("the admission names another identity provider");
+    let other = "6a1f6c1e-0000-4000-8000-00000000b104";
+    let (status, body) = request(&app, &login(other, &named())).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "another idp: {body}");
+    assert_eq!(persons_of(&pool, other).await, NONE);
 }
 
 /// Ten concurrent first requests of one login commit one `PERSON`, and a
@@ -336,7 +538,11 @@ async fn each_case_jit_never_runs_for_is_refused_and_creates_nothing() {
 #[tokio::test]
 async fn concurrent_first_requests_commit_one_person_and_a_taken_user_name_is_refused() {
     let mut config = jit_config();
-    config.party_binding.issuer[0].user_name_claim = Some("login_name".to_owned());
+    config.party_binding.issuer = vec![IssuerBinding {
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(PERSONS),
+        user_name_claim: Some("login_name".to_owned()),
+        ..IssuerBinding::default()
+    }];
     let (_db, pool, _service, app) = Box::pin(jit_app(config)).await;
     let key = "6a1f6c1e-0000-4000-8000-00000000c001";
     let mut claims = named();
@@ -449,9 +655,8 @@ const PATIENTS: &str = "https://patients.example";
 const SERVICE_ACCOUNT: &str = "service-account-lab";
 
 /// [`jit_config`] beside a patients issuer, whose persons issuer marks a
-/// guest by `acct = 1` and its service account app-only, its `[[auth.party]]` table admitting guests,
-/// and its just-in-time table creating guests when `guests_jit`.
-fn callers_config(guests_jit: bool) -> AppConfig {
+/// guest by `acct = 1` and its service account app-only, its `[[auth.party]]` table admitting guests.
+fn callers_config() -> AppConfig {
     let mut config = jit_config();
     if let Some(persons) = config
         .auth
@@ -481,21 +686,20 @@ fn callers_config(guests_jit: bool) -> AppConfig {
         .shared
         .party
         .iter_mut()
-        .find(|party| party.issuer == PERSONS)
+        .find(|party| party.issuer.expose() == PERSONS)
     {
         party.guests = true;
     }
-    config.party_binding.issuer[0].guests_jit = guests_jit;
     config
 }
 
 /// A patient of the patients issuer and an app-only token of the persons
 /// issuer pass the binding as before, the patient's scopes then deciding,
-/// and create no `PERSON`, and a guest is refused and creates none
-/// while `guests_jit` is off.
+/// and create no `PERSON`, and a guest is refused and creates none while no
+/// admission admits guests.
 #[tokio::test]
-async fn a_patient_a_system_caller_and_a_guest_without_guests_jit_create_nothing() {
-    let (_db, pool, _service, app) = Box::pin(jit_app(callers_config(false))).await;
+async fn a_patient_a_system_caller_and_a_guest_without_admit_guests_create_nothing() {
+    let (_db, pool, _service, app) = Box::pin(jit_app(callers_config())).await;
     let exp = jiff::Timestamp::now().as_second() + 3600;
     let patient = common::bearer(&json!({ "iss": PATIENTS, "aud": AUDIENCE, "exp": exp,
         "sub": "6a1f6c1e-0000-4000-8000-00000000e001", "name": "A. Patient",
@@ -529,11 +733,20 @@ async fn a_patient_a_system_caller_and_a_guest_without_guests_jit_create_nothing
     );
 }
 
-/// Under `guests_jit` an admitted guest's first login creates its
-/// provisional `PERSON` and is served bound to it.
+/// Under an admission whose `admit_guests` is true an admitted guest's first
+/// login creates its provisional `PERSON` and is served bound to it.
 #[tokio::test]
-async fn a_guest_under_guests_jit_is_created() {
-    let (_db, pool, _service, app) = Box::pin(jit_app(callers_config(true))).await;
+async fn a_guest_under_admit_guests_is_created() {
+    let (_db, pool, service, app) = Box::pin(bare_app(callers_config())).await;
+    admit(
+        &service,
+        &[element(
+            ADMIT_GUESTS,
+            &json!({ "_type": "DV_BOOLEAN", "value": true }),
+        )],
+        None,
+    )
+    .await;
     let key = "6a1f6c1e-0000-4000-8000-00000000e004";
     let mut guest = named();
     guest["acct"] = json!("1");

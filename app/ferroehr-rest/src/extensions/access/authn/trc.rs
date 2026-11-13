@@ -57,7 +57,7 @@ impl Shape {
     pub(super) fn of(layer: &AuthLayer, req: &Request) -> Self {
         let (matched, uri) = super::gates::route(req);
         let requirement = match layer.smart.need(req.method(), matched, uri.path()) {
-            Need::Now(requirement) => requirement,
+            Need::Now(requirement) | Need::Demographic(requirement) => requirement,
             Need::Composition(_) => Requirement::Caller,
         };
         Self {
@@ -86,8 +86,7 @@ pub(super) fn patient_context<'a>(
     let shape = Shape::of(layer, req);
     let headers = req.headers().clone();
     async move {
-        let clients = &layer.authenticator.declared.system_clients;
-        if let Some(refusal) = super::declared::over_rate(principal, clients) {
+        if let Some(refusal) = super::declared::over_rate(principal) {
             return Some(refusal);
         }
         if let Some(refusal) = confine(layer, principal, shape, &headers).await {

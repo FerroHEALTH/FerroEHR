@@ -62,7 +62,7 @@ fn persons(issuer: &str, profile: Preset) -> IssuerEntry {
 /// A `[[auth.party]]` table binding the logins of `issuer`.
 fn party(issuer: &str, identifier_issuer: &str) -> PartySection {
     PartySection {
-        issuer: issuer.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer),
         identifier_issuer: identifier_issuer.to_owned(),
         identifier_type: "guid".to_owned(),
         ..PartySection::default()
@@ -232,7 +232,7 @@ async fn an_entra_member_binds_and_a_member_of_another_tenant_is_a_guest() {
 async fn a_scopeless_entry_admits_the_subject_of_its_own_issuer_only() {
     let (_db, svc) = service().await;
     let scopeless = vec![ScopelessSubject {
-        issuer: MACHINES.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
         sub: "lab".to_owned(),
     }];
     let app = router(svc, config(scopeless)).await;

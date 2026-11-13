@@ -57,8 +57,9 @@ pub const CLIENT_TYPE: &str = "client";
 /// `PARTY_RELATED`, a bound professional's or a verified external person's
 /// `PARTY_IDENTIFIED` ([`super::external::committer`]), or a system
 /// caller's `PARTY_IDENTIFIED` named by its client, with the client
-/// identifier under the token issuer and no `external_ref`, so the record
-/// says a system committed; `None` for any other caller.
+/// identifier under the token issuer and, when the party store holds the
+/// client's `ACTOR`, an `external_ref` to it, so the record says which
+/// system committed; `None` for any other caller.
 #[must_use]
 pub fn server_committer(identity: &CommitterIdentity) -> Option<PartyProxy> {
     if let Some(super::ExternalCaller::Person { professional, .. }) = &identity.external {
@@ -68,9 +69,19 @@ pub fn server_committer(identity: &CommitterIdentity) -> Option<PartyProxy> {
     }
     if identity.system {
         let client = identity.client.clone()?;
+        // NOTE: BASE base_types PARTY_REF Type_validity admits "ACTOR", and a client is
+        // an ACTOR of any concrete kind; the namespace is ITS-REST's example.
+        let external_ref = identity
+            .agent
+            .and_then(|agent| HierObjectId::new(agent.to_string()).ok())
+            .map(|id| PartyRef {
+                namespace: "demographic".to_owned(),
+                r#type: "ACTOR".to_owned(),
+                id: ObjectId::HierObjectId(id),
+            });
         return Some(PartyProxy::PartyIdentified(
             PartyIdentified::PartyIdentified(PartyIdentifiedData {
-                external_ref: None,
+                external_ref,
                 name: Some(client.clone()),
                 identifiers: Some(openehr_base::containers::NonEmptyVec::of(DvIdentifier {
                     issuer: Some(

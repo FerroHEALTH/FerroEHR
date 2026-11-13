@@ -10,9 +10,6 @@
 [deployment]
 profile = "sandbox"
 
-[auth]
-enabled = true
-
 # The issuer the Basic user binds under. It signs nothing: its key set, which
 # every FerroEHR image carries, is the public half of a key pair whose private
 # key was discarded.
@@ -47,6 +44,11 @@ roles = ["ADMIN", "USER"]
 [authz.rbac]
 enabled = false
 
+# The operation the gate grants its provisioning client in the CDR before it
+# provisions the Basic user (scripts/scim-provision.sh).
+[authz.grants]
+allowed = ["commit_composition", "scim_provision"]
+
 [authz.party_binding]
 provider = { issuer = "urn:oid:2.999.7.9", id = "perf" }
 
@@ -55,33 +57,13 @@ user = "ferroehr"
 key_issuer = "urn:ferroehr:basic-user"
 key = "ferroehr"
 
-# The party mapping over the professional PERSON and ROLE pair of
-# deploy/definitions/professional/, which the gate loads with
-# `ferroehr definitions load` before `serve`, as docker/ferroehr.dev.toml maps it.
-[[authz.party_binding.person.template]]
-template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
-default = true
-key = { path = "/details[id2]/items[id3]", type = "login" }
-user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
-external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
-
-[[authz.party_binding.person.attribute]]
-scim = "name.formatted"
-name = true
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
-
-[authz.party_binding.professional_role]
-template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
-
-# The SCIM endpoint the gate provisions the Basic user through.
-[auth.scim]
+# The URL clients reach the server at, which every SCIM location names.
+[server]
 public_base_url = "http://127.0.0.1:58080"
 
-[[auth.scim.client]]
-issuer = "https://scim.ferroehr.invalid"
-client_id = "basic-users"
-scope = "ferroehr/scim"
-binding_issuer = "urn:ferroehr:basic-user"
+# The SCIM endpoint the gate provisions the Basic user through, by the
+# `basic-users` client scripts/scim-provision.sh grants scim_provision first.
+[auth.scim]
 
 [record]
 subject_index = "local"

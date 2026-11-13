@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -622,13 +622,13 @@ Use to incorporate the narrative descriptions of clinical findings within existi
       </items>
       <items code="at0.1">
         <items id="text">Placenta</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nb">
       <items code="at0.1">
         <items id="text">Placenta</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0000.1">
         <items id="text">Undersøkelse av en placenta.</items>
@@ -732,7 +732,7 @@ Use to incorporate the narrative descriptions of clinical findings within existi
       </items>
       <items code="at0.1">
         <items id="text">*Placenta (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="de">
@@ -787,7 +787,7 @@ Use to incorporate the narrative descriptions of clinical findings within existi
       </items>
       <items code="at0.1">
         <items id="text">*Placenta (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="sv">
@@ -798,7 +798,7 @@ Use to incorporate the narrative descriptions of clinical findings within existi
       </items>
       <items code="at0003">
         <items id="text">Klinisk beskrivning</items>
-        <items id="description">En övergripande beskrivning av fynden från den fysiska undersökningen. </items>
+        <items id="description">En övergripande beskrivning av fynden från den fysiska undersökningen.</items>
       </items>
       <items code="at0004">
         <items id="text">Fynd vid undersökning</items>
@@ -828,11 +828,8 @@ Use to incorporate the narrative descriptions of clinical findings within existi
       </items>
       <items code="at0012">
         <items id="text">Anatomisk plats</items>
-        <items id="description">Identifiering av den anatomiska plats som undersökts.&#xD;
-</items>
-        <items id="comment">Om den anatomiska platsen har identifierats fullt ut i "System eller struktur som undersökts" så blir detta element redundant.&#xD;
-&#xD;
-</items>
+        <items id="description">Identifiering av den anatomiska plats som undersökts.</items>
+        <items id="comment">Om den anatomiska platsen har identifierats fullt ut i "System eller struktur som undersökts" så blir detta element redundant.</items>
       </items>
       <items code="at0000.1">
         <items id="text">*Examination of a placenta (en)</items>
@@ -845,7 +842,7 @@ Use to incorporate the narrative descriptions of clinical findings within existi
       </items>
       <items code="at0.1">
         <items id="text">*Placenta (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_bindings terminology="SNOMED-CT">
@@ -868,4 +865,3 @@ Use to incorporate the narrative descriptions of clinical findings within existi
     </term_bindings>
   </ontology>
 </archetype>
-

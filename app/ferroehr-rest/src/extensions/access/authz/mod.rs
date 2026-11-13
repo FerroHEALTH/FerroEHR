@@ -29,28 +29,32 @@
 //! - `config`: the `ferroehr::config::authz::AuthzConfig` serde struct (the
 //!   `[authz]` section of the one server config tree) and boot validation.
 //! - [`roles`]: the RBAC gate decision over the caller's roles.
+//! - [`content`]: the category and origin rules of the ABAC content
+//!   attributes.
 //! - [`classify`]: `operation_id → OperationClass` / `ResourceKind` /
 //!   `AccessMode` (total-coverage-guarded).
+//! - [`cedar`]: the embedded Cedar engine over the Cedar admin register.
 //! - [`remote`]: the remote decision point `[authz.abac.remote]` describes.
 //! - [`request`]: the ABAC request and the model the Cedar schema is written
 //!   from.
 
+pub mod cedar;
 pub mod classify;
+pub mod content;
 pub mod remote;
 pub mod request;
 pub mod roles;
 
 use crate::api::operation::{Operation, operation};
 use crate::extensions::access::authz::classify::OperationClass;
+use crate::extensions::access::authz::content::ContentRules;
 use crate::extensions::access::authz::roles::{RbacDecision, authorize, authorize_readonly};
 use ferroehr::aql::subject::EhrSubject;
 use ferroehr::config::authz::{
     AbacConfig, AbacEngineKind, AuthzConfig, EhrAccessDefault, RbacConfig,
 };
-use ferroehr::origins::OriginsConfig;
+use ferroehr::policy_register::LiveRegisters;
 use ferroehr::storage::version_repo::meta::VersionContent;
-use ferroehr::system_log::categories::Classifier;
-use ferrohealth_authz::cedar::CedarEngine;
 use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
 
 use std::collections::HashMap;
@@ -58,7 +62,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use ferrohealth_config::units::Duration;
 use http::Method;
 
 /// An attribute-resolution failure (a DB lookup error). Fail-closed at the
@@ -114,32 +117,6 @@ pub type SubjectFn = Arc<dyn Fn(String) -> ResolverFuture<Option<EhrSubject>> + 
 pub type ContentOfVersionFn =
     Arc<dyn Fn(String, Option<String>) -> ResolverFuture<Option<VersionContent>> + Send + Sync>;
 
-/// The deployment's rules for the category and origin attributes (EHDS
-/// Annex II 3.4).
-///
-/// The category map every access is classified through, the origin register
-/// (`[[authz.origin]]`), and the `system_id` a direct commit by an unregistered client is
-/// stamped with.
-#[derive(Debug, Clone)]
-pub struct ContentRules {
-    /// The compiled `[audit.categories]` map.
-    pub categories: Classifier,
-    /// The `[[authz.origin]]` register.
-    pub origins: OriginsConfig,
-    /// The effective openEHR `system_id` (`[api] system_id`).
-    pub system_id: String,
-}
-
-impl Default for ContentRules {
-    fn default() -> Self {
-        Self {
-            categories: Classifier::default(),
-            origins: OriginsConfig::default(),
-            system_id: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
-        }
-    }
-}
-
 /// The DB-backed attribute resolvers the ABAC PEP calls.
 ///
 /// Defined here so the REST layer can hold them; the closures are built in
@@ -164,23 +141,21 @@ impl std::fmt::Debug for AuthzResolvers {
 /// Build the configured ABAC [`PolicyEngine`], or `None` when ABAC
 /// is disabled. Called by the binary at boot after [`AuthzConfig::validate`].
 ///
+/// The embedded Cedar engine takes its policy set from the Cedar register of
+/// `registers` ([`cedar::RegisterCedar`]).
+///
 /// # Errors
-/// [`AuthzError::Load`] if the Cedar policies fail to load or validate, or the
-/// remote decision point's settings or token client cannot be built.
-pub fn build_engine(config: &AbacConfig) -> Result<Option<Arc<dyn PolicyEngine>>, AuthzError> {
+/// [`AuthzError::Load`] if the Cedar register in force does not validate, or
+/// the remote decision point's settings or token client cannot be built.
+pub fn build_engine(
+    config: &AbacConfig,
+    registers: &Arc<LiveRegisters>,
+) -> Result<Option<Arc<dyn PolicyEngine>>, AuthzError> {
     if !config.enabled {
         return Ok(None);
     }
     let engine: Arc<dyn PolicyEngine> = match config.engine {
-        AbacEngineKind::Cedar => {
-            let dir = config
-                .cedar
-                .policy_dir
-                .as_deref()
-                .ok_or_else(|| AuthzError::Load("abac.cedar.policy_dir is not set".into()))?;
-            let reload = config.cedar.reload_interval.map(Duration::get);
-            Arc::new(CedarEngine::from_directory(request::model(), dir, reload)?)
-        }
+        AbacEngineKind::Cedar => Arc::new(cedar::RegisterCedar::new(Arc::clone(registers))?),
         AbacEngineKind::Remote => Arc::new(remote::remote_pdp(config)?),
     };
     Ok(Some(engine))
@@ -777,10 +752,14 @@ mod tests {
         assert_eq!(gate(&remote).subject_patient(Some(&patient)), None);
     }
 
-    #[test]
-    fn build_engine_none_when_abac_disabled() {
+    #[tokio::test]
+    async fn build_engine_none_when_abac_disabled() {
         // ABAC off (the default) → no engine, current behaviour preserved.
-        let engine = build_engine(&AbacConfig::default()).expect("build");
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://localhost/unused")
+            .expect("a lazy pool");
+        let registers = Arc::new(LiveRegisters::new(pool));
+        let engine = build_engine(&AbacConfig::default(), &registers).expect("build");
         assert!(engine.is_none());
     }
 

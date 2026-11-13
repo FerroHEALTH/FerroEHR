@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -655,63 +655,63 @@ This archetype is intended to represent version 1.2 of 4AT test.</use>
       </items>
       <items code="at0004">
         <items id="text">Alertness</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Normal (fully alert, but not agitated, throughout assessment)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Mild sleepiness for &lt;10 seconds after waking, then normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Clearly abnormal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Abbreviated Mental Test 4 (AMT-4) score</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">No mistakes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">1 mistake</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">2 or more mistakes/untestable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Attention</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Achieves 7 months or more correctly</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Starts but scores &lt;7 months / refuses to start</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Untestable (cannot start because unwell, drowsy, inattentive)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Acute change or fluctuating course</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Total score</items>
@@ -746,63 +746,63 @@ This archetype is intended to represent version 1.2 of 4AT test.</use>
       </items>
       <items code="at0004">
         <items id="text">Årvåkenhet (forholder seg normalt til omgivelsene)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Normal (helt årvåken, ikke urolig ved undersøkelse)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Lett søvnig &lt;10 sekunder etter oppvåkning, deretter normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Tydelig unormal(t)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">AMT4 (forkortet mental vurdering)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Ingen feil</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">1 feil</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">2 feil eller flere/ikke testbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Oppmerksomhet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Oppgir 7 måneder eller flere korrekt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Begynner, men klarer &lt;7 måneder/avslår å begynne</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Ikke testbar (er uvel, døsig, uoppmerksom)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Akutt endring eller fluktuasjon i tilstand</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Totalskår</items>
@@ -820,4 +820,3 @@ This archetype is intended to represent version 1.2 of 4AT test.</use>
     </term_definitions>
   </ontology>
 </archetype>
-

@@ -1,0 +1,73 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-OBSERVATION.third_party_observation-hearing.v1.0.0
+
+specialize
+    openEHR-EHR-OBSERVATION.third_party_observation.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"????">
+    >
+    lifecycle_state = <"Rejected">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about a third party observer/carer's observation of subject
+'s hearing">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] matches {    -- Carer observation about hearing of subject
+        /data[at0001]/events[at0002]/data[at0003]/items[at0004]/value matches {
+            DV_CODED_TEXT[at9000.1] matches {
+                defining_code matches {[ac0.9000]}    -- Stimulus (synthesised)
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.17"] = <
+                text = <"Quiet sounds">
+                description = <"*">
+            >
+            ["at0.18"] = <
+                text = <"Music">
+                description = <"*">
+            >
+            ["at0.19"] = <
+                text = <"Loud Sounds">
+                description = <"*">
+            >
+            ["at0.20"] = <
+                text = <"Television">
+                description = <"*">
+            >
+            ["at0.21"] = <
+                text = <"School room">
+                description = <"*">
+            >
+            ["at0000.1"] = <
+                text = <"Carer observation about hearing of subject">
+                description = <"Third party observier/carer's observation of subject's hearing">
+            >
+            ["ac0.9000"] = <
+                text = <"Stimulus (synthesised)">
+                description = <"Stimulus triggering the response being observed (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.17", "at0.18", "at0.19", "at0.20", "at0.21">
+        >
+    >

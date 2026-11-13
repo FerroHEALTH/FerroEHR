@@ -6,12 +6,28 @@ concept
 language
 	original_language = <[ISO_639-1::en]>
 	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Sol Fustiñana, Hendrik Heiser">
+				["organisation"] = <"University Hospital Basel (USB), CISTEC AG">
+				["email"] = <"sol.fustinana@usb.ch, hendrik.heiser@cistec.com">
+			>
+		>
 		["nb"] = <
 			language = <[ISO_639-1::nb]>
 			author = <
 				["name"] = <"Vebjørn Arntzen, June Marie Nepstad Knappskog">
 				["organisation"] = <"Oslo University Hospital, Helse Nord IKT AS, Norway (openEHR Editor)">
 				["email"] = <"varntzen@ous-hf.no, june.marie.nepstad.knappskog@hnikt.no">
+			>
+		>
+		["fr"] = <
+			language = <[ISO_639-1::fr]>
+			author = <
+				["name"] = <"Sol Fustiñana, Emmanuel Eschmann">
+				["organisation"] = <"University Hospital Basel (USB), CISTEC">
+				["email"] = <"sol.fustinana@usb.ch, emmanuel.eschmann@cistec.com">
 			>
 		>
 	>
@@ -23,6 +39,38 @@ description
 		["date"] = <"2024-08-26">
 	>
 	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Erfassung der Ergebnisse des Fragebogens zur gesundheitsbezogenen Lebensqualität (HRQoL) bei Patienten mit Prostatakrebs.">
+			use = <"Zur Erfassung der Ergebnisse des Fragebogens zur Messung der gesundheitsbezogenen Lebensqualität (HRQoL) bei Patienten mit Prostatakrebs.
+
+Dieser Archetyp enthält alle 51 Elemente des Fragebogens in der Version EPIC 2.2002, die von den Urheberrechtsinhabern als „Most Recent Version“ bezeichnet wird. Der Fragebogen ist seit 2002 unverändert und gilt als stabil; daher enthält der Archetyp weder im technischen Namen noch im Konzeptnamen Angaben zur Version. Sollten künftig Änderungen vorgenommen werden, muss eine neue Version des Archetyps erstellt werden. Dieser Archetyp kann in einem Template auch zur Abbildung der Version 6.2002 der EPIC-Kurzform (EPIC-26) verwendet werden. Siehe hierzu das Beispiel-Template im „Resource Centre“ des CKM.
+
+Der EPIC-Fragebogen selbst enthält keine zusammenfassenden Scores, weder Subscores noch einen Gesamtscore. Die Autoren von EPIC haben Anweisungen zur Berechnung der Scores für die Bereiche Harnfunktion, Darmfunktion, hormonelle Funktion und sexuelle Funktion bereitgestellt; siehe Abschnitt „Referenzen“. Da Archetypen der Datenerfassung und -speicherung dienen und nicht nur der Abbildung des Fragebogens, wurden Elemente für alle in den Scoring-Anweisungen beschriebenen Scores hinzugefügt. Beachten Sie, dass die Antwort auf jedes Item gemäß den Scoring-Anweisungen auf eine Skala von 0 bis 100 standardisiert und anschließend zu den verschiedenen Scores zusammengefasst werden muss. Die dafür erforderlichen Berechnungen und die entsprechende Logik müssen in einer Anwendung implementiert werden.
+
+Obwohl sich die Fragennummern zwischen der vollständigen EPIC-51-Version und der EPIC-26-Kurzform unterscheiden, verwenden beide dieselbe eindeutige „Item number“. Diese ist in den „Annotations“ jedes Elements unter dem Schlüssel epic_item_id zu finden. Zusammen mit den zusätzlichen Annotations-Schlüsseln domain, subscale und subscale2 ermöglicht dies Datenkonsumenten, den Archetyp als Lookup-Struktur zur Berechnung der Scores gemäß „Scoring Instructions for the Expanded Prostate Cancer Index Composite“ und „Scoring Instructions for the Expanded Prostate Cancer Index Composite Short Form“ zu verwenden. Darüber hinaus enthält jedes Element in den Annotations als Schlüssel die jeweilige Fragennummer in den Versionen EPIC 2.2002 und EPIC-SF 6.2002. Die Annotations-Schlüssel sind wie folgt definiert:
+
+- \"epic_item_id\" identifiziert die eindeutige „Item number“, die von EPIC-51 und der EPIC-Kurzform gemeinsam verwendet wird.
+- \"domain\" gibt an, welchem Bereich die jeweilige Frage zugeordnet ist: Urinary, Bowel, Sexual oder Hormonal.
+- \"subscale\" gibt die spezifische Subskala (Function oder Bother) an, der die jeweilige Frage zugeordnet ist, und wird im Format [Name des Bereichs + Subskala] angegeben.
+- \"subscale2\" gibt die spezifische Subskala (Incontinence oder Irritative/Obstructive) für Fragen im Bereich Urinary an.
+- \"epic_2_2002_number\" gibt die Nummer der Frage in der aktuellsten Version (EPIC 2.2002) des Expanded Prostate Cancer Index Composite an.
+- \"sf_6_2002_number\" gibt die Nummer der Frage in der Kurzform des Expanded Prostate Cancer Index Composite (EPIC-26, EPIC-SF 6.2002) an.
+
+In der klinischen Praxis wird üblicherweise vor Beginn der Behandlung eine Ausgangsmessung durchgeführt. Bei Personen, die sich im Rahmen einer aktiven Überwachung befinden und bei denen eine zukünftige Behandlung abgewartet wird, können jedoch mehrere Messungen vor der Behandlung vorliegen. Falls erforderlich, könnte ein Ereignis „Baseline“ in einem Template oder zur Laufzeit explizit als Ereignis zu einem bestimmten Zeitpunkt modelliert werden.
+
+Obwohl dieser Archetyp normalerweise in COMPOSITION.self_reported_data verwendet wird, kann je nach Situation die Verwendung einer anderen COMPOSITION gerechtfertigt sein.
+
+Obwohl openEHR-Archetypen grundsätzlich unter einer offenen Lizenz frei verfügbar sind, ist der spezifische Inhalt dieses Archetyps zum Expanded Prostate Cancer Index Composite (EPIC) urheberrechtlich geschützt. Jede Verwendung dieses Archetyps in Implementierungen muss den von den Urheberrechtsinhabern festgelegten Bedingungen entsprechen. Anfragen zu Lizenzen für die kommerzielle Nutzung können, wie nachfolgend angegeben, an die University of Michigan gerichtet werden.
+
+Urheberrechtshinweis: © 2000 The Regents of the University of Michigan, Regents of the University of California, Emory University and Cedars-Sinai. Alle Rechte vorbehalten.
+Informationen zum Urheberrecht: MImeasures@umich.edu.
+
+Als Quelle für die deutsche Übersetzung diente:
+Umbehr MH, Bachmann LM, Poyet C, Hammerer P, Steurer J, Puhan MA, et al. The German version of the Expanded Prostate Cancer Index Composite (EPIC): translation, validation and minimal important difference estimation. Health and Quality of Life Outcomes. 2018;16:36.">
+			keywords = <"Prostatakrebs, Lebensqualität, QOL, PROM, EPIC-26, HRQoL", ...>
+			misuse = <"Nicht für den EPIC-CP-Fragebogen verwenden. Verwenden Sie hierfür OBSERVATION.epic_cp.">
+		>
 		["nb"] = <
 			language = <[ISO_639-1::nb]>
 			purpose = <"For å registere resultater fra det helserelaterte livkvalitetsspørreskjemaet (HRQoL) for pasienter med prostatakreft.">
@@ -77,6 +125,38 @@ While openEHR archetypes are all freely available under an open license, the spe
 			keywords = <"prostate cancer, quality of life, QOL, PROM, EPIC-26, HRQoL", ...>
 			misuse = <"Not to be used for the EPIC-CP questionnaire. Use the OBSERVATION.epic_cp for this purpose.">
 		>
+		["fr"] = <
+			language = <[ISO_639-1::fr]>
+			purpose = <"Pour enregistrer les résultats du questionnaire sur la qualité de vie liée à la santé (QVLS) chez les patients atteints d’un cancer de la prostate.">
+			use = <"À utiliser pour enregistrer les résultats du questionnaire utilisé pour mesurer la qualité de vie liée à la santé (QVLS) chez les patients atteints d’un cancer de la prostate.
+
+Cet archétype comprend les 51 éléments du questionnaire dans sa version EPIC 2.2002, identifiée par les détenteurs des droits d’auteur comme « Most Recent Version ». Le questionnaire n’a pas été modifié depuis 2002 et est considéré comme stable ; l’archétype ne contient donc aucune information sur la version dans son nom technique ou son nom de concept. En cas de modifications futures, une nouvelle version de l’archétype devra être créée. Cet archétype peut également être utilisé dans un template pour représenter la version 6.2002 de la forme courte de l’EPIC (EPIC-26). Voir l’exemple de template dans le « Resource Centre » du CKM.
+
+Le questionnaire EPIC lui-même ne contient aucun score récapitulatif, ni sous-score ni score total. Les auteurs de l’EPIC ont fourni des instructions pour le calcul des scores des domaines urinaire, intestinal, hormonal et sexuel ; voir la section « Références ». Étant donné que les archétypes sont destinés à la saisie et au stockage des données, et pas uniquement à la représentation du questionnaire, des éléments correspondant à tous les scores décrits dans les instructions de calcul ont été ajoutés. Il convient de noter que la réponse à chaque item doit être standardisée sur une échelle de 0 à 100 conformément aux instructions de calcul, puis combinée pour obtenir les différents scores. Les calculs et la logique nécessaires doivent être implémentés dans une application.
+
+Bien que la numérotation des questions diffère entre la version complète EPIC-51 et la forme courte EPIC-26, les deux partagent le même « Item number » unique, qui se trouve dans les « Annotations » de chaque élément, sous l’attribut clé « epic_item_id ». Celui-ci, ainsi que les clés d’annotations supplémentaires « domain », « subscale » et « subscale2 », permettent aux consommateurs de données d’utiliser l’archétype comme structure de référence pour calculer les scores conformément aux documents « Scoring Instructions for the Expanded Prostate Cancer Index Composite » et « Scoring Instructions for the Expanded Prostate Cancer Index Composite Short Form ». De plus, pour chaque élément, les numéros correspondant à la question dans les versions EPIC 2.2002 et EPIC-SF 6.2002 sont indiqués sous forme de clés dans les Annotations. Les clés des Annotations sont les suivantes :
+
+- \"epic_item_id\" identifie l’ 'Item number' unique commun à EPIC-51 et à la forme courte EPIC.
+- \"domain\" identifie le domaine auquel appartient chaque question: 'Urinary', 'Bowel', 'Sexual' ou 'Hormonal'.
+- \"subscale\" indique la sous-échelle spécifique ('Function' ou 'Bother') associée à chaque question et est nommée selon le format [nom du domaine + sous-échelle].
+- \"subscale2\" indique la sous-échelle spécifique ('Incontinence' ou 'Irritative/Obstructive') associée à chaque question du domaine 'Urinary'.
+- \"epic_2_2002_number\" identifie le numéro de la question dans la version la plus récente (EPIC 2.2002) de l’Expanded Prostate Cancer Index Composite.
+- \"sf_6_2002_number\" identifie le numéro de la question dans la forme courte de l’Expanded Prostate Cancer Index Composite (EPIC-26, EPIC-SF 6.2002).
+
+Dans la pratique clinique, il est courant d’effectuer une mesure initiale avant le traitement. Toutefois, lorsqu’une personne fait l’objet d’une surveillance active dans l’attente d’un éventuel traitement futur, plusieurs mesures préthérapeutiques peuvent exister. Si nécessaire, un événement « Baseline » peut être explicitement modélisé comme un événement à un moment précis dans un template ou au moment de l’exécution.
+
+Bien que cet archétype soit normalement utilisé dans COMPOSITION.self_reported_data, l’utilisation d’une autre COMPOSITION peut être justifiée selon la situation.
+
+Bien que les archétypes openEHR soient tous librement disponibles sous une licence ouverte, le contenu spécifique de cet archétype Expanded Prostate Cancer Index Composite (EPIC) est protégé par le droit d’auteur. Toute utilisation de cet archétype dans une implémentation doit respecter les conditions établies par les détenteurs des droits d’auteur. Les demandes de licence pour une utilisation commerciale peuvent être adressées à l’University of Michigan comme indiqué ci-dessous.
+
+Mention de droit d’auteur : © 2000 The Regents of the University of Michigan, Regents of the University of California, Emory University and Cedars-Sinai. Tous droits réservés.
+Informations relatives aux droits d’auteur : MImeasures@umich.edu.
+
+Étant donné qu’il n’existe qu’une traduction française validée de l’EPIC-26, seules les questions faisant partie de cette version ont été traduites dans l’archétype. Si l’utilisation de la version complète EPIC 2.2002 en français s’avère nécessaire, les questions restantes devraient faire l’objet d’un processus de traduction et de validation équivalent à celui utilisé pour l’EPIC-26, et l’archétype devrait être mis à jour en conséquence.
+Référence : Anota A, Mariet AS, Maingon P, Joly F, Bosset JF, Guizard AV, et al. Cross-cultural adaptation and validation of the French version of the Expanded Prostate Cancer Index Composite questionnaire for health-related quality of life in prostate cancer patients. Health and Quality of Life Outcomes. 2016;14:168.">
+			keywords = <"cancer de la prostate, qualité de vie, QOL, PROM, EPIC-26, HRQoL", ...>
+			misuse = <"Ne pas utiliser pour le questionnaire EPIC-CP. Utiliser OBSERVATION.epic_cp à cette fin.">
+		>
 	>
 	lifecycle_state = <"published">
 	other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Koray Atalag, GALATA-Digital, New Zealand", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Ivar Berge, Oslo Universitetssykehus, Norway (Nasjonal IKT redaktør)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Christian Chevalley, ADOC, Thailand", "Giovanni Delussu, crs4, Italy", "Inger Elise Engelund, Fagsenter for pasientrapporterte data, Helse Bergen HF, Norway", "Rosane Gotardo, Systema Ltda., Brazil", "Atle Hansen, Universitetssykehuset Nord-Norge, Norway", "Anne Holck Storås, OUS, Norway", "Alfred Honore, Haukeland, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Ronald Krawec, Alberta Health Services, Canada", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "June Marie Knappskog, Helse Nord IKT AS, Norway (Nasjonal IKT redaktør), Norway (Nasjonal IKT redaktør)", "Hanne Marte Bårholm, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Terje Nordberg, Helse Bergen, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS AS, Norway", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
@@ -99,10 +179,10 @@ Norwegian translation: Fosså, S. D., Storås, A. H., Steinsvik, E. A., Myklebus
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"E4E5DD09606C3758822FD5C939F3940C">
-		["build_uid"] = <"60e4bfe5-2684-4128-9fe6-1463c4935092">
+		["MD5-CAM-1.0.1"] = <"E9A795CF5986ABBD354190F215F4ECD0">
+		["build_uid"] = <"4f12f3dd-c2d4-4fb2-86ca-00ac55c97461">
 		["ip_acknowledgements"] = <"The specific content of this Expanded Prostate cancer Index Composite (EPIC) archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners. Commercial use license inquiries can be directed to the University of Michigan as outlined below.  Copyright statement: © 2000 The Regents of the University of Michigan, Regents of the University of California, Emory University and Cedars-Sinai. All rights reserved.  Copyright information: MImeasures@umich.edu">
-		["revision"] = <"1.0.1">
+		["revision"] = <"1.0.2">
 	>
 
 definition
@@ -669,7 +749,6 @@ definition
 			ITEM_TREE[at0314] matches {*}    -- Item tree
 		}
 	}
-
 
 ontology
 	term_definitions = <
@@ -3519,6 +3598,2991 @@ ontology
 				["at0337"] = <
 					text = <"Hormonal bother subscale">
 					description = <"Delskåren for hormonelle plager.">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"Fragebogen zur Lebensqualitätserfassung bei Prostatakrebspatienten (EPIC)">
+					description = <"Ein Fragebogen zur Erfassung der Lebensqualität bei Prostatakrebspatienten">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Wie oft haben Sie in den letzten 4 Wochen ungewollt Urin verloren?">
+					description = <"">
+					epic_item_id = <"23">
+					subscale2 = <"Incontinence">
+					subscale = <"Urinary function">
+					epic_2_2002_number = <"1">
+					domain = <"Urinary">
+					sf_6_2002_number = <"1">
+				>
+				["at0005"] = <
+					text = <"Mehr als einmal pro Tag">
+					description = <"">
+				>
+				["at0006"] = <
+					text = <"Ungefähr einmal pro Tag">
+					description = <"">
+				>
+				["at0007"] = <
+					text = <"Mehr als einmal pro Woche">
+					description = <"">
+				>
+				["at0008"] = <
+					text = <"Ungefähr einmal pro Woche">
+					description = <"">
+				>
+				["at0009"] = <
+					text = <"Selten oder nie">
+					description = <"">
+				>
+				["at0010"] = <
+					text = <"Welche der folgenden Aussagen beschreibt Ihre Kontrolle über die Blase in den letzten 4 Wochen am besten?">
+					description = <"">
+					subscale2 = <"Urinary function">
+					subscale = <"Incontinence">
+					epic_2_2002_number = <"4">
+					domain = <"Urinary">
+					sf_6_2002_number = <"2">
+				>
+				["at0011"] = <
+					text = <"Keinerlei Kontrolle über die Blase (un- kontrollierter Urinverlust)">
+					description = <"">
+				>
+				["at0012"] = <
+					text = <"Häufiges Tröpfeln">
+					description = <"">
+				>
+				["at0013"] = <
+					text = <"Gelegentliches Tröpfeln">
+					description = <"">
+				>
+				["at0014"] = <
+					text = <"Vollständige Kontrolle über die Blase">
+					description = <"">
+				>
+				["at0015"] = <
+					text = <"Wie häufig hatten Sie an einem normalen Tag in den letzten 4 Wochen Stuhlgang?">
+					description = <"">
+					epic_item_id = <"47">
+					subscale = <"Bowel function">
+					epic_2_2002_number = <"13">
+					domain = <"Bowel">
+				>
+				["at0017"] = <
+					text = <"Zweimal oder weniger">
+					description = <"">
+				>
+				["at0018"] = <
+					text = <"Dreimal bis viermal">
+					description = <"">
+				>
+				["at0019"] = <
+					text = <"Fünfmal oder mehr">
+					description = <"">
+				>
+				["at0022"] = <
+					text = <"Tröpfeln oder Urinverlust">
+					description = <"">
+					epic_item_id = <"28">
+					subscale2 = <"Urinary bother">
+					subscale = <"Incontinence">
+					epic_2_2002_number = <"6a">
+					domain = <"Urinary">
+					sf_6_2002_number = <"4a">
+				>
+				["at0023"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0024"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0025"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0026"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0027"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0028"] = <
+					text = <"Schmerzen oder Brennen beim Urinieren (Wasserlassen)">
+					description = <"">
+					epic_item_id = <"29">
+					subscale2 = <"Irritative/Obstructive">
+					subscale = <"Urinary bother">
+					epic_2_2002_number = <"6b">
+					domain = <"Urinary">
+					sf_6_2002_number = <"4b">
+				>
+				["at0029"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0030"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0031"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0032"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0033"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0034"] = <
+					text = <"Blut im Urin">
+					description = <"">
+					epic_item_id = <"30">
+					subscale2 = <"Irritative/Obstructive">
+					subscale = <"Urinary bother">
+					epic_2_2002_number = <"6c">
+					domain = <"Urinary">
+					sf_6_2002_number = <"4c">
+				>
+				["at0035"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0036"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0037"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0038"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0039"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0040"] = <
+					text = <"Schwacher Harnstrahl oder unvollständige Blasenentleerung">
+					description = <"">
+					epic_item_id = <"31">
+					subscale2 = <"Irritative/Obstructive">
+					subscale = <"Urinary bother">
+					epic_2_2002_number = <"6b">
+					domain = <"Urinary">
+					sf_6_2002_number = <"4d">
+				>
+				["at0041"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0042"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0043"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0044"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0045"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0046"] = <
+					text = <"Häufiger Harndrang tagsüber">
+					description = <"">
+					epic_item_id = <"33">
+					subscale2 = <"Irritative/Obstructive">
+					subscale = <"Urinary bother">
+					epic_2_2002_number = <"6f">
+					domain = <"Urinary">
+					sf_6_2002_number = <"4e">
+				>
+				["at0047"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0048"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0049"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0050"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0051"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0052"] = <
+					text = <"Wie würden Sie generell Ihre Beschwerden oder Probleme beim Urinieren in den letzten 4 Wochen beschreiben?">
+					description = <"">
+					epic_item_id = <"34">
+					subscale = <"Urinary bother">
+					epic_2_2002_number = <"7">
+					domain = <"Urinary">
+					sf_6_2002_number = <"5">
+				>
+				["at0053"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0054"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0055"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0056"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0057"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0059"] = <
+					text = <"Häufiger Stuhlgang">
+					description = <"">
+					epic_item_id = <"50">
+					subscale = <"Bowel bother">
+					epic_2_2002_number = <"15b">
+					domain = <"Bowel">
+					sf_6_2002_number = <"6b">
+				>
+				["at0060"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0061"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0062"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0063"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0064"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0065"] = <
+					text = <"Wässriger Stuhlgang">
+					description = <"">
+					epic_item_id = <"51">
+					subscale = <"Bowel bother">
+					epic_2_2002_number = <"15c">
+					domain = <"Bowel">
+				>
+				["at0066"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0067"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0068"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0069"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0070"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0071"] = <
+					text = <"Verminderte Kontrolle über den Stuhlgang">
+					description = <"">
+					epic_item_id = <"52">
+					subscale = <"Bowel bother">
+					epic_2_2002_number = <"15d">
+					domain = <"Bowel">
+					sf_6_2002_number = <"6c">
+				>
+				["at0072"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0073"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0074"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0075"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0076"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0077"] = <
+					text = <"Blutiger Stuhl">
+					description = <"">
+					epic_item_id = <"53">
+					subscale = <"Bowel bother">
+					epic_2_2002_number = <"15e">
+					domain = <"Bowel">
+					sf_6_2002_number = <"6d">
+				>
+				["at0078"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0079"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0080"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0081"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0082"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0083"] = <
+					text = <"Schmerzen im Bauch, Beckenbereich oder Enddarm">
+					description = <"">
+					epic_item_id = <"54">
+					subscale = <"Bowel bother">
+					epic_2_2002_number = <"15f">
+					domain = <"Bowel">
+					sf_6_2002_number = <"6e">
+				>
+				["at0084"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0085"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0086"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0087"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0088"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0089"] = <
+					text = <"Wie würden Sie generell Ihre Beschwerden oder Probleme mit dem Stuhlgang in den letzten 4 Wochen beschreiben?">
+					description = <"">
+					epic_item_id = <"55">
+					subscale = <"Bowel bother">
+					epic_2_2002_number = <"16">
+					domain = <"Bowel">
+					sf_6_2002_number = <"7">
+				>
+				["at0090"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0091"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0092"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0093"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0094"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0095"] = <
+					text = <"Ihre Erektionsfähigkeit">
+					description = <"">
+					epic_item_id = <"57">
+					subscale = <"Sexual function">
+					epic_2_2002_number = <"17b">
+					domain = <"Sexual">
+					sf_6_2002_number = <"8a">
+				>
+				["at0097"] = <
+					text = <"Ihre Orgasmusfähigkeit">
+					description = <"">
+					epic_item_id = <"58">
+					subscale = <"Sexual function">
+					epic_2_2002_number = <"17c">
+					domain = <"Sexual">
+					sf_6_2002_number = <"8b">
+				>
+				["at0098"] = <
+					text = <"Sehr gering bis gar nicht">
+					description = <"">
+				>
+				["at0099"] = <
+					text = <"Gering">
+					description = <"">
+				>
+				["at0100"] = <
+					text = <"Durchschnittlich">
+					description = <"">
+				>
+				["at0101"] = <
+					text = <"Gut">
+					description = <"">
+				>
+				["at0102"] = <
+					text = <"Sehr gut">
+					description = <"">
+				>
+				["at0103"] = <
+					text = <"Sehr gering bis gar nicht">
+					description = <"">
+				>
+				["at0104"] = <
+					text = <"Gering">
+					description = <"">
+				>
+				["at0105"] = <
+					text = <"Durchschnittlich">
+					description = <"">
+				>
+				["at0106"] = <
+					text = <"Gut">
+					description = <"">
+				>
+				["at0107"] = <
+					text = <"Sehr gut">
+					description = <"">
+				>
+				["at0108"] = <
+					text = <"Wie würden Sie Ihre übliche Erektionsfähigkeit in den letzten 4 Wochen beschreiben?">
+					description = <"">
+					epic_item_id = <"59">
+					subscale = <"Sexual function">
+					epic_2_2002_number = <"18">
+					domain = <"Sexual">
+					sf_6_2002_number = <"9">
+				>
+				["at0109"] = <
+					text = <"Keine Erektionen">
+					description = <"">
+				>
+				["at0110"] = <
+					text = <"Nicht stark genug für sexuelle Aktivitäten">
+					description = <"">
+				>
+				["at0111"] = <
+					text = <"Nur stark genug für Selbstbefriedigung und Vorspiel">
+					description = <"">
+				>
+				["at0112"] = <
+					text = <"Stark genug für Geschlechtsverkehr">
+					description = <"">
+				>
+				["at0113"] = <
+					text = <"Wie würden Sie die Häufigkeit Ihrer Erektionen in den letzten 4 Wochen beschreiben?">
+					description = <"">
+					epic_item_id = <"60">
+					subscale = <"Sexual function">
+					epic_2_2002_number = <"19">
+					domain = <"Sexual">
+					sf_6_2002_number = <"10">
+				>
+				["at0114"] = <
+					text = <"Ich hatte nie eine Erektion, wenn ich eine wollte">
+					description = <"">
+				>
+				["at0115"] = <
+					text = <"Ich hatte in weniger als der Hälfte der Fälle eine Erektion, wenn ich eine wollte">
+					description = <"">
+				>
+				["at0116"] = <
+					text = <"Ich hatte ungefähr in der Hälfte der Fälle eine Erektion, wenn ich eine wollte">
+					description = <"">
+				>
+				["at0117"] = <
+					text = <"Ich hatte in mehr als der Hälfte der Fälle eine Erektion, wenn ich eine wollte">
+					description = <"">
+				>
+				["at0118"] = <
+					text = <"Ich hatte immer eine Erektion, wenn ich eine wollte">
+					description = <"">
+				>
+				["at0119"] = <
+					text = <"Wie würden Sie im Allgemeinen Ihre sexuelle Funktionsfähigkeit in den letzten 4 Wochen beschreiben?">
+					description = <"">
+					subscale = <"Sexual function">
+					epic_2_2002_number = <"23">
+					domain = <"Sexual">
+					sf_6_2002_number = <"11">
+				>
+				["at0120"] = <
+					text = <"Sehr schlecht">
+					description = <"">
+				>
+				["at0121"] = <
+					text = <"Schlecht">
+					description = <"">
+				>
+				["at0122"] = <
+					text = <"Mittelmässig">
+					description = <"">
+				>
+				["at0123"] = <
+					text = <"Gut">
+					description = <"">
+				>
+				["at0124"] = <
+					text = <"Sehr gut">
+					description = <"">
+				>
+				["at0125"] = <
+					text = <"Wie würden Sie generell das Problem um Ihre sexuelle Funktionsfähigkeit oder den Verlust Ihrer sexuellen Funktionsfähigkeit in den letzten 4 Wochen beschreiben?">
+					description = <"">
+					epic_item_id = <"68">
+					subscale = <"Sexual bother">
+					epic_2_2002_number = <"25">
+					domain = <"Sexual">
+					sf_6_2002_number = <"12">
+				>
+				["at0126"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0127"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0128"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0129"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0130"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0132"] = <
+					text = <"Hitzewallungen">
+					description = <"">
+					epic_item_id = <"74">
+					subscale = <"Hormonal bother">
+					epic_2_2002_number = <"31a">
+					domain = <"Hormonal">
+					sf_6_2002_number = <"13a">
+				>
+				["at0133"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0134"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0135"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0136"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0137"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0138"] = <
+					text = <"Spannungsgefühl oder Schmerzen im Brustbereich / Vergrösserung der Brust">
+					description = <"">
+					epic_item_id = <"75">
+					subscale = <"Hormonal bother">
+					epic_2_2002_number = <"31b">
+					domain = <"Hormonal">
+					sf_6_2002_number = <"13b">
+				>
+				["at0139"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0140"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0141"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0142"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0143"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0144"] = <
+					text = <"Niedergeschlagenheit">
+					description = <"">
+					epic_item_id = <"77">
+					subscale = <"Hormonal bother">
+					epic_2_2002_number = <"31d">
+					domain = <"Hormonal">
+					sf_6_2002_number = <"13c">
+				>
+				["at0145"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0146"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0147"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0148"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0149"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0150"] = <
+					text = <"Kraftlosigkeit / Müdigkeit">
+					description = <"">
+					epic_item_id = <"78">
+					subscale = <"Hormonal bother">
+					epic_2_2002_number = <"31e">
+					domain = <"Hormonal">
+					sf_6_2002_number = <"13d">
+				>
+				["at0151"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0152"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0153"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0154"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0155"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0156"] = <
+					text = <"Veränderung des Körpergewichts">
+					description = <"">
+					epic_item_id = <"79">
+					subscale = <"Hormonal bother">
+					epic_2_2002_number = <"31f">
+					domain = <"Hormonal">
+					sf_6_2002_number = <"13e">
+				>
+				["at0157"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0158"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0159"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0160"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0161"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0162"] = <
+					text = <"Wie oft hatten Sie in den letzten 4 Wochen Blut im Urin?">
+					description = <"">
+					epic_item_id = <"24">
+					subscale2 = <"Urinary function">
+					subscale = <"Irritative/Obstructive">
+					epic_2_2002_number = <"2">
+					domain = <"Urinary">
+				>
+				["at0163"] = <
+					text = <"Mehr als einmal pro Tag">
+					description = <"">
+				>
+				["at0164"] = <
+					text = <"Ungefähr einmal pro Tag">
+					description = <"">
+				>
+				["at0165"] = <
+					text = <"Mehr als einmal pro Woche">
+					description = <"">
+				>
+				["at0166"] = <
+					text = <"Ungefähr einmal pro Woche">
+					description = <"">
+				>
+				["at0167"] = <
+					text = <"Selten oder nie">
+					description = <"">
+				>
+				["at0168"] = <
+					text = <"Wie oft verspürten Sie in den letzten 4 Wochen Schmerzen oder ein Brennen beim Urinieren?">
+					description = <"">
+					epic_item_id = <"25">
+					subscale2 = <"Urinary function">
+					subscale = <"Irritative/Obstructive">
+					epic_2_2002_number = <"3">
+					domain = <"Urinary">
+				>
+				["at0169"] = <
+					text = <"Mehr als einmal pro Tag">
+					description = <"">
+				>
+				["at0170"] = <
+					text = <"Ungefähr einmal pro Tag">
+					description = <"">
+				>
+				["at0171"] = <
+					text = <"Mehr als einmal pro Woche">
+					description = <"">
+				>
+				["at0172"] = <
+					text = <"Ungefähr einmal pro Woche">
+					description = <"">
+				>
+				["at0173"] = <
+					text = <"Selten oder nie">
+					description = <"">
+				>
+				["at0174"] = <
+					text = <"Aufwachen wegen Harndrangs">
+					description = <"">
+					epic_item_id = <"32">
+					subscale2 = <"Irritative/Obstructive">
+					subscale = <"Urinary bother">
+					epic_2_2002_number = <"6e">
+					domain = <"Urinary">
+				>
+				["at0175"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0176"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0177"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0178"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0179"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0180"] = <
+					text = <"Wie oft verspürten Sie in den letzten 4 Wochen starken Stuhldrang, ohne dass es tatsächlich zu Stuhlabgang kam?">
+					description = <"">
+					epic_item_id = <"42">
+					subscale = <"Bowel function">
+					epic_2_2002_number = <"8">
+					domain = <"Bowel">
+				>
+				["at0181"] = <
+					text = <"Mehr als einmal pro Tag">
+					description = <"">
+				>
+				["at0182"] = <
+					text = <"Ungefähr einmal pro Tag">
+					description = <"">
+				>
+				["at0183"] = <
+					text = <"Mehr als einmal pro Woche">
+					description = <"">
+				>
+				["at0184"] = <
+					text = <"Ungefähr einmal pro Woche">
+					description = <"">
+				>
+				["at0185"] = <
+					text = <"Selten oder nie">
+					description = <"">
+				>
+				["at0186"] = <
+					text = <"Wie oft hatten Sie in den letzten 4 Wochen blutigen Stuhlgang?">
+					description = <"">
+					epic_item_id = <"45">
+					subscale = <"Bowel function">
+					epic_2_2002_number = <"11">
+					domain = <"Bowel">
+				>
+				["at0187"] = <
+					text = <"Nie">
+					description = <"">
+				>
+				["at0188"] = <
+					text = <"Selten">
+					description = <"">
+				>
+				["at0189"] = <
+					text = <"In ungefähr der Hälfte der Fälle">
+					description = <"">
+				>
+				["at0190"] = <
+					text = <"Meistens">
+					description = <"">
+				>
+				["at0191"] = <
+					text = <"Immer">
+					description = <"">
+				>
+				["at0192"] = <
+					text = <"Wie oft hatten Sie in den letzten 4 Wochen breiigen oder wässrigen Stuhlgang?">
+					description = <"">
+					epic_item_id = <"44">
+					subscale = <"Bowel function">
+					epic_2_2002_number = <"10">
+					domain = <"Bowel">
+				>
+				["at0193"] = <
+					text = <"Nie">
+					description = <"">
+				>
+				["at0194"] = <
+					text = <"Selten">
+					description = <"">
+				>
+				["at0195"] = <
+					text = <"In ungefähr der Hälfte der Fälle">
+					description = <"">
+				>
+				["at0196"] = <
+					text = <"Meistens">
+					description = <"">
+				>
+				["at0197"] = <
+					text = <"Immer">
+					description = <"">
+				>
+				["at0198"] = <
+					text = <"Wie oft hatten Sie in den letzten 4 Wochen krampfartige Schmerzen im Bauch, Beckenbereich oder Enddarm?">
+					description = <"">
+					epic_item_id = <"48">
+					subscale = <"Bowel function">
+					epic_2_2002_number = <"14">
+					domain = <"Bowel">
+				>
+				["at0199"] = <
+					text = <"Mehr als einmal pro Tag">
+					description = <"">
+				>
+				["at0200"] = <
+					text = <"Ungefähr einmal pro Tag">
+					description = <"">
+				>
+				["at0201"] = <
+					text = <"Mehr als einmal pro Woche">
+					description = <"">
+				>
+				["at0202"] = <
+					text = <"Ungefähr einmal pro Woche">
+					description = <"">
+				>
+				["at0203"] = <
+					text = <"Selten oder nie">
+					description = <"">
+				>
+				["at0204"] = <
+					text = <"Wie oft verspürten Sie in den letzten 4 Wochen Schmerzen beim Stuhlgang?">
+					description = <"">
+					epic_item_id = <"46">
+					subscale = <"Bowel function">
+					epic_2_2002_number = <"12">
+					domain = <"Bowel">
+				>
+				["at0205"] = <
+					text = <"Nie">
+					description = <"">
+				>
+				["at0206"] = <
+					text = <"Selten">
+					description = <"">
+				>
+				["at0207"] = <
+					text = <"In ungefähr der Hälfte der Fälle">
+					description = <"">
+				>
+				["at0208"] = <
+					text = <"Meistens">
+					description = <"">
+				>
+				["at0209"] = <
+					text = <"Immer">
+					description = <"">
+				>
+				["at0210"] = <
+					text = <"Stuhldrang ohne Stuhlentleerung">
+					description = <"">
+					epic_item_id = <"49">
+					subscale = <"Bowel bother">
+					epic_2_2002_number = <"15a">
+					domain = <"Bowel">
+					sf_6_2002_number = <"6a">
+				>
+				["at0211"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0212"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0213"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0214"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0215"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0216"] = <
+					text = <"Ihr sexuelles Verlangen">
+					description = <"">
+					epic_item_id = <"56">
+					subscale = <"Sexual function">
+					epic_2_2002_number = <"17a">
+					domain = <"Sexual">
+				>
+				["at0217"] = <
+					text = <"Sehr gering bis gar nicht">
+					description = <"">
+				>
+				["at0218"] = <
+					text = <"Gering">
+					description = <"">
+				>
+				["at0219"] = <
+					text = <"Durchschnittlich">
+					description = <"">
+				>
+				["at0220"] = <
+					text = <"Gut">
+					description = <"">
+				>
+				["at0221"] = <
+					text = <"Sehr gut">
+					description = <"">
+				>
+				["at0222"] = <
+					text = <"Wie viele Einlagen oder Windeln haben Sie in den letzten 4 Wochen normalerweise pro Tag wegen unfreiwilligem Urinverlust benötigt?">
+					description = <"">
+					epic_item_id = <"27">
+					subscale2 = <"Urinary function">
+					subscale = <"Incontinence">
+					epic_2_2002_number = <"5">
+					domain = <"Urinary">
+					sf_6_2002_number = <"3">
+				>
+				["at0223"] = <
+					text = <"Wie oft hatten Sie in den letzten 4 Wochen unkontrollierten Stuhlabgang?">
+					description = <"">
+					epic_item_id = <"43">
+					subscale = <"Bowel function">
+					epic_2_2002_number = <"9">
+					domain = <"Bowel">
+				>
+				["at0224"] = <
+					text = <"Mehr als einmal pro Tag">
+					description = <"">
+				>
+				["at0225"] = <
+					text = <"Ungefähr einmal pro Tag">
+					description = <"">
+				>
+				["at0226"] = <
+					text = <"Mehr als einmal pro Woche">
+					description = <"">
+				>
+				["at0227"] = <
+					text = <"Ungefähr einmal pro Woche">
+					description = <"">
+				>
+				["at0228"] = <
+					text = <"Selten oder nie">
+					description = <"">
+				>
+				["at0235"] = <
+					text = <"Wie oft sind Sie in den letzten 4 Wochen morgens oder in der Nacht mit einer Erektion aufgewacht?">
+					description = <"">
+					epic_item_id = <"61">
+					subscale = <"Sexual function">
+					epic_2_2002_number = <"20">
+					domain = <"Sexual">
+				>
+				["at0236"] = <
+					text = <"Nie">
+					description = <"">
+				>
+				["at0237"] = <
+					text = <"Weniger als einmal pro Woche">
+					description = <"">
+				>
+				["at0238"] = <
+					text = <"Ungefähr einmal pro Woche">
+					description = <"">
+				>
+				["at0239"] = <
+					text = <"Mehrmals pro Woche">
+					description = <"">
+				>
+				["at0240"] = <
+					text = <"Täglich">
+					description = <"">
+				>
+				["at0241"] = <
+					text = <"Wie oft waren Sie in den letzten 4 Wochen in irgendeiner Weise sexuell aktiv?">
+					description = <"">
+					epic_item_id = <"62">
+					subscale = <"Sexual function">
+					epic_2_2002_number = <"21">
+					domain = <"Sexual">
+				>
+				["at0242"] = <
+					text = <"Gar nicht">
+					description = <"">
+				>
+				["at0243"] = <
+					text = <"Weniger als einmal pro Woche">
+					description = <"">
+				>
+				["at0244"] = <
+					text = <"Ungefähr einmal pro Woche">
+					description = <"">
+				>
+				["at0245"] = <
+					text = <"Mehrmals pro Woche">
+					description = <"">
+				>
+				["at0246"] = <
+					text = <"Täglich">
+					description = <"">
+				>
+				["at0247"] = <
+					text = <"Wie oft hatten Sie in den letzten 4 Wochen Geschlechtsverkehr?">
+					description = <"">
+					epic_item_id = <"63">
+					subscale = <"Sexual function">
+					epic_2_2002_number = <"22">
+					domain = <"Sexual">
+				>
+				["at0248"] = <
+					text = <"Gar nicht">
+					description = <"">
+				>
+				["at0249"] = <
+					text = <"Weniger als einmal pro Woche">
+					description = <"">
+				>
+				["at0250"] = <
+					text = <"Ungefähr einmal pro Woche">
+					description = <"">
+				>
+				["at0251"] = <
+					text = <"Mehrmals pro Woche">
+					description = <"">
+				>
+				["at0252"] = <
+					text = <"Täglich">
+					description = <"">
+				>
+				["at0253"] = <
+					text = <"Ihre Erektionsfähigkeit">
+					description = <"">
+					epic_item_id = <"66">
+					subscale = <"Sexual bother">
+					epic_2_2002_number = <"24b">
+					domain = <"Sexual">
+				>
+				["at0254"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0255"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0256"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0257"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0258"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0259"] = <
+					text = <"Ihr sexuelles Verlangen">
+					description = <"">
+					epic_item_id = <"65">
+					subscale = <"Sexual bother">
+					epic_2_2002_number = <"24a">
+					domain = <"Sexual">
+				>
+				["at0260"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0261"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0262"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0263"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0264"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0265"] = <
+					text = <"Ihre Orgasmusfähigkeit">
+					description = <"">
+					epic_item_id = <"67">
+					subscale = <"Sexual bother">
+					epic_2_2002_number = <"24c">
+					domain = <"Sexual">
+				>
+				["at0266"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0267"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0268"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0269"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0270"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0271"] = <
+					text = <"Wie oft hatten Sie in den letzten 4 Wochen Hitzewallungen?">
+					description = <"">
+					epic_item_id = <"69">
+					subscale = <"Hormonal function">
+					epic_2_2002_number = <"26">
+					domain = <"Hormonal">
+				>
+				["at0272"] = <
+					text = <"Mehr als einmal pro Tag">
+					description = <"">
+				>
+				["at0273"] = <
+					text = <"Ungefähr einmal pro Tag">
+					description = <"">
+				>
+				["at0274"] = <
+					text = <"Mehr als einmal pro Woche">
+					description = <"">
+				>
+				["at0275"] = <
+					text = <"Ungefähr einmal pro Woche">
+					description = <"">
+				>
+				["at0276"] = <
+					text = <"Selten oder nie">
+					description = <"">
+				>
+				["at0277"] = <
+					text = <"Wie oft hatten Sie in den letzten 4 Wochen ein Spannungsgefühl oder Schmerzen im Brustbereich?">
+					description = <"">
+					epic_item_id = <"70">
+					subscale = <"Hormonal function">
+					epic_2_2002_number = <"27">
+					domain = <"Hormonal">
+				>
+				["at0278"] = <
+					text = <"Mehr als einmal pro Tag">
+					description = <"">
+				>
+				["at0279"] = <
+					text = <"Ungefähr einmal pro Tag">
+					description = <"">
+				>
+				["at0280"] = <
+					text = <"Mehr als einmal pro Woche">
+					description = <"">
+				>
+				["at0281"] = <
+					text = <"Ungefähr einmal pro Woche">
+					description = <"">
+				>
+				["at0282"] = <
+					text = <"Selten oder nie">
+					description = <"">
+				>
+				["at0283"] = <
+					text = <"Wie oft fühlten Sie sich in den letzten 4 Wochen niedergeschlagen oder deprimiert?">
+					description = <"">
+					epic_item_id = <"71">
+					subscale = <"Hormonal function">
+					epic_2_2002_number = <"28">
+					domain = <"Hormonal">
+				>
+				["at0284"] = <
+					text = <"Mehr als einmal pro Tag">
+					description = <"">
+				>
+				["at0285"] = <
+					text = <"Ungefähr einmal pro Tag">
+					description = <"">
+				>
+				["at0286"] = <
+					text = <"Mehr als einmal pro Woche">
+					description = <"">
+				>
+				["at0287"] = <
+					text = <"Ungefähr einmal pro Woche">
+					description = <"">
+				>
+				["at0288"] = <
+					text = <"Selten oder nie">
+					description = <"">
+				>
+				["at0289"] = <
+					text = <"Wie oft fühlten Sie sich in den letzten 4 Wochen kraftlos oder müde?">
+					description = <"">
+					epic_item_id = <"72">
+					subscale = <"Hormonal function">
+					epic_2_2002_number = <"29">
+					domain = <"Hormonal">
+				>
+				["at0290"] = <
+					text = <"Mehr als einmal pro Tag">
+					description = <"">
+				>
+				["at0291"] = <
+					text = <"Ungefähr einmal pro Tag">
+					description = <"">
+				>
+				["at0292"] = <
+					text = <"Mehr als einmal pro Woche">
+					description = <"">
+				>
+				["at0293"] = <
+					text = <"Ungefähr einmal pro Woche">
+					description = <"">
+				>
+				["at0294"] = <
+					text = <"Selten oder nie">
+					description = <"">
+				>
+				["at0295"] = <
+					text = <"Wie hat sich in den letzten 4 Wochen Ihr Gewicht verändert?">
+					description = <"">
+					epic_item_id = <"73">
+					subscale = <"Hormonal function">
+					epic_2_2002_number = <"30">
+					domain = <"Hormonal">
+				>
+				["at0296"] = <
+					text = <"5 kg oder mehr zugenommen">
+					description = <"">
+				>
+				["at0297"] = <
+					text = <"Weniger als 5 kg zugenommen">
+					description = <"">
+				>
+				["at0298"] = <
+					text = <"Keine Gewichtsveränderung">
+					description = <"">
+				>
+				["at0299"] = <
+					text = <"Weniger als 5 kg abgenommen">
+					description = <"">
+				>
+				["at0300"] = <
+					text = <"5 kg oder mehr abgenommen">
+					description = <"">
+				>
+				["at0301"] = <
+					text = <"Abnahme der Körperbehaarung">
+					description = <"">
+					epic_item_id = <"76">
+					subscale = <"Hormonal bother">
+					epic_2_2002_number = <"31c">
+					domain = <"Hormonal">
+				>
+				["at0302"] = <
+					text = <"Kein Problem">
+					description = <"">
+				>
+				["at0303"] = <
+					text = <"Sehr kleines Problem">
+					description = <"">
+				>
+				["at0304"] = <
+					text = <"Kleines Problem">
+					description = <"">
+				>
+				["at0305"] = <
+					text = <"Mittelschweres Problem">
+					description = <"">
+				>
+				["at0306"] = <
+					text = <"Grosses Problem">
+					description = <"">
+				>
+				["at0307"] = <
+					text = <"Wie zufrieden sind Sie im Allgemeinen mit Ihrer Prostatakrebsbehandlung?">
+					description = <"">
+					epic_item_id = <"80">
+					epic_2_2002_number = <"32">
+				>
+				["at0308"] = <
+					text = <"Sehr unzufrieden">
+					description = <"">
+				>
+				["at0309"] = <
+					text = <"Unzufrieden">
+					description = <"">
+				>
+				["at0310"] = <
+					text = <"Unschlüssig">
+					description = <"">
+				>
+				["at0311"] = <
+					text = <"Zufrieden">
+					description = <"">
+				>
+				["at0312"] = <
+					text = <"Sehr zufrieden">
+					description = <"">
+				>
+				["at0313"] = <
+					text = <"Beliebiges Ereignis">
+					description = <"Standardmäßiger, nicht näher beschriebener Zeitpunkt oder Intervall Ereignis welches in einem Template oder bei der Anwendung genauer definiert werden kann.">
+					comment = <"In der klinischen Praxis wird üblicherweise vor der Behandlung eine Ausgangsmessung durchgeführt. Bei Personen, die sich im Rahmen einer aktiven Überwachung in Erwartung einer zukünftigen Behandlung befinden, können jedoch mehrere solcher Ausgangsmessungen vorliegen. Darüber hinaus wird die Messung mehrmals während und nach der Behandlung durchgeführt. Die korrekte Benennung des Ereignisses muss zur Laufzeit erfolgen.">
+				>
+				["at0314"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0315"] = <
+					text = <"Keine">
+					description = <"">
+				>
+				["at0316"] = <
+					text = <"1 pro Tag">
+					description = <"">
+				>
+				["at0317"] = <
+					text = <"2 pro Tag">
+					description = <"">
+				>
+				["at0318"] = <
+					text = <"3 oder mehr pro Tag">
+					description = <"">
+				>
+				["at0319"] = <
+					text = <"Ein wie grosses Problem hatten Sie mit den folgenden Beschwerden in den letzten 4 Wochen?">
+					description = <"Eine übergeordnete Frage, deren Antworten ausschliesslich in den Elementen innerhalb des Clusters erfasst werden.">
+				>
+				["at0320"] = <
+					text = <"Ein wie grosses Problem hatten Sie mit den folgenden Beschwerden in den letzten 4 Wochen?">
+					description = <"Eine übergeordnete Frage, deren Antworten ausschliesslich in den Elementen innerhalb des Clusters erfasst werden.">
+				>
+				["at0321"] = <
+					text = <"Wie schätzen Sie die folgenden Bereiche Ihrer sexuellen Funktionsfähigkeit in den letzten 4 Wochen ein?">
+					description = <"Eine übergeordnete Frage, deren Antworten ausschliesslich in den Elementen innerhalb des Clusters erfasst werden.">
+				>
+				["at0322"] = <
+					text = <"Ein wie grosses Problem hatten Sie mit den folgenden Bereichen Ihrer sexuellen Funktionsfähigkeit in den letzten 4 Wochen?">
+					description = <"Eine übergeordnete Frage, deren Antworten ausschliesslich in den Elementen innerhalb des Clusters erfasst werden.">
+				>
+				["at0323"] = <
+					text = <"Ein wie grosses Problem hatten Sie mit den folgenden Beschwerden in den letzten 4 Wochen?">
+					description = <"Eine übergeordnete Frage, deren Antworten ausschliesslich in den Elementen innerhalb des Clusters erfasst werden.">
+				>
+				["at0324"] = <
+					text = <"Urinary summary score">
+					description = <"Der zusammenfassende Score für den HRQoL-Bereich Harnfunktion.">
+				>
+				["at0325"] = <
+					text = <"Bowel summary score">
+					description = <"Der zusammenfassende Score für den HRQoL-Bereich Darmfunktion.">
+				>
+				["at0326"] = <
+					text = <"Sexual summary score">
+					description = <"Der zusammenfassende Score für den HRQoL-Bereich sexuelle Funktion.">
+				>
+				["at0327"] = <
+					text = <"Hormonal summary score">
+					description = <"Der zusammenfassende Score für den HRQoL-Bereich hormonelle Funktion.">
+				>
+				["at0328"] = <
+					text = <"Urinary function subscale">
+					description = <"Die Subskala für die Harnfunktion.">
+				>
+				["at0329"] = <
+					text = <"Urinary bother subscale">
+					description = <"Die Subskala für Beschwerden beim Urinieren.">
+				>
+				["at0330"] = <
+					text = <"Urinary incontinence subscale">
+					description = <"Die Subskala für Harninkontinenz.">
+				>
+				["at0331"] = <
+					text = <"Urinary irritative/obstructive subscale">
+					description = <"Die Subskala für Reizung/Obstruktion beim Urinieren.">
+				>
+				["at0332"] = <
+					text = <"Bowel function subscale">
+					description = <"Die Subskala für die Darmfunktion.">
+				>
+				["at0333"] = <
+					text = <"Bowel bother subscale">
+					description = <"Die Subskala für Beschwerden beim Stuhlgang.">
+				>
+				["at0334"] = <
+					text = <"Sexual function subscale">
+					description = <"Die Subskala für die sexuelle Funktion.">
+				>
+				["at0335"] = <
+					text = <"Sexual bother subscale">
+					description = <"Die Subskala für Beschwerden der sexuellen Funktion.">
+				>
+				["at0336"] = <
+					text = <"Hormonal function subscale">
+					description = <"Die Subskala für die hormonelle Funktion.">
+				>
+				["at0337"] = <
+					text = <"Hormonal bother subscale">
+					description = <"Die Subskala für Beschwerden der hormonellen Funktion.">
+				>
+			>
+		>
+		["fr"] = <
+			items = <
+				["at0000"] = <
+					text = <"Questionnaire spécifique du cancer de la prostate (EPIC)">
+					description = <"Un questionnaire destiné à évaluer les problèmes liés à la qualité de vie des patients atteints d’un cancer de la prostate.">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Au cours des 4 dernières semaines, à quelle fréquence avez-vous eu des fuites urinaires ?">
+					description = <"">
+					epic_item_id = <"23">
+					subscale2 = <"Incontinence">
+					subscale = <"Urinary function">
+					epic_2_2002_number = <"1">
+					domain = <"Urinary">
+					sf_6_2002_number = <"1">
+				>
+				["at0005"] = <
+					text = <"Plus d'une fois par jour">
+					description = <"">
+				>
+				["at0006"] = <
+					text = <"Environ une fois par jour">
+					description = <"">
+				>
+				["at0007"] = <
+					text = <"Plus d'une fois par semaine">
+					description = <"">
+				>
+				["at0008"] = <
+					text = <"Environ une fois par semaine">
+					description = <"">
+				>
+				["at0009"] = <
+					text = <"Rarement ou jamais">
+					description = <"">
+				>
+				["at0010"] = <
+					text = <"Parmi les réponses suivantes, quelle est celle qui décrit le mieux votre contrôle sur la vessie au cours des 4 dernières semaines ?">
+					description = <"">
+					epic_item_id = <"26">
+					subscale2 = <"Urinary function">
+					subscale = <"Incontinence">
+					epic_2_2002_number = <"4">
+					domain = <"Urinary">
+					sf_6_2002_number = <"2">
+				>
+				["at0011"] = <
+					text = <"Aucun contrôle sur la vessie">
+					description = <"">
+				>
+				["at0012"] = <
+					text = <"Goutte à goutte fréquent">
+					description = <"">
+				>
+				["at0013"] = <
+					text = <"Goutte à goutte occasionnel">
+					description = <"">
+				>
+				["at0014"] = <
+					text = <"Contrôle total">
+					description = <"">
+				>
+				["at0015"] = <
+					text = <"*How many bowel movements have you had on a typical day during the last 4 weeks?(en)">
+					description = <"">
+				>
+				["at0017"] = <
+					text = <"*Two or less(en)">
+					description = <"">
+				>
+				["at0018"] = <
+					text = <"*Three to four(en)">
+					description = <"">
+				>
+				["at0019"] = <
+					text = <"*Five or more(en)">
+					description = <"">
+				>
+				["at0022"] = <
+					text = <"Goutte à goutte ou fuite urinaire">
+					description = <"">
+					epic_item_id = <"28">
+					subscale2 = <"Urinary bother">
+					subscale = <"Incontinence">
+					epic_2_2002_number = <"6a">
+					domain = <"Urinary">
+					sf_6_2002_number = <"4a">
+				>
+				["at0023"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0024"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0025"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0026"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0027"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0028"] = <
+					text = <"Douleur ou sensation de brûlure lorsque vous urinez">
+					description = <"">
+					epic_item_id = <"29">
+					subscale2 = <"Irritative/Obstructive">
+					subscale = <"Urinary bother">
+					epic_2_2002_number = <"6b">
+					domain = <"Urinary">
+					sf_6_2002_number = <"4b">
+				>
+				["at0029"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0030"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0031"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0032"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0033"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0034"] = <
+					text = <"Saignement lorsque vous urinez">
+					description = <"">
+					epic_item_id = <"30">
+					subscale2 = <"Irritative/Obstructive">
+					subscale = <"Urinary bother">
+					epic_2_2002_number = <"6c">
+					domain = <"Urinary">
+					sf_6_2002_number = <"4c">
+				>
+				["at0035"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0036"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0037"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0038"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0039"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0040"] = <
+					text = <"Jet d'urine faible ou vidange incomplète de la vessie">
+					description = <"">
+					epic_item_id = <"31">
+					subscale2 = <"Irritative/Obstructive">
+					subscale = <"Urinary bother">
+					epic_2_2002_number = <"6d">
+					domain = <"Urinary">
+					sf_6_2002_number = <"4d">
+				>
+				["at0041"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0042"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0043"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0044"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0045"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0046"] = <
+					text = <"Besoin fréquent d'uriner au cours de la journée">
+					description = <"">
+					epic_item_id = <"33">
+					subscale2 = <"Irritative/Obstructive">
+					subscale = <"Urinary bother">
+					epic_2_2002_number = <"6f">
+					domain = <"Urinary">
+					sf_6_2002_number = <"4e">
+				>
+				["at0047"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0048"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0049"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0050"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0051"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0052"] = <
+					text = <"Globalement, quelle a été l'importance du problème posé par votre fonction urinaire au cours des 4 dernières semaines ?">
+					description = <"">
+					epic_item_id = <"34">
+					subscale = <"Urinary bother">
+					epic_2_2002_number = <"7">
+					domain = <"Urinary">
+					sf_6_2002_number = <"5">
+				>
+				["at0053"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0054"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0055"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0056"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0057"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0059"] = <
+					text = <"Augmentation de la fréquence des selles">
+					description = <"">
+					epic_item_id = <"50">
+					subscale = <"Bowel bother">
+					epic_2_2002_number = <"15b">
+					domain = <"Bowel">
+					sf_6_2002_number = <"6b">
+				>
+				["at0060"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0061"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0062"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0063"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0064"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0065"] = <
+					text = <"*Watery bowel movements(en)">
+					description = <"">
+				>
+				["at0066"] = <
+					text = <"*No problem(en)">
+					description = <"">
+				>
+				["at0067"] = <
+					text = <"*Very small problem(en)">
+					description = <"">
+				>
+				["at0068"] = <
+					text = <"*Small problem(en)">
+					description = <"">
+				>
+				["at0069"] = <
+					text = <"*Moderate problem(en)">
+					description = <"">
+				>
+				["at0070"] = <
+					text = <"*Big problem(en)">
+					description = <"">
+				>
+				["at0071"] = <
+					text = <"Perte du contrôle de vos selles">
+					description = <"">
+					epic_item_id = <"52">
+					subscale = <"Bowel bother">
+					epic_2_2002_number = <"15d">
+					domain = <"Bowel">
+					sf_6_2002_number = <"6c">
+				>
+				["at0072"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0073"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0074"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0075"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0076"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0077"] = <
+					text = <"Sang dans les selles">
+					description = <"">
+					epic_item_id = <"53">
+					subscale = <"Bowel bother">
+					epic_2_2002_number = <"15e">
+					domain = <"Bowel">
+					sf_6_2002_number = <"6d">
+				>
+				["at0078"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0079"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0080"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0081"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0082"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0083"] = <
+					text = <"Douleur abdominale/pelvienne/rectale">
+					description = <"">
+					epic_item_id = <"54">
+					subscale = <"Bowel bother">
+					epic_2_2002_number = <"15f">
+					domain = <"Bowel">
+					sf_6_2002_number = <"6e">
+				>
+				["at0084"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0085"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0086"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0087"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0088"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0089"] = <
+					text = <"Globalement, quelle a été l'importance du problème posé par vos habitudes intestinales au cours des 4 dernières semaines ?">
+					description = <"">
+					epic_item_id = <"55">
+					subscale = <"Bowel bother">
+					epic_2_2002_number = <"16">
+					domain = <"Bowel">
+					sf_6_2002_number = <"7">
+				>
+				["at0090"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0091"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0092"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0093"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0094"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0095"] = <
+					text = <"Votre capacité à avoir une érection ?">
+					description = <"">
+					epic_item_id = <"57">
+					subscale = <"Sexual function">
+					epic_2_2002_number = <"17b">
+					domain = <"Sexual">
+					sf_6_2002_number = <"8a">
+				>
+				["at0097"] = <
+					text = <"Votre capacité à atteindre l’orgasme (la jouissance) ?">
+					description = <"">
+					epic_item_id = <"58">
+					subscale = <"Sexual function">
+					epic_2_2002_number = <"17c">
+					domain = <"Sexual">
+					sf_6_2002_number = <"8b">
+				>
+				["at0098"] = <
+					text = <"Très limitée à inexistante">
+					description = <"">
+				>
+				["at0099"] = <
+					text = <"Limitée">
+					description = <"">
+				>
+				["at0100"] = <
+					text = <"Correcte">
+					description = <"">
+				>
+				["at0101"] = <
+					text = <"Satisfaisante">
+					description = <"">
+				>
+				["at0102"] = <
+					text = <"Très satisfaisante">
+					description = <"">
+				>
+				["at0103"] = <
+					text = <"Très limitée à inexistante">
+					description = <"">
+				>
+				["at0104"] = <
+					text = <"Limitée">
+					description = <"">
+				>
+				["at0105"] = <
+					text = <"Correcte">
+					description = <"">
+				>
+				["at0106"] = <
+					text = <"Satisfaisante">
+					description = <"">
+				>
+				["at0107"] = <
+					text = <"Très satisfaisante">
+					description = <"">
+				>
+				["at0108"] = <
+					text = <"En règle générale, comment décririez-vous la QUALITÉ de vos érections au cours des 4 dernières semaines ?">
+					description = <"">
+					epic_item_id = <"59">
+					subscale = <"Sexual function">
+					epic_2_2002_number = <"18">
+					domain = <"Sexual">
+					sf_6_2002_number = <"9">
+				>
+				["at0109"] = <
+					text = <"Aucune érection">
+					description = <"">
+				>
+				["at0110"] = <
+					text = <"Pas assez ferme pour une quelconque activité sexuelle">
+					description = <"">
+				>
+				["at0111"] = <
+					text = <"Assez ferme pour la masturbation et les préliminaires uniquement">
+					description = <"">
+				>
+				["at0112"] = <
+					text = <"Assez ferme pour un rapport sexuel">
+					description = <"">
+				>
+				["at0113"] = <
+					text = <"Comment décririez-vous la FRÉQUENCE de vos érections au cours des 4 dernières semaines ?">
+					description = <"">
+					epic_item_id = <"60">
+					subscale = <"Sexual function">
+					epic_2_2002_number = <"19">
+					domain = <"Sexual">
+					sf_6_2002_number = <"10">
+				>
+				["at0114"] = <
+					text = <"Je n'ai JAMAIS eu d'érection lorsque je le voulais">
+					description = <"">
+				>
+				["at0115"] = <
+					text = <"J'ai eu une érection MOINS D'UNE FOIS SUR DEUX lorsque je le voulais">
+					description = <"">
+				>
+				["at0116"] = <
+					text = <"J'ai eu une érection ENVIRON UNE FOIS SUR DEUX lorsque je le voulais">
+					description = <"">
+				>
+				["at0117"] = <
+					text = <"J'ai eu une érection PLUS D'UNE FOIS SUR DEUX lorsque je le voulais">
+					description = <"">
+				>
+				["at0118"] = <
+					text = <"J'ai eu une érection CHAQUE FOIS que je le voulais">
+					description = <"">
+				>
+				["at0119"] = <
+					text = <"Globalement, comment évalueriez-vous votre fonction sexuelle au cours des 4 dernières semaines ?">
+					description = <"">
+					epic_item_id = <"64">
+					subscale = <"Sexual function">
+					epic_2_2002_number = <"23">
+					domain = <"Sexual">
+					sf_6_2002_number = <"11">
+				>
+				["at0120"] = <
+					text = <"Très limitée">
+					description = <"">
+				>
+				["at0121"] = <
+					text = <"Limitée">
+					description = <"">
+				>
+				["at0122"] = <
+					text = <"Correcte">
+					description = <"">
+				>
+				["at0123"] = <
+					text = <"Satisfaisante">
+					description = <"">
+				>
+				["at0124"] = <
+					text = <"Très satisfaisante">
+					description = <"">
+				>
+				["at0125"] = <
+					text = <"Globalement, quelle a été l'importance du problème posé par votre fonction sexuelle, voire son absence, au cours des 4 dernières semaines ?">
+					description = <"">
+					epic_item_id = <"68">
+					subscale = <"Sexual bother">
+					epic_2_2002_number = <"25">
+					domain = <"Sexual">
+					sf_6_2002_number = <"12">
+				>
+				["at0126"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0127"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0128"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0129"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0130"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0132"] = <
+					text = <"Bouffées de chaleur">
+					description = <"">
+					epic_item_id = <"74">
+					subscale = <"Hormonal bother">
+					epic_2_2002_number = <"31a">
+					domain = <"Hormonal">
+					sf_6_2002_number = <"13a">
+				>
+				["at0133"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0134"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0135"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0136"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0137"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0138"] = <
+					text = <"Sensibilité/augmentation du volume de vos seins">
+					description = <"">
+					epic_item_id = <"75">
+					subscale = <"Hormonal bother">
+					epic_2_2002_number = <"31b">
+					domain = <"Hormonal">
+					sf_6_2002_number = <"13b">
+				>
+				["at0139"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0140"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0141"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0142"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0143"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0144"] = <
+					text = <"Sentiment de déprime">
+					description = <"">
+					epic_item_id = <"77">
+					subscale = <"Hormonal bother">
+					epic_2_2002_number = <"31d">
+					domain = <"Hormonal">
+					sf_6_2002_number = <"13c">
+				>
+				["at0145"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0146"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0147"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0148"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0149"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0150"] = <
+					text = <"Manque d'énergie">
+					description = <"">
+					epic_item_id = <"78">
+					subscale = <"Hormonal bother">
+					epic_2_2002_number = <"31e">
+					domain = <"Hormonal">
+					sf_6_2002_number = <"13d">
+				>
+				["at0151"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0152"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0153"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0154"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0155"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0156"] = <
+					text = <"Modification de votre poids">
+					description = <"">
+					epic_item_id = <"79">
+					subscale = <"Hormonal bother">
+					epic_2_2002_number = <"31f">
+					domain = <"Hormonal">
+					sf_6_2002_number = <"13e">
+				>
+				["at0157"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0158"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0159"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0160"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0161"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0162"] = <
+					text = <"*Over the past 4 weeks, how often have you urinated blood?(en)">
+					description = <"">
+				>
+				["at0163"] = <
+					text = <"*More than once a day(en)">
+					description = <"">
+				>
+				["at0164"] = <
+					text = <"*About once a day(en)">
+					description = <"">
+				>
+				["at0165"] = <
+					text = <"*More than once a week(en)">
+					description = <"">
+				>
+				["at0166"] = <
+					text = <"*About once a week(en)">
+					description = <"">
+				>
+				["at0167"] = <
+					text = <"*Rarely or never(en)">
+					description = <"">
+				>
+				["at0168"] = <
+					text = <"*Over the past 4 weeks, how often have you had pain or burning with urination?(en)">
+					description = <"">
+				>
+				["at0169"] = <
+					text = <"*More than once a day(en)">
+					description = <"">
+				>
+				["at0170"] = <
+					text = <"*About once a day(en)">
+					description = <"">
+				>
+				["at0171"] = <
+					text = <"*More than once a week(en)">
+					description = <"">
+				>
+				["at0172"] = <
+					text = <"*About once a week(en)">
+					description = <"">
+				>
+				["at0173"] = <
+					text = <"*Rarely or never(en)">
+					description = <"">
+				>
+				["at0174"] = <
+					text = <"*Waking up to urinate(en)">
+					description = <"">
+				>
+				["at0175"] = <
+					text = <"*No problem(en)">
+					description = <"">
+				>
+				["at0176"] = <
+					text = <"*Very small problem(en)">
+					description = <"">
+				>
+				["at0177"] = <
+					text = <"*Small problem(en)">
+					description = <"">
+				>
+				["at0178"] = <
+					text = <"*Moderate problem(en)">
+					description = <"">
+				>
+				["at0179"] = <
+					text = <"*Big problem(en)">
+					description = <"">
+				>
+				["at0180"] = <
+					text = <"*How often have you had rectal urgency (felt like I had to pass stool, but did not) during the last 4 weeks?(en)">
+					description = <"">
+				>
+				["at0181"] = <
+					text = <"*More than once a day(en)">
+					description = <"">
+				>
+				["at0182"] = <
+					text = <"*About once a day(en)">
+					description = <"">
+				>
+				["at0183"] = <
+					text = <"*More than once a week(en)">
+					description = <"">
+				>
+				["at0184"] = <
+					text = <"*About once a week(en)">
+					description = <"">
+				>
+				["at0185"] = <
+					text = <"*Rarely or never(en)">
+					description = <"">
+				>
+				["at0186"] = <
+					text = <"*How often have you had bloody stools during the last 4 weeks?(en)">
+					description = <"">
+				>
+				["at0187"] = <
+					text = <"*Never(en)">
+					description = <"">
+				>
+				["at0188"] = <
+					text = <"*Rarely(en)">
+					description = <"">
+				>
+				["at0189"] = <
+					text = <"*About half the time(en)">
+					description = <"">
+				>
+				["at0190"] = <
+					text = <"*Usually(en)">
+					description = <"">
+				>
+				["at0191"] = <
+					text = <"*Always(en)">
+					description = <"">
+				>
+				["at0192"] = <
+					text = <"*How often have you had stools (bowel movements) that were loose or liquid (no form, watery, mushy) during the last 4 weeks?(en)">
+					description = <"">
+				>
+				["at0193"] = <
+					text = <"*Never(en)">
+					description = <"">
+				>
+				["at0194"] = <
+					text = <"*Rarely(en)">
+					description = <"">
+				>
+				["at0195"] = <
+					text = <"*About half the time(en)">
+					description = <"">
+				>
+				["at0196"] = <
+					text = <"*Usually(en)">
+					description = <"">
+				>
+				["at0197"] = <
+					text = <"*Always(en)">
+					description = <"">
+				>
+				["at0198"] = <
+					text = <"*How often have you had crampy pain in your abdomen, pelvis or rectum during the last 4 weeks?(en)">
+					description = <"">
+				>
+				["at0199"] = <
+					text = <"*More than once a day(en)">
+					description = <"">
+				>
+				["at0200"] = <
+					text = <"*About once a day(en)">
+					description = <"">
+				>
+				["at0201"] = <
+					text = <"*More than once a week(en)">
+					description = <"">
+				>
+				["at0202"] = <
+					text = <"*About once a week(en)">
+					description = <"">
+				>
+				["at0203"] = <
+					text = <"*Rarely or never(en)">
+					description = <"">
+				>
+				["at0204"] = <
+					text = <"*How often have your bowel movements been painful during the last 4 weeks?(en)">
+					description = <"">
+				>
+				["at0205"] = <
+					text = <"*Never(en)">
+					description = <"">
+				>
+				["at0206"] = <
+					text = <"*Rarely(en)">
+					description = <"">
+				>
+				["at0207"] = <
+					text = <"*About half the time(en)">
+					description = <"">
+				>
+				["at0208"] = <
+					text = <"*Usually(en)">
+					description = <"">
+				>
+				["at0209"] = <
+					text = <"*Always(en)">
+					description = <"">
+				>
+				["at0210"] = <
+					text = <"Besoin urgent d'aller à la selle">
+					description = <"">
+					epic_item_id = <"49">
+					subscale = <"Bowel bother">
+					epic_2_2002_number = <"15a">
+					domain = <"Bowel">
+					sf_6_2002_number = <"6a">
+				>
+				["at0211"] = <
+					text = <"Aucun problème">
+					description = <"">
+				>
+				["at0212"] = <
+					text = <"Un très léger problème">
+					description = <"">
+				>
+				["at0213"] = <
+					text = <"Un léger problème">
+					description = <"">
+				>
+				["at0214"] = <
+					text = <"Un problème modéré">
+					description = <"">
+				>
+				["at0215"] = <
+					text = <"Un gros problème">
+					description = <"">
+				>
+				["at0216"] = <
+					text = <"*Your level of sexual desire(en)">
+					description = <"">
+				>
+				["at0217"] = <
+					text = <"*Very poor to none(en)">
+					description = <"">
+				>
+				["at0218"] = <
+					text = <"*Poor(en)">
+					description = <"">
+				>
+				["at0219"] = <
+					text = <"*Fair(en)">
+					description = <"">
+				>
+				["at0220"] = <
+					text = <"*Good(en)">
+					description = <"">
+				>
+				["at0221"] = <
+					text = <"*Very good(en)">
+					description = <"">
+				>
+				["at0222"] = <
+					text = <"Combien de protections ou de couches pour adulte avez-vous généralement utilisées chaque jour pour contrôler vos fuites au cours des 4 dernières semaines ?">
+					description = <"">
+					epic_item_id = <"27">
+					subscale2 = <"Urinary function">
+					subscale = <"Incontinence">
+					epic_2_2002_number = <"5">
+					domain = <"Urinary">
+					sf_6_2002_number = <"3">
+				>
+				["at0223"] = <
+					text = <"*How often have you had uncontrolled leakage of stool or feces?(en)">
+					description = <"">
+				>
+				["at0224"] = <
+					text = <"*More than once a day(en)">
+					description = <"">
+				>
+				["at0225"] = <
+					text = <"*About once a day(en)">
+					description = <"">
+				>
+				["at0226"] = <
+					text = <"*More than once a week(en)">
+					description = <"">
+				>
+				["at0227"] = <
+					text = <"*About once a week(en)">
+					description = <"">
+				>
+				["at0228"] = <
+					text = <"*Rarely or never(en)">
+					description = <"">
+				>
+				["at0235"] = <
+					text = <"*How often have you awakened in the morning or night with an erection during the last 4 weeks?(en)">
+					description = <"">
+				>
+				["at0236"] = <
+					text = <"*Never(en)">
+					description = <"">
+				>
+				["at0237"] = <
+					text = <"*Less than once a week(en)">
+					description = <"">
+				>
+				["at0238"] = <
+					text = <"*About once a week(en)">
+					description = <"">
+				>
+				["at0239"] = <
+					text = <"*Several times a week(en)">
+					description = <"">
+				>
+				["at0240"] = <
+					text = <"*Daily(en)">
+					description = <"">
+				>
+				["at0241"] = <
+					text = <"*During the last 4 weeks, how often did you have any sexual activity?(en)">
+					description = <"">
+				>
+				["at0242"] = <
+					text = <"*Not at all(en)">
+					description = <"">
+				>
+				["at0243"] = <
+					text = <"*Less than once a week(en)">
+					description = <"">
+				>
+				["at0244"] = <
+					text = <"*About once a week(en)">
+					description = <"">
+				>
+				["at0245"] = <
+					text = <"*Several times a week(en)">
+					description = <"">
+				>
+				["at0246"] = <
+					text = <"*Daily(en)">
+					description = <"">
+				>
+				["at0247"] = <
+					text = <"*During the last 4 weeks, how often did you have sexual intercourse?(en)">
+					description = <"">
+				>
+				["at0248"] = <
+					text = <"*Not at all(en)">
+					description = <"">
+				>
+				["at0249"] = <
+					text = <"*Less than once a week(en)">
+					description = <"">
+				>
+				["at0250"] = <
+					text = <"*About once a week(en)">
+					description = <"">
+				>
+				["at0251"] = <
+					text = <"*Several times a week(en)">
+					description = <"">
+				>
+				["at0252"] = <
+					text = <"*Daily(en)">
+					description = <"">
+				>
+				["at0253"] = <
+					text = <"*Your ability to have an erection(en)">
+					description = <"">
+				>
+				["at0254"] = <
+					text = <"*No problem(en)">
+					description = <"">
+				>
+				["at0255"] = <
+					text = <"*Very small problem(en)">
+					description = <"">
+				>
+				["at0256"] = <
+					text = <"*Small problem(en)">
+					description = <"">
+				>
+				["at0257"] = <
+					text = <"*Moderate problem(en)">
+					description = <"">
+				>
+				["at0258"] = <
+					text = <"*Big problem(en)">
+					description = <"">
+				>
+				["at0259"] = <
+					text = <"*Your level of sexual desire(en)">
+					description = <"">
+				>
+				["at0260"] = <
+					text = <"*No problem(en)">
+					description = <"">
+				>
+				["at0261"] = <
+					text = <"*Very small problem(en)">
+					description = <"">
+				>
+				["at0262"] = <
+					text = <"*Small problem(en)">
+					description = <"">
+				>
+				["at0263"] = <
+					text = <"*Moderate problem(en)">
+					description = <"">
+				>
+				["at0264"] = <
+					text = <"*Big problem(en)">
+					description = <"">
+				>
+				["at0265"] = <
+					text = <"*Your ability to reach an orgasm(en)">
+					description = <"">
+				>
+				["at0266"] = <
+					text = <"*No problem(en)">
+					description = <"">
+				>
+				["at0267"] = <
+					text = <"*Very small problem(en)">
+					description = <"">
+				>
+				["at0268"] = <
+					text = <"*Small problem(en)">
+					description = <"">
+				>
+				["at0269"] = <
+					text = <"*Moderate problem(en)">
+					description = <"">
+				>
+				["at0270"] = <
+					text = <"*Big problem(en)">
+					description = <"">
+				>
+				["at0271"] = <
+					text = <"*Over the last 4 weeks, how often have you experienced hot flashes?(en)">
+					description = <"">
+				>
+				["at0272"] = <
+					text = <"*More than once a day(en)">
+					description = <"">
+				>
+				["at0273"] = <
+					text = <"*About once a day(en)">
+					description = <"">
+				>
+				["at0274"] = <
+					text = <"*More than once a week(en)">
+					description = <"">
+				>
+				["at0275"] = <
+					text = <"*About once a week(en)">
+					description = <"">
+				>
+				["at0276"] = <
+					text = <"*Rarely or never(en)">
+					description = <"">
+				>
+				["at0277"] = <
+					text = <"*How often have you had breast tenderness during the last 4 weeks?(en)">
+					description = <"">
+				>
+				["at0278"] = <
+					text = <"*More than once a day(en)">
+					description = <"">
+				>
+				["at0279"] = <
+					text = <"*About once a day(en)">
+					description = <"">
+				>
+				["at0280"] = <
+					text = <"*More than once a week(en)">
+					description = <"">
+				>
+				["at0281"] = <
+					text = <"*About once a week(en)">
+					description = <"">
+				>
+				["at0282"] = <
+					text = <"*Rarely or never(en)">
+					description = <"">
+				>
+				["at0283"] = <
+					text = <"*During the last 4 weeks, how often have you felt depressed?(en)">
+					description = <"">
+				>
+				["at0284"] = <
+					text = <"*More than once a day(en)">
+					description = <"">
+				>
+				["at0285"] = <
+					text = <"*About once a day(en)">
+					description = <"">
+				>
+				["at0286"] = <
+					text = <"*More than once a week(en)">
+					description = <"">
+				>
+				["at0287"] = <
+					text = <"*About once a week(en)">
+					description = <"">
+				>
+				["at0288"] = <
+					text = <"*Rarely or never(en)">
+					description = <"">
+				>
+				["at0289"] = <
+					text = <"*During the last 4 weeks, how often have you felt a lack of energy?(en)">
+					description = <"">
+				>
+				["at0290"] = <
+					text = <"*More than once a day(en)">
+					description = <"">
+				>
+				["at0291"] = <
+					text = <"*About once a day(en)">
+					description = <"">
+				>
+				["at0292"] = <
+					text = <"*More than once a week(en)">
+					description = <"">
+				>
+				["at0293"] = <
+					text = <"*About once a week(en)">
+					description = <"">
+				>
+				["at0294"] = <
+					text = <"*Rarely or never(en)">
+					description = <"">
+				>
+				["at0295"] = <
+					text = <"*How much change in your weight have you experienced during the last 4 weeks, if any?(en)">
+					description = <"">
+				>
+				["at0296"] = <
+					text = <"*Gained 10 pounds or more(en)">
+					description = <"">
+				>
+				["at0297"] = <
+					text = <"*Gained less than 10 pounds(en)">
+					description = <"">
+				>
+				["at0298"] = <
+					text = <"*No change in weight(en)">
+					description = <"">
+				>
+				["at0299"] = <
+					text = <"*Lost less than 10 pounds(en)">
+					description = <"">
+				>
+				["at0300"] = <
+					text = <"*Lost 10 pounds or more(en)">
+					description = <"">
+				>
+				["at0301"] = <
+					text = <"*Loss of body hair(en)">
+					description = <"">
+				>
+				["at0302"] = <
+					text = <"*No problem(en)">
+					description = <"">
+				>
+				["at0303"] = <
+					text = <"*Very small problem(en)">
+					description = <"">
+				>
+				["at0304"] = <
+					text = <"*Small problem(en)">
+					description = <"">
+				>
+				["at0305"] = <
+					text = <"*Moderate problem(en)">
+					description = <"">
+				>
+				["at0306"] = <
+					text = <"*Big problem(en)">
+					description = <"">
+				>
+				["at0307"] = <
+					text = <"*Overall, how satisfied are you with the treatment you received for your prostate cancer?(en)">
+					description = <"">
+				>
+				["at0308"] = <
+					text = <"*Extremely dissatisfied(en)">
+					description = <"">
+				>
+				["at0309"] = <
+					text = <"*Dissatisfied(en)">
+					description = <"">
+				>
+				["at0310"] = <
+					text = <"*Uncertain(en)">
+					description = <"">
+				>
+				["at0311"] = <
+					text = <"*Satisfied(en)">
+					description = <"">
+				>
+				["at0312"] = <
+					text = <"*Extremely satisfied(en)">
+					description = <"">
+				>
+				["at0313"] = <
+					text = <"Tout événement">
+					description = <"Par défaut, événement ponctuel ou d’intervalle non spécifié, pouvant être défini explicitement dans un template ou au moment de l’exécution.">
+					comment = <"Dans la pratique clinique, il est habituel d’effectuer une mesure de référence avant le traitement. Toutefois, lorsque la personne fait l’objet d’une surveillance active dans l’attente d’un traitement futur, plusieurs mesures de référence peuvent exister. La mesure est également réalisée à plusieurs reprises pendant et après le traitement. La dénomination correcte de l’événement doit être définie au moment de l’exécution.">
+				>
+				["at0314"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0315"] = <
+					text = <"Aucune">
+					description = <"">
+				>
+				["at0316"] = <
+					text = <"1 protection par jour">
+					description = <"">
+				>
+				["at0317"] = <
+					text = <"2 protections par jour">
+					description = <"">
+				>
+				["at0318"] = <
+					text = <"3 protections par jour ou plus">
+					description = <"">
+				>
+				["at0319"] = <
+					text = <"Quelle a été l'importance du problème posé par chacune des situations suivantes si vous les avez vécues au cours des 4 dernières semaines ?">
+					description = <"Une question d’en-tête, dont les réponses doivent être enregistrées uniquement dans les éléments du Cluster.">
+				>
+				["at0320"] = <
+					text = <"Quelle a été l'importance du problème posé par chacune des situations suivantes si vous les avez vécues ?">
+					description = <"Une question d’en-tête, dont les réponses doivent être enregistrées uniquement dans les éléments du Cluster.">
+				>
+				["at0321"] = <
+					text = <"Comment évalueriez-vous chacune des capacités suivantes au cours des 4 dernières semaines ?">
+					description = <"Une question d’en-tête, dont les réponses doivent être enregistrées uniquement dans les éléments du Cluster.">
+				>
+				["at0322"] = <
+					text = <"*How big a problem during the last 4 weeks, if any, has each of the following been for you?(en)">
+					description = <"*A header question, with answers to be recorded in the elements within the Cluster only.(en)">
+				>
+				["at0323"] = <
+					text = <"Quelle a été l'importance du problème posé par chacune des situations suivantes si vous les avez vécues au cours des 4 dernières semaines ?">
+					description = <"Une question d’en-tête, dont les réponses doivent être enregistrées uniquement dans les éléments du Cluster.">
+				>
+				["at0324"] = <
+					text = <"Urinary summary score">
+					description = <"Le score récapitulatif du domaine urinaire de la qualité de vie liée à la santé">
+				>
+				["at0325"] = <
+					text = <"Bowel summary score">
+					description = <"Le score récapitulatif du domaine intestinal de la qualité de vie.">
+				>
+				["at0326"] = <
+					text = <"Sexual summary score">
+					description = <"Le score récapitulatif du domaine sexuel de la qualité de vie.">
+				>
+				["at0327"] = <
+					text = <"Hormonal summary score">
+					description = <"Le score récapitulatif du domaine hormonal de la qualité de vie.">
+				>
+				["at0328"] = <
+					text = <"Urinary function subscale">
+					description = <"La sous-échelle de la fonction urinaire.">
+				>
+				["at0329"] = <
+					text = <"Urinary bother subscale">
+					description = <"La sous-échelle des problèmes urinaires.">
+				>
+				["at0330"] = <
+					text = <"Urinary incontinence subscale">
+					description = <"La sous-échelle de l’incontinence urinaire.">
+				>
+				["at0331"] = <
+					text = <"Urinary irritative/obstructive subscale">
+					description = <"La sous-échelle de l’irritation/obstruction urinaire.">
+				>
+				["at0332"] = <
+					text = <"Bowel function subscale">
+					description = <"La sous-échelle de la fonction intestinale.">
+				>
+				["at0333"] = <
+					text = <"Bowel bother subscale">
+					description = <"La sous-échelle des problèmes intestinaux.">
+				>
+				["at0334"] = <
+					text = <"Sexual function subscale">
+					description = <"La sous-échelle de la fonction sexuelle.">
+				>
+				["at0335"] = <
+					text = <"Sexual bother subscale">
+					description = <"La sous-échelle des problèmes liés à la fonction sexuelle.">
+				>
+				["at0336"] = <
+					text = <"Hormonal function subscale">
+					description = <"La sous-échelle de la fonction hormonale.">
+				>
+				["at0337"] = <
+					text = <"Hormonal bother subscale">
+					description = <"La sous-échelle des problèmes liés à la fonction hormonale.">
 				>
 			>
 		>

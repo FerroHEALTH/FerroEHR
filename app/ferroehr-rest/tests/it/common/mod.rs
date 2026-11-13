@@ -57,6 +57,7 @@ const EXTENSION_ROOTS: &[&str] = &[
     "/admin/outbox",
     "/admin/party",
     "/admin/query",
+    "/admin/registers",
     "/admin/report",
     "/admin/research-objection",
     "/admin/restriction",
@@ -64,6 +65,7 @@ const EXTENSION_ROOTS: &[&str] = &[
     "/admin/template",
     "/definition/archetype",
     "/definition/artefact",
+    "/demographic/party",
     "/demographic/party_relationship",
     "/demographic/versioned_party_relationship",
     "/message",
@@ -141,12 +143,16 @@ pub(crate) async fn router_for_profile(
 
 /// The assembled router over a real service with the given configuration —
 /// the same wiring as [`ferroehr_rest::build_with`], split open so tests can
-/// hand-tune `AppConfig` (auth modes, admin/extension toggles).
+/// hand-tune `AppConfig` (auth modes, admin/extension toggles). Every caller
+/// is looked up in the local party source over `service`, as the server does.
 pub(crate) async fn router_with(config: AppConfig, service: Arc<FerroEhrService>) -> Router {
+    let source = service
+        .party_source(config.party_binding.namespace.clone())
+        .with_creator(Arc::clone(&service));
     let authenticator = Authenticator::new(
         &config,
         None,
-        None,
+        Some(Arc::new(source)),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
     )
     .await
@@ -353,7 +359,7 @@ pub(crate) fn persons_and_patients(persons: &str, patients: &str, audience: &str
 /// The RBAC rules whose privileged roles the tokens of `issuer` may grant.
 pub(crate) fn rbac_trusting(issuer: &str) -> ferroehr::config::authz::RbacConfig {
     ferroehr::config::authz::RbacConfig {
-        role_issuers: vec![issuer.to_owned()],
+        role_issuers: vec![ferrohealth_secret::secret_url::SecretUrl::new(issuer)],
         ..ferroehr::config::authz::RbacConfig::default()
     }
 }
@@ -524,7 +530,6 @@ pub(crate) fn local_audit() -> ferroehr::system_log::config::AuditConfig {
             sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            ..ferroehr::system_log::config::StoreConfig::default()
         },
         ..ferroehr::system_log::config::AuditConfig::default()
     }

@@ -269,7 +269,7 @@ guarded_handler! {
                                     and an object the map cannot classify takes \
                                     the longest period configured for its kind; \
                                     `origin`, when present, keys it on one origin \
-                                    `[[authz.origin]]` declares, by its id, \
+                                    a `data_origin` grant in force names, by its id, \
                                     matched against the origins each version \
                                     recorded at commit; \
                                     `period` is a PostgreSQL interval, `anchor` one \

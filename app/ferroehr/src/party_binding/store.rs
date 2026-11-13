@@ -41,6 +41,7 @@ use crate::error::refusal::{Clash, Refusal};
 use crate::ids::VoId;
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::{Facts, container};
+use crate::party_binding::grants;
 use crate::party_binding::rows::{
     self, IdentifierRow, Professional, RepresentationRow, write_identifiers,
 };
@@ -69,6 +70,15 @@ struct Head {
 }
 
 impl Head {
+    /// The head as the grant rows read it.
+    fn grant_head(&self) -> grants::store::GrantHead<'_> {
+        grants::store::GrantHead {
+            vo_id: self.vo_id,
+            lifecycle_state: &self.lifecycle_state,
+            facts: self.facts.as_ref(),
+        }
+    }
+
     /// What a live head of the template `template` holds; `None` for a
     /// deleted head, one without a body and one of another template.
     fn live_of(&self, template: &str) -> Option<&Facts> {
@@ -98,6 +108,7 @@ pub(crate) fn selector_in_use(e: StorageError) -> ServiceError {
             "uq_binding_identifier_user_name" => Some("userName"),
             "uq_binding_identifier_external_id" => Some("externalId"),
             "uq_binding_identifier_display_name" => Some("displayName"),
+            "uq_binding_client" => Some("client identifier"),
             _ => None,
         });
     match selector {
@@ -115,6 +126,8 @@ pub(crate) fn selector_in_use(e: StorageError) -> ServiceError {
 /// Judges the party commit `committed` against the protection rules
 /// ([`crate::party_binding::protect`]), then brings its reverse-relationship
 /// index and side-table rows to its new head, on its commit transaction `tx`.
+/// A `PARTY_RELATIONSHIP` of its own is judged only: it is no party, so it has
+/// no rows.
 ///
 /// `facts` is what the committed body holds, `None` for a logical delete: the
 /// hooks read it and never the stored body (#5220).
@@ -128,6 +141,12 @@ pub(crate) async fn reindex_committed(
     committed: &Committed,
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
+    if committed.kind == Kind::PartyRelationship {
+        crate::party_binding::protect::check(tx, ctx.binding, committed, facts).await?;
+        let targets = facts.map_or(&[][..], |f| f.targets.as_slice());
+        party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
+        return Ok(());
+    }
     if crate::versioning::committer::person_commits() {
         // NOTE: RM common master04 §Audit Details, PARTY_SELF names the record
         // subject, and a demographic version has none (#5005).
@@ -137,6 +156,11 @@ pub(crate) async fn reindex_committed(
         ));
     }
     crate::party_binding::protect::check(tx, ctx.binding, committed, facts).await?;
+    if committed.kind == Kind::Role
+        && let Some(facts) = facts
+    {
+        grants::check_role(tx, committed.vo_id.0, facts, ctx.grants).await?;
+    }
     let (lifecycle_state, trunk_head) = head_of(tx, committed.vo_id).await?;
     let head = if trunk_head == Some(committed.sys_version) {
         Head {
@@ -160,14 +184,19 @@ pub(crate) async fn reindex_committed(
         }
     };
     let head = with_last(tx, ctx.binding, committed.kind, head).await?;
+    let targets = head
+        .facts
+        .as_ref()
+        .map_or(&[][..], |f| f.targets.as_slice());
+    party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
     reindex_heads(tx, ctx.binding, committed.kind, vec![head])
         .await
         .map_err(selector_in_use)
 }
 
-/// Brings the reverse-relationship index and the side-table rows of the party
-/// `vo_id` of `kind` to its stored head, on `tx`: what an import or an archive
-/// load writes after the versions it lands.
+/// Rebuilds the reverse-relationship index of the party `vo_id` of `kind` from
+/// its stored versions and brings its side-table rows to its stored head, on
+/// `tx`: what an import or an archive load writes after the versions it lands.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -177,19 +206,44 @@ pub(crate) async fn reindex_stored(
     kind: Kind,
     vo_id: VoId,
 ) -> Result<(), StorageError> {
+    party_reverse::rebuild(tx, vo_id).await?;
     let mut heads = stored_heads(tx, mapping, kind, Some(&[vo_id.0]), None).await?;
     let Some(head) = heads.pop() else {
-        return party_reverse::replace(tx, vo_id, &[]).await;
+        return Ok(());
     };
     let head = with_last(tx, mapping, kind, head).await?;
     reindex_heads(tx, mapping, kind, vec![head]).await
+}
+
+/// What an import does after it lands the versions of `vo_id` of `kind`, on
+/// `tx`: marks a demographic object one of whose versions is a policy party
+/// ([`crate::party_binding::policy_mark::mark_stored`]), and brings a
+/// demographic object's reverse-relationship index and a party's side-table
+/// rows to its stored head ([`reindex_stored`]).
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub(crate) async fn reindex_imported(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    kind: Kind,
+    vo_id: VoId,
+) -> Result<(), StorageError> {
+    if kind.is_demographic() {
+        crate::party_binding::policy_mark::mark_stored(tx, Some(vo_id)).await?;
+    }
+    if kind.is_demographic() {
+        reindex_stored(tx, mapping, kind, vo_id).await?;
+    }
+    Ok(())
 }
 
 /// Rebuilds the reverse-relationship index and the side-table rows of the
 /// party `vo_id`, whose stored kind is `kind`, loaded from an archive on `tx`.
 ///
 /// A `ROLE` loaded after its `PERSON` rebuilds that `PERSON`'s rows, so the
-/// rows do not depend on the order the archive holds the parties in.
+/// rows do not depend on the order the archive holds the parties in. A party
+/// with a policy version is marked ([`crate::party_binding::policy_mark::mark_stored`]).
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -199,13 +253,14 @@ pub(crate) async fn reindex_loaded(
     kind: &str,
     vo_id: VoId,
 ) -> Result<(), StorageError> {
+    crate::party_binding::policy_mark::mark_stored(tx, Some(vo_id)).await?;
     match Kind::from_type(kind) {
         Some(kind) => reindex_stored(tx, mapping, kind, vo_id).await,
-        None => party_reverse::replace(tx, vo_id, &[]).await,
+        None => party_reverse::rebuild(tx, vo_id).await,
     }
 }
 
-/// Writes the reverse index and the side-table rows of `heads`, each of
+/// Writes the grant rows and the side-table rows of `heads`, each of
 /// `kind`.
 async fn reindex_heads(
     tx: &mut PgConnection,
@@ -214,11 +269,7 @@ async fn reindex_heads(
     heads: Vec<Head>,
 ) -> Result<(), StorageError> {
     for head in &heads {
-        let targets = head
-            .facts
-            .as_ref()
-            .map_or(&[][..], |f| f.targets.as_slice());
-        party_reverse::replace(tx, VoId(head.vo_id), targets).await?;
+        grants::store::write(tx, kind, head.grant_head()).await?;
     }
     if mapping.is_empty() {
         return Ok(());
@@ -248,10 +299,13 @@ async fn reindex_heads(
 ///
 /// Every row goes, and the rows of every party head come back, the
 /// tombstones of the deleted `PERSON`s included, as the commits wrote them.
+/// Every party with a policy version gets the mark it lacks
+/// (`policy_mark::mark_stored`); no mark is cleared.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(), StorageError> {
+    crate::party_binding::policy_mark::mark_stored(tx, None).await?;
     for statement in [
         "DELETE FROM binding_identifier",
         "DELETE FROM binding_membership",
@@ -259,6 +313,7 @@ pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(
     ] {
         sqlx::query(statement).execute(&mut *tx).await?;
     }
+    refill_grants(tx).await?;
     for kind in [Kind::Person, Kind::Group] {
         let mut after = None;
         loop {
@@ -278,6 +333,30 @@ pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(
         }
     }
     Ok(())
+}
+
+/// Rebuilds every grant row from the `ACTOR` and `ROLE` versions alone, on
+/// `tx`, and moves the grant revision.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure, the unique violation of
+/// two `AGENT`s naming one client included.
+pub async fn refill_grants(tx: &mut PgConnection) -> Result<(), StorageError> {
+    grants::store::clear(tx).await?;
+    for kind in grants::store::HOLDERS {
+        let mut after = None;
+        loop {
+            let page = stored_heads(tx, &BindingMapping::default(), kind, None, after).await?;
+            let Some(last) = page.last() else {
+                break;
+            };
+            after = Some(last.vo_id);
+            for head in &page {
+                grants::store::write(tx, kind, head.grant_head()).await?;
+            }
+        }
+    }
+    grants::store::refilled(tx).await
 }
 
 /// One selector identifier of a live `PERSON` head, as the unique indexes
@@ -716,5 +795,6 @@ pub async fn erase(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<(), Storage
         .bind(vo_ids)
         .execute(&mut *tx)
         .await?;
-    Ok(())
+    let ids: Vec<Uuid> = vo_ids.iter().map(|id| id.0).collect();
+    grants::store::erase(tx, &ids).await
 }

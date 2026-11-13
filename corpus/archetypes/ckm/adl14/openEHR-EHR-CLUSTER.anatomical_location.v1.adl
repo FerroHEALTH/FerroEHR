@@ -17,9 +17,9 @@ language
 		["sv"] = <
 			language = <[ISO_639-1::sv]>
 			author = <
-				["name"] = <"Åsa Skagerhult, Linda Aulin, Romi Shweta Pathak, Henna Haapa Hybinette, sofia Lång Janstad, Sajjad Saffari Miandoab">
+				["name"] = <"Åsa Skagerhult, Linda Aulin, Romi Shweta Pathak, Henna Haapa Hybinette, sofia Lång Janstad, Sajjad Saffari Miandoab, Manna Vosta">
 				["organisation"] = <"Region Östergötland, Region Stockholm, Karolinska universitetssjukhuset, Karolinska University Hospital">
-				["email"] = <"asa.skagerhult@regionostergotland.se, linda.aulin@sll.se, romi.pathak@regionstockholm.se, henna.haapa-hybinette@regionstockholm.se, sofia.lang-janstad@regionstockholm.se, sajjad.saffari-miandoab@regionstockholm.se">
+				["email"] = <"asa.skagerhult@regionostergotland.se, linda.aulin@sll.se, romi.pathak@regionstockholm.se, henna.haapa-hybinette@regionstockholm.se, sofia.lang-janstad@regionstockholm.se, sajjad.saffari-miandoab@regionstockholm.se, manna.vosta@regionstockholm.se">
 			>
 		>
 		["nb"] = <
@@ -116,20 +116,19 @@ If this archetype is used within other archetypes where the specified subject of
 		["sv"] = <
 			language = <[ISO_639-1::sv]>
 			purpose = <"Att identifiera och registrera strukturerade detaljer om ett enskilt fysiskt ställe, på eller i människokroppen genom att använda makroskopiska anatomiska termer.">
-			use = <"*Use to record structured details about a single identified physical site on or within the human body.
+			use = <"Används för att registrera strukturerade uppgifter om en enskild identifierad fysisk lokalisation på eller i människokroppen.
 
-In many situations, a simple data element such as ‘Location of measurement’ or ‘Body site’ will be sufficient and practical when the value set is straightforward. This archetype is intended for cases where a more detailed or structured representation of an anatomical site is required, including precise or compound descriptions. It can be nested within relevant ENTRY or CLUSTER archetypes such as those for symptoms, findings, or interventions to support multiaxial or postcoordinated anatomical expressions. Examples include documenting pain in the lower limb, tenderness at McBurney’s point, or a laceration on the palmar aspect of the proximal right thumb.
+Används när en anatomisk lokalisation behöver beskrivas mer detaljerat eller strukturerat än med ett enkelt datafält, såsom ”Mätställe” eller ”Kroppslokalisation”, inklusive precisa eller sammansatta beskrivningar. Kan nästlas i relevanta ENTRY- eller CLUSTER-arketyper, exempelvis för symtom, fynd eller interventioner, för att stödja multiaxiella eller postkoordinerade anatomiska uttryck. Exempelvis för att dokumentera smärta i nedre extremitet, ömhet vid McBurneys punkt eller en sårskada på palmarsidan av den proximala delen av höger tumme.
 
-The ‘Laterality' data element may be used to qualify whether a paired structure or region is affected on the left, right, or both sides. When involvement is symmetrical and equivalent on both sides, for example the same cancer in both lungs or similar pain in both legs, record 'Left and right’. However, when the clinical characteristics differ between sides, two separate instances should be used:
+Används för att med datafältet ”Sidangivelse” ange om en parig struktur eller region är berörd på vänster sida, höger sida eller båda sidor. När båda sidor är symmetriskt och likvärdigt berörda, exempelvis samma typ av cancer i båda lungorna eller likartad smärta i båda benen, registreras ”Höger och vänster”. När de kliniska egenskaperna skiljer sig mellan sidorna ska däremot två separata instanser användas:
+- Två parallella instanser av denna arketyp i samma SLOT, var och en med egen sidangivelse och specifika uppgifter. Exempelvis för att dokumentera likvärdiga tumörer i vänster lungas underlob och höger lungas överlob.
+- Två parallella instanser av den överordnade arketypen, som vardera innehåller en instans av denna arketyp, när det finns kliniskt betydelsefulla skillnader mellan sidorna, såsom tumörtyp, storlek eller allvarlighetsgrad i respektive lunga.
 
-- Two parallel instances of this archetype within the same SLOT, each with its own laterality and specific details. For example, documenting equal tumours in the lower left lung lobe and the upper right lung lobe.
-- Two parallel instances of the parent archetype, each containing an instance of this archetype, when there are clinically significant differences such as tumour type, size, or severity in each lung.
+Används för att möjliggöra inkludering av ytterligare arketyper via SLOT för ”Alternativ kroppsstruktur”, som erbjuder alternativa sätt att beskriva samma kroppslokalisation, exempelvis CLUSTER.anatomical_location_relative eller CLUSTER.anatomical_location_clock. När denna arketyp används för att ange en större eller ospecifik kroppsdel kan CLUSTER.anatomical_location_relative användas för att registrera en mer exakt lokalisation, exempelvis 2 cm framför vänster armbågsveck eller 4 cm nedanför höger revbensbåge på bröstkorgsväggen i medioklavikularlinjen
 
-The 'Alternative structure' SLOT allows inclusion of additional archetypes that provide an alternative structure for describing the same body site, such as CLUSTER.anatomical_location_relative or CLUSTER.anatomical_location_clock, should this be required. In situations where this archetype is used to name a large or non-specific body part, the additional use of the CLUSTER.anatomical_location_relative archetype will support recording of a more precise location, for example, 2 cm anterior to the cubital fossa of the left forearm or 4 cm below the right costal margin on the chest wall in the mid-clavicular line.
-
-If this archetype is used within other archetypes where the specified subject of care is not the individual for whom the record is being created, for example a fetus in utero, then the anatomical location will be identifying a body site on or within the fetus. (en)">
-			keywords = <"lokalisation", "ställe", "anatomisk", "anatomiskt område", "topografisk anatomi", "makroskopisk", "anatomi">
-			misuse = <"*Not to be used to describe involvement of both sides of a paired structure when the clinical findings differ significantly between sides. In such cases, each side should be documented using a separate instance of this archetype with side-specific detail. (en)">
+Används för att ange en anatomisk lokalisation på eller i vårdsubjektets kropp även när vårdsubjektet inte är den individ som journalen upprättas för, exempelvis ett foster i livmodern.">
+			keywords = <"lokalisation", "anatomisk lokalisation", "ställe", "anatomisk", "anatomiskt område", "topografisk anatomi", "makroskopisk", "anatomi">
+			misuse = <"Ska inte användas för att beskriva båda sidor av en parig struktur när de kliniska fynden skiljer sig väsentligt mellan sidorna. I sådana fall ska varje sida dokumenteras i en separat instans av denna arketyp med sidospecifika uppgifter.">
 		>
 		["nb"] = <
 			language = <[ISO_639-1::nb]>
@@ -308,10 +307,10 @@ If this archetype is used within other archetypes where the specified subject of
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"50FC8A4E53830E22AF210F49492476F8">
-		["build_uid"] = <"e9ac6a45-2241-4eaa-971c-78d9656437e7">
+		["MD5-CAM-1.0.1"] = <"61B86EA63636A66BAA3EA9EAC6B0BE58">
+		["build_uid"] = <"4dcdf665-4ef8-4b9e-afbf-669aa99b4364">
 		["ip_acknowledgements"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
-		["revision"] = <"1.5.0">
+		["revision"] = <"1.5.1">
 	>
 
 definition
@@ -397,7 +396,6 @@ definition
 			}
 		}
 	}
-
 
 ontology
 	terminologies_available = <"SNOMED-CT", ...>
@@ -1494,19 +1492,19 @@ In most situations this will be a single specific site. This data element has mu
 					description = <"Ett fysiskt ställe på eller i människokroppen.">
 				>
 				["at0001"] = <
-					text = <"Namn på kroppsställe">
+					text = <"Kroppslokalisation">
 					description = <"Identifiering av enskilt fysiskt ställe på eller i människokroppen.">
-					comment = <"*This data element is the only mandated data point in this archetype and should be used as the primary data point to record an anatomical location with a commonly used name. It is strongly recommended that 'Body site name' be recorded as specifically as is anatomically possible. For example: record 'upper eyelid' rather than recording 'eyelid' with 'upper' as a qualifier; 'fifth rib' rather than 'rib' with a numeric qualifier. Use the other data elements for laterality, aspect, region and anatomical line to provide more detail.
+					comment = <"Detta är det enda obligatoriska datafältet i arketypen och ska användas som det primära fältet för att registrera en anatomisk lokalisation med ett vedertaget namn. Det rekommenderas starkt att ”Kroppslokalisation” registreras så anatomiskt specifikt som möjligt. Exempelvis bör ”övre ögonlock” registreras i stället för ”ögonlock” med ”övre” som bestämning, och ”femte revbenet” i stället för ”revben” med en numerisk bestämning. Använd övriga datafält för sidangivelse, aspekt, region och anatomisk linje för att ange ytterligare detaljer.
 
-This data element should be coded with a terminology capable of triggering decision support, where possible - an appropriate termset for use here could comprise individual concepts or a list of precoordinated terms. Free text should be used only if there is no appropriate terminology available.
+Detta datafält bör om möjligt kodas med en terminologi som kan användas för att trigga beslutsstöd. En lämplig termuppsättning kan bestå av enskilda begrepp eller en lista med förkoordinerade termer. Fritext bör endast användas om det inte finns någon lämplig terminologi tillgänglig.
 
-If 'Body site name' is already identified in an archetype in which this Anatomical location archetype has been nested, then this data element may be redundant. However, it might be reasonable to duplicate 'Body site name' in this archetype to support semantic querying using this archetype, instead of the archetype in which it has been nested. (en)">
+Om ”Kroppslokalisation” redan anges i en arketyp där denna arketyp för anatomisk lokalisation är nästlad kan detta datafält vara överflödigt. Det kan dock vara lämpligt att även registrera ”Kroppslokalisation” i denna arketyp för att möjliggöra semantiska sökningar baserade på denna arketyp, i stället för på den arketyp där den är nästlad.">
 				>
 				["at0002"] = <
 					text = <"Lateralitiet">
 					description = <"Den sidan av kroppen där det identifierade kroppstället är lokaliserad. 
 ">
-					comment = <"*If the 'Body site name' includes a pre-coordinated term that already specifies laterality, this data element may be redundant. If the findings require documentation of a body site on both the left and right sides of the body, or involving both sides of a paired structure or region, use 'Left and right' only when the same anatomical site is affected on both sides and side-specific detail is not required. If the findings differ significantly between sides, each should be recorded as a separate instance of this archetype with the appropriate laterality. (en)">
+					comment = <"Om ”Kroppslokalisation” innehåller en förkoordinerad term som redan anger sida kan detta datafält vara överflödigt. Om fynden behöver dokumenteras för en kroppslokalisation på både vänster och höger sida av kroppen, eller på båda sidor av en parig struktur eller region, ska ”Höger och vänter” endast användas när samma anatomiska struktur är berörd på båda sidor och sidospecifika uppgifter inte behöver anges. Om fynden skiljer sig väsentligt mellan sidorna ska varje sida registreras i en separat instans av denna arketyp med lämplig sidangivelse.">
 				>
 				["at0003"] = <
 					text = <"Vänster">
@@ -1519,24 +1517,21 @@ If 'Body site name' is already identified in an archetype in which this Anatomic
 				["at0023"] = <
 					text = <"Beskrivning">
 					description = <"Beskrivning för att ytterligare specificera och detaljera \"Namn på kroppsställe\".">
-					comment = <"Till exempel: intill läppröda; en tatuering täcker den nedre halvan av detta område.">
+					comment = <"Exempelvis intill läpprödsgränsen eller att en tatuering täcker den nedre halvan av området.">
 				>
 				["at0053"] = <
-					text = <"Alternativ struktur">
-					description = <"Ytterligare information om den anatomiska platsen med hjälp av ett alternativt sätt för att beskriva samma kroppsställe.
-">
-					comment = <"Till exempel relativ plats eller exakt plats med hjälp av koordinater.">
+					text = <"Alternativ kroppsstruktur">
+					description = <"Ytterligare information om den anatomiska lokalisationen med hjälp av ett alternativt sätt för att beskriva samma kroppsstruktur.">
+					comment = <"Exempelvis relativ plats eller exakt plats med hjälp av koordinater.">
 				>
 				["at0054"] = <
 					text = <"Multimediarepresentation">
-					description = <"Bild eller annat medium som används för att stödja identifiering av anatomisk plats.">
+					description = <"Bild eller annat medium som används för att stödja identifiering av kroppslokalisation.">
 				>
 				["at0055"] = <
 					text = <"Anatomisk linje">
-					description = <"Ytterligare detaljer med hjälp av teoretiska linjer ritade genom anatomiska strukturer som används för att ge en konsekvent referenspunkt på människokroppen.
-
-">
-					comment = <"Vanliga anatomiska linjer har inkluderats som ett urval, som kan utökas över tid, samt ett fritextalternativ. Ytterligare användning av detta dataelement möjliggör registrering av den typiska positionen för hjärtspetsstöt vid femte interkostalrummet på vänster sida vid mitralområdet. Om dataelementet 'Namn på kroppställe' använder prekoordinerade termer som inkluderar anatomisk linje, är detta dataelement överflödigt.
+					description = <"Ytterligare detaljer med hjälp av teoretiska linjer ritade genom anatomiska strukturer som används för att ge en konsekvent referenspunkt på människokroppen.">
+					comment = <"Vanliga anatomiska linjer har inkluderats som ett urval, som kan utökas över tid, samt ett fritextalternativ. Ytterligare användning av detta dataelement möjliggör registrering av den typiska positionen för hjärtspetsstöt vid femte interkostalrummet på vänster sida vid mitralområdet. Om dataelementet 'Kroppslokalisation' använder prekoordinerade termer som inkluderar anatomisk linje, är detta datafält överflödigt.
 
 
 ">
@@ -1574,40 +1569,41 @@ If 'Body site name' is already identified in an archetype in which this Anatomic
 					description = <"Kvalificerande detalj om den specifika delen av den identifierade kroppstället.
 
 ">
-					comment = <"Används för att öka precisionen i identifiering av det kroppstället, när det behövs. Vanliga aspekter har inkluderats som ett urval, som kan utökas över tid, samt ett fritextalternativ. Antar att kroppen beskrivs utifrån den anatomiska grundställningen. Till exempel: proximal uretra, plantar sida av vänster tumme. Flera delar kan också beskrivas, om så krävs, genom att tillåta 0..2 förekomster. Till exempel: en lesion kan vara på den vänstra främre/laterala (dvs anterolaterala) bröstkorgsväggen. Om data elementet \" Namn på kroppställe\" använder pre-koordinerade termer som innefattar del, då blir detta data element överflödigt.
+					comment = <"Används för att öka precisionen i identifiering av det kroppstället, när det behövs. Vanliga aspekter har inkluderats som ett urval, som kan utökas över tid, samt ett fritextalternativ. Arketypen antar att kroppen beskrivs utifrån den anatomiska grundställningen. Till exempel: proximal uretra, plantar sida av vänster tumme. Flera delar kan också beskrivas, om så krävs, genom att tillåta 0..2 förekomster. Exempelvis en lesion kan vara på den vänstra främre/laterala (dvs anterolaterala) bröstkorgsväggen. Om datafältet \"Kroppslokalisation\" använder pre-koordinerade termer som innefattar del, då blir detta datafält överflödigt.
 
 
 ">
 				>
 				["at0065"] = <
-					text = <"Specifikt ställe">
-					description = <"Ytterligare detalj angiven som ett specifikt område eller en punkt på eller i det identifierade kroppsstället.">
-					comment = <"*Use to increase precision of identification of the body site, if required. For example, the upper right quadrant or McBurney's point on the abdominal wall or interphalangeal joint of the great toe. If the 'Body site name' data element uses pre-coordinated terms that include the specific site, then this data element is redundant.
-In most situations this will be a single specific site. This data element has multiple occurrences to support less common use cases which need to identify a single anatomical location involving two or more adjacent and continuous specific sites. For example, to describe the specific site of a single tumour extending across the 2nd, 3rd and 4th ribs. (en)">
+					text = <"Preciserad kroppslokalisation">
+					description = <"Ytterligare detalj angiven som ett specifikt område eller en punkt på eller i den identifierade kropplokalisationen.">
+					comment = <"Används för att vid behov ange kroppslokalisationen med större precision. Exempelvis övre högra kvadranten, McBurneys punkt på bukväggen eller stortåns interfalangealled. Om datafältet ”Kroppsokalisation” använder förkoordinerade termer som redan inkluderar den specifika lokalisationen är detta datafält överflödigt.
+
+Används i de flesta situationer för att ange en enskild specifik lokalisation. Datafältet kan förekomma flera gånger för att stödja mindre vanliga användningsfall där en och samma anatomiska lokalisation omfattar två eller flera intilliggande och sammanhängande specifika lokalisationer. Exempelvis för att beskriva den specifika lokalisationen för en enskild tumör som sträcker sig över det andra, tredje och fjärde revbenet.">
 				>
 				["at0067"] = <
 					text = <"Medial">
-					description = <"Mot mittlinjen av kroppsstället.">
+					description = <"Mot mittlinjen av kroppslokalisationen.">
 				>
 				["at0068"] = <
 					text = <"Lateral">
-					description = <"Mot sida eller kant av kroppsstället.">
+					description = <"Mot sida eller kant av kroppslokalisationen.">
 				>
 				["at0069"] = <
 					text = <"Superior">
-					description = <"Ovanför kroppsstället, ofta i betydelsen i riktning mot huvudet.">
+					description = <"Ovanför kroppslokalisationen, ofta i betydelsen i riktning mot huvudet.">
 				>
 				["at0070"] = <
 					text = <"Inferior">
-					description = <"Nedanför kroppsstället, ofta i betydelsen i riktning mot fötterna.">
+					description = <"Nedanför kroppslokalisationen, ofta i betydelsen i riktning mot fötterna.">
 				>
 				["at0071"] = <
 					text = <"Främre">
-					description = <"Mot den främre eller ventrala ytan av kroppstället.">
+					description = <"Mot den främre eller ventrala ytan av kroppslokalisationen.">
 				>
 				["at0072"] = <
 					text = <"Bakre">
-					description = <"Bakre delen eller dorsala ytan av kroppsstället.">
+					description = <"Bakre delen eller dorsala ytan av kroppslokalisationen.">
 				>
 				["at0073"] = <
 					text = <"Proximal">
@@ -1615,9 +1611,7 @@ In most situations this will be a single specific site. This data element has mu
 				>
 				["at0074"] = <
 					text = <"Distal">
-					description = <"Mer perifert, eller längre bort från fästsättningspunkten, och beskriver vanligtvis en del av extremitet, finger, tå eller bihang
-
-">
+					description = <"Mer perifert, eller längre bort från fästsättningspunkten, och beskriver vanligtvis en del av extremitet, finger, tå eller bihang.">
 				>
 				["at0075"] = <
 					text = <"Palmar">
@@ -1629,7 +1623,7 @@ In most situations this will be a single specific site. This data element has mu
 				>
 				["at0077"] = <
 					text = <"I mitten av">
-					description = <"I mitten av kroppsstället.">
+					description = <"I mitten av kroppslokalisationen.">
 				>
 				["at0078"] = <
 					text = <"Oral">
@@ -1642,20 +1636,20 @@ In most situations this will be a single specific site. This data element has mu
 					description = <"I riktning mot anus. Används vanligtvis för att beskriva lokalisation inom matspjälkningssystemet.">
 				>
 				["at0080"] = <
-					text = <"Djupt">
-					description = <"I riktning bort från kroppsställets yta.">
+					text = <"Djup">
+					description = <"I riktning bort från kroppslokalisationens yta.">
 				>
 				["at0081"] = <
 					text = <"Ytlig">
-					description = <"I riktning mot kroppsställets yta.">
+					description = <"I riktning mot kroppslokalisationens yta.">
 				>
 				["at0082"] = <
 					text = <"Dorsal">
 					description = <"I riktning mot handens baksida eller fotens ovansida. Används som motsats till palmar och plantar, inte som en synonym till bakre.">
 				>
 				["at0083"] = <
-					text = <"*Right and left (en)">
-					description = <"*Both the right and sides of the body, or involving both sides of a paired organ, body structure, or anatomical region. (en)">
+					text = <"Höger och vänster">
+					description = <"Både höger och vänster sida av kroppen, eller omfattande båda sidor av ett parigt organ, en kroppsstruktur eller en anatomisk region.">
 				>
 			>
 		>

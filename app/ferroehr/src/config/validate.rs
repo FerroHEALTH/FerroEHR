@@ -27,22 +27,6 @@ impl FerroEhrConfig {
         self.validate_audit(&mut errors);
         self.validate_audit_syslog(&mut errors);
         self.validate_outbound_clients(&mut errors);
-        errors.extend(
-            self.origins()
-                .errors()
-                .into_iter()
-                .map(ConfigError::semantic),
-        );
-        let categories = &self.audit.categories;
-        errors.extend(categories.errors().into_iter().map(ConfigError::semantic));
-        if let Some(delay) = &self.privacy.access_delay {
-            errors.extend(
-                delay
-                    .errors(categories)
-                    .into_iter()
-                    .map(ConfigError::semantic),
-            );
-        }
         if let Some(cors) = &self.api.cors {
             errors.extend(cors.errors().into_iter().map(ConfigError::semantic));
         }
@@ -69,14 +53,14 @@ impl FerroEhrConfig {
         );
         // management.listen must not be the server.listen address.
         if let Some(listen) = self.management.listen
-            && self.server.listen.port() == listen.port()
-            && (self.server.listen.ip() == listen.ip()
-                || self.server.listen.ip().is_unspecified()
+            && self.server.shared.listen.port() == listen.port()
+            && (self.server.shared.listen.ip() == listen.ip()
+                || self.server.shared.listen.ip().is_unspecified()
                 || listen.ip().is_unspecified())
         {
             errors.push(ConfigError::semantic(format!(
                 "management.listen ({listen}) must differ from server.listen ({})",
-                self.server.listen
+                self.server.shared.listen
             )));
         }
         self.validate_body_tier(&mut errors);
@@ -387,13 +371,13 @@ impl FerroEhrConfig {
     fn validate_body_tier(&self, errors: &mut Vec<ConfigError>) {
         if let Some(tier) = self.api.body_limit
             && usize::try_from(tier.bytes())
-                .is_ok_and(|tier| tier >= self.server.body_limit_bytes())
+                .is_ok_and(|tier| tier >= self.server.shared.body_limit_bytes())
                 | usize::try_from(tier.bytes()).is_err()
         {
             errors.push(ConfigError::semantic(format!(
                 "api.body_limit (\"{tier}\") must be below server.body_limit (\"{}\"), \
                  the limit of the bulk routes and the ceiling of every route",
-                self.server.body_limit
+                self.server.shared.body_limit
             )));
         }
     }
@@ -512,14 +496,25 @@ impl FerroEhrConfig {
         if let Err(e) = self.auth.smart.validate() {
             errors.push(ConfigError::semantic(format!("auth.smart: {e}")));
         }
+        errors.extend(
+            self.public_url_errors()
+                .into_iter()
+                .map(ConfigError::semantic),
+        );
         let resolved = auth::resolve(&self.auth.shared).ok();
         errors.extend(
             self.auth
                 .scim
                 .iter()
-                .flat_map(|scim| scim.errors(resolved.as_ref()))
+                .flat_map(crate::config::scim::ScimConfig::errors)
                 .map(ConfigError::semantic),
         );
+        if self.auth.smart.discovery
+            && let Some(resolved) = &resolved
+            && let Some(named) = &resolved.described_issuer
+        {
+            errors.extend(described_issuer_error(named, resolved).map(ConfigError::semantic));
+        }
         if self.auth.smart.discovery && !auth::has_bearer(&self.auth.shared) {
             errors.push(ConfigError::semantic(
                 "auth.smart.discovery = true requires an [auth] issuer: the discovery document is \
@@ -528,6 +523,40 @@ impl FerroEhrConfig {
                     .to_owned(),
             ));
         }
+    }
+
+    /// `[server] public_base_url` holds its rule when set, and is set when a
+    /// consumer of the public URL is on: the SMART discovery document (master04
+    /// §Services makes every `services.*.baseUrl` an absolute URL), the SCIM
+    /// service provider (RFC 7643 §3.1: `location` is "The URI of the
+    /// resource being returned") and the `DPoP` proof check of an enabled
+    /// `[auth]` (RFC 9449 §4.3, check 9: `htu` is the URI the client
+    /// addressed).
+    fn public_url_errors(&self) -> Vec<String> {
+        if let Some(error) = self.server.public_base_url_error() {
+            return vec![error];
+        }
+        if self.server.public_base_url.is_some() {
+            return Vec::new();
+        }
+        let consumers = [
+            (self.auth.smart.discovery, "auth.smart.discovery = true"),
+            (self.auth.scim.is_some(), "[auth.scim]"),
+            (
+                self.auth.shared.enabled && self.auth.shared.dpop.is_some(),
+                "[auth.dpop]",
+            ),
+        ];
+        consumers
+            .into_iter()
+            .filter(|(on, _)| *on)
+            .map(|(_, consumer)| {
+                format!(
+                    "{consumer} requires server.public_base_url, the URL clients reach this \
+                     server at, e.g. 'https://cdr.example.com'"
+                )
+            })
+            .collect()
     }
 
     /// The signing section's own rules: a PGP mode needs a key, and a
@@ -610,5 +639,63 @@ fn multimedia_endpoint_errors(
     match config.endpoint_url() {
         Ok(_) => Vec::new(),
         Err(e) => vec![ConfigError::semantic(e.to_string())],
+    }
+}
+
+/// The refusal of `[auth] described_issuer` when `ferrohealth-smart`'s
+/// `describe` refuses it before any issuer is read: it names no `[auth]`
+/// issuer, or a `machines` issuer, which signs client credentials tokens only
+/// and so serves no user launch (SMART App Launch 2.2.0, Conformance,
+/// §Metadata: `authorization_endpoint`).
+fn described_issuer_error(
+    named: &ferrohealth_secret::secret_url::SecretUrl,
+    resolved: &ferrohealth_smart::config::Resolved,
+) -> Option<String> {
+    use ferrohealth_smart::resource::described::{Candidate, Metadata, describe};
+    // NOTE: no issuer's metadata is read at load, so each is offered as available and the start judges it.
+    let candidates = resolved
+        .kinds
+        .iter()
+        .map(|(issuer, kind)| Candidate::new(issuer.clone(), *kind, Metadata::Available, ()));
+    describe(candidates, Some(named))
+        .err()
+        .map(|e| format!("auth.described_issuer is refused: {e}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use ferrohealth_secret::secret_url::SecretUrl;
+    use ferrohealth_smart::config::AuthSection;
+
+    use super::*;
+
+    /// `[auth] described_issuer` names an `[auth]` issuer that serves a
+    /// user launch: an unknown issuer and a `machines` issuer, which signs
+    /// client credentials tokens only, are refused before any issuer is read,
+    /// and a `persons` issuer passes.
+    #[test]
+    fn the_described_issuer_names_a_user_facing_auth_issuer() {
+        let mut issuer = crate::config::auth_section::machines("https://as.example/machines");
+        issuer.extend(crate::config::auth_section::machines(
+            "https://as.example/persons",
+        ));
+        issuer[1].kind = Some(ferrohealth_smart::kind::IssuerKind::Persons);
+        let resolved = auth::resolve(&AuthSection {
+            issuer,
+            ..AuthSection::default()
+        })
+        .expect("two issuers resolve");
+        let unknown =
+            described_issuer_error(&SecretUrl::new("https://elsewhere.example"), &resolved)
+                .expect("an unknown issuer is refused");
+        assert!(unknown.contains("which is no trusted issuer"), "{unknown}");
+        let machines =
+            described_issuer_error(&SecretUrl::new("https://as.example/machines"), &resolved)
+                .expect("a machines issuer is refused");
+        assert!(machines.contains("names the machines issuer"), "{machines}");
+        assert!(
+            described_issuer_error(&SecretUrl::new("https://as.example/persons"), &resolved)
+                .is_none()
+        );
     }
 }

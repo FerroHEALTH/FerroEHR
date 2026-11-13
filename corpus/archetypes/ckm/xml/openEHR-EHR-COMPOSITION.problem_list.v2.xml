@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -74,8 +74,7 @@ In einem geschlossenen klinischen System wird erwartet, dass die Herkunft dieser
 &#xD;
 Es ist zwar ideal eine Problemliste für jeden Pflegebedürftigen zu haben, aber es ist realistischer zu erwarten, dass es in einer dezentralen Umgebung mehrere Problemlisten für einen einzelnen Pflegebedürftigen zu geben, die jeweils für einen bestimmten Arzt, eine Behandlungsepisode oder in einem anderen Kontext verwaltet und priorisiert wird. So kann beispielsweise eine Problemliste für einen Hausarzt eine ganz andere Konfiguration sein als die, die für einen Fachchirurgen oder als Vorlage während einer stationären Krankenhausepisode dient. In der Primärversorgung ist es üblich, die Problemliste auf der Basis aktiver oder inaktiver Problemen oder Diagnosen zu organisieren; Fachärzte können es bevorzugen, ihre Liste nach Primärdiagnosen zu strukturieren, die sich auf ihre spezifische Fachrichtung beziehen, während sekundäre Diagnosen, die nicht auf ihre Fachrichtung bezogen sind; und eine stationäre Aufnahme kann zusätzliche Fragen im Zusammenhang mit unmittelbaren Pflegeschwerpunkten beinhalten, die nach der Entlassung nach Hause nicht relevant wären - für diese Zwecke gibt es einen Status-SLOT im Problem/Diagnose-Archetyp, der die Verwendung eines Archetyps ermöglicht, der klinische Systeme unterstützen könnte, um Problemlisten nach Maßgabe der Präferenz der klinischen Benutzer des Systems zu organisieren, ohne diese kontextuellen Statuskennzeichnungen für andere klinische Situationen oder zur Erhaltung fortzuführen.&#xD;
 &#xD;
-Dieser Archetyp wird in der Regel als beständige Liste verwaltet, es gibt jedoch Situationen, in denen die Liste innerhalb der Episodenversorgung verwendet werden kann und zusätzliche Attribute wie Kontext usw. benötigt, um eine genaue Aufzeichnung zu ermöglichen. Das openEHR-Referenzmodell erlaubt derzeit nur die Aufzeichnung von Kontexten innerhalb von ereignisbasierten COMPOSITION-Archetypen. Aus diesem Grund wurde dieser Archetyp als Event und nicht als COMPOSITION modelliert. Die Flexibilität ist somit gewährleistet, so dass einige klinische Systeme Problemlisten für Episoden der Pflege sicher verwalten können, während andere sich dafür entscheiden, diese COMPOSITION zu implementieren, um dauerhaft zu handeln.&#xD;
-</use>
+Dieser Archetyp wird in der Regel als beständige Liste verwaltet, es gibt jedoch Situationen, in denen die Liste innerhalb der Episodenversorgung verwendet werden kann und zusätzliche Attribute wie Kontext usw. benötigt, um eine genaue Aufzeichnung zu ermöglichen. Das openEHR-Referenzmodell erlaubt derzeit nur die Aufzeichnung von Kontexten innerhalb von ereignisbasierten COMPOSITION-Archetypen. Aus diesem Grund wurde dieser Archetyp als Event und nicht als COMPOSITION modelliert. Die Flexibilität ist somit gewährleistet, so dass einige klinische Systeme Problemlisten für Episoden der Pflege sicher verwalten können, während andere sich dafür entscheiden, diese COMPOSITION zu implementieren, um dauerhaft zu handeln.</use>
       <misuse />
       <copyright />
     </details>
@@ -250,8 +249,7 @@ This archetype is usually managed as a persistent list, however there are situat
 &#xD;
 虽然理想的情况可能就是，每个照护服务对象分别只有一份问题清单，但更为现实的情况就是，在分布式的环境下，单个的照护服务对象可能同时拥有多份问题清单，并且还会针对具体的临床医生/临床医务人员、照护服务节段（episode of care）或其他的上下文背景，分别对每份问题清单加以管理和优先级排序。例如，基层临床医生的问题清单在配置上可能会截然不同于有益于外科专科医生的问题清单或者是供医院住院节段期间参考的问题清单。在基层医疗服务方面，常见的做法就是依据现行有效或无效的问题或诊断来组织问题清单；专科医生可能更愿意看到的是，针对与他们具体的专业相关的主要诊断和不相关的次要诊断，来组织他们的问题清单；住院患者的问题清单则可能包括与护理方面眼下的优先事项相关的其他问题，而当患者出院回家后，这些问题也就变得无关紧要了 - 对于此类的目的，问题/诊断原始型之中所提供的状态槽位 "Status"，则允许采用可以支持临床系统的原始型，根据临床系统临床用户的偏好来组织问题清单， 而无需将这些上下文状态标签延续到其他的临床场景或者是用于持久化。&#xD;
 &#xD;
-通常会将本原始型作为持久型清单来加以管理，但在某些情况下，可能会将问题清单用于节段性的照护服务（episodic care），并且可能还需要额外的特征属性（如上下文等）才能实现准确的记录。目前，openEHR 参考模型仅仅允许在那些基于事件的组合式文书型原始型当中记录上下文背景。因此，我们将本原始型建模成了事件型的组合式文书（Event），而不是持续型的组合式文书（Persistent），而这样做的目的就是使其具备灵活性，以便一些临床系统可以安全地管理那些针对照护服务节段的问题清单，而其他的系统则可以选择实现持续发挥作用的这种组合式文书（即本原始型）。&#xD;
-</use>
+通常会将本原始型作为持久型清单来加以管理，但在某些情况下，可能会将问题清单用于节段性的照护服务（episodic care），并且可能还需要额外的特征属性（如上下文等）才能实现准确的记录。目前，openEHR 参考模型仅仅允许在那些基于事件的组合式文书型原始型当中记录上下文背景。因此，我们将本原始型建模成了事件型的组合式文书（Event），而不是持续型的组合式文书（Persistent），而这样做的目的就是使其具备灵活性，以便一些临床系统可以安全地管理那些针对照护服务节段的问题清单，而其他的系统则可以选择实现持续发挥作用的这种组合式文书（即本原始型）。</use>
       <misuse />
       <copyright />
     </details>
@@ -698,8 +696,7 @@ El modelo de referencia actual de openEHR sólo permite el registro de contexto 
       </items>
       <items code="at0008">
         <items id="text">Extensión</items>
-        <items id="description">Información adicional necesaria para registrar el contexto local para alinearlo con otros formalismos o modelos de referencia&#xD;
-</items>
+        <items id="description">Información adicional necesaria para registrar el contexto local para alinearlo con otros formalismos o modelos de referencia</items>
         <items id="comment">Por ejemplo: Información local de un sistema departamental del hospital o metadatos adicionales para alinearlo con sus equivalentes en FHIR o CIMI</items>
       </items>
     </term_definitions>
@@ -720,4 +717,3 @@ El modelo de referencia actual de openEHR sólo permite el registro de contexto 
     </term_definitions>
   </ontology>
 </archetype>
-

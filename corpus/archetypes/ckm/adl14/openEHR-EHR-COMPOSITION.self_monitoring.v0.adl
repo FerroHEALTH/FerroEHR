@@ -1,0 +1,117 @@
+﻿archetype (adl_version=1.4; uid=1d6fde17-c20f-4296-be5b-5bee9b805694)
+	openEHR-EHR-COMPOSITION.self_monitoring.v0
+
+concept
+	[at0000]	-- Self monitoring
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Natalia Strauch">
+				["organisation"] = <"Medizinische Hochschule Hannover">
+				["email"] = <"Strauch.Natalia@mh-hannover.de">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"sam.heard@oceaninformatics.com">
+		["date"] = <"2013-01-19">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Repräsentation von Messungen und Beobachtungen der Person, die als Subjekt der Patientenakte ist, oder ihren Betreuern.">
+			use = <"Zur Verwendung durch den Patienten, um die von ihm gesammelten Informationen in die Gesundheitsakte aufzunehmen.">
+			keywords = <"Home-Überwachung", "Patienteneingabe", "Self Reporting">
+			misuse = <"">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To hold measurements and observations made by the person who is subject of the record, or their carers.">
+			use = <"For use by the clients of the health service to commit information they have collected to the health record.">
+			keywords = <"home monitoring", "patient entered", "self reporting">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["current_contact"] = <"Heather Leslie, Ocean Informatics<heather.leslie@oceaninformatics.com>">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"06A232E7214BE24E8BDAE60F783FAEEB">
+		["build_uid"] = <"dcfab8a2-a4d1-4db2-b582-5d0caad19bd0">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	COMPOSITION[at0000] matches {    -- Self monitoring
+		category matches {
+			DV_CODED_TEXT matches {
+				defining_code matches {
+					[openehr::433]
+				}
+			}
+		}
+		context matches {
+			EVENT_CONTEXT matches {
+				other_context matches {
+					ITEM_TREE[at0001] matches {    -- Tree
+						items cardinality matches {0..*; unordered} matches {
+							allow_archetype CLUSTER[at0002] occurrences matches {0..*} matches {    -- Extension
+								include
+									archetype_id/value matches {/.*/}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Self monitoring">
+					description = <"A composition to record a person self-monitoring particular parameters.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Extension">
+					description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+					comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"Selbstüberwachung">
+					description = <"Ein COMPOSITION-Archetyp zur Repräsentation von Parametern, die durch eine Person selbstüberwacht wurden.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Erweiterung">
+					description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+					comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+				>
+			>
+		>
+	>

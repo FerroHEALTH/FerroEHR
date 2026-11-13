@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -64,9 +64,9 @@ It's Pronounced Metrosexual, (2015), The Genderbread Person v3, http://itspronou
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">A08AF127279C26B62E56446624888406</other_details>
-    <other_details id="build_uid">139940b4-8435-463e-93e6-d9e13b02c282</other_details>
-    <other_details id="revision">1.1.4</other_details>
+    <other_details id="MD5-CAM-1.0.1">51A9C61AB4B67D13A271B83BAF39E73E</other_details>
+    <other_details id="build_uid">21186cc4-5848-4973-ac85-d3e413ddf993</other_details>
+    <other_details id="revision">1.1.5</other_details>
     <details>
       <language>
         <terminology_id>
@@ -429,9 +429,9 @@ No debe utilizarse para registrar el sexo genético o cromosómico. En la actual
       </terminology_id>
       <code_string>sv</code_string>
     </language>
-    <author id="name">Emma Malm</author>
-    <author id="organisation">Karolinska Universitetssjukhuset</author>
-    <author id="email">emma.malm@cambio.se</author>
+    <author id="name">Emma Malm, Manna Vosta</author>
+    <author id="organisation">Karolinska Universitetssjukhuset, Karolinska University Hospital</author>
+    <author id="email">emma.malm@cambio.se, manna.vosta@regionstockholm.se</author>
   </translations>
   <translations>
     <language>
@@ -1236,7 +1236,7 @@ No debe utilizarse para registrar el sexo genético o cromosómico. En la actual
         <items id="comment">Exempelvis identitetshandlingar så som födelsebevis eller pass.</items>
       </items>
       <items code="at0027">
-        <items id="text">*Gender category (en)</items>
+        <items id="text">Könskategori</items>
         <items id="description">*Category describing the alignment of an individual's gender identity with their sex assigned at birth. (en)</items>
         <items id="comment">*For example: cisgender; transgender. (en)</items>
       </items>
@@ -1578,4 +1578,3 @@ No debe utilizarse para registrar el sexo genético o cromosómico. En la actual
     </term_definitions>
   </ontology>
 </archetype>
-

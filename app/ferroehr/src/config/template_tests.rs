@@ -65,11 +65,22 @@ fn template_mentions_every_section() {
 /// inside another key's trailing comment does not count: a key mentioned
 /// only that way stays invisible to an operator reading the template.
 fn template_declares(key: &str) -> bool {
-    DEFAULT_TEMPLATE.lines().any(|line| {
+    template_values(key).next().is_some()
+}
+
+/// Whether the template declares `key` as a key line whose value is an
+/// inline table: a map key the generator writes as `key = { … }`.
+fn template_declares_inline_table(key: &str) -> bool {
+    template_values(key).any(|value| value.trim_start().starts_with('{'))
+}
+
+/// The value text after `=` of every key line of the template that declares
+/// `key`, live or as a `#?` reference line.
+fn template_values(key: &str) -> impl Iterator<Item = &'static str> + '_ {
+    DEFAULT_TEMPLATE.lines().filter_map(move |line| {
         let line = line.trim_start();
         let line = line.strip_prefix("#?").map_or(line, str::trim_start);
-        line.strip_prefix(key)
-            .is_some_and(|rest| rest.trim_start().starts_with('='))
+        line.strip_prefix(key)?.trim_start().strip_prefix('=')
     })
 }
 
@@ -87,6 +98,9 @@ fn template_declares_every_serialized_field() {
         };
         for (key, child) in map {
             match child {
+                // A map key's value is an inline table, `key = { … }`: its
+                // entries are the default's data, never keys of the schema.
+                serde_json::Value::Object(_) if template_declares_inline_table(key) => {}
                 serde_json::Value::Object(_) => walk(child, missing),
                 // An absent optional serializes to null, so this walk cannot
                 // see it at all — that class is the other test's job. An
@@ -157,10 +171,7 @@ fn template_declares_every_optional_field_of_the_secret_bearing_sections() {
         ),
         (
             "authz.party_binding",
-            retired::live(
-                accepted_fields::<binding::PartyBindingConfig>("authz.party_binding"),
-                &["enabled", "provisional_report_days"],
-            ),
+            accepted_fields::<binding::PartyBindingConfig>("authz.party_binding"),
         ),
         (
             "database",
@@ -178,11 +189,8 @@ fn template_declares_every_optional_field_of_the_secret_bearing_sections() {
         ),
         (
             "record.multimedia",
-            retired::live(
-                accepted_fields::<crate::extensions::multimedia::config::MultimediaConfig>(
-                    "record.multimedia",
-                ),
-                &["allow_http"],
+            accepted_fields::<crate::extensions::multimedia::config::MultimediaConfig>(
+                "record.multimedia",
             ),
         ),
     ];

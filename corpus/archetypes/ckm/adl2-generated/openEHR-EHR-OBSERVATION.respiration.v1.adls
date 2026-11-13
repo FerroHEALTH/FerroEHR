@@ -1,0 +1,2138 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=87989092-aad1-4fac-9731-9a0220ef2e3f; build_uid=499f5a61-219a-45d4-b5ec-eae003c78a1f)
+    openEHR-EHR-OBSERVATION.respiration.v1.2.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jasmin Buck, Sebastian Garde">
+                ["organisation"] = <"University of Heidelberg, Central Queensland University">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Kirsi Poikela">
+                ["organisation"] = <"Tieto Sweden Healthcare & Welfare AB">
+                ["email"] = <"ext.kirsi.poikela@tieto.com">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Vesa Peltola">
+                ["organisation"] = <"Tieto Finland">
+                ["email"] = <"vesa.peltola@tieto.com">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Dr. Leonardo Der Jachadurian">
+                ["organisation"] = <"Bitios.com">
+            >
+            accreditation = <"Medical Doctor (Internal Medicine Specialist)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Lars Bitsch-Larsen">
+                ["organisation"] = <"Haukeland University Hospital, Bergen, Norway.">
+            >
+            accreditation = <"MD, DEAA, specialist in anesthesia and intensive care, specialist in tropical medicine.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Ana Paula de Andrade">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"ana.andrade@coreconsulting.com.br">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+        ["fa"] = <
+            language = <[ISO_639-1::fa]>
+            author = <
+                ["name"] = <"Shahla Foozonkhah">
+                ["organisation"] = <"Ocean Informatics">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Marja Buur">
+                ["organisation"] = <"Medisch Centrum Alkmaar">
+                ["email"] = <"m.buur-krom@mca.nl">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics, United Kingdom">
+        ["email"] = <"ian.mcnicoll@freshEHR.com">
+        ["date"] = <"2009-07-17">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marja Buur, Medisch Centrum Alkmaar/ Code24, Netherlands", "Gregory Caulton, PatientOS Inc., United States", "Stephen Chu, NeHTA, Australia", "Sebastian Garde, Ocean Informatics, Germany", "Anne Harbison, CPCER, Australia", "Sam Heard, Ocean Informatics, Australia", "Omer Hotomaroglu, Turkey", "Sundaresan Jagannathan, Scottish NHS, United Kingdom", "Andrew James, University of Toronto, Canada", "Heather Leslie, Atomica Informatics, Australia (Editor)", "Rikard Lovstrom, Swedish Medical Association, Sweden", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (Editor)", "Jeroen Meintjens, Medisch Centrum Alkmaar, Netherlands", "Soon Ghee Yap, Singapore Health Services Pte Ltd, Singapore", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., UK">
+    lifecycle_state = <"deprecated">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Braun RB.  Respiratory Rate and Pattern. In: Walker HK, Hall WD, Hurst JW. Clinical methods: the history, physical, and laboratory examinations. [Internet] 3rd ed. Stoneham (MA): Butterworth Publishers; c1990 [cited 2009 Jul 21] ">
+        ["2"] = <"Available from: http://www.ncbi.nlm.nih.gov/bookshelf/br.fcgi?book=cm&part=A1308 [Accessed July 22, 2009].">
+        ["3"] = <"Gaunt AC, Frang T. Examination of the Respiratory System. The Journal of Clinical Examination 2007 (4): 14-22 ">
+        ["4"] = <"Available from:   http://www.thejce.com/downloads/journals/oct_2007/14-22%20Gaunt%20and%20Frang%20-%20Respiratory%20System.pdf  [Accessed July 22, 2009]">
+        ["5"] = <"Cheyne-Stokes respiration - Wikipedia, the free encyclopedia [Internet]. [cited 2009 Jul 25 ] ">
+        ["6"] = <"Available from: http://en.wikipedia.org/wiki/Cheyne-Stokes_respiration">
+        ["7"] = <"Biot's respiration - Wikipedia, the free encyclopedia [Internet]. [cited 2009 Jul 25 ] ">
+        ["8"] = <"Available from: http://en.wikipedia.org/wiki/Biot%27s_respiration">
+        ["9"] = <"Apneustic respirations - Wikipedia, the free encyclopedia [Internet]. [cited 2009 Jul 25 ] ">
+        ["10"] = <"Available from: http://en.wikipedia.org/wiki/Apneustic_respirations">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B0067DED85A29FF0EAA1174002116CA1">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation der Frequenz, des Rhythmus und der Charakteristik der Atmung">
+            keywords = <"Atmung", "Respiration">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att mäta de observerade egenskaperna vid spontanandning.">
+            keywords = <"respiration", "andning", "andningstag", "resp", "respiration">
+            use = <"Används för att registrera de observerade och uppmätta egenskaperna i samband med spontanandning hos en person, inklusive andningsfrekvens, djup och rytm.
+
+Respiration registreras vanligen som en komponent av Vitalparametrarna - innefattande Blodtryck, Puls, Temperatur och syrgasmättnad. Det finns ytterligare specifika arketyper för vart och ett av dessa begrepp.
+
+Nyföddas och unga spädbarns respiration bör mätas före matning.">
+            misuse = <"Används inte för att registrera andra aspekter av en bredare andningsundersökningen eller bedömningen. Andra specifika arketyper kommer att användas för att registrera egenskaper som exempelvis respiratoriska ansträngningar, auskultatoriska fynd etc. 
+
+Används inte för att registrera detaljer när patienten får assisterad ventilationsbehandling.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*To record the characteristics of spontaneous breathing by an individual.(en)">
+            keywords = <"*respirations(en)", "*breathing(en)", "*breath(en)", "*resps(en)", "*respiration(en)">
+            use = <"*Use to record the observed and measured characteristics of spontaneous breathing by an individual, including respiratory rate, depth and rhythm.
+
+Respirations are commonly recorded as one component of Vital signs.(en)">
+            misuse = <"*Not to be used to record the physical examination of the respiratory system - use the physical examination family of archetypes for this purpose, such as CLUSTER.exam-chest or CLUSTER.exam-lung.
+
+Not to be used to record other measurements related to breathing - use specific archetypes for the purpose, for example OBSERVATION.pulse_oximetry. 
+
+Not to be used to record functional assessments of breathing - use specific archetypes for the purpose, for example OBSERVATION.pulmonary_function.
+
+Not to be used for recording details about individuals who are undergoing assisted ventilation.(en)">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Para registrar las características de la respiración espontánea.">
+            keywords = <"respiraciones", "respiración", "FR">
+            use = <"Usar para registrar las características observadas y medidas, relacionadas con la respiraciones espontáneas en una persona, incluyendo frecuencia respiratoria, profundidad y ritmo.
+
+Las respiraciones son comúnmente registradas como un componente de los signos vitales (los cuales abarcan la presión arterial, el pulso, la temperatura y la oximetría de pulso). Hay arquetipos específicos adicionales para cada uno de esos conceptos.
+
+Las respiraciones deberían ser medidas antes de las comidas en neonatos e infantes jóvenes.">
+            misuse = <"No usar para intentar registrar otros aspectos del exámen respiratorio en general. Otros arquetipos específicos serán utilizados para registrar características tales como esfuerzo respiratorio, hallazgos auscultatorios, etc.
+
+No usar para registrar detalles cuando el paciente está en ventilación asistida.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere de observerte kjennetegn ved spontant åndedrett.">
+            keywords = <"pusting", "respirasjon", "pust", "respirasjoner", "frekvens", "rytme", "vital", "tegn", "livsfunksjoner", "åndedrett", "åndedrag", "ventilasjon", "hyperventilering", "hyperventilasjon", "hypoventilering", "hypoventilasjon", "ånde", "blåse">
+            use = <"Brukes til å registrere tilstedeværelse eller fravær av spontant åndedrett.
+
+Brukes til å registrere de observerte verdier knyttet til et individs spontane åndedrettsbevegelser.">
+            misuse = <"Ikke egnet til fullstendig undersøkelse av åndedrettssystem og dets funksjon. Andre spesifikke arketyper vil bli brukt til å registrere auskultatoriske funn etc.
+
+Skal ikke brukes til å registrere detaljer når det anvendes assistert ventilasjon.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Registrar as características observadas da respiração espontânea.">
+            keywords = <"respirações", "respiração">
+            use = <"Usar para registrar as características observadas e medidas relacionadas com as respirações espontâneas em uma pessoa, incluindo frequência respiratória, profundidade e ritmo.
+
+As respirações são comumente registradas como um componente de sinais vitais - incluindo pressão arterial, pulso, temperatura e oximetria. Há arquétipos adicionais, específicos para cada um desses conceitos.
+
+As respirações devem ser medidas antes de refeições em recém-nascidos e crianças jovens.">
+            misuse = <"Não deve ser usado para tentar registrar outros aspectos mais amplos do exame ou avaliação respiratória. Outros arquétipos específicos serão utilizados para registrar características tais como esforço respiratório, achados auscultatórios, etc.
+
+Não deve ser usado para registrar detalhes quando o paciente está sob ventilação assistida.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل الخصائص الملاحظة - المشاهدة - للتنفس التلقائي">
+            keywords = <"*respirations(en)", "*breathing(en)", "*breath(en)", "*resps(en)", "*respiration(en)">
+            use = <"يستخدم لتسجيل الخصائص الملاحظة - المشاهدة - أو التي يتم قياسها فيما يتعلق بالتنفس التلقائي لدى الشخص, بما فيه معدل  ( سرعة) التنفس, عمق التنفس و نَظْمه.
+
+عادة ما يتم تسجيل التنفس كجزء من العلامات الحياتية - و التي تتكون من ضغط الدم, النبض, درجة الحرارة و قياس التأكسج. و يوجد بالفعل نماذج مخصوصة إضافية لكل من هذه المفاهيم.
+
+ينبغي قياس التنفس قبل الإطعام في حديثي الولادة و الرضع الصغار">
+            misuse = <"لا يمكن استخدام النموذج لمحاولة تسجيل الجوانب الأخرى من الفحص أو التقييم التنفسي أشمل. يمكن استخدام نماذج أخرى مخصصة لتسجيل الخصائص من المجهود التنفسي و الموجودات التسمعية, إلى آخره
+ لا يستخدم لتسجيل تفاصيل حالة المنريض إذا كان يخضع للتهوية المساعَدة">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the characteristics of spontaneous breathing by an individual.">
+            keywords = <"respirations", "breathing", "breath", "resps", "respiration">
+            use = <"Use to record the observed and measured characteristics of spontaneous breathing by an individual, including respiratory rate, depth and rhythm.
+
+Respirations are commonly recorded as one component of Vital signs.">
+            misuse = <"Not to be used to record the physical examination of the respiratory system - use the physical examination family of archetypes for this purpose, such as CLUSTER.exam-chest or CLUSTER.exam-lung.
+
+Not to be used to record other measurements related to breathing - use specific archetypes for the purpose, for example OBSERVATION.pulse_oximetry. 
+
+Not to be used to record functional assessments of breathing - use specific archetypes for the purpose, for example OBSERVATION.pulmonary_function.
+
+Not to be used for recording details about individuals who are undergoing assisted ventilation.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fa"] = <
+            language = <[ISO_639-1::fa]>
+            purpose = <"برای ثبت ویژگی هایی قابل مشاهده تنفس خود بخود بکار می رود.">
+            keywords = <"تنفسها", "نفس کشیده", "نفس", "تنفسی">
+            use = <"برای ثبت ویژگی هایی قابل مشاهده و قابل اندازه گیری مربوط به تنفس خود بخود فرد ، شامل میزان تنفس ، عمق و ریتم استفاده می شود.
+تنفسها معمولا به عنوان یکی از مولفه های علایم حیاتی ثبت می شوند -شامل فشار خون ، نبض ، درجه حرارت واندازه گیری اکسیژن.
+در نوزادان و شیر خواران اندازه گیری تنفس قبل از تغذیه اندازه گیری می شود  .
+
+">
+            misuse = <"برای ثبت سایر جنبه های آزمایشات یا ارزیابی گسترده تر تنفسی استفاده نمی شود.
+از سایر الگوسازهای تخصصی برای ثبت ویژگی هایی نظیر تلاش برای تنفس،یافته های شنیداری و غیره استفاده نمایید.
+برای ثبت جزییات در زمانی که فرد تحت تنفس مصنوعی است استفاده نکنید .  ">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Om observaties van de spontane ademhaling te registreren ">
+            keywords = <"ademhaling", "respiratie", "inademen", "uitademen", "ademteug", "adem", "ademen">
+            use = <"Wordt gebruikt om observaties en metingen te registreren, die gerelateerd zijn aan de spontane ademhaling van een persoon, inclusief ademhalingsfrequentie, diepte en ritme
+
+Ademhaling wordt gewoonlijk geregistreerd als onderdeel van de vitale functies - bestaande uit bloeddruk, temperatuur en zuurstofsaturatie. Er zijn aanvullende specifieke archetypes voor deze concepten.
+
+De ademhaling moet bij neonaten en jonge kinderen gemeten worden voor de voeding.">
+            misuse = <"Niet te gebruiken om andere aspecten van het uitgebreidere onderzoek of beoordeling van de ademhaling te registreren. Andere, specifieke archetypes zullen gebruikt worden om karakteristieken zoals ademhalingsinspanning en auscultatoire bevindingen te registreren.
+
+Niet te gebruiken voor de registratie van details, als de persoon beademing ondergaat.
+">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Respirations
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0062] occurrences matches {0..1} matches {    -- Presence
+                                        value matches {
+                                            DV_CODED_TEXT[at9018] matches {    -- Flow rate, volume
+                                                defining_code matches {[ac9016]}    -- Flow rate, volume (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Rate
+                                        value matches {
+                                            DV_QUANTITY[at9005] matches {
+                                                magnitude matches {|0.0..200.0|}
+                                                units matches {"/min"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Regular?
+                                        value matches {
+                                            DV_CODED_TEXT[at9006] matches {
+                                                defining_code matches {[ac9010]}    -- Regular? (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Depth
+                                        value matches {
+                                            DV_CODED_TEXT[at9008] matches {
+                                                defining_code matches {[ac9011]}    -- Depth (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Clinical description
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Clinical interpretation
+                                        value matches {
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9015]}    -- Clinical interpretation (synthesised)
+                                            }
+                                            DV_TEXT[at9013]
+                                        }
+                                    }
+                                    ELEMENT[at0070] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9022]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0022] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    allow_archetype CLUSTER[at0055] occurrences matches {0..1} matches {    -- Inspired oxygen
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.inspired_oxygen(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0056] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9023]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0037] occurrences matches {0..1} matches {    -- Exertion
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.level_of_exertion(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.level_of_exertion(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0065] occurrences matches {0..1} matches {    -- Body position
+                                        value matches {
+                                            DV_CODED_TEXT[at9021] matches {
+                                                defining_code matches {[ac9017]}    -- Body position (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0057] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0058] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"*Respirations(en)">
+                description = <"*The observed characteristics of spontaneous breathing as would commonly be recorded as part of a 'vital signs' examination.(en)">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time. (en)">
+            >
+            ["at0004"] = <
+                text = <"*Rate(en)">
+                description = <"*The rate of spontaneous breathing. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Regular? (en)">
+                description = <"*The pattern of spontaneous breathing. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Regular(en)">
+                description = <"*Regular respiration.(en)">
+            >
+            ["at0007"] = <
+                text = <"*Irregular(en)">
+                description = <"*Irregular respirations.(en)">
+            >
+            ["at0009"] = <
+                text = <"*Abnormal respiratory pattern(en)">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en)">
+            >
+            ["at0012"] = <
+                text = <"*Kussmaul's respiration(en)">
+                description = <"*Deep chest breathing with or without a visible gasp.(en)">
+            >
+            ["at0016"] = <
+                text = <"*Depth(en)">
+                description = <"*The depth of spontaneous breathing. (en)">
+            >
+            ["at0017"] = <
+                text = <"*Normal(en)">
+                description = <"*Normal depth of breathing.(en)">
+            >
+            ["at0018"] = <
+                text = <"*Shallow(en)">
+                description = <"*Shallow depth of breathing.(en)">
+            >
+            ["at0019"] = <
+                text = <"*Deep(en)">
+                description = <"*Deep breathing.(en)">
+            >
+            ["at0024"] = <
+                text = <"*Clinical description (en)">
+                description = <"*A narrative description about the spontaneous breathing of the individual. (en)">
+            >
+            ["at0025"] = <
+                text = <"*Variable(en)">
+                description = <"*Variable depth of breathing.(en)">
+            >
+            ["at0030"] = <
+                text = <"*Cheyne-Stokes respiration(en)">
+                description = <"*Periods of hyperventilation alternating with periods of apnoea.(en)">
+            >
+            ["at0031"] = <
+                text = <"*Ataxic respiration(en)">
+                description = <"*Breathing of varying tidal volumes and rates.(en)">
+            >
+            ["at0033"] = <
+                text = <"*Apneustic respiration(en)">
+                description = <"*Deep, gasping inspiration with a pause at full inspiration followed by a brief, insufficient release of breath.(en)">
+            >
+            ["at0034"] = <
+                text = <"*Cluster breathing(en)">
+                description = <"*Clusters of irregular breaths that alternate with periods of apnoea. Also termed Biot's breathing.(en)">
+            >
+            ["at0037"] = <
+                text = <"*Exertion(en)">
+                description = <"*Details about physical exertion being undertaken during the examination. (en)">
+                comment = <"*The individual's level of exertion at or just prior to the observation being made. (en)">
+            >
+            ["at0044"] = <
+                text = <"*Apnoea(en)">
+                description = <"*Breathing has ceased.(en)">
+            >
+            ["at0054"] = <
+                text = <"*Prolonged expiratory phase(en)">
+                description = <"*The respiratory expiratory phase is longer than normal/usual. Associated with obstructive airways disease such as asthma.(en)">
+            >
+            ["at0055"] = <
+                text = <"*Ambient oxygen(en)">
+                description = <"*Details of the amount of oxygen being delivered to the individual at the time of observation. (en)">
+                comment = <"*Assumed values of 21% oxygen concentration, Fi02 of 0.21 and oxygen flow rate of 0 l/min or 0 ml/min. (en)">
+            >
+            ["at0056"] = <
+                text = <"*Confounding factors(en)">
+                description = <"*Description about any issues or incidental factors that may impact on interpretation of the physical findings. (en)">
+                comment = <"*For example: level of anxiety, pain, feeding in infants, tracheostomy. (en)">
+            >
+            ["at0058"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR. (en)">
+            >
+            ["at0059"] = <
+                text = <"*Tachypnoea(en)">
+                description = <"*Abnormally rapid breathing.(en)">
+            >
+            ["at0060"] = <
+                text = <"*Bradypnoea(en)">
+                description = <"*Abnormally slow breathing.(en)">
+            >
+            ["at0061"] = <
+                text = <"*Normal(en)">
+                description = <"*Normal breathing pattern.(en)">
+            >
+            ["at0062"] = <
+                text = <"*Presence (en)">
+                description = <"*Observation of spontaneous respiration. (en)">
+                comment = <"*This data element may be useful in extreme situations where a formal measurement of respiration rate is not possible. For example: a subject is unconscious and distant to the observer, such as trapped in a car or has fallen down a cliff. Presence of respiration can be implied if the 'Rate' >0 breaths/min. (en)">
+            >
+            ["at0063"] = <
+                text = <"*Present (en)">
+                description = <"*Respiratory movements are observed. (en)">
+            >
+            ["at0064"] = <
+                text = <"*Not detected (en)">
+                description = <"*Respiratory movements are not detected on observation. (en)">
+            >
+            ["at0065"] = <
+                text = <"*Body position (en)">
+                description = <"*The body position of the individual during the observation. (en)">
+            >
+            ["at0066"] = <
+                text = <"*Standing/upright (en)">
+                description = <"*The individual was standing, walking or running. (en)">
+            >
+            ["at0067"] = <
+                text = <"*Sitting (en)">
+                description = <"*The individual was sitting (for example, on a bed or chair). (en)">
+            >
+            ["at0068"] = <
+                text = <"*Reclining (en)">
+                description = <"*The individual was reclining at an approximate angle of 45 degrees, with the legs elevated to the level of the pelvis. (en)">
+            >
+            ["at0069"] = <
+                text = <"*Lying (en)">
+                description = <"*The individual was lying flat. (en)">
+            >
+            ["at0070"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the respirations, not captured in other fields. (en)">
+            >
+            ["at9018"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+            ["ac9016"] = <
+                text = <"* Flow rate, volume (en) (synthesised)">
+                description = <"* Flow rate, volume (en) (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"*Regular? (en) (synthesised)">
+                description = <"*The pattern of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"*Depth(en) (synthesised)">
+                description = <"*The depth of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"*Abnormal respiratory pattern(en) (synthesised)">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en) (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"*Body position (en) (synthesised)">
+                description = <"*The body position of the individual during the observation. (en) (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Andning">
+                description = <"De observerade egenskaperna i spontanandning som vanligen skulle registreras som en del av en undersökning av \"vitalparametrar\".">
+            >
+            ["at0002"] = <
+                text = <"Ospecificerad händelse">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time. (en)">
+            >
+            ["at0004"] = <
+                text = <"Frekvens">
+                description = <"*The rate of spontaneous breathing. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Regular? (en)">
+                description = <"*The pattern of spontaneous breathing. (en)">
+            >
+            ["at0006"] = <
+                text = <"Regelbunden">
+                description = <"Regelbunden andning.">
+            >
+            ["at0007"] = <
+                text = <"Oregelbunden">
+                description = <"Oregelbunden andning.">
+            >
+            ["at0009"] = <
+                text = <"Onormalt andningsmönster">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en)">
+            >
+            ["at0012"] = <
+                text = <"Kussmauls andning">
+                description = <"Djup bröstandning med eller utan synlig flämtning.">
+            >
+            ["at0016"] = <
+                text = <"Andningsdjup">
+                description = <"*The depth of spontaneous breathing. (en)">
+            >
+            ["at0017"] = <
+                text = <"Normalt">
+                description = <"Normalt andningsdjup.">
+            >
+            ["at0018"] = <
+                text = <"Ytligt">
+                description = <"Ytligt andningsdjup.">
+            >
+            ["at0019"] = <
+                text = <"Djup">
+                description = <"Djupandning">
+            >
+            ["at0024"] = <
+                text = <"*Clinical description (en)">
+                description = <"*A narrative description about the spontaneous breathing of the individual. (en)">
+            >
+            ["at0025"] = <
+                text = <"Ojämnt">
+                description = <"Ojämnt andningsdjup.">
+            >
+            ["at0030"] = <
+                text = <"Cheyne-Stokes andning">
+                description = <"Perioder av hyperventilation alternerade av perioder av apné.">
+            >
+            ["at0031"] = <
+                text = <"Ataktisk andning">
+                description = <"Andning med varierade tidalvolymer och andningsfrekvenser.">
+            >
+            ["at0033"] = <
+                text = <"Apnoisk andning">
+                description = <"Djup, flämtande inandning med en paus vid full inandning följt av en kort, otillräcklig utandning.">
+            >
+            ["at0034"] = <
+                text = <"Klusterandning">
+                description = <"Kluster av oregelbundna andetag växelvis med perioder med apné. Kallas även Biots andning.">
+            >
+            ["at0037"] = <
+                text = <"Ansträngning">
+                description = <"*Details about physical exertion being undertaken during the examination. (en)">
+                comment = <"*The individual's level of exertion at or just prior to the observation being made. (en)">
+            >
+            ["at0044"] = <
+                text = <"Apné">
+                description = <"Andningsstillestånd.">
+            >
+            ["at0054"] = <
+                text = <"Förlängd utandningsfas">
+                description = <"Utandningsfasen är längre än normalt/vanligt. Associerad med obstruktiv luftvägssjukdom såsom astma.">
+            >
+            ["at0055"] = <
+                text = <"Tillförd syrgas">
+                description = <"*Details of the amount of oxygen being delivered to the individual at the time of observation. (en)">
+                comment = <"*Assumed values of 21% oxygen concentration, Fi02 of 0.21 and oxygen flow rate of 0 l/min or 0 ml/min. (en)">
+            >
+            ["at0056"] = <
+                text = <"Påverkande faktorer">
+                description = <"*Description about any issues or incidental factors that may impact on interpretation of the physical findings. (en)">
+                comment = <"*For example: level of anxiety, pain, feeding in infants, tracheostomy. (en)">
+            >
+            ["at0058"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR. (en)">
+            >
+            ["at0059"] = <
+                text = <"*Tachypnoea(en)">
+                description = <"*Abnormally rapid breathing.(en)">
+            >
+            ["at0060"] = <
+                text = <"*Bradypnoea(en)">
+                description = <"*Abnormally slow breathing.(en)">
+            >
+            ["at0061"] = <
+                text = <"*Normal(en)">
+                description = <"*Normal breathing pattern.(en)">
+            >
+            ["at0062"] = <
+                text = <"*Presence (en)">
+                description = <"*Observation of spontaneous respiration. (en)">
+                comment = <"*This data element may be useful in extreme situations where a formal measurement of respiration rate is not possible. For example: a subject is unconscious and distant to the observer, such as trapped in a car or has fallen down a cliff. Presence of respiration can be implied if the 'Rate' >0 breaths/min. (en)">
+            >
+            ["at0063"] = <
+                text = <"*Present (en)">
+                description = <"*Respiratory movements are observed. (en)">
+            >
+            ["at0064"] = <
+                text = <"*Not detected (en)">
+                description = <"*Respiratory movements are not detected on observation. (en)">
+            >
+            ["at0065"] = <
+                text = <"*Body position (en)">
+                description = <"*The body position of the individual during the observation. (en)">
+            >
+            ["at0066"] = <
+                text = <"*Standing/upright (en)">
+                description = <"*The individual was standing, walking or running. (en)">
+            >
+            ["at0067"] = <
+                text = <"*Sitting (en)">
+                description = <"*The individual was sitting (for example, on a bed or chair). (en)">
+            >
+            ["at0068"] = <
+                text = <"*Reclining (en)">
+                description = <"*The individual was reclining at an approximate angle of 45 degrees, with the legs elevated to the level of the pelvis. (en)">
+            >
+            ["at0069"] = <
+                text = <"*Lying (en)">
+                description = <"*The individual was lying flat. (en)">
+            >
+            ["at0070"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the respirations, not captured in other fields. (en)">
+            >
+            ["at9018"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+            ["ac9016"] = <
+                text = <"* Flow rate, volume (en) (synthesised)">
+                description = <"* Flow rate, volume (en) (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"*Regular? (en) (synthesised)">
+                description = <"*The pattern of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Andningsdjup (synthesised)">
+                description = <"*The depth of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Onormalt andningsmönster (synthesised)">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en) (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"*Body position (en) (synthesised)">
+                description = <"*The body position of the individual during the observation. (en) (synthesised)">
+            >
+        >
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Hengitys">
+                description = <"Havaitut spontaanin hengityksen ominaisuudet, jotka yleensä kirjattaisiin osana ”vitaalimerkit”-tutkimusta.">
+            >
+            ["at0002"] = <
+                text = <"Mikä tahansa tapahtuma">
+                description = <"Yleinen tapahtuma.">
+            >
+            ["at0004"] = <
+                text = <"Hengitysfrekvenssi">
+                description = <"Hengitystaajuus.">
+            >
+            ["at0005"] = <
+                text = <"Rytmi">
+                description = <"Hengityksen rytmi.">
+            >
+            ["at0006"] = <
+                text = <"Säännöllinen">
+                description = <"Säännöllinen hengitys.">
+            >
+            ["at0007"] = <
+                text = <"Epäsäännöllinen">
+                description = <"Epäsäännöllinen hengitys.">
+            >
+            ["at0009"] = <
+                text = <"Kliininen tulkinta">
+                description = <"Hengitystapa taikka yksittäinen sana, fraasi tai lyhyt kuvaus joka edustaa mittausten kliinistä merkitystä.">
+            >
+            ["at0012"] = <
+                text = <"Kussmaulin hengitys">
+                description = <"Syvä rintahengitys, jossa ei ole havaittavaa hengen haukkomista.">
+            >
+            ["at0016"] = <
+                text = <"Syvyys">
+                description = <"Hengityksen syvyys.">
+            >
+            ["at0017"] = <
+                text = <"Normaali">
+                description = <"Normaali hengityksen syvyys.">
+            >
+            ["at0018"] = <
+                text = <"Pinnallinen">
+                description = <"Pinnallinen hengityksen syvyys.">
+            >
+            ["at0019"] = <
+                text = <"Syvä">
+                description = <"Syvä hengitys.">
+            >
+            ["at0024"] = <
+                text = <"Kuvaus">
+                description = <"Tekstimuotoinen hengitysten kuvaus.">
+            >
+            ["at0025"] = <
+                text = <"Muuttuva">
+                description = <"Muuttuva hengityksen syvyys.">
+            >
+            ["at0030"] = <
+                text = <"Cheyne-Stokes-hengitys">
+                description = <"Hyperventilaatiojaksoja, jotka vuorottelevat hengityspysähdyksen kanssa.">
+            >
+            ["at0031"] = <
+                text = <"Ataktinen hengitys">
+                description = <"Hengitys, jonka kertahengitystilavuus ja nopeus vaihtelee.">
+            >
+            ["at0033"] = <
+                text = <"Apneustinen hengitys">
+                description = <"Syvä, haukkova hengitys, jossa esiintyy täyden hengenvedon kohdassa tauko, jota seuraa lyhyt, riittämätön uloshengitys.">
+            >
+            ["at0034"] = <
+                text = <"Biot’n hengitys">
+                description = <"Rykelmä epäsäännöllisiä hengityksiä, jotka vuorottelevat hengityspysähdyksen kanssa. Yleisesti käytetty nimitys on Biot’n hengitys.">
+            >
+            ["at0037"] = <
+                text = <"Rasitus">
+                description = <"Tutkittavan rasitustaso havaintohetkellä tai juuri sitä ennen. Tarkoitettu rasituksen kirjaamiseen vain tapauksissa, joissa se saattaa vaikuttaa hengitykseen, mutta jota ei normaalisti kirjattaisi osana yleisiä kliinisiä huomioita.">
+                comment = <"*The individual's level of exertion at or just prior to the observation being made.(en)">
+            >
+            ["at0044"] = <
+                text = <"Apnea">
+                description = <"Hengitys on pysähtynyt.">
+            >
+            ["at0054"] = <
+                text = <"Pitkittynyt uloshengitysvaihe">
+                description = <"Uloshengitysvaihe on tavallista pitempi. Liittyy ahtauttavaan hengitystiesairauteen, kuten astmaan.">
+            >
+            ["at0055"] = <
+                text = <"Ilman happipitoisuus">
+                description = <"Kertoo, kuinka paljon henkilölle annettiin happea tarkkailuhetkenä.  Oletetut arvot ovat happipitoisuus 21 %, Fi02 0,21 ja hapen virtausnopeus 0 l/min tai 0 ml/min.">
+                comment = <"*Assumed values of 21% oxygen concentration, Fi02 of 0.21 and oxygen flow rate of 0 l/min or 0 ml/min.(en)">
+            >
+            ["at0056"] = <
+                text = <"Sekoittavat tekijät">
+                description = <"Kommentoi ja kirjaa muita satunnaistekijöitä, jotka saattavat vaikuttaa hengityksen havainnointiin. Esimerkiksi ahdistuneisuus, kipu, vauvan rintaruokinta, trakeostomia.">
+                comment = <"*For example: level of anxiety, pain, feeding in infants, tracheostomy.(en)">
+            >
+            ["at0058"] = <
+                text = <"Laajennus">
+                description = <"Lisätiedot, joita tarvitaan paikallisen asiayhteyden kirjaamiseksi tai yhtenäistämiseksi muiden viitemallien tai formalismien kanssa.">
+                comment = <"e.g. Local hospital departmental infomation or additional metadata to align with HL7 or CDISC equivalents.">
+            >
+            ["at0059"] = <
+                text = <"Takypnea">
+                description = <"Epätavallisen nopea hengitys.">
+            >
+            ["at0060"] = <
+                text = <"Bradypnea">
+                description = <"Epätavallisen hidas hengitys.">
+            >
+            ["at0061"] = <
+                text = <"Normaali">
+                description = <"Normaali hengitys.">
+            >
+            ["at0062"] = <
+                text = <"*Presence(en)">
+                description = <"*Observation of spontaneous respiration.(en)">
+                comment = <"*This data element may be useful in extreme situations where a formal measurement of respiration rate is not possible. For example: a subject is unconscious and distant to the observer, such as trapped in a car or has fallen down a cliff. Presence of respiration can be implied if the 'Rate' >0 breaths/min.(en)">
+            >
+            ["at0063"] = <
+                text = <"*Present(en)">
+                description = <"*Respiratory movements are observed.(en)">
+            >
+            ["at0064"] = <
+                text = <"*Not detected(en)">
+                description = <"*Respiratory movements are not detected on observation.(en)">
+            >
+            ["at0065"] = <
+                text = <"*Body position(en)">
+                description = <"*The body position of the individual during the observation.(en)">
+            >
+            ["at0066"] = <
+                text = <"*Standing/upright(en)">
+                description = <"*The individual was standing, walking or running.(en)">
+            >
+            ["at0067"] = <
+                text = <"*Sitting(en)">
+                description = <"*The individual was sitting (for example, on a bed or chair).(en)">
+            >
+            ["at0068"] = <
+                text = <"*Reclining(en)">
+                description = <"*The individual was reclining at an approximate angle of 45 degrees, with the legs elevated to the level of the pelvis.(en)">
+            >
+            ["at0069"] = <
+                text = <"*Lying(en)">
+                description = <"*The individual was lying flat.(en)">
+            >
+            ["at0070"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the respirations, not captured in other fields. (en)">
+            >
+            ["at9018"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+            ["ac9016"] = <
+                text = <"* Flow rate, volume (en) (synthesised)">
+                description = <"* Flow rate, volume (en) (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Rytmi (synthesised)">
+                description = <"Hengityksen rytmi. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Syvyys (synthesised)">
+                description = <"Hengityksen syvyys. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Kliininen tulkinta (synthesised)">
+                description = <"Hengitystapa taikka yksittäinen sana, fraasi tai lyhyt kuvaus joka edustaa mittausten kliinistä merkitystä. (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"*Body position(en) (synthesised)">
+                description = <"*The body position of the individual during the observation.(en) (synthesised)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Respiraciones">
+                description = <"Las características observadas de la respiración espontánea, tal cual sería comúnmente registrada como parte de una evaluación de signos vitales.">
+            >
+            ["at0002"] = <
+                text = <"Cualquier evento">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time. (en)">
+            >
+            ["at0004"] = <
+                text = <"Frecuencia">
+                description = <"*The rate of spontaneous breathing. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Regular? (en)">
+                description = <"*The pattern of spontaneous breathing. (en)">
+            >
+            ["at0006"] = <
+                text = <"Regular">
+                description = <"Respiración regular.">
+            >
+            ["at0007"] = <
+                text = <"Irregular">
+                description = <"Respiración irregular.">
+            >
+            ["at0009"] = <
+                text = <"Patrones respiratorios anormales">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en)">
+            >
+            ["at0012"] = <
+                text = <"Respiración de Kussmaul">
+                description = <"Respiración profunda con o sin jadeo visible.">
+            >
+            ["at0016"] = <
+                text = <"Profundidad">
+                description = <"*The depth of spontaneous breathing. (en)">
+            >
+            ["at0017"] = <
+                text = <"Normal">
+                description = <"Respiración con profundidad normal.">
+            >
+            ["at0018"] = <
+                text = <"Superficial">
+                description = <"Respiración superficial.">
+            >
+            ["at0019"] = <
+                text = <"Profunda">
+                description = <"Respiración profunda.">
+            >
+            ["at0024"] = <
+                text = <"*Clinical description (en)">
+                description = <"*A narrative description about the spontaneous breathing of the individual. (en)">
+            >
+            ["at0025"] = <
+                text = <"Variable">
+                description = <"Respiración con profundidad variable.">
+            >
+            ["at0030"] = <
+                text = <"Respiración de Cheyne-Stokes">
+                description = <"Períodos de hiperventilación alternando con períodos de apnea.">
+            >
+            ["at0031"] = <
+                text = <"Respiración atáxica">
+                description = <"Respiración de frecuencia y volumen corriente variables.">
+            >
+            ["at0033"] = <
+                text = <"Respiración apnéustica">
+                description = <"Respiración profunda, con jadeo inspiratorio, que tiene una pausa al completar la inspiración, seguida con una espiración breve e insuficiente.">
+            >
+            ["at0034"] = <
+                text = <"Respiración de Biot">
+                description = <"Grupos de respiraciones irregulares profundas que alternan con períodos de apnea.">
+            >
+            ["at0037"] = <
+                text = <"Esfuerzo">
+                description = <"*Details about physical exertion being undertaken during the examination. (en)">
+                comment = <"*The individual's level of exertion at or just prior to the observation being made. (en)">
+            >
+            ["at0044"] = <
+                text = <"Apnea">
+                description = <"Cesación de la respiración.">
+            >
+            ["at0054"] = <
+                text = <"Espiración prolongada">
+                description = <"La fase espiratoria respiratoria es mas larga que lo usual/normal. Asociada con enfermedades obstructivas de las vías aéreas tales como el asma.">
+            >
+            ["at0055"] = <
+                text = <"*Inspired oxygen(en)">
+                description = <"*Details of the amount of oxygen being delivered to the individual at the time of observation. (en)">
+                comment = <"*Assumed values of 21% oxygen concentration, Fi02 of 0.21 and oxygen flow rate of 0 l/min or 0 ml/min. (en)">
+            >
+            ["at0056"] = <
+                text = <"Factores confundidores">
+                description = <"*Description about any issues or incidental factors that may impact on interpretation of the physical findings. (en)">
+                comment = <"*For example: level of anxiety, pain, feeding in infants, tracheostomy. (en)">
+            >
+            ["at0058"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR. (en)">
+            >
+            ["at0059"] = <
+                text = <"*Tachypnoea(en)">
+                description = <"*Abnormally rapid breathing.(en)">
+            >
+            ["at0060"] = <
+                text = <"*Bradypnoea(en)">
+                description = <"*Abnormally slow breathing.(en)">
+            >
+            ["at0061"] = <
+                text = <"*Normal(en)">
+                description = <"*Normal breathing pattern.(en)">
+            >
+            ["at0062"] = <
+                text = <"*Presence (en)">
+                description = <"*Observation of spontaneous respiration. (en)">
+                comment = <"*This data element may be useful in extreme situations where a formal measurement of respiration rate is not possible. For example: a subject is unconscious and distant to the observer, such as trapped in a car or has fallen down a cliff. Presence of respiration can be implied if the 'Rate' >0 breaths/min. (en)">
+            >
+            ["at0063"] = <
+                text = <"*Present (en)">
+                description = <"*Respiratory movements are observed. (en)">
+            >
+            ["at0064"] = <
+                text = <"*Not detected (en)">
+                description = <"*Respiratory movements are not detected on observation. (en)">
+            >
+            ["at0065"] = <
+                text = <"*Body position (en)">
+                description = <"*The body position of the individual during the observation. (en)">
+            >
+            ["at0066"] = <
+                text = <"*Standing/upright (en)">
+                description = <"*The individual was standing, walking or running. (en)">
+            >
+            ["at0067"] = <
+                text = <"*Sitting (en)">
+                description = <"*The individual was sitting (for example, on a bed or chair). (en)">
+            >
+            ["at0068"] = <
+                text = <"*Reclining (en)">
+                description = <"*The individual was reclining at an approximate angle of 45 degrees, with the legs elevated to the level of the pelvis. (en)">
+            >
+            ["at0069"] = <
+                text = <"*Lying (en)">
+                description = <"*The individual was lying flat. (en)">
+            >
+            ["at0070"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the respirations, not captured in other fields. (en)">
+            >
+            ["at9018"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+            ["ac9016"] = <
+                text = <"* Flow rate, volume (en) (synthesised)">
+                description = <"* Flow rate, volume (en) (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"*Regular? (en) (synthesised)">
+                description = <"*The pattern of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Profundidad (synthesised)">
+                description = <"*The depth of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Patrones respiratorios anormales (synthesised)">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en) (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"*Body position (en) (synthesised)">
+                description = <"*The body position of the individual during the observation. (en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Åndedrett">
+                description = <"De observerte egenskapene ved spontant åndedrett som hører til de vitale kroppsfunksjoner, og registreres rutinemessig.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time. (en)">
+            >
+            ["at0004"] = <
+                text = <"Frekvens">
+                description = <"*The rate of spontaneous breathing. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Regular? (en)">
+                description = <"*The pattern of spontaneous breathing. (en)">
+                comment = <"Brukes til å registrere en enkel vurdering av regelmessighet som en indikasjon på unormalt åndedrett - vurdert for eksempel av en pasient eller helsearbeider på et avsidesliggende sted.">
+            >
+            ["at0006"] = <
+                text = <"Regelmessig">
+                description = <"Regelmessig åndedrett.">
+            >
+            ["at0007"] = <
+                text = <"Uregelmessig">
+                description = <"Uregelmessig åndedrett">
+            >
+            ["at0016"] = <
+                text = <"Dybde">
+                description = <"*The depth of spontaneous breathing. (en)">
+            >
+            ["at0017"] = <
+                text = <"Normal">
+                description = <"Normal åndedrettsdybde.">
+            >
+            ["at0018"] = <
+                text = <"Overfladisk">
+                description = <"Overfladisk åndedrett.">
+            >
+            ["at0019"] = <
+                text = <"Dyp">
+                description = <"Dypt åndedrett.">
+            >
+            ["at0024"] = <
+                text = <"*Clinical description (en)">
+                description = <"*A narrative description about the spontaneous breathing of the individual. (en)">
+                comment = <"Eksempler: tegn på åndenød, bruk av støttemuskulatur, normal spontan, unormal, rask, langsom, uregelmessig apné, grunn, dyp, rolig, bråkete, sukkende, hulkende, gryntende, stønnende, boblende, knitrende, inspiratorisk/ekspiratorisk stridor, anstrengt, lett, gispende, åndenød, fiskemunn, paradoksalt åndedrett, periodisk under søvn, nesevingespill, subcostale/intercostale/jugulære inndragninger.">
+            >
+            ["at0025"] = <
+                text = <"Varierende">
+                description = <"Varierende åndedrettsdybde.">
+            >
+            ["at0037"] = <
+                text = <"Fysisk anstrengelse">
+                description = <"*Details about physical exertion being undertaken during the examination. (en)">
+                comment = <"*The individual's level of exertion at or just prior to the observation being made. (en)">
+            >
+            ["at0055"] = <
+                text = <"Oksygentilførsel">
+                description = <"*Details of the amount of oxygen being delivered to the individual at the time of observation. (en)">
+                comment = <"*Assumed values of 21% oxygen concentration, Fi02 of 0.21 and oxygen flow rate of 0 l/min or 0 ml/min. (en)">
+            >
+            ["at0056"] = <
+                text = <"Konfunderende faktorer">
+                description = <"*Description about any issues or incidental factors that may impact on interpretation of the physical findings. (en)">
+                comment = <"*For example: level of anxiety, pain, feeding in infants, tracheostomy. (en)">
+            >
+            ["at0058"] = <
+                text = <"Spontant åndedrett">
+                description = <"Identifikasjon av observert spontant åndedrett.">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR. (en)">
+            >
+            ["at0059"] = <
+                text = <"Tilstede">
+                description = <"Spontant åndedrett kan observeres.">
+            >
+            ["at0060"] = <
+                text = <"Fraværende">
+                description = <"Spontant åndedrett kan ikke observeres.">
+            >
+            ["at0061"] = <
+                text = <"Mønster">
+                description = <"Identifisert åndedrettsmønster.">
+                comment = <"Anvendelse av standard terminologi for pustemønster er ønskelig, der det er mulig. For eksempel: Kussmaul respirasjon [Dype thorakale åndedrag med eller uten et synlig gisping], Cheyne-Stokes respirasjon [Perioder med hyperventilering alternerende med perioder med apné], ataksisk respirasjon [Innånding av varierende tidevolum og priser], 
+
+Apneisk åndedrett [Dyp, gispende inspirasjon med en pause ved full inspirasjon etterfulgt av en kort, utilstrekkelig ekspirasjon.
+
+Cluster pusting [Klynger av uregelmessige åndedrag som veksler med perioder med apné. Betegnes også Biot pust],
+
+Apné [pusting har opphørt],
+
+Forlenget ekspirasjonsfase [Den respiratoriske ekspirasjonsfase er lengre enn normalt / vanlig.].
+
+">
+            >
+            ["at0009"] = <
+                text = <"*Clinical interpretation(en)">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en)">
+            >
+            ["at0012"] = <
+                text = <"*Kussmaul's respiration(en)">
+                description = <"*Deep chest breathing with or without a visible gasp.(en)">
+            >
+            ["at0030"] = <
+                text = <"*Cheyne-Stokes respiration(en)">
+                description = <"*Periods of hyperventilation alternating with periods of apnoea.(en)">
+            >
+            ["at0031"] = <
+                text = <"*Ataxic respiration(en)">
+                description = <"*Breathing of varying tidal volumes and rates.(en)">
+            >
+            ["at0033"] = <
+                text = <"*Apneustic respiration(en)">
+                description = <"*Deep, gasping inspiration with a pause at full inspiration followed by a brief, insufficient release of breath.(en)">
+            >
+            ["at0034"] = <
+                text = <"*Cluster breathing(en)">
+                description = <"*Clusters of irregular breaths that alternate with periods of apnoea. Also termed Biot's breathing.(en)">
+            >
+            ["at0044"] = <
+                text = <"*Apnoea(en)">
+                description = <"*Breathing has ceased.(en)">
+            >
+            ["at0054"] = <
+                text = <"*Prolonged expiratory phase(en)">
+                description = <"*The respiratory expiratory phase is longer than normal/usual. Associated with obstructive airways disease such as asthma.(en)">
+            >
+            ["at0062"] = <
+                text = <"*Presence (en)">
+                description = <"*Observation of spontaneous respiration. (en)">
+                comment = <"*This data element may be useful in extreme situations where a formal measurement of respiration rate is not possible. For example: a subject is unconscious and distant to the observer, such as trapped in a car or has fallen down a cliff. Presence of respiration can be implied if the 'Rate' >0 breaths/min. (en)">
+            >
+            ["at0063"] = <
+                text = <"*Present (en)">
+                description = <"*Respiratory movements are observed. (en)">
+            >
+            ["at0064"] = <
+                text = <"*Not detected (en)">
+                description = <"*Respiratory movements are not detected on observation. (en)">
+            >
+            ["at0065"] = <
+                text = <"*Body position (en)">
+                description = <"*The body position of the individual during the observation. (en)">
+            >
+            ["at0066"] = <
+                text = <"*Standing/upright (en)">
+                description = <"*The individual was standing, walking or running. (en)">
+            >
+            ["at0067"] = <
+                text = <"*Sitting (en)">
+                description = <"*The individual was sitting (for example, on a bed or chair). (en)">
+            >
+            ["at0068"] = <
+                text = <"*Reclining (en)">
+                description = <"*The individual was reclining at an approximate angle of 45 degrees, with the legs elevated to the level of the pelvis. (en)">
+            >
+            ["at0069"] = <
+                text = <"*Lying (en)">
+                description = <"*The individual was lying flat. (en)">
+            >
+            ["at0070"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the respirations, not captured in other fields. (en)">
+            >
+            ["at9018"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+            ["ac9016"] = <
+                text = <"* Flow rate, volume (en) (synthesised)">
+                description = <"* Flow rate, volume (en) (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"*Regular? (en) (synthesised)">
+                description = <"*The pattern of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Dybde (synthesised)">
+                description = <"*The depth of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"*Clinical interpretation(en) (synthesised)">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en) (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"*Body position (en) (synthesised)">
+                description = <"*The body position of the individual during the observation. (en) (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Respirações">
+                description = <"As características observadas da respiração espontânea, como seriam comumente registradas em uma verificação de \"sinais vitais\".">
+            >
+            ["at0002"] = <
+                text = <"Qualquer evento">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time. (en)">
+            >
+            ["at0004"] = <
+                text = <"Frequência">
+                description = <"*The rate of spontaneous breathing. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Regular? (en)">
+                description = <"*The pattern of spontaneous breathing. (en)">
+            >
+            ["at0006"] = <
+                text = <"Regular">
+                description = <"Respiração regular.">
+            >
+            ["at0007"] = <
+                text = <"Irregular">
+                description = <"Respiração irregular.">
+            >
+            ["at0009"] = <
+                text = <"Interpretação clínica">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en)">
+            >
+            ["at0012"] = <
+                text = <"Respiração de Kussmaul">
+                description = <"Respiração peitoral profunda com ou sem suspiro visível.">
+            >
+            ["at0016"] = <
+                text = <"Profundidade">
+                description = <"*The depth of spontaneous breathing. (en)">
+            >
+            ["at0017"] = <
+                text = <"Normal">
+                description = <"Profundidade respiratória normal.">
+            >
+            ["at0018"] = <
+                text = <"Superficial">
+                description = <"Profundidade respiratória superficial.">
+            >
+            ["at0019"] = <
+                text = <"Profunda">
+                description = <"Respiração profunda.">
+            >
+            ["at0024"] = <
+                text = <"*Clinical description (en)">
+                description = <"*A narrative description about the spontaneous breathing of the individual. (en)">
+            >
+            ["at0025"] = <
+                text = <"Variável">
+                description = <"Profundidade respiratória variável.">
+            >
+            ["at0030"] = <
+                text = <"Respiração de Cheyne-Stokes">
+                description = <"Períodos de hiperventilação alternados com períodos de apneia.">
+            >
+            ["at0031"] = <
+                text = <"Respiração atáxica">
+                description = <"Respiração de frequência e volume corrente variáveis.">
+            >
+            ["at0033"] = <
+                text = <"Respiração apnêustica">
+                description = <"Profunda, inspiração ofegante com uma pausa na inspiração total seguida de uma breve insuficiência na expiração.">
+            >
+            ["at0034"] = <
+                text = <"Respiração cluster">
+                description = <"Grupos de respirações irregulares que se alternam com períodos de apneia. Também chamado de respiração de Biot.">
+            >
+            ["at0037"] = <
+                text = <"Esforço">
+                description = <"*Details about physical exertion being undertaken during the examination. (en)">
+                comment = <"*The individual's level of exertion at or just prior to the observation being made. (en)">
+            >
+            ["at0044"] = <
+                text = <"Apneia">
+                description = <"Parada da respiração.">
+            >
+            ["at0054"] = <
+                text = <"Fase de expiração prolongada">
+                description = <"A fase da expiração é mais longa que o normal/usual. Associada com doenças obstrutivas das vias respiratórias tal como asma.">
+            >
+            ["at0055"] = <
+                text = <"*Inspired oxygen(en)">
+                description = <"*Details of the amount of oxygen being delivered to the individual at the time of observation. (en)">
+                comment = <"*Assumed values of 21% oxygen concentration, Fi02 of 0.21 and oxygen flow rate of 0 l/min or 0 ml/min. (en)">
+            >
+            ["at0056"] = <
+                text = <"Fatores de confusão">
+                description = <"*Description about any issues or incidental factors that may impact on interpretation of the physical findings. (en)">
+                comment = <"*For example: level of anxiety, pain, feeding in infants, tracheostomy. (en)">
+            >
+            ["at0058"] = <
+                text = <"Extensão">
+                description = <"Informação adicional necessária para capturar contextos locais ou para alinhamento a outros modelos de referência/formalismos.">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR. (en)">
+            >
+            ["at0059"] = <
+                text = <"Taquipneia">
+                description = <"Respiração anormalmente rápida.">
+            >
+            ["at0060"] = <
+                text = <"Bradipneia">
+                description = <"Respiração anormalmente lenta.">
+            >
+            ["at0061"] = <
+                text = <"Normal">
+                description = <"Padrões normais de respiração.">
+            >
+            ["at0062"] = <
+                text = <"*Presence (en)">
+                description = <"*Observation of spontaneous respiration. (en)">
+                comment = <"*This data element may be useful in extreme situations where a formal measurement of respiration rate is not possible. For example: a subject is unconscious and distant to the observer, such as trapped in a car or has fallen down a cliff. Presence of respiration can be implied if the 'Rate' >0 breaths/min. (en)">
+            >
+            ["at0063"] = <
+                text = <"*Present (en)">
+                description = <"*Respiratory movements are observed. (en)">
+            >
+            ["at0064"] = <
+                text = <"*Not detected (en)">
+                description = <"*Respiratory movements are not detected on observation. (en)">
+            >
+            ["at0065"] = <
+                text = <"*Body position (en)">
+                description = <"*The body position of the individual during the observation. (en)">
+            >
+            ["at0066"] = <
+                text = <"*Standing/upright (en)">
+                description = <"*The individual was standing, walking or running. (en)">
+            >
+            ["at0067"] = <
+                text = <"*Sitting (en)">
+                description = <"*The individual was sitting (for example, on a bed or chair). (en)">
+            >
+            ["at0068"] = <
+                text = <"*Reclining (en)">
+                description = <"*The individual was reclining at an approximate angle of 45 degrees, with the legs elevated to the level of the pelvis. (en)">
+            >
+            ["at0069"] = <
+                text = <"*Lying (en)">
+                description = <"*The individual was lying flat. (en)">
+            >
+            ["at0070"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the respirations, not captured in other fields. (en)">
+            >
+            ["at9018"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+            ["ac9016"] = <
+                text = <"* Flow rate, volume (en) (synthesised)">
+                description = <"* Flow rate, volume (en) (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"*Regular? (en) (synthesised)">
+                description = <"*The pattern of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Profundidade (synthesised)">
+                description = <"*The depth of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Interpretação clínica (synthesised)">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en) (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"*Body position (en) (synthesised)">
+                description = <"*The body position of the individual during the observation. (en) (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"التنفس">
+                description = <"الخصائص الملحوظة - المشاهدة- للتنفس التلقائي و الذي عادة ما يتم تسجيله كجزء من فحص العلامات الحياتية">
+            >
+            ["at0002"] = <
+                text = <"إحدى الوقائع">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time. (en)">
+            >
+            ["at0004"] = <
+                text = <"السرعة - المعدَّل">
+                description = <"*The rate of spontaneous breathing. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Regular? (en)">
+                description = <"*The pattern of spontaneous breathing. (en)">
+            >
+            ["at0006"] = <
+                text = <"منتظم">
+                description = <"تنفس منتظم">
+            >
+            ["at0007"] = <
+                text = <"غير منتظم">
+                description = <"تنفس غير منتظم">
+            >
+            ["at0009"] = <
+                text = <"النمط التنفسي غير الطبيعي">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en)">
+            >
+            ["at0012"] = <
+                text = <"تنفس كوسماول">
+                description = <"تنفس صدري عميق بوجود أو بعدم وجود لُهاث مرئي">
+            >
+            ["at0016"] = <
+                text = <"العمق">
+                description = <"*The depth of spontaneous breathing. (en)">
+            >
+            ["at0017"] = <
+                text = <"طبيعي">
+                description = <"عمق التنفس طبيعي">
+            >
+            ["at0018"] = <
+                text = <"ضحل">
+                description = <"عمق التنفس ضحل">
+            >
+            ["at0019"] = <
+                text = <"عميق">
+                description = <"التنفس عميق">
+            >
+            ["at0024"] = <
+                text = <"*Clinical description (en)">
+                description = <"*A narrative description about the spontaneous breathing of the individual. (en)">
+            >
+            ["at0025"] = <
+                text = <"متغير">
+                description = <"عمق التنفس متغيِّر">
+            >
+            ["at0030"] = <
+                text = <"تنفس شيين - ستوكس">
+                description = <"فترات من فرط التهوية متبادلة مع فترات من انقطاع النفس">
+            >
+            ["at0031"] = <
+                text = <"تنفس رَنَحي - فاقد للانتظام">
+                description = <"التنفس بسرعات (معدلات) و أحجام مَدِّية مختلفة">
+            >
+            ["at0033"] = <
+                text = <"تنفس بشهيق مستمر">
+                description = <"شهيق عميق مع اللُّهاث, مع توقف عند الشهيق الكلي يليه إطلاق للنفس بشكل مختصر و غير كافي">
+            >
+            ["at0034"] = <
+                text = <"*Cluster breathing(en)">
+                description = <"*Clusters of irregular breaths that alternate with periods of apnoea. Also termed Biot's breathing.(en)">
+            >
+            ["at0037"] = <
+                text = <"المجهود - عنقود">
+                description = <"*Details about physical exertion being undertaken during the examination. (en)">
+                comment = <"*The individual's level of exertion at or just prior to the observation being made. (en)">
+            >
+            ["at0044"] = <
+                text = <"*Apnoea(en)">
+                description = <"*Breathing has ceased.(en)">
+            >
+            ["at0054"] = <
+                text = <"*Prolonged expiratory phase(en)">
+                description = <"*The respiratory expiratory phase is longer than normal/usual. Associated with obstructive airways disease such as asthma.(en)">
+            >
+            ["at0055"] = <
+                text = <"الأكسجين المحيط - عنقود">
+                description = <"*Details of the amount of oxygen being delivered to the individual at the time of observation. (en)">
+                comment = <"*Assumed values of 21% oxygen concentration, Fi02 of 0.21 and oxygen flow rate of 0 l/min or 0 ml/min. (en)">
+            >
+            ["at0056"] = <
+                text = <"العوامل المُربِكة">
+                description = <"*Description about any issues or incidental factors that may impact on interpretation of the physical findings. (en)">
+                comment = <"*For example: level of anxiety, pain, feeding in infants, tracheostomy. (en)">
+            >
+            ["at0058"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR. (en)">
+            >
+            ["at0059"] = <
+                text = <"*Tachypnoea(en)">
+                description = <"*Abnormally rapid breathing.(en)">
+            >
+            ["at0060"] = <
+                text = <"*Bradypnoea(en)">
+                description = <"*Abnormally slow breathing.(en)">
+            >
+            ["at0061"] = <
+                text = <"*Normal(en)">
+                description = <"*Normal breathing pattern.(en)">
+            >
+            ["at0062"] = <
+                text = <"*Presence (en)">
+                description = <"*Observation of spontaneous respiration. (en)">
+                comment = <"*This data element may be useful in extreme situations where a formal measurement of respiration rate is not possible. For example: a subject is unconscious and distant to the observer, such as trapped in a car or has fallen down a cliff. Presence of respiration can be implied if the 'Rate' >0 breaths/min. (en)">
+            >
+            ["at0063"] = <
+                text = <"*Present (en)">
+                description = <"*Respiratory movements are observed. (en)">
+            >
+            ["at0064"] = <
+                text = <"*Not detected (en)">
+                description = <"*Respiratory movements are not detected on observation. (en)">
+            >
+            ["at0065"] = <
+                text = <"*Body position (en)">
+                description = <"*The body position of the individual during the observation. (en)">
+            >
+            ["at0066"] = <
+                text = <"*Standing/upright (en)">
+                description = <"*The individual was standing, walking or running. (en)">
+            >
+            ["at0067"] = <
+                text = <"*Sitting (en)">
+                description = <"*The individual was sitting (for example, on a bed or chair). (en)">
+            >
+            ["at0068"] = <
+                text = <"*Reclining (en)">
+                description = <"*The individual was reclining at an approximate angle of 45 degrees, with the legs elevated to the level of the pelvis. (en)">
+            >
+            ["at0069"] = <
+                text = <"*Lying (en)">
+                description = <"*The individual was lying flat. (en)">
+            >
+            ["at0070"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the respirations, not captured in other fields. (en)">
+            >
+            ["at9018"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+            ["ac9016"] = <
+                text = <"* Flow rate, volume (en) (synthesised)">
+                description = <"* Flow rate, volume (en) (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"*Regular? (en) (synthesised)">
+                description = <"*The pattern of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"العمق (synthesised)">
+                description = <"*The depth of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"النمط التنفسي غير الطبيعي (synthesised)">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en) (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"*Body position (en) (synthesised)">
+                description = <"*The body position of the individual during the observation. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Respirations">
+                description = <"The characteristics of spontaneous breathing by an individual.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Rate">
+                description = <"The rate of spontaneous breathing.">
+            >
+            ["at0005"] = <
+                text = <"Regular?">
+                description = <"The pattern of spontaneous breathing.">
+            >
+            ["at0006"] = <
+                text = <"Regular">
+                description = <"The breathing pattern is regular.">
+            >
+            ["at0007"] = <
+                text = <"Irregular">
+                description = <"The breathing pattern is not regular.">
+            >
+            ["at0009"] = <
+                text = <"Clinical interpretation">
+                description = <"Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations.">
+            >
+            ["at0012"] = <
+                text = <"Kussmaul's respiration">
+                description = <"Deep chest breathing with or without a visible gasp.">
+            >
+            ["at0016"] = <
+                text = <"Depth">
+                description = <"The depth of spontaneous breathing.">
+            >
+            ["at0017"] = <
+                text = <"Normal">
+                description = <"Normal depth of breathing.">
+            >
+            ["at0018"] = <
+                text = <"Shallow">
+                description = <"Shallow depth of breathing.">
+            >
+            ["at0019"] = <
+                text = <"Deep">
+                description = <"Deep breathing.">
+            >
+            ["at0024"] = <
+                text = <"Clinical description">
+                description = <"A narrative description about the spontaneous breathing of the individual.">
+            >
+            ["at0025"] = <
+                text = <"Variable">
+                description = <"Variable depth of breathing.">
+            >
+            ["at0030"] = <
+                text = <"Cheyne-Stokes respiration">
+                description = <"Periods of hyperventilation alternating with periods of apnoea.">
+            >
+            ["at0031"] = <
+                text = <"Ataxic respiration">
+                description = <"Breathing of varying tidal volumes and rates.">
+            >
+            ["at0033"] = <
+                text = <"Apneustic respiration">
+                description = <"Deep, gasping inspiration with a pause at full inspiration followed by a brief, insufficient release of breath.">
+            >
+            ["at0034"] = <
+                text = <"Cluster breathing">
+                description = <"Clusters of irregular breaths that alternate with periods of apnoea. Also termed Biot's breathing.">
+            >
+            ["at0037"] = <
+                text = <"Exertion">
+                description = <"Details about physical exertion being undertaken during the examination.">
+                comment = <"The individual's level of exertion at or just prior to the observation being made.">
+            >
+            ["at0044"] = <
+                text = <"Apnoea">
+                description = <"Breathing has ceased.">
+            >
+            ["at0054"] = <
+                text = <"Prolonged expiratory phase">
+                description = <"The respiratory expiratory phase is longer than normal/usual. Associated with obstructive airways disease such as asthma.">
+            >
+            ["at0055"] = <
+                text = <"Inspired oxygen">
+                description = <"Details of the amount of oxygen being delivered to the individual at the time of observation.">
+                comment = <"Assumed values of 21% oxygen concentration, Fi02 of 0.21 and oxygen flow rate of 0 l/min or 0 ml/min.">
+            >
+            ["at0056"] = <
+                text = <"Confounding factors">
+                description = <"Identification of any issues or incidental factors that may impact on interpretation of the physical findings.">
+                comment = <"For example: level of anxiety, pain, feeding in infants, tracheostomy.">
+            >
+            ["at0058"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR.">
+            >
+            ["at0059"] = <
+                text = <"Tachypnoea">
+                description = <"Abnormally rapid breathing.">
+            >
+            ["at0060"] = <
+                text = <"Bradypnoea">
+                description = <"Abnormally slow breathing.">
+            >
+            ["at0061"] = <
+                text = <"Normal">
+                description = <"Normal breathing pattern.">
+            >
+            ["at0062"] = <
+                text = <"Presence">
+                description = <"Observation of spontaneous respiration.">
+                comment = <"This data element may be useful in extreme situations where a formal measurement of respiration rate is not possible. For example: a subject is unconscious and distant to the observer, such as trapped in a car or has fallen down a cliff. Presence of respiration can be implied if the 'Rate' >0 breaths/min.">
+            >
+            ["at0063"] = <
+                text = <"Present">
+                description = <"Respiratory movements are observed.">
+            >
+            ["at0064"] = <
+                text = <"Not detected">
+                description = <"Respiratory movements are not detected on observation.">
+            >
+            ["at0065"] = <
+                text = <"Body position">
+                description = <"The body position of the individual during the observation.">
+            >
+            ["at0066"] = <
+                text = <"Standing/upright">
+                description = <"The individual was standing, walking or running.">
+            >
+            ["at0067"] = <
+                text = <"Sitting">
+                description = <"The individual was sitting (for example, on a bed or chair).">
+            >
+            ["at0068"] = <
+                text = <"Reclining">
+                description = <"The individual was reclining at an approximate angle of 45 degrees, with the legs elevated to the level of the pelvis.">
+            >
+            ["at0069"] = <
+                text = <"Lying">
+                description = <"The individual was lying flat.">
+            >
+            ["at0070"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the respirations, not captured in other fields.">
+            >
+            ["at9018"] = <
+                text = <"Flow rate, volume">
+                description = <"Flow rate, volume">
+            >
+            ["ac9016"] = <
+                text = <"Flow rate, volume (synthesised)">
+                description = <"Flow rate, volume (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Regular? (synthesised)">
+                description = <"The pattern of spontaneous breathing. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Depth (synthesised)">
+                description = <"The depth of spontaneous breathing. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Clinical interpretation (synthesised)">
+                description = <"Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Body position (synthesised)">
+                description = <"The body position of the individual during the observation. (synthesised)">
+            >
+        >
+        ["fa"] = <
+            ["at0000"] = <
+                text = <"تنفس">
+                description = <" ویژگی های قابل مشاهده مربوط به تنفس خود بخود که معمولا می توان به عنوان بخشی از آزمایشات \"علایم حیاتی\" ثبت نمود.">
+            >
+            ["at0002"] = <
+                text = <"هر رویداد">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time. (en)">
+            >
+            ["at0004"] = <
+                text = <"میزان">
+                description = <"*The rate of spontaneous breathing. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Regular? (en)">
+                description = <"*The pattern of spontaneous breathing. (en)">
+            >
+            ["at0006"] = <
+                text = <"منظم">
+                description = <"تنفس منظم.">
+            >
+            ["at0007"] = <
+                text = <"نامنظم">
+                description = <"تنفس نامنظم.">
+            >
+            ["at0009"] = <
+                text = <"الگوی غیر طبیعی تنفس">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en)">
+            >
+            ["at0012"] = <
+                text = <"تنفس کاسمال">
+                description = <"تنفس عمیق قفسه سینه ای با یا بدون نفسهای بریده بریده. ">
+            >
+            ["at0016"] = <
+                text = <"عمق">
+                description = <"*The depth of spontaneous breathing. (en)">
+            >
+            ["at0017"] = <
+                text = <"طبیعی">
+                description = <"عمق تنفس طبیعی.">
+            >
+            ["at0018"] = <
+                text = <"سطحی">
+                description = <"عمق تنفس سطحی.">
+            >
+            ["at0019"] = <
+                text = <"عمیق">
+                description = <"تنفس عمیق.">
+            >
+            ["at0024"] = <
+                text = <"*Clinical description (en)">
+                description = <"*A narrative description about the spontaneous breathing of the individual. (en)">
+            >
+            ["at0025"] = <
+                text = <"متغیر">
+                description = <"عمق تنفس طبیعی.">
+            >
+            ["at0030"] = <
+                text = <"تنفس چیین استوکس">
+                description = <"دوره های تخلیه عمیق نفس که با دوره های تنگی تنفس تغییر می کند. ">
+            >
+            ["at0031"] = <
+                text = <"تنفس بدون قاعده">
+                description = <"تنفس متغیر از نظر حجم و میزان.">
+            >
+            ["at0033"] = <
+                text = <"تنفس اپناستیک">
+                description = <"تنفس بریده بریده و  عمیق با توقف در تنفس کامل که با تنفس ناکافی و کوتاه دنبال می شود. ">
+            >
+            ["at0034"] = <
+                text = <"تنفس خوشه ای">
+                description = <"خوشه هایی از تنفس نامنظم که با دوره هایی از تنگی تنفس تغییر می کند. همچنین به عنوان تنفس بیوت شناخته می شود.">
+            >
+            ["at0037"] = <
+                text = <"تقلا">
+                description = <"*Details about physical exertion being undertaken during the examination. (en)">
+                comment = <"*The individual's level of exertion at or just prior to the observation being made. (en)">
+            >
+            ["at0044"] = <
+                text = <"تنگی تنفس">
+                description = <"تنفس متوقف شده است.">
+            >
+            ["at0054"] = <
+                text = <"مرحله بازدم طولانی مدت">
+                description = <"مرحله بازدم طولانی مدت که اط حالت طبیعی و معمول .که با بیماری انسداد راههای تنفسی نظیر آسم همراه است. ">
+            >
+            ["at0055"] = <
+                text = <"اکسیژن محیطی">
+                description = <"*Details of the amount of oxygen being delivered to the individual at the time of observation. (en)">
+                comment = <"*Assumed values of 21% oxygen concentration, Fi02 of 0.21 and oxygen flow rate of 0 l/min or 0 ml/min. (en)">
+            >
+            ["at0056"] = <
+                text = <"فاکتورهای جانبی">
+                description = <"*Description about any issues or incidental factors that may impact on interpretation of the physical findings. (en)">
+                comment = <"*For example: level of anxiety, pain, feeding in infants, tracheostomy. (en)">
+            >
+            ["at0058"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR. (en)">
+            >
+            ["at0059"] = <
+                text = <"*Tachypnoea(en)">
+                description = <"*Abnormally rapid breathing.(en)">
+            >
+            ["at0060"] = <
+                text = <"*Bradypnoea(en)">
+                description = <"*Abnormally slow breathing.(en)">
+            >
+            ["at0061"] = <
+                text = <"*Normal(en)">
+                description = <"*Normal breathing pattern.(en)">
+            >
+            ["at0062"] = <
+                text = <"*Presence (en)">
+                description = <"*Observation of spontaneous respiration. (en)">
+                comment = <"*This data element may be useful in extreme situations where a formal measurement of respiration rate is not possible. For example: a subject is unconscious and distant to the observer, such as trapped in a car or has fallen down a cliff. Presence of respiration can be implied if the 'Rate' >0 breaths/min. (en)">
+            >
+            ["at0063"] = <
+                text = <"*Present (en)">
+                description = <"*Respiratory movements are observed. (en)">
+            >
+            ["at0064"] = <
+                text = <"*Not detected (en)">
+                description = <"*Respiratory movements are not detected on observation. (en)">
+            >
+            ["at0065"] = <
+                text = <"*Body position (en)">
+                description = <"*The body position of the individual during the observation. (en)">
+            >
+            ["at0066"] = <
+                text = <"*Standing/upright (en)">
+                description = <"*The individual was standing, walking or running. (en)">
+            >
+            ["at0067"] = <
+                text = <"*Sitting (en)">
+                description = <"*The individual was sitting (for example, on a bed or chair). (en)">
+            >
+            ["at0068"] = <
+                text = <"*Reclining (en)">
+                description = <"*The individual was reclining at an approximate angle of 45 degrees, with the legs elevated to the level of the pelvis. (en)">
+            >
+            ["at0069"] = <
+                text = <"*Lying (en)">
+                description = <"*The individual was lying flat. (en)">
+            >
+            ["at0070"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the respirations, not captured in other fields. (en)">
+            >
+            ["at9018"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+            ["ac9016"] = <
+                text = <"* Flow rate, volume (en) (synthesised)">
+                description = <"* Flow rate, volume (en) (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"*Regular? (en) (synthesised)">
+                description = <"*The pattern of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"عمق (synthesised)">
+                description = <"*The depth of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"الگوی غیر طبیعی تنفس (synthesised)">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en) (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"*Body position (en) (synthesised)">
+                description = <"*The body position of the individual during the observation. (en) (synthesised)">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Ademhaling">
+                description = <"Observaties van de spontane ademhaling, zoals deze meestal geregistreerd worden als onderdeel van de observatie van de vitale functies">
+            >
+            ["at0002"] = <
+                text = <"any event">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time. (en)">
+            >
+            ["at0004"] = <
+                text = <"Frequentie">
+                description = <"*The rate of spontaneous breathing. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Regular? (en)">
+                description = <"*The pattern of spontaneous breathing. (en)">
+            >
+            ["at0006"] = <
+                text = <"Regelmatig">
+                description = <"Regelmatige ademhaling
+">
+            >
+            ["at0007"] = <
+                text = <"Onregelmatig">
+                description = <"Onregelmatige ademhaling">
+            >
+            ["at0009"] = <
+                text = <"Afwijkend ademhalingspatroon">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en)">
+            >
+            ["at0012"] = <
+                text = <"Ademhaling volgens Kussmaul">
+                description = <"Zeer diepe regelmatige ademhaling ">
+            >
+            ["at0016"] = <
+                text = <"Diepte">
+                description = <"*The depth of spontaneous breathing. (en)">
+            >
+            ["at0017"] = <
+                text = <"Normaal">
+                description = <"Normale diepte van de in- en uitademing">
+            >
+            ["at0018"] = <
+                text = <"Oppervlakkig">
+                description = <"Oppervlakkige ademhaling">
+            >
+            ["at0019"] = <
+                text = <"Diep">
+                description = <"Diepe ademhaling">
+            >
+            ["at0024"] = <
+                text = <"*Clinical description (en)">
+                description = <"*A narrative description about the spontaneous breathing of the individual. (en)">
+            >
+            ["at0025"] = <
+                text = <"Variabel">
+                description = <"Variabele diepte van de ademteugen">
+            >
+            ["at0030"] = <
+                text = <"Ademhaling volgens Cheyne-Stokes">
+                description = <"Periodes van hyperventilatie afwisselend met periodes met apneu">
+            >
+            ["at0031"] = <
+                text = <"Atactische ademhaling">
+                description = <"Ademhaling met variërende volumes per teug en variërende frequentie">
+            >
+            ["at0033"] = <
+                text = <"Apneustische ademhaling">
+                description = <"Diepe, hijgende inspiratie met een pauze bij volledige inspiratie, gevolgd door een korte, onvoldoende uitademing.">
+            >
+            ["at0034"] = <
+                text = <"Cluster ademhaling">
+                description = <"Clusters van onregelmatige ademhaling die worden afgewisseld met perioden van apneu. Ook genoemd ademhaling van Biot.">
+            >
+            ["at0037"] = <
+                text = <"Inspanning">
+                description = <"*Details about physical exertion being undertaken during the examination. (en)">
+                comment = <"*The individual's level of exertion at or just prior to the observation being made. (en)">
+            >
+            ["at0044"] = <
+                text = <"Apneu">
+                description = <"Ademhaling is gestopt.">
+            >
+            ["at0054"] = <
+                text = <"Verlengde expiratoire fase">
+                description = <"De respiratoire expiratoire fase is langer dan normaal / gebruikelijk. Wordt geassocieerd met obstructieve ziektes van de  luchtwegen, zoals astma.">
+            >
+            ["at0055"] = <
+                text = <"Toegevoerde zuurstof">
+                description = <"*Details of the amount of oxygen being delivered to the individual at the time of observation. (en)">
+                comment = <"*Assumed values of 21% oxygen concentration, Fi02 of 0.21 and oxygen flow rate of 0 l/min or 0 ml/min. (en)">
+            >
+            ["at0056"] = <
+                text = <"Beïnvloedende factoren">
+                description = <"*Description about any issues or incidental factors that may impact on interpretation of the physical findings. (en)">
+                comment = <"*For example: level of anxiety, pain, feeding in infants, tracheostomy. (en)">
+            >
+            ["at0058"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR. (en)">
+            >
+            ["at0059"] = <
+                text = <"*Tachypnoea(en)">
+                description = <"*Abnormally rapid breathing.(en)">
+            >
+            ["at0060"] = <
+                text = <"*Bradypnoea(en)">
+                description = <"*Abnormally slow breathing.(en)">
+            >
+            ["at0061"] = <
+                text = <"*Normal(en)">
+                description = <"*Normal breathing pattern.(en)">
+            >
+            ["at0062"] = <
+                text = <"*Presence (en)">
+                description = <"*Observation of spontaneous respiration. (en)">
+                comment = <"*This data element may be useful in extreme situations where a formal measurement of respiration rate is not possible. For example: a subject is unconscious and distant to the observer, such as trapped in a car or has fallen down a cliff. Presence of respiration can be implied if the 'Rate' >0 breaths/min. (en)">
+            >
+            ["at0063"] = <
+                text = <"*Present (en)">
+                description = <"*Respiratory movements are observed. (en)">
+            >
+            ["at0064"] = <
+                text = <"*Not detected (en)">
+                description = <"*Respiratory movements are not detected on observation. (en)">
+            >
+            ["at0065"] = <
+                text = <"*Body position (en)">
+                description = <"*The body position of the individual during the observation. (en)">
+            >
+            ["at0066"] = <
+                text = <"*Standing/upright (en)">
+                description = <"*The individual was standing, walking or running. (en)">
+            >
+            ["at0067"] = <
+                text = <"*Sitting (en)">
+                description = <"*The individual was sitting (for example, on a bed or chair). (en)">
+            >
+            ["at0068"] = <
+                text = <"*Reclining (en)">
+                description = <"*The individual was reclining at an approximate angle of 45 degrees, with the legs elevated to the level of the pelvis. (en)">
+            >
+            ["at0069"] = <
+                text = <"*Lying (en)">
+                description = <"*The individual was lying flat. (en)">
+            >
+            ["at0070"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the respirations, not captured in other fields. (en)">
+            >
+            ["at9018"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+            ["ac9016"] = <
+                text = <"* Flow rate, volume (en) (synthesised)">
+                description = <"* Flow rate, volume (en) (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"*Regular? (en) (synthesised)">
+                description = <"*The pattern of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Diepte (synthesised)">
+                description = <"*The depth of spontaneous breathing. (en) (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Afwijkend ademhalingspatroon (synthesised)">
+                description = <"*Respiratory pattern as a single word, phrase or brief description which represents the clinical meaning and significance of the observations. (en) (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"*Body position (en) (synthesised)">
+                description = <"*The body position of the individual during the observation. (en) (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9018"] = <http://openehr.org/id/126>
+        >
+    >
+    value_sets = <
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0017", "at0018", "at0019", "at0025">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0006", "at0007">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0066", "at0067", "at0068", "at0069">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0063", "at0064">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0012", "at0030", "at0031", "at0033", "at0034", "at0044", "at0054", "at0059", "at0060", "at0061">
+        >
+    >

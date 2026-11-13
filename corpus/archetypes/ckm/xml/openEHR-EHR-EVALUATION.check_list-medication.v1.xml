@@ -1,0 +1,432 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2007-04-02</original_author>
+    <original_author id="name">Sam Heard</original_author>
+    <original_author id="organisation">Ocean Informatics</original_author>
+    <original_author id="email">sam.heard@oceaninformatics.com</original_author>
+    <lifecycle_state>Rejected</lifecycle_state>
+    <other_details id="references" />
+    <other_details id="MD5-CAM-1.0.1">2F6726A75556B6249EBE41FD5CAEBCA2</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Eine Kontrollliste zur Dokumentation strukturierter Fragen und Antworten zur Medikation.</purpose>
+      <keywords>Kontrolle</keywords>
+      <keywords>Liste</keywords>
+      <keywords>Medikation</keywords>
+      <use>Zur Dokumentation von gesammelten Informationen zur Medikation</use>
+      <misuse>Nicht zur Dokumentation von Verordnungen oder Verabreichungen</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>A checklist for recording structured questions and answers about medication.</purpose>
+      <keywords>check</keywords>
+      <keywords>list</keywords>
+      <keywords>medication</keywords>
+      <use>Use for recording information gathering about medication.</use>
+      <misuse>Not for recording medication orders or administration records.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ar-sy</code_string>
+      </language>
+      <purpose>قائمة مراجعة لتسجيل الأسئلة المركبة و الإجابات المتعلقة بالأدوية</purpose>
+      <keywords>التحقق/ المراجعة</keywords>
+      <keywords>قائمة</keywords>
+      <keywords>الأدوية</keywords>
+      <use>يستخدم لتسجيل عملية تجميع المعلومات حول الأدوية</use>
+      <misuse>لا يستخدم لتسجيل الأمر بالأدوية أو سجلات تناول الدواء</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Jasmin Buck, Sebastian Garde</author>
+    <author id="email">University of Heidelberg, Central Queensland University</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ar-sy</code_string>
+    </language>
+    <author id="name">Mona Saleh</author>
+  </translations>
+  <archetype_id>
+    <value>openEHR-EHR-EVALUATION.check_list-medication.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000.1</concept>
+  <parent_archetype_id>
+    <value>openEHR-EHR-EVALUATION.check_list.v1</value>
+  </parent_archetype_id>
+  <definition>
+    <rm_type_name>EVALUATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000.1</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </occurrences>
+            <node_id>at0004</node_id>
+            <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+              <rm_attribute_name>items</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>CLUSTER</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>1</lower>
+                </occurrences>
+                <node_id>at0002</node_id>
+                <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                  <rm_attribute_name>items</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0003.1</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0005</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <cardinality>
+                    <is_ordered>false</is_ordered>
+                    <is_unique>false</is_unique>
+                    <interval>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>2</upper>
+                    </interval>
+                  </cardinality>
+                </attributes>
+              </children>
+              <cardinality>
+                <is_ordered>false</is_ordered>
+                <is_unique>false</is_unique>
+                <interval>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>1</lower>
+                </interval>
+              </cardinality>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0006</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">eine gesundheitsorientierte Kontrollliste</items>
+        <items id="description">Ein allgemeiner Archetyp zur Dokumentation von Fragen und Antworten, erlaubt strukturierte Aufzeichnungen. Tatsächliche Befunde werden in anderen Strukturen dokumentiert.</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">Eine Kontrollliste für Medikationen</items>
+        <items id="description">Ein allgemeiner Archetyp zur Dokumentation von Fragen und Antworten zur Medikation</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Baum</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Frage</items>
+        <items id="description">Der Name der Gruppe ist die Frage</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Answer(en)</items>
+        <items id="description">*The answer(s) to the question.(en)</items>
+      </items>
+      <items code="at0003.1">
+        <items id="text">Medikation</items>
+        <items id="description">Die Medikation, die die Antwort auf die Frage ist</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Fragegruppe</items>
+        <items id="description">Eine Gruppierung von Fragen und Antworten</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Eine Anmerkung zur Antwort</items>
+        <items id="description">Eine Anmerkung zur Antwort</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Zusammenfassung</items>
+        <items id="description">Zusammenfassung von Fragen</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">A health oriented check list</items>
+        <items id="description">A generic archetype for recording questions and answers to allow structured recording. Actual findings are recorded in other structures.</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">A check list for medications</items>
+        <items id="description">A generic archetype for recording questions and answers about medication.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Question</items>
+        <items id="description">The name of the cluster is the question.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Answer</items>
+        <items id="description">The answer(s) to the question.</items>
+      </items>
+      <items code="at0003.1">
+        <items id="text">Medication</items>
+        <items id="description">The medications that are the answer(s) to the question.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Question group</items>
+        <items id="description">A grouping for questions and answers.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">A comment on the answer</items>
+        <items id="description">A comment on the answer.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Summary</items>
+        <items id="description">Summary of questions.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="ar-sy">
+      <items code="at0000">
+        <items id="text">*A health oriented check list(en)</items>
+        <items id="description">*A generic archetype for recording questions and answers to allow structured recording. Actual findings are recorded in other structures(en)</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">قائمة مراجعة للأدوية</items>
+        <items id="description">نموذج جنيس - غير محدود الملكية - لتسجيل الأسئلة و الإجابات حول الدواء.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*Tree(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">السؤال</items>
+        <items id="description">اسم العنقود هو السؤال</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Answer(en)</items>
+        <items id="description">*The answer(s) to the question.(en)</items>
+      </items>
+      <items code="at0003.1">
+        <items id="text">الدواء</items>
+        <items id="description">الأدوية التي هي إجابة للسؤال المطروح</items>
+      </items>
+      <items code="at0004">
+        <items id="text">مجموعة الأسئلة</items>
+        <items id="description">تجميع للأسئلة و الإجابات</items>
+      </items>
+      <items code="at0005">
+        <items id="text">تعليق حول الإجابة</items>
+        <items id="description">تعليق حول الإجابة</items>
+      </items>
+      <items code="at0006">
+        <items id="text">تلخيص</items>
+        <items id="description">تلخيص للأسئلة</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

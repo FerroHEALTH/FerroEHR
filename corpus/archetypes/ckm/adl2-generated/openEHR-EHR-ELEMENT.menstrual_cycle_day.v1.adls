@@ -1,0 +1,51 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f658fc59-ccb7-4f4f-8c1d-1cc30c2f59bb; build_uid=51101a7a-ec36-4c5e-a478-aef040e32f99)
+    openEHR-EHR-ELEMENT.menstrual_cycle_day.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"19/07/2008">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"038BEA51C47F56F0118AA7BE658C7BD2">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the number of day's since the Last Normal Menstrual Period">
+            keywords = <"menstrual", "cycle", "menstruation", "day", "woman", "female">
+            use = <"To reuse within multiple archetypes - for example, the cluster recording the details about menstrual cycles, plus use in the temperature observation">
+            misuse = <"">
+            copyright = <"copyright (c) 2009 openEHR Foundation">
+        >
+    >
+
+definition
+    ELEMENT[at0000] matches {    -- Current Day of Menstrual cycle
+        value matches {
+            DV_COUNT[at9000] matches {
+                magnitude matches {|>=1|}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Current Day of Menstrual cycle">
+                description = <"Number of days since onset of last normal menstrual period">
+            >
+        >
+    >

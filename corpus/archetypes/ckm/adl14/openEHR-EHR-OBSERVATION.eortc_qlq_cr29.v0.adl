@@ -1,0 +1,903 @@
+﻿archetype (adl_version=1.4; uid=ca208f3f-e5ab-48ef-8da6-ce8ba282a789)
+	openEHR-EHR-OBSERVATION.eortc_qlq_cr29.v0
+
+concept
+	[at0000]	-- EORTC QLQ-CR29
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["fr"] = <
+			language = <[ISO_639-1::fr]>
+			author = <
+				["name"] = <"Bassem Khouzam">
+				["organisation"] = <"Medtronic">
+				["email"] = <"bassem.khouzam@medtronic.com">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Vanessa Pereira">
+		["organisation"] = <"Pathfinder - Better by Marand">
+		["email"] = <"vanessa.pereira@better.care">
+		["date"] = <"2020-03-30">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"Evaluating quality of life in patients with colorectal cancer. ">
+			use = <"Use to record the results of the quality of life of colorectal cancer patients (QLQ-CR29) using the European Organization for the Research and Treatment of Cancer questionnaires (EORTC). It should always be complemented by the QLQ-C30.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners.
+Copyright statement: © Copyright 1995 EORTC Quality of Life Group. All rights reserved. Version 3.0
+Terms and conditions for use: https://qol.eortc.org/terms-conditions/.">
+			keywords = <"screening, quality of life, cancer, depression, mood, assessment, mental health, QOL, QLQ, EORTC, QLQ-CR29, CR29", ...>
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+		["fr"] = <
+			language = <[ISO_639-1::fr]>
+			purpose = <"">
+			use = <"">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Danielle Santos Alves - Federal University of Pernambuco / Pathfinder - Better by Marand">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"Aaronson NK, Ahmedzai S, Bergman B, Bullinger M, Cull A, Duez NJ, Filiberti A,Flechtner H, Fleishman SB, de Haes JCJM, Kaasa S, Klee MC, Osoba D, Razavi D,Rofe PB, Schraub S, Sneeuw KCA, Sullivan M, Takeda F. The European Organisation for Research and Treatment of Cancer QLQ-C30: A quality-of-life instrument for use in international clinical trials in oncology.Journal of the National Cancer Institute1993;85:365-376.
+
+Whistance RN, et al. Clinical and psychometric validation of the EORTC QLQ-CR29 questionnaire module to assess health-related quality of life in patients with colorectal cancer. European journal of cancer. 2009 Nov;45(17):3017-26.">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"720469181ca9813b654e61e11bed21a6">
+		["build_uid"] = <"4300f269-c3b4-4ced-ba93-a8d5f4caa4d2">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	OBSERVATION[at0000] matches {    -- EORTC QLQ-CR29
+		data matches {
+			HISTORY[at0001] matches {    -- History
+				events cardinality matches {0..*; unordered} matches {
+					POINT_EVENT[at0002] occurrences matches {0..*} matches {    -- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {    -- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0004] occurrences matches {0..1} matches {    -- During the past week had urinated frequently during the day
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0005] occurrences matches {0..1} matches {    -- During the past week had urinated frequently during the night
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0006] occurrences matches {0..1} matches {    -- During the past week had any unintentional release (leakage) of urine
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0007] occurrences matches {0..1} matches {    -- During the past week had pain when you urinated
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0008] occurrences matches {0..1} matches {    -- During the past week had abdominal pain
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0009] occurrences matches {0..1} matches {    -- During the past week had pain in your buttocks/anal area/rectum
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0010] occurrences matches {0..1} matches {    -- During the past week had a bloated feeling in abdomen
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0011] occurrences matches {0..1} matches {    -- During the past week had blood in your stools
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0012] occurrences matches {0..1} matches {    -- During the past week had mucus in your stools
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0013] occurrences matches {0..1} matches {    -- During the past week had dry mouth
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0014] occurrences matches {0..1} matches {    -- During the past week had lost hair as a result of treatment
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0015] occurrences matches {0..1} matches {    -- During the past week had problems with sense of taste
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0016] occurrences matches {0..1} matches {    -- During the past week were worried about health in the future
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0017] occurrences matches {0..1} matches {    -- During the past week were worried about weight
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0018] occurrences matches {0..1} matches {    -- During the past week felt physically less attractive as a result of disease or treatment
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0019] occurrences matches {0..1} matches {    -- During the past week felt less feminine/masculine as a result of disease or treatment
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0020] occurrences matches {0..1} matches {    -- During the past week had been dissatisfied with your body
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0021] occurrences matches {0..1} matches {    -- Do you have a stoma bag (colostomy/ileostomy)?
+										value matches {
+											DV_BOOLEAN matches {*}
+										}
+									}
+									ELEMENT[at0022] occurrences matches {0..1} matches {    -- During the past week had unintentional release of gas/flatulence from your stoma bag
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0023] occurrences matches {0..1} matches {    -- During the past week had leakage of stools from your stoma bag
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0166] occurrences matches {0..1} matches {    -- During the past week had sore skin around your stoma
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0024] occurrences matches {0..1} matches {    -- During the past week did frequent bag changes occur during the day
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0025] occurrences matches {0..1} matches {    -- During the past week did frequent bag changes occur during the night
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0026] occurrences matches {0..1} matches {    -- During the past week felt embarrassed because of your stoma
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0027] occurrences matches {0..1} matches {    -- During the past week had problems caring for your stoma
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0028] occurrences matches {0..1} matches {    -- During the past week had unintentional release of gas/flatulence from your back passage
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0029] occurrences matches {0..1} matches {    -- During the past week had leakage of stools from your back passage
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0030] occurrences matches {0..1} matches {    -- During the past week had sore skin around your anal area
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0031] occurrences matches {0..1} matches {    -- During the past week had frequent bowel movements occur during the day
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0032] occurrences matches {0..1} matches {    -- During the past week had frequent bowel movements occur during the night
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0033] occurrences matches {0..1} matches {    -- During the past week felt embarrassed because of your bowel movement
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0034] occurrences matches {0..1} matches {    -- During the past 4 weeks to what extent were you interested in sex?
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0035] occurrences matches {0..1} matches {    -- During the past 4 weeks had difficulty getting or maintaining an erection
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0036] occurrences matches {0..1} matches {    -- During the past 4 weeks had pain or discomfort during intercourse
+										value matches {
+											1|[local::at0038],
+											2|[local::at0039],
+											3|[local::at0040],
+											4|[local::at0041]
+										}
+									}
+									ELEMENT[at0167] occurrences matches {0..1} matches {    -- Total score
+										value matches {
+											DV_COUNT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0037] matches {    -- Item tree
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0168] occurrences matches {0..1} matches {    -- Scoring method
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0169,    -- Raw score
+									at0170]    -- Linear transformation
+								}
+							}
+						}
+					}
+					allow_archetype CLUSTER[at0171] occurrences matches {0..*} matches {    -- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"EORTC QLQ-CR29">
+					description = <"33 item assessment for evaluating quality of life in patients with colorectal cancer varying in disease stage and treatment modality (i.e. radiotherapy or chemo-radiation, ultra-low anterior resection, minimal access surgery and new chemotherapy regimens).">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any point in time event">
+					description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"During the past week had urinated frequently during the day">
+					description = <"During the past week: Did you urinate frequently during the day?">
+					Scale = <"UF">
+					Question_number = <"31">
+				>
+				["at0005"] = <
+					text = <"During the past week had urinated frequently during the night">
+					description = <"During the past week: Did you urinate frequently during the night?">
+					Scale = <"UF">
+					Question_number = <"32">
+				>
+				["at0006"] = <
+					text = <"During the past week had any unintentional release (leakage) of urine">
+					description = <"During the past week: Have you had any unintentional release (leakage) of urine?">
+					Scale = <"UI">
+					Question_number = <"33">
+				>
+				["at0007"] = <
+					text = <"During the past week had pain when you urinated">
+					description = <"During the past week: Did you have pain when you urinated?">
+					Scale = <"DY2">
+					Question_number = <"34">
+				>
+				["at0008"] = <
+					text = <"During the past week had abdominal pain">
+					description = <"During the past week: Did you have abdominal pain?">
+					Scale = <"AP2">
+					Question_number = <"35">
+				>
+				["at0009"] = <
+					text = <"During the past week had pain in your buttocks/anal area/rectum">
+					description = <"During the past week: Did you have pain in your buttocks/anal area/rectum?">
+					Scale = <"BP">
+					Question_number = <"36">
+				>
+				["at0010"] = <
+					text = <"During the past week had a bloated feeling in abdomen">
+					description = <"During the past week: Did you have a bloated feeling in your abdomen?">
+					Scale = <"BF">
+					Question_number = <"37">
+				>
+				["at0011"] = <
+					text = <"During the past week had blood in your stools">
+					description = <"During the past week: Have you had blood in your stools?">
+					Scale = <"BMS">
+					Question_number = <"38">
+				>
+				["at0012"] = <
+					text = <"During the past week had mucus in your stools">
+					description = <"During the past week: Have you had mucus in your stools?">
+					Scale = <"BMS">
+					Question_number = <"39">
+				>
+				["at0013"] = <
+					text = <"During the past week had dry mouth">
+					description = <"During the past week: Did you have a dry mouth?">
+					Scale = <"DM">
+					Question_number = <"40">
+				>
+				["at0014"] = <
+					text = <"During the past week had lost hair as a result of treatment">
+					description = <"During the past week: Have you lost hair as a result of your treatment?">
+					Scale = <"HL">
+					Question_number = <"41">
+				>
+				["at0015"] = <
+					text = <"During the past week had problems with sense of taste">
+					description = <"During the past week: Have you had problems with your sense of taste?">
+					Scale = <"TA">
+					Question_number = <"42">
+				>
+				["at0016"] = <
+					text = <"During the past week were worried about health in the future">
+					description = <"During the past week: Were you worried about your health in the future?
+">
+					Scale = <"ANX">
+					Question_number = <"43">
+				>
+				["at0017"] = <
+					text = <"During the past week were worried about weight">
+					description = <"During the past week: Have you worried about your weight?">
+					Scale = <"WEI">
+					Question_number = <"44">
+				>
+				["at0018"] = <
+					text = <"During the past week felt physically less attractive as a result of disease or treatment">
+					description = <"During the past week: Have you felt physically less attractive as a result of your disease or treatment?
+">
+					Scale = <"BI">
+					Question_number = <"45">
+				>
+				["at0019"] = <
+					text = <"During the past week felt less feminine/masculine as a result of disease or treatment">
+					description = <"During the past week: Have you been feeling less feminine/masculine as a result of your disease or treatment?">
+					Scale = <"BI">
+					Question_number = <"46">
+				>
+				["at0020"] = <
+					text = <"During the past week had been dissatisfied with your body">
+					description = <"During the past week: Have you been dissatisfied with your body?">
+					Scale = <"BI">
+					Question_number = <"47">
+				>
+				["at0021"] = <
+					text = <"Do you have a stoma bag (colostomy/ileostomy)?">
+					description = <"Original question: 
+Do you have a stoma bag (colostomy/ileostomy)?">
+					Question_number = <"48">
+				>
+				["at0022"] = <
+					text = <"During the past week had unintentional release of gas/flatulence from your stoma bag">
+					description = <"During the past week: Have you had unintentional release of gas/flatulence from your stoma bag?">
+					comment = <"(Answer these questions ONLY IF YOU HAVE A STOMA BAG)">
+					Scale = <"FL">
+					Question_number = <"49">
+				>
+				["at0023"] = <
+					text = <"During the past week had leakage of stools from your stoma bag">
+					description = <"During the past week: Have you had leakage of stools from your stoma bag?">
+					comment = <"(Answer these questions ONLY IF YOU HAVE A STOMA BAG)">
+					Scale = <"FI2">
+					Question_number = <"50">
+				>
+				["at0024"] = <
+					text = <"During the past week did frequent bag changes occur during the day">
+					description = <"During the past week: Did frequent bag changes occur during the day?">
+					comment = <"(Answer these questions ONLY IF YOU HAVE A STOMA BAG)">
+					Scale = <"SF2">
+					Question_number = <"52">
+				>
+				["at0025"] = <
+					text = <"During the past week did frequent bag changes occur during the night">
+					description = <"During the past week: Did frequent bag changes occur during the night?">
+					comment = <"(Answer these questions ONLY IF YOU HAVE A STOMA BAG)">
+					Scale = <"SF2">
+					Question_number = <"53">
+				>
+				["at0026"] = <
+					text = <"During the past week felt embarrassed because of your stoma">
+					description = <"During the past week: Did you feel embarrassed because of your stoma?">
+					comment = <"(Answer these questions ONLY IF YOU HAVE A STOMA BAG)">
+					Scale = <"EMB">
+					Question_number = <"54">
+				>
+				["at0027"] = <
+					text = <"During the past week had problems caring for your stoma">
+					description = <"During the past week: Did you have problems caring for your stoma?">
+					comment = <"(Answer these questions ONLY IF YOU HAVE A STOMA BAG)">
+					Scale = <"STO">
+					Question_number = <"55">
+				>
+				["at0028"] = <
+					text = <"During the past week had unintentional release of gas/flatulence from your back passage">
+					description = <"During the past week: Have you had unintentional release of gas/flatulence from your back passage?">
+					comment = <"(Answer these questions ONLY IF YOU DO NOT HAVE A STOMA BAG)">
+					Scale = <"FL">
+					Question_number = <"49">
+				>
+				["at0029"] = <
+					text = <"During the past week had leakage of stools from your back passage">
+					description = <"During the past week: Have you had leakage of stools from your back passage?">
+					comment = <"(Answer these questions ONLY IF YOU DO NOT HAVE A STOMA BAG)">
+					Scale = <"FI2">
+					Question_number = <"50">
+				>
+				["at0030"] = <
+					text = <"During the past week had sore skin around your anal area">
+					description = <"During the past week: Have you had sore skin around your anal area?">
+					comment = <"(Answer these questions ONLY IF YOU DO NOT HAVE A STOMA BAG)">
+					Scale = <"SS">
+					Question_number = <"51">
+				>
+				["at0031"] = <
+					text = <"During the past week had frequent bowel movements occur during the day">
+					description = <"During the past week: Did frequent bowel movements occur during the day?">
+					comment = <"(Answer these questions ONLY IF YOU DO NOT HAVE A STOMA BAG)">
+					Scale = <"SF2">
+					Question_number = <"52">
+				>
+				["at0032"] = <
+					text = <"During the past week had frequent bowel movements occur during the night">
+					description = <"During the past week: Did frequent bowel movements occur during the night?
+">
+					comment = <"(Answer these questions ONLY IF YOU DO NOT HAVE A STOMA BAG)">
+					Scale = <"SF2">
+					Question_number = <"53">
+				>
+				["at0033"] = <
+					text = <"During the past week felt embarrassed because of your bowel movement">
+					description = <"During the past week: Did you feel embarrassed because of your bowel movement?">
+					comment = <"(Answer these questions ONLY IF YOU DO NOT HAVE A STOMA BAG)">
+					Scale = <"EMB">
+					Question_number = <"54">
+				>
+				["at0034"] = <
+					text = <"During the past 4 weeks to what extent were you interested in sex?">
+					description = <"During the past 4 weeks: To what extent were you interested in sex?">
+					Scale = <"SEXF">
+					Question_number = <"56, 58">
+				>
+				["at0035"] = <
+					text = <"During the past 4 weeks had difficulty getting or maintaining an erection">
+					description = <"During the past 4 weeks: Did you have difficulty getting or maintaining an erection?">
+					comment = <"(For men only)">
+					Scale = <"IMP">
+					Question_number = <"57">
+				>
+				["at0036"] = <
+					text = <"During the past 4 weeks had pain or discomfort during intercourse">
+					description = <"During the past 4 weeks: Did you have pain or discomfort during intercourse?">
+					comment = <"(For woman only)">
+					Scale = <"DYS">
+					Question_number = <"59">
+				>
+				["at0037"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0038"] = <
+					text = <"Not at all">
+					description = <"">
+				>
+				["at0039"] = <
+					text = <"A little">
+					description = <"">
+				>
+				["at0040"] = <
+					text = <"Quite a bit">
+					description = <"">
+				>
+				["at0041"] = <
+					text = <"Very much">
+					description = <"">
+				>
+				["at0166"] = <
+					text = <"During the past week had sore skin around your stoma">
+					description = <"During the past week: Have you had sore skin around your stoma?">
+					comment = <"(Answer these questions ONLY IF YOU HAVE A STOMA BAG)">
+					Scale = <"SS">
+					Question_number = <"51">
+				>
+				["at0167"] = <
+					text = <"Total score">
+					description = <"">
+				>
+				["at0168"] = <
+					text = <"Scoring method">
+					description = <"">
+				>
+				["at0169"] = <
+					text = <"Raw score">
+					description = <"">
+				>
+				["at0170"] = <
+					text = <"Linear transformation">
+					description = <"">
+				>
+				["at0171"] = <
+					text = <"Extension">
+					description = <"">
+				>
+			>
+		>
+		["fr"] = <
+			items = <
+				["at0000"] = <
+					text = <"EORTC QLQ-CR29">
+					description = <"EORTC_QLQ_CR29">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"*Any event (en)">
+					description = <"">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Au cours de la semaine passée, urines fréquentes en journée">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous fréquemment uriné dans la journée ?">
+				>
+				["at0005"] = <
+					text = <"Au cours de la semaine passée, urines fréquentes la nuit">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous fréquemment uriné pendant la nuit ?">
+				>
+				["at0006"] = <
+					text = <"Au cours de la semaine passée, fuites urinaires">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous eu des fuites urinaires ?">
+				>
+				["at0007"] = <
+					text = <"Au cours de la semaine passée, douleurs en urinant">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous eu des douleurs en urinant ?">
+				>
+				["at0008"] = <
+					text = <"Au cours de la semaine passée, douleur au ventre">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous eu mal au ventre ?">
+				>
+				["at0009"] = <
+					text = <"Au cours de la semaine passée, douleurs à la région anale">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous ressenti des douleurs au niveau de la région anale ?">
+				>
+				["at0010"] = <
+					text = <"Au cours de la semaine passée, sensation de ballonnement">
+					description = <"Question d'origine:
+Au cours de la semaine passée: vous êtes-vous senti(e) ballonné(e) ?">
+				>
+				["at0011"] = <
+					text = <"Au cours de la semaine passée, sang dans les selles">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous vu du sang dans vos selles ?">
+				>
+				["at0012"] = <
+					text = <"Au cours de la semaine passée, glaires dans les selles">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous constaté des glaires dans vos selles ?">
+				>
+				["at0013"] = <
+					text = <"Au cours de la semaine passée, bouche sèche">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous eu la bouche sèche ?">
+				>
+				["at0014"] = <
+					text = <"Au cours de la semaine passée, perte de cheveux du fait du traitement">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous perdu des cheveux du fait de votre traitement ?">
+				>
+				["at0015"] = <
+					text = <"Au cours de la semaine passée, goût inhabituel des aliments">
+					description = <"Question d'origine:
+Au cours de la semaine passée: les aliments avaient-ils un goût inhabituel ?">
+				>
+				["at0016"] = <
+					text = <"Au cours de la semaine passée, inquiétude pour sa santé dans l'avenir">
+					description = <"Question d'origine:
+Au cours de la semaine passée: vous êtes vous inquiété(e) de votre santé pour l'avenir ?">
+				>
+				["at0017"] = <
+					text = <"Au cours de la semaine passée, inquiétude pour le poids">
+					description = <"Question d'origine:
+Au cours de la semaine passée: vous êtes-vous inquiété(e) de votre poids ?">
+				>
+				["at0018"] = <
+					text = <"Au cours de la semaine passée, sentiment d'être moins attirant du fait de sa maladie ou de son traitement">
+					description = <"Question d'origine:
+Au cours de la semaine passée: vous êtes-vous senti(e) moins attirant(e) du fait de votre maladie ou de votre traitement ?">
+				>
+				["at0019"] = <
+					text = <"Au cours de la semaine passée, sentiment d'être moins femme/homme du fait de sa maladie ou de son traitement">
+					description = <"Question d'origine:
+Au cours de la semaine passée: vous êtes-vous senti(e) moins femme/homme du fait de votre maladie ou de votre traitement ?">
+				>
+				["at0020"] = <
+					text = <"Au cours de la semaine passée, corps déplaisant">
+					description = <"Question d'origine:
+Au cours de la semaine passée: votre corps vous a-t-il déplu ?">
+				>
+				["at0021"] = <
+					text = <"Présence d'un anus artificiel (stomie)">
+					description = <"Question d'origine:
+Avez-vous un anus artificiel (stomie) ?">
+				>
+				["at0022"] = <
+					text = <"Au cours de la semaine passée, fuites de gaz par l'anus artificiel">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous eu des fuites de gaz par votre anus artificiel (stomie) ?">
+					comment = <"Répondez à ces questions UNIQUEMENT SI VOUS AVEZ UNE STOMIE">
+				>
+				["at0023"] = <
+					text = <"Au cours de la semaine passée, fuites de matières fécales hors de la poche de stomie">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous eu des fuites de matières fécales en dehors de votre poche de stomie ?">
+					comment = <"Répondez à ces questions UNIQUEMENT SI VOUS AVEZ UNE STOMIE">
+				>
+				["at0024"] = <
+					text = <"Au cours de la semaine passée, nécessité de changer la poche de stomie en journée">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous dû souvent changer votre poche de stomie au cours de la journée ?">
+					comment = <"Répondez à ces questions UNIQUEMENT SI VOUS AVEZ UNE STOMIE">
+				>
+				["at0025"] = <
+					text = <"Au cours de la semaine passée, nécessité de changer la poche de stomie la nuit">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous dû souvent changer votre poche de stomie au cours de la nuit ?">
+					comment = <"Répondez à ces questions UNIQUEMENT SI VOUS AVEZ UNE STOMIE">
+				>
+				["at0026"] = <
+					text = <"Au cours de la semaine passée, sensation de gêne à cause de la poche">
+					description = <"Question d'origine:
+Au cours de la semaine passée: vous êtes-vous senti(e) gêné(e) à cause de votre poche ?">
+					comment = <"Répondez à ces questions UNIQUEMENT SI VOUS AVEZ UNE STOMIE">
+				>
+				["at0027"] = <
+					text = <"Au cours de la semaine passée, difficulté avec les soins de la poche de stomie">
+					description = <"Question d'origine:
+Au cours de la semaine passée: les soins de votre poche de stomie vous ont-ils posé des problèmes ?">
+					comment = <"Répondez à ces questions UNIQUEMENT SI VOUS AVEZ UNE STOMIE">
+				>
+				["at0028"] = <
+					text = <"Au cours de la semaine passée, fuites de gaz involontaires par l’anus">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous eu des fuites de gaz involontaires par l’anus ?">
+					comment = <"Répondez à ces questions UNIQUEMENT SI VOUS N'AVEZ PAS UNE STOMIE">
+				>
+				["at0029"] = <
+					text = <"Au cours de la semaine passée, fuites de matières fécales par l’anus">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous eu des fuites de matières fécales par l’anus ?">
+					comment = <"Répondez à ces questions UNIQUEMENT SI VOUS N'AVEZ PAS UNE STOMIE">
+				>
+				["at0030"] = <
+					text = <"Au cours de la semaine passée, douleur au niveau de la peau entourant l'anus">
+					description = <"Question d'origine:
+Au cours de la semaine passée: la peau entourant votre anus vous a-t-elle fait souffrir ?">
+					comment = <"Répondez à ces questions UNIQUEMENT SI VOUS N'AVEZ PAS UNE STOMIE">
+				>
+				["at0031"] = <
+					text = <"Au cours de la semaine passée, nécessité d'aller à la selle en journée">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous dû fréquemment aller à la selle au cours de la journée ?">
+					comment = <"Répondez à ces questions UNIQUEMENT SI VOUS N'AVEZ PAS UNE STOMIE">
+				>
+				["at0032"] = <
+					text = <"Au cours de la semaine passée, nécessité d'aller à la selle la nuit">
+					description = <"Question d'origine:
+Au cours de la semaine passée: avez-vous dû fréquemment aller à la selle au cours de la nuit ?">
+					comment = <"Répondez à ces questions UNIQUEMENT SI VOUS N'AVEZ PAS UNE STOMIE">
+				>
+				["at0033"] = <
+					text = <"Au cours de la semaine passée, sensation de gêne à la selle">
+					description = <"Question d'origine:
+Au cours de la semaine passée: vous êtes-vous senti(e) gêné(e) lorsque vous alliez à la selle ?">
+					comment = <"Répondez à ces questions UNIQUEMENT SI VOUS N'AVEZ PAS UNE STOMIE">
+				>
+				["at0034"] = <
+					text = <"Au cours des 4 dernières semaines, interêt pour la sexualité">
+					description = <"Question d'origine:
+Au cours des 4 dernières semaines: dans quelle mesure vous êtes-vous intéressé à la sexualité ?">
+				>
+				["at0035"] = <
+					text = <"Au cours des 4 dernières semaines, difficultés à avoir ou rester en érection">
+					description = <"Question d'origine:
+Au cours des 4 dernières semaines: avez-vous eu des difficultés à avoir une érection ou à rester en érection ?">
+					comment = <"Uniquement pour les hommes">
+				>
+				["at0036"] = <
+					text = <"Au cours des 4 dernières semaines, douleurs ou gêne lors des rapports sexuels">
+					description = <"Question d'origine:
+Au cours des 4 dernières semaines: avez-vous ressenti des douleurs ou une gêne lors des rapports sexuels ?">
+					comment = <"Uniquement pour les femmes">
+				>
+				["at0037"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0038"] = <
+					text = <"Pas du tout">
+					description = <"">
+				>
+				["at0039"] = <
+					text = <"Un peu">
+					description = <"">
+				>
+				["at0040"] = <
+					text = <"Assez">
+					description = <"">
+				>
+				["at0041"] = <
+					text = <"Beaucoup">
+					description = <"">
+				>
+				["at0166"] = <
+					text = <"Au cours de la semaine passée: la peau entourant votre anus artificiel (stomie) vous a-t-elle fait souffrir ?">
+					description = <"">
+					comment = <"Répondez à ces questions UNIQUEMENT SI VOUS AVEZ UNE STOMIE">
+				>
+				["at0167"] = <
+					text = <"Score total">
+					description = <"">
+				>
+				["at0168"] = <
+					text = <"Méthode de calcul du Score">
+					description = <"">
+				>
+				["at0169"] = <
+					text = <"*Raw score (en)">
+					description = <"">
+				>
+				["at0170"] = <
+					text = <"*Linear transformation (en)">
+					description = <"">
+				>
+				["at0171"] = <
+					text = <"Extension">
+					description = <"">
+				>
+			>
+		>
+	>

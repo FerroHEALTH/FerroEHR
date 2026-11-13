@@ -64,7 +64,7 @@ fn rest_config() -> AppConfig {
     let basic = config.auth.shared.basic.take();
     config.auth = common::issuer_auth(ISSUER, AUDIENCE);
     config.auth.shared.basic = basic;
-    config.rbac.role_issuers = vec![ISSUER.to_owned()];
+    config.rbac.role_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(ISSUER)];
     config
 }
 
@@ -119,7 +119,6 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
             sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            ..StoreConfig::default()
         },
         syslog: Some(SyslogConfig {
             url: ferrohealth_secret::secret_url::SecretUrl::new(format!("tls://127.0.0.1:{port}")),
@@ -646,11 +645,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
         ..SyslogConfig::default()
     });
     cfg.auth.smart.platform_base_url = Some(leaky(9));
-    cfg.auth.smart.public_base_url = Some(leaky(10));
-    cfg.auth.scim = Some(ferroehr::config::scim::ScimConfig {
-        public_base_url: Some(leaky(11)),
-        ..ferroehr::config::scim::ScimConfig::default()
-    });
+    cfg.server.public_base_url = Some(leaky(10));
     cfg.auth.shared.issuer = vec![ferrohealth_smart::config::IssuerEntry {
         issuer: SecretUrl::new("https://idp.example"),
         introspection: Some(ferrohealth_smart::config::IntrospectionSection {
@@ -690,7 +685,8 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
             !body.contains("URL_PW_SENTINEL"),
             "URL userinfo leaked from {uri}: {body}"
         );
-        for n in (1..=13).filter(|n| *n != 4) {
+        // URL 11 was `[auth.scim] public_base_url`, which URL 10 replaces.
+        for n in (1..=13).filter(|n| ![4, 11].contains(n)) {
             assert!(
                 body.contains(&format!("https://***@h{n}/p")),
                 "URL {n} lost its host and path in {uri}: {body}"

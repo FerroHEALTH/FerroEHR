@@ -18,6 +18,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::binding::PartyBinding;
 use ferrohealth_smart::party::config::PartySection;
@@ -793,7 +794,7 @@ async fn the_source_reports_the_live_groups_a_person_belongs_to() {
     // Through the shared binding, a token naming two of the three groups
     // binds the PERSON with exactly those two.
     let table = PartySection {
-        issuer: "https://login.example".to_owned(),
+        issuer: SecretUrl::new("https://login.example"),
         identifier_issuer: LOGIN.to_owned(),
         identifier_type: GUID.to_owned(),
         group_claim: "groups".to_owned(),
@@ -854,7 +855,7 @@ async fn a_membership_change_writes_one_row() {
 }
 
 /// The live memberships of `group` and the sources the reverse index names
-/// as pointing at it, each sorted.
+/// as pointing at it now (an open interval), each sorted.
 async fn group_rows(pool: &sqlx::PgPool, group: VoId) -> (Vec<VoId>, Vec<VoId>) {
     let members: Vec<VoId> = sqlx::query_scalar(
         "SELECT member_id FROM party.binding_membership \
@@ -866,7 +867,7 @@ async fn group_rows(pool: &sqlx::PgPool, group: VoId) -> (Vec<VoId>, Vec<VoId>) 
     .expect("the memberships read");
     let sources: Vec<VoId> = sqlx::query_scalar(
         "SELECT source_vo_id FROM party.party_relationship_target \
-         WHERE target_party_id = $1 ORDER BY 1",
+         WHERE target_party_id = $1 AND valid_to IS NULL ORDER BY 1",
     )
     .bind(group)
     .fetch_all(pool)
@@ -1203,4 +1204,43 @@ async fn the_lookup_runs_on_the_party_role_only() {
         "the clinical role reads the binding side table: {clinical:?}"
     );
     pools.close().await;
+}
+
+/// The reverse-index intervals naming `target`, in order: source, from, to.
+async fn intervals(pool: &sqlx::PgPool, target: VoId) -> Vec<(VoId, String, Option<String>)> {
+    sqlx::query_as(
+        "SELECT source_vo_id, valid_from::text, valid_to::text \
+         FROM party.party_relationship_target WHERE target_party_id = $1 ORDER BY 1, 2",
+    )
+    .bind(target)
+    .fetch_all(pool)
+    .await
+    .expect("the reverse index reads")
+}
+
+#[tokio::test]
+async fn a_rebuild_from_the_versions_writes_the_intervals_the_commits_wrote() {
+    let (db, svc) = service().await;
+    let pool = db.pool();
+    let (member, _) = create(&svc, PartyKind::Person, &person(OTHER_TEMPLATE, &[])).await;
+    let (vo, _) = create(&svc, PartyKind::Group, &group(GROUP_TEMPLATE, "ward")).await;
+    // Joined, left, joined again: one closed interval and one open.
+    join(&svc, member, vo).await;
+    memberships(&svc, member, &[]).await;
+    join(&svc, member, vo).await;
+    let committed = intervals(&pool, vo).await;
+    assert_eq!(committed.len(), 2, "{committed:?}");
+    assert!(committed.first().is_some_and(|(_, _, to)| to.is_some()));
+    assert!(committed.get(1).is_some_and(|(_, _, to)| to.is_none()));
+
+    let mut tx = pool.begin().await.expect("a transaction");
+    sqlx::query("SET LOCAL search_path = party, ext, public")
+        .execute(&mut *tx)
+        .await
+        .expect("the party search path");
+    ferroehr::storage::party_reverse::rebuild(&mut tx, member)
+        .await
+        .expect("the rebuild");
+    tx.commit().await.expect("the commit");
+    assert_eq!(intervals(&pool, vo).await, committed);
 }

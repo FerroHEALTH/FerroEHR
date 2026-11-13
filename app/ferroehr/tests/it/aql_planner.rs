@@ -44,6 +44,7 @@ fn build_sql(q: &str) -> String {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
@@ -743,26 +744,52 @@ fn demographic_container_is_a_structure_hop() {
     assert_eq!(hops, ["identities", "details", "items"]);
 }
 
-/// The demographic classes outside the served roots, and every other
-/// placement of a demographic root, are typed refusals naming the class.
+/// `GROUP`, `AGENT` and a standalone `PARTY_RELATIONSHIP` are roots as
+/// `PERSON` is, and the abstract `PARTY` and `ACTOR` cover the concrete
+/// classes the RM model lists below them (RM demographic
+/// `master02-demographic_package.adoc` §Class Descriptions).
 #[test]
-fn unserved_demographic_forms_rejected() {
-    for (q, class) in [
-        ("SELECT g/uid/value FROM GROUP g", "GROUP"),
-        ("SELECT a/uid/value FROM AGENT a", "AGENT"),
-        ("SELECT a/uid/value FROM ACTOR a", "ACTOR"),
-        ("SELECT p/uid/value FROM PARTY p", "PARTY"),
+fn every_demographic_class_is_a_root() {
+    for (q, classes) in [
+        ("SELECT g/uid/value FROM GROUP g", &["GROUP"][..]),
+        ("SELECT a/uid/value FROM AGENT a", &["AGENT"][..]),
+        (
+            "SELECT a/uid/value FROM ACTOR a",
+            &["AGENT", "GROUP", "ORGANISATION", "PERSON"][..],
+        ),
+        (
+            "SELECT p/uid/value FROM PARTY p",
+            &["AGENT", "GROUP", "ORGANISATION", "PERSON", "ROLE"][..],
+        ),
         (
             "SELECT r/uid/value FROM PARTY_RELATIONSHIP r",
-            "PARTY_RELATIONSHIP",
+            &["PARTY_RELATIONSHIP"][..],
         ),
     ] {
-        let err = plan_err(q);
-        assert!(
-            matches!(&err, AqlError::Feature(AqlFeatureError::UnsupportedDemographicClass(c)) if c == class),
-            "{q}: got {err:?}"
-        );
+        let ir = plan_ok(q);
+        assert_eq!(ir.domain, QueryDomain::Demographic, "{q}");
+        let Some(Source::Rm(root)) = ir.sources.first() else {
+            panic!("{q}: an RM root, got {:?}", ir.sources);
+        };
+        let mut names: Vec<&str> = root.rm_type.names().iter().map(String::as_str).collect();
+        names.sort_unstable();
+        assert_eq!(names, classes, "{q}");
     }
+    let err = plan_err("SELECT r/uid/value FROM PARTY_RELATIONSHIP r CONTAINS EHR e");
+    assert!(
+        matches!(
+            &err,
+            AqlError::Feature(AqlFeatureError::DemographicWithClinical { party, other })
+                if party == "PARTY_RELATIONSHIP" && other == "EHR"
+        ),
+        "a relationship is the subject of no EHR: got {err:?}"
+    );
+}
+
+/// Every placement of a demographic root other than the outermost class is a
+/// typed refusal naming the class.
+#[test]
+fn misplaced_demographic_roots_rejected() {
     for (q, class) in [
         (
             "SELECT o/uid/value FROM PERSON p CONTAINS ORGANISATION o",
@@ -1046,6 +1073,7 @@ fn a_fragment_path_ending_on_a_list_names_its_elements() {
             limit: None,
             offset: None,
             archetype_lineage: Arc::new(ArchetypeLineage::default()),
+            policy_parties: ferroehr::aql::sql::PolicyParties::Served,
         };
         let built = ferroehr::aql::sql::build(&plan_ok(q), &Params::default(), &ctx)
             .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"));
@@ -1590,6 +1618,7 @@ fn build_sql_limited(q: &str) -> String {
         limit: Some(50),
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
@@ -1785,6 +1814,7 @@ fn a_named_ehr_scope_streams_on_its_spine() {
         limit: Some(50),
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     let named = ferroehr::aql::sql::build(
         &ir,
@@ -2105,6 +2135,7 @@ fn build_err(q: &str) -> AqlError {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .err()
@@ -2380,6 +2411,7 @@ fn prepare(
         limit,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
@@ -2639,6 +2671,7 @@ fn scope_ctx() -> SqlCtx {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     }
 }
 
@@ -3019,6 +3052,7 @@ fn build_sql_with(q: &str, params: &Params) -> String {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     ferroehr::aql::sql::build(&ir, params, &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))

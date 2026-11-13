@@ -17,13 +17,9 @@
 # Each holds every SMART on openEHR scope and the product scope, so the SMART
 # layer passes and the RBAC roles decide.
 
-# The openEHR specification generation set (matches the built-in default;
-# explicit here so the dev lanes state the posture they test).
+# The declared posture (matches the built-in default; explicit so the dev lanes
+# state the posture they test): a sandbox must not hold real patient data.
 [deployment]
-spec_profile = "development"
-
-# The declared posture (matches the built-in default; explicit for the same
-# reason): a sandbox must not hold real patient data.
 profile = "sandbox"
 
 [api]
@@ -33,9 +29,6 @@ profile = "sandbox"
 # operationally needed.
 admin = true
 terminology = true
-
-[auth]
-enabled = true
 
 # The issuer the Basic users bind under. A Basic user is a person and maps to
 # the PERSON carrying its binding key, which [[auth.party]] places under the
@@ -53,8 +46,10 @@ jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
 issuer = "https://basic-users.ferroehr.invalid"
 identifier_issuer = "urn:ferroehr:basic-user"
 identifier_type = "login"
+group_claim = "groups"
+group_identifier_issuer = "urn:ferroehr:groups"
 
-# The issuer of the dev lanes' SCIM provisioning client: a machines issuer
+# The issuer of the dev lanes' SCIM provisioning clients: a machines issuer
 # over the COMMITTED TEST key set of docs/conformance/party/scim/ (never
 # production material), whose private half scripts/scim-provision.sh signs
 # with. Each lane mounts the key set at this path. Overlays add their own
@@ -147,6 +142,13 @@ roles = ["READONLY"]
 [authz.rbac]
 import_role = "IMPORTER"
 
+# The operations the party store may grant: beside a system client's commit,
+# the SCIM provisioning each lane's client is granted in the CDR before it
+# provisions (scripts/scim-provision.sh) and the change feed a lane may grant
+# a reader.
+[authz.grants]
+allowed = ["commit_composition", "read_change_feed", "scim_provision"]
+
 [authz.party_binding]
 provider = { issuer = "urn:oid:2.999.7.9", id = "dev" }
 
@@ -165,48 +167,16 @@ user = "ferroehr-readonly"
 key_issuer = "urn:ferroehr:basic-user"
 key = "ferroehr-readonly"
 
-# The party mapping over the professional PERSON and ROLE pair of
-# deploy/definitions/professional/, which each lane loads with
-# `ferroehr definitions load` before `serve`: the binding key, `userName` and
-# `externalId` share the identifier element and are told apart by type.
-[[authz.party_binding.person.template]]
-template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
-default = true
-key = { path = "/details[id2]/items[id3]", type = "login" }
-user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
-external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
-
-[[authz.party_binding.person.attribute]]
-scim = "name.formatted"
-name = true
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
-
-[[authz.party_binding.person.attribute]]
-scim = "name.givenName"
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id7]" }
-
-[[authz.party_binding.person.attribute]]
-scim = "name.familyName"
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id8]" }
-
-[[authz.party_binding.person.attribute]]
-scim = 'emails[type eq "work"].value'
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/contacts[id9]/addresses[id10]/details[id11]/items[id12]" }
-
-[authz.party_binding.professional_role]
-template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
-
-# The SCIM endpoint the lanes provision their persons through. The client
-# below provisions the three Basic users; an overlay that adds a persons
-# issuer adds its own client (index 1), since no two share a binding_issuer.
-[auth.scim]
+# The URL clients reach the server at, which every SCIM location names.
+[server]
 public_base_url = "http://localhost:8080"
 
-[[auth.scim.client]]
-issuer = "https://scim.ferroehr.invalid"
-client_id = "basic-users"
-scope = "ferroehr/scim"
-binding_issuer = "urn:ferroehr:basic-user"
+# The SCIM endpoint the lanes provision their persons through. Who
+# provisions is a scim_provision grant in the CDR: scripts/scim-provision.sh
+# grants the `basic-users` client the three Basic users' binding issuer, and
+# an overlay that adds a persons issuer has its own client granted, since no
+# two clients share a binding_issuer.
+[auth.scim]
 
 # The in-instance subject-to-EHR map, the explicit opt-in of a FerroEHR run
 # on its own: development, the UI journeys and the conformance lanes ask no

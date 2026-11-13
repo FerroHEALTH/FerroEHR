@@ -39,7 +39,8 @@ use openehr_rm::prelude::Composition;
 
 use crate::api::RequestParts;
 use crate::extensions::access::authn::{Principal, current_principal};
-use crate::extensions::access::authz::{AbacGate, ContentRules};
+use crate::extensions::access::authz::AbacGate;
+use crate::extensions::access::authz::content::ContentRules;
 use crate::overview::error::RestError;
 use ferroehr::config::authz::AbacEngineKind;
 use ferroehr::storage::version_repo::meta::VersionContent;
@@ -432,12 +433,7 @@ struct ContentAttrs {
 /// The category attribute of `content`, as the access record spells each
 /// category: a `<system>|<code>` token, `none` or `unclassified`.
 fn category_attr(rules: &ContentRules, content: &AccessedContent, written: bool) -> Attr {
-    Attr::Set(
-        rules
-            .categories
-            .classify(content, written)
-            .stored_categories(),
-    )
+    Attr::Set(rules.classify(content, written).stored_categories())
 }
 
 /// The attributes of objects identified by `objects`, with `origins` as the
@@ -504,7 +500,7 @@ async fn pre_content(
                 stored_attrs(rules, content, true)
             }))
         }
-        (CompositionGate::Write, _) => Ok(composition_content(rules, principal, parts)),
+        (CompositionGate::Write, _) => Ok(composition_content(rules, parts)),
         // An item-tag write: the attributes of the COMPOSITION it tags.
         (CompositionGate::None, Verb::Update | Verb::Delete)
             if row.kind == Some(ResourceKind::Composition) =>
@@ -538,25 +534,12 @@ async fn stored_content(
     }))
 }
 
-/// The origin a body with no `FEEDER_AUDIT` committed by `principal` is
-/// stamped with: the caller's registered origin, or this server.
-fn direct_origin(rules: &ContentRules, principal: &Principal) -> String {
-    rules.origins.direct_origin(
-        crate::extensions::access::authn::client_of(principal).as_deref(),
-        &rules.system_id,
-    )
-}
-
 /// The attributes of a COMPOSITION write, read off its body the way the commit
 /// will: the template, the root archetype, and the `FEEDER_AUDIT` origins or
 /// the caller's direct origin. A simplified-format body names its template in
 /// a header and is converted only at the commit seam, so it carries the
 /// template and the category it implies and no origin attribute.
-fn composition_content(
-    rules: &ContentRules,
-    principal: &Principal,
-    parts: &RequestParts,
-) -> ContentAttrs {
+fn composition_content(rules: &ContentRules, parts: &RequestParts) -> ContentAttrs {
     let h = &parts.headers;
     if crate::formats::dispatch::is_simplified_body(h) {
         let template = crate::formats::dispatch::header_template_id(h);
@@ -581,18 +564,21 @@ fn composition_content(
     let Ok(composition) = negotiate::decode::rm_value::<Composition>(h, &parts.body) else {
         return ContentAttrs::default();
     };
-    composition_attrs(rules, principal, &composition)
+    composition_attrs(rules, &composition)
 }
 
 /// The attributes of one decoded COMPOSITION a write carries.
-fn composition_attrs(
-    rules: &ContentRules,
-    principal: &Principal,
-    composition: &Composition,
-) -> ContentAttrs {
-    let canonical = openehr_its::json::to_canonical_value(composition);
-    let origins =
-        ferroehr::versioning::origins::origins(&direct_origin(rules, principal), &canonical);
+fn composition_attrs(rules: &ContentRules, composition: &Composition) -> ContentAttrs {
+    // The feeder origins of the body, or the caller's direct origin: each
+    // candidate when the caller's grants name several, which the commit then
+    // refuses.
+    let fed =
+        ferroehr::versioning::origins::fed(&openehr_its::json::to_canonical_value(composition));
+    let origins = if fed.is_empty() {
+        ferroehr::origins::DirectOrigin::current(&rules.system_id).candidates()
+    } else {
+        fed.into_iter().collect()
+    };
     let details = composition.archetype_details.as_ref();
     let template = details
         .and_then(|a| a.template_id.as_ref())
@@ -663,7 +649,7 @@ fn contribution_content(
                 // is nothing here to authorize.
                 return Ok(ContentAttrs::default());
             };
-            let attrs = composition_attrs(rules, principal, &composition);
+            let attrs = composition_attrs(rules, &composition);
             let details = composition.archetype_details.as_ref();
             match details.and_then(|a| a.template_id.as_ref()) {
                 Some(template) => {

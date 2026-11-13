@@ -15,6 +15,7 @@
 
 use std::sync::Arc;
 
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::Outcome;
 use ferrohealth_smart::party::binding::PartyBinding;
@@ -23,6 +24,7 @@ use ferrohealth_smart::resource::Caller;
 use serde_json::{Value, json};
 
 use crate::fixtures::{change_type, composition, if_match, object, written_vo};
+use crate::policy_fixtures::{as_client, capability, granted, identified, scope};
 use ferroehr::error::ServiceError;
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::party_binding::{BindingMapping, IdentifierSelector, NameSelector, PersonSelectors};
@@ -134,7 +136,7 @@ pub(crate) async fn professional(svc: &FerroEhrService, name: &str, key: &str) -
 /// The identity of the login `sub` whose key `key` the binding binds.
 pub(crate) async fn bound(svc: &FerroEhrService, sub: &str, key: &str) -> CommitterIdentity {
     let table = PartySection {
-        issuer: ISSUER.to_owned(),
+        issuer: SecretUrl::new(ISSUER),
         identifier_issuer: LOGIN.to_owned(),
         identifier_type: "guid".to_owned(),
         ..PartySection::default()
@@ -178,7 +180,7 @@ pub(crate) async fn bound(svc: &FerroEhrService, sub: &str, key: &str) -> Commit
             namespace: "demographic".to_owned(),
         }),
         system: false,
-        system_client: None,
+        agent: None,
         external: None,
     }
 }
@@ -380,7 +382,7 @@ async fn a_patient_commits_no_demographic_version() {
         representative: false,
         bound: None,
         system: false,
-        system_client: None,
+        agent: None,
         external: None,
     };
     let body = json!({ "_type": "PERSON", "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
@@ -399,7 +401,9 @@ async fn a_patient_commits_no_demographic_version() {
 #[tokio::test]
 async fn an_import_needs_the_role_and_refuses_a_local_login_from_an_untrusted_system() {
     let (_source_db, source) = crate::fixtures::service().await;
+    let source = source.with_system_id("legacy.example");
     let (_target_db, target) = crate::fixtures::service().await;
+    let target = crate::policy_fixtures::granting(target).await;
     let ehr = crate::fixtures::create_ehr(&source).await;
     let local_login = json!({ "_type": "PARTY_IDENTIFIED", "name": "bob",
         "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": "bob", "type": "basic" }] });
@@ -419,7 +423,6 @@ async fn an_import_needs_the_role_and_refuses_a_local_login_from_an_untrusted_sy
 
     let strict = target.with_import_policy(ImportPolicy::new(
         Some("IMPORTER".to_owned()),
-        Vec::new(),
         vec![ISSUER.to_owned()],
     ));
     // A caller without the import role is refused.
@@ -433,7 +436,7 @@ async fn an_import_needs_the_role_and_refuses_a_local_login_from_an_untrusted_sy
         representative: false,
         bound: None,
         system: false,
-        system_client: None,
+        agent: None,
         external: None,
     };
     let refused = ferroehr::system_log::access_context::with_roles(
@@ -458,22 +461,67 @@ async fn an_import_needs_the_role_and_refuses_a_local_login_from_an_untrusted_sy
     .await
     .expect_err("a local login from an untrusted system");
     assert!(matches!(refused.flattened(), ServiceError::Forbidden(_)));
-    // From a trusted system it lands, and the wrapped committer is kept.
-    let trusted = strict.with_import_policy(ImportPolicy::new(
-        Some("IMPORTER".to_owned()),
-        vec![source_system_id(&extracts[0])],
-        vec![ISSUER.to_owned()],
-    ));
-    ferroehr::system_log::access_context::with_roles(
-        vec!["IMPORTER".to_owned()],
-        with_committer(Some(clinician), Box::pin(trusted.import_ehr(None, extract))),
+    // A grant that vouches for the source system on another operation, or
+    // vouches for this node itself, trusts nothing for an EHR import.
+    let source_system = source_system_id(&extracts[0]);
+    assert_eq!(source_system, "legacy.example");
+    let extract_only = capability(
+        "import_ehr_extract",
+        &[
+            scope("creating_system", &source_system),
+            scope("subject_namespace", "local"),
+        ],
+    );
+    let own_node = capability(
+        "import_ehr",
+        &[
+            scope("creating_system", ferroehr::service::DEFAULT_SYSTEM_ID),
+            scope("subject_namespace", "local"),
+        ],
+    );
+    granted(&strict, "extract-importer", &[extract_only, own_node]).await;
+    let refused = as_client(
+        &strict,
+        "extract-importer",
+        ferroehr::system_log::access_context::with_roles(
+            vec!["IMPORTER".to_owned()],
+            with_committer(
+                Some(clinician.clone()),
+                Box::pin(strict.import_ehr(None, extract.clone())),
+            ),
+        ),
     )
     .await
-    .expect("a trusted system's import lands");
+    .expect_err("no import_ehr grant vouches for the source system");
+    assert!(matches!(refused.flattened(), ServiceError::Forbidden(_)));
+    // From a system the caller's import grant vouches for, read from the CDR
+    // on the request, it lands, and the wrapped committer is kept.
+    granted(
+        &strict,
+        "migrator",
+        &[capability(
+            "import_ehr",
+            &[
+                identified("creating_system", &source_system),
+                scope("subject_namespace", "local"),
+            ],
+        )],
+    )
+    .await;
+    as_client(
+        &strict,
+        "migrator",
+        ferroehr::system_log::access_context::with_roles(
+            vec!["IMPORTER".to_owned()],
+            with_committer(Some(clinician), Box::pin(strict.import_ehr(None, extract))),
+        ),
+    )
+    .await
+    .expect("a vouched-for system's import lands");
 }
 
 /// The `creating_system_id` of the first wrapped version of `extract`.
-fn source_system_id(extract: &Value) -> String {
+pub(crate) fn source_system_id(extract: &Value) -> String {
     let text = extract.to_string();
     let marker = "::";
     // NOTE: every wrapped version uid of the fixture is `{vo}::{system}::{tree}`.
@@ -570,7 +618,7 @@ async fn a_representatives_write_is_held_to_the_persons_rules() {
         representative: false,
         bound: None,
         system: false,
-        system_client: None,
+        agent: None,
         external: None,
     };
     let refused = |result: Result<String, ServiceError>| match result {

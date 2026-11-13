@@ -29,7 +29,7 @@ use openehr_query::parser::parse_str;
 use crate::aql;
 use crate::aql::error::{AqlError, ExecError};
 use crate::aql::ir::{Params, QueryDomain, QueryIr};
-use crate::aql::sql::SqlCtx;
+use crate::aql::sql::{PolicyParties, SqlCtx};
 use crate::error::refusal::{Missing, Refusal};
 use crate::error::{ErrorChain, ServiceError};
 use crate::service::FerroEhrService;
@@ -174,6 +174,7 @@ impl FerroEhrService {
             // §Supporting Archetype-based Querying): resolved here, once per execution,
             // because SQL building is synchronous.
             archetype_lineage: self.archetype_lineage().await,
+            policy_parties: PolicyParties::of_request(&self.binding),
         };
 
         let exec_start = Instant::now();
@@ -758,6 +759,7 @@ mod tests {
             limit: None,
             offset: None,
             archetype_lineage: std::sync::Arc::new(crate::aql::lineage::ArchetypeLineage::default()),
+            policy_parties: crate::aql::sql::PolicyParties::Served,
         };
         let pool = closed_pool().await;
         let failure = crate::aql::exec::execute(&pool, &ir, &params, &ctx, profile)

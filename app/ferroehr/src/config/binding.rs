@@ -26,6 +26,8 @@ use serde::de::value::{MapAccessDeserializer, SeqAccessDeserializer};
 use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 
+use crate::party_binding::shipped;
+
 pub mod jit;
 pub mod person;
 
@@ -33,6 +35,8 @@ pub mod person;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = ["provider.issuer", "provider.id"])))]
 pub struct PartyBindingConfig {
     /// The healthcare provider this deployment acts for, which every access
     /// record of a bound person and every version a person commits name
@@ -41,11 +45,17 @@ pub struct PartyBindingConfig {
     pub provider: Option<Providers>,
     /// The `PARTY_REF.namespace` a bound party is written under, held to the
     /// `OBJECT_REF.namespace` pattern.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub namespace: String,
     /// The key each Basic user is bound by (`[[authz.party_binding.basic_user]]`).
     pub basic_user: Vec<BasicUserKey>,
-    /// The person templates and attributes of the shared party mapping.
-    pub person: person::PersonSection,
+    /// The person templates and attributes of the shared party mapping. Each
+    /// mapping section defaults to FerroEHR's default demographic definitions,
+    /// which every boot stores when no definition of their id is stored (the
+    /// book's "Default demographic definitions" page); a deployment with
+    /// templates of its own sets the section, and stores its templates before
+    /// boot.
+    pub person: Option<person::PersonSection>,
     /// The professional `ROLE` template.
     pub professional_role: Option<person::RoleSection>,
     /// The provisioned `GROUP` template.
@@ -54,30 +64,35 @@ pub struct PartyBindingConfig {
     pub membership: Option<person::MembershipSection>,
     /// The representation `PARTY_RELATIONSHIP` archetype.
     pub representation: Option<person::RepresentationSection>,
-    /// What FerroEHR does for each `persons` issuer beyond the lookup
-    /// (`[[authz.party_binding.issuer]]`): just-in-time creation.
+    /// The patient's `PERSON` template.
+    pub patient: Option<person::PatientSection>,
+    /// How FerroEHR reads each `persons` issuer's tokens when it creates a
+    /// provisional `PERSON` at a first login
+    /// (`[[authz.party_binding.issuer]]`).
     pub issuer: Vec<jit::IssuerBinding>,
     /// The age past which `ferroehr party-binding check` reports a
     /// provisional `PERSON`.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub provisional_report_after: ferrohealth_config::units::Duration,
-    /// Retired in v5.7.0: refused at load, naming `provisional_report_after`.
-    #[serde(skip_serializing)]
-    pub provisional_report_days: ferrohealth_config::removed::Removed,
-    /// Retired in v5.7.0: refused at load, binding has no switch.
-    #[serde(skip_serializing)]
-    pub enabled: ferrohealth_config::removed::Removed,
 }
 
 impl PartyBindingConfig {
+    /// The person section, empty when the table sets an empty one.
+    #[must_use]
+    pub fn person(&self) -> &person::PersonSection {
+        self.person.as_ref().unwrap_or(&person::NO_PERSON)
+    }
+
     /// The mapping sections of the table.
     #[must_use]
     pub fn sections(&self) -> person::Sections<'_> {
         person::Sections {
-            person: &self.person,
+            person: self.person(),
             professional_role: self.professional_role.as_ref(),
             group: self.group.as_ref(),
             membership: self.membership.as_ref(),
             representation: self.representation.as_ref(),
+            patient: self.patient.as_ref(),
         }
     }
 }
@@ -90,16 +105,88 @@ impl Default for PartyBindingConfig {
             // `committer.external_ref.namespace="demographic"` in its example.
             namespace: "demographic".to_owned(),
             basic_user: Vec::new(),
-            person: person::PersonSection::default(),
-            professional_role: None,
-            group: None,
-            membership: None,
-            representation: None,
+            // The default mapping names the shipped definitions of
+            // `deploy/definitions/`, which every boot stores when absent.
+            person: Some(person::PersonSection {
+                template: vec![person::PersonTemplate {
+                    template_id: shipped::PROFESSIONAL_PERSON.to_owned(),
+                    key: selector(IDENTIFIER, "login"),
+                    user_name: Some(selector(IDENTIFIER, "scim_user_name")),
+                    external_id: Some(selector(IDENTIFIER, "scim_external_id")),
+                    default: true,
+                }],
+                attribute: vec![
+                    attribute(
+                        "name.formatted",
+                        true,
+                        "/identities[id4]/details[id5]/items[id6]",
+                    ),
+                    attribute(
+                        "name.givenName",
+                        false,
+                        "/identities[id4]/details[id5]/items[id7]",
+                    ),
+                    attribute(
+                        "name.familyName",
+                        false,
+                        "/identities[id4]/details[id5]/items[id8]",
+                    ),
+                    attribute(
+                        "emails[type eq \"work\"].value",
+                        false,
+                        "/contacts[id9]/addresses[id10]/details[id11]/items[id12]",
+                    ),
+                ],
+            }),
+            professional_role: Some(person::RoleSection {
+                template_id: shipped::PROFESSIONAL_ROLE.to_owned(),
+            }),
+            group: Some(person::GroupSection {
+                template_id: shipped::CARE_TEAM.to_owned(),
+                external_id: selector(IDENTIFIER, "scim_external_id"),
+                display_name: Some("/identities[id4]/details[id5]/items[id6]".to_owned()),
+            }),
+            membership: Some(person::MembershipSection {
+                archetype_id: shipped::MEMBERSHIP.to_owned(),
+            }),
+            representation: Some(person::RepresentationSection {
+                archetype_id: shipped::REPRESENTATION.to_owned(),
+                relationship_codes: BTreeMap::from([
+                    ("at10".to_owned(), "254".to_owned()),
+                    ("at11".to_owned(), "264".to_owned()),
+                ]),
+            }),
+            patient: Some(person::PatientSection {
+                template_id: shipped::PATIENT.to_owned(),
+                identifier: IDENTIFIER.to_owned(),
+                name: Some("/identities[id6]/details[id7]/items[id8]".to_owned()),
+            }),
             issuer: Vec::new(),
             provisional_report_after: ferrohealth_config::units::Duration::from_days(30),
-            provisional_report_days: ferrohealth_config::removed::Removed::default(),
-            enabled: ferrohealth_config::removed::Removed::default(),
         }
+    }
+}
+
+/// The identifier element of each default `PERSON` and `GROUP` definition.
+const IDENTIFIER: &str = "/details[id2]/items[id3]";
+
+/// The selector of the identifiers of `identifier_type` at `path`.
+fn selector(path: &str, identifier_type: &str) -> person::Selector {
+    person::Selector {
+        path: path.to_owned(),
+        identifier_type: identifier_type.to_owned(),
+    }
+}
+
+/// The attribute mapping the SCIM attribute `scim` to `path` of the default
+/// professional's `PERSON`.
+fn attribute(scim: &str, name: bool, path: &str) -> person::PersonAttribute {
+    person::PersonAttribute {
+        scim: Some(scim.to_owned()),
+        oidc: None,
+        jit: false,
+        name,
+        path: BTreeMap::from([(shipped::PROFESSIONAL_PERSON.to_owned(), path.to_owned())]),
     }
 }
 
@@ -108,6 +195,7 @@ impl Default for PartyBindingConfig {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct ProviderId {
     /// The issuer of the identifier.
     pub issuer: String,
@@ -126,6 +214,7 @@ impl fmt::Display for ProviderId {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct TenantProvider {
     /// The `tenant_claim` value the table holds for.
     pub tenant: String,
@@ -178,6 +267,7 @@ impl<'de> Visitor<'de> for ProvidersVisitor {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct BasicUserKey {
     /// The `[[auth.basic.users]]` user-id.
     pub user: String,
@@ -272,10 +362,10 @@ pub fn errors(authz: &crate::config::authz::AuthzConfig, resolved: &Resolved) ->
     key_types(binding, resolved, &mut errors);
     shared_audiences(resolved, &mut errors);
     providers(binding, resolved, &mut errors);
-    errors.extend(jit::errors(binding, resolved, &authz.assurance));
+    errors.extend(jit::errors(binding, resolved));
     if let Err(e) = resolved.check_role_issuers("authz.rbac.role_issuers", &authz.rbac.role_issuers)
     {
-        errors.push(e.to_string());
+        errors.push(crate::error::ErrorChain::new(&e).to_string());
     }
     errors
 }
@@ -283,7 +373,7 @@ pub fn errors(authz: &crate::config::authz::AuthzConfig, resolved: &Resolved) ->
 /// Refuses a `persons` issuer with no `[[auth.party]]` table: binding is how
 /// FerroEHR attributes a person, with no unbound mode.
 fn unbound_persons(resolved: &Resolved, errors: &mut Vec<String>) {
-    let bound: BTreeSet<&str> = resolved.party.iter().map(|t| t.issuer.as_str()).collect();
+    let bound: BTreeSet<&str> = resolved.party.iter().map(|t| t.issuer.expose()).collect();
     for (issuer, kind) in &resolved.kinds {
         if *kind == IssuerKind::Persons && !bound.contains(issuer.as_str()) {
             errors.push(format!(
@@ -301,7 +391,7 @@ fn unbound_persons(resolved: &Resolved, errors: &mut Vec<String>) {
 /// would ever match a party.
 fn key_types(binding: &PartyBindingConfig, resolved: &Resolved, errors: &mut Vec<String>) {
     let written: BTreeSet<&str> = binding
-        .person
+        .person()
         .template
         .iter()
         .map(|template| template.key.identifier_type.as_str())
@@ -392,7 +482,7 @@ fn tenants(tables: &[TenantProvider], resolved: &Resolved, errors: &mut Vec<Stri
             ));
         }
     }
-    let bound: BTreeSet<&str> = resolved.party.iter().map(|t| t.issuer.as_str()).collect();
+    let bound: BTreeSet<&str> = resolved.party.iter().map(|t| t.issuer.expose()).collect();
     for settings in &resolved.issuers {
         if bound.contains(settings.issuer.as_str())
             && settings
@@ -411,12 +501,10 @@ fn tenants(tables: &[TenantProvider], resolved: &Resolved, errors: &mut Vec<Stri
 }
 
 impl crate::config::FerroEhrConfig {
-    /// The boot refusals of the party binding, the system clients, the
-    /// federation agreements and `[authz.import]`; the section rules of
-    /// `[auth]` itself are [`crate::config::auth::validate`]'s.
+    /// The boot refusals of the party binding; the section rules of `[auth]`
+    /// itself are [`crate::config::auth::validate`]'s.
     pub(crate) fn identity_errors(&self) -> Vec<String> {
-        let mut errors =
-            crate::config::clients::import_errors(&self.authz.import, &self.api.system_id);
+        let mut errors = Vec::new();
         let Ok(resolved) = crate::config::auth::resolve(&self.auth.shared) else {
             return errors;
         };
@@ -435,16 +523,6 @@ impl crate::config::FerroEhrConfig {
                 .sections()
                 .errors(&key_issuers(&resolved), protected),
         );
-        errors.extend(crate::config::clients::system_client_errors(
-            &self.authz.system_client,
-            &resolved,
-        ));
-        errors.extend(crate::config::agreement::errors(
-            &self.authz.federation.agreement,
-            &self.auth.shared,
-            &resolved,
-            self.audit.store.horizon(),
-        ));
         errors
     }
 }
@@ -477,8 +555,8 @@ pub(crate) fn one_provider() -> Providers {
 /// state it.
 ///
 /// It carries the issuers with their kind and identifier issuer, the
-/// provider, and every federation agreement with its accessor and legal
-/// ground.
+/// provider, and every federation agreement in force with its accessor and
+/// legal ground, which `/management/info` reads from the CDR on each request.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BindingPosture {
     /// Every trusted issuer.
@@ -487,8 +565,9 @@ pub struct BindingPosture {
     pub provider: Option<Providers>,
     /// The `PARTY_REF.namespace` a bound party is written under.
     pub namespace: String,
-    /// The federation agreements.
-    pub agreements: Vec<AgreementPosture>,
+    /// The federation agreements in force, read from the CDR; empty in the
+    /// posture the configuration alone states.
+    pub agreements: Vec<crate::party_binding::grants::trust::AgreementPosture>,
     /// The mapped Basic users, while `[authz.assurance] minimum` is unset: a
     /// Basic credential carries no assurance level, so nothing refuses them
     /// on patient data.
@@ -507,17 +586,6 @@ pub struct BoundIssuer {
     pub identifier_issuer: Option<String>,
 }
 
-/// One federation agreement of the binding posture.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct AgreementPosture {
-    /// The federation issuer.
-    pub issuer: String,
-    /// Who it admits.
-    pub accessor: Option<crate::config::agreement::Accessor>,
-    /// Its legal ground, rendered.
-    pub legal_ground: Option<String>,
-}
-
 impl BindingPosture {
     /// Returns the posture `config` declares.
     #[must_use]
@@ -533,19 +601,8 @@ impl BindingPosture {
                 kind: entry.kind,
                 identifier_issuer: party
                     .iter()
-                    .find(|table| table.issuer == entry.issuer.expose())
+                    .find(|table| table.issuer == entry.issuer)
                     .map(|table| table.identifier_issuer.clone()),
-            })
-            .collect();
-        let agreements = config
-            .authz
-            .federation
-            .agreement
-            .iter()
-            .map(|agreement| AgreementPosture {
-                issuer: agreement.issuer.clone(),
-                accessor: agreement.accessor,
-                legal_ground: agreement.legal_ground.as_ref().map(ToString::to_string),
             })
             .collect();
         let unassured_basic = if config.authz.assurance.minimum.is_none() {
@@ -563,14 +620,15 @@ impl BindingPosture {
             issuers,
             provider: config.authz.party_binding.provider.clone(),
             namespace: config.authz.party_binding.namespace.clone(),
-            agreements,
+            agreements: Vec::new(),
             unassured_basic,
         }
     }
 
-    /// Logs the posture: one line for the binding, one per agreement, a
-    /// `warn` for every agreement that runs without a named person, and a
-    /// `warn` while a mapped Basic user exists with no assurance minimum.
+    /// Logs the posture: one line for the binding and a `warn` while a mapped
+    /// Basic user exists with no assurance minimum. The agreements are
+    /// logged once the grants are read
+    /// ([`crate::party_binding::grants::live::LiveGrants::log_agreements`]).
     pub fn log(&self) {
         let issuers: Vec<String> = self
             .issuers
@@ -598,27 +656,6 @@ impl BindingPosture {
                 "mapped Basic users sign in with no assurance level while \
                  [authz.assurance] minimum is unset"
             );
-        }
-        for agreement in &self.agreements {
-            let accessor = agreement
-                .accessor
-                .map_or_else(|| "-".to_owned(), |a| a.to_string());
-            let ground = agreement.legal_ground.as_deref().unwrap_or("-");
-            if agreement.accessor == Some(crate::config::agreement::Accessor::Organisation) {
-                tracing::warn!(
-                    issuer = %agreement.issuer,
-                    accessor = %accessor,
-                    legal_ground = %ground,
-                    "a federation agreement admits an organisation without a named person"
-                );
-            } else {
-                tracing::info!(
-                    issuer = %agreement.issuer,
-                    accessor = %accessor,
-                    legal_ground = %ground,
-                    "federation agreement configured"
-                );
-            }
         }
     }
 }
@@ -658,7 +695,6 @@ mod tests {
             ),
             ("FERROEHR__AUTHZ__RBAC__IMPORT_ROLE", "IMPORTER"),
             ("FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS", "https://a,https://b"),
-            ("FERROEHR__AUTHZ__IMPORT__TRUSTED_SYSTEMS", "sys-a"),
         ]);
         assert_eq!(c.authz.assurance.claim, "loa");
         assert_eq!(
@@ -678,7 +714,12 @@ mod tests {
             }))
         );
         assert_eq!(c.authz.rbac.import_role.as_deref(), Some("IMPORTER"));
-        assert_eq!(c.authz.rbac.role_issuers, ["https://a", "https://b"]);
-        assert_eq!(c.authz.import.trusted_systems, ["sys-a"]);
+        assert_eq!(
+            c.authz.rbac.role_issuers,
+            [
+                ferrohealth_secret::secret_url::SecretUrl::new("https://a"),
+                ferrohealth_secret::secret_url::SecretUrl::new("https://b")
+            ]
+        );
     }
 }

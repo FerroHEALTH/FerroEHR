@@ -29,6 +29,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct IdentifierProtectionConfig {
     /// The scheme codes to protect
     /// (`FERROEHR__PRIVACY__IDENTIFIER_PROTECTION__SCHEMES`).

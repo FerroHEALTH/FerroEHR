@@ -1,0 +1,132 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e1de9374-6175-4051-bc4f-b738787b1173; build_uid=9f59a46e-2e07-4a06-9019-72fd2327c4cb)
+    openEHR-EHR-CLUSTER.exam_breasts.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2015-06-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Bergen Hospital Trust, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "John Tore Valand, Haukeland Universitetssjukehus, Norway">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"D3D806B902A494EAB1D87324F37201C7">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording a narrative description and clinical interpretation of the findings observed during the physical examination of the breasts.">
+            keywords = <"examination", "physical", "clinical", "findings", "exam", "breast">
+            use = <"Use to record a narrative description of the overall findings observed during the physical examination of the breasts. 
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings - for example, examination findings for each breast separately in CLUSTER.exam_breast. 
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording data not related to the physical examination of the breasts.
+
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom.
+
+Not to be used to record stand-alone clinical observations or measurements or test results - use specific OBSERVATION archetypes. For example OBSERVATION.blood_pressure or OBSERVATION.imaging_exam.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination of both breasts
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- No abnormality detected
+                value matches {
+                    DV_BOOLEAN[at9000] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Symmetry?
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            allow_archetype CLUSTER[at0004] matches {    -- Examination details
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_breast(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0005] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0006] matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            allow_archetype CLUSTER[at0008] matches {    -- Examination not done
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Examination of both breasts">
+                description = <"Findings observed during the physical examination of both breasts.">
+            >
+            ["at0002"] = <
+                text = <"No abnormality detected">
+                description = <"Statement that no abnormality was detected (NAD) on examination of both breasts.">
+                comment = <"Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element.">
+            >
+            ["at0003"] = <
+                text = <"Clinical description">
+                description = <"Narrative description of the overall findings observed during the physical examination.">
+            >
+            ["at0004"] = <
+                text = <"Examination details">
+                description = <"Structured details about the physical examination findings.">
+            >
+            ["at0005"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram representing the physical examination findings.">
+            >
+            ["at0006"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the physical examination findings, not captured in other fields.">
+            >
+            ["at0008"] = <
+                text = <"Examination not done">
+                description = <"Details to explicitly record that this examination was not performed.">
+            >
+            ["at0011"] = <
+                text = <"Symmetry?">
+                description = <"Description of the appearance of symmetry of both breasts in comparison to one another.">
+            >
+        >
+    >

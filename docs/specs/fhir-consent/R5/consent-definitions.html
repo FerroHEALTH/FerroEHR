@@ -1,0 +1,575 @@
+﻿<!DOCTYPE HTML>
+  <!-- template-definitions.html --><html xml:lang="en" xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <title>Consent - FHIR v5.0.0</title>
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="http://hl7.org/fhir"/>
+
+  <link rel="stylesheet" href="fhir.css"/>
+  <link rel="stylesheet" href="fhir-pub.css"/>
+  <link rel="Prev" href="http://hl7.org/fhir/consent-definitions.html"/>
+
+    <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="./dist/css/bootstrap.css"/>
+  <link rel="stylesheet" href="./assets/css/bootstrap-fhir.css"/>
+
+    <!-- Project extras -->
+  <link rel="stylesheet" href="./assets/css/project.css"/>
+  <link rel="stylesheet" href="./assets/css/pygments-manni.css"/>
+	<link rel="stylesheet" href="jquery-ui.css"/>
+
+  <script src="./assets/js/fhir-table-scripts.js"></script>
+
+    <!-- Favicons -->
+  <link sizes="144x144" rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-144-precomposed.png"/>
+  <link sizes="114x114" rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-114-precomposed.png"/>
+  <link sizes="72x72" rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-72-precomposed.png"/>
+  <link rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-57-precomposed.png"/>
+  <link rel="shortcut icon" href="./assets/ico/favicon.png"/>
+
+</head>
+<body>
+	<div id="segment-header" class="segment">  <!-- segment-header -->	
+		<div class="container">    <!-- container -->
+			<a no-external="true" id="logo" href="http://hl7.org/fhir"><img src="./assets/images/fhir-logo-www.png" alt="logo fhir" width="249" height="60"/> </a>
+			<div id="hl7-status">
+				<b>Release 5</b>
+			</div>       	
+			
+			<div id="hl7-nav">
+				 <a no-external="true" id="hl7-logo" href="http://www.hl7.org">
+					<img src="./assets/images/hl7-logo.png" width="54" alt="visit the hl7 website" height="50"/>
+				</a> 
+			</div>       	
+			<div id="hl7-nav"><a no-external="true" id="hl7-logo" href="http://hl7.org/fhir/R5/searchform.html"><img src="./assets/images/search.png" alt="Search CI-Build FHIR"/></a></div> 
+		</div>
+		<div class="container">    <!-- container -->
+	</div></div>  <!-- /segment-header -->	
+
+
+	<div id="segment-navbar" class="segment">  <!-- segment-navbar -->
+		<div id="stripe"> </div>
+		<div class="container">  <!-- container -->
+   <!-- HEADER CONTENT -->
+ 	      		 	      		      		
+			<nav class="navbar navbar-inverse">
+				<div class="container">
+					<button data-target=".navbar-inverse-collapse" data-toggle="collapse" type="button" class="navbar-toggle">
+						<span class="icon-bar"> </span>
+						<span class="icon-bar"> </span>
+						<span class="icon-bar"> </span>
+					</button>
+					<a href="index.html" class="navbar-brand hidden">FHIR</a>
+					<div class="nav-collapse collapse navbar-inverse-collapse">
+						<ul class="nav navbar-nav">
+              <li><a href="./index.html">Home</a></li>
+              <li><a href="./modules.html">Getting Started</a></li>
+              <li><a href="./documentation.html">Documentation</a></li>
+              <li><a href="./datatypes.html">Data Types</a></li>
+              <li><a href="./resourcelist.html"><b><i>Resource Types</i></b></a></li>
+              <li><a href="./terminologies-systems.html">Terminologies</a></li>
+              <li class="dropdown">
+                <a data-toggle="dropdown" href="#" class="dropdown-toggle">Artifacts<b class="caret"></b></a>
+                <ul class="dropdown-menu">
+                  <li><a href="http://hl7.org/fhir/extensions/extension-registry.html">Extensions</a></li>
+                  <li><a href="./operationslist.html">Operations</a></li>
+                  <li><a href="./patterns.html">Patterns</a></li>
+                  <li><a href="./profilelist.html">Profiles</a></li>
+                  <li><a href="./searchparameter-registry.html">Search Parameters</a></li>
+				  <li class="divider"></li>
+                  <li><a href="http://registry.fhir.org" target="_blank">Artifact Registry <img src="external.png" alt="icon" style="vertical-align: baseline"/></a></li>
+                </ul>    
+              </li>
+              <li><a href="http://fhir.org/guides/registry" target="_blank">Implementation Guides <img src="external.png" alt="icon" style="vertical-align: baseline"/></a></li>
+						</ul>
+					</div>  <!-- /.nav-collapse -->
+				</div>  <!-- /.container -->
+			</nav>  <!-- /.navbar -->
+      		
+  <!-- /HEADER CONTENT -->				
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-navbar -->
+	
+
+	<div id="segment-breadcrumb" class="segment">  <!-- segment-breadcrumb -->
+		<div class="container">  <!-- container -->	
+			<ul class="breadcrumb">
+        <li><a href="secpriv-module.html"><img src="secpriv.jpg" alt="link"/> Security and Privacy</a></li>        <li><a href="consent.html">Consent</a></li>        <li><b>Detailed Descriptions</b></li>          <!-- consent.html / res-Detailed Descriptions / Consent -->
+
+			</ul>	
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-breadcrumb -->
+	
+
+	<div id="segment-content" class="segment">  <!-- segment-content -->
+	<div class="container">  <!-- container -->
+            <div class="row">
+            	<div class="inner-wrapper">
+  <!-- CONTENT CONTENT -->
+
+<div class="col-12">
+
+  <!-- ReleaseHeader --><p id="publish-box">This page is part of the FHIR Specification (v5.0.0: R5 - <a href="https://confluence.hl7.org/display/HL7/HL7+Balloting" title="Standard for Trial-Use">STU</a>). This is the current published version in it's permanent home (it will always be available at this URL). For a full list of available versions, see the <a href="http://hl7.org/fhir/directory.html">Directory of published versions <img src="external.png" style="text-align: baseline"></a>. <!--pxl-->Page versions: <b>R5</b> <a href="http://hl7.org/fhir/R4B/consent-definitions.html">R4B</a> <a href="http://hl7.org/fhir/R4/consent-definitions.html">R4</a> <a href="http://hl7.org/fhir/STU3/consent-definitions.html">R3</a></p><!-- EndReleaseHeader -->
+
+
+
+<ul class="nav nav-tabs"><li><a href="consent.html">Content</a></li><li><a href="consent-examples.html">Examples</a></li><li class="active"><a href="#">Detailed Descriptions</a></li><li><a href="consent-mappings.html">Mappings</a></li><li><a href="consent-operations.html">Operations</a></li><li><a href="consent-search.html">Search Params</a></li><li><a href="consent-profiles.html">Profiles</a></li><li><a href="http://hl7.org/fhir/extensions/extensions-Consent.html">Extensions</a></li><li><a href="http://hl7.org/fhir/extensions/conversions-Consent.html">R4 Conversions</a></li></ul>
+
+<h2 class="self-link-parent"><span class="sectioncount">6.2.13<a name="6.2.13"> </a></span> Resource Consent - Detailed Descriptions <a href="consent-definitions.html#6.2.13" title="link to here" class="self-link"><svg viewBox="0 0 1792 1792" width="20" class="self-link" height="20"><path d="M1520 1216q0-40-28-68l-208-208q-28-28-68-28-42 0-72 32 3 3 19 18.5t21.5 21.5 15 19 13 25.5 3.5 27.5q0 40-28 68t-68 28q-15 0-27.5-3.5t-25.5-13-19-15-21.5-21.5-18.5-19q-33 31-33 73 0 40 28 68l206 207q27 27 68 27 40 0 68-26l147-146q28-28 28-67zm-703-705q0-40-28-68l-206-207q-28-28-68-28-39 0-68 27l-147 146q-28 28-28 67 0 40 28 68l208 208q27 27 68 27 42 0 72-31-3-3-19-18.5t-21.5-21.5-15-19-13-25.5-3.5-27.5q0-40 28-68t68-28q15 0 27.5 3.5t25.5 13 19 15 21.5 21.5 18.5 19q33-31 33-73zm895 705q0 120-85 203l-147 146q-83 83-203 83-121 0-204-85l-206-207q-83-83-83-203 0-123 88-209l-88-88q-86 88-208 88-120 0-204-84l-208-208q-84-84-84-204t85-203l147-146q83-83 203-83 121 0 204 85l206 207q83 83 83 203 0 123-88 209l88 88q86-88 208-88 120 0 204 84l208 208q84 84 84 204z" fill="navy"/></svg></a></h2>
+<table class="colstu"><tr><td><a href="http://www.hl7.org/Special/committees/homehealth/index.cfm">Community Based Collaborative Care <img src="external.png" alt="icon" style="vertical-align: baseline"/></a> Work Group</td><td><a href="versions.html#maturity">Maturity Level</a>: 2</td><td>&nbsp;<a href="versions.html#std-process" title="Standard Status">Trial Use</a></td><td><a href="security.html#SecPrivConsiderations">Security Category</a>: Patient</td>  <!-- !ns! --><td><a href="compartmentdefinition.html">Compartments</a>: <a href="compartmentdefinition-patient.html">Patient</a></td></tr></table>
+
+
+
+<p>Detailed Descriptions for the elements in the Consent resource.</p>
+
+<table class="dict">
+  <tr><td colspan="2" class="structure"><a name="Consent"> </a><b>Consent</b></td></tr>
+  <tr><td>Element Id</td><td>Consent</td></tr>
+  <tr><td>Definition</td><td><p>A record of a healthcare consumer’s  choices  or choices made on their behalf by a third party, which permits or denies identified recipient(s) or recipient role(s) to perform one or more actions within a given policy context, for specific purposes and periods of time.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>A healthcare consumer's  or third party's choices to permit or deny recipients or roles to perform actions for specific purposes and periods of time</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="domainresource.html">DomainResource</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td>Comments</td><td><p>Broadly, there are 3 key areas of consent for patients: Consent around sharing information (aka Privacy Consent Directive - Authorization to Collect, Use, or Disclose information), consent for specific treatment, or kinds of treatment and consent for research participation and data sharing.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.identifier"> </a><b>Consent.identifier</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.identifier</td></tr>
+  <tr><td>Definition</td><td><p>Unique identifier for this copy of the Consent Statement.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Identifier for this record (external references)</td></tr>
+  <tr><td>Note</td><td>This is a business identifier, not a resource identifier (see <a href="resource.html#identifiers">discussion</a>)</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Identifier">Identifier</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>This identifier identifies this copy of the consent. Where this identifier is also used elsewhere as the identifier for a consent record (e.g. a CDA consent document) then the consent details are expected to be the same.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.status"> </a><b>Consent.status</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.status</td></tr>
+  <tr><td>Definition</td><td><p>Indicates the current state of this Consent resource.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>draft | active | inactive | not-done | entered-in-error | unknown</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>1..1</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-consent-state-codes.html">Consent State</a> (<a href="terminologies.html#required">Required</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#code">code</a></td></tr>
+  <tr><td><a href="conformance-rules.html#ismodifier">Is Modifier</a></td><td>true (Reason: This element is labelled as a modifier because it is a status element that contains status entered-in-error which means that the resource should not be treated as valid)</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>This element is labeled as a modifier because the status contains the codes rejected and entered-in-error that mark the Consent as not currently valid.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.category"> </a><b>Consent.category</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.category</td></tr>
+  <tr><td>Definition</td><td><p>A classification of the type of consents found in the statement. This element supports indexing and retrieval of consent statements.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Classification of the consent statement - for indexing/retrieval</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-consent-category.html">Consent Category Codes</a> (<a href="terminologies.html#example">Example</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#CodeableConcept">CodeableConcept</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.subject"> </a><b>Consent.subject</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.subject</td></tr>
+  <tr><td>Definition</td><td><p>The patient/healthcare practitioner or group of persons to whom this consent applies.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Who the consent applies to</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="patient.html">Patient</a> | <a href="practitioner.html">Practitioner</a> | <a href="group.html">Group</a>)</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.date"> </a><b>Consent.date</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.date</td></tr>
+  <tr><td>Definition</td><td><p>Date the consent instance was agreed to.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Fully executed date of the consent</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#date">date</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.period"> </a><b>Consent.period</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.period</td></tr>
+  <tr><td>Definition</td><td><p>Effective period for this Consent Resource and all provisions unless specified in that provision.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Effective period for this Consent</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Period">Period</a></td></tr>
+  <tr><td title="Other names by which this resource/element may be known">Alternate Names</td><td>period</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.grantor"> </a><b>Consent.grantor</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.grantor</td></tr>
+  <tr><td>Definition</td><td><p>The entity responsible for granting the rights listed in a Consent Directive.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Who is granting rights according to the policy and rules</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="careteam.html">CareTeam</a> | <a href="healthcareservice.html">HealthcareService</a> | <a href="organization.html">Organization</a> | <a href="patient.html">Patient</a> | <a href="practitioner.html">Practitioner</a> | <a href="relatedperson.html">RelatedPerson</a> | <a href="practitionerrole.html">PractitionerRole</a>)</td></tr>
+  <tr><td title="Other names by which this resource/element may be known">Alternate Names</td><td>grantor</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.grantee"> </a><b>Consent.grantee</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.grantee</td></tr>
+  <tr><td>Definition</td><td><p>The entity responsible for complying with the Consent Directive, including any obligations or limitations on authorizations and enforcement of prohibitions.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Who is agreeing to the policy and rules</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="careteam.html">CareTeam</a> | <a href="healthcareservice.html">HealthcareService</a> | <a href="organization.html">Organization</a> | <a href="patient.html">Patient</a> | <a href="practitioner.html">Practitioner</a> | <a href="relatedperson.html">RelatedPerson</a> | <a href="practitionerrole.html">PractitionerRole</a>)</td></tr>
+  <tr><td title="Other names by which this resource/element may be known">Alternate Names</td><td>grantee</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>In a fully computable consent, both grantee and grantor  will be listed as actors within the consent. The Grantee and Grantor elements are for ease of search only.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.manager"> </a><b>Consent.manager</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.manager</td></tr>
+  <tr><td>Definition</td><td><p>The actor that manages the consent through its lifecycle.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Consent workflow management</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="healthcareservice.html">HealthcareService</a> | <a href="organization.html">Organization</a> | <a href="patient.html">Patient</a> | <a href="practitioner.html">Practitioner</a>)</td></tr>
+  <tr><td title="Other names by which this resource/element may be known">Alternate Names</td><td>manager</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.controller"> </a><b>Consent.controller</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.controller</td></tr>
+  <tr><td>Definition</td><td><p>The actor that controls/enforces the access according to the consent.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Consent Enforcer</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="healthcareservice.html">HealthcareService</a> | <a href="organization.html">Organization</a> | <a href="patient.html">Patient</a> | <a href="practitioner.html">Practitioner</a>)</td></tr>
+  <tr><td title="Other names by which this resource/element may be known">Alternate Names</td><td>controller</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.sourceAttachment"> </a><b>Consent.sourceAttachment</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.sourceAttachment</td></tr>
+  <tr><td>Definition</td><td><p>The source on which this consent statement is based. The source might be a scanned original paper form.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Source from which this consent is taken</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Attachment">Attachment</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td>Comments</td><td><p>The source can be contained inline (Attachment), referenced directly (Consent), referenced in a consent repository (DocumentReference), or simply by an identifier (Identifier), e.g. a CDA document id.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.sourceReference"> </a><b>Consent.sourceReference</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.sourceReference</td></tr>
+  <tr><td>Definition</td><td><p>A reference to a consent that links back to such a source, a reference to a document repository (e.g. XDS) that stores the original consent document.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Source from which this consent is taken</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="consent.html">Consent</a> | <a href="documentreference.html">DocumentReference</a> | <a href="contract.html">Contract</a> | <a href="questionnaireresponse.html">QuestionnaireResponse</a>)</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td>Comments</td><td><p>The source can be contained inline (Attachment), referenced directly (Consent), referenced in a consent repository (DocumentReference), or simply by an identifier (Identifier), e.g. a CDA document id.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.regulatoryBasis"> </a><b>Consent.regulatoryBasis</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.regulatoryBasis</td></tr>
+  <tr><td>Definition</td><td><p>A set of codes that indicate the regulatory basis (if any) that this consent supports.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Regulations establishing base Consent</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-consent-policy.html">Consent PolicyRule Codes</a> (<a href="terminologies.html#example">Example</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#CodeableConcept">CodeableConcept</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.policyBasis"> </a><b>Consent.policyBasis</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.policyBasis</td></tr>
+  <tr><td>Definition</td><td><p>A Reference or URL used to uniquely identify the policy the organization will enforce for this Consent. This Reference or URL should be specific to the version of the policy and should be dereferencable to a computable policy of some form.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Computable version of the backing policy</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.policyBasis.reference"> </a><b>Consent.policyBasis.reference</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.policyBasis.reference</td></tr>
+  <tr><td>Definition</td><td><p>A Reference that identifies the policy the organization will enforce for this Consent.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Reference backing policy resource</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="resourcelist.html#Any">Any</a>)</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td>Comments</td><td><p>While any resource may be used, Consent, PlanDefinition and Contract would be most frequent</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.policyBasis.url"> </a><b>Consent.policyBasis.url</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.policyBasis.url</td></tr>
+  <tr><td>Definition</td><td><p>A URL that links to a computable version of the policy the organization will enforce for this Consent.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>URL to a computable backing policy</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#url">url</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.policyText"> </a><b>Consent.policyText</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.policyText</td></tr>
+  <tr><td>Definition</td><td><p>A Reference to the human readable policy explaining the basis for the Consent.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Human Readable Policy</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="documentreference.html">DocumentReference</a>)</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.verification"> </a><b>Consent.verification</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.verification</td></tr>
+  <tr><td>Definition</td><td><p>Whether a treatment instruction (e.g. artificial respiration: yes or no) was verified with the patient, his/her family or another authorized person.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Consent Verified by patient or family</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.verification.verified"> </a><b>Consent.verification.verified</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.verification.verified</td></tr>
+  <tr><td>Definition</td><td><p>Has the instruction been verified.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Has been verified</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>1..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#boolean">boolean</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.verification.verificationType"> </a><b>Consent.verification.verificationType</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.verification.verificationType</td></tr>
+  <tr><td>Definition</td><td><p>Extensible list of verification type starting with verification and re-validation.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Business case of verification</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-consent-verification.html">Consent Vefication Codes</a> (<a href="terminologies.html#example">Example</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#CodeableConcept">CodeableConcept</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td>Comments</td><td><p>This allows the verification element to hold multiple use cases including RelatedPerson verification of the Grantee decision and periodic re-validation of the consent.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.verification.verifiedBy"> </a><b>Consent.verification.verifiedBy</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.verification.verifiedBy</td></tr>
+  <tr><td>Definition</td><td><p>The person who conducted the verification/validation of the Grantor decision.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Person conducting verification</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="organization.html">Organization</a> | <a href="practitioner.html">Practitioner</a> | <a href="practitionerrole.html">PractitionerRole</a>)</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.verification.verifiedWith"> </a><b>Consent.verification.verifiedWith</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.verification.verifiedWith</td></tr>
+  <tr><td>Definition</td><td><p>Who verified the instruction (Patient, Relative or other Authorized Person).</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Person who verified</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="patient.html">Patient</a> | <a href="relatedperson.html">RelatedPerson</a>)</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.verification.verificationDate"> </a><b>Consent.verification.verificationDate</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.verification.verificationDate</td></tr>
+  <tr><td>Definition</td><td><p>Date(s) verification was collected.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>When consent verified</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#dateTime">dateTime</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td>Comments</td><td><p>Allows for history of verification/validation.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.decision"> </a><b>Consent.decision</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.decision</td></tr>
+  <tr><td>Definition</td><td><p>Action to take - permit or deny - as default.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>deny | permit</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-consent-provision-type.html">Consent Provision Type</a> (<a href="terminologies.html#required">Required</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#code">code</a></td></tr>
+  <tr><td><a href="conformance-rules.html#ismodifier">Is Modifier</a></td><td>true (Reason: Sets context for the values in .provision)</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision"> </a><b>Consent.provision</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision</td></tr>
+  <tr><td>Definition</td><td><p>An exception to the base policy of this consent. An exception can be an addition or removal of access permissions.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Constraints to the base Consent.policyRule/Consent.policy</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.period"> </a><b>Consent.provision.period</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.period</td></tr>
+  <tr><td>Definition</td><td><p>Timeframe for this provision.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Timeframe for this provision</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Period">Period</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>This is the bound effective time of the consent and should be in the base provision in the Consent resource.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.actor"> </a><b>Consent.provision.actor</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.actor</td></tr>
+  <tr><td>Definition</td><td><p>Who or what is controlled by this provision. Use group to identify a set of actors by some property they share (e.g. 'admitting officers').</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Who|what controlled by this provision (or group, by role)</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td>Meaning if Missing</td><td>There is no specific actor associated with the exception</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.actor.role"> </a><b>Consent.provision.actor.role</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.actor.role</td></tr>
+  <tr><td>Definition</td><td><p>How the individual is involved in the resources content that is described in the exception.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>How the actor is involved</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-participation-role-type.html">Participation Role Type</a> (<a href="terminologies.html#extensible">Extensible</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#CodeableConcept">CodeableConcept</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.actor.reference"> </a><b>Consent.provision.actor.reference</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.actor.reference</td></tr>
+  <tr><td>Definition</td><td><p>The resource that identifies the actor. To identify actors by type, use group to identify a set of actors by some property they share (e.g. 'admitting officers').</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Resource for the actor (or group, by role)</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="device.html">Device</a> | <a href="group.html">Group</a> | <a href="careteam.html">CareTeam</a> | <a href="organization.html">Organization</a> | <a href="patient.html">Patient</a> | <a href="practitioner.html">Practitioner</a> | <a href="relatedperson.html">RelatedPerson</a> | <a href="practitionerrole.html">PractitionerRole</a>)</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.action"> </a><b>Consent.provision.action</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.action</td></tr>
+  <tr><td>Definition</td><td><p>Actions controlled by this provision.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Actions controlled by this provision</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-consent-action.html">Consent Action Codes</a> (<a href="terminologies.html#example">Example</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#CodeableConcept">CodeableConcept</a></td></tr>
+  <tr><td>Meaning if Missing</td><td>all actions</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>Note that this is the direct action (not the grounds for the action covered in the purpose element). At present, the only action in the understood and tested scope of this resource is 'read'.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.securityLabel"> </a><b>Consent.provision.securityLabel</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.securityLabel</td></tr>
+  <tr><td>Definition</td><td><p>A security label, comprised of 0..* security label fields (Privacy tags), which define which resources are controlled by this exception.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Security Labels that define affected resources</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-security-label-examples.html">Example set of Security Labels</a> (<a href="terminologies.html#example">Example</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Coding">Coding</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>If the consent specifies a security label of "R" then it applies to all resources that are labeled "R" or lower. E.g. for Confidentiality, it's a high water mark. For other kinds of security labels, subsumption logic applies. When the purpose of use tag is on the data, access request purpose of use shall not conflict.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.purpose"> </a><b>Consent.provision.purpose</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.purpose</td></tr>
+  <tr><td>Definition</td><td><p>The context of the activities a user is taking - why the user is accessing the data - that are controlled by this provision.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Context of activities covered by this provision</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="http://terminology.hl7.org/5.1.0/ValueSet-v3-PurposeOfUse.html">PurposeOfUse <img src="external.png" alt="icon" style="vertical-align: baseline"/></a> (<a href="terminologies.html#extensible">Extensible</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Coding">Coding</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>When the purpose of use tag is on the data, access request purpose of use shall not conflict.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.documentType"> </a><b>Consent.provision.documentType</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.documentType</td></tr>
+  <tr><td>Definition</td><td><p>The documentType(s) covered by this provision. The type can be a CDA document, or some other type that indicates what sort of information the consent relates to.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>e.g. Resource Type, Profile, CDA, etc</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-consent-content-class.html">Consent Content Class</a> (<a href="terminologies.html#preferred">Preferred</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Coding">Coding</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>Multiple types are or'ed together. The intention of the documentType element is that the codes refer to document types defined in a standard somewhere.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.resourceType"> </a><b>Consent.provision.resourceType</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.resourceType</td></tr>
+  <tr><td>Definition</td><td><p>The resourceType(s) covered by this provision. The type can be a FHIR resource type or a profile on a type that indicates what information the consent relates to.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>e.g. Resource Type, Profile, etc</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-resource-types.html">Resource Types</a> (<a href="terminologies.html#extensible">Extensible</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Coding">Coding</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>Multiple types are or'ed together. The intention of the resourceType element is that the codes refer to profiles or document types defined in a standard or an implementation guide somewhere.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.code"> </a><b>Consent.provision.code</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.code</td></tr>
+  <tr><td>Definition</td><td><p>If this code is found in an instance, then the provision applies.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>e.g. LOINC or SNOMED CT code, etc. in the content</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-consent-content-code.html">Consent Content Codes</a> (<a href="terminologies.html#example">Example</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#CodeableConcept">CodeableConcept</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.dataPeriod"> </a><b>Consent.provision.dataPeriod</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.dataPeriod</td></tr>
+  <tr><td>Definition</td><td><p>Clinical or Operational Relevant period of time that bounds the data controlled by this provision.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Timeframe for data controlled by this provision</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#Period">Period</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td>Comments</td><td><p>This has a different sense to the Consent.period - that is when the consent agreement holds. This is the time period of the data that is controlled by the agreement.</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.data"> </a><b>Consent.provision.data</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.data</td></tr>
+  <tr><td>Definition</td><td><p>The resources controlled by this provision if specific resources are referenced.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Data controlled by this provision</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td>Meaning if Missing</td><td>all data</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.data.meaning"> </a><b>Consent.provision.data.meaning</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.data.meaning</td></tr>
+  <tr><td>Definition</td><td><p>How the resource reference is interpreted when testing consent restrictions.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>instance | related | dependents | authoredby</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>1..1</td></tr>
+  <tr><td><a href="terminologies.html">Terminology Binding</a></td><td><a href="valueset-consent-data-meaning.html">Consent Data Meaning</a> (<a href="terminologies.html#required">Required</a>)</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="datatypes.html#code">code</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.data.reference"> </a><b>Consent.provision.data.reference</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.data.reference</td></tr>
+  <tr><td>Definition</td><td><p>A reference to a specific resource that defines which resources are covered by this consent.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>The actual data reference</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>1..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="references.html#Reference">Reference</a>(<a href="resourcelist.html#Any">Any</a>)</td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>true</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.expression"> </a><b>Consent.provision.expression</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.expression</td></tr>
+  <tr><td>Definition</td><td><p>A computable (FHIRPath or other) definition of what is controlled by this consent.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>A computable expression of the consent</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..1</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="metadatatypes.html#Expression">Expression</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+  <tr><td>Comments</td><td><p>Constraining the expression type for a specific implementation via profile is recommended</p>
+</td></tr>
+  <tr><td colspan="2" class="structure"><a name="Consent.provision.provision"> </a><b>Consent.provision.provision</b></td></tr>
+  <tr><td>Element Id</td><td>Consent.provision.provision</td></tr>
+  <tr><td>Definition</td><td><p>Provisions which provide exceptions to the base provision or subprovisions.</p>
+</td></tr>
+  <tr><td>Short Display</td><td>Nested Exception Provisions</td></tr>
+  <tr><td><a href="conformance-rules.html#cardinality">Cardinality</a></td><td>0..*</td></tr>
+  <tr><td><a href="datatypes.html">Type</a></td><td><a href="#Consent.provision">See Consent.provision</a></td></tr>
+  <tr><td><a href="search.html#summary">Summary</a></td><td>false</td></tr>
+</table>
+
+
+
+</div>   <!-- col-12 -->
+				</div>  <!-- /inner-wrapper -->
+            </div>  <!-- /row -->
+        </div>  <!-- /container -->
+        
+    </div>  <!-- /segment-content -->
+
+
+	<div id="segment-footer" class="segment">  <!-- segment-footer -->
+		<div class="container">  <!-- container -->
+			<div class="inner-wrapper">
+				<p>
+        FHIR &reg;&copy; HL7.org 2011+. FHIR R5 hl7.fhir.core#5.0.0 generated on Sun, Mar 26, 2023 15:24+1100. 
+        <br/>
+        <span style="color: #FFFF77">
+        Links: <a style="color: #b8dcf9" href="http://hl7.org/fhir/R5/search.cfm">Search <img src="external.png" alt="icon" style="vertical-align: baseline"/></a> | 
+               <a style="color: #b8dcf9" href="history.html">Version History</a> | 
+               <a style="color: #b8dcf9" href="toc.html">Contents</a> | 
+               <a style="color: #b8dcf9" href="help.html">Glossary</a> |
+               <a style="color: #ffffff" href="qa.html">QA</a> |
+  <!-- <a style="color: #b8dcf9" href="credits.html">Credits</a> | -->
+               <a style="color: #b8dcf9" href="https://www.fhir.org/perl/htmldiff.pl?oldfile=http%3A%2F%2Fhl7.org%2Ffhir%2FR4%2Fconsent-definitions.html&amp;newfile=http%3A%2F%2Fhl7.org%2Ffhir%2FR5%2Fconsent-definitions.html">Compare to R4 <img src="external.png" alt="icon" style="vertical-align: baseline"/></a> |                
+               <a style="color: #b8dcf9" href="https://www.fhir.org/perl/htmldiff.pl?oldfile=http%3A%2F%2Fhl7.org%2Ffhir%2FR4B%2Fconsent-definitions.html&amp;newfile=http%3A%2F%2Fhl7.org%2Ffhir%2FR5%2Fconsent-definitions.html">Compare to R4B <img src="external.png" alt="icon" style="vertical-align: baseline"/></a> |                
+               <a rel="license" style="color: #b8dcf9" href="license.html"><img src="cc0.png" alt="CC0" style="border-style: none;"/></a> | 
+               <a style="color: #b8dcf9" href="https://jira.hl7.org/secure/CreateIssueDetails!init.jspa?pid=10405&amp;issuetype=10600&amp;customfield_11302=FHIR-core&amp;customfield_11808=R5&amp;customfield_10612=http://hl7.org/fhir/R5/consent-definitions.html" target="_blank">Propose a change <img src="external.png" alt="icon" style="vertical-align: baseline"/></a>   
+        </span>
+        </p>
+			</div>  <!-- /inner-wrapper -->
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-footer -->
+  <!-- disqus thread -->
+  <!-- disqus -->
+  <!-- end disqus -->        
+	
+	<div id="segment-post-footer" class="segment hidden">  <!-- segment-post-footer -->
+		<div class="container">  <!-- container -->
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-post-footer -->
+    
+      <!-- JS and analytics only. -->
+      <!-- Bootstrap core JavaScript
+================================================== -->
+  <!-- Placed at the end of the document so the pages load faster -->
+<script src="./assets/js/jquery.js"> </script>     <!-- note keep space here, otherwise it will be transformed to empty tag -> fails -->
+<script src="./dist/js/bootstrap.min.js"> </script>
+<script src="./assets/js/respond.min.js"> </script>
+
+<script src="./assets/js/fhir.js"> </script>
+
+  <!-- Analytics Below
+================================================== -->
+
+    
+</body>
+</html>

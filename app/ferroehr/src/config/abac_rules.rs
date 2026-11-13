@@ -4,10 +4,9 @@
 //! The boot rules of `[authz.abac]` and the two engines' own tables.
 //!
 //! The policy kinds, the parameters each may carry, what each engine needs,
-//! and `[authz.abac.cedar]` and `[authz.abac.remote]`. No openEHR spec governs RBAC or ABAC:
+//! and `[authz.abac.remote]`; the Cedar engine's policy set is the Cedar admin
+//! register ([`crate::policy_register`]). No openEHR spec governs RBAC or ABAC:
 //! our own design.
-
-use std::path::PathBuf;
 
 use ferrohealth_secret::secret_url::RedactedUrl;
 use ferrohealth_smart::config::endpoint::EndpointSection;
@@ -41,10 +40,7 @@ impl AbacConfig {
         self.validate_policy_rules()?;
         match self.engine {
             AbacEngineKind::Remote => self.validate_remote_engine(),
-            AbacEngineKind::Cedar => match self.cedar.policy_dir {
-                Some(_) => Ok(()),
-                None => Err(AuthzConfigError::CedarDirMissing),
-            },
+            AbacEngineKind::Cedar => Ok(()),
         }
     }
 
@@ -95,20 +91,6 @@ impl AbacConfig {
     }
 }
 
-/// The embedded-Cedar engine settings.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(default, deny_unknown_fields)]
-pub struct CedarConfig {
-    /// Directory of `*.cedar` policy files (required when `engine = cedar`).
-    pub policy_dir: Option<PathBuf>,
-    /// Optional periodic hot-reload interval; off when unset.
-    pub reload_interval: Option<ferrohealth_config::units::Duration>,
-    /// Retired in v5.7.0: refused at load, naming `reload_interval`.
-    #[serde(skip_serializing)]
-    pub reload_secs: ferrohealth_config::removed::Removed,
-}
-
 /// The remote-PDP client settings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
@@ -121,20 +103,8 @@ pub struct RemoteConfig {
     /// timeout), the `retry` of a call that got no answer or a `5xx`, the TLS
     /// and the credential, such as the OAuth 2.0 client credentials grant.
     /// Any `userinfo` in the URL is masked in every rendering.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
     pub endpoint: EndpointSection,
-    /// Retired in v5.7.0: refused at load, naming
-    /// `endpoint.credentials.oauth`.
-    #[serde(skip_serializing)]
-    pub oauth: ferrohealth_config::removed::Removed,
-    /// Retired in v5.7.0: refused at load, naming `url`.
-    #[serde(skip_serializing)]
-    pub server: ferrohealth_config::removed::Removed,
-    /// Retired in v5.7.0: refused at load, naming `connect_timeout`.
-    #[serde(skip_serializing)]
-    pub connect_timeout_ms: ferrohealth_config::removed::Removed,
-    /// Retired in v5.7.0: refused at load, naming `timeout`.
-    #[serde(skip_serializing)]
-    pub request_timeout_ms: ferrohealth_config::removed::Removed,
 }
 
 impl Default for RemoteConfig {
@@ -145,10 +115,6 @@ impl Default for RemoteConfig {
                 connect_timeout: Some(ferrohealth_config::units::Duration::from_secs(2)),
                 ..EndpointSection::default()
             },
-            oauth: ferrohealth_config::removed::Removed::default(),
-            server: ferrohealth_config::removed::Removed::default(),
-            connect_timeout_ms: ferrohealth_config::removed::Removed::default(),
-            request_timeout_ms: ferrohealth_config::removed::Removed::default(),
         }
     }
 }

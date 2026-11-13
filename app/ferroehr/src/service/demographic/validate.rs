@@ -25,51 +25,34 @@
               fragment the seam produced once; stored-content serving"
 )]
 
-use openehr_base::prelude::PartyRef;
 use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal;
 use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
-use openehr_base::validate::Validate;
 use serde_json::Value;
 
 use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
+use crate::versioning::party_refs::{self, Referent};
 
 /// The RM `_type` a `PARTY_RELATIONSHIP` versioned object stores.
 const RELATIONSHIP_RM_TYPE: &str = "PARTY_RELATIONSHIP";
 
-/// Validate one inbound `PARTY_REF` value against the BASE class checks —
-/// `PARTY_REF.Type_validity` and the inherited `OBJECT_REF.namespace` rule.
-///
-/// The rules themselves are NOT restated here: the reference is decoded into
-/// the generated [`PartyRef`] and judged by that class's single spec-cited
-/// realization in `openehr-base`
-/// (`base_types/identification/party_ref_impl.rs`), so this service and the
-/// whole-instance RM pass can never give two answers about the same ref.
-/// `context` names the referencing attribute for the `422` message.
-///
-/// Decoding also enforces the mandatory `OBJECT_REF` attributes (`id`,
-/// `namespace`, `type` are all 1..1 —
-/// `docs/specs/openehr/BASE/docs/UML/classes/org.openehr.base.base_types.object_ref.adoc`
-/// §Attributes), which a partial hand check cannot see.
-fn validate_party_ref(reference: &Value, context: &str) -> Result<(), ServiceError> {
-    let typed = openehr_its::json::from_canonical_value::<PartyRef>(reference).map_err(|e| {
-        ServiceError::content_invalid(
-            Violation::new("is not a well-formed PARTY_REF")
-                .with_path(context)
-                .with_decode_failure(&e),
-        )
-    })?;
-    let violations = typed.invariants();
-    if !violations.is_empty() {
-        // The class's own `InvariantViolation`s travel on as data; only the
-        // first is rendered.
-        return Err(ServiceError::content_invalid(
-            Violation::new("fails its BASE class invariants")
-                .with_path(context)
-                .with_causes(violations.into_iter().take(1).collect()),
-        ));
+/// The version container a party version is judged as part of: `self` in RM
+/// `party.adoc` `Relationships_validity`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Container {
+    /// A first version, under the id the commit gives the new container.
+    New(VoId),
+    /// A later version of the existing container the write addresses.
+    Existing(VoId),
+}
+
+impl Container {
+    /// The container's id.
+    fn id(self) -> VoId {
+        match self {
+            Container::New(id) | Container::Existing(id) => id,
+        }
     }
-    Ok(())
 }
 
 /// Structurally validate a candidate party body of concrete RM type `rm_type`:
@@ -91,6 +74,7 @@ pub(crate) fn party_check(
     rm_type: &str,
     data: &Value,
     incomplete: bool,
+    container: Container,
 ) -> Result<(), ServiceError> {
     use openehr_rm::prelude::{Agent, Group, Organisation, Person, Role};
     let typed = match rm_type {
@@ -115,7 +99,114 @@ pub(crate) fn party_check(
     if !incomplete {
         typed.map_err(|e| ServiceError::canonical_decode(data, e))?;
     }
-    party_invariants(rm_type, data, incomplete, None)
+    party_invariants(rm_type, data, incomplete, container)
+}
+
+/// Refuses a body `uid` that names another version container than `container`,
+/// the one an update addresses: a version's `uid` is its
+/// `OBJECT_VERSION_ID`, whose `object_id` is its container (BASE
+/// `master05-identification_package.adoc` §Syntaxes), so a foreign one would
+/// stand in for the party's own id.
+///
+/// NOTE: no openEHR operation states a status for a body/path id mismatch; the `422`
+/// matches the COMPOSITION update's (ITS-REST overview §HTTP status codes).
+fn uid_names_container(rm_type: &str, data: &Value, container: VoId) -> Result<(), ServiceError> {
+    let Some(uid) = data.pointer("/uid/value").and_then(Value::as_str) else {
+        return Ok(());
+    };
+    let object_id = ObjectVersionId::new(uid).map_or_else(
+        |_| uid.to_owned(),
+        |version_id| version_id.object_id().value().into_owned(),
+    );
+    if composite_ids_equal(&object_id, &container.to_string()) {
+        return Ok(());
+    }
+    Err(ServiceError::content_invalid(
+        Violation::new(format!(
+            "names the version container {object_id}, not the one this write addresses \
+             ({container})"
+        ))
+        .with_path(format!("{rm_type}.uid")),
+    ))
+}
+
+/// `PARTY.Relationships_validity`, second arm (RM `party.adoc` §Invariants,
+/// "`relationships.for_all (r | r.source = self)`"): every inline
+/// relationship's `source` names `container`, the party's own version container.
+///
+/// RM demographic master02 §Party Relationships stores a relationship "as part
+/// of the data of the `PARTY` designated as the source" and has its refs name
+/// the Version container by `HIER_OBJECT_ID`; a body `uid` never stands in for
+/// `container`, since the commit stamps its own.
+///
+/// NOTE: a client cannot know the id a create mints (RM common master06 §Version
+/// Identification), so it adds relationships on update: our own design.
+fn relationships_validity(
+    rm_type: &str,
+    data: &Value,
+    container: Container,
+) -> Result<(), ServiceError> {
+    let Some(relationships) = data.get("relationships").and_then(Value::as_array) else {
+        return Ok(());
+    };
+    let own = container.id().to_string();
+    for (i, rel) in relationships.iter().enumerate() {
+        let source = rel.pointer("/source/id/value").and_then(Value::as_str);
+        let Some(source) = source.filter(|s| !composite_ids_equal(s, &own)) else {
+            continue;
+        };
+        let detail = match container {
+            Container::New(_) => format!(
+                "names {source}, but a relationship is stored under its source and a new \
+                 party's container id is assigned by this commit: add the relationship with \
+                 an update of the party"
+            ),
+            Container::Existing(_) => format!(
+                "names {source}, not this party's version container ({own}): a \
+                 relationship is stored under its source"
+            ),
+        };
+        return Err(ServiceError::content_invalid(
+            Violation::new(detail)
+                .with_path(format!("{rm_type}.relationships[{i}].source"))
+                .with_invariant("PARTY.Relationships_validity"),
+        ));
+    }
+    Ok(())
+}
+
+/// Judges each demographic reference a party body carries by itself
+/// ([`party_refs::shape_of`]): every inline relationship's `source` and
+/// `target`, a ROLE's `performer` and an Actor's `roles`, the one check a
+/// standalone relationship's ends get as well.
+///
+/// # Errors
+/// [`ServiceError::Unprocessable`] naming the rule and the reference's path.
+fn references(rm_type: &str, data: &Value) -> Result<(), ServiceError> {
+    let present = |value: Option<&Value>| value.filter(|v| !v.is_null()).cloned();
+    let list = |key: &str| {
+        data.get(key)
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default()
+    };
+    for (i, rel) in list("relationships").iter().enumerate() {
+        for end in ["source", "target"] {
+            if let Some(reference) = present(rel.get(end)) {
+                let path = format!("{rm_type}.relationships[{i}].{end}");
+                party_refs::shape_of(&reference, &path, Referent::Party)?;
+            }
+        }
+    }
+    for (i, role) in list("roles").iter().enumerate() {
+        party_refs::shape_of(role, &format!("{rm_type}.roles[{i}]"), Referent::Role)?;
+    }
+    if rm_type == "ROLE"
+        && let Some(performer) = present(data.get("performer"))
+    {
+        party_refs::shape_of(&performer, "ROLE.performer", Referent::Actor)?;
+    }
+    Ok(())
 }
 
 /// The party invariants that are NOT facts of the typed decode — everything
@@ -127,8 +218,8 @@ pub(crate) fn party_check(
 /// `ARCHETYPED` presence, and the "present implies non-empty" list bounds that
 /// an absent and a present-empty list both deserialize into the same `Vec`).
 ///
-/// `container` is the versioned object an update addresses by its path; it
-/// stands in for the party's own id when the body carries no `uid`.
+/// `container` is the version container the body becomes a version of: the
+/// id a create gives the new container, or the one an update addresses.
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] naming the violated rule.
@@ -136,7 +227,7 @@ pub(super) fn party_invariants(
     rm_type: &str,
     data: &Value,
     incomplete: bool,
-    container: Option<VoId>,
+    container: Container,
 ) -> Result<(), ServiceError> {
     // PARTY is unconditionally an archetype root (`demographic.party.adoc`
     // §Invariants `Is_archetype_root`), so `Archetyped_valid`'s "a root MUST
@@ -151,54 +242,11 @@ pub(super) fn party_invariants(
     // non-empty family hold by construction at the strict typed door; the
     // `553|incomplete|` lane skips typed construction (master06 §Incomplete).
 
-    // Relationships_validity, second arm (party.adoc): every inline
-    // relationship's `source` must reference THIS party's CONTAINER id — RM
-    // demographic master02 §Party Relationships requires `HIER_OBJECT_ID`s
-    // there, while a served party's `uid` is the three-part
-    // `OBJECT_VERSION_ID`, so it is reduced to its `object_id`. A body without
-    // a `uid` is judged against the container its update path names.
-    let own_id = data
-        .pointer("/uid/value")
-        .and_then(Value::as_str)
-        .map(|uid| {
-            ObjectVersionId::new(uid).map_or_else(
-                |_| uid.to_owned(),
-                |version_id| version_id.object_id().value().into_owned(),
-            )
-        })
-        .or_else(|| container.map(|vo_id| vo_id.to_string()));
-    if let (Some(container_id), Some(relationships)) =
-        (own_id, data.get("relationships").and_then(Value::as_array))
-    {
-        for (i, rel) in relationships.iter().enumerate() {
-            let source = rel.pointer("/source/id/value").and_then(Value::as_str);
-            if source.is_some_and(|s| !composite_ids_equal(s, &container_id)) {
-                return Err(ServiceError::content_invalid(
-                    Violation::new(format!(
-                        "must reference this party's version container \
-                         ({container_id}) — relationships are stored under their \
-                         source"
-                    ))
-                    .with_path(format!("{rm_type}.relationships[{i}].source"))
-                    .with_invariant("PARTY.Relationships_validity"),
-                ));
-            }
-        }
+    if let Container::Existing(id) = container {
+        uid_names_container(rm_type, data, id)?;
     }
-
-    // enforce PARTY_REF.Type_validity on the demographic refs a party
-    // body carries. ACTOR.roles is `List<PARTY_REF>` (actor.adoc); ROLE.performer
-    // is `PARTY_REF` (role.adoc). BASE `party_ref.adoc §Type_validity`.
-    if let Some(roles) = data.get("roles").and_then(Value::as_array) {
-        for (i, role_ref) in roles.iter().enumerate() {
-            validate_party_ref(role_ref, &format!("{rm_type}.roles[{i}]"))?;
-        }
-    }
-    if rm_type == "ROLE"
-        && let Some(performer) = data.get("performer").filter(|v| !v.is_null())
-    {
-        validate_party_ref(performer, "ROLE.performer")?;
-    }
+    references(rm_type, data)?;
+    relationships_validity(rm_type, data, container)?;
 
     // The checks above are root-scoped, but the RM class invariants bind every
     // node, so this whole-instance pass judges an identity, contact or nested
@@ -216,7 +264,6 @@ pub(super) fn party_invariants(
 /// [`ServiceError::BadRequest`] when the strict reader refuses the body;
 /// [`ServiceError::Unprocessable`] when a ref rule fails.
 pub(crate) fn relationship_check(data: &Value, incomplete: bool) -> Result<(), ServiceError> {
-    use openehr_base::prelude::ObjectId;
     use openehr_rm::prelude::PartyRelationship;
     // The decode is the validating ACT: `source`/`target` are mandatory
     // `PARTY_REF`s on the RM type, so once it succeeds their presence and shape
@@ -235,31 +282,11 @@ pub(crate) fn relationship_check(data: &Value, incomplete: bool) -> Result<(), S
         .iter()
         .flat_map(|t| [("source", &t.source), ("target", &t.target)])
     {
-        // The refs denote the Version CONTAINER of a Party — an OBJECT_REF
-        // carrying a HIER_OBJECT_ID (the continuant), never an
-        // OBJECT_VERSION_ID (one particular version) — RM demographic
-        // master02 §Modelling of Parties and Relationships.
-        if matches!(reference.id, ObjectId::ObjectVersionId(_)) {
-            return Err(ServiceError::content_invalid(
-                Violation::new(
-                    "must identify the party's version container (HIER_OBJECT_ID), \
-                     not one version (OBJECT_VERSION_ID)",
-                )
-                .with_path(format!("PARTY_RELATIONSHIP.{field}.id"))
-                .with_invariant("RM demographic master02"),
-            ));
-        }
-        // PARTY_REF.Type_validity + OBJECT_REF.namespace (BASE
-        // `party_ref.adoc` / `object_ref.adoc`), run on the ALREADY-DECODED
-        // ref: no second decode, so no second way to answer the same question.
-        let violations = reference.invariants();
-        if !violations.is_empty() {
-            return Err(ServiceError::content_invalid(
-                Violation::new("fails its BASE class invariants")
-                    .with_path(format!("PARTY_RELATIONSHIP.{field}"))
-                    .with_causes(violations.into_iter().take(1).collect()),
-            ));
-        }
+        party_refs::shape(
+            reference,
+            &format!("PARTY_RELATIONSHIP.{field}"),
+            Referent::Party,
+        )?;
     }
     // `PARTY_RELATIONSHIP` is a LOCATABLE too
     // (`RM/docs/UML/classes/org.openehr.rm.demographic.party_relationship.adoc`),
@@ -276,6 +303,9 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+
+    /// A first version under a container no relationship names.
+    const NEW: Container = Container::New(VoId(uuid::Uuid::nil()));
 
     /// A complete, RM-valid `PARTY_IDENTITY` (its LOCATABLE `name` +
     /// `archetype_node_id` and the mandatory `details` are 1..1 on the
@@ -323,7 +353,7 @@ mod tests {
             .as_object_mut()
             .unwrap()
             .remove("archetype_details");
-        let msg = match party_check("PERSON", &no_details, false) {
+        let msg = match party_check("PERSON", &no_details, false, NEW) {
             Err(ServiceError::Unprocessable { violation: v, .. }) => v,
             other => panic!("expected Unprocessable, got {other:?}"),
         };
@@ -334,7 +364,7 @@ mod tests {
         // surfaces as the structured `ValidationFailed` report.
         let mut mismatched = person(&json!([identity()]));
         mismatched["archetype_node_id"] = json!("openEHR-DEMOGRAPHIC-PERSON.other.v1");
-        let err = party_check("PERSON", &mismatched, false)
+        let err = party_check("PERSON", &mismatched, false, NEW)
             .expect_err("a contradicting root identity is rejected");
         assert!(
             format!("{err:?}").contains("archetype_node_id"),
@@ -352,7 +382,7 @@ mod tests {
     #[test]
     fn identities_valid_is_enforced() {
         for bad in [person(&json!([])), json!({ "_type": "PERSON" })] {
-            let err = party_check("PERSON", &bad, false)
+            let err = party_check("PERSON", &bad, false, NEW)
                 .expect_err("an unconstructible body must be refused");
             assert!(
                 matches!(&err, ServiceError::BadRequest(_)),
@@ -363,7 +393,7 @@ mod tests {
                 "the decode is the enforcement point, got {err:?}"
             );
         }
-        party_check("PERSON", &person(&json!([identity()])), false)
+        party_check("PERSON", &person(&json!([identity()])), false, NEW)
             .expect("a party with one identity is valid");
     }
 
@@ -371,7 +401,7 @@ mod tests {
     fn present_but_empty_lists_are_rejected() {
         let mut body = person(&json!([identity()]));
         body["contacts"] = json!([]);
-        let err = party_check("PERSON", &body, false)
+        let err = party_check("PERSON", &body, false, NEW)
             .expect_err("present-but-empty contacts must refuse (#1730 parse class)");
         assert!(
             format!("{err:?}").contains("contacts")
@@ -386,13 +416,14 @@ mod tests {
     fn party_ref_type_validity_is_enforced() {
         let good = json!({ "_type": "PARTY_REF", "namespace": "demographic",
             "type": "PERSON", "id": { "_type": "HIER_OBJECT_ID", "value": "x" } });
-        validate_party_ref(&good, "ctx").expect("PERSON is a legal PARTY_REF type");
+        party_refs::shape_of(&good, "ctx", Referent::Party)
+            .expect("PERSON is a legal PARTY_REF type");
         let actor = json!({ "_type": "PARTY_REF", "namespace": "local",
             "type": "ACTOR", "id": { "_type": "HIER_OBJECT_ID", "value": "x" } });
-        validate_party_ref(&actor, "ctx").expect("ACTOR supertype is legal");
+        party_refs::shape_of(&actor, "ctx", Referent::Party).expect("ACTOR supertype is legal");
         let bad_type = json!({ "_type": "PARTY_REF", "namespace": "demographic",
             "type": "COMPOSITION", "id": { "_type": "HIER_OBJECT_ID", "value": "x" } });
-        match validate_party_ref(&bad_type, "ctx") {
+        match party_refs::shape_of(&bad_type, "ctx", Referent::Party) {
             Err(ServiceError::Unprocessable { violation: v, .. }) => assert!(
                 v.causes()
                     .iter()
@@ -415,7 +446,8 @@ mod tests {
     fn party_ref_any_supertype_is_accepted() {
         let any = json!({ "_type": "PARTY_REF", "namespace": "local",
             "type": "ANY", "id": { "_type": "HIER_OBJECT_ID", "value": "x" } });
-        validate_party_ref(&any, "ctx").expect("ANY is admitted by PARTY_REF.Type_validity");
+        party_refs::shape_of(&any, "ctx", Referent::Party)
+            .expect("ANY is admitted by PARTY_REF.Type_validity");
     }
 
     /// an `OBJECT_REF.namespace` that is empty or violates the standard
@@ -424,7 +456,7 @@ mod tests {
     fn object_ref_namespace_legality_is_enforced() {
         let bad_ns = json!({ "_type": "PARTY_REF", "namespace": "1nope",
             "type": "PERSON", "id": { "_type": "HIER_OBJECT_ID", "value": "x" } });
-        match validate_party_ref(&bad_ns, "ctx") {
+        match party_refs::shape_of(&bad_ns, "ctx", Referent::Party) {
             Err(ServiceError::Unprocessable { violation: v, .. }) => {
                 assert!(
                     v.causes()
@@ -446,13 +478,13 @@ mod tests {
     fn party_ref_mandatory_attributes_are_enforced() {
         let no_id = json!({ "_type": "PARTY_REF", "namespace": "local", "type": "PERSON" });
         assert!(matches!(
-            validate_party_ref(&no_id, "ctx"),
+            party_refs::shape_of(&no_id, "ctx", Referent::Party),
             Err(ServiceError::Unprocessable { .. })
         ));
         let no_type = json!({ "_type": "PARTY_REF", "namespace": "local",
             "id": { "_type": "HIER_OBJECT_ID", "value": "x" } });
         assert!(matches!(
-            validate_party_ref(&no_type, "ctx"),
+            party_refs::shape_of(&no_type, "ctx", Referent::Party),
             Err(ServiceError::Unprocessable { .. })
         ));
     }
@@ -475,8 +507,9 @@ mod tests {
                     "id": { "_type": "HIER_OBJECT_ID", "value": "performer-id" } }
             })
         };
-        party_check("ROLE", &role("PERSON"), false).expect("a legal performer ref is accepted");
-        match party_check("ROLE", &role("COMPOSITION"), false) {
+        party_check("ROLE", &role("PERSON"), false, NEW)
+            .expect("a legal performer ref is accepted");
+        match party_check("ROLE", &role("COMPOSITION"), false, NEW) {
             Err(ServiceError::Unprocessable { violation: v, .. }) => assert!(
                 v.causes()
                     .iter()
@@ -495,12 +528,12 @@ mod tests {
     /// nested identity are both 422s, and the valid twins are accepted.
     #[test]
     fn party_rm_invariants_below_the_root_are_enforced() {
-        party_check("PERSON", &person(&json!([identity()])), false)
+        party_check("PERSON", &person(&json!([identity()])), false, NEW)
             .expect("the baseline person is valid");
 
         let mut empty_rm_version = person(&json!([identity()]));
         empty_rm_version["archetype_details"]["rm_version"] = json!("");
-        let err = party_check("PERSON", &empty_rm_version, false)
+        let err = party_check("PERSON", &empty_rm_version, false, NEW)
             .expect_err("an empty rm_version must be refused");
         assert!(
             format!("{err:?}").contains("Rm_version_valid"),
@@ -512,7 +545,7 @@ mod tests {
             .as_object_mut()
             .unwrap()
             .insert("links".into(), json!([]));
-        let err = party_check("PERSON", &nested_links, false)
+        let err = party_check("PERSON", &nested_links, false, NEW)
             .expect_err("an empty links list must be refused");
         assert!(
             format!("{err:?}").contains("links")

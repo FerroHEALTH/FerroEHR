@@ -39,8 +39,9 @@
 //! same DDL. It carries none of the EHR gates (the population gate, the
 //! `ehr_ids` scope, the per-EHR access decision, the ABAC patient scope),
 //! because the `party` schema has no `ehr` relation and a party is no EHR's
-//! content; the restriction mark and `LATEST_VERSION` ride the head join as
-//! for every root. No openEHR spec governs AQL over a demographic repository:
+//! content; the restriction mark, the policy-party mark of a caller who is no
+//! administrator (`gates`) and `LATEST_VERSION` ride the head join as for
+//! every root. No openEHR spec governs AQL over a demographic repository:
 //! our own design.
 //!
 //! Every column is named through the schema catalog ([`crate::db::iden`]),
@@ -119,6 +120,43 @@ pub struct SqlCtx {
     /// `archetype_lineage` read); an empty index leaves the predicate at exact
     /// + ADL 1.4 concept-prefix matching.
     pub archetype_lineage: Arc<ArchetypeLineage>,
+    /// Whether a demographic query serves the policy parties
+    /// ([`crate::party_binding::policy`]) or leaves them out; a clinical query
+    /// reads no party, so it never applies there.
+    pub policy_parties: PolicyParties,
+}
+
+/// Whether a demographic query serves the policy parties
+/// ([`crate::party_binding::policy`]).
+///
+/// The service decides it per request: only an administrator reads a policy
+/// party, through the Demographic API (`party_binding::protect::check_read`)
+/// and through AQL alike. No openEHR spec governs who reads a party, and
+/// QUERY master03 §FROM gives semantics to the clinical repository only: our
+/// own design.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PolicyParties {
+    /// Every party is served: an administrator's query, or one on a
+    /// deployment whose mapping recognises no policy party.
+    Served,
+    /// The query leaves out every version of a party that ever had a policy
+    /// version ([`crate::party_binding::policy_mark`]): its head row carries
+    /// the mark (`vo_head.policy_party_at`) the commit of such a version sets.
+    Hidden,
+}
+
+impl PolicyParties {
+    /// What the running request reads under `mapping`: the policy parties
+    /// are hidden when the mapping recognises them and the request is no
+    /// administrator's (`party_binding::protect::administrator`).
+    #[must_use]
+    pub fn of_request(mapping: &crate::party_binding::BindingMapping) -> Self {
+        if mapping.names_policy() && !crate::party_binding::protect::administrator(mapping) {
+            Self::Hidden
+        } else {
+            Self::Served
+        }
+    }
 }
 
 /// Which EHRs a query may read rows from under the caller's per-EHR access
@@ -402,7 +440,7 @@ impl<'a> Builder<'a> {
             sub_ctr: 0,
             streaming: false,
             presence_only: false,
-            gates: gates::Gates::current(),
+            gates: gates::Gates::current(ir.domain, ctx.policy_parties),
             step_bindings: Vec::new(),
         }
     }

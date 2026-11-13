@@ -10,7 +10,13 @@
 //! role template, and a `GROUP` of the group template with its memberships.
 //! Only an administrator writes one through the demographic API, so nobody
 //! can plant a key-bearing `PERSON`, grant themselves the professional
-//! `ROLE` or point a colleague's `PERSON` at their own login. A SCIM client
+//! `ROLE` or point a colleague's `PERSON` at their own login. The policy
+//! parties ([`super::policy_mark`]) are protected too, recognised by what a
+//! version holds in any archetype: a capability coded in FerroEHR's operation
+//! terminology, an acts-for relationship, inline or of its own, or a client
+//! identifier. Once a version is one, the party is marked for good, and
+//! only an administrator writes or reads it, never a SCIM client, so no
+//! other caller can grant itself or anyone a capability. A SCIM client
 //! writes the ones it owns: a `PERSON` whose binding keys its
 //! `binding_issuer` issues, a professional `ROLE` that `PERSON` performs, and
 //! a `GROUP` it created (RFC 7644 §3: a client manages its own resources). A present
@@ -31,6 +37,7 @@ use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::Facts;
+use crate::party_binding::policy_mark::{self, PolicyContent};
 use crate::party_binding::store::parsed;
 use crate::versioning::Kind;
 use crate::versioning::change::Committed;
@@ -77,16 +84,25 @@ type Held = (&'static str, String, String, String);
 struct Protected {
     /// The selector identifiers of a `PERSON` of a mapped template.
     identifiers: BTreeSet<Held>,
-    /// Whether the body is of a template or archetype the protection
-    /// covers as a whole: the professional `ROLE`, the group, or a `PERSON`
-    /// that is the source of a representation relationship.
+    /// Whether the body is of a template the protection covers as a whole:
+    /// the professional `ROLE`, the group, a `PERSON` that is the source of a
+    /// representation relationship, or a policy party.
     whole: bool,
+    /// Why the party is a policy party, which only an administrator writes.
+    policy: Option<String>,
 }
 
 impl Protected {
     /// Whether the version is protected.
     fn protected(&self) -> bool {
         self.whole || !self.identifiers.is_empty()
+    }
+
+    /// Records `reason`, why the party is a policy party, when there is one:
+    /// a policy party is protected whole.
+    fn mark_policy(&mut self, reason: Option<String>) {
+        self.whole |= reason.is_some();
+        self.policy = reason;
     }
 
     /// The canonical binding keys `(issuer, value)` of the version.
@@ -111,7 +127,8 @@ impl Protected {
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) when a caller who is neither an
 /// administrator nor, inside [`provisioning`], the SCIM client that owns it
-/// writes a protected party, or a write changes a present
+/// writes a protected party, a caller who is no administrator writes a
+/// policy party, or a write changes a present
 /// binding key outside [`rekey`]; [`ServiceError::Unprocessable`] (`422`)
 /// naming the identifier when an administrator's version leaves a protected
 /// identifier out; a storage error when the versions cannot be read.
@@ -122,22 +139,32 @@ pub(crate) async fn check(
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
     let (kind, vo_id) = (committed.kind, committed.vo_id);
-    if mapping.is_empty() || !matches!(kind, Kind::Person | Kind::Role | Kind::Group) {
+    if !kind.is_demographic() {
         return Ok(());
     }
+    let binding = !mapping.is_empty() && matches!(kind, Kind::Person | Kind::Role | Kind::Group);
     let (current, previous) = versions(tx, vo_id).await?;
-    let before = match previous {
+    let (marked, committed_policy) = mark_committed(tx, (kind, vo_id), current, facts).await?;
+    if !(binding || mapping.names_policy()) {
+        return Ok(());
+    }
+    let mut before = match previous {
         Some(sys_version) => read(tx, mapping, kind, vo_id, sys_version).await?,
         None => Protected::default(),
     };
-    let after = match (current, facts) {
+    let mut after = match (current, facts) {
         (Some(_), Some(facts)) => protected(mapping, kind, facts),
         (Some(sys_version), None) => read(tx, mapping, kind, vo_id, sys_version).await?,
         (None, _) => Protected::default(),
     };
+    if mapping.names_policy() {
+        before.mark_policy(marked.then(|| "a version of it held policy content".to_owned()));
+        after.mark_policy(committed_policy.map(|content| format!("it holds {content}")));
+    }
     if !(before.protected() || after.protected()) {
         return Ok(());
     }
+    refuse_policy(mapping, (kind, vo_id), &before, &after)?;
     let owner = match PROVISIONER.try_with(Clone::clone) {
         Ok(issuer) => {
             let held = [current, previous];
@@ -343,10 +370,36 @@ fn label(selector: &str) -> &'static str {
     }
 }
 
-/// Whether the running request may write a protected party: a write with no
+/// Refuses the read of the party or relationship `vo_id` by a caller who is
+/// no administrator when one of its versions is a policy party: its head row
+/// carries the mark ([`policy_mark`]), read by the primary key, which
+/// demographic AQL filters on too.
+///
+/// # Errors
+/// [`ServiceError::Forbidden`] (`403`); a storage error when the head cannot
+/// be read.
+pub(crate) async fn check_read(
+    conn: &mut PgConnection,
+    mapping: &BindingMapping,
+    vo_id: VoId,
+) -> Result<(), ServiceError> {
+    if !mapping.names_policy() || administrator(mapping) {
+        return Ok(());
+    }
+    if !policy_mark::marked(conn, vo_id).await? {
+        return Ok(());
+    }
+    Err(ServiceError::not_permitted(format!(
+        "{vo_id} is a policy party: a version of it holds a grant-coded capability, an \
+         acts-for relationship or a client identifier, so only an administrator reads it"
+    )))
+}
+
+/// Whether the running request is an administrator's: a request with no
 /// request committer is the server's own, and a request whose roles hold the
-/// mapping's administrator role is an administrator's.
-fn administrator(mapping: &BindingMapping) -> bool {
+/// mapping's administrator role is an administrator's. It writes a protected
+/// party, and it reads a policy party through the Demographic API and AQL.
+pub(crate) fn administrator(mapping: &BindingMapping) -> bool {
     if crate::versioning::committer::current_committer().is_none() {
         return true;
     }
@@ -421,6 +474,61 @@ async fn read(
     Ok(protected(mapping, kind, &facts))
 }
 
+/// Refuses the write of the party `vo_id` of `kind` by a caller who is no
+/// administrator when its version `before` or `after` the write is a policy
+/// party.
+fn refuse_policy(
+    mapping: &BindingMapping,
+    (kind, vo_id): (Kind, VoId),
+    before: &Protected,
+    after: &Protected,
+) -> Result<(), ServiceError> {
+    match after.policy.as_ref().or(before.policy.as_ref()) {
+        Some(reason) if !administrator(mapping) => Err(ServiceError::not_permitted(format!(
+            "the {} {vo_id} is a policy party, as {reason}: only an administrator writes it",
+            kind.as_str()
+        ))),
+        _ => Ok(()),
+    }
+}
+
+/// Whether the party `vo_id` of `kind` was marked before the commit `tx`
+/// wrote its version `current` holding `facts`, and what makes that version
+/// a policy party ([`policy_mark::policy_content`]); a policy version marks
+/// the party whatever the mapping, so the mark is a fact of the versions.
+async fn mark_committed(
+    tx: &mut PgConnection,
+    (kind, vo_id): (Kind, VoId),
+    current: Option<i32>,
+    facts: Option<&Facts>,
+) -> Result<(bool, Option<PolicyContent>), ServiceError> {
+    let marked = policy_mark::marked(tx, vo_id).await?;
+    let committed = match (current, facts) {
+        (Some(_), Some(facts)) => facts.policy.clone(),
+        (Some(sys_version), None) => stored_policy(tx, kind, vo_id, sys_version).await?,
+        (None, _) => None,
+    };
+    if committed.is_some() && !marked {
+        policy_mark::mark(tx, vo_id).await?;
+    }
+    Ok((marked, committed))
+}
+
+/// What makes the stored version `sys_version` of `vo_id` of `kind` a policy
+/// party ([`policy_mark::policy_content`]), read from its body; `None` for a
+/// version without one.
+async fn stored_policy(
+    tx: &mut PgConnection,
+    kind: Kind,
+    vo_id: VoId,
+    sys_version: i32,
+) -> Result<Option<PolicyContent>, ServiceError> {
+    let Some(body) = body(tx, vo_id, sys_version).await? else {
+        return Ok(None);
+    };
+    Ok(parsed(kind, &body, &BindingMapping::default())?.policy)
+}
+
 /// What `facts`, held by a party of `kind`, hold that is protected.
 fn protected(mapping: &BindingMapping, kind: Kind, facts: &Facts) -> Protected {
     let mut protected = Protected::default();
@@ -435,7 +543,7 @@ fn protected(mapping: &BindingMapping, kind: Kind, facts: &Facts) -> Protected {
                 .as_ref()
                 .is_some_and(|g| &g.template == template);
         }
-        _ => {
+        Kind::Person => {
             if !mapping.persons.contains_key(template) {
                 return protected;
             }
@@ -449,6 +557,7 @@ fn protected(mapping: &BindingMapping, kind: Kind, facts: &Facts) -> Protected {
             }
             protected.whole = facts.represents;
         }
+        _ => {}
     }
     protected
 }

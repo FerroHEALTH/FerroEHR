@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -54,9 +54,9 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">73009E1DDDC081E23EE2C74228EAE006</other_details>
-    <other_details id="build_uid">3321723b-2135-4156-9c39-39a0cea7e845</other_details>
-    <other_details id="revision">1.0.5</other_details>
+    <other_details id="MD5-CAM-1.0.1">2A7F7E860F6B197FD24B5EACECA56D97</other_details>
+    <other_details id="build_uid">718a4a7a-6274-48f9-a58f-a0aa317728d6</other_details>
+    <other_details id="revision">1.0.6</other_details>
     <details>
       <language>
         <terminology_id>
@@ -79,8 +79,7 @@
 In der Praxis ist die klinische Synopse eine Meta-Beobachtung, die den bestehenden strukturierten klinischen Datensatz ergänzt und den Ausdruck von subtilen, subjektiven oder interpretativen Informationen über den Patienten ermöglicht, die andernfalls durch strukturierte Daten allein nicht offensichtlich wären, dies soll eine balancierte, kontextspezifische elektronische Patientenakte unterstützen.&#xD;
 So kann eine klinische Synopse beispielsweise eine knappe Zusammenfassung der Krankenhausaufnahme des Patienten als Bestandteil eines umfassenden und strukturierten Entlassungsberichts darstellen.</use>
       <misuse>Nicht für die Erfassung spezifischer und strukturierter Gesundheitsinformationen zu verwenden. Beispielsweise sollten detaillierte Informationen über Probleme, Diagnosen und Testergebnisse durch die entsprechend relevanten Archetypen EVALUATION.problem, EVALUATION.problem-diagnosis und OBSERVATION-Archetypen für Labpr- oder radiologische Ergebnisse aufgenommen werden. Die Clinical Synopsis darf manche kritische bzw. ausgewählte numerische Ergebnisse aus diesen strukturierten Details überbringen, wenn diese als wichtig für die Vollständigkeit der Synopsis beurteilt werden; sie ist jedoch NICHT die primäre Stelle zur Aufnahme solcher Informationen.&#xD;
-Der Begriff "Klinische Synopsis" kann sich manchmal auf komplexe und umfangreiche Dokumente beziehen, z. B. eine Epikrise (Discharge Summary) oder ein Bericht (Report). In openEHR sollten diese Dokumente als Aggregationen eingeschränkter Archetypen dargestellt werden (sprich openEHR "templates"), d. h. eine Epikrise- oder Bericht-Vorlage, die aus mehreren einzelnen Archetypen besteht, wovon der Clinical Synopsis-Archetyp einer sein könnte.&#xD;
-</misuse>
+Der Begriff "Klinische Synopsis" kann sich manchmal auf komplexe und umfangreiche Dokumente beziehen, z. B. eine Epikrise (Discharge Summary) oder ein Bericht (Report). In openEHR sollten diese Dokumente als Aggregationen eingeschränkter Archetypen dargestellt werden (sprich openEHR "templates"), d. h. eine Epikrise- oder Bericht-Vorlage, die aus mehreren einzelnen Archetypen besteht, wovon der Clinical Synopsis-Archetyp einer sein könnte.</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
     <details>
@@ -167,7 +166,7 @@ The term “Clinical Synopsis” can sometimes refer to complex and comprehensiv
         </terminology_id>
         <code_string>ar-sy</code_string>
       </language>
-      <purpose>لتسجيل ملخص برواية تم توليفها يدويا عن مريض من وجهة نظر مقدم الرعاية الصحية </purpose>
+      <purpose>لتسجيل ملخص برواية تم توليفها يدويا عن مريض من وجهة نظر مقدم الرعاية الصحية</purpose>
       <keywords>ملخص</keywords>
       <keywords>استنتاج</keywords>
       <keywords>إطار</keywords>
@@ -354,6 +353,60 @@ Begrepet "Klinisk sammendrag" kan i enkelte tilfeller henvise til sammensatte og
         <terminology_id>
           <value>ISO_639-1</value>
         </terminology_id>
+        <code_string>ja</code_string>
+      </language>
+      <purpose>医療従事者の視点から、患者についての叙述的な要約を手作業で総合的に記録するため。</purpose>
+      <keywords>要約</keywords>
+      <keywords>結論</keywords>
+      <keywords>概要</keywords>
+      <keywords>大意</keywords>
+      <keywords>抄録</keywords>
+      <keywords>アセスメント</keywords>
+      <keywords>退院時サマリー</keywords>
+      <keywords>サマリー</keywords>
+      <keywords>エピクリーゼ</keywords>
+      <keywords>コメント</keywords>
+      <keywords>記録</keywords>
+      <keywords>臨床要約</keywords>
+      <keywords>経過要約</keywords>
+      <use>患者の健康状態を文章で要約して記録するために用いる。この構造化されていない要約には、把握された健康上のプロブレム、患者が受けた医療、それらについての解釈、患者自身の理解などを含めることができる。また、患者の経験やこれまでの経過にまつわる、細かなニュアンスや主観的な側面も共有できる。通常は、診察や入院などの特定の健康イベントに関連する要約として用いられるが、さまざまな期間にわたる患者の健康に関する経験をまとめるためにも使用できる。 &#xD;
+臨床要約は、既存の構造化された臨床記録を補完するメタ観察として機能する。構造化データだけでは読み取りにくい、患者に関する細かなニュアンスや主観的な情報、解釈を伴う情報を表現することで、EHR の記録に文脈を補い、全体のバランスを整える。 &#xD;
+例えば、包括的で構造化された退院時サマリー文書の一部として臨床要約を用い、患者の入院に関する簡潔な要約を伝えることができる。</use>
+      <misuse>特定の構造化された健康情報を記録するために用いてはならない。例えば、プロブレム、診断、検査結果に関する詳細情報は、それぞれに対応する EVALUATION.problem、EVALUATION.problem-diagnosis、および OBSERVATION の臨床検査や放射線検査の結果の各archetypeを用いて記録すべきである。臨床要約は、要約の完全性のために重要と判断される場合には、これらの構造化された詳細の中から重要で選択された数値結果を伝えてもよいが、それらの主たる記録場所ではない。&#xD;
+「臨床要約（Clinical Synopsis）」という語は、退院時サマリーや報告書のような複雑で包括的な文書を指すこともある。openEHR では、これらの文書は制約されたarchetypeの集合、すなわち複数の独立したarchetypeからなる退院時サマリーのテンプレートや報告書のテンプレートとして表現されるべきであり、本臨床要約archetypeはその一つになることもある。</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sl</code_string>
+      </language>
+      <purpose>Za ročno sestavljanje in beleženje pripovednega povzetka o pacientu, iz perspektive izvajalca zdravstvenih storitev.</purpose>
+      <keywords>povzetek</keywords>
+      <keywords>sklep</keywords>
+      <keywords>oris</keywords>
+      <keywords>kratek</keywords>
+      <keywords>pregled</keywords>
+      <keywords>abstrakt</keywords>
+      <keywords>ocena</keywords>
+      <keywords>sinopsa</keywords>
+      <keywords>epikríza</keywords>
+      <keywords>komentar</keywords>
+      <keywords>opomba</keywords>
+      <use>Uporabite za beleženje pripovednega, povzetega pogleda na zdravje pacienta. Ta nestrukturirani povzetek lahko vključuje identificirane zdravstvene težave; zagotovljeno zdravstveno oskrbo; povezano interpretacijo; razumevanje pacienta; in omogoča komunikacijo o nekaterih bolj subjektivnih vidikih izkušenj in poti pacienta. Najpogosteje je ta povzetek verjetno povezan s specifičnim zdravstvenim dogodkom, kot je specifičen posvet ali bolnišnična obravnava, lahko pa se uporabi tudi za povzemanje zdravstvenih izkušenj pacienta skozi različna časovna obdobja.&#xD;
+V praksi je klinični povzetek meta opazovanje, ki bo dopolnilo obstoječi strukturirani klinični zapis, kar omogoča izražanje subtilnih, subjektivnih ali interpretativnih informacij o pacientu, ki sicer morda ne bi bile očitne samo skozi strukturirane podatke, kar zagotavlja ravnovesje in kontekst zapisu EHR.&#xD;
+Na primer, klinični povzetek lahko sporoči jedrnat povzetek bolnišnične obravnave pacienta kot eno komponento celovitega in strukturiranega dokumenta odpustnega povzetka.</use>
+      <misuse>Ne uporabljajte za beleženje specifičnih in strukturiranih zdravstvenih informacij. Na primer, podrobne informacije o težavah, diagnozah in rezultatih testov je treba beležiti z uporabo specifičnih ustreznih arhetipov EVALUATION.problem, EVALUATION.problem-diagnosis in laboratorijskih ali radioloških rezultatov v OBSERVATION. Klinični povzetek lahko posreduje nekaj kritičnih in izbranih številčnih rezultatov iz teh strukturiranih podrobnosti, ko se šteje za pomembno za popolnost povzetka, vendar NI primarno mesto za njihovo beleženje.&#xD;
+Izraz "klinični povzetek" se lahko včasih nanaša na kompleksne in celovite dokumente, kot je odpustni povzetek ali poročilo. V openEHR je treba te dokumente predstaviti kot agregacije omejenih arhetipov, torej predlogo odpustnega povzetka ali predlogo poročila, ki vsebuje številne ločene arhetipe, od katerih je lahko eden ta arhetip kliničnega povzetka.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
         <code_string>fa</code_string>
       </language>
       <purpose>به صورت دستی ترکیب و ثبت توضیحی خلاصه در مورد یک بیمار ، از نظر ارائه دهنده خدمات درمانی</purpose>
@@ -369,10 +422,9 @@ Begrepet "Klinisk sammendrag" kan i enkelte tilfeller henvise til sammensatte og
       <keywords>یادداشت</keywords>
       <use>برای ثبت توضیح ، نظری خلاصه در مورد سلامت بیمار استفاده می شود.این خلاصه ساختار بندی نشده ممکن است شامل شناسایی مسایل بهداشتی ، مراقبت های بهداشتی ارایه شده همراه با تفسیر ، درک بیمار ، توانایی ارتباط با بیمار در مورد برخی جنبه های ذهنی و... در مورد تجربیات وسفرهای بیمار .معمولا این خلاصه به رویدادهای خاص سلامت نظیر مشاوره های خاص یا پذیرش بیمارستانی مربوط می شود اما ممکن است همچنین برای خلاصه نمودن تجربیات بیمار در طی دوره های زمانی مختلف استفاده شود&#xD;
 در عمل،خلاصه بالینی مشاهده .... است که متمم مدارک ساختارمند بالینی کنونی خواهد بود که بیان اطلاعات دقیق ، ذهنی یا تفسیر را امکان پذیر می کند در غیر اینصورت از طریق داده های ساختار یافته به تنهایی امکان پذیر نیست و تعادل و چهارجوچوبی برای ثبت پرونده الکترونیک سلامت ارایه می کنند&#xD;
-برای مثال خلاصه  بالینی می تواند بین خلاصه کوتاه پذیرش بیمارستانی بیمار به عنوان یکی از اجزا جامع و برگه ساختار مند خلاصه ترخیص ارتباط برقرار کند            </use>
+برای مثال خلاصه  بالینی می تواند بین خلاصه کوتاه پذیرش بیمارستانی بیمار به عنوان یکی از اجزا جامع و برگه ساختار مند خلاصه ترخیص ارتباط برقرار کند</use>
       <misuse>برای ثبت اطلاعات سلامت خاص و ساختار مند استفاده نمی شود. برای مثال اطلاعات جزیی درباره مشکلات ، تشخیصها و نتایج تست باید با استفاده از الگو ساز خاص ومربوطه .....و نتایج آزمایشگاهی یا رادیولوژی در ....ثبت شود. خلاصه بالینی ممکن است شامل برخی نتایج عددی حیاتی و انتخاب شده  از  جزییات ساختار مند باشد زمانی که برای تکمیل خلاصه مهم باشدامااین الگو ساز محل اولیه ثبت این موارد نیست&#xD;
-واژه "خلاصه بالینی "کاهی به اسناد پیچیده و جامع اشاره می کند نظیر خلاصه ترخیص یا گزارش. در ... اسناد باید به عنوان توده ای از الگوسازهای محدود شده ارایه شود ، الگوی خلاصه ترخیص یا  الگوی گزارش شامل تعدادی از الگوسازهای جداگانه می باشد که الگوساز خلاصه بالینی یکی از این الگوسازها می باشد    &#xD;
-  </misuse>
+واژه "خلاصه بالینی "کاهی به اسناد پیچیده و جامع اشاره می کند نظیر خلاصه ترخیص یا گزارش. در ... اسناد باید به عنوان توده ای از الگوسازهای محدود شده ارایه شود ، الگوی خلاصه ترخیص یا  الگوی گزارش شامل تعدادی از الگوسازهای جداگانه می باشد که الگوساز خلاصه بالینی یکی از این الگوسازها می باشد</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
     <details>
@@ -429,28 +481,6 @@ El terme ""Sinopsi Clínica"" de vegades pot referir-se a documents complexos i 
       <terminology_id>
         <value>ISO_639-1</value>
       </terminology_id>
-      <code_string>es-ar</code_string>
-    </language>
-    <author id="name">Dr. Leonardo Der Jachadurian</author>
-    <author id="organisation">Bitios.com</author>
-    <accreditation>Medical Doctor (Internal Medicine Specialist)</accreditation>
-  </translations>
-  <translations>
-    <language>
-      <terminology_id>
-        <value>ISO_639-1</value>
-      </terminology_id>
-      <code_string>nb</code_string>
-    </language>
-    <author id="name">Ingrid Heitmann</author>
-    <author id="organisation">NTNU and OUS, Registered nurse</author>
-    <author id="email">john.tore.valand@helse-bergen.no</author>
-  </translations>
-  <translations>
-    <language>
-      <terminology_id>
-        <value>ISO_639-1</value>
-      </terminology_id>
       <code_string>pt-br</code_string>
     </language>
     <author id="name">Emerson Urushibata</author>
@@ -481,17 +511,6 @@ El terme ""Sinopsi Clínica"" de vegades pot referir-se a documents complexos i 
       <terminology_id>
         <value>ISO_639-1</value>
       </terminology_id>
-      <code_string>fa</code_string>
-    </language>
-    <author id="name">Shahla Foozonkhah</author>
-    <author id="organisation">Ocean Informatics</author>
-    <author id="email">shahla.foozonkhah@oceaninformatics.com</author>
-  </translations>
-  <translations>
-    <language>
-      <terminology_id>
-        <value>ISO_639-1</value>
-      </terminology_id>
       <code_string>fr</code_string>
     </language>
     <author id="name">Jonas Bucher</author>
@@ -515,23 +534,78 @@ El terme ""Sinopsi Clínica"" de vegades pot referir-se a documents complexos i 
       <terminology_id>
         <value>ISO_639-1</value>
       </terminology_id>
-      <code_string>ca</code_string>
+      <code_string>es</code_string>
     </language>
     <author id="name">Clara Calleja Vega</author>
     <author id="organisation">CatSalut. Servei Català de la Salut.</author>
     <author id="email">ccalleja@catsalut.cat</author>
-    <other_details id="other_contributors">TRADCREA</other_details>
   </translations>
   <translations>
     <language>
       <terminology_id>
         <value>ISO_639-1</value>
       </terminology_id>
-      <code_string>es</code_string>
+      <code_string>es-ar</code_string>
+    </language>
+    <author id="name">Dr. Leonardo Der Jachadurian</author>
+    <author id="organisation">Bitios.com</author>
+    <accreditation>Medical Doctor (Internal Medicine Specialist)</accreditation>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Ingrid Heitmann</author>
+    <author id="organisation">NTNU and OUS, Registered nurse</author>
+    <author id="email">john.tore.valand@helse-bergen.no</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ja</code_string>
+    </language>
+    <author id="name">Shinji KOBAYASHI</author>
+    <author id="organisation">NPO openEHR Japan</author>
+    <author id="email">skoba@moss.gr.jp</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sl</code_string>
+    </language>
+    <author id="name">Vanja Maravić, Lara Škufca, Anđela Marjanović, Ana Milošev</author>
+    <author id="organisation">Better Deutschland GmbH, Better d.o.o.</author>
+    <author id="email">vanja.maravic@better.care, laras@better.care, andjela.marjanovic@better.care, ana.milosev@better.care</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>fa</code_string>
+    </language>
+    <author id="name">Shahla Foozonkhah</author>
+    <author id="organisation">Ocean Informatics</author>
+    <author id="email">shahla.foozonkhah@oceaninformatics.com</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ca</code_string>
     </language>
     <author id="name">Clara Calleja Vega</author>
     <author id="organisation">CatSalut. Servei Català de la Salut.</author>
     <author id="email">ccalleja@catsalut.cat</author>
+    <other_details id="other_contributors">TRADCREA</other_details>
   </translations>
   <uid>
     <value>87e2704b-955b-43bc-b569-755e06dbd3f5</value>
@@ -733,7 +807,7 @@ El terme ""Sinopsi Clínica"" de vegades pot referir-se a documents complexos i 
     <term_definitions language="fa">
       <items code="at0000">
         <items id="text">خلاصه بالینی</items>
-        <items id="description">خلاصه یا مروری تشریحی دربازه بیمار بویژه از نظز ارایه کننده مراقبت بهداشتی با یا بدون تفسیرهای مربوطه </items>
+        <items id="description">خلاصه یا مروری تشریحی دربازه بیمار بویژه از نظز ارایه کننده مراقبت بهداشتی با یا بدون تفسیرهای مربوطه</items>
       </items>
       <items code="at0001">
         <items id="text">*List(en)</items>
@@ -756,7 +830,7 @@ El terme ""Sinopsi Clínica"" de vegades pot referir-se a documents complexos i 
     <term_definitions language="ar-sy">
       <items code="at0000">
         <items id="text">المختصر السريري</items>
-        <items id="description">ملخص بالرواية أو نظرة عامة عن المريض, خاصة من وجهة نظر مقدم الخدمة الصحية, مع إرفاق أو عدم إرفاق تفسيرات </items>
+        <items id="description">ملخص بالرواية أو نظرة عامة عن المريض, خاصة من وجهة نظر مقدم الخدمة الصحية, مع إرفاق أو عدم إرفاق تفسيرات</items>
       </items>
       <items code="at0001">
         <items id="text">*List(en)</items>
@@ -795,8 +869,7 @@ El terme ""Sinopsi Clínica"" de vegades pot referir-se a documents complexos i 
       </items>
       <items code="at0004">
         <items id="text">Erweiterung</items>
-        <items id="description">Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle / Formalismen.&#xD;
-</items>
+        <items id="description">Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle / Formalismen.</items>
         <items id="comment">Zum Beispiel: lokale Informationsanforderungen oder zusätzliche Metadaten zur Anpassung an FHIR oder CIMI-Äquivalente.</items>
       </items>
     </term_definitions>
@@ -1006,6 +1079,51 @@ El terme ""Sinopsi Clínica"" de vegades pot referir-se a documents complexos i 
         <items id="comment">Par exemple: exigences d’information locales ou métadonnées supplémentaires permettant l’alignement avec des équivalents FHIR ou CIMI.</items>
       </items>
     </term_definitions>
+    <term_definitions language="sl">
+      <items code="at0000">
+        <items id="text">Klinični povzetek</items>
+        <items id="description">Pripovedni povzetek ali pregled o pacientu, specifično iz perspektive izvajalca zdravstvenih storitev, z ali brez povezanih interpretacij.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">List</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Povzetek</items>
+        <items id="description">Povzetek, ocena, sklepi ali evalvacija kliničnih ugotovitev.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Razširitev</items>
+        <items id="description">Dodatne informacije, potrebne za zajemanje lokalnega konteksta ali za uskladitev z drugimi referenčnimi modeli/formalizmi.</items>
+        <items id="comment">Na primer: informacije lokalnega bolnišničnega oddelka ali dodatni metapodatki za uskladitev z ekvivalenti FHIR ali CIMI.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="ja">
+      <items code="at0000">
+        <items id="text">臨床要約</items>
+        <items id="description">患者についての叙述的な要約または概要で、特に医療従事者の視点からのもの。関連する解釈を伴う場合も伴わない場合もある。</items>
+      </items>
+      <items code="at0001">
+        <items id="text">List</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">要約</items>
+        <items id="description">臨床所見の要約、アセスメント、まとめ、または評価。</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Extension</items>
+        <items id="description">ローカルコンテンツを捕捉するため、あるいは他の参照モデルや形式手法と整合させるために必要な追加情報。</items>
+        <items id="comment">例：ローカルな情報要件や、FHIR または CIMI の相当するものに適合させるための追加メタデータ。</items>
+      </items>
+    </term_definitions>
   </ontology>
 </archetype>
-

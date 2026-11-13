@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! What a verified external caller of a `federation` issuer commits: an
-//! external person only a COMPOSITION of a template its
-//! `[[authz.federation.agreement]]` lists in `writes`, naming its healthcare
+//! external person only a COMPOSITION of a template its federation
+//! agreement lists (`template`), naming its healthcare
 //! provider as the facility, and an external organisation nothing.
 //!
 //! EHDS Art. 13(4) (`docs/law/eu/ehds/text.html`) asks the record to identify
@@ -12,9 +12,9 @@
 //! the dispensation of Art. 23(6). What an external caller may commit is our
 //! own design.
 //!
-//! An agreement that sets `discard` lets the person discard, as a logical
-//! delete, a dispensation of a template its `writes` lists, committed within
-//! `discard_window_hours` at the same point of care: every identifier the
+//! An agreement that holds a `discard_window` lets the person discard, as a
+//! logical delete, a dispensation of a template it lists, committed within
+//! that window at the same point of care: every identifier the
 //! person's own write names its point of care by is in the dispensation's
 //! `health_care_facility.identifiers` (MyHealth@EU Requirements Catalogue
 //! 10.0.0, requirement 07.04; the eHDSI point of care is a name only, so the
@@ -74,7 +74,7 @@ pub(crate) fn admit_content(
         }
         ExternalCaller::Person { .. } => Err(ServiceError::not_permitted(
             "a verified external person commits only a COMPOSITION of a template its \
-             [[authz.federation.agreement]] writes lists",
+             federation agreement lists",
         )),
         ExternalCaller::Organisation => Err(ServiceError::not_permitted(ORGANISATION)),
     }
@@ -108,7 +108,7 @@ pub(crate) async fn admit_delete(
         Some(ExternalCaller::Person { .. }) => {
             return Err(ServiceError::not_permitted(
                 "a verified external person deletes nothing but a dispensation its \
-                 [[authz.federation.agreement]] lets it discard",
+                 federation agreement lets it discard",
             ));
         }
     };

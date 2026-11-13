@@ -8,7 +8,7 @@
 # `secrets:` and `database:`) — mounted as read-only FILES wherever the config key
 # has a `*_file` sibling, which is now everything except `audit.fhir_feed.endpoint.url` and
 # `record.multimedia.access_key_id`; only the mounted PATH is passed as env. `config.files` mounts genuinely file-shaped material
-# (Cedar policies, ATNA PEMs, the PGP key, JWKS) that in-TOML `*_path`/`*_file`
+# (ATNA PEMs, the PGP key, JWKS) that in-TOML `*_path`/`*_file`
 # keys point at. `extraEnv` is the escape hatch for anything not surfaced here.
 #
 # Every feature below defaults to the SAME state as the binary (all optional
@@ -323,24 +323,21 @@ migrations:
 #
 # Each file is stored in the definition store by an init container that runs
 # `ferroehr definitions load` on the server's own configuration, in the order
-# listed, before the server container starts. A deployment that maps its
-# professionals to demographic parties needs the templates its party mapping
-# names stored before boot, which refuses a mapping whose templates it lacks.
-# A definition stored with the same text is left alone, so the step runs at
-# every pod start; one stored under the same id with other text fails the
-# pod, because a stored definition never changes. The files travel in a
-# ConfigMap of their own. No openEHR spec governs loading definitions out of
-# band: our own design.
+# listed, before the server container starts. The server stores FerroEHR's
+# default demographic definitions itself as it boots, and with no mapping key
+# set the party mapping names them, so list only definitions of your own: a
+# deployment whose party mapping names its own templates lists them, since
+# boot refuses a mapping whose templates the store lacks. A definition stored
+# with the same text is left alone, so the step runs at every pod start; one
+# stored under the same id with other text fails the pod, because a stored
+# definition never changes. The files travel in a ConfigMap of their own. No
+# openEHR spec governs loading definitions out of band: our own design.
 # ─────────────────────────────────────────────────────────────────────────────
 definitions:
   # -- The definitions to load, in order: each `name` a file name ending in
   # `.opt` (an OPT 1.4 template) or `.adls` (an ADL 2 archetype or template,
   # its parents and slot fillers first) and its `content`.
   files: []
-  # - name: openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls
-  #   content: |
-  #     archetype (adl_version=2.0.6; rm_release=1.1.0)
-  #     ...
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Per-domain logical backups (off by default).
@@ -597,20 +594,12 @@ metrics:
 config:
   # [deployment] — what this deployment is.
   deployment:
-    # The openEHR specification generation set the server runs — one coupled
-    # choice: "development" (RM 1.2.0 + BASE 1.3.0 + LANG 1.1.0, the default)
-    # or "stable" (the released generations: RM 1.1.0 + BASE 1.2.0 +
-    # LANG 1.0.0). stable → development is always safe; development → stable
-    # only for data that never used development-only constructs (refused
-    # loudly at read otherwise).
-    spec_profile: development
-
-  # The declared deployment posture, which the chart REFUSES to render
-  # without: there is no default, so every installation says which posture it
-  # runs (EHDS Annex II 1.2: installed following the manufacturer's
-  # instructions without affecting the product's characteristics).
-  # `sandbox` must not hold real patient data: the server names every missing
-  # separation on its boot banner, in the log and on /management/status, and
+    # The declared deployment posture, which the chart REFUSES to render
+    # without: there is no default, so every installation says which posture it
+    # runs (EHDS Annex II 1.2: installed following the manufacturer's
+    # instructions without affecting the product's characteristics).
+    # `sandbox` must not hold real patient data: the server names every missing
+    # separation on its boot banner, in the log and on /management/status, and
     # GET /ferroehr/rest/status reports the profile. `production` refuses to
     # boot while a separation is missing and not named in `accepts`. These
     # chart defaults leave several open (one DSN for every domain, an empty
@@ -641,6 +630,11 @@ config:
     # The requests served at once; past it a request is answered 503 with
     # Retry-After, and the health probes are never refused.
     max_concurrent_requests: 256
+    # The URL clients reach the server at through the Ingress, named once:
+    # the SMART discovery document's baseUrl, every SCIM meta.location and
+    # the URL a DPoP proof's htu is compared with all hang off it. Required
+    # with auth.smart.discovery, auth.scim or auth.dpop.
+    #   public_base_url: https://ferroehr.example.com
     # [server.caller_rate] — per authenticated caller, refused 429 +
     # Retry-After. Not the same control as max_concurrent_requests (503): this
     # one is per caller over time. The defaults sit above the reference SUT's
@@ -654,36 +648,18 @@ config:
   # [api] — the openEHR REST API.
   api:
     base_path: /ferroehr/rest/openehr/v1
-    # Who may read the Swagger UI + the OpenAPI JSON: off, admin_only, private
-    # (any authenticated principal) or public. The documents list the whole
-    # enabled operation surface, so public discloses it anonymously.
-    openapi_ui: private
     # The largest body the clinical surface accepts, below
     # server.body_limit, which the bulk routes keep. Raise it if
     # compositions embed large DV_MULTIMEDIA data. Over-limit is 413.
     body_limit: 16MiB
-    # The ADMIN API group (physical, irreversible delete). Off ⇒ routes 405.
-    admin: false
-    # The terminology extension API; the server it asks is config.terminology.
-    terminology: false
     # [api.cors] — absent sends no CORS header. Production lists its origins:
     #   cors:
     #     allow_origins: [https://app.example.com]
 
   # [database] — pool bounds (the DSN itself is the FERROEHR__DATABASE__URL secret, above).
   database:
-    # apply | verify — whether the server runs its embedded migrations at boot.
-    # `verify` issues no DDL and refuses to boot against a database that has not
-    # been migrated, which is what lets the runtime DSN be ferroehr_clinical only.
-    # Pair it with migrations.job.enabled (see the Migrations section above).
-    migrations: apply
     max_connections: 10
     min_connections: 0
-    acquire_timeout: 30s
-    # The backstop the HTTP request timeout cannot be: dropping a handler future
-    # does not cancel the statement PostgreSQL is running. Above
-    # record.query.timeout so the engine's typed 408 fires first.
-    statement_timeout: 1min
 
   # [telemetry]: the console, the request log and the OpenTelemetry export
   # (the family's shared section). json is correct for cluster log collectors;
@@ -734,61 +710,37 @@ config:
   auth:
     enabled: true
 
-  # [authz] — coarse RBAC (on with auth) + ABAC (off).
-  authz:
-    rbac:
-      enabled: true
-      admin_role: ADMIN
-      # The persons issuers whose role claims may grant admin_role and the
-      # other privileged roles; a token of any other issuer never holds them.
-      role_issuers: []
-    abac:
-      enabled: false
+  # [authz] — coarse RBAC (on with auth) + ABAC (off). Under config.authz:
     # The party binding. `provider` (issuer and id, in NL the URA) is required
     # once auth admits a credential: every access record of a bound person and
     # every version a person commits name it (EHDS Art. 13(4), Annex II 3.2(a)).
     # basic_user maps each Basic user to the binding key its PERSON carries.
-    #   provider: { issuer: "urn:oid:2.16.528.1.1007.3.3", id: "12345678" }
-    #   basic_user:
-    #     - { user: clinician, key_issuer: urn:example:staff-login, key: "<binding key>" }
-    party_binding:
-      namespace: demographic
-    # Each OAuth client-credentials client that commits: its issuer and
-    # client_id, the provider it acts for, the facilities and templates it may
-    # commit, and its origins (relay | device).
-    #   - issuer: https://idp.example.com/realms/machines
-    #     client_id: ferrobridge
+    #   party_binding:
     #     provider: { issuer: "urn:oid:2.16.528.1.1007.3.3", id: "12345678" }
-    #     facilities: [{ issuer: urn:example:facility, id_prefix: ward- }]
-    #     writes: []
-    #     origins: [relay]
-    system_client: []
-    # What a federation issuer's external persons or organisation may do here,
-    # one agreement per issuer and accessor (person | organisation), with its
-    # legal ground, consent source, patient/ reads, caller_rate and, for an
-    # organisation, its access_class (automated | chained). See the
-    # configuration reference for every key.
-    federation:
-      agreement: []
+    #     basic_user:
+    #       - { user: clinician, key_issuer: urn:example:staff-login, key: "<binding key>" }
+    # A system client, such as FerroBRIDGE, is authorized by the CDR itself:
+    # an AGENT carrying its client_id and performing a ROLE whose capabilities
+    # grant what it may commit, import or export, written through the
+    # Demographic API (the book's "Operational policy").
+    # The federation agreements are CDR data, written through the Demographic
+    # API (Operational policy in the book), and no configuration key.
 
   # [auth.scim] — the SCIM 2.0 service provider at /scim/v2 (RFC 7644),
   # through which an identity provider such as Microsoft Entra ID provisions
   # each professional as a demographic PERSON. Absent by default, and the
   # table's presence serves it. It needs a machines [[auth.issuer]] (the
-  # deployment's own authorization server), an [[auth.party]] whose
-  # identifier_issuer each client's binding_issuer names, and the person
-  # template, attributes and professional_role under authz.party_binding.
-  # public_base_url is required, and the Ingress then routes /scim/v2 on every
-  # host. Under config.auth:
+  # deployment's own authorization server); the party mapping under
+  # authz.party_binding defaults to FerroEHR's default definitions.
+  # config.server.public_base_url is required, and the Ingress then routes
+  # /scim/v2 on every host. Who provisions is CDR data, not a value: a
+  # scim_provision grant on the client's AGENT names its binding_issuer (the
+  # identifier_issuer of an [[auth.party]]) and its token_scope, and
+  # config.authz.grants.allowed must admit scim_provision (the book's
+  # "Operational policy" page). Under config.auth:
   #   scim:
-  #     public_base_url: https://ferroehr.example.com
   #     max_deactivations: 100           # per client per window, else 429
   #     deactivation_window: 1h
-  #     client:
-  #       - issuer: https://as.example.com
-  #         client_id: entra-provisioning
-  #         scope: ferroehr/scim
-  #         binding_issuer: urn:example:login
 
   # [management] — ops-introspection surface (info / prometheus / metrics / env /
   # loggers / flamegraph). The master switch is ON here (unlike the bare binary)
@@ -800,50 +752,17 @@ config:
   management:
     enabled: true
     base_path: /management
-    endpoints:
-      # off | public | private | admin_only
-      info: "off"
-      metrics: "off"
-      prometheus: "off"
-      env: "off"
-      loggers: "off"
-      # On-demand CPU flamegraph of the running server (pprof sampling; caps
-      # under [management.profiling] — see the configuration reference).
-      flamegraph: "off"
 
   # [record] — the record itself: the subject index, signing, the query
-  # engine, the change feed and multimedia.
-  record:
-    # [record.signing] — VERSION signing. On/digest by default (the STANDARD
-    # "Signing" capability). pgp mode requires key_file (a mounted
-    # config.files key) + the secrets.signingKeyPassphrase secret, and FAILS
-    # CLOSED at boot.
-    signing:
-      enabled: true
-      # digest | pgp
-      mode: digest
-      # off | warn | strict — read-time verification of OUR OWN signatures.
-      # Defaults to strict when signing is enabled (a served version whose
-      # stored signature no longer recomputes is a 5xx integrity fault); set
-      # warn (log + meter, still serve) or off (never check) to opt out.
-      # Client-supplied signatures are always stored verbatim and never
-      # re-verified.
-      verify_on_read: "strict"
-    # [record.multimedia] — DV_MULTIMEDIA externalization → S3. Our own
-    # extension; no openEHR spec governs it. Off by default (inline behaviour
-    # byte-identical). WARNING: offloaded blobs are PHI — bucket must be
-    # private, encrypted, HTTPS (an http:// url is plain HTTP, dev only).
-    # Credentials are the secrets.multimedia* secrets.
-    multimedia:
-      enabled: false
-      bucket: openehr-multimedia
-      region: us-east-1
-    # [record.change_feed] — the commit-event outbox and its cursor feed. Our
-    # own extension; no openEHR spec governs it. Off until a reader is named:
-    # FerroBRIDGE reads the feed (scope __ferroehr.outbox) and delivers the
-    # PHI-free events to a message broker.
+  # engine, the change feed and multimedia. Every key has a server default.
+  #   record:
+    # [record.change_feed] — how long the commit-event outbox keeps a row. Our
+    # own extension; no openEHR spec governs it. Off until a read_change_feed
+    # grant in the CDR names a reader (config.authz.grants.allowed must admit
+    # it): FerroBRIDGE reads the feed (scope __ferroehr.outbox) and delivers
+    # the PHI-free events to a message broker.
     #   change_feed:
-    #     readers: [ferrobridge]
+    #     retention: 7d
     # subject_index — who holds the subject-to-EHR cross-reference: "pixm",
     # an IHE patient identity source asked over PIXm (ITI-83, config.pixm), or
     # "local", the in-instance map. With `ferropix.enabled` the chart INJECTS
@@ -871,33 +790,6 @@ config:
   # ([audit.syslog] classic DICOM/syslog, [audit.fhir_feed] RESTful ATNA).
   audit:
     enabled: true
-    store:
-      enabled: true
-      # How long records are kept, a calendar period (P3Y, P1096D); unset
-      # (null) keeps them forever. The server refuses a horizon outside the
-      # floors and ceilings of the jurisdictions its identifier rules name
-      # (three years EU-wide, five NL, one CH, at most three DE for a declared
-      # SGB V § 309 controller, who sets P3Y with sgb_v_309_controller: true).
-      # -- (string)
-      # @default -- unset
-      retention: null
-    # [audit.categories] — the EHDS priority category of every access,
-    # classified by ehds-logging (FerroAUDIT): which categories each template
-    # id, and failing that each root archetype id, holds. A priority category
-    # is its HL7 Europe code (Patient-Summaries, Electronic-Prescriptions,
-    # Electronic-Dispensations, Medical-Imaging, Laboratory-Reports,
-    # Discharge-Reports) or <system>|<code>; a national one is declared under
-    # national as <system>|<code>; data of no category map to the word none.
-    # EMPTY by default: an access the map cannot classify is recorded
-    # "unclassified", never refused. Example:
-    #   templates:
-    #     "International Patient Summary": [Patient-Summaries]
-    #   archetypes:
-    #     openEHR-EHR-COMPOSITION.report-result.v1: [Laboratory-Reports]
-    #     openEHR-EHR-COMPOSITION.encounter.v1: none
-    categories:
-      templates: {}
-      archetypes: {}
 
   # [terminology] — the outbound FHIR terminology server; absent, none is
   # asked. Not defaulted here: with `terminology.enabled` +
@@ -909,9 +801,10 @@ config:
   # ── Mounted config files (NOT part of the TOML above) ──────────────────────
   # Each key becomes /etc/ferroehr/<key> from a chart Secret (opaque, read-only),
   # alongside ferroehr.toml. Use for file-shaped material an in-TOML `*_file`
-  # key points at: the PGP key (record.signing.key_file), Cedar policies
-  # (authz.abac.cedar.policy_dir), ATNA PEMs, a JWKS file (auth.jwks_file), the commercial
-  # licence token (deployment.licence_file).
+  # key points at: the PGP key (record.signing.key_file), ATNA PEMs, a JWKS
+  # file (auth.jwks_file), the commercial licence token
+  # (deployment.licence_file). The Cedar policy set is an admin register,
+  # written through the admin API, and no file.
   files: {}
   # signing.asc: |
   #   -----BEGIN PGP PRIVATE KEY BLOCK-----

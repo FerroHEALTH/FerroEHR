@@ -330,11 +330,14 @@ async fn each_step_leaves_its_versions_with_the_memberships_and_no_role() {
         second_dropped.1, group_versions[2].1,
         "the Group's deletion drops its members' memberships in its CONTRIBUTION"
     );
-    let roles: i64 =
-        sqlx::query_scalar("SELECT count(DISTINCT vo_id) FROM party.version WHERE kind = 'ROLE'")
-            .fetch_one(&pool)
-            .await
-            .expect("count the ROLEs");
+    // The two SCIM clients' scim_provision grants are ROLEs of their own.
+    let roles: i64 = sqlx::query_scalar(
+        "SELECT count(DISTINCT vo_id) FROM party.version WHERE kind = 'ROLE' \
+         AND vo_id NOT IN (SELECT role_id FROM party.binding_capability)",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("count the ROLEs");
     assert_eq!(
         roles, 2,
         "each User performs one ROLE, and no Group mints one"
@@ -653,7 +656,7 @@ async fn a_token_naming_two_of_a_persons_groups_lists_exactly_those_two() {
         }
     }
     let table = PartySection {
-        issuer: PERSONS.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(PERSONS),
         identifier_issuer: LOGIN.to_owned(),
         identifier_type: "guid".to_owned(),
         group_claim: "groups".to_owned(),

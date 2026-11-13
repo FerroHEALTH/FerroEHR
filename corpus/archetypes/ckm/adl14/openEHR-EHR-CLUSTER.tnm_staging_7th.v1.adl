@@ -1,0 +1,172 @@
+﻿archetype (adl_version=1.4; uid=3e265293-b1e7-4169-876a-4624ca61a7b1)
+	openEHR-EHR-CLUSTER.tnm_staging_7th.v1
+
+concept
+	[at0000]	-- Tumour - TNM Cancer staging 7th Edition
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Dr Ian McNicoll">
+		["organisation"] = <"Ocean Informatics Scotland">
+		["email"] = <"ian.mcnicoll@oceaninformatics.com">
+		["date"] = <"27/07/2009">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"A framework archetype for the recording of classification and grading of malignancies using the TNM classification 7th Edition. Each malignancy has a unique TNM staging classification and it would be normal to further constrain this archetype to reflect these individual requirements.">
+			use = <"May be specialised or template-constrained for each particular tumour. e.g. TNM classification for bronchial carcinoma">
+			keywords = <"tumour", "TNM", "malignancy", "cancer", "staging", "classification", "grade", "grading", "stage", "lymph node", "metastasis">
+			misuse = <"Should not normally be used for TNM classification without specialisation or template-constraints">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Heather Leslie Ocean Informatics Australia", "Sam Heard Ocean Informatics Australia", "Koray Atalag, University of Auckland, New Zealand">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"Sobin LH. TNM Classification of Malignant Tumours 7th Edition.  John Wiley and Sons; 2009.">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"F40801BD116DEC7BEB65AE28E6696DC0">
+		["build_uid"] = <"2ce6569f-02a3-434d-b411-88f581749105">
+	>
+
+definition
+	CLUSTER[at0000] matches {	-- Tumour - TNM Cancer staging 7th Edition
+		items cardinality matches {1..*; unordered} matches {
+			ELEMENT[at0003] occurrences matches {0..1} matches {	-- Primary tumour (T)
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0004] occurrences matches {0..1} matches {	-- Regional lymph nodes (N)
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0005] occurrences matches {0..1} matches {	-- Distant metastasis (M)
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0025] occurrences matches {0..1} matches {	-- Residual tumour (R)
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0046] occurrences matches {0..1} matches {	-- Histopathological grading (G)
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0047, 	-- GX
+							at0048, 	-- G1
+							at0049, 	-- G2
+							at0050, 	-- G3
+							at0051]	-- G4
+						}
+					}
+				}
+			}
+			ELEMENT[at0010] occurrences matches {0..1} matches {	-- Overall staging
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0052] occurrences matches {0..1} matches {	-- Descriptors
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0053] occurrences matches {0..*} matches {	-- Descriptor
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+			ELEMENT[at0014] occurrences matches {0..1} matches {	-- Stage grouping
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0012] occurrences matches {0..1} matches {	-- Comment
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Tumour - TNM Cancer staging 7th Edition">
+					description = <"A framework for the classification and grading of malignancies using the TNM classification system 7th Edition.">
+				>
+				["at0003"] = <
+					text = <"Primary tumour (T)">
+					description = <"Assessment of the primary tumour.">
+				>
+				["at0004"] = <
+					text = <"Regional lymph nodes (N)">
+					description = <"Assessment of the regional lymph nodes.">
+				>
+				["at0005"] = <
+					text = <"Distant metastasis (M)">
+					description = <"Assessment of distant metastasis.">
+				>
+				["at0010"] = <
+					text = <"Overall staging">
+					description = <"The overall staging derived from each T, N and M component e.g T1aM0NX. May include additional TNM descriptors.">
+				>
+				["at0012"] = <
+					text = <"Comment">
+					description = <"A text comment on the staging.">
+				>
+				["at0014"] = <
+					text = <"Stage grouping">
+					description = <"The TNM Stage grouping.">
+				>
+				["at0025"] = <
+					text = <"Residual tumour (R)">
+					description = <"Assessment of post-treatment residual tumour.">
+				>
+				["at0046"] = <
+					text = <"Histopathological grading (G)">
+					description = <"TNM histopathological grading classification. ">
+				>
+				["at0047"] = <
+					text = <"GX">
+					description = <"Grade of differentiation cannot be assessed.">
+				>
+				["at0048"] = <
+					text = <"G1">
+					description = <"Well differentiated.">
+				>
+				["at0049"] = <
+					text = <"G2">
+					description = <"Moderately differentiated.">
+				>
+				["at0050"] = <
+					text = <"G3">
+					description = <"Poorly differentiated.">
+				>
+				["at0051"] = <
+					text = <"G4">
+					description = <"Undifferentiated.">
+				>
+				["at0052"] = <
+					text = <"Descriptors">
+					description = <"Additional tumour specific TNM descriptors.">
+				>
+				["at0053"] = <
+					text = <"Descriptor">
+					description = <"Additional tumour specific TNM descriptor.">
+				>
+			>
+		>
+	>

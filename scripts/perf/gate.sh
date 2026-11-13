@@ -16,9 +16,10 @@
 # perf/ferroehr.toml as its configuration, its database in a container of the
 # FerroEHR PostgreSQL image, both on a network of their own; ferrohealth-perf
 # reads the server's cgroup and counts the transactions of its database.
-# Before serve, the professional templates of deploy/definitions/professional/
-# are loaded, and once it is ready the Basic user is bound to a PERSON through
-# SCIM (scripts/scim-provision.sh). The seed writes one EHR the reads use and
+# The server stores its default demographic definitions at boot (a base tree
+# that predates that has them loaded before serve), and once it is ready the
+# Basic user is bound to a PERSON through SCIM (scripts/scim-provision.sh, which grants
+# the client scim_provision through the server first). The seed writes one EHR the reads use and
 # never changes, one EHR the commits write into, the lab-results template with
 # a result, and a PERSON, and the plan is rendered with their ids
 # (perf/plan.toml, `@NAME@`).
@@ -158,17 +159,30 @@ up() {
     -v "$tree/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro"
     -v "$tree/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"
     -v "$tree/deploy/definitions/professional:/etc/ferroehr/definitions:ro")
-  # The professional templates the party mapping names are stored before serve.
-  docker run --rm "${process[@]}" "$image" definitions load \
-    /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls \
-    /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls >/dev/null
+  # A base tree whose configuration still names the professional templates
+  # predates the default party mapping, and its server stores no default
+  # definitions, so they are stored before serve; a newer server stores them
+  # at boot.
+  if grep -q '^template_id' "$tree/perf/ferroehr.toml"; then
+    docker run --rm "${process[@]}" "$image" definitions load \
+      /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls \
+      /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls >/dev/null
+  fi
   docker run -d --name "$server" -p "127.0.0.1:${http_port}:8080" "${process[@]}" \
     "$image" >/dev/null
   SERVER_URL="http://127.0.0.1:${http_port}"
   DATABASE_URL="postgres://postgres:${PG_SUPER_SECRET}@127.0.0.1:${pg_port}/ferroehr"
   TARGET=(--container "$(docker inspect -f '{{.Id}}' "$server")")
   wait_for "FerroEHR$suffix" 120 curl -fsS "$SERVER_URL/health/readiness"
-  bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users ferroehr >/dev/null
+  # A tree whose SCIM clients are grants in the CDR grants its client through
+  # the server first; an older tree declares it in its configuration.
+  if grep -q 'binding-issuer' "$tree/scripts/scim-provision.sh"; then
+    SCIM_GRANT="docker exec $server /usr/local/bin/ferroehr" \
+      bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users urn:ferroehr:basic-user \
+      ferroehr >/dev/null
+  else
+    bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users ferroehr >/dev/null
+  fi
   seed "$tree"
 }
 

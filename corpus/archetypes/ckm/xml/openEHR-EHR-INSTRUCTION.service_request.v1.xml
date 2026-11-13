@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1859,7 +1859,7 @@ In many situations, it will be possible to record the steps that occur as part o
       <items code="at0156">
         <items id="text">Billing guidance</items>
         <items id="description">A recommendation from the requester to the receiver about the method of payment for the service.</items>
-        <items id="comment">For example: 'Private'; 'Government insurance scheme'; or 'Private insurance'. </items>
+        <items id="comment">For example: 'Private'; 'Government insurance scheme'; or 'Private insurance'.</items>
       </items>
       <items code="at0157">
         <items id="text">Responsible payer</items>
@@ -2133,7 +2133,7 @@ In many situations, it will be possible to record the steps that occur as part o
       </items>
       <items code="at0137">
         <items id="text">Urgente</items>
-        <items id="description">La richiesta richiede un'attenzione prioritaria. </items>
+        <items id="description">La richiesta richiede un'attenzione prioritaria.</items>
       </items>
       <items code="at0138">
         <items id="text">Routine</items>
@@ -3185,4 +3185,3 @@ In many situations, it will be possible to record the steps that occur as part o
     </term_definitions>
   </ontology>
 </archetype>
-

@@ -47,6 +47,14 @@ language
 				["email"] = <"vladimir.pizzo@hsl.org.br">
 			>
 		>
+		["sl"] = <
+			language = <[ISO_639-1::sl]>
+			author = <
+				["name"] = <"Vanja Maravić, Ana Milošev, Anđela Marjanović, Vuk Radnić">
+				["organisation"] = <"Better Deutschland GmbH, Better d.o.o.">
+				["email"] = <"vanja.maravic@better.care, ana.milosev@better.care, andjela.marjanovic@better.care, vuk.radnic@better.care">
+			>
+		>
 		["nl"] = <
 			language = <[ISO_639-1::nl]>
 			author = <
@@ -140,6 +148,17 @@ For example, as a component of the conclusions drawn as part of a clinical consu
 			misuse = <"Not to be used to carry structured data elements detailing additional instructions, such as timing, frequency, duration or dosage - use appropriate INSTRUCTION archetypes for this purpose.">
 			copyright = <"© openEHR Foundation">
 		>
+		["sl"] = <
+			language = <[ISO_639-1::sl]>
+			purpose = <"Za beleženje predloga, nasveta ali priporočila za klinično vodenje v določenem času.">
+			use = <"Uporabiti za beleženje predloga, nasveta ali pobude za klinično obravnavo v določenem trenutku.
+
+Namen uporabe je podpora zdravstvenemu delavcu pri beleženju priporočila ali priporočil v določenem trenutku.
+Na primer kot sestavni del zaključkov, oblikovanih v okviru kliničnega posveta.">
+			keywords = <"nasvet", "predlog", "priporočilo", "sugestija">
+			misuse = <"Ni namenjeno beleženju strukturiranih podatkovnih elementov, ki podrobno opredeljujejo dodatna navodila, kot so časovni okvir, pogostost, trajanje ali odmerek – za ta namen uporabite ustrezne arhetipe INSTRUCTION.
+ ">
+		>
 		["nl"] = <
 			language = <[ISO_639-1::nl]>
 			purpose = <"Het vastleggen van een suggestie, advies of voorstel voor behandeling op een bepaald moment.">
@@ -180,9 +199,9 @@ Per exemple, com a component de les conclusions extretes en el marc de la consul
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"99B27EB9818E4FDB6D7BEFCEAFB15F51">
-		["build_uid"] = <"1c00256d-4057-4075-a7d1-7161980e7684">
-		["revision"] = <"2.0.4">
+		["MD5-CAM-1.0.1"] = <"0D4B9682FE630A641B219074256FB4C7">
+		["build_uid"] = <"30819ab8-c96e-484e-b49b-90def9b62844">
+		["revision"] = <"2.0.5">
 	>
 
 definition
@@ -224,7 +243,6 @@ definition
 			}
 		}
 	}
-
 
 ontology
 	term_definitions = <
@@ -576,6 +594,45 @@ ontology
 				["at0007"] = <
 					text = <"Última actualització">
 					description = <"Data de la darrera actualització d'aquesta recomanació.">
+				>
+			>
+		>
+		["sl"] = <
+			items = <
+				["at0000"] = <
+					text = <"Priporočilo">
+					description = <"Predlog, nasvet ali priporočilo za klinično vodenje.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Priporočilo">
+					description = <"Pripovedni opis priporočila.">
+					comment = <"Lahko se kodira s terminologijo, če je potrebno.">
+				>
+				["at0003"] = <
+					text = <"Utemeljitev">
+					description = <"Utemeljitve za priporočilo.">
+				>
+				["at0004"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Razširitev">
+					description = <"Dodatne informacije, potrebne za zajemanje lokalnega konteksta ali za uskladitev z drugimi referenčnimi modeli/formalizmi.">
+					comment = <"Na primer: informacije lokalnega bolnišničnega oddelka ali dodatni metapodatki za uskladitev z ekvivalenti FHIR.">
+				>
+				["at0006"] = <
+					text = <"Tema">
+					description = <"Tema ali predmet priporočila.">
+					comment = <"Uporabno, če se hkrati podaja več vrst priporočil znotraj istega nabora podatkov.">
+				>
+				["at0007"] = <
+					text = <"Zadnja posodobitev">
+					description = <"Datum zadnje posodobitve tega priporočila.">
 				>
 			>
 		>

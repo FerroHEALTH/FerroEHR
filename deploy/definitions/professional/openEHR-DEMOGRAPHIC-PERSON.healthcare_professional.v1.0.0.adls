@@ -20,7 +20,7 @@ description
     >
     other_details = <
         ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
-        ["derived_from"] = <"openEHR-DEMOGRAPHIC-PERSON.person.v0, openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v0, openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0, openEHR-DEMOGRAPHIC-ADDRESS.electronic_communication.v0 (openEHR CKM)">
+        ["derived_from"] = <"openEHR-DEMOGRAPHIC-PERSON.person.v0 (openEHR CKM 1013.1.479, modified 2022-01-20), openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v0 (openEHR CKM 1013.1.470, modified 2018-12-20), openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0 (openEHR CKM 1013.1.477, modified 2019-08-09), openEHR-DEMOGRAPHIC-ADDRESS.electronic_communication.v0 (openEHR CKM 1013.1.486, modified 2019-08-08)">
     >
 
 definition
@@ -36,6 +36,12 @@ definition
         }
         identities matches {
             PARTY_IDENTITY[id4] matches {
+                name matches {
+                    DV_TEXT[id18]
+                    DV_CODED_TEXT[id19] matches {
+                        defining_code matches {[ac1]}
+                    }
+                }
                 details matches {
                     ITEM_TREE[id5] matches {
                         items matches {
@@ -57,11 +63,25 @@ definition
             CONTACT[id9] occurrences matches {0..1} matches {
                 addresses matches {
                     ADDRESS[id10] matches {
+                        name matches {
+                            DV_TEXT[id20]
+                            DV_CODED_TEXT[id21] matches {
+                                defining_code matches {[ac2]}
+                            }
+                        }
                         details matches {
                             ITEM_TREE[id11] matches {
                                 items matches {
                                     ELEMENT[id12] occurrences matches {0..1} matches {
                                         value matches { DV_TEXT[id17] }
+                                    }
+                                    ELEMENT[id22] occurrences matches {0..1} matches {
+                                        value matches {
+                                            DV_TEXT[id23]
+                                            DV_CODED_TEXT[id24] matches {
+                                                defining_code matches {[ac3]}
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -87,5 +107,39 @@ terminology
             ["id10"] = <text = <"Electronic communication"> description = <"An electronic address of the person.">>
             ["id11"] = <text = <"Electronic communication details"> description = <"The structure of the address.">>
             ["id12"] = <text = <"Email address"> description = <"The work email address of the person.">>
+            ["id22"] = <text = <"Usage"> description = <"What the address is used for.">>
+            ["ac1"] = <text = <"Name usages"> description = <"The usages of a person's name.">>
+            ["ac2"] = <text = <"Electronic address types"> description = <"The types of an electronic address.">>
+            ["ac3"] = <text = <"Address usages"> description = <"What an address is used for.">>
+            ["at20"] = <text = <"Reporting name"> description = <"Reporting name.">>
+            ["at21"] = <text = <"Newborn name"> description = <"Newborn name.">>
+            ["at22"] = <text = <"Professional or business name"> description = <"Professional or business name.">>
+            ["at23"] = <text = <"Maiden name"> description = <"Maiden name.">>
+            ["at24"] = <text = <"Legal name"> description = <"Legal name.">>
+            ["at25"] = <text = <"Other name"> description = <"Other name.">>
+            ["at30"] = <text = <"Telephone"> description = <"Telephone.">>
+            ["at31"] = <text = <"Fax"> description = <"Fax.">>
+            ["at32"] = <text = <"Mobile"> description = <"Mobile.">>
+            ["at33"] = <text = <"Pager"> description = <"Pager.">>
+            ["at34"] = <text = <"E-mail"> description = <"E-mail.">>
+            ["at35"] = <text = <"URL"> description = <"URL.">>
+            ["at40"] = <text = <"Personal"> description = <"Personal.">>
+            ["at41"] = <text = <"Business"> description = <"Business.">>
+            ["at42"] = <text = <"Personal/Business"> description = <"Personal/Business.">>
+            ["at43"] = <text = <"Other use"> description = <"Other use.">>
+        >
+    >
+    value_sets = <
+        ["ac1"] = <
+            id = <"ac1">
+            members = <"at20", "at21", "at22", "at23", "at24", "at25">
+        >
+        ["ac2"] = <
+            id = <"ac2">
+            members = <"at30", "at31", "at32", "at33", "at34", "at35">
+        >
+        ["ac3"] = <
+            id = <"ac3">
+            members = <"at40", "at41", "at42", "at43">
         >
     >

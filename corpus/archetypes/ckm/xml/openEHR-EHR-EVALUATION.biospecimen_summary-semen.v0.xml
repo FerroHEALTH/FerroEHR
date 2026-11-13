@@ -1,0 +1,1482 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2022-02-09</original_author>
+    <original_author id="name">Heather Leslie</original_author>
+    <original_author id="organisation">Atomica Informatics</original_author>
+    <original_author id="email">heather.leslie@atomicainformatics.com</original_author>
+    <other_contributors>Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Heather Leslie, Atomica Informatics, Australia (openEHR Editor)</other_contributors>
+    <lifecycle_state>rejected</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Ashford, P., et al., Standard terminology for reproductive tissue and cell products for use in ART. Human Reproduction Open, 2019. 2019(2): p. hoz005.</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">9556A36CAAE30E281F1A3574B1A79D32</other_details>
+    <other_details id="build_uid">2bc0abdb-9c31-4edc-9ddf-6ad2c8fc0e5d</other_details>
+    <other_details id="ip_acknowledgements">This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.</other_details>
+    <other_details id="revision">0.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Darstellung eines zusammenfassenden oder dauerhaften Datensatzes über eine Bioprobe.</purpose>
+      <keywords>*assisted reproduction (en)</keywords>
+      <keywords>*sperm (en)</keywords>
+      <keywords>*testicular (en)</keywords>
+      <keywords>*ovarian (en)</keywords>
+      <keywords>*tissue (en)</keywords>
+      <keywords>*oocyte (en)</keywords>
+      <keywords>*zygote (en)</keywords>
+      <keywords>*embryo (en)</keywords>
+      <keywords>*blastocyst (en)</keywords>
+      <keywords>*biobsy (en)</keywords>
+      <keywords>*graft (en)</keywords>
+      <use>*Use to record summary or persistent record about a single biospecimen or biosample, from the time of collection or harvesting to disposition.&#xD;
+&#xD;
+This archetype is intended to support tracking the collection, storage, use or disposition of human biofluids, cells or tissue. Use cases include, but are not limited to:&#xD;
+- oocytes, zygotes, embryos, or semen in assisted reproduction; and&#xD;
+- autologous skin graft.&#xD;
+&#xD;
+Details about the biospecimen, including collection information, can be recorded using the CLUSTER.specimen in the 'Specimen details' SLOT.&#xD;
+&#xD;
+Details about the location of the biospecimen can be recorded using the CLUSTER.specimen_container and CLUSTER.biobank in the 'Storage details' SLOT. (en)</use>
+      <misuse>Nicht zur Darstellung von Blutspenden verwenden. Verwenden Sie dazu zweckspezifische Archetypen.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For å registrere et sammendrag eller vedvarende registrering hvor prøvemateriale er sæd.</purpose>
+      <keywords>ivf</keywords>
+      <keywords>assistert reproduksjon</keywords>
+      <keywords>sperm</keywords>
+      <keywords>sæd</keywords>
+      <keywords>testikler</keywords>
+      <keywords>bioprøve</keywords>
+      <keywords>semen</keywords>
+      <keywords>vev</keywords>
+      <use>Brukes til å registrere sammendrag eller persistent registrering av det biologiske prøvematerialet sædveske (semen).&#xD;
+&#xD;
+Denne arketypen er designet for å registrere detaljer om innsamling (prøvetakning), lagring, håndtering, bruk eller destruering av en sædprøve, spesielt ved assistert befruktning.&#xD;
+&#xD;
+Detaljer om sædprøven, inkludert tidspunkt for prøvetakning/innsamling, kan registreres ved å bruke arketypen CLUSTER.specimen (Prøvemateriale) i 'Prøvematerialdetaljer'-SLOTet.&#xD;
+&#xD;
+Detaljer om lagring av sædprøven kan registreres ved å bruke CLUSTER.specimen_container (Prøvebeholder) og CLUSTER.biobank (Biologisk lager/biobank) i 'Lagringsdetaljer'-SLOTet.</use>
+      <misuse />
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record a summary or persistent record about a sperm specimen.</purpose>
+      <keywords>assisted reproduction</keywords>
+      <keywords>testicular</keywords>
+      <keywords>testicle</keywords>
+      <keywords>tissue</keywords>
+      <keywords>semen</keywords>
+      <keywords>sperm</keywords>
+      <use>Use to record summary or persistent record about about a sperm specimen.&#xD;
+&#xD;
+This archetype has been designed to track the collection, storage, management, use or disposition of a sperm specimen, especially in assisted reproduction treatment.&#xD;
+&#xD;
+Details about the biospecimen, including collection information, can be recorded using the CLUSTER.specimen in the 'Specimen details' SLOT.&#xD;
+&#xD;
+Details about the location of the biospecimen can be recorded using the CLUSTER.specimen_container and CLUSTER.biobank in the 'Storage details' SLOT.</use>
+      <misuse />
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Natalia Strauch</author>
+    <author id="organisation">Medizinische Hochschule Hannover</author>
+    <author id="email">Strauch.Natalia@mh-hannover.de</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Liv Laugen</author>
+    <author id="organisation">​Oslo University Hospital, Norway</author>
+    <author id="email">liv.laugen@ous-hf.no</author>
+  </translations>
+  <uid>
+    <value>035d8e23-ab6f-40d7-9a46-3c9def35de43</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-EVALUATION.biospecimen_summary-semen.v0</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000.1</concept>
+  <parent_archetype_id>
+    <value>openEHR-EHR-EVALUATION.biospecimen_summary.v0</value>
+  </parent_archetype_id>
+  <definition>
+    <rm_type_name>EVALUATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000.1</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0002</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_IDENTIFIER</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0003.1</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>defining_code</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_CODE_PHRASE">
+                    <rm_type_name>CODE_PHRASE</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <terminology_id>
+                      <value>local</value>
+                    </terminology_id>
+                    <code_list>at0.1</code_list>
+                    <code_list>at0.2</code_list>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0019</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0004</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0005</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0006</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0007</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0008</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v2|openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v2|openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v1</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0018</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0009</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.biobank_storage(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.biobank_storage(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.specimen_container(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.specimen_container(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>openEHR-EHR-CLUSTER\.biobank_storage(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.biobank_storage(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.specimen_container(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.specimen_container(-[a-zA-Z0-9_]+)*\.v1</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0010</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0011</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0012</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0017</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/.*/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>.*</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0016</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0.3</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>defining_code</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_CODE_PHRASE">
+                    <rm_type_name>CODE_PHRASE</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <terminology_id>
+                      <value>local</value>
+                    </terminology_id>
+                    <code_list>at0.4</code_list>
+                    <code_list>at0.5</code_list>
+                    <code_list>at0.6</code_list>
+                    <code_list>at0.7</code_list>
+                    <code_list>at0.8</code_list>
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0.9</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>defining_code</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_CODE_PHRASE">
+                    <rm_type_name>CODE_PHRASE</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <terminology_id>
+                      <value>local</value>
+                    </terminology_id>
+                    <code_list>at0.10</code_list>
+                    <code_list>at0.11</code_list>
+                    <code_list>at0.12</code_list>
+                    <code_list>at0.13</code_list>
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>protocol</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0013</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0014</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0015</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/.*/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>.*</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000.1">
+        <items id="text">Biospecimen summary - semen</items>
+        <items id="description">Summary or persistent information about a sperm specimen.</items>
+      </items>
+      <items code="at0.3">
+        <items id="text">Sperm procurement</items>
+        <items id="description">The method used to collect or recover the sperm.</items>
+      </items>
+      <items code="at0.4">
+        <items id="text">Ejaculation</items>
+        <items id="description">Sperm procured from ejaculate.</items>
+      </items>
+      <items code="at0.5">
+        <items id="text">Epididymal aspirate</items>
+        <items id="description">Sperm procured by aspiration from epididymis.</items>
+      </items>
+      <items code="at0.6">
+        <items id="text">Testicular aspirate</items>
+        <items id="description">Sperm procured by percutaneous aspiration from testis.</items>
+      </items>
+      <items code="at0003.1">
+        <items id="text">Biospecimen type</items>
+        <items id="description">The type of cell or tissue collected.</items>
+      </items>
+      <items code="at0.1">
+        <items id="text">Semen</items>
+        <items id="description">The male gamete.</items>
+      </items>
+      <items code="at0.2">
+        <items id="text">Testicular tissue</items>
+        <items id="description">Fragment of the testicle.</items>
+      </items>
+      <items code="at0.7">
+        <items id="text">Testicular biopsy</items>
+        <items id="description">Sperm procured by biopsy of testis.</items>
+      </items>
+      <items code="at0.8">
+        <items id="text">Unknown</items>
+        <items id="description">Procurement method is not specified, or not applicable.</items>
+      </items>
+      <items code="at0.9">
+        <items id="text">Sperm preparation</items>
+        <items id="description">The treatment of the sperm.</items>
+      </items>
+      <items code="at0.10">
+        <items id="text">Unwashed</items>
+        <items id="description">Raw ejaculate.</items>
+      </items>
+      <items code="at0.11">
+        <items id="text">Washed</items>
+        <items id="description">The ejaculate has been washed by centrifugation in a buffer solution.</items>
+      </items>
+      <items code="at0.12">
+        <items id="text">Prepared</items>
+        <items id="description">Viable sperm cells have been isolated from other contents of the seminal fluid.</items>
+      </items>
+      <items code="at0.13">
+        <items id="text">Unknown</items>
+        <items id="description">No information about the preparation of sperm is provided, or not applicable.</items>
+      </items>
+      <items code="at0000">
+        <items id="text">Biospecimen summary</items>
+        <items id="description">Summary or persistent information about a human biospecimen, such as biofluids, tissue, cells or other human-derived material, collected or harvested.</items>
+        <items id="comment">For example: a harvested oocyte, a sperm sample or tissue graft.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Biospecimen ID</items>
+        <items id="description">Unique identifier for the biospecimen.</items>
+        <items id="comment">For example: SEC-ID (The Single European Code) for tissues and cell products, used in, among other things, reproductive medicine treatment.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Biospecimen type</items>
+        <items id="description">The type of biofluids, tissue cells or other human-derived material collected.</items>
+        <items id="comment">For example: skin (for grafting); semen (for storage or donation). Coding of the biospecimen type with a terminology is preferred, where possible.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Type of preservation</items>
+        <items id="description">The technique used to preserve the biospecimen.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Date of preservation</items>
+        <items id="description">The date/time when the biospecimen was preserved.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Disposition</items>
+        <items id="description">The final disposition of the biospecimen.</items>
+        <items id="comment">Usually this involves use, donation or disposal.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Date of disposition</items>
+        <items id="description">The date/time for the disposition of the biospecimen.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Expiry date</items>
+        <items id="description">The date beyond the biospecimen is not to be used.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Last updated</items>
+        <items id="description">The date this biospecimen summary was last updated.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Extension</items>
+        <items id="description">Additional information required to extend the model with local content or to align with other reference models or formalisms.</items>
+        <items id="comment">For example: local information requirements; or additional metadata to align with FHIR.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Description</items>
+        <items id="description">Narrative description about the biospecimen.</items>
+        <items id="comment">For example, information about how it was collected.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Storage details</items>
+        <items id="description">Details about the storage of the biospecimen.</items>
+        <items id="comment">For example: details about the container and biobank where the biospecimen is stored.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Treatment</items>
+        <items id="description">Narrative description about the management of the biospecimen prior to preservation, including clinical treatments.</items>
+        <items id="comment">It is possible to link from this data element to an ACTION.procedure within the health record to record the specific details about the clinical procedure/s and timing.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Specimen details</items>
+        <items id="description">Details about the biospecimen.</items>
+        <items id="comment">For example: date &amp; time of collection, specific project number for the biospecimen collection.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Comment</items>
+        <items id="description">Additional narrative about the biospecimen, not captured in other fields.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Additional details</items>
+        <items id="description">Additional structured details related to the biospecimen.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Date of storage</items>
+        <items id="description">The date/time when the biospecimen was stored.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Category</items>
+        <items id="description">The category of the biospecimen.</items>
+        <items id="comment">For example: Normal/Abnormal; or Tumoral/Peritumoral.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0.1">
+        <items id="text">Sæd</items>
+        <items id="description">Den mannlige reproduktive væske (semen).</items>
+      </items>
+      <items code="at0.10">
+        <items id="text">Uvasket</items>
+        <items id="description">Ubehandlet ejakulat/sæd.</items>
+      </items>
+      <items code="at0.11">
+        <items id="text">Vasket</items>
+        <items id="description">Ejakulatet/sæden er vasket ved sentrifugering i en bufferløsning.</items>
+      </items>
+      <items code="at0.12">
+        <items id="text">Preparert</items>
+        <items id="description">Levedyktige spermier har blitt isolert fra annet innhold i sædvæsken.</items>
+      </items>
+      <items code="at0.13">
+        <items id="text">Ukjent</items>
+        <items id="description">Ingen informasjon om preparering av spermiene er gitt, eller det er ikke aktuelt.</items>
+      </items>
+      <items code="at0.2">
+        <items id="text">Testikkelvev</items>
+        <items id="description">Vev fra testikkelen.</items>
+      </items>
+      <items code="at0.3">
+        <items id="text">Spermieinnhenting</items>
+        <items id="description">Metoden som er brukt for å fremskaffe spermier/sædceller.</items>
+      </items>
+      <items code="at0.4">
+        <items id="text">Ejakulasjon</items>
+        <items id="description">Spermier/sædceller fremskaffet fra ejakulat.</items>
+      </items>
+      <items code="at0.5">
+        <items id="text">Epididymal aspirat</items>
+        <items id="description">Spermier/sædceller fremskaffet ved aspirasjon fra bitestikel.</items>
+      </items>
+      <items code="at0.6">
+        <items id="text">Testikkelaspirat</items>
+        <items id="description">Spermier/sædceller fremskaffet ved perkutan aspirasjon fra testis.</items>
+      </items>
+      <items code="at0.7">
+        <items id="text">Testikkelbiopsi</items>
+        <items id="description">Spermier/sædceller fremskaffet ved en testisbiopsi.</items>
+      </items>
+      <items code="at0.8">
+        <items id="text">Ukjent</items>
+        <items id="description">Anskaffelsesmetode er ikke spesifisert, eller det er ikke aktuelt.</items>
+      </items>
+      <items code="at0.9">
+        <items id="text">Sædpreparering</items>
+        <items id="description">Forbehandling av spermiene/sædcellene.</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">Biologisk prøve sammendrag - sæd</items>
+        <items id="description">Sammendrag eller persistent informasjon om en sædprøve.</items>
+      </items>
+      <items code="at0003.1">
+        <items id="text">Biologisk prøvetype</items>
+        <items id="description">Type av celler eller vev som er innsamlet/høstet.</items>
+        <items id="comment">For eksempel: hud (for transplantasjon); sæd (for lagring og donasjon).</items>
+      </items>
+      <items code="at0000">
+        <items id="text">Biologisk prøvemateriale sammendrag</items>
+        <items id="description">Sammendrag eller persistent informasjon om et humant biologisk prøvemateriale, som for eksempel kroppsvæsker, vev, celler, eller annet materiale, som er innhentet vha. prøvetakning eller høsting.</items>
+        <items id="comment">For eksempel en innhøstet oocytt, en sædprøve eller vevsgraft.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Biologisk prøveID</items>
+        <items id="description">En unik identifikator for det biologiske prøvematerialet.</items>
+        <items id="comment">For eksempel: SEC-ID (The Single European Code) for vev og celleprodukter, brukt i blant annet i reproduksjonsmedisinsk behandling.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Biologisk prøvetype</items>
+        <items id="description">Type av kroppsvæsker, vev, celler, eller annet materiale som er innsamlet/høstet.</items>
+        <items id="comment">For eksempel: hud (for transplantasjon); sæd (for lagring og donasjon). Koding av den biologiske prøvetypen med en terminologi er foretrukket, dersom mulig.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Beskrivelse</items>
+        <items id="description">Fritekstbeskrivelse av det biologiske prøvemateriale.</items>
+        <items id="comment">For eksempel, informasjon om hvordan prøven ble tatt.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Behandling</items>
+        <items id="description">Fritekstbeskrivelse av håndteringen av det biologiske prøvematerialet før konservering, inkludert klinisk behandling.</items>
+        <items id="comment">Det er mulig å koble dette dataelementet til en ACTION.procedure i den elektroniske pasientjournalen for å registrere spesifikke detaljer om den kliniske prosedyren og tidspunkt den ble utført.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Dato for preservering</items>
+        <items id="description">Dato/tid da det biologiske prøvematerialet ble preservert/konservert.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Type preservering</items>
+        <items id="description">Teknikken som ble brukt til å preservere/konservere det biologiske prøvematerialet.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Prøvematerialdetaljer</items>
+        <items id="description">Detaljer om det biologiske prøvematerialet.</items>
+        <items id="comment">For eksempel: prøvetakningsdato og tid.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Lagringsdetaljer</items>
+        <items id="description">Detaljer om lagringen av det biologiske prøvematerialet.</items>
+        <items id="comment">For eksempel: detaljer om prøvebeholderen og biobanken hvor det biologiske prøvematerialet er lagret.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Avhending/disponering</items>
+        <items id="description">Den endelige avslutningen/disponeringen av det biologiske prøvematerialet.</items>
+        <items id="comment">Vanligvis involverer dette at det biologiske prøvematerialet er brukt, donert eller destruert.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Avhending/disponering dato</items>
+        <items id="description">Dato og tid da det biologiske prøvematerialet ble benyttet/disponert.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Utløpsdato</items>
+        <items id="description">Dato for holdbarheten til det biologiske prøvematerialet.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Sist oppdatert</items>
+        <items id="description">Datoen da det sammendraget for det biologiske prøvematerialet sist ble oppdatert.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Utvidelse</items>
+        <items id="description">Tilleggsinformasjon som kan være nødvendig for å dokumentere lokal kontekst, eller for å tilpasse til andre referansemodeller/formalismer.</items>
+        <items id="comment">For eksempel: lokal informasjon eller ytterligere metadata for tilpasning til FHIR eller CIMI.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Kommentar</items>
+        <items id="description">Ytterligere kommentarer om det biologiske materialet som ikke passer i andre felter.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Ytterligere detaljer</items>
+        <items id="description">Ytterligere strukturerte detaljer om det biologiske prøvematerialet.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Dato for lagring</items>
+        <items id="description">Dato/tid da det biologiske prøvematerialet ble lagret/arkivert.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Kategori</items>
+        <items id="description">Kategorien til det biologiske prøvematerialet.</items>
+        <items id="comment">For eksempel: Normal/unormal; eller tumor/peritumoralt.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000.1">
+        <items id="text">Zusammenfassung zu der Bioprobe</items>
+        <items id="description">*Summary or persistent information about a human biospecimen, such as biofluids, tissue, cells or other human-derived material, collected or harvested. (en)</items>
+        <items id="comment">Zum Beispiel: eine entnommene Eizelle, eine Samenprobe oder ein Gewebetransplantat.</items>
+      </items>
+      <items code="at0.3">
+        <items id="text">Sperm procurement</items>
+        <items id="description">The method used to collect or recover the sperm.</items>
+      </items>
+      <items code="at0.4">
+        <items id="text">Ejaculation</items>
+        <items id="description">Sperm procured from ejaculate.</items>
+      </items>
+      <items code="at0.5">
+        <items id="text">Epididymal aspirate</items>
+        <items id="description">Sperm procured by aspiration from epididymis.</items>
+      </items>
+      <items code="at0.6">
+        <items id="text">Testicular aspirate</items>
+        <items id="description">Sperm procured by percutaneous aspiration from testis.</items>
+      </items>
+      <items code="at0003.1">
+        <items id="text">Art der Bioprobe</items>
+        <items id="description">*The type of biofluids, tissue cells or other human-derived material collected. (en)</items>
+        <items id="comment">*For example: skin (for grafting); semen (for storage or donation). Coding of the biospecimen type with a terminology is preferred, where possible. (en)</items>
+      </items>
+      <items code="at0.1">
+        <items id="text">Semen</items>
+        <items id="description">The male gamete.</items>
+      </items>
+      <items code="at0.2">
+        <items id="text">Testicular tissue</items>
+        <items id="description">Fragment of the testicle.</items>
+      </items>
+      <items code="at0.7">
+        <items id="text">Testicular biopsy</items>
+        <items id="description">Sperm procured by biopsy of testis.</items>
+      </items>
+      <items code="at0.8">
+        <items id="text">Unknown</items>
+        <items id="description">Procurement method is not specified, or not applicable.</items>
+      </items>
+      <items code="at0.9">
+        <items id="text">Sperm preparation</items>
+        <items id="description">The treatment of the sperm.</items>
+      </items>
+      <items code="at0.10">
+        <items id="text">Unwashed</items>
+        <items id="description">Raw ejaculate.</items>
+      </items>
+      <items code="at0.11">
+        <items id="text">Washed</items>
+        <items id="description">The ejaculate has been washed by centrifugation in a buffer solution.</items>
+      </items>
+      <items code="at0.12">
+        <items id="text">Prepared</items>
+        <items id="description">Viable sperm cells have been isolated from other contents of the seminal fluid.</items>
+      </items>
+      <items code="at0.13">
+        <items id="text">Unknown</items>
+        <items id="description">No information about the preparation of sperm is provided, or not applicable.</items>
+      </items>
+      <items code="at0000">
+        <items id="text">Zusammenfassung zur Bioprobe</items>
+        <items id="description">Zusammenfassende oder dauerhafte Informationen über eine menschliche Bioprobe, wie z. B. entnommene Bioflüssigkeiten, Gewebe, Zellen oder anderes vom Menschen stammendes Material.</items>
+        <items id="comment">Zum Beispiel: eine entnommene Eizelle, eine Samenprobe oder ein Gewebetransplantat.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Bioproben-ID</items>
+        <items id="description">Eindeutige Kennung für die Bioprobe.</items>
+        <items id="comment">Zum Beispiel: SEC-ID (The Single European Code) für Gewebe und Zellprodukte, die unter anderem in der reproduktionsmedizinischen Behandlung verwendet werden.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Art der Bioprobe</items>
+        <items id="description">Die Art der entnommenen Bioflüssigkeiten, Gewebezellen oder anderen vom Menschen stammenden Materialien.</items>
+        <items id="comment">Zum Beispiel: Haut (zur Transplantation), Samen (zur Lagerung oder Spende). Wenn möglich, wird die Codierung der Art der Bioprobe mit einer Terminologie bevorzugt.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Zeitpunkt der Konservierung</items>
+        <items id="description">Das Datum und die Uhrzeit der Konservierung der Bioprobe.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Probendetails</items>
+        <items id="description">Detaillierte Angaben zur Bioprobe.</items>
+        <items id="comment">Zum Beispiel: Datum und Uhrzeit der Entnahme, spezifische Projektnummer für die Bioprobenentnahme.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Angaben zur Lagerung</items>
+        <items id="description">Angaben zur Lagerung der Bioprobe.</items>
+        <items id="comment">Zum Beispiel: Angaben zum Behälter und zur Biobank, in denen die Bioprobe gelagert wird.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Zeitpunkt der Verwendung</items>
+        <items id="description">Das Datum und die Uhrzeit der Verwendung der Bioprobe.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Zusätzliche Angaben</items>
+        <items id="description">Zusätzliche strukturierte Informationen zur Bioprobe.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Zeitpunkt der Lagerung</items>
+        <items id="description">Das Datum und die Uhrzeit der Lagerung der Bioprobe.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Kategorie</items>
+        <items id="description">Die Kategorie der Bioprobe.</items>
+        <items id="comment">Zum Beispiel: Normal/Anormal oder Tumoral/Peritumoral.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Beschreibung</items>
+        <items id="description">Beschreibung der Bioprobe.</items>
+        <items id="comment">Zum Beispiel Informationen darüber, wie sie entnommen wurde.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Behandlung</items>
+        <items id="description">Beschreibung des Umgangs mit der Probe vor der Konservierung, einschließlich klinischer Behandlungen.</items>
+        <items id="comment">Es ist möglich, dieses Datenelement mit einem ACTION.procedure innerhalb der Gesundheitsakte zu verknüpfen, um die spezifischen Details über das/die klinische(n) Verfahren und den zeitlichen Ablauf darzustellen.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Art der Konservierung</items>
+        <items id="description">Die zur Konservierung der Bioprobe verwendete Technik.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Verwendung</items>
+        <items id="description">Die endgültige Verwendung der Bioprobe.</items>
+        <items id="comment">In der Regel geht es dabei um Nutzung, Spende oder Entsorgung.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Verfallsdatum</items>
+        <items id="description">Das Datum, nach der die Bioprobe nicht verwendet werden darf.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Letzte Aktualisierung</items>
+        <items id="description">Das Datum, an dem diese Zusammenfassung zu der Bioprobe zuletzt aktualisiert wurde.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Erweiterung</items>
+        <items id="description">Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.</items>
+        <items id="comment">Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Kommentar</items>
+        <items id="description">Zusätzliche Beschreibung über die Bioprobe, die nicht in anderen Feldern erfasst wurde.</items>
+      </items>
+    </term_definitions>
+    <term_bindings terminology="SNOMED-CT">
+      <items code="at0.1">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>734846002</code_string>
+        </value>
+      </items>
+    </term_bindings>
+  </ontology>
+</archetype>

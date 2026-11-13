@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -22,9 +22,30 @@ Kroenke K, Spitzer RL, Williams JB. The Patient Health Questionnaire-2: validity
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">5591953BB82BBEFBD0AB521E8EF5DB71</other_details>
-    <other_details id="build_uid">d6653acb-2695-4c08-8840-30198bbddeff</other_details>
+    <other_details id="MD5-CAM-1.0.1">3FCD1BF5007BEC7E97A62E070FA10E5C</other_details>
+    <other_details id="build_uid">4a04d672-3bcd-44c9-88a5-e995ca3030a2</other_details>
     <other_details id="revision">0.0.1-alpha</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Aufzeichnung der Ergebnisse des Patient Health Questionnaire-9 (PHQ-9) und seiner Subset-Bewertung PHQ-2.</purpose>
+      <keywords>Screening</keywords>
+      <keywords>Depression</keywords>
+      <keywords>Stimmung</keywords>
+      <keywords>Bewertung</keywords>
+      <keywords>Psychische Gesundheit</keywords>
+      <use>Zur Aufzeichnung der Ergebnisse des Patient Health Questionnaire-9 (PHQ-9) und seiner Subset-Bewertung PHQ-2.&#xD;
+&#xD;
+Der Archetyp ist so konzipiert, dass die eigentlichen PHQ-Fragen als Beschreibung für jedes Datenelement des Fragebogens erfasst werden. Der Name des Datenelements ist eine pragmatische Beschreibung, die auf die Absicht der Frage hinweist.&#xD;
+&#xD;
+Das ursprüngliche PHQ-9-Tool wurde von Dr. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke und Kollegen, mit einem Bildungsstipendium von Pfizer Inc. Von der PHQ Screeners-Website (http://www.phqscreeners.com/overview.aspx): „Alle PHQ-, GAD-7-Screener und -Übersetzungen können hier heruntergeladen werden Website und es ist keine Genehmigung erforderlich, um sie zu reproduzieren, zu übersetzen, anzuzeigen oder zu verteilen." Und von der PHQ-Webseite (http://www.phqscreeners.com/pdfs/01_PHQ/English.pdf): "Keine Erlaubnis erforderlich, um zu reproduzieren, zu übersetzen, anzuzeigen oder zu verteilen".</use>
+      <misuse />
+      <copyright />
+    </details>
     <details>
       <language>
         <terminology_id>
@@ -48,7 +69,50 @@ The Australian indigenous adaptation for the PHQ-9 subset assessing mood was dev
       <misuse />
       <copyright>© Northern Territory Department of Health (Australia), openEHR Foundation</copyright>
     </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>fr</code_string>
+      </language>
+      <purpose>Pour enregistrer les résultats du Questionnaire sur la santé du patient-9 (PHQ-9) et son évaluation de sous-ensemble PHQ-2.</purpose>
+      <keywords>projection</keywords>
+      <keywords>dépression</keywords>
+      <keywords>humeur</keywords>
+      <keywords>évaluation</keywords>
+      <keywords>santé mentale</keywords>
+      <use>Utilisez-le pour enregistrer les résultats du Questionnaire sur la santé du patient-9 (PHQ-9) et de son sous-ensemble d'évaluation PHQ-2.&#xD;
+&#xD;
+L'archétype a été conçu de telle sorte que les questions réelles du PHQ soient enregistrées comme description pour chaque élément de données du questionnaire. Le nom de l'élément de données est une description pragmatique qui indique l'intention de la question.&#xD;
+&#xD;
+L'outil original PHQ‐9 a été développé par les Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke et ses collègues, avec une bourse d'études de Pfizer Inc. Sur le site Web PHQ Screeners (http://www.phqscreeners.com/overview.aspx) : "Tous les filtres PHQ, GAD-7 et les traductions sont téléchargeables à partir de ce site Web et aucune autorisation n'est requise pour les reproduire, les traduire, les afficher ou les distribuer." Et sur la page Web de PHQ (http://www.phqscreeners.com/pdfs/01_PHQ/English.pdf) : "Aucune autorisation requise pour reproduire, traduire, afficher ou distribuer".</use>
+      <misuse />
+      <copyright />
+    </details>
   </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Vanessa Pereira</author>
+    <author id="organisation">Luxembourg Institute of Health (LIH)</author>
+    <author id="email">vanessapereira@protonmail.com</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>fr</code_string>
+    </language>
+    <author id="name">Vanessa Pereira</author>
+    <author id="organisation">Luxembourg Institute of Health (LIH)</author>
+    <author id="email">vanessapereira@protonmail.com</author>
+  </translations>
   <uid>
     <value>4b04a62d-4bc1-4b14-8dfa-f6fb55c155ba</value>
   </uid>
@@ -1309,6 +1373,219 @@ by thoughts that you would be better off dead or of hurting yourself in some way
         <items id="comment">For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.</items>
       </items>
     </term_definitions>
+    <term_definitions language="fr">
+      <items code="at0000">
+        <items id="text">Questionnaire sur la santé du patient-9 (PHQ-9)</items>
+        <items id="description">Questionnaire de dépistage de la santé mentale pouvant être utilisé par les professionnels de la santé ou autodéclaré par les particuliers.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Event Series</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Point dans le temps</items>
+        <items id="description">Une date et/ou une heure spécifique qui peut être explicitement définie dans un modèle ou au moment de l'exécution.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Intérêt/plaisir</items>
+        <items id="description">Au cours des 2 dernières semaines, selon quelle fréquence avez-vous été gêné(e) peu d’intérêt ou de plaisir à faire les choses?</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Jamais</items>
+        <items id="description">Le sujet de la question n'a pas du tout affecté le sujet au cours des deux dernières semaines.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Plusieurs jours</items>
+        <items id="description">Le sujet de la question a touché le sujet plusieurs jours au cours des deux dernières semaines.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Plus de la moitié du temps</items>
+        <items id="description">Le sujet de la question a touché le sujet plus de la moitié des jours au cours des deux dernières semaines.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Presque tous les jours</items>
+        <items id="description">Le sujet de la question a touché le sujet presque tous les jours au cours des deux dernières semaines.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Déprime</items>
+        <items id="description">Au cours des 2 dernières semaines, selon quelle fréquence avez-vous être triste, déprimé(e) ou désespéré(e)?</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Note PHQ-2</items>
+        <items id="description">Score total pour les deux premières questions sur "Intérêt/Plaisir" et "Déprime".</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Note PHQ-9</items>
+        <items id="description">Score total pour les neuf questions.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Problèmes de sommeil</items>
+        <items id="description">Au cours des 2 dernières semaines, selon quelle fréquence avez-vous difficultés à s’endormir ou à rester endormi(e), ou dormir trop?</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Fatigué/peu d'énergie</items>
+        <items id="description">Au cours des 2 dernières semaines, selon quelle fréquence avez-vous se sentir fatigué(e) ou manquer d’énergie?</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Appétit</items>
+        <items id="description">Au cours des 2 dernières semaines, selon quelle fréquence avez-vous avoir peu d’appétit ou manger trop?</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Se sentir mal dans sa peau</items>
+        <items id="description">Au cours des 2 dernières semaines, selon quelle fréquence avez-vous avoir une mauvaise opinion de soi-même, ou avoir le sentiment d’être nul(le), ou d’avoir déçu sa famille ou s’être déçu(e) soi-même?</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Problème de concentration</items>
+        <items id="description">Au cours des 2 dernières semaines, selon quelle fréquence avez-vous avoir du mal à se concentrer, par exemple, pour lire le journal ou regarder la télévision?</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Lent/agité</items>
+        <items id="description">Au cours des 2 dernières semaines, selon quelle fréquence avez-vous bouger ou parler si lentement que les autres auraient pu le remarquer. Ou au contraire, être si agité(e) que vous avez eu du mal à tenir en place par rapport à d’habitude?</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Mort/automutilation</items>
+        <items id="description">Au cours des 2 dernières semaines, selon quelle fréquence avez-vous penser qu’il vaudrait mieux mourir ou envisager &#xD;
+de vous faire du mal d’une manière ou d’une autre?</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Difficulté dans les activités de la vie</items>
+        <items id="description">Si vous avez coché au moins un des problèmes évoqués, à quel point ce(s) problème(s) a-t-il (ont ils) rendu votre travail, vos tâches à la maison ou votre capacité à vous entendre avec les autres difficile(s) ?</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Pas du tout difficile(s)</items>
+        <items id="description">L'individu n'a trouvé aucune difficulté à travailler, à s'occuper des choses à la maison ou à s'entendre avec d'autres personnes.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Assez difficile(s)</items>
+        <items id="description">La personne a trouvé quelque peu difficile de travailler, de s'occuper de ses affaires à la maison ou de s'entendre avec d'autres personnes.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Très difficile(s)</items>
+        <items id="description">L'individu trouvait très difficile de travailler, de s'occuper de ses affaires à la maison ou de s'entendre avec d'autres personnes.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Extrêmement difficile(s)</items>
+        <items id="description">L'individu trouvait qu'il était extrêmement difficile de travailler, de s'occuper des choses à la maison ou de s'entendre avec d'autres personnes.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Extension</items>
+        <items id="description">Informations supplémentaires requises pour capturer le contenu local ou pour s'aligner sur d'autres modèles/formalismes de référence.</items>
+        <items id="comment">Par exemple : exigences d'informations locales ou métadonnées supplémentaires pour s'aligner sur les équivalents FHIR ou CIMI.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Gesundheitsfragebogen für patienten-9 (PHQ-9)</items>
+        <items id="description">Screening-Fragebogen für psychische Gesundheit, der von Angehörigen der Gesundheitsberufe verwendet oder von Einzelpersonen selbst angegeben werden kann.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Event Series</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Jedes Ereignis</items>
+        <items id="description">Standard, nicht spezifizierter Zeitpunkt oder Intervallereignis, das explizit in einer Vorlage oder zur Laufzeit definiert werden kann.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Interesse/Freude</items>
+        <items id="description">Wie oft hat Sie in den letzten zwei Wochen wenig Interesse oder Freude an Ihren Tätigkeiten?</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Überhaupt nicht</items>
+        <items id="description">Das Thema der Frage hat das Thema in den letzten zwei Wochen überhaupt nicht berührt.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">An einzelnen tagen</items>
+        <items id="description">Das Thema der Frage hat das Thema in den letzten zwei Wochen an mehreren Tagen berührt.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">An mehr als die Hälfte der Tage</items>
+        <items id="description">Das Thema der Frage hat das Thema in den letzten zwei Wochen an mehr als der Hälfte der Tage berührt.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Beinahe jeden Tag</items>
+        <items id="description">Das Thema der Frage hat das Thema in den letzten zwei Wochen fast täglich berührt.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Niedergeschlagenheit</items>
+        <items id="description">Wie oft haben Sie sich in den letzten zwei Wochen Niedergeschlagenheit, Schwermut oder Hoffnungslosigkeit?</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Ergebnis PHQ-2</items>
+        <items id="description">Gesamtpunktzahl für die ersten beiden Fragen zu „Interesse/Freude“ und „Niedergeschlagenheit“.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Ergebnis PHQ-9</items>
+        <items id="description">Gesamtpunktzahl für alle neun Fragen.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Schlafprobleme</items>
+        <items id="description">Wie oft wurden Sie in den letzten zwei Wochen von Schwierigkeiten, ein- oder durchzuschlafen, oder vermehrter Schlaf?</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Müde/wenig Energie</items>
+        <items id="description">Wie oft fühlten Sie sich in den letzten zwei Wochen Müdigkeit oder Gefühl, keine Energie zu haben?</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Appetit</items>
+        <items id="description">Wie oft litten Sie in den letzten zwei Wochen Verminderter Appetit oder übermäßiges Bedürfnis zu essen?</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Sich schlecht fühlen</items>
+        <items id="description">Wie oft haben Sie sich in den letzten zwei Wochen darüber geärgert, dass Sie sich schlecht über sich selbst gefühlt haben – oder dass Sie ein Versager sind oder sich selbst oder Ihre Familie im Stich gelassen haben?</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Konzentrationsschwierigkeiten</items>
+        <items id="description">Wie oft hatten Sie in den letzten zwei Wochen Probleme, sich auf Dinge wie Zeitunglesen oder Fernsehen zu konzentrieren?</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Langsam/zappelig</items>
+        <items id="description">Wie oft haben Sie sich in den letzten zwei Wochen daran gestört, dass Sie sich so langsam bewegten oder sprachen, dass andere Personen es hätten bemerken können? Oder das Gegenteil – so zappelig oder unruhig zu sein, dass Sie sich viel mehr als sonst bewegt haben?</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Tod/Selbstverletzung</items>
+        <items id="description">Wie oft wurden Sie in den letzten zwei Wochen von Gedanken geplagt, dass Sie lieber tot wären oder sich auf irgendeine Weise verletzen würden?</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Schwierigkeiten bei Lebensaktivitäten</items>
+        <items id="description">Wenn Sie irgendwelche Probleme auf diesem Fragebogen angekreuzt haben, wie schwierig haben diese Probleme es Ihnen gemacht, Ihre Arbeit zu erledigen, Dinge zu Hause zu erledigen oder mit anderen Menschen auszukommen?</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Überhaupt nicht erschwert</items>
+        <items id="description">Die Person hatte keine Schwierigkeiten zu arbeiten, sich um Dinge im Haushalt zu kümmern oder mit anderen Menschen auszukommen.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Etwas erschwert</items>
+        <items id="description">Der Einzelne fand es etwas schwierig zu arbeiten, sich um Dinge im Haushalt zu kümmern oder mit anderen Menschen auszukommen.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Stark erschwert</items>
+        <items id="description">Die Person fand es sehr schwierig zu arbeiten, sich um Dinge im Haushalt zu kümmern oder mit anderen Menschen auszukommen.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Extrem erschwert</items>
+        <items id="description">Die Person fand es äußerst schwierig, zu arbeiten, sich um Dinge im Haushalt zu kümmern oder mit anderen Menschen auszukommen.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Erweiterung</items>
+        <items id="description">Zusätzliche Angaben, die nicht in anderen Feldern erfasst sind.</items>
+      </items>
+    </term_definitions>
   </ontology>
 </archetype>
-

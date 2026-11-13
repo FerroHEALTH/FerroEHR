@@ -1,0 +1,348 @@
+﻿archetype (adl_version=1.4; uid=e26efb0f-7a2e-457b-9170-7bb17e546924)
+	openEHR-EHR-CLUSTER.health_event-trauma.v0
+specialise
+	openEHR-EHR-CLUSTER.health_event.v1
+
+concept
+	[at0000.1]	-- Trauma event
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"unknown">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"Record details about the occurrence of trauma or an injury.">
+			use = <"">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"لتسجيل التفاصيل حول وجود إصابة أو كدمة">
+			use = <"">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"AD14DD06FF3BBE1060E88E4327A88BA9">
+		["build_uid"] = <"1aa165f5-736b-481f-a22d-b588b5fdb112">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	CLUSTER[at0000.1] matches {	-- Trauma event
+		items cardinality matches {1..*; unordered} matches {
+			ELEMENT[at0001] matches {	-- Trauma
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0015] occurrences matches {0..1} matches {	-- Trauma details
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0009] occurrences matches {0..1} matches {	-- Clinical description
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					CLUSTER[at0010] occurrences matches {0..1} matches {	-- Occurrence
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0011] occurrences matches {0..1} matches {	-- How long ago
+								value matches {
+									DV_DURATION matches {*}
+								}
+							}
+							ELEMENT[at0.16] occurrences matches {0..1} matches {	-- Time of trauma
+								value matches {
+									DV_DATE_TIME matches {*}
+								}
+							}
+						}
+					}
+					CLUSTER[at0004] occurrences matches {0..1} matches {	-- Other parties
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0002] occurrences matches {0..1} matches {	-- Witness
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0003] occurrences matches {0..*} matches {	-- Perpetrator
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+						}
+					}
+					ELEMENT[at0007] occurrences matches {0..1} matches {	-- Circumstances
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					CLUSTER[at0.20] occurrences matches {0..1} matches {	-- Location of trauma
+						items cardinality matches {1..*; unordered} matches {
+							allow_archetype ELEMENT[at0.21] occurrences matches {0..*} matches {	-- Element: Location of trauma
+								include
+									archetype_id/value matches {/openEHR-EHR-ELEMENT\.body_location(-[a-zA-Z0-9_]+)*\.v1/}
+							}
+						}
+					}
+					CLUSTER[at0.17] occurrences matches {0..1} matches {	-- Mechanism of trauma
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0.18] occurrences matches {0..1} matches {	-- Mechanism details
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0.19] occurrences matches {0..1} matches {	-- Comments
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {[local::]}
+									}
+								}
+							}
+						}
+					}
+					CLUSTER[at0008] occurrences matches {0..1} matches {	-- Preceding symptoms and events
+						items cardinality matches {1..*; unordered} matches {
+							allow_archetype CLUSTER[at0016] occurrences matches {0..*} matches {	-- Cluster: Preceding symptoms and events
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.symptom\.v1|openEHR-EHR-CLUSTER\.health_event\.v1/}
+							}
+						}
+					}
+					CLUSTER[at0012] occurrences matches {0..1} matches {	-- Associated symptoms and events
+						items cardinality matches {1..*; unordered} matches {
+							allow_archetype CLUSTER[at0017] occurrences matches {0..*} matches {	-- Cluster: Preceding and associated symptoms and events
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.health_event\.v1|openEHR-EHR-CLUSTER\.symptom-pain\.v1|openEHR-EHR-CLUSTER\.symptom\.v1/}
+							}
+						}
+					}
+					CLUSTER[at0013] occurrences matches {0..1} matches {	-- Contributing factors
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0014] occurrences matches {0..*} matches {	-- Contributing factor
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.16"] = <
+					text = <"Time of trauma">
+					description = <"*">
+				>
+				["at0.17"] = <
+					text = <"Mechanism of trauma">
+					description = <"*">
+				>
+				["at0.18"] = <
+					text = <"Mechanism details">
+					description = <"*">
+				>
+				["at0.19"] = <
+					text = <"Comments">
+					description = <"*">
+				>
+				["at0.20"] = <
+					text = <"Location of trauma">
+					description = <"Body location of trauma.">
+				>
+				["at0.21"] = <
+					text = <"Element: Location of trauma">
+					description = <"Body location of trauma.">
+				>
+				["at0000"] = <
+					text = <"Health event">
+					description = <"A recording about a health related event.">
+				>
+				["at0000.1"] = <
+					text = <"Trauma event">
+					description = <"A recording about the occurrence of trauma or an injury.">
+				>
+				["at0001"] = <
+					text = <"Trauma">
+					description = <"The type of trauma that has occurred.">
+				>
+				["at0002"] = <
+					text = <"Witness">
+					description = <"Who witnessed the event other than the patient.">
+				>
+				["at0003"] = <
+					text = <"Perpetrator">
+					description = <"Any person involved in causing the event.">
+				>
+				["at0004"] = <
+					text = <"Other parties">
+					description = <"Information about other parties.">
+				>
+				["at0007"] = <
+					text = <"Circumstances">
+					description = <"Information about the circumstances surrounding the event.">
+				>
+				["at0008"] = <
+					text = <"Preceding symptoms and events">
+					description = <"Symptoms and events which preceded the index event.">
+				>
+				["at0009"] = <
+					text = <"Clinical description">
+					description = <"A clinical description of what happenned.">
+				>
+				["at0010"] = <
+					text = <"Occurrence">
+					description = <"The timing of the event in relation to the observation.">
+				>
+				["at0011"] = <
+					text = <"How long ago">
+					description = <"The time between the event and the observation time.">
+				>
+				["at0012"] = <
+					text = <"Associated symptoms and events">
+					description = <"Grouping of associated symptoms and events.">
+				>
+				["at0013"] = <
+					text = <"Contributing factors">
+					description = <"Factors contributing to the event or likelihood of the event.">
+				>
+				["at0014"] = <
+					text = <"Contributing factor">
+					description = <"A factor contributing to the event.">
+				>
+				["at0015"] = <
+					text = <"Trauma details">
+					description = <"*">
+				>
+				["at0016"] = <
+					text = <"Cluster: Preceding symptoms and events">
+					description = <"Symptoms and events which preceded the index event.">
+				>
+				["at0017"] = <
+					text = <"Cluster: Preceding and associated symptoms and events">
+					description = <"Symptoms and events which preceded the index event.">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0.16"] = <
+					text = <"وقت الكدمة">
+					description = <"*">
+				>
+				["at0.17"] = <
+					text = <"آلية الكدمة">
+					description = <"*">
+				>
+				["at0.18"] = <
+					text = <"تفاصيل الآلية">
+					description = <"*">
+				>
+				["at0.19"] = <
+					text = <"التعليقات">
+					description = <"*">
+				>
+				["at0.20"] = <
+					text = <"مكان الكدمة">
+					description = <"مكان الكدمة من الجسم">
+				>
+				["at0.21"] = <
+					text = <"عنصر: مكان الكدمة">
+					description = <"مكان الكدمة من الجسم">
+				>
+				["at0000"] = <
+					text = <"*Health event(en)">
+					description = <"*A recording about a health related event.(en)">
+				>
+				["at0000.1"] = <
+					text = <"واقعة كدمة">
+					description = <"تسجيل حول وجود كدمة أو إصابة">
+				>
+				["at0001"] = <
+					text = <"كدمة">
+					description = <"نوع الكدمة التي حدثت">
+				>
+				["at0002"] = <
+					text = <"الشاهد">
+					description = <"من شهد الواقعة فيما عدا المريض">
+				>
+				["at0003"] = <
+					text = <"المسئول عن الإعداد">
+					description = <"أي شخص متورط في التسبب في الواقعة">
+				>
+				["at0004"] = <
+					text = <"الأطراف الأخرى">
+					description = <"معلومات حول الأطراف الأخرى">
+				>
+				["at0007"] = <
+					text = <"الظروف/الملابسات">
+					description = <"معلومات حول الظروف/الملابسات المحيطة بالواقعة">
+				>
+				["at0008"] = <
+					text = <"الوقائع و الأعراض السابقة">
+					description = <"الوقائع و الأعراض التي تسبق الواقعة المَنْسَب">
+				>
+				["at0009"] = <
+					text = <"الوصف السريري">
+					description = <"وصف سريري لما حدث">
+				>
+				["at0010"] = <
+					text = <"الحدوث">
+					description = <"توقيت الواقعة فيما يتعلق بالملاحظة">
+				>
+				["at0011"] = <
+					text = <"منذ كم من الزمن">
+					description = <"الوقت بين الواقعة و وقت الملاحظة">
+				>
+				["at0012"] = <
+					text = <"الأعراض و الوقائع المصاحبة">
+					description = <"تجميع للأعراض و الوقائع المصاحبة">
+				>
+				["at0013"] = <
+					text = <"العوامل المساهمة">
+					description = <"العوامل التي تساهم في الواقعة أو زيادة احتمال حدوثها">
+				>
+				["at0014"] = <
+					text = <"العامل المساهم">
+					description = <"عامل يساهم في الواقعة">
+				>
+				["at0015"] = <
+					text = <"تفاصيل الإصابة">
+					description = <"*">
+				>
+				["at0016"] = <
+					text = <"عنقود: الوقائع و الأعراض السابقة">
+					description = <"الوقائع و الأعراض التي تسبق الواقعة المَنْسَب">
+				>
+				["at0017"] = <
+					text = <"عنقود: الوقائع و الأعراض السابقة و المصاحبة">
+					description = <"الوقائع و الأعراض التي تسبق الواقعة المَنْسَب">
+				>
+			>
+		>
+	>

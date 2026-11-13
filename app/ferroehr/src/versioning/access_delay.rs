@@ -35,7 +35,7 @@ pub(crate) async fn hold_on_creation(
     ehr_id: Option<EhrId>,
     committed: &Committed,
 ) -> Result<(), ServiceError> {
-    let (Some(policy), Some(ehr_id)) = (ctx.access_delay, ehr_id) else {
+    let (Some(policy), Some(ehr_id)) = (ctx.access_delay.as_deref(), ehr_id) else {
         return Ok(());
     };
     // NOTE: EHDS Art. 3(3), the delay withholds data from the person until a professional

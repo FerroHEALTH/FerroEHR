@@ -41,6 +41,7 @@ pub(crate) mod assurance;
 mod build;
 pub(crate) mod declared;
 mod gates;
+pub(crate) mod grants;
 mod issuer;
 mod party;
 pub(crate) mod purpose;
@@ -59,8 +60,7 @@ use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
-use ferrohealth_smart::resource::introspection::Introspector;
-use ferrohealth_smart::resource::{Access, Honoured, ResourceServer, Via};
+use ferrohealth_smart::resource::{Access, Honoured, Via};
 use http::request::Parts;
 use http::{HeaderValue, StatusCode};
 use openehr_its::rest::runtime::ApiError;
@@ -70,6 +70,8 @@ use crate::extensions::access::authz::AuthzHandle;
 use crate::overview::error::RestError;
 use crate::smart::routes::SmartRoutes;
 use assurance::PatientDataGate;
+use build::Primary;
+use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::system_log::event::ActorAuthentication;
 use gates::patient_data_refusal;
 
@@ -115,8 +117,9 @@ pub struct Principal {
     /// checks read.
     pub access: Access,
     /// What FerroEHR honours for the caller beyond a `user/` grant: whether it
-    /// is a listed backend client and whether its issuer's `patient/` grants
-    /// count (`[auth.smart] backend_clients`, `[auth.smart] patient_issuers`).
+    /// is a backend client, a client the CDR grants `query_system_wide`, and
+    /// whether its issuer's `patient/` grants count
+    /// (`[auth.smart] patient_issuers`).
     pub honoured: Honoured,
     /// The EHR a bound representative is confined to, `None` for every other
     /// caller (#5086).
@@ -378,16 +381,6 @@ impl AuthError {
     }
 }
 
-/// The check of the described issuer, whose metadata the SMART discovery
-/// document is built from.
-enum Primary {
-    /// A JWT access token checked against the issuer's keys.
-    Jwt(Arc<ResourceServer>),
-    /// An opaque access token checked by the issuer's introspection endpoint
-    /// (RFC 7662).
-    Introspection(Arc<Introspector>),
-}
-
 /// The configured authenticator: the crate's gate and the role sources.
 pub struct Authenticator {
     /// `[auth] enabled`.
@@ -403,7 +396,7 @@ pub struct Authenticator {
     /// The party binding every admitted caller is looked up in, when an
     /// `[[auth.party]]` table binds an issuer.
     party: Option<Arc<party::Binding>>,
-    /// The system clients and the federation agreements.
+    /// The federation agreements' caller limits.
     declared: declared::Declared,
 }
 
@@ -485,7 +478,6 @@ impl Authenticator {
         if let Some(refusal) = access.caller().and_then(party::kind_refusal) {
             return Err(refusal);
         }
-        let access = self.declared.admit(access)?;
         let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
         let roles = self.role_issuers.roles(caller);
         let honoured = self.gate.honoured(&access);
@@ -564,7 +556,7 @@ pub(crate) async fn middleware(
     req: Request,
     next: Next,
 ) -> Response {
-    let auth = &layer.authenticator;
+    let (auth, live) = (&layer.authenticator, layer.service.grants());
     if !auth.enabled() {
         return REQUEST_PRINCIPAL.scope(None, next.run(req)).await;
     }
@@ -572,10 +564,15 @@ pub(crate) async fn middleware(
     let outcome = auth.authenticate(&parts).await;
     let mut req = Request::from_parts(parts, body);
     match outcome {
-        Ok(Authenticated {
-            mut principal,
-            fresh,
-        }) => {
+        Ok(Authenticated { principal, fresh }) => {
+            let granted = match grants::resolve(live, &principal).await {
+                Ok(granted) => granted,
+                Err(e) => return refusal::response(auth, req.headers(), &e),
+            };
+            let mut principal = match grants::bound(&layer, principal, &granted, req.headers()) {
+                Ok(principal) => principal,
+                Err(refusal) => return *refusal,
+            };
             if let Some(refusal) = purpose::mismatch(&layer, &principal, &req) {
                 return refusal;
             }
@@ -593,6 +590,13 @@ pub(crate) async fn middleware(
                 refusal.extensions_mut().insert(principal);
                 return refusal;
             }
+            let granted = match grants::resolve(live, &principal).await {
+                Ok(granted) => granted,
+                Err(e) => return refusal::response(auth, req.headers(), &e),
+            };
+            // NOTE: master08 §Resource Scopes, a `system/aql-*` grant reaches every
+            // query, so it counts only for a client the CDR grants `query_system_wide`.
+            principal.honoured.backend = grants::client_holds(&granted, Operation::QuerySystemWide);
             // How the person authenticated is judged before what they may do:
             // a step-up refusal is an authentication outcome (RFC 9470 §3).
             let actor = match layer.patient_data.as_deref() {
@@ -614,14 +618,13 @@ pub(crate) async fn middleware(
                 refusal.extensions_mut().insert(actor);
                 return refusal;
             }
-            if let Some(mut refusal) = gates::smart_refusal(&layer, &req, &principal) {
+            if let Some(mut refusal) = gates::smart_refusal(&layer, &req, &principal, &granted) {
                 refusal.extensions_mut().insert(actor);
                 return refusal;
             }
             req.extensions_mut().insert(principal.clone());
             let for_audit = principal.clone();
-            let mut committer =
-                party::committer_identity(&for_audit, &auth.declared.system_clients);
+            let mut committer = party::committer_identity(&for_audit, &granted);
             if let Some(binding) = auth.party.as_deref() {
                 match binding.details(&for_audit).await {
                     Ok(details) => committer.bound = details,
@@ -632,7 +635,7 @@ pub(crate) async fn middleware(
             // scope, so a record the service layer emits by itself carries
             // them too (#3239).
             let roles = for_audit.roles.clone();
-            let binding = record::of_request(&for_audit, &committer);
+            let binding = record::of_request(&for_audit, &committer, &granted, Some(auth));
             let mut resp = REQUEST_PRINCIPAL
                 .scope(
                     Some(principal),
@@ -642,7 +645,7 @@ pub(crate) async fn middleware(
                             binding,
                             ferroehr::versioning::committer::with_committer(
                                 Some(committer),
-                                next.run(req),
+                                Box::pin(grants::scoped(live, granted, next.run(req))),
                             ),
                         ),
                     ),
@@ -661,7 +664,7 @@ pub(crate) async fn middleware(
     }
 }
 
-/// The client a request came through, which the `[[authz.origin]]` register maps to.
+/// The client a request came through: the Basic user, or the token's client.
 ///
 /// The Basic user, or the client the token's issuer profile reads from
 /// `client_claims`, never another client claim the token carries (#5194).
@@ -670,14 +673,6 @@ pub fn client_of(principal: &Principal) -> Option<String> {
     match principal.method {
         AuthMethod::Basic => Some(principal.subject.clone()),
         AuthMethod::Bearer => principal.access.caller()?.client_id().map(str::to_owned),
-    }
-}
-
-/// The `mechanism` metric label for a known authenticated principal.
-fn mechanism_label(method: AuthMethod) -> &'static str {
-    match method {
-        AuthMethod::Basic => "basic",
-        AuthMethod::Bearer => "bearer",
     }
 }
 
@@ -1575,7 +1570,6 @@ mod tests {
             smart: Arc::new(SmartRoutes::new(
                 &crate::api::Namespaces::of(&ferroehr::config::rest::ApiConfig::default()),
                 "__ferroehr.platform",
-                Vec::new(),
             )),
             served: Arc::new(ServedMethods::default()),
             service: Arc::new(ferroehr::service::FerroEhrService::new(
@@ -1663,12 +1657,13 @@ mod tests {
         }
     }
 
-    /// A `jwks_file` issuer authenticator reading `[auth.smart] issuer_metadata_file`.
+    /// A `jwks_file` issuer authenticator serving discovery from `issuer_metadata_file`.
     async fn with_metadata_file(file: Option<&MetadataFile>) -> Result<Arc<Authenticator>, String> {
         let mut config = AppConfig {
             auth: test_support::bearer_auth(),
             ..AppConfig::default()
         };
+        config.auth.smart.discovery = true;
         config.auth.smart.issuer_metadata_file = file.map(|file| file.0.display().to_string());
         Authenticator::new(&config, None, None, memory()).await
     }
@@ -1680,9 +1675,12 @@ mod tests {
     #[tokio::test]
     async fn a_jwks_file_issuer_takes_its_metadata_from_the_configured_file() {
         let options = SmartOptions::default();
-        let without = with_metadata_file(None).await.expect("authenticator");
-        let document = without.smart_configuration(&options).expect("a document");
-        assert!(document.get("token_endpoint").is_none(), "{document}");
+        let without = with_metadata_file(None)
+            .await
+            .expect_err("no issuer to describe");
+        assert!(
+            without.contains("can describe no issuer") && without.contains("issuer_metadata_file")
+        );
 
         let good = MetadataFile::new(
             "good",
@@ -1751,6 +1749,7 @@ mod tests {
         assert!(message.contains("repeats a member name"), "{message}");
     }
 
+    mod described;
     mod outcome_status;
     mod remote_issuer;
 }

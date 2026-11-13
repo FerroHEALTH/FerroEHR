@@ -1,0 +1,126 @@
+﻿archetype (adl_version=1.4)
+	openEHR-DEMOGRAPHIC-CLUSTER.person_details_br.v1
+
+concept
+	[at0000]	-- dados da pessoa
+language
+	original_language = <[ISO_639-1::pt-br]>
+	translations = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			author = <
+				["name"] = <"Sergio Miranda Freire">
+				["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+				["email"] = <"sergio@lampada.uerj.br">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+		["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+		["email"] = <"sergio@lampada.uerj.br">
+		["date"] = <"22/05/2009">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"Representation of other person's data besides those specified in ISO 22220">
+			use = <"Used in demographic service to collect a person's data">
+			keywords = <"demographic service", "person's demographic data">
+			misuse = <"">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+		["pt-br"] = <
+			language = <[ISO_639-1::pt-br]>
+			purpose = <"Representação de outros dados de uma pessoa além daqueles especificados pela ISO 22220">
+			use = <"Usado em serviço demográficos para coletar os dados de uma pessoa">
+			keywords = <"serviço demográfico", "dados demográficos de uma pessoa">
+			misuse = <"">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Authordraft">
+	other_contributors = <>
+
+definition
+      CLUSTER[at0000] occurrences matches {0..1} matches {  -- Outros dados demográficos de uma pessoa 
+           items cardinality matches {0..*; ordered} matches {
+                  ELEMENT[at0001] occurrences matches {0..*} matches {  -- Estado Civil
+                        value matches {
+                            DV_CODED_TEXT matches { 
+                                defining_code matches {[ac0001]}
+                            }
+                        }
+                  }
+                  ELEMENT[at0002] occurrences matches {0..*} matches {  -- Etnia
+                        value matches {
+                            DV_CODED_TEXT matches { 
+                                defining_code matches {[ac0002]}
+                            }
+                        }
+                  }
+            }
+     }
+
+ontology
+	term_definitions = <
+		["pt-br"] = <
+			items = <
+				["at0000"] = <
+					text = <"dados da pessoa">
+					description = <"dados da pessoa">
+				>
+				["at0001"] = <
+					text = <"Estado Civil">
+					description = <"Estado Civil">
+				>
+				["at0002"] = <
+					text = <"Etnia">
+					description = <"Grupo étnico ao qual a pessoa pertence">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Person´s data">
+					description = <"A person's data">
+				>
+				["at0001"] = <
+					text = <"Marital status">
+					description = <"Marital status">
+				>
+				["at0002"] = <
+					text = <"Ethnic background">
+					description = <"The person's ethnic background">
+				>
+			>
+		>
+	>
+	constraint_definitions = <
+		["pt-br"] = <
+			items = <
+				["ac0001"] = <
+					text = <"Códigos para Estado Civil">
+					description = <"Códigos válidos para Estado Civil">
+				>
+				["ac0002"] = <
+					text = <"Códigos para grupos étnicos">
+					description = <"códigos válidos para grupos étnicos">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["ac0001"] = <
+					text = <"Marital status codes">
+					description = <"Valid codes for marital status">
+				>
+				["ac0002"] = <
+					text = <"Ethnic background codes">
+					description = <"Valid codes for ethnic background">
+				>
+			>
+		>
+	>

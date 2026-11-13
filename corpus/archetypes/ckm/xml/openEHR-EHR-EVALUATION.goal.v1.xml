@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1767,7 +1767,7 @@ Dit archetype is bedoeld voor gebruik als onderdeel van een zorgplan: COMPOSITIO
     <term_definitions language="fi">
       <items code="at0000">
         <items id="text">Päämäärä</items>
-        <items id="description">Terveys- tai hyvinvointitulos, joka halutaan saada hoidettavalle aikaan. </items>
+        <items id="description">Terveys- tai hyvinvointitulos, joka halutaan saada hoidettavalle aikaan.</items>
       </items>
       <items code="at0001">
         <items id="text">Tree</items>
@@ -1775,104 +1775,104 @@ Dit archetype is bedoeld voor gebruik als onderdeel van een zorgplan: COMPOSITIO
       </items>
       <items code="at0002">
         <items id="text">Päämäärän nimi</items>
-        <items id="description">Halutun terveystuloksen nimi. </items>
+        <items id="description">Halutun terveystuloksen nimi.</items>
         <items id="comment">For example: reduced blood pressure; 10 kilogram weight loss; or diabetes control.</items>
       </items>
       <items code="at0003">
         <items id="text">Ehdotettu päämäärän saavutuspäivämäärä</items>
-        <items id="description">Haluttu tai ehdotettu päivämäärä, johon mennessä päämäärä saavutetaan. </items>
+        <items id="description">Haluttu tai ehdotettu päivämäärä, johon mennessä päämäärä saavutetaan.</items>
       </items>
       <items code="at0004">
         <items id="text">Päämäärän päättymispäivämäärä</items>
-        <items id="description">Päivämäärä, jona päämäärä todellisuudessa saavutettiin tai hylättiin. </items>
+        <items id="description">Päivämäärä, jona päämäärä todellisuudessa saavutettiin tai hylättiin.</items>
       </items>
       <items code="at0005">
         <items id="text">Tavoite</items>
-        <items id="description">Tietoja aiotusta tavoitteesta. </items>
+        <items id="description">Tietoja aiotusta tavoitteesta.</items>
         <items id="comment">Multiple targets are allowed. In some situations, only one target will be required. In some clinical scenarios the goal may require a multifaceted approach with a number of targets contributing to a successful goal outcome. In addition, some goals may require incremental targets to be set sequentially during a period of time.</items>
       </items>
       <items code="at0006">
         <items id="text">Tavoitteen polku</items>
-        <items id="description">Tavoitteen tietojen arkkityyppi ja polku kohdetietojen solmuun. </items>
+        <items id="description">Tavoitteen tietojen arkkityyppi ja polku kohdetietojen solmuun.</items>
         <items id="comment">For example: the 'Weight' data element in the OBSERVATION.body_weight archetype.</items>
       </items>
       <items code="at0007">
         <items id="text">Tavoite</items>
-        <items id="description">Aiottu tavoite. </items>
+        <items id="description">Aiottu tavoite.</items>
       </items>
       <items code="at0008">
         <items id="text">Ehdotettu tavoitteen saavutuspäivämäärä</items>
-        <items id="description">Haluttu tai ehdotettu päivämäärä, johon mennessä tavoite saavutetaan. </items>
+        <items id="description">Haluttu tai ehdotettu päivämäärä, johon mennessä tavoite saavutetaan.</items>
       </items>
       <items code="at0009">
         <items id="text">Tavoitteen päättymispäivä</items>
-        <items id="description">Päivämäärä, jona tavoite todellisuudessa saavutettiin tai hylättiin. </items>
+        <items id="description">Päivämäärä, jona tavoite todellisuudessa saavutettiin tai hylättiin.</items>
       </items>
       <items code="at0010">
         <items id="text">Kliininen indikaatio</items>
-        <items id="description">Vaivan tai diagnoosin nimi, johon tämän päämäärän saavuttamisella halutaan vaikuttaa. </items>
+        <items id="description">Vaivan tai diagnoosin nimi, johon tämän päämäärän saavuttamisella halutaan vaikuttaa.</items>
         <items id="comment">For example: Hypertension; Obesity; or Diabetes Type 2.</items>
       </items>
       <items code="at0011">
         <items id="text">Tavoitteen nimi</items>
-        <items id="description">Halutun tavoitteen nimi. </items>
+        <items id="description">Halutun tavoitteen nimi.</items>
         <items id="comment">For example: systolic blood pressure under 140 mmHg; lose 10 kilograms; or HBA1c in the normal range.</items>
       </items>
       <items code="at0012">
         <items id="text">Päämäärän kuvaus</items>
-        <items id="description">Kertomusmuodossa oleva kuvaus päämäärästä, mukaan lukien saavutettava tavoite tai tavoitteet, mikäli mahdollista. </items>
+        <items id="description">Kertomusmuodossa oleva kuvaus päämäärästä, mukaan lukien saavutettava tavoite tai tavoitteet, mikäli mahdollista.</items>
       </items>
       <items code="at0013">
         <items id="text">Päämäärän lopputulos</items>
-        <items id="description">Yksittäinen sana, fraasi tai lyhyt kuvaus, joka edustaa päämäärälle tosiasiallisesti saavutettua tulosta. </items>
+        <items id="description">Yksittäinen sana, fraasi tai lyhyt kuvaus, joka edustaa päämäärälle tosiasiallisesti saavutettua tulosta.</items>
         <items id="comment">Coding with a terminology is preferred, where possible. For example: target weight achieved; poor diabetes control; or successful completion.</items>
       </items>
       <items code="at0015">
         <items id="text">Saavutettu</items>
-        <items id="description">Ehdotettu päämäärä saavutettiin. </items>
+        <items id="description">Ehdotettu päämäärä saavutettiin.</items>
       </items>
       <items code="at0016">
         <items id="text">Osittain saavutettu</items>
-        <items id="description">Ehdotettu päämäärä saavutettiin osittain. </items>
+        <items id="description">Ehdotettu päämäärä saavutettiin osittain.</items>
       </items>
       <items code="at0017">
         <items id="text">Ei saavutettu</items>
-        <items id="description">Ehdotettua päämäärää ei saavutettu ja se hylättiin. </items>
+        <items id="description">Ehdotettua päämäärää ei saavutettu ja se hylättiin.</items>
       </items>
       <items code="at0018">
         <items id="text">Tavoitteen tulos</items>
-        <items id="description">Yksittäinen sana, fraasi tai lyhyt kuvaus, joka edustaa tavoitteelle tosiasiallisesti saavutettua tulosta. </items>
+        <items id="description">Yksittäinen sana, fraasi tai lyhyt kuvaus, joka edustaa tavoitteelle tosiasiallisesti saavutettua tulosta.</items>
         <items id="comment">Coding with a terminology is preferred, where possible. This data element could represent success or failure, or some state in between when the goal is completed or abandoned/removed from the record. For example: poor blood sugar control, or successful completion.</items>
       </items>
       <items code="at0019">
         <items id="text">Saavutettu</items>
-        <items id="description">Tavoite saavutettiin. </items>
+        <items id="description">Tavoite saavutettiin.</items>
       </items>
       <items code="at0020">
         <items id="text">Osittain saavutettu</items>
-        <items id="description">Tavoite saavutettiin osittain. </items>
+        <items id="description">Tavoite saavutettiin osittain.</items>
       </items>
       <items code="at0021">
         <items id="text">Ei saavutettu</items>
-        <items id="description">Ehdotettua tavoitetta ei saavutettu ja se hylättiin. </items>
+        <items id="description">Ehdotettua tavoitetta ei saavutettu ja se hylättiin.</items>
       </items>
       <items code="at0022">
         <items id="text">Päämäärän kommentti</items>
-        <items id="description">Päämäärään liittyvät kertomusmuodossa olevat lisätiedot, joita ei voida ilmoittaa muissa kentissä. </items>
+        <items id="description">Päämäärään liittyvät kertomusmuodossa olevat lisätiedot, joita ei voida ilmoittaa muissa kentissä.</items>
         <items id="comment">For example: the reason why the goal was not achieved, or a description about how the goal was partially achieved.</items>
       </items>
       <items code="at0023">
         <items id="text">Tavoitteen kommentti</items>
-        <items id="description">Tavoitteeseen liittyvät kertomusmuodossa olevat lisätiedot, joita ei voida ilmoittaa muissa kentissä. </items>
+        <items id="description">Tavoitteeseen liittyvät kertomusmuodossa olevat lisätiedot, joita ei voida ilmoittaa muissa kentissä.</items>
         <items id="comment">For example: the reason why the target was not achieved, or a description about how the target was partially achieved.</items>
       </items>
       <items code="at0024">
         <items id="text">Tavoitteen kuvaus</items>
-        <items id="description">Kertomusmuodossa oleva kuvaus aiotusta tavoitteesta. </items>
+        <items id="description">Kertomusmuodossa oleva kuvaus aiotusta tavoitteesta.</items>
       </items>
       <items code="at0025">
         <items id="text">Päämäärän aloituspäivämäärä</items>
-        <items id="description">Odotettu tai ehdotettu päivämäärä, jolloin työ päämäärän saavuttamiseksi alkaa. </items>
+        <items id="description">Odotettu tai ehdotettu päivämäärä, jolloin työ päämäärän saavuttamiseksi alkaa.</items>
         <items id="comment">Note: this date may not be the date of recording of the goal.</items>
       </items>
       <items code="at0026">
@@ -1881,16 +1881,16 @@ Dit archetype is bedoeld voor gebruik als onderdeel van een zorgplan: COMPOSITIO
       </items>
       <items code="at0027">
         <items id="text">Laajennus</items>
-        <items id="description">Lisätiedot, joita tarvitaan paikallisen sisällön kirjaamiseksi tai yhtenäistämiseksi muiden viitemallien tai formalismien kanssa. </items>
+        <items id="description">Lisätiedot, joita tarvitaan paikallisen sisällön kirjaamiseksi tai yhtenäistämiseksi muiden viitemallien tai formalismien kanssa.</items>
         <items id="comment">For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.</items>
       </items>
       <items code="at0028">
         <items id="text">Valmius muutokseen</items>
-        <items id="description">Tiedot muutosvalmiudesta halutun päämäärän saamiseksi. </items>
+        <items id="description">Tiedot muutosvalmiudesta halutun päämäärän saamiseksi.</items>
       </items>
       <items code="at0029">
         <items id="text">Viimeksi päivitetty</items>
-        <items id="description">Päivämäärä, jolloin päämäärä päivitettiin viimeksi. </items>
+        <items id="description">Päivämäärä, jolloin päämäärä päivitettiin viimeksi.</items>
       </items>
     </term_definitions>
     <term_definitions language="nl">
@@ -1931,8 +1931,7 @@ Dit archetype is bedoeld voor gebruik als onderdeel van een zorgplan: COMPOSITIO
       </items>
       <items code="at0008">
         <items id="text">Voorgestelde doelstellingsdatum</items>
-        <items id="description">De gewenste of voorgestelde datum voor het behalen van de doelstelling.&#xD;
-</items>
+        <items id="description">De gewenste of voorgestelde datum voor het behalen van de doelstelling.</items>
       </items>
       <items code="at0009">
         <items id="text">Einddatum van de doelstelling</items>
@@ -2025,4 +2024,3 @@ Dit archetype is bedoeld voor gebruik als onderdeel van een zorgplan: COMPOSITIO
     </term_definitions>
   </ontology>
 </archetype>
-

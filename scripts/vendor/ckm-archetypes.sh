@@ -26,13 +26,11 @@
 #     running our own 1.4->2 converter over CKM output: that would test the
 #     converter against itself.
 #
-# CKM REST PAGINATION GOTCHA: the list endpoints page with `?size=M&offset=N`
-# (the Swagger 2.0 document at `/rest/v1/swagger.json`, verified on the wire
-# 2026-09-03: `?size=2&offset=2` shifts the window, `?page=5&size=2` does not).
-# `page`, `limit`, `pageSize`, `maxResults`, `count` and `rows` are all silently
-# IGNORED and you get a 20-row first page — which reads exactly like "CKM only
-# publishes 20 archetypes". Always fetch with size/offset and assert the count
-# grew.
+# THE LIST (scripts/vendor/lib/ckm.sh): every archetype in every lifecycle
+# state the contract at `/rest/v1/openapi.json` enumerates, REJECTED and
+# DEPRECATED included (CKM's default leaves those two out), paged with
+# `?size=M&offset=N` only. Any other paging parameter is silently ignored and
+# yields a 20-row first page, so the list refuses 20 rows or fewer.
 #
 # Usage:
 #   scripts/vendor/ckm-archetypes.sh                # ADL 1.4 texts
@@ -40,7 +38,10 @@
 #   CKM_JOBS=8 scripts/vendor/ckm-archetypes.sh     # parallel (default 4)
 set -Eeuo pipefail
 
-CKM="https://ckm.openehr.org/ckm/rest/v1"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/vendor/lib/ckm.sh
+. "$ROOT/scripts/vendor/lib/ckm.sh"
+CKM="$CKM_REST"
 OUT="corpus/archetypes/ckm"
 JOBS="${CKM_JOBS:-4}"
 
@@ -78,9 +79,9 @@ WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 STAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-echo "==> listing the full CKM archetype library (size/offset pagination)"
-curl -fsS "$CKM/archetypes?size=10000&offset=0" -H "Accept: application/json" \
-  -o "$WORK/archetypes.json"
+echo "==> listing the full CKM archetype library, every lifecycle state"
+ckm_list_archetypes "$WORK/archetypes.json"
+STATES=$(ckm_listed_states "$WORK/archetypes.json" | paste -sd, - | sed 's/,/, /g')
 
 # The list is turned into two job files and a provenance TSV with jq. The
 # duplicate-HRID suffix (`__2`, `__3`) is the one piece of real logic: CKM can
@@ -88,11 +89,6 @@ curl -fsS "$CKM/archetypes?size=10000&offset=0" -H "Accept: application/json" \
 # silently vendor only the last. `group_by` + the within-group index reproduces
 # the previous counter exactly, on the same `resourceMainId` sort order.
 published=$(jq 'length' "$WORK/archetypes.json")
-if [[ "$published" -le 20 ]]; then
-  echo "::error::the list endpoint returned only $published rows — CKM ignored the" \
-       "pagination parameters (use ?size=M&offset=N)" >&2
-  exit 1
-fi
 
 jq '
   # Stable name per archetype: the HRID, suffixed only for a repeat of it.
@@ -111,7 +107,7 @@ jq -r --arg dir "$ADL_DIR" '.[] | "\(.cid) \($dir)/\(.name).adl"' \
   "$WORK/rows.json" > "$WORK/jobs_adl.txt"
 jq -r --arg dir "$XML_DIR" '.[] | "\(.cid) \($dir)/\(.name).xml"' \
   "$WORK/rows.json" > "$WORK/jobs_xml.txt"
-printf '==> %s archetypes published by CKM\n' "$published"
+printf '==> %s archetypes listed by CKM\n' "$published"
 
 echo "==> fetching ADL 1.4 texts (jobs=$JOBS)"
 find "$ADL_DIR" -name '*.adl' -delete
@@ -145,14 +141,38 @@ jq -Rn --slurpfile rows "$WORK/rows.json" '
 ' < "$WORK/adl.log" > "$WORK/classified.json"
 XML_EXPORTS=$(grep -cE '^(OK|BAD|FAIL) ' "$WORK/xml.log" || true)
 
+# The pin: CKM serves the current export and takes no version, so every file's
+# sha256 sits beside it and a re-run that changes one shows in the diff.
+pin_tree() {
+  (cd "$1" && find . -name "*.$2" -print0 | sort -z | xargs -0 shasum -a 256 | sed 's#  \./#  #') \
+    > "$1/SHA256SUMS"
+}
+pin_tree "$ADL_DIR" adl
+if [[ $WITH_XML == 1 ]]; then pin_tree "$XML_DIR" xml; fi
+# Each file states its own licence; the count is over the ADL texts vendored.
+LICENCE_4=$({ grep -l 'Attribution-ShareAlike 4.0' "$ADL_DIR"/*.adl || true; } | wc -l | tr -d ' ')
+LICENCE_3=$({ grep -l 'Attribution-ShareAlike 3.0' "$ADL_DIR"/*.adl || true; } | wc -l | tr -d ' ')
+ADL_TOTAL=$(find "$ADL_DIR" -name '*.adl' | wc -l | tr -d ' ')
+
 # The static prose stays in shell `echo`s: it carries apostrophes and braces
 # that would have to fight the quoting of a jq program, and it is not data.
 {
   echo "# CKM archetype library (ADL 1.4) — provenance"
   echo
-  echo "Every archetype the official openEHR CKM (\`$CKM\`) publishes, exported"
+  echo "Every archetype the official openEHR CKM (\`$CKM\`) lists, exported"
   echo "by CKM itself and vendored verbatim by"
   echo "\`scripts/vendor/ckm-archetypes.sh\` on $STAMP."
+  echo
+  echo "## The list"
+  echo
+  echo "\`GET /archetypes?size=10000&offset=0\` with \`resource-state\` set to every"
+  echo "state the contract (\`$CKM/openapi.json\`) enumerates: $STATES."
+  echo "CKM's default leaves out REJECTED and DEPRECATED, so those are asked"
+  echo "for by name. Each row below records the archetype's lifecycle state and"
+  echo "its CKM modification time as the list reported them; the state and the"
+  echo "time together pin the export, since a v0 archetype can change without"
+  echo "a new id. \`adl14/SHA256SUMS\` (and \`xml/SHA256SUMS\` with the XML twin)"
+  echo "holds the sha256 of every file vendored."
   echo
   echo "## Dialect"
   echo
@@ -187,10 +207,14 @@ XML_EXPORTS=$(grep -cE '^(OK|BAD|FAIL) ' "$WORK/xml.log" || true)
   echo "## Licensing"
   echo
   echo "CKM publishes no repository-level license; each archetype carries its"
-  echo "own \`description\` > \`licence\` metadata (predominantly CC-BY-SA 3.0"
-  echo "where stated — see the individual file). Vendored verbatim, so the"
-  echo "authorship and licence metadata ride along in every file; root"
-  echo "reference copy: \`LICENSE-CC-BY-SA-3.0\`."
+  echo "own \`description\` > \`licence\` metadata, and the corpus is **mixed**:"
+  echo "of the $ADL_TOTAL ADL texts, **$LICENCE_4 state CC-BY-SA 4.0 and $LICENCE_3"
+  echo "CC-BY-SA 3.0** (counted by this script at the fetch). Read the"
+  echo "individual file; its own metadata is the authority. Vendored verbatim,"
+  echo "so the authorship and licence metadata ride along in every file; root"
+  echo "reference copies: \`LICENSE-CC-BY-SA-3.0\` and \`LICENSE-CC-BY-SA-4.0\`"
+  echo "(\`LICENSES/CC-BY-SA-3.0.txt\`, \`LICENSES/CC-BY-SA-4.0.txt\`), and"
+  echo "\`REUSE.toml\` declares this tree as \`CC-BY-SA-3.0 AND CC-BY-SA-4.0\`."
   echo
   echo "## Inventory"
   echo
@@ -198,7 +222,7 @@ XML_EXPORTS=$(grep -cE '^(OK|BAD|FAIL) ' "$WORK/xml.log" || true)
     # Both aggregate tables sort by descending count, then by name.
     def tally(f): (.ok | group_by(f) | map({ key: (.[0] | f), n: length })
                    | sort_by([-.n, .key]));
-    [ "- published by CKM: **\(.published)**",
+    [ "- listed by CKM: **\(.published)**",
       "- vendored: **\(.ok | length)**",
       "- unreachable: **\(.bad | length)**",
       "",
@@ -214,9 +238,9 @@ XML_EXPORTS=$(grep -cE '^(OK|BAD|FAIL) ' "$WORK/xml.log" || true)
           "CKM answers 404 for resources held in a private incubator; they are",
           "only exportable by a signed-in account with access.",
           "",
-          "| cid | archetype | status |",
-          "|---|---|---|" ]
-        + (.bad | map("| \(.cid) | \(.name) | \(.status) |"))
+          "| cid | archetype | status | modified |",
+          "|---|---|---|---|" ]
+        + (.bad | map("| \(.cid) | \(.name) | \(.status) | \(.modified) |"))
         + [ "" ]
       else [] end)
     + [ "## Vendored",

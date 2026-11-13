@@ -34,10 +34,10 @@ use std::sync::{Mutex, PoisonError};
 use jiff_sqlx::Timestamp;
 use sqlx::postgres::{PgConnection, PgRow};
 use sqlx::{Connection, PgPool, Row};
-use tokio::sync::OnceCell;
 use uuid::Uuid;
 
 mod batch;
+mod writers;
 
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
@@ -50,6 +50,7 @@ use crate::system_log::render::RenderPolicy;
 #[cfg(feature = "fhir")]
 use crate::system_log::render::{CompiledPolicy, StoredRecord};
 use batch::BatchColumns;
+use writers::{WritePolicy, Writers};
 
 use ferrohealth_smart::assurance::AssuranceLevel;
 
@@ -196,30 +197,6 @@ static INSERT_BATCH_OWED: LazyLock<String> = LazyLock::new(|| {
     )
 });
 
-/// The render policy a store writes its records under, registered in the
-/// store the first time a record is written.
-#[derive(Debug)]
-struct WritePolicy {
-    policy: RenderPolicy,
-    /// The policy's digest, once the store holds the policy.
-    digest: OnceCell<Vec<u8>>,
-    /// The policy compiled, which renders each record's document for its
-    /// search tokens.
-    #[cfg(feature = "fhir")]
-    compiled: OnceCell<Arc<CompiledPolicy>>,
-}
-
-impl WritePolicy {
-    fn new(policy: RenderPolicy) -> Self {
-        Self {
-            policy,
-            digest: OnceCell::new(),
-            #[cfg(feature = "fhir")]
-            compiled: OnceCell::new(),
-        }
-    }
-}
-
 /// The policies records name, compiled once each, by digest.
 #[cfg(feature = "fhir")]
 type PolicyCache = Arc<Mutex<BTreeMap<Vec<u8>, Arc<CompiledPolicy>>>>;
@@ -238,8 +215,8 @@ pub struct AuditStore {
     /// Whether the FHIR Feed delivers from this store, so each record written
     /// is owed to it.
     fhir_feed: bool,
-    /// The policy every record this store writes is rendered under.
-    writing: Arc<WritePolicy>,
+    /// The policies the records this store writes are rendered under.
+    writing: Arc<Writers>,
     /// The policies of the records this store has read.
     #[cfg(feature = "fhir")]
     policies: PolicyCache,
@@ -258,7 +235,7 @@ impl AuditStore {
         AuditStore {
             pool,
             fhir_feed: false,
-            writing: Arc::new(WritePolicy::new(RenderPolicy::default())),
+            writing: Arc::new(Writers::new(RenderPolicy::default())),
             #[cfg(feature = "fhir")]
             policies: Arc::new(Mutex::new(BTreeMap::new())),
             #[cfg(feature = "fhir")]
@@ -285,17 +262,21 @@ impl AuditStore {
     /// FHIR `AuditEvent` is rendered under when it is read.
     #[must_use]
     pub fn with_render_policy(mut self, policy: RenderPolicy) -> Self {
-        self.writing = Arc::new(WritePolicy::new(policy));
+        self.writing = Arc::new(Writers::new(policy));
         self
     }
 
-    /// The digest of the policy this store writes under, storing the policy
-    /// the first time.
+    /// This store writing every record from now on with `categories` as its
+    /// category map; a record of an earlier map keeps that map's policy.
+    pub fn set_categories(&self, categories: &crate::system_log::categories::CategoryMapConfig) {
+        self.writing.set_categories(categories);
+    }
+
+    /// The digest of `writing`, storing the policy the first time.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the policy cannot be stored.
-    async fn writing_digest(&self) -> Result<Vec<u8>, AuditError> {
-        let writing = &self.writing;
+    async fn writing_digest(&self, writing: &WritePolicy) -> Result<Vec<u8>, AuditError> {
         writing
             .digest
             .get_or_try_init(|| async {
@@ -324,13 +305,13 @@ impl AuditStore {
     #[cfg(feature = "fhir")]
     async fn search_tokens<'a>(
         &self,
+        writing: &WritePolicy,
         conn: &mut PgConnection,
         records: impl Iterator<Item = (&'a AuditEvent, Option<&'a str>)>,
     ) -> Result<(Vec<Vec<i32>>, LearnedSets), AuditError> {
-        let compiled = self
-            .writing
+        let compiled = writing
             .compiled
-            .get_or_try_init(|| async { self.writing.policy.compile().map(Arc::new) })
+            .get_or_try_init(|| async { writing.policy.compile().map(Arc::new) })
             .await?;
         let tokens: Vec<_> = records
             .map(|(event, subject)| {
@@ -366,11 +347,13 @@ impl AuditStore {
     #[cfg(feature = "fhir")]
     async fn batch_tokens(
         store: &Self,
+        writing: &WritePolicy,
         conn: &mut PgConnection,
         records: &[AuditRecord],
     ) -> Result<(Vec<String>, LearnedSets), AuditError> {
         let (ids, learned) = store
             .search_tokens(
+                writing,
                 conn,
                 records
                     .iter()
@@ -393,6 +376,7 @@ impl AuditStore {
     #[cfg(not(feature = "fhir"))]
     fn batch_tokens(
         _store: &Self,
+        _writing: &WritePolicy,
         _conn: &mut PgConnection,
         records: &[AuditRecord],
     ) -> std::future::Ready<Result<(Vec<String>, LearnedSets), AuditError>> {
@@ -410,13 +394,14 @@ impl AuditStore {
         event: &AuditEvent,
         subject: Option<&str>,
     ) -> Result<Uuid, AuditError> {
-        let policy = self.writing_digest().await?;
+        let writing = self.writing.of(event);
+        let policy = self.writing_digest(&writing).await?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         #[cfg(feature = "fhir")]
         let (tokens, learned) = {
             let (mut tokens, learned) = self
-                .search_tokens(&mut tx, std::iter::once((event, subject)))
+                .search_tokens(&writing, &mut tx, std::iter::once((event, subject)))
                 .await?;
             (tokens.pop().ok_or(AuditError::SearchToken)?, learned)
         };
@@ -507,15 +492,27 @@ impl AuditStore {
         if records.is_empty() {
             return Ok(());
         }
-        let policy = self.writing_digest().await?;
+        let runs = self.writing.runs(records);
+        let mut digests = Vec::with_capacity(runs.len());
+        for (writing, _, _) in &runs {
+            digests.push(self.writing_digest(writing).await?);
+        }
         // NOTE: one transaction holds the tokens and the records, so a batch costs one commit.
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        let (tokens, learned) = Self::batch_tokens(self, &mut tx, records).await?;
-        self.insert_rows(&mut tx, records, ends, policy, tokens)
-            .await?;
+        let mut learned_all = Vec::with_capacity(runs.len());
+        for ((writing, start, end), policy) in runs.iter().zip(digests) {
+            let run = records.get(*start..*end).unwrap_or_default();
+            let run_ends = ends.get(*start..*end).unwrap_or_default();
+            let (tokens, learned) = Self::batch_tokens(self, writing, &mut tx, run).await?;
+            self.insert_rows(&mut tx, run, run_ends, policy, tokens)
+                .await?;
+            learned_all.push(learned);
+        }
         tx.commit().await?;
-        self.remember(learned);
+        for learned in learned_all {
+            self.remember(learned);
+        }
         Ok(())
     }
 

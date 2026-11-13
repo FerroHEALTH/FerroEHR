@@ -21,9 +21,8 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
-use ferroehr::config::access_delay::{AccessDelayConfig, AccessDelayPolicy};
+use ferroehr::policy_register::Register;
 use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::categories::CategoryMapConfig;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::AuditStore;
 use ferroehr_rest::extensions::management::Observability;
@@ -50,29 +49,29 @@ async fn app(delayed: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrService>, R
     let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
         .await
         .expect("the audit sender");
-    let classifier = CategoryMapConfig::default()
-        .compile()
-        .expect("the shipped map compiles");
-    let section = AccessDelayConfig {
-        categories: vec!["Patient-Summaries".to_owned()],
-        max_delay: Some(ferrohealth_config::units::Duration::from_hours(72)),
-    };
     let svc = Arc::new(
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender)
-            .with_audit_store(AuditStore::new(pool.clone()))
-            .with_access_delay(
-                delayed
-                    .then(|| AccessDelayPolicy::compile(&section, &classifier))
-                    .flatten(),
-            ),
+            .with_audit_store(AuditStore::new(pool.clone())),
     );
-    svc.mirror_category_map(&classifier)
+    if delayed {
+        svc.put_policy_register(
+            Register::AccessDelay,
+            0,
+            r#"{"enabled": true, "categories": ["Patient-Summaries"], "max_delay": "72h"}"#,
+        )
+        .await
+        .expect("turn the access delay on");
+    }
+    svc.mirror_category_map()
         .await
         .expect("mirror the category map");
     let mut config = common::api_config(true);
     config.auth = common::persons_and_patients(ISSUER, PATIENTS, AUDIENCE);
-    config.auth.smart.patient_issuers = vec![ISSUER.to_owned(), PATIENTS.to_owned()];
+    config.auth.smart.patient_issuers = vec![
+        ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
+        ferrohealth_secret::secret_url::SecretUrl::new(PATIENTS),
+    ];
     let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
         .await
         .expect("build app");
@@ -427,7 +426,7 @@ async fn the_treating_professional_releases_from_a_clinical_route() {
     );
 }
 
-/// Without `[privacy.access_delay]` the person reads new data immediately (Art. 3(1))
+/// With the access-delay register off the person reads new data immediately (Art. 3(1))
 /// and no hold may be placed.
 #[tokio::test]
 async fn a_deployment_without_the_delay_withholds_nothing() {

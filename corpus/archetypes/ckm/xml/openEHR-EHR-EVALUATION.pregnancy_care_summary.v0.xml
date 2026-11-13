@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -3173,27 +3173,27 @@
       </items>
       <items code="at0016">
         <items id="text">Additional details</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Antenatal admission</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Gestation at admission</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Inpatient admission details</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Description</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Description</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Conditions managed</items>
@@ -3202,7 +3202,7 @@
       </items>
       <items code="at0015">
         <items id="text">Treatment summary</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Conditions managed</items>
@@ -3210,11 +3210,11 @@
       </items>
       <items code="at0024">
         <items id="text">Treatment summary</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Additional details</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Last antenatal visit</items>
@@ -3222,19 +3222,19 @@
       </items>
       <items code="at0030">
         <items id="text">Comment</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Description</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Gestation at admission</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Specific postnatal visit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Type of visit</items>
@@ -3242,19 +3242,19 @@
       </items>
       <items code="at0036">
         <items id="text">Description</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Assessment</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Additional details</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Postnatal admission</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Item tree</items>
@@ -3262,11 +3262,11 @@
       </items>
       <items code="at0043">
         <items id="text">Description</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Inpatient admission details</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Conditions managed</items>
@@ -3274,11 +3274,11 @@
       </items>
       <items code="at0046">
         <items id="text">Treatment summary</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Additional details</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Total number of antenatal visits</items>
@@ -3318,19 +3318,19 @@
       </items>
       <items code="at0052">
         <items id="text">Extension</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Total number of postnatal admissions</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Total number of postnatal visits</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Gestation at discharge</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Last updated</items>
@@ -3342,35 +3342,35 @@
       </items>
       <items code="at0057">
         <items id="text">Date of visit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Delivery admission</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0059">
         <items id="text">Inpatient admission details</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Comment</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Comment</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Comment</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">Comment</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0076">
         <items id="text">No antenatal care</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0095">
         <items id="text">Overall funding type</items>
@@ -3426,23 +3426,23 @@
       </items>
       <items code="at0108">
         <items id="text">Provider name</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">Provider details</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">Description</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0111">
         <items id="text">Date of first visit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0112">
         <items id="text">Days post partum at first visit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0113">
         <items id="text">Date of last visit</items>
@@ -3450,7 +3450,7 @@
       </items>
       <items code="at0114">
         <items id="text">Days post partum at last visit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0115">
         <items id="text">Number of visits</items>
@@ -3462,11 +3462,11 @@
       </items>
       <items code="at0117">
         <items id="text">Treatment summary</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0118">
         <items id="text">Additional details</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0119">
         <items id="text">Scheduled follow up</items>
@@ -3474,7 +3474,7 @@
       </items>
       <items code="at0120">
         <items id="text">Comment</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0121">
         <items id="text">Gestation at first visit</items>
@@ -3483,4 +3483,3 @@
     </term_definitions>
   </ontology>
 </archetype>
-

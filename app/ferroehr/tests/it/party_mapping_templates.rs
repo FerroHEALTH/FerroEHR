@@ -105,6 +105,9 @@ async fn service() -> (testkit::TestDb, FerroEhrService) {
     svc.template_adl2_upload(&archetype(GROUP, "GROUP", PARTS))
         .await
         .expect("the group archetype uploads");
+    svc.seed_default_definitions()
+        .await
+        .expect("a boot seeds the definitions the unset sections default to");
     (db, svc)
 }
 

@@ -1,0 +1,614 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=218876d6-5a07-4ecc-b46d-60384773e3bf; build_uid=e9b36b46-4b16-4d4c-915e-44302a54a9d1)
+    openEHR-EHR-OBSERVATION.pathology_test-lipids.v1.0.0
+
+specialize
+    openEHR-EHR-OBSERVATION.pathology_test.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, United Kingdom">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2009-11-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Koray Atalag, University of Auckland, New Zealand", "Sharmila Biswas, Dr Sharmila Biswas GP, Australia", "Doug Chesher, PaLMS, Australia", "Stephen Chu, NEHTA, Australia (Editor)", "Matthew Cordell, NEHTA, Australia", "Andre de Wolf, NeHTA, Australia", "Gail Easterbrook, Flinders Medical Centre, Australia", "David Evans, Queensland Health, Australia", "Shahla Foozonkhah, Ocean Informatics, Australia", "Heath Frankel, Ocean Informatics, Australia", "Grahame Grieve, Health Intersections Pyty Ltd, Australia (Editor)", "Sam Heard, Ocean Informatics, Australia", "Mary Kelaher, NEHTA, Australia", "Michael Legg, Michael Legg & associates, Australia", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Mike Martyn, The Hobart Anaesthetic Group, Australia", "Andrew McIntyre, Medical-Objects, Australia", "David McKillop, NEHTA, Australia", "Ian McNicoll, Ocean Informatics UK, United Kingdom", "Chris Mitchell, RACGP, Australia", "Stewart Morrison, NEHTA, Australia", "Michael Osborne, Mater Health Services, Australia", "Kyle Shore, Charm Health, Australia", "Michael Thompson, Queensland Health, Australia", "Gordon Tomes, Australian Institute of Health and Welfare, Australia", "Richard Townley-O'Neill, NEHTA, Australia", "David Rowed, VAMC Clinic, Australia (Editor)", "Mona Saleh (Translator)">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Pathology (Data Specifications) Version 1.0 [Internet]. Sydney, Australia: National E-Health Transition Authority; 2007 May 29 [cited 2011 Jul 11]; Available at http://www.nehta.gov.au/component/docman/doc_download/962-pathology-v10.">
+        ["2"] = <"Laboratory Technical Framework, Volume 3: Content, Revision 3.0 [Internet]. USA: IHE International; 2011 May 19; [cited 2011 Jul 11]. Available from: http://www.ihe.net/Technical_Framework/index.cfm#laboratory.">
+        ["3"] = <"Based on NEHTA 'Pathology Test' archetype. Available from: http://dcm.nehta.org.au/ckm/OKM.html#showarchetype_1013.1.839_8">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D79EA96F7B62B73C936D68503FA0F6AB">
+    >
+    details = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل نتيجة اختبار المعمل, و التي قد يتم استخدامها لتسجيل اختبار ذي قيمة واحدة, و عادة ما يتم بعد ذلك المزيد من التخصيص أو الوضع في قالب لتمثيل اختبار متعدد القيم أو رتل من الاختبارات. 
+و يمثل هذا النموذج كوالد (أب) للتخصيصات الأخرى لاختبارات معملية أكثر تحديدا مثل الميكروبيولوجيا و الهيستوباثولوجيا.">
+            keywords = <"المعمل - المختبر", "الباثولوجيا - المرضية", "الكيمياء الحيوية", "الدمويات", "الميكروبيولوجيا", "المناعيات - علم المناعة">
+            use = <"قد يستخدم لتسجيل نتيجة اختبار المعمل, و التي قد يتم استخدامها لتسجيل اختبار ذي قيمة واحدة, و عادة ما يتم بعد ذلك المزيد من التخصيص أو الوضع في قالب لتمثيل اختبار متعدد القيم أو رتل من الاختبارات. 
+
+يتم بعد ذلك تقديم التقرير للطبيب السريري الذي قام بطلب الاختبار في سياق تقرير معملي متكامل.">
+            misuse = <"قد تكون التخصيصات أكثر مناسبة للتقارير المركبة مثل حالات الميكروبيولوجيا أو الهيستوباثولوجيا.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings and interpretation of biochemical lipid study test results. This is typically done in a laboratory but may be done in other environments such as at the point of care.">
+            keywords = <"lab", "pathology", "biochemistry", "laboratory", "chemical", "clinical", "test", "specimen">
+            use = <"Use to record a lipid studies test result panel.
+
+This archetype has been designed to enable the health record to:
+- distinguish between fasting and non-fasting lipid measurements, 
+- distinguish measurements from laboratory, point of care and home-based devices, and;
+
+Will normally be reported back to the requesting clinician as one component within the context of an overall COMPOSITION-based report.">
+            misuse = <"Not to be used to represent an entire cumulative report. This Pathology test result archetype represents only one of the result sets that is usually viewed as a vertical in a cumulative test report. A cumulative report is a view that is constructed from the results represented by multiple OBSERVATION archetypes.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] matches {    -- Lipid Studies Test Result
+        /data[at0001]/events matches {
+            EVENT[at0002] matches {
+                /data[at0003]/items[at0095]/items matches {
+                    CLUSTER[at0096.6] matches {    -- Total Cholesterol
+                        items matches {
+                            ELEMENT[at0078.1] matches {    -- Result Value
+                                value matches {
+                                    DV_QUANTITY[at0.9001] matches {
+                                        property matches {[at0.9000]}    -- Concentration
+                                        [units] matches {
+                                            [{"mg/dl"}],
+                                            [{"mmol/l"}]
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0102] matches {
+                                value matches {
+                                    DV_TEXT[at0.9002]
+                                }
+                            }
+                            ELEMENT[at0103] matches {
+                                value matches {
+                                    DV_TEXT[at0.9003]
+                                }
+                            }
+                            ELEMENT[at0108] matches {
+                                value matches {
+                                    DV_CODED_TEXT[at0.9004] matches {
+                                        defining_code matches {[ac9000]}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0096.7] matches {    -- Triglyceride
+                        items matches {
+                            ELEMENT[at0078.2] matches {    -- Result Value
+                                value matches {
+                                    DV_QUANTITY[at0.9005] matches {
+                                        property matches {[at0.9000]}    -- Concentration
+                                        [magnitude, units] matches {
+                                            [{|>=0.0|}, {"mg/dl"}],
+                                            [{|>=0.0|}, {"mmol/l"}]
+                                        }
+                                    }
+                                }
+                            }
+                            after [at0078.2]
+                            use_node ELEMENT[at0.9036] /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0102]    -- Triglyceride (synthesised)
+                            use_node ELEMENT[at0.9037] occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0103]    -- Triglyceride (synthesised)
+                            use_node ELEMENT[at0.9038] occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0108]    -- Triglyceride (synthesised)
+                        }
+                    }
+                    CLUSTER[at0096.5] matches {    -- HDL Cholesterol
+                        items matches {
+                            ELEMENT[at0078.3] matches {    -- Result Value
+                                value matches {
+                                    DV_QUANTITY[at0.9009] matches {
+                                        property matches {[at0.9000]}    -- Concentration
+                                        [magnitude, units] matches {
+                                            [{|>=0.0|}, {"mg/dl"}],
+                                            [{|>=0.0|}, {"mmol/l"}]
+                                        }
+                                    }
+                                }
+                            }
+                            after [at0078.3]
+                            use_node ELEMENT[at0.9039] /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0102]    -- HDL Cholesterol (synthesised)
+                            use_node ELEMENT[at0.9040] occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0103]    -- HDL Cholesterol (synthesised)
+                            use_node ELEMENT[at0.9041] occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0108]    -- HDL Cholesterol (synthesised)
+                        }
+                    }
+                    CLUSTER[at0096.4] matches {    -- LDL Cholesterol Direct Assay
+                        items matches {
+                            ELEMENT[at0078.4] matches {    -- Result Value
+                                value matches {
+                                    DV_QUANTITY[at0.9013] matches {
+                                        property matches {[at0.9000]}    -- Concentration
+                                        [magnitude, units] matches {
+                                            [{|>=0.0|}, {"mg/dl"}],
+                                            [{|>=0.0|}, {"mmol/l"}]
+                                        }
+                                    }
+                                }
+                            }
+                            after [at0078.4]
+                            use_node ELEMENT[at0.9042] /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0102]    -- LDL Cholesterol Direct Assay (synthesised)
+                            use_node ELEMENT[at0.9043] occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0103]    -- LDL Cholesterol Direct Assay (synthesised)
+                            use_node ELEMENT[at0.9044] occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0108]    -- LDL Cholesterol Direct Assay (synthesised)
+                        }
+                    }
+                    CLUSTER[at0096.8] matches {    -- LDL Cholesterol Calculated
+                        items matches {
+                            ELEMENT[at0078.7] matches {    -- Result Value
+                                value matches {
+                                    DV_QUANTITY[at0.9017] matches {
+                                        property matches {[at0.9000]}    -- Concentration
+                                        [magnitude, units] matches {
+                                            [{|>=0.0|}, {"mg/dl"}],
+                                            [{|>=0.0|}, {"mmol/l"}]
+                                        }
+                                    }
+                                }
+                            }
+                            after [at0078.7]
+                            use_node ELEMENT[at0.9045] /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0102]    -- LDL Cholesterol Calculated (synthesised)
+                            use_node ELEMENT[at0.9046] occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0103]    -- LDL Cholesterol Calculated (synthesised)
+                            use_node ELEMENT[at0.9047] occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0108]    -- LDL Cholesterol Calculated (synthesised)
+                        }
+                    }
+                    CLUSTER[at0096.3] matches {    -- VLDL Cholesterol
+                        items matches {
+                            ELEMENT[at0078.8] matches {    -- Result Value
+                                value matches {
+                                    DV_QUANTITY[at0.9021] matches {
+                                        property matches {[at0.9000]}    -- Concentration
+                                        [magnitude, units] matches {
+                                            [{|>=0.0|}, {"mg/dl"}],
+                                            [{|>=0.0|}, {"mmol/l"}]
+                                        }
+                                    }
+                                }
+                            }
+                            after [at0078.8]
+                            use_node ELEMENT[at0.9048] /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0102]    -- VLDL Cholesterol (synthesised)
+                            use_node ELEMENT[at0.9049] occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0103]    -- VLDL Cholesterol (synthesised)
+                            use_node ELEMENT[at0.9050] occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0108]    -- VLDL Cholesterol (synthesised)
+                        }
+                    }
+                    CLUSTER[at0096.2] matches {    -- LDL/HDL Cholesterol Ratio
+                        items matches {
+                            ELEMENT[at0078.5] matches {    -- Result Value
+                                value matches {
+                                    DV_PROPORTION[at0.9025] matches {
+                                        is_integral matches {False}
+                                        type matches {0}
+                                    }
+                                }
+                            }
+                            after [at0078.5]
+                            use_node ELEMENT[at0.9051] /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0102]    -- LDL/HDL Cholesterol Ratio (synthesised)
+                            use_node ELEMENT[at0.9052] occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0103]    -- LDL/HDL Cholesterol Ratio (synthesised)
+                            use_node ELEMENT[at0.9053] occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0108]    -- LDL/HDL Cholesterol Ratio (synthesised)
+                        }
+                    }
+                    CLUSTER[at0096.1] matches {    -- Total/HDL Cholesterol Ratio
+                        items matches {
+                            ELEMENT[at0078.6] matches {    -- Result Value
+                                value matches {
+                                    DV_PROPORTION[at0.9029] matches {
+                                        is_integral matches {False}
+                                        type matches {0}
+                                    }
+                                }
+                            }
+                            after [at0078.6]
+                            use_node ELEMENT[at0.9054] /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0102]    -- Total/HDL Cholesterol Ratio (synthesised)
+                            use_node ELEMENT[at0.9055] occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0103]    -- Total/HDL Cholesterol Ratio (synthesised)
+                            use_node ELEMENT[at0.9056] occurrences matches {0..1} /data[at0001]/events[at0002]/data[at0003]/items[at0095]/items[at0096.6]/items[at0108]    -- Total/HDL Cholesterol Ratio (synthesised)
+                        }
+                    }
+                }
+                state matches {
+                    ITEM_TREE[at0.112] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            ELEMENT[at0.113] occurrences matches {0..1} matches {    -- Fasting State
+                                value matches {
+                                    DV_BOOLEAN[at0.9033] matches {
+                                        value matches {True}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.114] occurrences matches {0..1} matches {    -- Duration of Fasting
+                                value matches {
+                                    DV_DURATION[at0.9034] matches {
+                                        value matches {PTHS/|>=PT0S|}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        /protocol[at0004]/items matches {
+            before [at0017]
+            ELEMENT[at0.111] occurrences matches {0..1} matches {    -- Point of Care Device used
+                value matches {
+                    DV_BOOLEAN[at0.9035] matches {
+                        value matches {True, False}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ar-sy"] = <
+            ["at0.111"] = <
+                text = <"*Point of Care Device used(en)">
+                description = <"*The test was performed using a point of care device or a home-based device.(en)">
+            >
+            ["at0.113"] = <
+                text = <"*Fasting State(en)">
+                description = <"*A fasting specimen was used for the measurement.(en)">
+            >
+            ["at0.114"] = <
+                text = <"*Duration of Fasting(en)">
+                description = <"*The duration of fasting completed by the test subject prior to the sample being taken.(en)">
+            >
+            ["at0000.1"] = <
+                text = <"*Lipid Studies Test Result(en)">
+                description = <"*The findings and interpretation of bochemical lipid study test results.(en)">
+            >
+            ["at0078.1"] = <
+                text = <"*Result Value(en)">
+                description = <"*Actual value of the result.(en)">
+            >
+            ["at0078.2"] = <
+                text = <"*Result Value(en)">
+                description = <"*Actual value of the result.(en)">
+            >
+            ["at0078.3"] = <
+                text = <"*Result Value(en)">
+                description = <"*Actual value of the result.(en)">
+            >
+            ["at0078.4"] = <
+                text = <"*Result Value(en)">
+                description = <"*Actual value of the result.(en)">
+            >
+            ["at0078.5"] = <
+                text = <"*Result Value(en)">
+                description = <"*Actual value of the result.(en)">
+            >
+            ["at0078.6"] = <
+                text = <"*Result Value(en)">
+                description = <"*Actual value of the result.(en)">
+            >
+            ["at0078.7"] = <
+                text = <"*Result Value(en)">
+                description = <"*Actual value of the result.(en)">
+            >
+            ["at0078.8"] = <
+                text = <"*Result Value(en)">
+                description = <"*Actual value of the result.(en)">
+            >
+            ["at0096.1"] = <
+                text = <"*Total/HDL Cholesterol Ratio(en)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+            >
+            ["at0096.2"] = <
+                text = <"*LDL/HDL Cholesterol Ratio(en)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+            >
+            ["at0096.3"] = <
+                text = <"*VLDL Cholesterol(en)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+            >
+            ["at0096.4"] = <
+                text = <"*LDL Cholesterol Direct Assay(en)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+            >
+            ["at0096.5"] = <
+                text = <"*HDL Cholesterol(en)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+            >
+            ["at0096.6"] = <
+                text = <"*Total Cholesterol(en)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+            >
+            ["at0096.7"] = <
+                text = <"*Triglyceride(en)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+            >
+            ["at0096.8"] = <
+                text = <"*LDL Cholesterol Calculated(en)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en)">
+            >
+            ["at0.9000"] = <
+                text = <"* Concentration (en)">
+                description = <"* Concentration (en)">
+            >
+            ["at0.9036"] = <
+                text = <"*Triglyceride(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9037"] = <
+                text = <"*Triglyceride(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9038"] = <
+                text = <"*Triglyceride(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9039"] = <
+                text = <"*HDL Cholesterol(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9040"] = <
+                text = <"*HDL Cholesterol(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9041"] = <
+                text = <"*HDL Cholesterol(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9042"] = <
+                text = <"*LDL Cholesterol Direct Assay(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9043"] = <
+                text = <"*LDL Cholesterol Direct Assay(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9044"] = <
+                text = <"*LDL Cholesterol Direct Assay(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9045"] = <
+                text = <"*LDL Cholesterol Calculated(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9046"] = <
+                text = <"*LDL Cholesterol Calculated(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9047"] = <
+                text = <"*LDL Cholesterol Calculated(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9048"] = <
+                text = <"*VLDL Cholesterol(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9049"] = <
+                text = <"*VLDL Cholesterol(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9050"] = <
+                text = <"*VLDL Cholesterol(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9051"] = <
+                text = <"*LDL/HDL Cholesterol Ratio(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9052"] = <
+                text = <"*LDL/HDL Cholesterol Ratio(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9053"] = <
+                text = <"*LDL/HDL Cholesterol Ratio(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9054"] = <
+                text = <"*Total/HDL Cholesterol Ratio(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9055"] = <
+                text = <"*Total/HDL Cholesterol Ratio(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+            ["at0.9056"] = <
+                text = <"*Total/HDL Cholesterol Ratio(en) (synthesised)">
+                description = <"*Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0.111"] = <
+                text = <"Point of Care Device used">
+                description = <"The test was performed using a point of care device or a home-based device.">
+            >
+            ["at0.113"] = <
+                text = <"Fasting State">
+                description = <"A fasting specimen was used for the measurement.">
+            >
+            ["at0.114"] = <
+                text = <"Duration of Fasting">
+                description = <"The duration of fasting completed by the test subject prior to the sample being taken.">
+            >
+            ["at0000.1"] = <
+                text = <"Lipid Studies Test Result">
+                description = <"The findings and interpretation of bochemical lipid study test results.">
+            >
+            ["at0078.1"] = <
+                text = <"Result Value">
+                description = <"Actual value of the result.">
+            >
+            ["at0078.2"] = <
+                text = <"Result Value">
+                description = <"Actual value of the result.">
+            >
+            ["at0078.3"] = <
+                text = <"Result Value">
+                description = <"Actual value of the result.">
+            >
+            ["at0078.4"] = <
+                text = <"Result Value">
+                description = <"Actual value of the result.">
+            >
+            ["at0078.5"] = <
+                text = <"Result Value">
+                description = <"Actual value of the result.">
+            >
+            ["at0078.6"] = <
+                text = <"Result Value">
+                description = <"Actual value of the result.">
+            >
+            ["at0078.7"] = <
+                text = <"Result Value">
+                description = <"Actual value of the result.">
+            >
+            ["at0078.8"] = <
+                text = <"Result Value">
+                description = <"Actual value of the result.">
+            >
+            ["at0096.1"] = <
+                text = <"Total/HDL Cholesterol Ratio">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+            >
+            ["at0096.2"] = <
+                text = <"LDL/HDL Cholesterol Ratio">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+            >
+            ["at0096.3"] = <
+                text = <"VLDL Cholesterol">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+            >
+            ["at0096.4"] = <
+                text = <"LDL Cholesterol Direct Assay">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+            >
+            ["at0096.5"] = <
+                text = <"HDL Cholesterol">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+            >
+            ["at0096.6"] = <
+                text = <"Total Cholesterol">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+            >
+            ["at0096.7"] = <
+                text = <"Triglyceride">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+            >
+            ["at0096.8"] = <
+                text = <"LDL Cholesterol Calculated">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+            >
+            ["at0.9000"] = <
+                text = <"Concentration">
+                description = <"Concentration">
+            >
+            ["at0.9036"] = <
+                text = <"Triglyceride (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9037"] = <
+                text = <"Triglyceride (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9038"] = <
+                text = <"Triglyceride (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9039"] = <
+                text = <"HDL Cholesterol (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9040"] = <
+                text = <"HDL Cholesterol (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9041"] = <
+                text = <"HDL Cholesterol (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9042"] = <
+                text = <"LDL Cholesterol Direct Assay (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9043"] = <
+                text = <"LDL Cholesterol Direct Assay (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9044"] = <
+                text = <"LDL Cholesterol Direct Assay (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9045"] = <
+                text = <"LDL Cholesterol Calculated (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9046"] = <
+                text = <"LDL Cholesterol Calculated (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9047"] = <
+                text = <"LDL Cholesterol Calculated (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9048"] = <
+                text = <"VLDL Cholesterol (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9049"] = <
+                text = <"VLDL Cholesterol (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9050"] = <
+                text = <"VLDL Cholesterol (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9051"] = <
+                text = <"LDL/HDL Cholesterol Ratio (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9052"] = <
+                text = <"LDL/HDL Cholesterol Ratio (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9053"] = <
+                text = <"LDL/HDL Cholesterol Ratio (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9054"] = <
+                text = <"Total/HDL Cholesterol Ratio (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9055"] = <
+                text = <"Total/HDL Cholesterol Ratio (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+            ["at0.9056"] = <
+                text = <"Total/HDL Cholesterol Ratio (synthesised)">
+                description = <"Specific detailed result, including both the value of the result item, and additional information that may be useful for clinical interpretation. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9000"] = <http://openehr.org/id/119>
+        >
+    >

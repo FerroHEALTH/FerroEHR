@@ -24,9 +24,25 @@ with its selector unique indexes, the protection of the parties it relies on
 judged in that commit (`protect`), the first fill and refill under the
 mapping's digest with the replica leases (`fill`), and the
 `ferrohealth-smart` `PartySource` over it, no cache; the mapping's
-configuration is `config::binding::person`),
+configuration is `config::binding::person`; `policy` recognises the policy
+parties by archetype and carries their default definitions from
+`assets/definitions/policy/`, and `shipped` carries the default demographic
+definitions of `deploy/definitions/` and the ids the default mapping names;
+`service::demographic::default_definitions` seeds both sets at boot when
+absent; `grants` derives the client identifiers of any `ACTOR` and the
+operations of the `ferroehr-operations` terminology coded in any `ROLE`'s
+capability credentials into the side table in each commit, never by
+archetype, refuses an operation above `[authz.grants] allowed` or a grant
+without its terms, holds each client's acts-for provider, and keeps them in
+memory per replica (`LiveGrants`, invalidated through `NOTIFY`) for
+`Capabilities::current()`, which decides a system client's commits
+(`versioning::system`), imports and exports (`service::message::import_policy`)),
 `origins` (the
 `[origins]` register of recognised data origins, EHDS Annex II 3.4),
+`policy_register` (the operational-policy admin registers: the audit category
+map, the access delay and the Cedar policy set, versioned in the clinical
+`policy_register` table, held in memory and read again when `listen::Listened`
+says a write notified),
 `licence`, `ids`, `extensions`, `banner`, `decommission` (the `ferroehr db
 erase` operation: blobs first, then `db::erase_schema` drops every schema,
 behind a confirmation naming the instance), `manufacturer` (the one source of

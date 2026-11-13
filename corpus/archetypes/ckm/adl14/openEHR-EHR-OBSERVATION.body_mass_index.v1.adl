@@ -1,0 +1,940 @@
+﻿archetype (adl_version=1.4; uid=4441884d-7a56-4498-9909-45cc2caddcc2)
+	openEHR-EHR-OBSERVATION.body_mass_index.v1
+
+concept
+	[at0000]	-- Body mass index
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			author = <
+				["name"] = <"Domingo Liotta">
+				["organisation"] = <"Universidad de Morón">
+			>
+			accreditation = <"Universidad de Morón">
+		>
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			author = <
+				["name"] = <"Lars Morgan Karlsen">
+				["organisation"] = <"DIPS ASA">
+				["email"] = <"lmk@dips.no">
+			>
+		>
+		["pt-br"] = <
+			language = <[ISO_639-1::pt-br]>
+			author = <
+				["name"] = <"Marco Borges">
+				["organisation"] = <"P2D">
+				["email"] = <"marco.borges@p2d.com.br">
+			>
+			accreditation = <"P2D Health Advisor Council">
+		>
+		["el"] = <
+			language = <[ISO_639-1::el]>
+			author = <
+				["name"] = <"George Nikolaidis">
+				["organisation"] = <"Ergobyte Informatics S.A.">
+				["email"] = <"gnikolaidis@ergobyte.gr">
+			>
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+		["fa"] = <
+			language = <[ISO_639-1::fa]>
+			author = <
+				["name"] = <"Shahla Foozonkhah">
+				["organisation"] = <"Ocean Informatics">
+				["email"] = <"shahla.foozonkhah@oceaninformatics.com">
+			>
+		>
+		["zh-cn"] = <
+			language = <[ISO_639-1::zh-cn]>
+			author = <
+				["name"] = <"Lin Zhang">
+				["organisation"] = <"BIPH">
+				["email"] = <"linforest@163.com">
+			>
+			accreditation = <"?">
+		>
+		["nl"] = <
+			language = <[ISO_639-1::nl]>
+			author = <
+				["name"] = <"Marja Buur">
+				["organisation"] = <"Medisch Centrum Alkmaar">
+				["email"] = <"m.buur-krom@mca.nl">
+			>
+			accreditation = <"Nurse Informatics">
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"sam.heard@oceaninformatics.com">
+		["date"] = <"2006-03-26">
+	>
+	details = <
+		["pt-br"] = <
+			language = <[ISO_639-1::pt-br]>
+			purpose = <"Para gravar o Índice de Massa Corpórea (IMC) de uma pessoa.
+Índice de Massa Corpórea é uma taxa calculada que descreve como o peso corporal de um indivíduo se relaciona com o peso que é considerado normal, ou desejável, para a altura do indivíduo.">
+			use = <"Usado para gravar o Índice de Massa Corpórea de adultos e crianças.
+Use para registrar o IMC manualmente (isto é, calculado e digitado pelo médico) ou automaticamente (cálculo feito automaticamente por uma aplicação de software, com base na altura e medições de peso).
+Fórmulas: IMC é normalmente calculado como peso (kg) / [altura (m) ao quadrado]. Esta é a fórmula assimuda salvo nova fórmula registrada no protocolo. O IMC pode ser medido com libras e polegadas: Peso (lb) / [altura (polegadas) ao quadrado ] x 703 (com onças (oz) e frações alterando casas decimais).
+Em algumas situações, a fórmula do IMC é corrigida por exemplo, para uso em pacientes amputados - esta fórmula específica podem ser contabilizados como parte do protocolo. para essa  alternativa de IMC usada com amputados, lesões semelhantes ou deficiência ajusta-se a altura e/ou peso, conforme o caso. Veja openEHR-EHR-OBSERVATION.height-adjusted e OBSERVATION.body_weight-adjusted.
+Veja na referência ajustamentos da altura / comprimento para o IMC em pediatria.
+Em crianças e adolescentes, o IMC deve ser avaliada por meio de tabelas de referência relacionadas com a idade.">
+			keywords = <"obesidade", "índice", "massa corporal", "IMC", "anorexia", "*Quetelet(en)", "subnutrição", "subdesenvolvimento", "bulimia">
+			misuse = <"Não se destina a registrar informações sobre os percentis de IMC - estes serão gravadas em arquétipos distintos.">
+			copyright = <"© openEHR Foundation">
+		>
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			purpose = <"Registrar el Índice de Masa Corporal (IMC) de un individuo.
+El Índice de Masa Corporal  es una cociente que describe la manera en que el peso de un individuo se considera normal, o deseable, respecto a su altura. ">
+			use = <"Usar para registrar el Índice de Masa Corporal de adultos y niños.
+Usar para ingresar el Índice de Masa Corporal manualmente (ej: calculado e ingresado directamente por el médico), o automáticamente (ej: cálculo y entrada se realiza automáticamente por una aplicación de software, basado en la medición de peso y altura por separado).
+Fórmulas: Índice de Masa Corporal comúnmente se calcula como peso (kg) / [altura (m) al cuadrado].  Este es la fórmula asumida a menos que se especifique otra en el elemento Fórmula dentro de Protocolo. Otras alternativas estiman el Índice de Masa Corporal usando libras y pulgadas: peso (lb) / [altura (in) al cuadrado) x 703 (con onzas (oz) y fracciones ajustados a valores decimales).
+En algunas situaciones la fórmula de Índice de Masa Corporal se corrige por ej: para el uso de amputados - esa fórmula específica puede registrarse como parte del protocolo. Alternativamente el cálculo de Índice de Masa Corporal puede ser usado con amputados y similares o personas con discapacidades si se usa 'altura ajustada' y/o 'peso ajustado' apropiadamente en lugar de altura y peso actual. Véase openEHR-EHR-OBSERVATION.height-adjusted and openEHR-EHR-OBSERVATION.body_weight-adjusted. 
+Véase las recomendaciones de la OMS respecto a adecuar peso/altura para el Índice se Masa Corporal en pediatría.
+En niños y adolescentes, IMC debe calcularse usando cartillas de referencia por edades.">
+			keywords = <"obesidad(sp)", "índice(sp)", "masa corporal(sp)", "IMC(sp)", "anorexia(sp)", "Quetelet(sp)", "malnutrición(sp)", "bulimia(sp)", "desnutrición(sp)">
+			misuse = <"No se usa para el registro de percentiles de Índice de Masa Corporal - estos se registran en otros arquetipos por separado.">
+			copyright = <"© openEHR Foundation">
+		>
+		["fa"] = <
+			language = <[ISO_639-1::fa]>
+			purpose = <" برای ثبت شاخص توده بدن فرد  بکار می رود 
+شاخص توده بدن نسبتی است که نحوه ارتباط وزن بدن با وزن طبیعی یا مورد دلخواه، با توجه به قد فرد را محاسبه می کند که بصورت وزن طبیعی یا مطلوب فرد در نظر گرفته می شود     ">
+			use = <" برای ثبت شاخص توده بدن بزرگسالان و کودکان بکار می رود برای وارد کردن شاخص توده بدن بصورت دستی(توسط افراد بالینی محاسبه و بطور مستقیم ثبت می شود) یا بطور خودکار (محاسبات بطور خودکار توسط نرم افزار و بر اساس اندازه های جداگانه قد و وزن انجام می شود) محاسبه و ثبت می شود.ء
+فرمولها : شاخص توده بدن معمولا بصورت وزن بر حسب کیلو گرم تقسیم بر [قد بر حسب متر به توان دو] محاسبه می شود. در محاسبات همیشه فرض بر این فرمول است مگر اینکه عناصر فرمول در پروتکل مدنظر مشخص شوند. همچنین بعنوان فرمولی جایگزین برای تخمین شاخص توده بدن از پوند و اینچ نیز استفاده می شود : وزن بر حسب پوند تقسیم بر [قد بر حسب اینچ به توان دو] ضرب در 703 (مقادیر کسری بصورت اعشاری تغییر می یابند).
+شاخص توده بدن برای بکار گیری در شرایطی همچون قطع عضو تصحیح می شود ،این فرمول را می توان بصورت بخشی از پروتکل ثبت نمود. بعنوان فرمولی جایگزین، می توان از فرمول شاخص توده بدن، با تاثیر دادن قد یا وزن معادل (تطبیق یافته) عضو معیوب به جای قد یا وزن واقعی، در موارد قطع عضو و صدمات مشابه یا ناتوانی ها، نیز استفاده کرد.ء
+ببینید:ء
+openEHR-EHR-OBSERVATION.height-adjusted  وopenEHR-EHR-OBSERVATION.body_weight-adjusted.
+مرجع سازمان جهانی بهداشت در مورد استفاده از وزن و یا قد برای شاخص توده بدن در اطفال را بینید.
+در بچه ها و نوجوانان لازم است شاخص توده بدن با استفاده از جدول مرجع سن مربوطه محاسبه شود
+  ">
+			keywords = <"چاقی", "شاخص", "توده بدن", "شاخص توده بدن", "بی اشتهایی", "اندکس کوت لت(شاخص توده بدن)", "سو تغذیه", "اختلال رشد", "پرخوری">
+			misuse = <" برای ثبت اطلاعات در مورد شاخص توده بدن به درصد در نظر گرفته نشده است-  این موارد در الگو ساز جداگانه ای ثبت خواهد شد">
+			copyright = <"© openEHR Foundation">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"لتسجيل معامل كتلة الجسم للشخص.
+معامل كتلة الجسم هو نسبة محسوبة تصف العلاقة بين وزن جسم الشخص و الوزن الطبيعي أو المرغوب المناسب لطول الجسم.">
+			use = <"يستخدم لتسجيل معامل كتلة الجسم لكل من البالغين و الأطفال.
+
+يستخدم لإدخال معامل كتلة الجسم المحسوب بشكل يدوي (محسوب و مسَجَّل بشكل مباشر بواسطة الطبيب السريري) أو تلقائيا (يتم الحساب و الإدخال تلقائيا من خلال برنامج كمبيوتر, على أساس قياسات منفردة للطول و الوزن)
+
+الصيَغ: عادة ما يتم حساب معامل كتلة الجسم بقسمة الوزن بالكيلوغرام على مربع الطول بالميتر المربع.
+
+و هذه هي الصيغة المفترضة ما لم يتم تحديد خلاف ذلك في البروتوكول المستخدم.
+
+و يمكن تقدير معامل كتلة الجسم باستخدام الباوند و البوصة : بقسمة الوزن بالباوند على مربع الطول بالبوصة المربعة و ضرب الناتج في 307 - - مع تحويل الأونصات و الكسور الحسابية إلى قيم عشرية.
+
+في بعض المواقف يتم تصحيح معامل كتلة الجسم, مثلا عند استخدامه في الأشخاص الذين يعانون من بتر في أي من الأعضاء - و يمكن استخدام هذه الصيغة الخاصة كجزء من البروتوكول.
+كما يمكن استخدام الصيغة الشهيرة لحساب معامل كتلة الجسم للأشخاص الذين يعانون من البرت أو من إصابات أو إعاقات مشابهة إذا تم استخدام قياسات مصححة للطول و/أو الوزن, حيثما كان مناسبا, بدلا من الطول أو الوزن الحقيقين. 
+يمكن الرجوع إلى نموذج ملاحظة. الطول المصحح و نموذج ملاحظة. وزن الجسم المصحح.
+
+يمكن الرجوع إلى مرجع منظمة الصحة العالمية لتصحيح قياسات الطول و الوزن لقياس معامل كتلة الجسم في الأطفال.
+في الأطفال و المراهقين, توجد حاجة لتقييم معامل كتلة الجسم باستخدام المخطط المرجعي المرتبط بالعمر.">
+			keywords = <"*Quetelet(en)", "السمنة", "معامل", "كتلة الجسم", "معامل كتلة الجسم", "فقدان الشهية", "سوء التغذية", "الفشل في النماء", "النُّهام">
+			misuse = <"لا يستخدم لتسجيل المعلومات الخاصة بالشرائح المئوية لمعامل كتلة الجسم - حيث يتم تسجيلها في نماذج منفردة.">
+			copyright = <"© openEHR Foundation">
+		>
+		["nl"] = <
+			language = <[ISO_639-1::nl]>
+			purpose = <"Het registreren van de Body Mass Index (BMI) van een persoon.
+De Body Mass Index is een berekening hoe het lichaamsgewicht van een persoon zich verhoudt tot het normale gewicht, of gewenste gewicht, t.o.v. de  lengte van de persoon. ">
+			use = <"Wordt gebruikt voor het registreren van de Body Mass Index van zowel volwassenen als kinderen. 
+Wordt gebruikt door de Body Mass Index of manueel (d.w.z. berekend en direct ingevoerd door de clinicus), of automatisch (d.w.z. dat de berekening en invoer automatisch door een software applicatie, gebaseerd op afzonderlijke lengte en gewicht metingen gedaan wordt) in te voeren.
+Formule: Body Mass Index wordt gewoonlijk berekend door gewicht (kg)/[lengte (m) in het kwadraat]. Dit is de veronderstelde formule, tenzij anders gespecificeerd in het Formule element in Protocol.
+Alternatieve geschatte Body Mass Index gebruik makend van pounds en inches: gewicht (lb)/[lengte(in) in het kwadraat] x 703 (met ounces (oz) en gedeeltes gewijzigd tot op de decimaal).
+In sommige situaties wordt de Body Mass Index formule gecorrigeerd, b.v. voor gebruik bij geamputeerden - deze specifieke formule kan geregistreerd worden als onderdeel van het protocol. Alternatief kan de gewoonlijke Body Mass Index berekening gebruikt worden bij geamputeerden en vergelijkbare verwondingen of handicaps, bij gebruikmaking van aangepaste gewicht en/of lengte in plaats van de werkelijke lengte en gewicht. Gebruik daarvoor openEHR-EHR-OBSERVATION.height-adjusted (openEHR-EHR-OBSERVATION.lengte-aangepast)  en openEHR-EHR-OBSERVATION.body_weight-adjusted (openEHR-EHR-OBSERVATION.lichaamsgewicht-aangepast).
+Zie de WHO richtlijnen tot aanpassing van hoogte / lengte voor Body Mass Index in de pediatrie.
+Bij kinderen en tieners, dient de BMI te worden beoordeeld met behulp van leeftijd-gerelateerde referentie lijsten.">
+			keywords = <"obesitas", "indexbody mass", "BMI", "anorexia", "Quetelet", "ondervoeding", "onvermogen op gewicht te blijven, onvermogen om te groeien", "boulimia">
+			misuse = <"Niet bestemd voor het registreren van informatie over de Body Mass Index percentielen - deze zullen worden opgenomen in afzonderlijke archetypen.">
+			copyright = <"© openEHR Foundation">
+		>
+		["zh-cn"] = <
+			language = <[ISO_639-1::zh-cn]>
+			purpose = <"旨在记录个人的体重指数（ Body Mass Index，BMI）。
+BMI是一种计算出来的比值，用于描述个人的体重与其对于身高来说正常的或理想的体重的关系。">
+			use = <"用于记录成年人和儿童的体重指数。
+用于采用手工方式（即直接由临床医生计算机和录入）或自动化方式（依据单独的身高和体重测量结果，由软件应用程序自动地完成计算和录入）录入体重指数。
+计算公式：体重指数通常是体重(kg)/[身高(m)的平方]，即体重指数=体重(公斤)÷ 身高(米)的平方 kg/m^2。除非在方案的公式元素之中另有规定，这将是假设采用的公式。体重指数的另一种计算公式则是：体重(lb) / [身高 (in)的平方] x 703（其中，盎司(oz)和小数部分均变为十进制值）。
+在某些情况下，会对体重指数公式加以校正；比如，用于被截肢者的时候——可将这种特殊的公式记录为方案的组成部分。或者，对于被截肢者和类似损伤或残疾者，在合适的情况下，如果采用的是经过调整的身高和/或经过调整的体重，而不是实际身高和体重，亦可采用上述常用的体重指数计算方法。参见调整型身高原始型openEHR-EHR-OBSERVATION.height-adjusted和调整型体重原始型openEHR-EHR-OBSERVATION.body_weight-adjusted。
+对于儿科患者体重指数，关于身高/体重的重新调整，请参见WHO的参考标准。
+对于儿童和青少年，需要采用与年龄相关的参考表（age-related reference charts）来评估BMI。">
+			keywords = <"体重指数", "体质指数", "体质量指数", "肥胖", "指数", "体重", "体质", "体质量", "BMI", "厌食", "厌食症", "食欲缺乏", "克托莱", "凯特勒", "凯特莱", "克托莱指数", "凯特勒指数", "凯特莱指数", "营养不良", "营养不足", "发育停滞", "生长迟缓", "发育不良", "成长失调", "贪食", "贪食症", "善饥", "食欲过盛">
+			misuse = <"并非旨在记录关于体重指数百分位数的信息——后者的记录将采用不同的原始型。">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record the Body Mass Index (BMI) of a person.
+Body Mass Index is a calculated ratio describing how an individual's body weight relates to the weight that is regarded as normal, or desirable, for the individual's height.">
+			use = <"Use to record the Body Mass Index of both adults and children.  
+Use to enter the Body Mass Index either manually (ie calculated and directly entered by the clinician), or automatically (ie calculation and entry is done automatically by a software application, based on separate height and weight measurements).
+Formulas: Body Mass Index is commonly calculated as weight (kg) / [height (m) squared]. This is the assumed formula unless otherwise specified in the Formula element within Protocol. Alternatively estimate Body Mass Index using pounds and inches: weight (lb) / [height (in) squared] x 703 (with ounces (oz) and fractions changed to decimal values).
+In some situations the Body Mass Index formula is corrected eg for use in amputees - this specific formula can be recorded as part of the protocol.  Alternatively the common Body Mass Index calculation can be used with amputees and similar injuries or disabilities if using adjusted height and/or adjusted weight, as appropriate, rather than actual height and weight.   See openEHR-EHR-OBSERVATION.height-adjusted and openEHR-EHR-OBSERVATION.body_weight-adjusted.
+See WHO reference re adjusting height/length for Body Mass Index in paediatrics. 
+In children and teens, BMI needs to be assessed using age-related reference charts.">
+			keywords = <"obesity", "index", "body mass", "BMI", "anorexia", "Quetelet", "malnutrition", "failure to thrive", "bulimia">
+			misuse = <"Not intended to record information regarding Body Mass Index percentiles - these will be recorded in separate archetypes.">
+			copyright = <"© openEHR Foundation">
+		>
+		["el"] = <
+			language = <[ISO_639-1::el]>
+			purpose = <"Η καταγραφή του Δείκτη Μάζας Σώματος (ΔΜΣ) ενός ατόμου.
+Ο Δείκτης Μάζας Σώματος είναι μια υπολογιζόμενη αναλογία που περιγράφει πώς το σωματικό βάρος ενός ατόμου σχετίζεται με το βάρος που θεωρείται φυσιολογικό, ή επιθυμητό, αναλογικά με το ύψος του.">
+			use = <"Χρησιμοποιείται για την καταγραφή του Δείκτη Μάζας Σώματος για ενήλικες και παιδιά.
+Χρησιμοποιείται για την εισαγωγή του ΔΜΣ, είτε χειροκίνητα (δηλ. με υπολογισμό και απευθείας καταχώρηση από τον ιατρό), είτε αυτόματα (δηλ. ο υπολογισμός και η καταγραφή γίνεται αυτόματα από την εφαρμογή λογισμικού, μετά από ξεχωριστή καταχώρηση των μετρήσεων του σωματικού βάρους και ύψους). 
+Μαθηματικοί τύποι: Ο ΔΜΣ υπολογίζεται συνήθως ως βάρος (kg) / [ύψος (m) εις το τετράγωνο]. Αυτός είναι ο εννοούμενος τύπος, εκτός εάν ορίζεται διαφορετικά στο πεδίο \"Μαθηματικός τύπος\" του πρωτοκόλλου. Εναλλακτικά, ο ΔΜΣ μπορεί να υπολογιστεί κατ' εκτίμηση από τον τύπο: ΔΜΣ = βάρος (lb) / [ύψος (in) εις το τετράγωνο] x 703.
+Σε ορισμένες περιπτώσεις, όπως για παράδειγμα σε ακρωτηριασμούς, ο ΔΜΣ πρέπει να διορθωθεί - αυτός ο μαθηματικός τύπος μπορεί να αποτελέσει μέρος του πρωτοκόλλου. Εναλλακτικά, ο ΔΜΣ μπορεί να χρησιμοποιηθεί σε περιπτώσεις ακρωτηριασμών ή άλλων παρόμοιων τραυματισμών λαμβάνοντας υπόψη το κατάλληλα προσαρμοσμένο ύψος ή/και βάρος και όχι το πραγματικό.
+βλ. openEHR-EHR-OBSERVATION.height-adjusted και openEHR-EHR-OBSERVATION.body_weight-adjusted. 
+βλ. Παγκόσμιος Οργανισμός Υγείας (WHO): Re adjusting height/length for Body Mass Index in paediatrics.
+Στους εφήβους και τα παιδιά, ο ΔΜΣ πρέπει να αξιολογηθεί χρησιμοποιώντας πίνακες αναφοράς που σχετίζονται με την ηλικία.">
+			keywords = <"παχυσαρκία", "δείκτης", "μάζα σώματος", "ΔΜΣ", "ανορεξία", "Quetelet", "υποσιτισμός", "αδυναμία ανάπτυξης", "βουλιμία">
+			misuse = <"Δεν προορίζεται για την καταγραφή πληροφοριών που αφορούν την ποσοστιαία κατάταξη με βάση το ΔΜΣ. Για την καταγραφή αυτή υπάρχουν χωριστά αρχέτυπα.">
+			copyright = <"© openEHR Foundation">
+		>
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			purpose = <"Å registrere et individs kroppsmasseindeks/body mass index (KMI/BMI). Forkortelsen BMI foretrekkes i arketyper, siden dette er et innarbeidet uttrykk også i norsk klinisk praksis.
+
+Kroppsmasseindeks er en beregnet verdi som beskriver hvordan individets kroppsvekt forholder seg til høyden.">
+			use = <"Brukes for å registrere kroppsmasseindeks hos både voksne og barn. 
+
+Brukes til manuell registrering av kroppsmasseindeks (dvs. beregnet og skrives inn direkte av klinikeren), eller automatisk (dvs. beregning og oppføring er gjort automatisk av et program, basert på måling av høyde og vekt). 
+
+Formler: Kroppsmasseindeks utregnes på følgende måte: vekt (kg) / [høyde (m) x høyde(m)]. Dette er den antatte formelen, med mindre annet er angitt i elementet som beskriver formel i protokollen.
+
+I enkelte situasjoner kan en modifisert beregning benyttes, for eksempel ved bruk hos en person som har amputert begge bein, - denne spesifikke formelen kan tas opp som en del av protokollen. Alternativt kan den vanlige formelen for kroppsmasseindeks brukes for personer med amputerte lemmer og lignende skader eller funksjonshemminger hvis du bruker justert høyde og / eller justert vekt. Se openEHR-EHR-OBSERVATION.height og openEHR-EHR-OBSERVATION.body_weight. 
+
+Se WHO referanse for justert høyde / lengde for kroppsmasseindeks i pediatri. 
+
+For barn og tenåringer vurderes BMI ved hjelp av aldersjusterte referansediagrammer.">
+			keywords = <"fedme", "indeks", "kroppsmasse", "BMI", "KMI", "anoreksi", "Quetelet indeks", "feilernæring", "vektøkning", "vektutvikling", "bulimi", "spiseforstyrrelse", "overvekt", "undervekt", "slanking", "vekttap", "høyde", "vekt", "underernæring", "ernæringsmessig risiko", "underernæring", "adipositas", "kroppsmasseindeks", "muskelmasse">
+			misuse = <"Ikke beregnet til å registrere informasjon om persentiler av kroppsmasseindeks - disse vil bli registrert i egne arketyper.">
+		>
+	>
+	lifecycle_state = <"deprecated">
+	other_contributors = <"Grethe Almenning, Bergen kommune, Norway", "Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University Hospital, Bergen, Norway", "Marja Buur, Medisch Centrum Alkmaar/ Code24, Netherlands", "Rong Chen, Cambio Healthcare Systems, Sweden", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Angela de Zwart, Orion Health, New Zealand", "Paul Donaldson, Nursing Informatics Australia, Australia", "Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Samuel Frade, Marand, Portugal", "Sebastian Garde, Ocean Informatics, Germany", "Heather Grain, Llewelyn Grain Informatics, Australia", "Anne Harbison, CPCER, Australia", "Sam Heard, Ocean Informatics, Australia", "Andrew James, University of Toronto, Canada", "Shinji Kobayashi, Kyoto University, Japan", "Heather Leslie, Ocean Health Systems, Australia (openEHR Editor)", "Rikard Lovstrom, Swedish Medical Association, Sweden", "Hallvard Lærum, Oslo Universitetssykehus HF, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Jeroen Meintjens, Medisch Centrum Alkmaar, Netherlands", "Lars Morgan Karlsen, DIPS ASA, Norway", "Hugo Nilssen, UNN HF K3K/Tromsø, Norway", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Arturo Romero, SESCAM, Spain", "Kari Sygnestveit, Helse Bergen, Norway", "Micaela Thierley, Helse Bergen, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Editor)", "Soon Ghee Yap, Singapore General Hospital, Singapore">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"Clinical Guidelines on the Identification, Evaluation, and Treatment of Overweight and Obesity in Adults: The Evidence Report [Internet]. Bethesda (MD): National Heart, Lung, and Blood Institute; NIH Publication No. 98-4083, Sep 1998, [cited 2009 July 02]. Available from: http://www.nhlbi.nih.gov/guidelines/obesity/
+
+About BMI for Children and Teens [Internet]. Atlanta (GA): Division of Nutrition, Physical Activity and Obesity, Centers for Disease Control and Prevention; 2009 Jan 27 [cited 2009 Jul 28 ]. Available from: http://www.cdc.gov/healthyweight/assessing/bmi/childrens_BMI/about_childrens_BMI.html
+
+WHO Child Growth Standards: Length/height-for-age, weight-for-age, weight-for-length, weight-for-height and body mass index-for-age: Methods and development. [Internet] Geneva, Switzerland: WHO Multicentre Growth Reference Study Group, World Health Organization; 2006 [cited 2009 July 02].  Chapter 6, BMI-for-age standards. Available from: http://www.who.int/childgrowth/standards/Chap_6.pdf.
+
+Obesity: Preventing and Managing the Global Epidemic: Report of a WHO Consultation [Internet]. Geneva, Switzerland: World Health Organisation; 2000 [cited 2009 Jul 28]. Available from: http://www.who.int/nutrition/publications/obesity/WHO_TRS_894/en/index.html
+
+Tzamaloukas AH, Patron A, Malhotra D. Body Mass Index in Amputees. Journal of Parenteral and Enteral Nutrition [Internet]. 1994 [cited 2009 Jul 28]; 18 (4): 355. Available from: http://pen.sagepub.com/cgi/content/abstract/18/4/355">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"7E83CE58D8B08E8B13C8D99E5F7B2BD0">
+		["build_uid"] = <"e3a33bf7-1e9d-4710-992e-ba2791da8a95">
+		["revision"] = <"1.0.1">
+	>
+
+definition
+	OBSERVATION[at0000] matches {	-- Body mass index
+		data matches {
+			HISTORY[at0001] matches {	-- history
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..*} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Single
+								items cardinality matches {1..*; unordered} matches {
+									ELEMENT[at0004] matches {	-- Body mass index
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::349]>
+												list = <
+													["1"] = <
+														units = <"kg/m2">
+														magnitude = <|0.0..<1000.0|>
+														precision = <|1|>
+													>
+													["2"] = <
+														units = <"[lb_av]/[in_i]2">
+														magnitude = <|0.0..<1000.0|>
+														precision = <|1|>
+													>
+												>
+											>
+										}
+									}
+									ELEMENT[at0013] occurrences matches {0..1} matches {	-- Clinical interpretation
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0012] occurrences matches {0..1} matches {	-- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+						state matches {
+							ITEM_TREE[at0014] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0011] occurrences matches {0..1} matches {	-- Confounding factors
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0005] matches {	-- Tree
+				items cardinality matches {0..*; ordered} matches {
+					ELEMENT[at0006] occurrences matches {0..1} matches {	-- Method
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0007, 	-- Automatic entry
+									at0008]	-- Direct entry
+								}
+							}
+						}
+					}
+					ELEMENT[at0010] occurrences matches {0..1} matches {	-- Formula
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					allow_archetype CLUSTER[at0015] occurrences matches {0..*} matches {	-- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	terminologies_available = <"SNOMED-CT", "LOINC">
+	term_definitions = <
+		["pt-br"] = <
+			items = <
+				["at0000"] = <
+					text = <"Indice de massa corpórea">
+					description = <"IMC - medida que compara o peso de uma pessoa com a altura.">
+				>
+				["at0001"] = <
+					text = <"history">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Qualquer evento">
+					description = <"Gravação a qualquer momento do Índice de Massa Corpórea.">
+				>
+				["at0003"] = <
+					text = <"Single">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Indice de massa corpórea">
+					description = <"Índice que descreve a relação de peso com a altura.">
+				>
+				["at0005"] = <
+					text = <"List">
+					description = <"@ internal @">
+				>
+				["at0006"] = <
+					text = <"Método">
+					description = <"Método de entrada do IMC.">
+				>
+				["at0007"] = <
+					text = <"Entrada automática">
+					description = <"IMC registrado automaticamente, sem a intervenção do usuário.">
+				>
+				["at0008"] = <
+					text = <"Entrada direta">
+					description = <"IMC registrado diretamente pelo usuário.">
+				>
+				["at0010"] = <
+					text = <"Fórmula">
+					description = <"Fórmula usada para calcular o IMC (somente se for diferente de peso/altura^2).">
+				>
+				["at0011"] = <
+					text = <"*Confounding factors(en)">
+					description = <"*Narrative description of any issues or factors that may impact on the calculation.(en)">
+					comment = <"*For example: the calculation was made using adjusted weight or height.(en)">
+				>
+				["at0012"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0013"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0014"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0015"] = <
+					text = <"*Cluster(en)">
+					description = <"**(en)">
+				>
+			>
+		>
+		["es-ar"] = <
+			items = <
+				["at0000"] = <
+					text = <"Índice de masa corporal">
+					description = <"Medición calculada que compara el peso y altura de un individuo">
+				>
+				["at0001"] = <
+					text = <"*history(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"Cualquier evento">
+					description = <"Cualquier registro en el tiempo del Índice de Masa Corporal">
+				>
+				["at0003"] = <
+					text = <"*Single(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"Índice de Masa Corporal">
+					description = <"Índice que describe el cociente entre peso y altura.">
+				>
+				["at0005"] = <
+					text = <"*List(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0006"] = <
+					text = <"Método">
+					description = <"El método de registro del Índice de Masa Corporal.">
+				>
+				["at0007"] = <
+					text = <"Registro automático">
+					description = <"Índice de Masa Corporal calculado e ingresado automáticamente sin intervención del usuario.">
+				>
+				["at0008"] = <
+					text = <"Entrada directa">
+					description = <"Índice de Masa Corporal calculado e ingresado directamente por el usuario.">
+				>
+				["at0010"] = <
+					text = <"Fórmula">
+					description = <"Fórmula usada para calcular el Índice de Masa Corporal.">
+				>
+				["at0011"] = <
+					text = <"*Confounding factors(en)">
+					description = <"*Narrative description of any issues or factors that may impact on the calculation.(en)">
+					comment = <"*For example: the calculation was made using adjusted weight or height.(en)">
+				>
+				["at0012"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0013"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0014"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0015"] = <
+					text = <"*Cluster(en)">
+					description = <"**(en)">
+				>
+			>
+		>
+		["fa"] = <
+			items = <
+				["at0000"] = <
+					text = <"شاخص توده بدن">
+					description = <"اندازه گیری محاسبه شده ای که وزن و قد افراد را مقایسه می کند
+">
+				>
+				["at0001"] = <
+					text = <"*history(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"هر رویداد">
+					description = <"هر گونه ثبت زمانی شاخص توده بدن">
+				>
+				["at0003"] = <
+					text = <"*Single(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"شاخص توده بدن">
+					description = <"شاخصی که نسبت وزن به قد را توصیف می کند">
+				>
+				["at0005"] = <
+					text = <"*List(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0006"] = <
+					text = <"روش">
+					description = <"روش ثبت شاخص توده بدن">
+				>
+				["at0007"] = <
+					text = <"ثبت خودکار">
+					description = <" شاخص توده بدن بطور خودکار بدون مداخله کاربر محاسبه و ثبت می شود">
+				>
+				["at0008"] = <
+					text = <"ورود مستقیم داده ها">
+					description = <"شاخص توده بدن مستقیما توسط کاربر محاسبه و ثبت می شود">
+				>
+				["at0010"] = <
+					text = <"فرمول">
+					description = <"فرمول مورد استفاده برای استخراج شاخص توده بدن">
+				>
+				["at0011"] = <
+					text = <"*Confounding factors(en)">
+					description = <"*Narrative description of any issues or factors that may impact on the calculation.(en)">
+					comment = <"*For example: the calculation was made using adjusted weight or height.(en)">
+				>
+				["at0012"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0013"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0014"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0015"] = <
+					text = <"*Cluster(en)">
+					description = <"**(en)">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Body mass index">
+					description = <"Calculated measurement which compares a person's weight and height.">
+				>
+				["at0001"] = <
+					text = <"history">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+				>
+				["at0003"] = <
+					text = <"Single">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Body mass index">
+					description = <"Index describing ratio of weight to height.">
+				>
+				["at0005"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0006"] = <
+					text = <"Method">
+					description = <"The method of entering the body mass index.">
+				>
+				["at0007"] = <
+					text = <"Automatic entry">
+					description = <"Body Mass Index calculated and entered automatically without user intervention.">
+				>
+				["at0008"] = <
+					text = <"Direct entry">
+					description = <"Body Mass Index calculated and entered directly by user.">
+				>
+				["at0010"] = <
+					text = <"Formula">
+					description = <"Formula used to derive the body mass index.">
+				>
+				["at0011"] = <
+					text = <"Confounding factors">
+					description = <"Narrative description of any issues or factors that may impact on the calculation.">
+					comment = <"For example: the calculation was made using adjusted weight or height.">
+				>
+				["at0012"] = <
+					text = <"Comment">
+					description = <"Additional narrative about the calculation, not captured in other fields.">
+				>
+				["at0013"] = <
+					text = <"Clinical interpretation">
+					description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the body mass index.">
+					comment = <"For example: underweight, normal, overweight or obese.">
+				>
+				["at0014"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0015"] = <
+					text = <"Extension">
+					description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+					comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0000"] = <
+					text = <"معامل كتلة الجسم">
+					description = <"قياس حسابي يجمع بين وزن الشخص و طوله">
+				>
+				["at0001"] = <
+					text = <"*history(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"إحدى الوقائع">
+					description = <"قياس معامل كتلة الجسم في وقت معين">
+				>
+				["at0003"] = <
+					text = <"*Single(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"معامل كتلة الجسم">
+					description = <"معامل يصف النسبة بين الوزن و الطول">
+				>
+				["at0005"] = <
+					text = <"*List(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0006"] = <
+					text = <"الطريقة">
+					description = <"طريقة إدخال معامل كتلة الجسم">
+				>
+				["at0007"] = <
+					text = <"إدخال تلقائي">
+					description = <"يتم حساب و إدخال معامل كتلةالجسم تلقائيا بدون تدخل من المستخدِم">
+				>
+				["at0008"] = <
+					text = <"إدخال مباشر">
+					description = <"يتم حساب و إدخال كتلة الجسم مباشرة بواسطة المستخدم">
+				>
+				["at0010"] = <
+					text = <"الصيغة">
+					description = <"الصيغة المستخدمة لاشتقاق معامل كتلة الجسم">
+				>
+				["at0011"] = <
+					text = <"*Confounding factors(en)">
+					description = <"*Narrative description of any issues or factors that may impact on the calculation.(en)">
+					comment = <"*For example: the calculation was made using adjusted weight or height.(en)">
+				>
+				["at0012"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0013"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0014"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0015"] = <
+					text = <"*Cluster(en)">
+					description = <"**(en)">
+				>
+			>
+		>
+		["nl"] = <
+			items = <
+				["at0000"] = <
+					text = <"Body mass index">
+					description = <"Berekende meting welke gewicht en lengte van een persoon vergelijkt.">
+				>
+				["at0001"] = <
+					text = <"*history(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"Elke gebeurtenis">
+					description = <"Opslag van iedere meting van de Body Mass Index">
+				>
+				["at0003"] = <
+					text = <"*Single(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"Body Mass Index">
+					description = <"Index om ratio gewicht - lengte te beschrijven">
+				>
+				["at0005"] = <
+					text = <"*List(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0006"] = <
+					text = <"Methode">
+					description = <"De methode om de Body Mass Index in te voeren.">
+				>
+				["at0007"] = <
+					text = <"Automatische invoer">
+					description = <"Body Mass Index is automatisch berekend en ingevoerd, zonder tussenkomst van gebruikers.">
+				>
+				["at0008"] = <
+					text = <"Direkte invoer">
+					description = <"Body Mass Index is berekend en ingevoerd door de gebruiker.">
+				>
+				["at0010"] = <
+					text = <"Formule">
+					description = <"De formule die gebruikt wordt om de Body Mass Index te berekenen">
+				>
+				["at0011"] = <
+					text = <"*Confounding factors(en)">
+					description = <"*Narrative description of any issues or factors that may impact on the calculation.(en)">
+					comment = <"*For example: the calculation was made using adjusted weight or height.(en)">
+				>
+				["at0012"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0013"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0014"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0015"] = <
+					text = <"*Cluster(en)">
+					description = <"**(en)">
+				>
+			>
+		>
+		["zh-cn"] = <
+			items = <
+				["at0000"] = <
+					text = <"体重指数">
+					description = <"对个人的体重与身高加以比较而获得的计算型指标。">
+				>
+				["at0001"] = <
+					text = <"*history(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"任何事件">
+					description = <"关于体重指数的任何带有时间标记的记录。">
+				>
+				["at0003"] = <
+					text = <"*Single(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"体重指数">
+					description = <"用于描述体重与身高之间比例的指数。">
+				>
+				["at0005"] = <
+					text = <"*List(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0006"] = <
+					text = <"方法">
+					description = <"用于录入体重指数的方法。">
+				>
+				["at0007"] = <
+					text = <"自动录入法">
+					description = <"在没有用户干预的情况下自动计算并录入体重指数。">
+				>
+				["at0008"] = <
+					text = <"直接录入法">
+					description = <"由用户直接计算并录入体重指数。">
+				>
+				["at0010"] = <
+					text = <"公式">
+					description = <"用于计算得出体重指数的公式。">
+				>
+				["at0011"] = <
+					text = <"*Confounding factors(en)">
+					description = <"*Narrative description of any issues or factors that may impact on the calculation.(en)">
+					comment = <"*For example: the calculation was made using adjusted weight or height.(en)">
+				>
+				["at0012"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0013"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0014"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0015"] = <
+					text = <"*Cluster(en)">
+					description = <"**(en)">
+				>
+			>
+		>
+		["el"] = <
+			items = <
+				["at0000"] = <
+					text = <"Δείκτης μάζας σώματος">
+					description = <"Υπολογιζόμενη μέτρηση η οποία συγκρίνει το βάρος και το ύψος ενός ατόμου.">
+				>
+				["at0001"] = <
+					text = <"history">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Οποιοδήποτε γεγονός">
+					description = <"Οποιαδήποτε χρονική καταγραφή του Δείκτη Μάζας Σώματος.">
+				>
+				["at0003"] = <
+					text = <"Single">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Δείκτης Μάζας Σώματος">
+					description = <"Δείκτης που περιγράφει την αναλογία βάρους προς ύψος.">
+				>
+				["at0005"] = <
+					text = <"List">
+					description = <"@ internal @">
+				>
+				["at0006"] = <
+					text = <"Μέθοδος">
+					description = <"Η μέθοδος εισόδου του Δείκτη Μάζας Σώματος.">
+				>
+				["at0007"] = <
+					text = <"Αυτόματη εισαγωγή">
+					description = <"Ο Δείκτης Μάζας Σώματος υπολογίζεται και εισάγεται αυτόματα, χωρίς την παρέμβαση του χρήστη.">
+				>
+				["at0008"] = <
+					text = <"Άμεση εισαγωγή">
+					description = <"Ο Δείκτης Μάζας Σώματος υπολογίζεται και εισάγεται απευθείας από τον χρήστη.">
+				>
+				["at0010"] = <
+					text = <"Μαθηματικός τύπος">
+					description = <"Ο μαθηματικός τύπος που χρησιμοποιείται για τον υπολογισμό του Δείκτη Μάζας Σώματος.">
+				>
+				["at0011"] = <
+					text = <"*Confounding factors(en)">
+					description = <"*Narrative description of any issues or factors that may impact on the calculation.(en)">
+					comment = <"*For example: the calculation was made using adjusted weight or height.(en)">
+				>
+				["at0012"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0013"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0014"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0015"] = <
+					text = <"*Cluster(en)">
+					description = <"**(en)">
+				>
+			>
+		>
+		["nb"] = <
+			items = <
+				["at0000"] = <
+					text = <"Kroppsmasseindeks">
+					description = <"Beregnet verdi som gjenspeiler individets kroppsmasse på grunnlag av dens høyde og vekt.">
+				>
+				["at0001"] = <
+					text = <"history">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Uspesifisert hendelse">
+					description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en template eller i en applikasjon.">
+				>
+				["at0003"] = <
+					text = <"Single">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Kroppsmasseindeks">
+					description = <"Indeks som beskriver forholdet mellom vekt og høyde.">
+				>
+				["at0005"] = <
+					text = <"List">
+					description = <"@ internal @">
+				>
+				["at0006"] = <
+					text = <"Metode">
+					description = <"Metode for registrering av kroppsmasseindeks.">
+				>
+				["at0007"] = <
+					text = <"Automatisk registrering">
+					description = <"Kroppsmasseindeks beregnes og legges inn automatisk, uten brukermedvirkning.">
+				>
+				["at0008"] = <
+					text = <"Manuell registrering">
+					description = <"Kroppsmasseindeks beregnes og registreres manuelt av brukeren.">
+				>
+				["at0010"] = <
+					text = <"Formel">
+					description = <"Formel som er benyttet for beregning av kroppsmasseindeks. Brukes kun dersom det benyttes en annen formel enn den som er definert under Use.">
+				>
+				["at0011"] = <
+					text = <"Konfunderende faktorer">
+					description = <"Fritekstbeskrivelse av problemer eller faktorer som kan ha påvirkning på utregningen.">
+					comment = <"For eksempel: utregningen var basert på justert høyde eller vekt.">
+				>
+				["at0012"] = <
+					text = <"Kommentar">
+					description = <"Ytterligere fritekst om utregningen, som ikke passer inn i andre elementer.">
+				>
+				["at0013"] = <
+					text = <"Klinisk tolkning">
+					description = <"Enkeltord, frase eller kort beskrivelse som representerer den kliniske betydningen og signifikansen av kroppsmasseindeksen.">
+					comment = <"For eksempel undervektig, normalvektig, overvektig eller fedme.">
+				>
+				["at0014"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0015"] = <
+					text = <"Tilleggsinformasjon">
+					description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+					comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+				>
+			>
+		>
+	>
+	term_bindings = <
+		["SNOMED-CT"] = <
+			items = <
+				["at0004"] = <[SNOMED-CT::60621009]>
+			>
+		>
+		["LOINC"] = <
+			items = <
+				["at0004"] = <[LOINC::39156-5]>
+			>
+		>
+	>

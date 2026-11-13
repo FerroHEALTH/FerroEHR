@@ -21,6 +21,7 @@ use crate::config::management::AccessLevel;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct ApiConfig {
     /// The ITS-REST base path all API routes hang off, from the root of the
     /// listener. `management.base_path` is set the same way; the two never
@@ -64,6 +65,7 @@ pub struct ApiConfig {
     /// Defaults to [`crate::service::DEFAULT_SYSTEM_ID`]. No openEHR spec
     /// governs the configuration mechanism — our own design; the specs govern
     /// only that a system has such an identifier.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = true)))]
     pub system_id: String,
     /// The `OPTIONS /` System-Options manifest identity (`[api.options]`).
     /// Sourced from config so the public identity is not a string literal in
@@ -122,6 +124,7 @@ impl Default for ApiConfig {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct CorsConfig {
     /// `Access-Control-Allow-Origin`: the origins a browser may read
     /// responses for, each a serialized origin such as
@@ -280,6 +283,7 @@ impl ApiConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct SystemOptionsConfig {
     /// `Options.solution` — the product name.
     pub solution: String,

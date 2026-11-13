@@ -293,8 +293,6 @@ definition
 		}
 	}
 
-
-
 ontology
 	terminologies_available = <"en", "sl", "nb">
 	term_definitions = <

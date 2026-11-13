@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -382,8 +382,7 @@ This archetype has been designed to be used as a screening tool or to record sim
         </terminology_id>
         <code_string>fr</code_string>
       </language>
-      <purpose>Créer un cadre pour l'enregistrement des réponses à des questions prédéfinies sur le contexte sociale.&#xD;
-</purpose>
+      <purpose>Créer un cadre pour l'enregistrement des réponses à des questions prédéfinies sur le contexte sociale.</purpose>
       <keywords>sans-abri</keywords>
       <keywords>sans-abrisme</keywords>
       <keywords>logement</keywords>
@@ -444,8 +443,7 @@ La structure EVENT du modèle de référence peut être utilisée pour spécifie
 &#xD;
 La source des informations contenues dans une réponse à un questionnaire peut varier selon le contexte, mais elle peut être spécifiquement identifiée à l'aide de l'élément "Fournisseur d'informations" du modèle de référence.&#xD;
 &#xD;
-Cet archétype a été conçu pour être utilisé comme outil de dépistage ou pour enregistrer des données simples sous forme de questionnaire en vue d'une utilisation dans des situations telles qu'un registre des maladies. Si le processus de dépistage identifie une circonstance, un problème ou une inquiétude liée au contexte social et il est prévu de d’enregistrer les détails dans le dossier de santé, tout renseignement supplémentaire sur le contexte social doit être enregistré à l’aide d’archétypes dédiés à des fins cliniques.&#xD;
-</use>
+Cet archétype a été conçu pour être utilisé comme outil de dépistage ou pour enregistrer des données simples sous forme de questionnaire en vue d'une utilisation dans des situations telles qu'un registre des maladies. Si le processus de dépistage identifie une circonstance, un problème ou une inquiétude liée au contexte social et il est prévu de d’enregistrer les détails dans le dossier de santé, tout renseignement supplémentaire sur le contexte social doit être enregistré à l’aide d’archétypes dédiés à des fins cliniques.</use>
       <misuse>Ne pas utiliser pour enregistrer des détails persistants sur des concepts liés au contexte social. Utilisez les archétypes existants à cette fin, par exemple EVALUATION.housing, EVALUATION.education, EVALUATION.occupation, EVALUATION.social_network et d'autres archétypes du projet "Social context" - https://ckm.openehr.org/ckm/projects/1013.30.39.</misuse>
       <copyright />
     </details>
@@ -1318,11 +1316,11 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0023">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Comment</items>
@@ -1334,7 +1332,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0027">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Screening purpose</items>
@@ -1355,7 +1353,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0050">
         <items id="text">Unsure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Timing</items>
@@ -1409,11 +1407,11 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0023">
         <items id="text">*Yes (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">*No (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Kommentit</items>
@@ -1425,7 +1423,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0027">
         <items id="text">*Unknown (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">*Screening purpose(en)</items>
@@ -1446,7 +1444,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0050">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">*Timing (en)</items>
@@ -1500,11 +1498,11 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0023">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Kommentar</items>
@@ -1516,7 +1514,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0027">
         <items id="text">Ukjent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Kartleggingsformål</items>
@@ -1537,7 +1535,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0050">
         <items id="text">Usikker</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Tidsangivelse</items>
@@ -1591,11 +1589,11 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0023">
         <items id="text">*Yes (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">*No (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Commento</items>
@@ -1607,7 +1605,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0027">
         <items id="text">*Unknown (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Scopo dello screening</items>
@@ -1628,7 +1626,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0050">
         <items id="text">*Unsure (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">*Timing (en)</items>
@@ -1682,11 +1680,11 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0023">
         <items id="text">Si</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Comentari</items>
@@ -1698,7 +1696,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0027">
         <items id="text">Desconegut</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Propòsit de cribratge</items>
@@ -1719,7 +1717,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0050">
         <items id="text">Dubtós</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Temps</items>
@@ -1773,11 +1771,11 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0023">
         <items id="text">Si</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Comentario</items>
@@ -1789,7 +1787,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0027">
         <items id="text">Desconocido</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Propósito del cribado</items>
@@ -1810,7 +1808,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0050">
         <items id="text">Dudoso</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Tiempo</items>
@@ -1864,11 +1862,11 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0023">
         <items id="text">Oui</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Non</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Commentaire</items>
@@ -1880,7 +1878,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0027">
         <items id="text">Inconnu</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Objectif du dépistage</items>
@@ -1901,7 +1899,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0050">
         <items id="text">Incertain</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Timing</items>
@@ -1955,11 +1953,11 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0023">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Nein</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Kommentar</items>
@@ -1971,7 +1969,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0027">
         <items id="text">Unbekannt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Zweck des Screenings</items>
@@ -1992,7 +1990,7 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
       </items>
       <items code="at0050">
         <items id="text">Unsicher</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Zeitangaben</items>
@@ -2048,4 +2046,3 @@ Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o par
     </term_bindings>
   </ontology>
 </archetype>
-

@@ -216,7 +216,7 @@ fn origin(
             input
                 .jit_issuers
                 .iter()
-                .any(|issuer| text == jit::description(issuer))
+                .any(|issuer| text == jit::description(issuer.expose()))
         });
     if person && jit && referenced == Some(party) {
         return Some(Origin::Jit);
