@@ -20,7 +20,8 @@ the package version is the crate's own SemVer line
   `openehr-codegen emit-drafts` generates them from
   `tools/openehr-codegen/draft/bmm/`, `emit` never touches the subtree, and
   their BMM class invariants are hand-written in `draft/invariants.rs` (the
-  shared `Violation` report) and `draft/<package>/invariants.rs`. Their tests
+  shared `Violation` report) and `draft/<package>/invariants.rs`, with the
+  access control terminology groups in `draft/access_control/terminology.rs`. Their tests
   are `tests/it/draft/`, run with `--features draft` (CI's
   `--all-features`). If openEHR adopts a package it becomes an RM generation
   and leaves `draft`.

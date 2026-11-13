@@ -26,3 +26,4 @@ mod open_seam;
 
 // hand-written modules (spec behaviour), auto-declared:
 pub mod invariants;
+pub mod terminology;

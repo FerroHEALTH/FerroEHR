@@ -6,7 +6,10 @@ our change proposals) are generated into `openehr-rm` under
 `openehr_rm::draft`, behind its `draft` feature, which this crate enables;
 their class invariants sit beside them (`openehr_rm::draft::invariants`,
 `openehr_rm::draft::access_log::invariants`,
-`openehr_rm::draft::access_control::invariants`). Generated openEHR types
+`openehr_rm::draft::access_control::invariants`), and so do the access
+control groups of `ferroehr-operations` those invariants, the access
+evaluator and the write checks read
+(`openehr_rm::draft::access_control::terminology`). Generated openEHR types
 never live in an application crate (owner decision 2026-11-13, #5540): the
 service logic over them stays here and names them by full path.
 

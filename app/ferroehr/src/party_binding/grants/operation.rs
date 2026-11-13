@@ -31,6 +31,9 @@ use crate::party_binding::grants::admission::{
     ADMIT_ASSURANCE, ADMIT_GROUP, ADMIT_GUESTS, ADMIT_IDP, ADMIT_ROLE, LOGIN_ISSUER,
 };
 use crate::party_binding::policy_mark::{ACTS_FOR, REPRESENTS};
+use openehr_rm::draft::access_control::terminology::{
+    CareRelationship, PermittedPurpose, SensitivityClearance, Term,
+};
 
 /// The code naming the credentials element whose `DV_DATE_TIME` is the
 /// instant before which a grant does not hold.
@@ -137,8 +140,9 @@ pub const SCOPES: [&str; 8] = [
     TOKEN_SCOPE,
 ];
 
-/// Whether `code` names a grant's bound or scope element, or the acts-for or
-/// representation relationship.
+/// Whether `code` names a grant's bound or scope element, a capability's
+/// clearance or permitted purpose element, or the acts-for, representation
+/// or care relationship.
 fn names_no_operation(code: &str) -> bool {
     [
         ACTS_FOR,
@@ -163,6 +167,9 @@ fn names_no_operation(code: &str) -> bool {
     ]
     .contains(&code)
         || SCOPES.contains(&code)
+        || SensitivityClearance::CODES.contains(&code)
+        || PermittedPurpose::CODES.contains(&code)
+        || CareRelationship::CODES.contains(&code)
 }
 
 /// One operation a capability may grant.
@@ -229,11 +236,17 @@ pub enum Operation {
     /// Be admitted, as a system caller whose token carries no resource
     /// scope, to every SMART on openEHR requirement.
     AccessWithoutScope,
+    /// Write the `member_of` and `under_care_of` relationships of
+    /// [`openehr_rm::draft::access_control::terminology::CareRelationship`] through the
+    /// Demographic API, as a hospital's ADT system does.
+    WriteCareRelationship,
+    /// Write the controller's `ACCESS_POLICY`.
+    WriteAccessPolicy,
 }
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 20] = [
+    pub const ALL: [Self; 22] = [
         Self::CommitComposition,
         Self::ImportEhr,
         Self::ImportEhrExtract,
@@ -254,6 +267,8 @@ impl Operation {
         Self::SignInPersons,
         Self::ActForPersons,
         Self::AccessWithoutScope,
+        Self::WriteCareRelationship,
+        Self::WriteAccessPolicy,
     ];
 
     /// The operation's code in [`crate::party_binding::policy_mark::TERMINOLOGY`].
@@ -280,6 +295,8 @@ impl Operation {
             Self::SignInPersons => "sign_in_persons",
             Self::ActForPersons => "act_for_persons",
             Self::AccessWithoutScope => "access_without_scope",
+            Self::WriteCareRelationship => "write_care_relationship",
+            Self::WriteAccessPolicy => "write_access_policy",
         }
     }
 
@@ -373,7 +390,23 @@ impl Default for GrantCeiling {
 
 #[cfg(test)]
 mod tests {
+    use openehr_rm::draft::access_control::terminology::Group;
+
     use super::*;
+
+    #[test]
+    fn no_access_control_code_is_a_grant() {
+        let grants = Operation::ALL.map(Operation::code);
+        for group in Group::ALL {
+            for code in group.codes() {
+                // NOTE: own design: an access service caller kind is the caller holding that grant.
+                assert!(
+                    *code == "access_service" || !grants.contains(code),
+                    "{code}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn every_operation_reads_back_from_its_code() {
@@ -387,6 +420,8 @@ mod tests {
         assert!(is_qualifier(RELAY) && is_qualifier(DEVICE) && is_qualifier("identifier_prefix"));
         assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_GUESTS));
         assert!(is_qualifier(NO_SUBJECT_NAMESPACE));
+        assert!(is_qualifier("sensitivity_clearance") && is_qualifier("permitted_purpose"));
+        assert!(is_qualifier("member_of") && is_qualifier("under_care_of"));
     }
 
     #[test]

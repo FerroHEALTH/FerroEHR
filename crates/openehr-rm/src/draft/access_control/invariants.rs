@@ -16,9 +16,8 @@
 //!
 //! The terminology invariants name `Terminology_id_access_control`, which the
 //! draft leaves to FerroEHR's operation terminology until openEHR adopts the
-//! groups. The draft defines each group by its rubrics and assigns no codes
-//! yet, so a coded value holds when its terminology is
-//! [`TERMINOLOGY_ID_ACCESS_CONTROL`] and its code is one of the group's rubrics.
+//! groups: a coded value holds when [`crate::draft::access_control::terminology`] reads it as
+//! a term of the invariant's group.
 
 use crate::draft::access_control::access_control::access_actor_scope::AccessActorScope;
 use crate::draft::access_control::access_control::access_classification::AccessClassification;
@@ -26,54 +25,30 @@ use crate::draft::access_control::access_control::access_data_scope::AccessDataS
 use crate::draft::access_control::access_control::access_directive::AccessDirective;
 use crate::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
 use crate::draft::access_control::access_control::access_policy::AccessPolicy;
+use crate::draft::access_control::terminology::{
+    AccessDefault, CallerKind, DirectiveKind, Effect, Relationship, Term,
+};
 use crate::draft::invariants::{Check, Violations};
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
-/// The BMM's `Terminology_id_access_control`: FerroEHR's operation terminology,
-/// which holds the draft groups until openEHR adopts them.
-pub const TERMINOLOGY_ID_ACCESS_CONTROL: &str = "ferroehr-operations";
-
-/// The rubrics of the draft `access default` group.
-const ACCESS_DEFAULT: &[&str] = &["open", "restricted", "consent_required"];
-/// The rubrics of the draft `access directive kind` group.
-const ACCESS_DIRECTIVE_KIND: &[&str] = &["consent", "restriction", "opt_out", "delegation"];
-/// The rubrics of the draft `access effect` group.
-const ACCESS_EFFECT: &[&str] = &["permit", "deny"];
-/// The rubrics of the draft `access relationship` group.
-const ACCESS_RELATIONSHIP: &[&str] = &["care", "representative", "proxy"];
-/// The rubrics of the draft `access caller kind` group.
-const ACCESS_CALLER_KIND: &[&str] = &[
-    "professional",
-    "access_service",
-    "subject",
-    "representative",
-    "system",
-];
-
-/// Whether `coded` is a term of the draft group whose rubrics are `group`.
-fn in_group(coded: &DvCodedText, group: &[&str]) -> bool {
-    coded.defining_code.terminology_id.value == TERMINOLOGY_ID_ACCESS_CONTROL
-        && group.contains(&coded.defining_code.code_string.as_str())
-}
-
-/// Whether `coded` is the term `rubric` of the draft terminology.
-fn is_code(coded: &DvCodedText, rubric: &str) -> bool {
-    in_group(coded, &[rubric])
-}
-
 /// `ACCESS_DIRECTIVE.is_deny`: the effect is the `deny` code.
 fn is_deny(directive: &AccessDirective) -> bool {
-    is_code(&directive.effect, "deny")
+    Effect::Deny.is(&directive.effect)
 }
 
 /// `ACCESS_DIRECTIVE.is_restriction`: the kind is the `restriction` code.
 fn is_restriction(directive: &AccessDirective) -> bool {
-    is_code(&directive.kind, "restriction")
+    DirectiveKind::Restriction.is(&directive.kind)
 }
 
 /// `ACCESS_DIRECTIVE.is_opt_out`: the kind is the `opt_out` code.
 fn is_opt_out(directive: &AccessDirective) -> bool {
-    is_code(&directive.kind, "opt_out")
+    DirectiveKind::OptOut.is(&directive.kind)
+}
+
+/// Whether `coded`, when present, is a term of the group `T`.
+fn absent_or<T: Term>(coded: Option<&DvCodedText>) -> bool {
+    coded.is_none_or(|coded| T::read_coded(coded).is_ok())
 }
 
 /// Checks every invariant of an `ACCESS_DIRECTIVE_SETTINGS` and of the
@@ -84,7 +59,7 @@ fn is_opt_out(directive: &AccessDirective) -> bool {
 pub fn check_settings(settings: &AccessDirectiveSettings) -> Result<(), Violations> {
     let mut check = Check::default();
     check.hold(
-        in_group(&settings.default_access, ACCESS_DEFAULT),
+        AccessDefault::read_coded(&settings.default_access).is_ok(),
         "ACCESS_DIRECTIVE_SETTINGS",
         "Default_access_valid",
     );
@@ -139,12 +114,12 @@ pub fn check_policy(policy: &AccessPolicy) -> Result<(), Violations> {
 
 fn directive_rules(check: &mut Check, directive: &AccessDirective) {
     check.hold(
-        in_group(&directive.kind, ACCESS_DIRECTIVE_KIND),
+        DirectiveKind::read_coded(&directive.kind).is_ok(),
         "ACCESS_DIRECTIVE",
         "Kind_valid",
     );
     check.hold(
-        in_group(&directive.effect, ACCESS_EFFECT),
+        Effect::read_coded(&directive.effect).is_ok(),
         "ACCESS_DIRECTIVE",
         "Effect_valid",
     );
@@ -188,18 +163,12 @@ fn actor_scope_rules(check: &mut Check, scope: &AccessActorScope) {
         "Not_empty",
     );
     check.hold(
-        scope
-            .relationship
-            .as_ref()
-            .is_none_or(|r| in_group(r, ACCESS_RELATIONSHIP)),
+        absent_or::<Relationship>(scope.relationship.as_ref()),
         "ACCESS_ACTOR_SCOPE",
         "Relationship_valid",
     );
     check.hold(
-        scope
-            .caller_kind
-            .as_ref()
-            .is_none_or(|k| in_group(k, ACCESS_CALLER_KIND)),
+        absent_or::<CallerKind>(scope.caller_kind.as_ref()),
         "ACCESS_ACTOR_SCOPE",
         "Caller_kind_valid",
     );

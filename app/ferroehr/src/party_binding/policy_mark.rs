@@ -236,7 +236,7 @@ mod tests {
         // openEHR adopts them, so its invariants and the policy marks agree.
         assert_eq!(
             TERMINOLOGY,
-            openehr_rm::draft::access_control::invariants::TERMINOLOGY_ID_ACCESS_CONTROL
+            openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL
         );
     }
 

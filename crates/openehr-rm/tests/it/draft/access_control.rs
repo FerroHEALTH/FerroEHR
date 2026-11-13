@@ -26,9 +26,8 @@ use openehr_rm::draft::access_control::access_control::access_policy::AccessPoli
 use openehr_rm::draft::access_control::access_control::versioned_access_policy::VersionedAccessPolicy;
 use openehr_rm::draft::access_control::common::archetyped::locatable::Locatable;
 use openehr_rm::draft::access_control::common::change_control::versioned_object::VersionedObject;
-use openehr_rm::draft::access_control::invariants::{
-    TERMINOLOGY_ID_ACCESS_CONTROL, check_policy, check_settings,
-};
+use openehr_rm::draft::access_control::invariants::{check_policy, check_settings};
+use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL;
 use openehr_rm::draft::invariants::{Violation, Violations};
 use openehr_rm::v1_2::ehr::ehr_access::EhrAccess;
 use serde::Serialize;

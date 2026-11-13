@@ -523,6 +523,25 @@ recognition runs with or without a party mapping and enters no mapping
 digest: the grant rows it derives do not depend on the mapping. **Our own
 design.**
 
+**The access control terminology**
+(`openehr_rm::draft::access_control::terminology`, #5507, beside the draft
+it codes since #5540)
+adds the groups the ABAC design of #5487 reads to `ferroehr-operations`:
+`access default`, `access directive kind`, `access effect`, `access
+relationship`, `access caller kind`, `access operation`, `access
+sensitivity clearance`, `access permitted purpose`, `care relationship` and
+`access refusal`, each a closed set of rubrics read into a typed term
+(`Term::read`), with a value of another terminology or a code outside its
+group refused. The operations gain the grants `write_care_relationship` and
+`write_access_policy`, and the clearance, purpose and care relationship codes
+are qualifiers, never operations. Sensitivity, category, purpose and legal
+ground stay in the terminology the jurisdiction names and are compared by
+terminology id and code (`ForeignCode`). The draft invariants of
+`access_control_invariants` read their groups through it, and the evaluator
+and the `EHR_ACCESS` and `ACCESS_POLICY` write checks read no other code. RM
+EHR IM `ACCESS_CONTROL_SETTINGS` is "Currently implementation dependent" and
+openEHR names no access control terminology: **our own design.**
+
 The default demographic definitions of `deploy/definitions/` (the
 professional `PERSON` and `ROLE`, the care-team `GROUP`, the membership and
 representation `PARTY_RELATIONSHIP`s, the patient `PERSON` and the provider

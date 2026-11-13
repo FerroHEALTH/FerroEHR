@@ -45,6 +45,8 @@ version.
   `EHR_ACCESS.settings` carrier.
 - `draft::invariants` and `draft::<package>::invariants`: the class
   invariants each draft BMM states.
+- `draft::access_control::terminology`: the access control groups the
+  invariants read, coded in `Terminology_id_access_control`.
 
 ## Generated code — do not edit
 
