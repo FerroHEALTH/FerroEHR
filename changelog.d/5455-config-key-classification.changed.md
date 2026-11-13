@@ -6,8 +6,7 @@
   infrastructure, trust, or a tuning key. The configuration types carry the classification
   (`x-ferroehr-class`), and the reference generator, run by the `config-reference` guard, fails
   on a key with no class, an optional key with no default, or a class entry that names no key.
-  This change adds and removes no key: 5.7.0 listed 921 keys and marked none as required, and
-  with the admin registers moved out (#5442) the file lists 913, of which 10 are must-set.
+  The classification adds and removes no key.
   The shipped configurations (the quickstart, the hosted sandbox, the
   development, perf and conformance files, the chart's `values.yaml`, `values-production.yaml`
   and CI overlays) no longer restate a default: `deployment.spec_profile`, `auth.enabled`,
