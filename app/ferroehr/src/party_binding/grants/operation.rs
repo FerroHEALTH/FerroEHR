@@ -73,11 +73,18 @@ pub enum Operation {
     AccessService,
     /// Read a party's protected national identifiers.
     ReadIdentifiers,
+    /// Count a `system/aql-*` grant of the client's token, which "would
+    /// grant access to all registered and ad-hoc AQL queries system-wide"
+    /// (SMART on openEHR, `master08-scopes.adoc` §Resource Scopes).
+    QuerySystemWide,
+    /// Reach the DEMOGRAPHIC API, which no SMART on openEHR resource family
+    /// covers.
+    AccessDemographic,
 }
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 11] = [
         Self::CommitComposition,
         Self::ImportEhr,
         Self::ImportEhrExtract,
@@ -87,6 +94,8 @@ impl Operation {
         Self::ReadSubjectAudit,
         Self::AccessService,
         Self::ReadIdentifiers,
+        Self::QuerySystemWide,
+        Self::AccessDemographic,
     ];
 
     /// The operation's code in [`crate::party_binding::policy_mark::TERMINOLOGY`].
@@ -102,6 +111,8 @@ impl Operation {
             Self::ReadSubjectAudit => "read_subject_audit",
             Self::AccessService => "access_service",
             Self::ReadIdentifiers => "read_identifiers",
+            Self::QuerySystemWide => "query_system_wide",
+            Self::AccessDemographic => "access_demographic",
         }
     }
 

@@ -15,7 +15,7 @@
 #
 # What you must set
 #
-# This file lists 917 keys. A deployment that holds real data sets the 10
+# This file lists 915 keys. A deployment that holds real data sets the 10
 # below; every other key is optional and runs on the built-in default its line
 # shows, or stays unset where its note says so.
 #
@@ -837,21 +837,11 @@ discovery = false
 # Episode resource; master09 calls the semantics "currently
 # implementation-defined"). Optional (infrastructure).
 episode_launch = false
-# The `client_id`s of the backend clients a `system/aql-*` grant counts for:
-# master08 §Resource Scopes says such a grant "would grant access to all
-# registered and ad-hoc AQL queries system-wide". Empty, no client. Optional
-# (trust).
-backend_clients = []
 # The issuers whose `patient/` grants count, each confined to the `ehrId` of
 # the token's launch context (master07 §Context Selection: the `ehrId` names
 # an EHR of the platform that issued it). Empty, a `patient/` grant grants
 # nothing. Each renders with any userinfo masked. Optional (trust).
 patient_issuers = []
-# The `client_id`s that reach the DEMOGRAPHIC API. master08 §Resource Scopes
-# defines no resource family for demographic data, so no SMART scope covers it:
-# a listed client, or a caller holding the `[auth] product_scope`, reaches it
-# (no openEHR spec governs this: our own design). Optional (trust).
-demographic_clients = []
 
 # The SCIM 2.0 service provider and its provisioning clients; absent,
 # `/scim/v2/` is not served.

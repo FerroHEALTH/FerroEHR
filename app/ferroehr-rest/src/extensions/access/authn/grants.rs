@@ -23,6 +23,7 @@ use std::sync::Arc;
 use axum::response::Response;
 use ferroehr::party_binding::grants::capabilities::{Actor, Capabilities, with_capabilities};
 use ferroehr::party_binding::grants::live::tracking;
+use ferroehr::party_binding::grants::operation::Operation;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::Outcome;
 
@@ -63,6 +64,14 @@ pub(super) async fn resolve(
         return Err(AuthError::PartyUnavailable { retry_after: None });
     }
     Ok(Arc::new(grants.capabilities(actor, jiff::Timestamp::now())))
+}
+
+/// Whether the caller of `granted` is a client whose `ACTOR` holds a grant of
+/// `operation`, as a backend client's `query_system_wide` or the
+/// DEMOGRAPHIC API's `access_demographic`: a grant to a party the login is
+/// bound to is no client's.
+pub(super) fn client_holds(granted: &Capabilities, operation: Operation) -> bool {
+    granted.client().is_some() && granted.holds(operation)
 }
 
 /// Runs `request` inside the caller's capabilities `granted`, reads the grant

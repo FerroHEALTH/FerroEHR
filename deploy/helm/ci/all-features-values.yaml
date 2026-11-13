@@ -91,7 +91,6 @@ config:
       # absolute, so the server has to be told the origin clients reach it at;
       # it cannot infer one from a request. Matches the ingress host below.
       public_base_url: https://ferroehr.example.com
-      demographic_clients: [ferroehr-mpi]
       patient_issuers: [https://keycloak.example.com/realms/ferroehr]
     scim:
       public_base_url: https://ferroehr.example.com

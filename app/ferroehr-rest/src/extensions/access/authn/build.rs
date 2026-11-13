@@ -236,15 +236,13 @@ async fn introspected(
     Ok(issuers)
 }
 
-/// Returns what `[auth.smart]` honours for a caller: a `backend_clients` client
-/// and a `patient_issuers` issuer.
+/// Returns what `[auth.smart]` honours for a caller: a `patient_issuers`
+/// issuer. Whether it is a backend client is its `query_system_wide` grant,
+/// which the middleware reads from the CDR once the caller's grants resolve.
 fn honoured(config: &AppConfig) -> impl Fn(&Caller) -> Honoured + Send + Sync + 'static {
-    let backend = config.auth.smart.backend_clients.clone();
     let patient = config.auth.smart.patient_issuers.clone();
     move |caller| Honoured {
-        backend: caller
-            .client_id()
-            .is_some_and(|client| backend.iter().any(|listed| listed == client)),
+        backend: false,
         patient: caller
             .issuer()
             .is_some_and(|issuer| patient.iter().any(|listed| listed.expose() == issuer)),

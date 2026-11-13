@@ -668,7 +668,6 @@ data:
           issuer = "https://machines.example.org/realms/ferroehr"
           scope = "ferroehr/scim"
       [auth.smart]
-        demographic_clients = ["ferroehr-mpi"]
         discovery = true
         patient_issuers = ["https://keycloak.example.com/realms/ferroehr"]
         public_base_url = "https://ferroehr.example.com"

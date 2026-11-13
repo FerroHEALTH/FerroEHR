@@ -560,12 +560,10 @@ mod tests {
                 ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr"),
                 ("FERROEHR__AUTH__ISSUER__0__ALGORITHMS", "ES256"),
                 ("FERROEHR__AUTH__SCOPES_SUPPORTED", "openid"),
-                ("FERROEHR__AUTH__SMART__BACKEND_CLIENTS", "etl"),
                 (
                     "FERROEHR__AUTH__SMART__PATIENT_ISSUERS",
                     "https://as.example",
                 ),
-                ("FERROEHR__AUTH__SMART__DEMOGRAPHIC_CLIENTS", "mpi"),
                 ("FERROEHR__RECORD__CHANGE_FEED__READERS", "ferrobridge"),
             ]),
             &[],
@@ -582,12 +580,10 @@ mod tests {
         assert_eq!(issuer.audience, vec!["ferroehr".to_owned()]);
         assert_eq!(issuer.algorithms.len(), 1);
         assert_eq!(c.auth.shared.scopes_supported, vec!["openid".to_owned()]);
-        assert_eq!(c.auth.smart.backend_clients, vec!["etl".to_owned()]);
         assert_eq!(
             c.auth.smart.patient_issuers,
             vec![SecretUrl::new("https://as.example")]
         );
-        assert_eq!(c.auth.smart.demographic_clients, vec!["mpi".to_owned()]);
         assert_eq!(c.record.change_feed.readers, vec!["ferrobridge".to_owned()]);
     }
 

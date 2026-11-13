@@ -9,13 +9,15 @@
 //! authentication is on: the route table in `ferroehr_rest::smart` declares a
 //! requirement per operation, and the `ferrohealth-smart` crate checks it.
 //! This section holds what FerroEHR decides beside that table: whether the
-//! `/.well-known/smart-configuration` document is served and where, which
-//! clients count as backend clients, which issuers' `patient/` grants count,
-//! and which clients reach the DEMOGRAPHIC API.
+//! `/.well-known/smart-configuration` document is served and where, and
+//! which issuers' `patient/` grants count. Which clients count as backend
+//! clients and which reach the DEMOGRAPHIC API is policy the CDR holds: the
+//! `query_system_wide` and `access_demographic` grants of a client's `ACTOR`
+//! (`crate::party_binding::grants`).
 //!
 //! This is the `[auth.smart]` table of the one server configuration tree; it
-//! carries no loader of its own. Its lists apply whether or not the discovery
-//! document is served, so the table is always read and `discovery` alone
+//! carries no loader of its own. `patient_issuers` applies whether or not the
+//! discovery document is served, so the table is always read and `discovery` alone
 //! turns the document on.
 
 use ferrohealth_secret::secret_url::SecretUrl;
@@ -67,26 +69,12 @@ pub struct SmartConfig {
     /// "currently implementation-defined").
     pub episode_launch: bool,
 
-    /// The `client_id`s of the backend clients a `system/aql-*` grant counts
-    /// for: master08 §Resource Scopes says such a grant "would grant access to
-    /// all registered and ad-hoc AQL queries system-wide". Empty, no client.
-    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
-    pub backend_clients: Vec<String>,
-
     /// The issuers whose `patient/` grants count, each confined to the `ehrId`
     /// of the token's launch context (master07 §Context Selection: the `ehrId`
     /// names an EHR of the platform that issued it). Empty, a `patient/` grant
     /// grants nothing. Each renders with any userinfo masked.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub patient_issuers: Vec<SecretUrl>,
-
-    /// The `client_id`s that reach the DEMOGRAPHIC API. master08 §Resource
-    /// Scopes defines no resource family for demographic data, so no SMART
-    /// scope covers it: a listed client, or a caller holding the
-    /// `[auth] product_scope`, reaches it (no openEHR spec governs this: our
-    /// own design).
-    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
-    pub demographic_clients: Vec<String>,
 }
 
 impl SmartConfig {
@@ -148,10 +136,19 @@ mod tests {
         assert!(c.platform_base_url.is_none());
         assert!(c.public_base_url.is_none());
         assert!(!c.episode_launch);
-        assert_eq!(c.backend_clients, Vec::<String>::new());
         assert_eq!(c.patient_issuers, Vec::<SecretUrl>::new());
-        assert_eq!(c.demographic_clients, Vec::<String>::new());
         assert!(c.validate().is_ok());
+    }
+
+    /// The client lists are grants the CDR holds (#5437), so the keys that
+    /// carried them are unknown keys.
+    #[test]
+    fn the_client_lists_are_unknown_keys() {
+        for key in ["backend_clients", "demographic_clients"] {
+            let err = toml::from_str::<SmartConfig>(&format!("{key} = [\"etl\"]"))
+                .expect_err("a removed key is refused");
+            assert!(err.to_string().contains("unknown field"), "{key}: {err}");
+        }
     }
 
     /// A published URL carrying `userinfo` is refused whether or not the

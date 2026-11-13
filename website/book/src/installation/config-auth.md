@@ -50,7 +50,7 @@ The section keys:
 | `capabilities` | list of string | `[]` | SMART capabilities the discovery document adds: one SMART App Launch or the SMART on openEHR draft lists, or a full URI. |
 | `scopes_supported` | list of string | `[]` | The scopes the discovery document lists. Empty, it lists the scopes the route table honours. |
 | `described_issuer` | string | unset | The issuer the discovery document describes: one of kind `persons`, `patients` or `federation` whose metadata FerroEHR has, read from it, introspected, or supplied by [`[auth.smart] issuer_metadata_file`](#authsmart). Read only with `[auth.smart] discovery = true`, where naming an unknown issuer, a `machines` issuer or one without metadata is a boot error. Required with discovery when more than one issuer could be described. It renders with any userinfo masked. See [the described issuer](#the-described-issuer). |
-| `product_scope` | string | `""` ⇒ `__ferroehr.platform` | FerroEHR's own scope. It admits the ADMIN API and, beside the bearer clients in `[auth.smart] demographic_clients`, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility). |
+| `product_scope` | string | `""` ⇒ `__ferroehr.platform` | FerroEHR's own scope. It admits the ADMIN API and, beside the clients the CDR grants `access_demographic`, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility). |
 
 The keys `audience`, `algorithms`, `token_profile`, `clock_skew_seconds`,
 `jwks_max_age_seconds`, `jwks_refresh_interval_seconds`, `jwks_file`,
@@ -1060,14 +1060,20 @@ whose grants count for what. See [SMART App Launch](../smart-app-launch.md).
 | `platform_base_url` | string | unset ⇒ the REST root | The path the discovery document hangs off, e.g. `/gateway/v1`. |
 | `public_base_url` | string | **required with `discovery`** | The server's externally reachable origin (e.g. `https://cdr.example.com`), from which the discovery document's absolute `services.*.baseUrl` values are built. |
 | `episode_launch` | bool | `false` | Advertise episode context and accept the `launch/episode` scope and `episodeId` claim; applies no episode-scoped filtering. |
-| `backend_clients` | list of string | `[]` | The `client_id`s a `system/aql-*` grant counts for: such a grant "would grant access to all registered and ad-hoc AQL queries system-wide" (master08 §Resource Scopes). |
 | `patient_issuers` | list of string | `[]` | The issuers whose `patient/` grants count, each confined to the EHR the token's `ehrId` claim names (master07 §Context Selection). Empty, a `patient/` grant grants nothing. |
-| `demographic_clients` | list of string | `[]` | The bearer `client_id`s that reach the DEMOGRAPHIC API, which no SMART on openEHR scope covers. A Basic user-id never matches an entry. A caller holding `[auth] product_scope` reaches it too. |
 
 The `launch-base64-json` capability (master09) is advertised by listing it in
 `[auth] capabilities`; the base64 JSON launch object is the application's to
-consume. The table is always read, since its lists apply whether or not the
-document is served; `discovery` alone turns the document on.
+consume. The table is always read, since `patient_issuers` applies whether or
+not the document is served; `discovery` alone turns the document on.
+
+Which clients count as backend clients and which reach the DEMOGRAPHIC API is
+policy the CDR holds, never a key here: the `query_system_wide` and
+`access_demographic` grants of the client's `AGENT`
+([Operational policy](../operational-policy.md#a-backend-client-and-a-demographic-client)).
+`patient_issuers` stays in the file because it is trust: it says which
+issuer's `ehrId` claim names an EHR of this platform, which the server needs
+before it can believe a `patient/` token at all.
 
 No `smart` URL may carry a user name or password, whether or not the document
 is served: the discovery document publishes these URLs to every application,
