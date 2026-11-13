@@ -804,11 +804,9 @@ is our own design.
   and the log is sealed; a deployment without it signs nothing, and
   `ferroehr access-log checkpoint` answers that the keyring holds no key.
 - **Use an Ed25519 key.** Each access writes one entry per EHR it reached,
-  and each entry's link is signed in the audit writer's transaction. A
-  signature costs about 13 µs with an Ed25519 key, against 1.0 ms with
-  RSA-2048, 2.5 ms with RSA-3072 and 5.5 ms with RSA-4096 (rPGP, one core).
-  With RSA, an AQL query over a thousand EHRs adds seconds of signing while
-  every other audit write waits on the head of the chain.
+  and each entry's link is signed in the audit writer's transaction while
+  the head of the chain is locked. RSA signing is far slower than Ed25519,
+  and every other audit write waits on it.
 - **The schedule.** The server seals the head every five minutes when the
   chain grew since the last checkpoint; a run on a log that did not grow
   writes nothing. There is no switch and no interval to set.
