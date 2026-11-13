@@ -1060,7 +1060,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         .read_policy_registers()
         .await
         .context("reading the operational-policy registers")?;
-    service.policy_registers().spawn_listener();
+    service.policy_registers().listened().spawn_listener();
     service
         .mirror_category_map()
         .await

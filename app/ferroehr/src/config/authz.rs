@@ -303,6 +303,52 @@ impl AbacConfig {
     }
 }
 
+/// The ceiling on what the policy grants may grant (`[authz.grants]`).
+///
+/// A grant is an operation of FerroEHR's operation terminology
+/// (`ferroehr-operations`) coded in the credentials of a `CAPABILITY`, which
+/// an administrator manages through the Demographic API. This key is the
+/// trust bound the party store cannot raise: a commit of a capability coding
+/// an operation it does not list is refused, and one already stored is never
+/// honoured, so a compromised administrator account grants no more than the
+/// operator allows. No openEHR spec gives a capability an authorization
+/// meaning: our own design.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
+#[serde(default, deny_unknown_fields)]
+pub struct GrantsConfig {
+    /// The operations the party store may grant
+    /// (`FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated).
+    ///
+    /// The operations are `commit_composition`, `import_ehr`,
+    /// `import_ehr_extract`, `export_ehr_extract`, `federated_person_access`,
+    /// `federated_organisation_access`, `read_subject_audit`,
+    /// `access_service` and `read_identifiers`. The default allows only
+    /// `commit_composition`, which lets a client write the templates its
+    /// grant names and nothing else: an import, an export, a federation
+    /// agreement and every privilege reach data beyond one system's own
+    /// writes, so each is allowed by name. An empty list lets the store grant
+    /// nothing.
+    pub allowed: Vec<crate::party_binding::grants::operation::Operation>,
+}
+
+impl Default for GrantsConfig {
+    fn default() -> Self {
+        Self {
+            allowed: vec![crate::party_binding::grants::operation::Operation::CommitComposition],
+        }
+    }
+}
+
+impl GrantsConfig {
+    /// The ceiling these operations set.
+    #[must_use]
+    pub fn ceiling(&self) -> crate::party_binding::grants::operation::GrantCeiling {
+        crate::party_binding::grants::operation::GrantCeiling::new(self.allowed.iter().copied())
+    }
+}
+
 /// Authorization configuration: the coarse RBAC gate plus the opt-in ABAC
 /// policy layer.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -330,6 +376,8 @@ pub struct AuthzConfig {
     /// period and an access rule may name (`[[authz.origin]]`, EHDS Annex II
     /// 3.4).
     pub origin: Vec<crate::origins::RegisteredOrigin>,
+    /// The operations the policy grants may grant (`[authz.grants]`).
+    pub grants: GrantsConfig,
 }
 
 /// A boot-time authorization-configuration error — a hard error that must

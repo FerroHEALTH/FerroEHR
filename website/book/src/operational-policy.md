@@ -15,8 +15,9 @@ access, is openEHR demographic data in the party store: the
 [policy parties](#the-policy-parties), managed through the Demographic API,
 with every change a version with its committer. Policy that has no home in
 the openEHR demographic model is an [admin register](#the-admin-registers).
-FerroEHR stores, validates and protects the policy parties; the server does
-not yet read a grant from them.
+FerroEHR stores, validates and protects the policy parties, and every
+request resolves its caller's grants from them; no check decides a request
+on a grant yet.
 
 No openEHR specification governs operational policy or where it is kept, and
 none gives a party an authorization meaning. The classes are the openEHR
@@ -50,10 +51,9 @@ store, or before it can trust anything:
   party store does not answer;
 - the password hashes of the Basic users, since a secret never becomes
   versioned openEHR data;
-- the grant ceiling, `[authz.grants] allowed`: the kinds of grant the party
-  store may hold at all, so a compromised administrator account cannot grant
-  more than the operator allows. The key arrives with the request path that
-  reads the grants.
+- the grant ceiling, `[authz.grants] allowed`: the operations the party store
+  may grant at all, so a compromised administrator account cannot grant
+  more than the operator allows ([The grant ceiling](#the-grant-ceiling)).
 
 Everything else is CDR data: who may do what is party data (below), and the
 policy with no demographic home is an admin register.
@@ -103,7 +103,7 @@ since the RM stores it there.
 who granted what, and when, is recorded twice.
 
 **Revocation.** A grant ends with a new version of the `ROLE` whose
-`time_validity` ends today, or with its deletion. An `AGENT` that committed
+`time_validity` ends before today, or with its deletion. An `AGENT` that committed
 versions is set inactive, never deleted, because it is their committer.
 
 ### Who writes and reads a policy party
@@ -174,6 +174,117 @@ as a `PARTY_RELATIONSHIP` of its own.
 
 Every write and every read is an access record of the Demographic API, with
 its committer, as any demographic access is.
+
+### How a request reads its grants
+
+FerroEHR reads a grant from coded content, never from an archetype or a
+template id. You model your parties from any archetypes, and a grant holds
+when the data carries the codes below. The terminology, its codes and the
+client identifier type are the stable contract.
+
+**The operation terminology.** Its `TERMINOLOGY_ID` is
+`ferroehr-operations`. A `CAPABILITY` grants an operation when its
+`credentials` hold, at any depth, an element whose value is a
+`DV_CODED_TEXT` with that terminology and the operation's code:
+
+| Code | Operation |
+|---|---|
+| `commit_composition` | Commit a `COMPOSITION` on the caller's own account, within the templates and facilities the grant names |
+| `import_ehr` | Import an EHR |
+| `import_ehr_extract` | Import an EHR extract |
+| `export_ehr_extract` | Export an EHR extract |
+| `federated_person_access` | Admit a federation partner's persons under a data-sharing agreement |
+| `federated_organisation_access` | Admit a federation partner organisation itself under a data-sharing agreement |
+| `read_subject_audit` | Read the access log of one subject |
+| `access_service` | Act as an EHDS Article 10 access service, held to a subject's opt-out |
+| `read_identifiers` | Read a party's protected national identifiers |
+
+The same terminology names the elements that qualify a grant, by the code
+in the element's `name`:
+
+| Code | Element |
+|---|---|
+| `not_before` | A `DV_DATE_TIME`: the instant before which the grant does not hold |
+| `not_after` | A `DV_DATE_TIME`: the instant after which the grant does not hold |
+| `template` | A template the grant writes |
+| `facility` | A facility the grant covers, an element or a `CLUSTER` |
+| `subject_namespace` | The `EHR_STATUS.subject.external_ref.namespace` of the EHRs it touches |
+| `acts_for` | On a `PARTY_RELATIONSHIP`: the source acts for the target |
+
+A code of another terminology grants nothing, and a code of
+`ferroehr-operations` that the table does not define is refused at commit.
+A capability that codes several operations grants each of them.
+
+**Who acts.** A client is any `ACTOR` (`AGENT`, `PERSON`, `ORGANISATION` or
+`GROUP`) that carries, anywhere in its `details` or `identities`, a
+`DV_IDENTIFIER` whose `type` is `client_id`, whose `issuer` is the token
+issuer and whose `id` is the OAuth 2.0 `client_id`. One party names a client:
+a second party carrying the same issuer and `client_id` is refused with
+`409`.
+
+**Whose grants.** Every authenticated request resolves its caller's grants
+once: a system client, a token of a `machines` issuer, by its issuer and
+`client_id`; a person the login binding bound to a `PERSON`, by that party;
+anyone else to no grants. Its grants are the operations the capabilities of
+the `ROLE`s whose `performer` names that party grant, when:
+
+- the client and the `ROLE` are `complete` or `incomplete`; a client set
+  inactive holds no grant;
+- the `ROLE`'s `time_validity` and the capability's `time_validity` both hold
+  the request's date, read in UTC. An absent `time_validity` holds every
+  date;
+- the request's instant is not before `not_before` and not after
+  `not_after`, when the credentials carry them. A `DV_DATE_TIME` without an
+  offset is read in UTC, and one that does not read as a date-time makes the
+  capability hold on no date;
+- `[authz.grants] allowed` admits the operation.
+
+A change takes effect on the next request with no restart. Each replica keeps
+the grants in memory and reads them again when a commit changes one: the
+commit notifies every replica through PostgreSQL, the request that made the
+change reads them before it answers, and a replica whose notification
+listener is down reads them on every request. When the grants must be read
+and the database cannot answer, the request is answered `503`.
+
+`ferroehr party-binding refill` rebuilds the grants from the party versions,
+with the rest of the binding side table.
+
+### The grant ceiling
+
+`[authz.grants] allowed` lists the operations the party store may grant. The
+default is the narrowest set that still lets a system client write:
+`["commit_composition"]`. That grant reaches only the templates it names,
+while an import, an export, a federation agreement and every privilege reach
+data beyond one system's own writes, so you admit each by name:
+
+```toml
+[authz.grants]
+allowed = ["commit_composition", "import_ehr", "export_ehr_extract"]
+```
+
+The environment form is `FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated.
+An empty list lets the party store grant nothing.
+
+A `ROLE` committed with a capability that codes an operation the ceiling does
+not admit is refused with `403`, and the problem names the operation and the
+key, for example `the ROLE grants the operation import_ehr, which
+[authz.grants] allowed does not admit, so this CDR may not grant it`. A grant
+already stored, for example before you narrowed the ceiling, is never
+honoured, and the server logs the operations it skips when it reads the
+grants.
+
+### For a check that reads a grant
+
+A check inside a request reads the caller's grants with
+`ferroehr::party_binding::grants::capabilities::Capabilities::current()`,
+which holds them for the duration of the request:
+
+- `client()` is the `ACTOR` the client identifier names, with its state;
+- `grants()`, `of(operation)` and `holds(operation)` are the grants in force,
+  each an `Operation` with its `ROLE`;
+- `credentials()` of a grant reads its credentials by the code of an
+  element's name: `named`, `texts`, `codes`, `count`, `boolean`, and
+  `clusters` for a `CLUSTER` such as a facility.
 
 ### The example policy archetypes
 
@@ -771,10 +882,12 @@ configuration grant those.
 #### Ending a grant
 
 To end a grant, an administrator commits a new version of the `ROLE` whose
-`time_validity` upper bound is today, with `PUT /demographic/role/{uid}` and
-the `If-Match` of its current version, or deletes it with
+`time_validity` ends before today (an upper bound of yesterday, or of today
+with `upper_included` false), with `PUT /demographic/role/{uid}` and the
+`If-Match` of its current version, or deletes it with
 `DELETE /demographic/role/{uid}`. Both are versions with their committer, so
-the revision history keeps the grant and who ended it.
+the revision history keeps the grant and who ended it, and the change decides
+the caller's next request.
 
 ### Own design
 
@@ -795,6 +908,10 @@ design:
   to the clinical repository only.
 - **The grant ceiling.** `[authz.grants] allowed` bounds what the party store
   may grant.
+- **A grant is held in memory on every replica** and read again when a commit
+  changes one, so the request path adds no database read.
+- **A `ROLE`'s `performer` ties a grant to its party**; the performer's
+  `roles` list need not name the `ROLE`.
 - **Break-glass stays in the configuration**, so emergency access works when
   the party store does not answer.
 

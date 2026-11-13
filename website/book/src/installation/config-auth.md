@@ -610,6 +610,12 @@ own accessor kind; every agreement is listed on the boot line and in
 An organisation agreement on a MyHealth@EU `contact_point` issuer refuses the
 start.
 
+### `[authz.grants]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `allowed` | list of operation codes | `["commit_composition"]` | The operations of the `ferroehr-operations` terminology the policy grants may grant. A `ROLE` committed with a capability that codes an operation this list does not name is refused with `403`, and one already stored is never honoured, so a compromised administrator account grants no more than you allow. An empty list lets the party store grant nothing; an unknown code refuses the start. Environment: `FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated. The codes and how a request reads its grants are on [Operational policy](../operational-policy.md#how-a-request-reads-its-grants). |
+
 ### `[authz.rbac]`
 
 | Key | Type | Default | Description |

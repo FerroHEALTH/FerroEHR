@@ -89,7 +89,7 @@ fn text<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
 }
 
 /// The code of `value` when it is a `DV_CODED_TEXT` of [`TERMINOLOGY`].
-fn coded(value: &Value) -> Option<&str> {
+pub(crate) fn coded(value: &Value) -> Option<&str> {
     let code = value.get("defining_code")?;
     let terminology = code.get("terminology_id").and_then(|id| text(id, "value"));
     (text(value, "_type") == Some("DV_CODED_TEXT") && terminology == Some(TERMINOLOGY))

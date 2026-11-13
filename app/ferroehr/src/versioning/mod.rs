@@ -230,4 +230,7 @@ pub(crate) struct SigningCtx<'a> {
     /// The part of the shared party mapping the binding side table is
     /// derived under ([`crate::party_binding::store`]); empty derives no row.
     pub(crate) binding: &'a crate::party_binding::BindingMapping,
+    /// The policy grants in force, whose ceiling a policy `ROLE` commit is
+    /// judged against ([`crate::party_binding::grants`]).
+    pub(crate) grants: &'a crate::party_binding::grants::live::LiveGrants,
 }

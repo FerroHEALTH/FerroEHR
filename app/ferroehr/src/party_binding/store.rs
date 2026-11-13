@@ -41,6 +41,7 @@ use crate::error::refusal::{Clash, Refusal};
 use crate::ids::VoId;
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::{Facts, container};
+use crate::party_binding::grants;
 use crate::party_binding::rows::{
     self, IdentifierRow, Professional, RepresentationRow, write_identifiers,
 };
@@ -69,6 +70,15 @@ struct Head {
 }
 
 impl Head {
+    /// The head as the grant rows read it.
+    fn grant_head(&self) -> grants::store::GrantHead<'_> {
+        grants::store::GrantHead {
+            vo_id: self.vo_id,
+            lifecycle_state: &self.lifecycle_state,
+            facts: self.facts.as_ref(),
+        }
+    }
+
     /// What a live head of the template `template` holds; `None` for a
     /// deleted head, one without a body and one of another template.
     fn live_of(&self, template: &str) -> Option<&Facts> {
@@ -98,6 +108,7 @@ pub(crate) fn selector_in_use(e: StorageError) -> ServiceError {
             "uq_binding_identifier_user_name" => Some("userName"),
             "uq_binding_identifier_external_id" => Some("externalId"),
             "uq_binding_identifier_display_name" => Some("displayName"),
+            "uq_binding_client" => Some("client identifier"),
             _ => None,
         });
     match selector {
@@ -142,6 +153,11 @@ pub(crate) async fn reindex_committed(
         ));
     }
     crate::party_binding::protect::check(tx, ctx.binding, committed, facts).await?;
+    if committed.kind == Kind::Role
+        && let Some(facts) = facts
+    {
+        grants::check_ceiling(facts, &ctx.grants.ceiling())?;
+    }
     let (lifecycle_state, trunk_head) = head_of(tx, committed.vo_id).await?;
     let head = if trunk_head == Some(committed.sys_version) {
         Head {
@@ -241,13 +257,17 @@ pub(crate) async fn reindex_loaded(
     }
 }
 
-/// Writes the side-table rows of `heads`, each of `kind`.
+/// Writes the grant rows and the side-table rows of `heads`, each of
+/// `kind`.
 async fn reindex_heads(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
     kind: Kind,
     heads: Vec<Head>,
 ) -> Result<(), StorageError> {
+    for head in &heads {
+        grants::store::write(tx, kind, head.grant_head()).await?;
+    }
     if mapping.is_empty() {
         return Ok(());
     }
@@ -290,6 +310,7 @@ pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(
     ] {
         sqlx::query(statement).execute(&mut *tx).await?;
     }
+    refill_grants(tx).await?;
     for kind in [Kind::Person, Kind::Group] {
         let mut after = None;
         loop {
@@ -309,6 +330,30 @@ pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(
         }
     }
     Ok(())
+}
+
+/// Rebuilds every grant row from the `AGENT` and `ROLE` versions alone, on
+/// `tx`, and moves the grant revision.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure, the unique violation of
+/// two `AGENT`s naming one client included.
+pub async fn refill_grants(tx: &mut PgConnection) -> Result<(), StorageError> {
+    grants::store::clear(tx).await?;
+    for kind in [Kind::Agent, Kind::Role] {
+        let mut after = None;
+        loop {
+            let page = stored_heads(tx, &BindingMapping::default(), kind, None, after).await?;
+            let Some(last) = page.last() else {
+                break;
+            };
+            after = Some(last.vo_id);
+            for head in &page {
+                grants::store::write(tx, kind, head.grant_head()).await?;
+            }
+        }
+    }
+    grants::store::refilled(tx).await
 }
 
 /// One selector identifier of a live `PERSON` head, as the unique indexes
@@ -747,5 +792,6 @@ pub async fn erase(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<(), Storage
         .bind(vo_ids)
         .execute(&mut *tx)
         .await?;
-    Ok(())
+    let ids: Vec<Uuid> = vo_ids.iter().map(|id| id.0).collect();
+    grants::store::erase(tx, &ids).await
 }
