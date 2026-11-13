@@ -150,7 +150,7 @@ async fn the_policy_is_read_written_and_versioned() {
     let first = create(&app, &policy(false)).await;
     assert!(
         first.starts_with("W/\"") && first.ends_with("::1\""),
-        "{first}"
+        "the first trunk version as a weak ETag"
     );
     let (status, headers, body) = call(&app, "GET", "root", "", None, None).await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -172,7 +172,7 @@ async fn the_policy_is_read_written_and_versioned() {
     let second = common::header(&headers, header::ETAG)
         .expect("an ETag")
         .to_owned();
-    assert!(second.ends_with("::2\""), "{second}");
+    assert!(second.ends_with("::2\""), "the second trunk version");
 
     for condition in [
         Some((header::IF_MATCH, first.as_str())),
@@ -196,7 +196,7 @@ async fn the_policy_is_read_written_and_versioned() {
     assert_eq!(uids.len(), 2, "{body}");
     assert!(
         second.contains(uids[0]) && first.contains(uids[1]),
-        "{uids:?}"
+        "the history lists the second version, then the first"
     );
     assert_eq!(
         body[0]["commit_audit"]["committer"]["_type"],

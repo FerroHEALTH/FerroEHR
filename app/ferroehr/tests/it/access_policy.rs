@@ -95,7 +95,7 @@ async fn the_policy_is_a_versioned_object_with_contributions_and_audit() {
     assert_eq!(svc.access_policy().in_force().version, 0);
 
     let first = create(&svc, &policy(false)).await;
-    assert!(first.ends_with("::1"), "{first}");
+    assert!(first.ends_with("::1"), "the first trunk version");
     assert_eq!(svc.access_policy().in_force().version, 1);
     let second = svc
         .put_access_policy(&PolicyPrecondition::Replace(first.clone()), &policy(true))
@@ -103,8 +103,7 @@ async fn the_policy_is_a_versioned_object_with_contributions_and_audit() {
         .expect("the second version commits");
     assert!(
         second.version_uid.ends_with("::2"),
-        "{}",
-        second.version_uid
+        "the second trunk version"
     );
     assert_eq!(second.data["care_relationship_required"], true);
     let in_force = svc.access_policy().in_force();
@@ -153,8 +152,7 @@ async fn the_policy_is_a_versioned_object_with_contributions_and_audit() {
     assert_eq!(versioned.body["owner_id"]["type"], "ORGANISATION");
     assert!(
         first.starts_with(&versioned.uid),
-        "{first} {}",
-        versioned.uid
+        "the version names the versioned object"
     );
 }
 

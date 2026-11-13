@@ -860,34 +860,7 @@
             "description": "The newest `ACCESS_POLICY`, in canonical JSON. The weak `ETag` is its `OBJECT_VERSION_ID` and `Last-Modified` its commit time.",
             "content": {
               "application/json": {
-                "schema": {},
-                "example": {
-                  "_type": "ACCESS_POLICY",
-                  "name": {
-                    "_type": "DV_TEXT",
-                    "value": "Access policy"
-                  },
-                  "archetype_node_id": "openEHR-EHR-ACCESS_POLICY.controller.v1",
-                  "archetype_details": {
-                    "_type": "ARCHETYPED",
-                    "archetype_id": {
-                      "_type": "ARCHETYPE_ID",
-                      "value": "openEHR-EHR-ACCESS_POLICY.controller.v1"
-                    },
-                    "rm_version": "1.2.0"
-                  },
-                  "controller": {
-                    "_type": "PARTY_REF",
-                    "id": {
-                      "_type": "HIER_OBJECT_ID",
-                      "value": "8c2b2b2e-3c57-4a8e-9f0e-6a1b7f1e2d3c"
-                    },
-                    "namespace": "demographic",
-                    "type": "ORGANISATION"
-                  },
-                  "care_relationship_required": true,
-                  "purpose_required": false
-                }
+                "schema": {}
               }
             }
           },
