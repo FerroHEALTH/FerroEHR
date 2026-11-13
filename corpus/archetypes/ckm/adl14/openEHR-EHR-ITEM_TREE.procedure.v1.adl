@@ -1,0 +1,214 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-ITEM_TREE.procedure.v1
+
+concept
+	[at0000]	-- Procedure
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"12/03/2007">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record orders and administration of procedures">
+			use = <"">
+			keywords = <"procedure", ...>
+			misuse = <"">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"AuthorDraft">
+	other_contributors = <"Sam Heard, Ocean Informatics", ...>
+
+definition
+	ITEM_TREE[at0000] occurrences matches {0..*} matches {	-- Procedure
+		items cardinality matches {0..*; unordered} matches {
+			ELEMENT[at0004] matches {	-- Procedure
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0027] occurrences matches {0..1} matches {	-- Body site
+				items cardinality matches {0..*; unordered} matches {
+					allow_archetype CLUSTER[at0028] occurrences matches {0..*} matches {
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+			ELEMENT[at0017] occurrences matches {0..*} matches {	-- Objective
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0006] occurrences matches {0..1} matches {	-- Intent
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0007, 	-- Preventive
+							at0008, 	-- Curative
+							at0009, 	-- Palliative
+							at0010, 	-- Adjunct
+							at0011, 	-- Adjuvant
+							at0012]	-- Supportive
+						}
+					}
+				}
+			}
+			ELEMENT[at0005] occurrences matches {0..1} matches {	-- Indication
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0013] occurrences matches {0..1} matches {	-- Technique details
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0023] occurrences matches {0..1} matches {	-- Timing
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0014] occurrences matches {0..1} matches {	-- Urgency
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0015, 	-- Elective
+									at0016]	-- Emergency
+								}
+							}
+						}
+					}
+					ELEMENT[at0024] occurrences matches {0..1} matches {	-- Planned date
+						value matches {
+							DV_DATE_TIME matches {
+								value matches {yyyy-??-??T??:??:??}
+							}
+						}
+					}
+					ELEMENT[at0019] occurrences matches {0..1} matches {	-- Scheduled date
+						value matches {
+							DV_DATE_TIME matches {
+								value matches {yyyy-??-??T??:??:??}
+							}
+						}
+					}
+					ELEMENT[at0025] occurrences matches {0..1} matches {	-- Date of Operation
+						value matches {
+							DV_DATE_TIME matches {
+								value matches {yyyy-??-??T??:??:??}
+							}
+						}
+					}
+				}
+			}
+			ELEMENT[at0020] occurrences matches {0..1} matches {	-- Comments
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[local::]}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Procedure">
+					description = <"Generic archetype for recording details of a procedure">
+				>
+				["at0004"] = <
+					text = <"Procedure">
+					description = <"Name of procedure">
+				>
+				["at0005"] = <
+					text = <"Indication">
+					description = <"The reason this procedure has been carried out">
+				>
+				["at0006"] = <
+					text = <"Intent">
+					description = <"Intended impact on underlying health condition or issue">
+				>
+				["at0007"] = <
+					text = <"Preventive">
+					description = <"Procedure to prevent further health issues or onset of given condition">
+				>
+				["at0008"] = <
+					text = <"Curative">
+					description = <"Procedure performed with the intent of curing or resolving a given health condition or issue">
+				>
+				["at0009"] = <
+					text = <"Palliative">
+					description = <"Procedure performed with the intent of palliating a given health condition or issue">
+				>
+				["at0010"] = <
+					text = <"Adjunct">
+					description = <"Procedure performed to in addition to, or alongside, other forms of therapy for a given condition or health issue">
+				>
+				["at0011"] = <
+					text = <"Adjuvant">
+					description = <"Procedure performed to enhance  the effect of other therapy on a given health condition or issue">
+				>
+				["at0012"] = <
+					text = <"Supportive">
+					description = <"Procedure performed to support the effect of existing therapy on a given health condition or  issue">
+				>
+				["at0013"] = <
+					text = <"Technique details">
+					description = <"Description of the procedure performed">
+				>
+				["at0014"] = <
+					text = <"Urgency">
+					description = <"Requirement for timing, having implications related to the ability to prepare the patient to undergo the procedure">
+				>
+				["at0015"] = <
+					text = <"Elective">
+					description = <"To be performed at descretion of provider or patient">
+				>
+				["at0016"] = <
+					text = <"Emergency">
+					description = <"To be performed as urgently as possible in a crisis situation">
+				>
+				["at0017"] = <
+					text = <"Objective">
+					description = <"Specific objective or goal to be achieved by procedure">
+				>
+				["at0019"] = <
+					text = <"Scheduled date">
+					description = <"*">
+				>
+				["at0020"] = <
+					text = <"Comments">
+					description = <"*">
+				>
+				["at0023"] = <
+					text = <"Timing">
+					description = <"*">
+				>
+				["at0024"] = <
+					text = <"Planned date">
+					description = <"*">
+				>
+				["at0025"] = <
+					text = <"Date of Operation">
+					description = <"*">
+				>
+				["at0027"] = <
+					text = <"Body site">
+					description = <"*">
+				>
+				["at0028"] = <
+					text = <"A cluster to document details about a body site">
+					description = <"*">
+				>
+			>
+		>
+	>

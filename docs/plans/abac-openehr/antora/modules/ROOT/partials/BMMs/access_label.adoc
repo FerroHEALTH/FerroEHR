@@ -1,0 +1,36 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_LABEL",
+  "documentation": "Sensitivity labels on one versioned object of the EHR. A caller reads labelled data only when a capability clears every label, a permit directive names the label, or an emergency override applies.",
+  "properties": {
+    "target": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "target",
+      "documentation": "The versioned object the labels apply to.",
+      "is_mandatory": true,
+      "type": "OBJECT_REF"
+    },
+    "sensitivities": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "sensitivities",
+      "documentation": "The sensitivity codes the object carries.",
+      "is_mandatory": true,
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 1,
+        "upper_unbounded": true
+      }
+    },
+    "reason": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "reason",
+      "documentation": "Why the object is labelled, never clinical content.",
+      "type": "DV_TEXT"
+    }
+  }
+}
+--------

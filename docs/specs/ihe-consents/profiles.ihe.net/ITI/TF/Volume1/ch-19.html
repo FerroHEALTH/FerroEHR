@@ -1,0 +1,355 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en_US">
+  <head>
+    <meta xmlns="" charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title xmlns="">IHE ITI TF Vol1</title>
+    <link xmlns="" rel="stylesheet" href="../../../css/styles.css" />
+    <script type="text/javascript" src="https://www.googletagmanager.com/gtag/js?id=G-HLBNC861DJ" async> </script> 
+</head>
+  <body xmlns="">
+    <header>
+        <div class="title-bar" data-responsive-toggle="responsive-menu" data-hide-for="medium">
+          <button class="menu-icon" type="button" data-toggle="responsive-menu"></button>
+          <div class="title-bar-title">IHE ITI Technical Framework</div>
+        </div>
+        <div class="top-bar" id="responsive-menu">
+          <div class="top-bar-left">
+            <img src="../../../IHE_INTERNATIONAL.png" class="IHE logo hide-for-small-only" alt="IHE logo" />
+            <ul id="tf-small-menu" class="menu vertical show-for-small-only">
+              <li><a class="ihe-purple" href="https://ihe.net" target="_blank">About IHE</a></li>
+              <li class="menu-text">Sections
+                <ul id="tf-small-menu-list" class="nested vertical menu">
+                </ul>
+              </li>
+            </ul>
+          </div>
+          <div class="top-bar-right hide-for-small-only">
+            <ul class="menu">
+              <li class="menu-text tf-version">IHE IT Infrastructure (ITI) Technical Framework, Volume <span id="volumeNo"></span><br />Revision 20.0, August 4, 2023 – Final Text</li>
+            </ul>
+              <ul class="menu align-right">
+                    <li><input id="ihe-search-field" type="search" placeholder="Search"></li>
+                    <li><button id="ihe-search-button" type="button" class="button search">Search</button></li>
+                </ul>
+            </div>
+        </div>
+         </header>
+    <div class="navigation">
+      <nav aria-label="You are here:" role="navigation">
+        <ul class="breadcrumbs">
+        </ul>
+      </nav>
+    </div>
+    <div class="scroll-top-wrapper">
+      <span class="scroll-top-inner">
+        <i class="size-icon-lg fi-arrow-up"></i>
+      </span>
+    </div>
+    <div class="grid-container fluid">
+      <div class="grid-x grid-margin-x align-center">
+        <div class="cell medium-11">
+          <div class="callout disclaimer warning text-center">              
+          The Final Text ITI Technical Framework is published here in HTML format and is no longer published as PDF. Trial Implementation supplements are available from the <a href=https://profiles.ihe.net/ITI/TF/Volume1/index.html>Volume 1 Table of Contents</a>.
+          </div>
+        </div>
+      </div>
+      <main>
+        <div class="grid-x grid-margin-x align-center">
+          <div class="hide-for-small-only cell medium-2 large-2" data-sticky-container>
+            <div id="section-menu" class="sticky" data-sticky data-anchor="main-top">
+            </div>
+          </div>
+          <div id="main-top" class="cell medium-10 large-10">
+      <h1 id="19">19 Basic Patient Privacy Consents (BPPC)</h1>
+      <p>
+        The document sharing infrastructure provided by XD* allow for the publication and use of clinical documents associated with a patient. This profile allows for a Patient Privacy Policy Domain (e.g., an XDS Affinity Domain to have a number of Patient Privacy Policies that can be acknowledged (aka consent). This allows for more flexibility to support some patient concerns, while providing an important and useful dataset to the healthcare provider. Without BPPC, the XDS Profile requires that the administrators of an XDS Affinity Domain creates and agrees to a single document publication and use policy (see
+        <a href="../Volume1/ch-L.html#Appendix L">ITI TF-1: Appendix L</a>
+        ). Such a single XDS Affinity Domain Policy is enforced in a distributed way through the inherent access controls of the systems involved in the XDS Affinity Domain.
+      </p>
+      <p>
+        This profile will use terms consistent with ISO 22600 - Privilege Management and Access Control (PMAC), but is not restricted to systems that implement PMAC. This profile uses the term “Patient” to refer to the human-subject of health-related data. In this context “Patient” is not to imply only those subjects under current treatment, this is sometimes referred to as “consumer”. This profile uses the term “Consent” to mean acknowledgement of a privacy policy, also known as an information access policy. In this context the privacy policy may include constraints and obligations. The systems involved in XDS are expected to support sufficient Access Controls to carry out the Policy of the XDS Affinity Domain.
+	  </p>
+      <p class="note">See the IHE white paper <a href="http://profiles.ihe.net/ITI/HIE-Whitepaper/index.html">Enabling Document Sharing Health Information Exchange Using IHE Profiles</a> published on the IHE web site.
+      </p>
+      <p>Healthcare providers utilize many different sets of data to carry out treatment, billing, and normal operations. This information may include patient demographics, contacts, insurance information, dietary requirements, general clinical information and sensitive clinical information. This information may be published (e.g., to XDS, XDR, XDM, PACS) as independent documents with different sensitivity labels (i.e., confidentialityCode). This mechanism is not unique to BPPC, but is leveraged by privacy and security policies.</p>
+      <p>Healthcare providers in different functional roles will have different needs to access these documents. For example, administrators may need to be able to access the patient demographics, billing and contact documents. Dietary staff will need access to the dietary documents but would not need access to insurance documents. General care providers will want access to most clinical documents, and direct care providers should have access to all clinical documents. This is an example of a Patient Privacy Policy that would be given a Patient Privacy Policy Identifier within a Patient Privacy Policy Domain. When a patient acknowledges this policy, the Patient Privacy Policy document would refer to the policy by the Patient Privacy Policy Identifier.</p>
+      <p>This profile provides a mechanism by which an XDS Affinity Domain can create a basic vocabulary of codes that identify Patient Privacy Domain managed Privacy Policy Identifiers with respect to document sharing. Each Privacy Policy Identifier uniquely identifies a Privacy Policy which should identify in legal text what the acceptable use, re-disclosure uses, which functional roles may access which document and under which conditions, etc. The administration of the XDS Affinity Domain will assign each Privacy Policy Identifiers for use within the XDS Affinity Domain. Future profiles may include in addition to the legal text, a structured and coded expression of the consent policy that can be used to support even more dynamic understanding of the patient's directives (see HL7 and OASIS).</p>
+      <h2 id="19.1">19.1 Basic Patient Privacy Consent Use-Cases</h2>
+      <p>This section gives examples of some possible patient privacy consent policies and how the systems publishing documents and using documents might act. This is an informative section and should not be interpreted as the only way to implement the BPPC Profile. Its purpose is to allow implementers of BPPC to more easily understand the principle of operation of BPPC.</p>
+      <h3 id="19.1.1">19.1.1 Implied Consent vs. Explicit Consent</h3>
+      <p>This profile supports both Implied Consent as well as Explicit Consent environments. In order to provide a profile with global appeal we have supported both environments. In an implied consent environment, it would be normal for a Document Consumer to find no instance of a patient specific acknowledgement of a privacy consent policy in the XDS Affinity Domain, as capturing the act of acknowledging a privacy consent policy would not be required. Note: this may also be true in an Explicit Consent environment, where obtaining the acknowledgement is delayed due to medical reasons (e.g., emergency).</p>
+      <p>An XDS Affinity Domain might have a paper document that describes their Privacy Consent Policy. In our example this Privacy Consent Policy will be given a local XDS Affinity Domain managed Privacy Policy Identifier (e.g., an OID such as: 9.8.7.6.5.4.3.2.1). The example in Figure 19.1-1 is ridiculous (i.e., chicken costume) but is provided to emphasize that IHE doesn’t write these policies, and to make clear that the BPPC Profile could be used to enforce any policy that could be written in human readable form, provided that all actors can be configured to enforce that policy. This example also points out that the content of the policy is human readable text, and that we provide no structured or coded way to interpret. This example policy might look like Figure 19.1.1-1.</p>
+      <div id="f19.1.1-1">
+        <img src="media/Figure_19.1.1-1.png" alt="" >
+        <p class="figureTitle">Figure 19.1.1-1: Policy Example</p>
+      </div>
+      <h4 id="19.1.1.1">19.1.1.1 Opt-In</h4>
+      <p>A common structure for sharing clinical documents requires that the patient first acknowledge that they want this sharing to happen before any documents are actually shared. In this case the XDS Affinity Domain administrators would write a policy that indicates what should be shared, when it should be shared, when it can be used, etc. There would also be an overriding XDS Affinity Domain policy that indicates that no document will be shared until the patient has explicitly chosen to participate.</p>
+      <h4 id="19.1.1.2">19.1.1.2  Opt-Out</h4>
+      <p>Equally as common is a structure for sharing documents that presumes that when the patient chooses to get care within a care setting, that they are implicitly agreeing to the normal sharing of their documents for treatment purposes. In this environment, there is usually a control that allows a patient to choose to NOT participate in this sharing. This is commonly referred to as “opt-out”.</p>
+      <p>In this case the existence an acknowledgement to an opt-out policy would mean that documents should no longer be shared, and any documents that might appear should not be used. Clearly the XDS Affinity Domain administrators need to make the actual behavior clear in their policies.</p>
+      <h3 id="19.1.2">19.1.2 Wet Signature</h3>
+      <p>An XDS Affinity Domain might have the patient acknowledge the consent through ink on paper. For Example:</p>
+      <div id="
+      ">
+        <img src="media/Figure_19.1.2-1.png" alt=" " />Sample Consent: by A. Patient. It's OK  <p class="figureTitle">f19.1.2-1</p>
+      </div>
+      <p>This acknowledgement is captured according to the XDS Scanned Document Content Profile (XDS-SD), with the additional parameters specified in the BPPC Content Profile also applied. This is submitted into the XDS Affinity Domain as proof that the patient has acknowledged policy 9.8.7.6.5.4.3.2.1.</p>
+      <p>The following shows this graphically:</p>
+      <div id="f19.1.2-2">
+        <img src="media/Figure_19.1.2-2.png" alt="" >
+        <p class="figureTitle">Figure 19.1.2-2: Graphical representation of consent with wet signature</p>
+      </div>
+      <p>If an XDS Affinity Domain wants to further provide non-repudiation protections it may choose to apply a digital signature using the DSG Profile to the whole package with the appropriate purpose and signed by an appropriate signing system/person.</p>
+      <h3 id="19.1.3">19.1.3 Advanced Patient Privacy Consents</h3>
+      <p>An XDS Affinity Domain may have jurisdictional or organizational policies that require support for more complex patient privacy consent policies. These privacy policies may require that a patient explicitly consent to disclosure of protected or sensitive health information to specific entities. The BPPC Profile provides a starting point for implementing these types of privacy consent policies, but does not explicitly specify how additional information needed to enforce the policy would be conveyed. In these cases, the capability of BPPC may not be enough to support all types of needs. An example of an Advanced Patient Privacy Consent would be when a patient wants to name individuals that can access their documents.</p>
+      <h2 id="19.2">19.2 Creating Patient Privacy Policies</h2>
+      <p>
+        The administrators of the Patient Privacy Policy Domain (e.g., XDS Affinity Domain) will need to develop and publish an overall Policy for the Patient Privacy Policy Domain that clearly defines the overall appropriate use of the protected resources. This is the subject of
+        <a href="../Volume1/ch-L.html#Appendix L">ITI TF-1: Appendix L</a>
+        and is not further defined here.
+      </p>
+      <p>
+        Within this Patient Privacy Policy Domain (e.g., XDS Affinity Domain) overall Policy is a defined set of acceptable use Patient Privacy Policies. A Patient Privacy Policy further explains appropriate use of the protected resources in a way that provides choices to the patient. The BPPC Profile places no requirements on the content of these policies nor the method used to develop these policies (see
+        <a href="../Volume1/ch-P.html#Appendix P">ITI TF-1: Appendix P</a>
+        for some guidance on developing these policies). BPPC only assumes that the overall Patient Privacy Policy Domain can be structured as a set of specific policies (A, B, C, D in the example below), where each one may be used independently or combined in relationship to publication and access of a specific type(s) of document.
+      </p>
+      <div id="f19.2-1">
+        <img src="media/Figure_19.2-1.png" alt="" >
+        <p class="figureTitle">Figure 19.2-1: Example Patient Privacy Policy Hierarchy</p>
+      </div>
+      <p>A Patient Privacy Policy will identify who has access to information, and what information is governed by the policy (e.g., under what conditions will a document marked as containing sensitive information be used by a specific type of individual for a specific use). The mechanism for publishing these policies is not described by this profile. The set of Patient Privacy Policies written by the Patient Privacy Policy Domain must be able to be implemented by the technologies in all of the systems that have access to the domain. This means that the Patient Privacy Policies must be created with great care to ensure they are enforceable.</p>
+      <p>Each Patient Privacy Policy will be given a unique identifier (OID) known as a Patient Privacy Policy Identifier. This is additionally used when capturing a patient’s acknowledgement of a specific Patient Privacy Policy resulting in a Patient Privacy Policy Acknowledgement Document (i.e., an instance of a BPPC document).</p>
+      <p>Finally, Privacy Consent Policies used within an XDS Affinity Domain will very likely be different than those used with the XDM or XDR Profiles as these profiles often are used to transfer documents in ad-hoc ways. The patient may provide a consent given to share information on media to the provider creating the media for specific use, rather than for more general sharing within an XDS Affinity Domain. When transferring information that originated in an XDS Affinity Domain to media (XDM), the Privacy Consent Policies found in the XDS Affinity Domain might be changed during the publication process. There are also differences in the sensitivity that should be considered for consents shared on media or transmitted through XDR and those shared in an XDS Affinity Domain. See the section Security Considerations later in this volume for more details.</p>
+      <h3 id="19.2.1">19.2.1 Summary of the creation and publication of the policies</h3>
+      <ol>
+        <li class="numbered-list1">The Patient Privacy Policy Domain will write and agree to overall privacy policies (lots of lawyers involved).</li>
+        <li class="numbered-list1">The Patient Privacy Policy Domain will include a small set of Patient Privacy Policies (more lawyers). These are text documents very similar to the privacy consent documents used today.</li>
+        <li class="numbered-list1">Each Patient Privacy Policy will be given a unique identifier (OID) called the Patient Privacy Policy Identifier</li>
+        <li class="numbered-list1">The Policy of the Patient Privacy Policy Domain and all of the Patient Privacy Policies will be published in some way. It is expected that this will be sufficiently public to support local regulation.</li>
+        <li class="numbered-list1">When a patient acknowledges a Patient Privacy Policy, a Patient Privacy Policy Acknowledgement Document will be published with the Patient Privacy Policy Identifier of the policy that the patient acknowledged.</li>
+      </ol>
+      <h2 id="19.3">19.3 BPPC Actors/Transactions</h2>
+      <p>There are two actors in the BPPC Profile, the Content Creator and the Content Consumer. Content is created by a Content Creator and is to be consumed by a Content Consumer. The sharing or transmission of content or updates from one actor to the other is addressed by the use of appropriate IHE profiles described in the section on Content Bindings with XDS, XDM and XDR in PCC TF-2: 4.1, and is out of scope of this profile. A Document Source or a Portable Media Creator may embody the Content Creator. A Document Consumer, a Document Recipient or a Portable Media Importer may embody the Content Consumer.</p>
+      <div id="f19.3-1">
+        <img src="media/Figure_19.3-1.png" alt="XDS-SD Actor Diagram" />
+        <p class="figureTitle">Figure 19.3-1: BPPC Actor Diagram</p>
+      </div>
+      <p>Table 19.3-1 lists the transactions for each actor directly involved in the BPPC Profile. In order to claim support of this Integration Profile, an implementation must perform the required transactions (labeled “R”). Transactions labeled “O” are optional. A complete list of options defined by this Integration Profile and that implementations may choose to support is listed in Section 19.4.</p>
+      <p id="t19.3-1" class="tableTitle">Table 19.3-1: BPPC Integration Profile - Actors and Transactions</p>
+      <table cellspacing="0" cellpadding="0">
+        <tr>
+          <td class="tableHeader">Actors</td>
+          <td class="tableHeader">Transactions</td>
+          <td class="tableHeader">Optionality</td>
+          <td class="tableHeader">Section</td>
+        </tr>
+        <tr style="height:20.65pt">
+          <td>Content Creator</td>
+          <td>Share Content</td>
+          <td>R</td>
+          <td>
+            <p>
+              <a href="../Volume1/ch-19.html#19.4.3">ITI TF-1: 19.4.3</a>
+            </p>
+            <p>
+              <a href="../Volume1/ch-19.html#19.4.4">ITI TF-1: 19.4.4</a>
+            </p>
+          </td>
+        </tr>
+        <tr style="height:20.65pt">
+          <td>Content Consumer</td>
+          <td>Share Content</td>
+          <td>R</td>
+          <td>
+            <a href="../Volume1/ch-19.html#19.4.5">ITI TF-1: 19.4.5</a>
+          </td>
+        </tr>
+      </table>
+      <h3 id="19.3.1">19.3.1 BPPC Required Actor Groupings</h3>
+      <p>
+        <span>An actor from this profile (Column 1) shall implement all of the required transactions and/or content modules in this profile</span>
+        <span style="font-weight:bold;font-style:italic">in addition to</span>
+        <span />
+        <span style="font-weight:bold;font-style:italic;text-decoration:underline">all</span>
+        <span>of the requirements for the grouped actor (Column 2).</span>
+      </p>
+      <p>If this is a content profile, and actors from this profile are grouped with actors from a workflow or transport profile, the Reference column references any specifications for mapping data from the content module into data elements from the workflow or transport transactions.</p>
+      <p id="t19.3.1-1" class="tableTitle">Table 19.3.1-1: BPPC - Required Actor Groupings</p>
+      <table cellspacing="0" cellpadding="0">
+        <thead>
+          <tr>
+            <td class="tableHeader">BPPC Actor</td>
+            <td class="tableHeader">Actor(s) to be grouped with</td>
+            <td class="tableHeader">Reference</td>
+            <td class="tableHeader">Content Bindings Reference</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td rowspan="3">Content Creator</td>
+            <td>XDS.b / Document Source (Note 1)</td>
+            <td>
+              <a href="../Volume1/ch-10.html#10.1">ITI TF-1: 10.1</a>
+            </td>
+            <td rowspan="3">
+              <a href="../Volume3/ch-5.1.html#5.1">ITI TF-3: 5.1</a>
+            </td>
+          </tr>
+          <tr>
+            <td>XDR / Document Source (Note 1)</td>
+            <td>
+              <a href="../Volume1/ch-15.html#15.1">ITI TF-1: 15.1</a>
+            </td>
+          </tr>
+          <tr>
+            <td>XDM / Portable Media Creator (Note 1)</td>
+            <td>
+              <a href="../Volume1/ch-16.html#16.1">ITI TF-1: 16.1</a>
+            </td>
+          </tr>
+          <tr>
+            <td rowspan="4">Content Consumer</td>
+            <td>XDS-SD / Content Consumer</td>
+            <td>
+              <a href="../Volume1/ch-23.html#23.2">ITI TF-1: 23.2</a>
+            </td>
+            <td rowspan="4">--</td>
+          </tr>
+          <tr>
+            <td>XDS.b / Document Consumer (Note 1)</td>
+            <td>
+              <a href="../Volume1/ch-10.html#10.1">ITI TF-1: 10.1</a>
+            </td>
+          </tr>
+          <tr>
+            <td>XDR / Document Consumer (Note 1)</td>
+            <td>
+              <a href="../Volume1/ch-15.html#15.1">ITI TF-1: 15.1</a>
+            </td>
+          </tr>
+          <tr>
+            <td>XDM / Portable Media Importer (Note 1)</td>
+            <td>
+              <a href="../Volume1/ch-16.html#16.1">ITI TF-1: 16.1</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="note">Note 1: One or more of the Document Sharing infrastructure groupings shall be supported.</p>
+      <h4 id="19.3.1.1">19.3.1.1 Basic Patient Privacy Documents Bindings to XDS, XDR, XDM</h4>
+      <p>
+        A BPPC Content Creator or Content Consumer can be grouped with appropriate actors from the XDS, XDM or XDR Profiles to exchange Basic Privacy Consent documents. The metadata sent in the document sharing or interchange messages has specific relationships or dependencies (which we call bindings) to the content of the clinical document – a Basic Patient Privacy Consent document - described in
+        <a href="../Volume3/ch-5.1.html#5.1.2">ITI TF-3: 5.1.2</a>
+        and <a href="../Volume3/ch-5.1.html#5.1.3">5.1.3</a>.
+      </p>
+      <h4 id="19.3.1.2">19.3.1.2 Basic Patient Privacy Grouping with XDS-SD</h4>
+      <p>The BPPC Content Consumer shall be grouped with an XDS-SD Content Consumer. This means that a Content Consumer for BPPC Content must also be able to display XDS-SD content. This is required due to the common practice of capturing Wet Signatures.</p>
+      <h2 id="19.4">19.4 BPPC Actor Options</h2>
+      <p>Options that may be selected for this Integration Profile are listed in Table 19.4-1 along with the IHE actors to which they apply.</p>
+      <p id="t19.4-1" class="tableTitle">Table 19.4-1: Basic Patient Privacy Consents - Actors and Options</p>
+      <table cellspacing="0" cellpadding="0">
+        <tr>
+          <td class="tableHeader">Actors</td>
+          <td class="tableHeader">Option</td>
+          <td class="tableHeader">Section</td>
+        </tr>
+        <tr style="height:20.65pt">
+          <td rowspan="2">Content Creator</td>
+          <td>Basic Patient Privacy Acknowledgement (Note 1)</td>
+          <td>Section 19.4.3</td>
+        </tr>
+        <tr style="height:20.65pt">
+          <td>Basic Patient Privacy Acknowledgement with Scanned Document</td>
+          <td>Section 19.4.4</td>
+        </tr>
+        <tr style="height:20.65pt">
+          <td>Content Consumer</td>
+          <td>Basic Patient Privacy Acknowledgement View (Note 2)</td>
+          <td>Section 19.4.5</td>
+        </tr>
+      </table>
+      <p class="note">Note 1: Content Creator shall implement the Basic Patient Privacy Acknowledgement Option, and may choose to implement the Basic Patient Privacy Acknowledgement with Scanned Document Option</p>
+      <p class="note">Note 2: Content Consumer shall implement the Basic Patient Privacy Acknowledgement View Option.</p>
+      <h3 id="19.4.1">19.4.1 Intentionally Left Blank</h3>
+      <h3 id="19.4.2">19.4.2 Intentionally Left Blank</h3>
+      <h3 id="19.4.3">19.4.3 Basic Patient Privacy Acknowledgement Option</h3>
+      <p>
+        The Content Creator shall be able to create Patient Privacy Policy Acknowledgement Document Content as specified in
+        <a href="../Volume3/ch-5.1.html#5.1.2">ITI TF-3: 5.1.2</a>
+        .
+      </p>
+      <p>A Patient Privacy Policy Acknowledgement Document is a kind of medical document. The content of a Patient Privacy Policy Acknowledgement Document shall include the effective time of the acknowledgement and Patient Privacy Policy Domain (e.g., XDS Affinity Domain) defined coded vocabulary identifying the Patient Privacy Consent Policy Identifier (OID) acknowledged by the patient. The content of the Patient Privacy Acknowledgement Document may include a text description of what the patient has acknowledged.</p>
+      <p>The Patient Privacy Policy Acknowledgement Document may be signed. There are cases, as seen in the use-cases, where the Content Creator would need to be grouped with a DSG Content Creator. The BPPC Profile does not require this grouping. This grouping can be fully specified in an IHE Integration Statement.</p>
+      <h3 id="19.4.4">19.4.4 Basic Patient Privacy Acknowledgement with Scanned Document Option</h3>
+      <p>
+        A Basic Patient Privacy Policy Acknowledgement Document may include a scanned document. An example of the scanned document could be a wet signature by the patient on the text. The Content Creator that claims to support Basic Patient Privacy Policy Acknowledgement with Scanned Document Option shall be able to create a Patient Privacy Policy Acknowledgement with Scanned Document Content as specified in
+        <a href="../Volume3/ch-5.1.html#5.1.3">ITI TF-3: 5.1.3</a>
+        .
+      </p>
+      <h3 id="19.4.5">19.4.5 Patient Privacy Acknowledgement View Option</h3>
+      <p>
+        The Content Consumer shall be able to display the Patient Privacy Policy Acknowledgement Document Content as specified in
+        <a href="../Volume3/ch-5.1.html#5.1.2">ITI TF-3: 5.1.2</a>
+        and
+        <a href="../Volume3/ch-5.1.html#5.1.3">ITI TF-3: 5.1.3</a>
+        .
+      </p>
+      <h2 id="19.5">19.5 Intentionally Left Blank</h2>
+      <h2 id="19.6">19.6 BPPC Process Flow in an XDS Affinity Domain</h2>
+      <p>This flow shows how an XDS Affinity Domain would use the BPPC Profile. Only a basic flow is shown, the profile supports many alternative flows.</p>
+      <h3 id="19.6.1">19.6.1 Checking for a patient’s acknowledgement of a privacy policy</h3>
+      <p>An XDS Document Consumer that is enforcing policies registered by BPPC can query an XDS Affinity Domain for instances of Patient Privacy Policy Acknowledgement Documents that have been acknowledged by a specific patient. Through the XDS Metadata the Document Consumer can determine which Patient Privacy Policies have been acknowledged.</p>
+      <p>Note if the local regulations allow, some XDS Affinity Domains may not publish the consent documents, so systems should be able to handle the configurations where no Patient Privacy Acknowledgment Document is in the XDS Affinity Domain for a specific patient (e.g., implied consent).</p>
+      <p>Note if the local regulations allow, some patients may have documents shared before informed consent can be captured. In this case the XDS Affinity Domain policy needs to explain the default behavior, that behavior for the absence of a consent document.</p>
+      <h3 id="19.6.2">19.6.2 Recording a patient’s acknowledgement of a privacy policy</h3>
+      <p>The Content Creator creates Patient Privacy Policy Acknowledgement Documents with or without a scanned document part. This document records the patient’s acknowledgement of a specified policy.</p>
+      <h3 id="19.6.3">19.6.3 Publishing documents against a consent policy</h3>
+      <p>All documents managed in an XDS Affinity Domain, or transferred using XDM/XDR, are labeled with a confidentialityCode. The administrators of an XDS Affinity Domain may need to define a vocabulary and meaning to that vocabulary.</p>
+      <p>The XDS or XDR Document Source that supports the Basic Patient Privacy Enforcement Option determines which of the XDS Affinity Domain – Privacy Consent Policies would allow the documents to be published. In some XDS Affinity domains this may require that the system check that a patient has indeed acknowledged a specific policy.</p>
+      <p>The Document Source will set the XDS Metadata – confidentialityCode - to indicate the appropriate sensitivity for use/constraint (determined by the XDS Affinity Domain Policy)</p>
+      <p>The XDS Document Registry validates that each of the confidentialityCode(s) are from the approved list of confidentialityCode for use within the XDS Affinity Domain.</p>
+      <h3 id="19.6.4">19.6.4 Using published documents</h3>
+      <p>When an XDS Document Consumer that supports the Basic Patient Privacy Enforcement Option queries the XDS Affinity Domain it may utilize the confidentialityCode filter in the Registry Stored Query [ITI-18] transaction to restrict the documents returned to those that the Document Consumer can utilize.</p>
+      <p>The Document Consumer will enforce access controls based on the returned XDS metadata-confidentialityCode, current state of consent acknowledgements, system type, user, context, and any number of other factors that the system is capable of enforcing.</p>
+      <p>The Document Consumer may be capable of querying for ‘Approved’ consent acknowledgement documents and using the resulting XDS Metadata as the list of currently Approved Patient Privacy Policy Acknowledgement Documents. There is no requirement for the Document Consumer system to retrieve the Patient Privacy Policy Acknowledgement Document content.</p>
+      <h2 id="19.7">19.7 Security Considerations</h2>
+      <p>Consents stored in an XDS Affinity Domain are also governed by privacy policies. The content of a Patient Privacy Policy Acknowledgement Document may itself contain sensitive information. For example, a terminally ill patient may decide that his prognosis should not be shared with his family members, but that other information may be. Sharing the Patient Privacy Policy Acknowledgement Document with family members would potentially inform them of a negative prognosis. Thus, the confidentialityCode placed on Patient Privacy Policy Acknowledgement Documents must be appropriately assigned (e.g., most will be assigned the broadest use confidentialityCode).</p>
+      <p>However, Patient Privacy Policy Acknowledgement Documents stored in the clear on media (XDM), or transmitted through XDR, should not contain sensitive information. The rationale is that the receiver of the information must be able to read the consent that was used to share this information in order to understand how they must treat the information with respect to their own Patient Privacy Policies.</p>
+      <p>Implementation of Patient Privacy Policies within a healthcare environment has different considerations and risks than implementing similar access control policies within other non-treatment environments. This is for the simple reason that failing to provide access to critical healthcare information has the risk of causing serious injury or death to a patient. This risk must be balanced against the risk of prosecution or lawsuit due to accidental or malicious disclosure of private information. The XDS Affinity Domain should take care in writing their Patient Privacy Policies to avoid this.</p>
+      <p>One mitigation strategy that is often adopted in healthcare provides accountability through audit controls. That is to say that the healthcare providers are trusted not to abuse their access to private information, but that this is followed up by a policy of monitoring healthcare provider accesses to private information to ensure that abuse does not occur. This strategy reduces the risk of serious death or injury due to lack of access to critical healthcare information, at the increased risk of disclosure of private information. This is why the ITI Technical Committee created the Audit Trail and Node Authentication (ATNA) Integration Profile, and furthermore, why that profile is a requirement of XDS and related profiles.</p>
+      <p>Another risk that must be resolved by an affinity domain is how to address the issues of sharing truly sensitive information in a registry (e.g., psychology documents). One strategy that might be recommended is that truly sensitive data not be shared within the XDS Affinity Domain; directed communications using XDR or XDM may be more appropriate.</p>
+          </div>
+        </div>
+      </main>
+    </div>
+   <footer class="ihe-footer">
+    <div class="grid-container fluid">
+      <div class="grid-x grid-margin-x align-middle">
+        <div class="cell medium-9 small-order-2 medium-order-1 text-center medium-text-left">
+          © 2000 &mdash; <span id="current-year"></span> IHE International | TEL 1-630-481-1004 | 820&nbsp;Jorie&nbsp;Boulevard,
+          Oak&nbsp;Brook, IL&nbsp;60523
+        </div>
+        <div class="cell medium-3 small-order-1 medium-order-2 text-center medium-text-right ihe-footer-icons">
+          <a href="mailto:secretary@ihe.net"><i class="fi fi-mail"></i></a>
+          <a href="https://www.linkedin.com/company/iheintl"><i class="fi fi-social-linkedin"></i></a>
+          <a href="https://twitter.com/IHEIntl"><i class="fi fi-social-twitter" aria-hidden="true"></i></a>
+          <a href="https://www.youtube.com/user/IHEIntl"><i class="fi fi-social-youtube" aria-hidden="true"></i></a>
+        </div>
+      </div>
+    </div>
+  </footer>
+    <script src="../../../js/vendor/jquery.min.js"></script>
+    <script src="../../../js/vendor/motion-ui.min.js"></script>
+    <script src="../../../js/vendor/what-input.js"></script>
+    <script src="../../../js/vendor/foundation.min.js"></script>
+    <script src="../../../js/app.js"></script>
+  	<script>
+	 window.dataLayer = window.dataLayer || [];
+	function gtag(){dataLayer.push(arguments);}
+	gtag('js', new Date());
+	gtag('config', 'G-HLBNC861DJ');
+	</script>
+</body>
+</html>

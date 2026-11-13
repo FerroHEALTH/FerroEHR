@@ -1,0 +1,178 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1e1d57a4-e67c-4d25-bbb8-98380f31c652; build_uid=62c78f82-69b9-4b16-961b-45ef2ea52680)
+    openEHR-EHR-CLUSTER.lab_result_annotation.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, United Kingdom">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"08/12/2009">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heath Frankel, Ocean Informatics, Australia", "Heather Leslie, Ocean Informatics, Australia">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"NEHTA, Australia. Pathology Episode v1.0 - Data Group library [Internet]. 2009;[cited 2009 Dec 8 ] Available from: http://www.nehta.gov.au/data-group-library/data-specifications/dgl-pathology">
+        ["2"] = <"IHE. IHE, Laboratory Technical Framework, Volume 3 Content [Internet]. 2008;Available from: http://www.ihe.net/Technical_Framework/upload/ihe_lab_TF_rel2_1-Vol-3_FT_2008-08-08.pdf">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D5CF31554C564BB64AE480BA0CB77724">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record comments and other per-node annotations within a lab_test archetype.">
+            keywords = <"lab test", "comment">
+            use = <"To be used within a lab_test archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Laboratory result annotation
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Result name
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Result comment
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Unexpected result indicator
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Testing method
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Result status
+                value matches {
+                    DV_CODED_TEXT[at9006] matches {
+                        defining_code matches {[ac9005]}    -- Result status (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Reference range guidance
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            allow_archetype CLUSTER[at0006] matches {    -- Specimen detail
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Laboratory result identifier
+                value matches {
+                    DV_TEXT[at9007]
+                }
+            }
+            allow_archetype CLUSTER[at0014] matches {    -- Laboratory details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Link to original lab test
+                value matches {
+                    DV_EHR_URI[at9008]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Laboratory result annotation">
+                description = <"To record comments and other per-node annotations within a lab_test archetype.">
+            >
+            ["at0001"] = <
+                text = <"Unexpected result indicator">
+                description = <"Indicates the degree of diagnostic significance associated with a pathology test result based on all the available clinical information.">
+            >
+            ["at0002"] = <
+                text = <"Result comment">
+                description = <"A comment on an individual lab result.">
+            >
+            ["at0003"] = <
+                text = <"Testing method">
+                description = <"Description of the method use for an individual result">
+            >
+            ["at0004"] = <
+                text = <"Result status">
+                description = <"The status of an individual lab result.">
+            >
+            ["at0005"] = <
+                text = <"Reference range guidance">
+                description = <"Further advice on the applicability of the reference range.">
+            >
+            ["at0006"] = <
+                text = <"Specimen detail ">
+                description = <"Details of  the specimen for a particular reb result.">
+            >
+            ["at0007"] = <
+                text = <"Result name">
+                description = <"Name of the result to which this annotation refers. This will often be coded with a reference terminology such as LOINC.">
+            >
+            ["at0008"] = <
+                text = <"Interim">
+                description = <"This is an initial or interim result - further updates are anticipated.">
+            >
+            ["at0009"] = <
+                text = <"Final">
+                description = <"This is the final result. No further alterations are anticipated">
+            >
+            ["at0010"] = <
+                text = <"Supplementary">
+                description = <"This is a supplememtary result in addition to the Interim result.">
+            >
+            ["at0011"] = <
+                text = <"Corrected (amended)">
+                description = <"This is a Correction which should replace any previous results.">
+            >
+            ["at0012"] = <
+                text = <"Aborted">
+                description = <"The testing/ reporting process was aborted and never completed.">
+            >
+            ["at0013"] = <
+                text = <"Never performed">
+                description = <"The test was never performed.">
+            >
+            ["at0014"] = <
+                text = <"Laboratory details">
+                description = <"Demographic details of the laboratory with responsibility for the individual result. Details of secondary laboratories may also be included.">
+            >
+            ["at0015"] = <
+                text = <"Laboratory result identifier">
+                description = <"The identifier given to the laboratory test result of a pathology 
+investigation.">
+            >
+            ["at0017"] = <
+                text = <"Link to original lab test">
+                description = <"If the result was originally reported in  a separate lab test entry, link to that entry.">
+            >
+            ["ac9005"] = <
+                text = <"Result status (synthesised)">
+                description = <"The status of an individual lab result. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0008", "at0009", "at0010", "at0011", "at0012", "at0013">
+        >
+    >

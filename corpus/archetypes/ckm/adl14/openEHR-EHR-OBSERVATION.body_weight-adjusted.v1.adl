@@ -1,0 +1,368 @@
+﻿archetype (adl_version=1.4; uid=8bdf715e-87d0-44d7-bacb-2b4b94228a2d)
+	openEHR-EHR-OBSERVATION.body_weight-adjusted.v1
+specialise
+	openEHR-EHR-OBSERVATION.body_weight.v1
+
+concept
+	[at0000.1]	-- Adjusted Body weight
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["ru"] = <
+			language = <[ISO_639-1::ru]>
+			author = <
+				["name"] = <"?">
+			>
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"2009-6-19">
+	>
+	details = <
+		["ru"] = <
+			language = <[ISO_639-1::ru]>
+			purpose = <"Для записи скорректированного веса тела(ru)">
+			use = <"Используется для записи скорректированной массы тела - то есть, расчет полной и окончательной массы тела человека с ампутации конечностей, основанном на других измерениях и алгоритме.">
+			keywords = <"*weight(en)", "*adjusted(en)">
+			misuse = <"Не использовать для записи фактического веса человека, или прибавки / потери массы - использовать для этого архетип OBSERVATION.body_weight.
+Не использовать для записи первого вес ребенка вскоре после рождения - использовать для этого архетип OBSERVATION.body_weight.
+Не использовать для записи веса предмета или части тела(ru)">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record the adjusted body weight of an individual.">
+			use = <"To be used to record the adjusted measurement of body weight - that is, a calculation of the full and complete body weight of a person with limb amputation, based on other measurements and an algorithm.">
+			keywords = <"weight", "adjusted">
+			misuse = <"Not to be used to record the actual weight of an individual, or weight gain/loss - use OBSERVATION.body_weight.
+Not to be used to record the first weight of an infant soon after birth - use the specialisation of this archetype OBSERVATION.body_weight-birth.
+Not to be used to record the weight of an object or body part.">
+			copyright = <"© openEHR Foundation">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"لتسجيل وزن الجسم المُصحَّح للشخص">
+			use = <"يستخدم لتسجيل القياس المُصحَّح لوزن الجسم - و ذلك يعني حساب وزن الجسم الإجمالي و الكامل للشخص الذي يعاني من بتر في أحد أطرافه, بناء على قياسات أخرى باستخدام خُوارزمية">
+			keywords = <"الوزن", "المُصحَّح">
+			misuse = <"لا يستخدم لتسجيل الوزن الفعلي للشخص, أو زيادة/نقص الوزن - استخدم لذلك نموذج ملاحظة.وزن الجسم.
+لا يستخدم لتسجيل الوزن الأول لحديث الولادة بعد ولادته بفترة قليلة - استخدم لذلك تخصيص النموذج ملاحظة.وزن الجسم عند الولادة.
+لا يستخدم لتسجيل وزن شيء ما أو جزء من الجسم.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Jeroen Meintjens, Medisch Centrum Alkmaar, Netherlands", "Marja Buur-Krom, Medisch Centrum Alkmaar, Netherlands", "Sebastian Garde, Ocean Informatics, Germany", "Ian McNicoll, Ocean Informatics, Scotland", "Paul Donaldson, Queensland Health, Australia", "Heather Grain, Llewellyn Informatics, Australia", "Anne Harbison, Australia", "Andrew James, University of Toronto, Canada", "Sam Heard, Ocean Informatics, Australia">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"EAC87AC0ED2395CE91BA47B358D9CB67">
+		["build_uid"] = <"3c27d480-d6e1-43db-a84d-b5f829194a2e">
+	>
+
+definition
+	OBSERVATION[at0000.1] matches {	-- Adjusted Body weight
+		data matches {
+			HISTORY[at0002] matches {	-- history
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0003] occurrences matches {0..*} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0001] matches {	-- Simple
+								items cardinality matches {1..*; unordered} matches {
+									ELEMENT[at0004.1] matches {	-- Adjusted Weight
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::124]>
+												list = <
+													["1"] = <
+														units = <"kg">
+														magnitude = <|0.0..1000.0|>
+													>
+													["2"] = <
+														units = <"lb">
+														magnitude = <|0.0..2000.0|>
+													>
+												>
+											>
+										}
+									}
+									ELEMENT[at0024] occurrences matches {0..1} matches {	-- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+						state matches {
+							ITEM_TREE[at0008] matches {	-- state structure
+								items cardinality matches {0..*; ordered} matches {
+									ELEMENT[at0009] occurrences matches {0..1} matches {	-- State of Dress
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0011, 	-- Lightly clothed/underwear
+													at0013, 	-- Naked
+													at0010, 	-- Fully clothed, including shoes
+													at0017; 	-- Nappy/diaper
+													at0011]	-- assumed value
+												}
+											}
+										}
+									}
+									ELEMENT[at0025] occurrences matches {0..*} matches {	-- Confounding Factors
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0015] matches {	-- protocol structure
+				items cardinality matches {0..*; ordered} matches {
+					allow_archetype CLUSTER[at0020] occurrences matches {0..1} matches {	-- Device
+						include
+							archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["ru"] = <
+			items = <
+				["at0000"] = <
+					text = <"Масса тела">
+					description = <"Измерение актуальной массы тела человека.">
+				>
+				["at0000.1"] = <
+					text = <"Вес тела с добавлениями">
+					description = <"Измерение массы тела пациента с протезами / внешними устройствами.">
+				>
+				["at0001"] = <
+					text = <"Простой">
+					description = <"Bнутренний элемент.">
+				>
+				["at0002"] = <
+					text = <"История">
+					description = <"Bнутренний элемент.">
+				>
+				["at0003"] = <
+					text = <"Любое событие">
+					description = <"Любое событие.">
+				>
+				["at0004"] = <
+					text = <"Вес">
+					description = <"Актуальный вес человека.">
+				>
+				["at0004.1"] = <
+					text = <"Вес дополнения">
+					description = <"Вес дополнения.">
+				>
+				["at0008"] = <
+					text = <"*state structure(en)">
+					description = <"Bнутренний элемент.">
+				>
+				["at0009"] = <
+					text = <"Степень одетости">
+					description = <"Описание степени одетости пациента во время измерения веса.">
+				>
+				["at0010"] = <
+					text = <"В одежде без обуви">
+					description = <"Одежда может добавить значительный вес.">
+				>
+				["at0011"] = <
+					text = <"Лёгкая одежда или бельё">
+					description = <"Одежда не добавляет значительный вес.">
+				>
+				["at0013"] = <
+					text = <"Без одежды">
+					description = <"Совсем без одежды, голышом.">
+				>
+				["at0015"] = <
+					text = <"Структура протокола ">
+					description = <"Bнутренний элемент.">
+				>
+				["at0017"] = <
+					text = <"Памперс / одноразовая пелёнка">
+					description = <"Только памперс - может добавить значительный вес.">
+				>
+				["at0020"] = <
+					text = <"Устройство">
+					description = <"Информация об используемых весах.">
+				>
+				["at0024"] = <
+					text = <"Комментарии">
+					description = <"Комментарии к данному взвешиванию.">
+				>
+				["at0025"] = <
+					text = <"Стохастические факторы">
+					description = <"*Записывать любые события или факторы, которые могут повлиять на измерение массы тела, например период менструального цикла, время последней дефекации или мочеиспускания.">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Body weight">
+					description = <"Measurement of the actual body weight of an individual.">
+				>
+				["at0000.1"] = <
+					text = <"Adjusted Body weight">
+					description = <"Measurement of the adjusted body weight of an individual.">
+				>
+				["at0001"] = <
+					text = <"Simple">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"history">
+					description = <"@ internal @">
+				>
+				["at0003"] = <
+					text = <"Any event">
+					description = <"Any event.">
+				>
+				["at0004"] = <
+					text = <"Weight">
+					description = <"The actual weight of the individual.">
+				>
+				["at0004.1"] = <
+					text = <"Adjusted Weight">
+					description = <"The adjusted weight of the individual.">
+				>
+				["at0008"] = <
+					text = <"state structure">
+					description = <"@ internal @">
+				>
+				["at0009"] = <
+					text = <"State of Dress">
+					description = <"Description of the state of dress of the person at the time of weighing.">
+				>
+				["at0010"] = <
+					text = <"Fully clothed, including shoes">
+					description = <"Clothing which may add significantly to weight, including shoes.">
+				>
+				["at0011"] = <
+					text = <"Lightly clothed/underwear">
+					description = <"Clothing which will not add to weight significantly.">
+				>
+				["at0013"] = <
+					text = <"Naked">
+					description = <"Without any clothes.">
+				>
+				["at0015"] = <
+					text = <"protocol structure">
+					description = <"@ internal @">
+				>
+				["at0017"] = <
+					text = <"Nappy/diaper">
+					description = <"Wearing only a nappy - can add significant weight.">
+				>
+				["at0020"] = <
+					text = <"Device">
+					description = <"Details about the weighing device.">
+				>
+				["at0024"] = <
+					text = <"Comment">
+					description = <"Comment about the measurement of weight.">
+				>
+				["at0025"] = <
+					text = <"Confounding Factors">
+					description = <"Record any issues or factors that may impact on the measurement of body weight eg timing in menstrual cycle, timing of recent bowel motion or voiding of urine.">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0000"] = <
+					text = <"*Body weight(en)">
+					description = <"*Measurement of the actual body weight of an individual.(en)">
+				>
+				["at0000.1"] = <
+					text = <"وزن الجسم المُصحَّح">
+					description = <"قياس وزن الجسم المُصحَّح للشخص">
+				>
+				["at0001"] = <
+					text = <"*Simple(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"*history(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0003"] = <
+					text = <"إحدى الوقائع">
+					description = <"إحدى الوقائع">
+				>
+				["at0004"] = <
+					text = <"*Weight(en)">
+					description = <"*The actual weight of the individual.(en)">
+				>
+				["at0004.1"] = <
+					text = <"الوزن المُصحَّح">
+					description = <"الوزن المُصحَّح للشخص">
+				>
+				["at0008"] = <
+					text = <"*state structure(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0009"] = <
+					text = <"حالة الملبس">
+					description = <"وصف حالة ملبس الشخص في وقت قياس الوزن">
+				>
+				["at0010"] = <
+					text = <"ملابس كاملة بما في ذلك الأحذية">
+					description = <"ملابس قد تزيد الوزن بشكل مؤثر, بما في ذلك الأحذية">
+				>
+				["at0011"] = <
+					text = <"ملابس خفيفة/ ملابس داخلية">
+					description = <"درجة من الملبس لا تزيد على الوزن بصورة مؤثرة">
+				>
+				["at0013"] = <
+					text = <"مُعَرَّى">
+					description = <"لا يرتدي أي ملابس">
+				>
+				["at0015"] = <
+					text = <"*protocol structure(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0017"] = <
+					text = <"حفاظة">
+					description = <"يرتدي حفاظة فقط - و قد يزيد ذلك الوزن بشكل مؤثر">
+				>
+				["at0020"] = <
+					text = <"الجهيزة">
+					description = <"تفاصيل حول الجهيزة المستخدمة في القياس">
+				>
+				["at0024"] = <
+					text = <"تعليق">
+					description = <"تعليق حول قياس الوزن">
+				>
+				["at0025"] = <
+					text = <"العوامل المربكة">
+					description = <"تسجيل أي عوامل / قضايا قد تؤثر على قياس وزن الجسم, مثل توقيت الدورة الشهرية, وقت آخر مرة لإفراغ الأمعاء, أو التخلص من البول">
+				>
+			>
+		>
+	>

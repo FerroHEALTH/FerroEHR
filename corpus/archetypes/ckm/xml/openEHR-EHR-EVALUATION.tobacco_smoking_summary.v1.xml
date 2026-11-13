@@ -1,0 +1,3099 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2009-06-21</original_author>
+    <original_author id="name">Heather Leslie</original_author>
+    <original_author id="organisation">Atomica Informatics</original_author>
+    <original_author id="email">heather.leslie@atomicainformatics.com</original_author>
+    <other_contributors>Amund Aakerholt, Helse Stavanger, KORFOR, Norway</other_contributors>
+    <other_contributors>Morten Aas, Oslo Universitetssykehus, Norway</other_contributors>
+    <other_contributors>Tomas Alme, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Ole Andreas Bjordal, Webmed, Norway</other_contributors>
+    <other_contributors>Rita Apelt, Department of Health,NT, Australia</other_contributors>
+    <other_contributors>Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT editor)</other_contributors>
+    <other_contributors>Koray Atalag, University of Auckland, New Zealand</other_contributors>
+    <other_contributors>Gustavo Bacelar-Silva, Healthcare Designs, Brazil</other_contributors>
+    <other_contributors>Silje Ljosland Bakke, Nasjonal IKT HF, Norway</other_contributors>
+    <other_contributors>Marcus Baw, openGPSoC / BawMedical Ltd, United Kingdom</other_contributors>
+    <other_contributors>Kristian Berg, Universitetssykehuset Nord Norge, Norway</other_contributors>
+    <other_contributors>Lars Bitsch-Larsen, Haukeland University Hospital, Bergen, Norway</other_contributors>
+    <other_contributors>Fredrik Borchsenius, Oslo universitetssykehus, Norway</other_contributors>
+    <other_contributors>Chris Bullen, University of Auckland, New Zealand (openEHR Editor)</other_contributors>
+    <other_contributors>Fatemeh Chalabianloo, Helse Bergen, Norway</other_contributors>
+    <other_contributors>Bjørn Christensen, Helse Bergen HF, Norway</other_contributors>
+    <other_contributors>Stephen Chu, NEHTA, Australia</other_contributors>
+    <other_contributors>Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway</other_contributors>
+    <other_contributors>Are Edvardsen, SKDE, Norway</other_contributors>
+    <other_contributors>Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway</other_contributors>
+    <other_contributors>Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom</other_contributors>
+    <other_contributors>Heather Grain, Llewelyn Grain Informatics, Australia</other_contributors>
+    <other_contributors>Liv Grøtvedt, Folkehelseinstituttet, Norway</other_contributors>
+    <other_contributors>Sam Heard, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Kristian Heldal, Telemark Hospital Trust, Norway</other_contributors>
+    <other_contributors>Jørn Henrik Vold, Helse Bergen, Avdeling for rusmedisin, Norway</other_contributors>
+    <other_contributors>Anca Heyd, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Evelyn Hovenga, EJSH Consulting, Australia</other_contributors>
+    <other_contributors>Tom Jarl Jakobsen, Helse Bergen, Norway</other_contributors>
+    <other_contributors>Lars Morgan Karlsen, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Adriana Kitajima, CORE Consulting, Brazil</other_contributors>
+    <other_contributors>Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway</other_contributors>
+    <other_contributors>Ole Kristian Losvik, Losol AS, Norway</other_contributors>
+    <other_contributors>Heather Leslie, Atomica Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Rikard Lovstrom, Swedish Medical Association, Sweden</other_contributors>
+    <other_contributors>Camilla Lund, Institute for Cancer Genetics and Informatics, Norway</other_contributors>
+    <other_contributors>Hallvard Lærum, Direktoratet for e-helse, Norway</other_contributors>
+    <other_contributors>Arne Løberg Sæter, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Siv Marie Lien, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Ian McNicoll, freshEHR Clinical Informatics, United Kingdom</other_contributors>
+    <other_contributors>Bjørn Næss, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Jeremy Oats, NT Health, Australia</other_contributors>
+    <other_contributors>Andrej Orel, Marand d.o.o., Slovenia</other_contributors>
+    <other_contributors>Anne Pauline Anderssen, Helse Nord RHF, Norway</other_contributors>
+    <other_contributors>Rune Pedersen, Universitetssykehuset i Nord Norge, Norway</other_contributors>
+    <other_contributors>Tanja Riise, Nasjonal IKT HF, Norway</other_contributors>
+    <other_contributors>Rosalie Schultz, Anyinginyi Health Aboriginal Corporation, Australia</other_contributors>
+    <other_contributors>Line Silsand, Universitetssykehuset i Nord-Norge, Norway</other_contributors>
+    <other_contributors>Raymond Simkus, Brookswood Family Practice, Canada</other_contributors>
+    <other_contributors>Lisbeth Sommervoll, Akershus Universitetssykehus, Norway</other_contributors>
+    <other_contributors>Norwegian Review Summary, Nasjonal IKT HF, Norway</other_contributors>
+    <other_contributors>Nyree Taylor, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Jon Tysdahl, Furst medlab AS, Norway</other_contributors>
+    <other_contributors>John Tore Valand, Helse Bergen, Norway (Nasjonal IKT editor)</other_contributors>
+    <other_contributors>Ping-Cheng Wei, New Zealand</other_contributors>
+    <lifecycle_state>deprecated</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Centers for Disease Control and Prevention (CDC). State-specific secondhand smoke exposure and current cigarette smoking among adults - United States, 2008. MMWR Morb Mortal Wkly Rep. 2009 Nov 13;58(44):1232-5. PubMed PMID: 19910910.&#xD;
+&#xD;
+Centres for Disease Control (CDC). Tobacco glossary [cited: 2016-07-05]. Available from: http://www.cdc.gov/nchs/nhis/tobacco/tobacco_glossary.htm.&#xD;
+&#xD;
+Definitions of smoking status [Internet]. New Zealand Ministry of Health; 2015 Jun 04 [cited: 2016-11-23]. Available from: http://www.health.govt.nz/our-work/preventative-health-wellness/tobacco-control/tobacco-control-guidance-practitioners/definitions-smoking-status.&#xD;
+&#xD;
+Feng X, Qian Z, Zhang B, Guo E, Wang L, Liu P, Wen X, Xu W, Jiang C, Li Y, et al. Number of Cigarettes Smoked Per Day, Smoking Index, and Intracranial Aneurysm Rupture: A Case-Control Study. Front Neurol. 2018 May 31;9:380. doi: 10.3389/fneur.2018.00380. eCollection 2018. PubMed PMID: 29904368; PubMed Central PMCID: PMC5990590.&#xD;
+&#xD;
+Masters N &amp; Tutt C. Smoking Pack Years [Internet]. United Kingdom: Highfield Surgery; 2007. Available from: http://smokingpackyears.com/.&#xD;
+&#xD;
+Tobacco Use Summary, Draft Archetype [Internet]. nehta, Australia, nehta Clinical Knowledge Manager [cited: 2016-06-06]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1026 [no longer available].&#xD;
+&#xD;
+Tobacco Use Summary, Rejected Archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2016-06-06]. Available from: http://www.openehr.org/ckm/#showArchetype_1013.1.1520.&#xD;
+&#xD;
+Wood DM, Mould MG, Ong SB, Baker EH. "Pack year" smoking histories: what about patients who use loose tobacco? Tob Control. 2005 Apr;14(2):141-2. PubMed PMID: 15791025; PubMed Central PMCID: PMC1748001.</other_details>
+    <other_details id="current_contact">Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">4662BEAE259AA4530E826863A323C044</other_details>
+    <other_details id="build_uid">3127b2f7-a4e5-499a-ad6d-758fa11ec4eb</other_details>
+    <other_details id="revision">1.1.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Erfassung zusammenfassender Informationen über das individuelle Rauchverhalten von Tabak und tabakhaltigen Produkten.</purpose>
+      <keywords>*tobacco(en)</keywords>
+      <keywords>*cigarette(en)</keywords>
+      <keywords>*cigar(en)</keywords>
+      <keywords>*pipe(en)</keywords>
+      <keywords>*smoking(en)</keywords>
+      <keywords>*kretek(en)</keywords>
+      <keywords>*beedi(en)</keywords>
+      <keywords>*bidi(en)</keywords>
+      <keywords>*cigarillo(en)</keywords>
+      <keywords>*smoker(en)</keywords>
+      <keywords>*waterpipe(en)</keywords>
+      <keywords>*shisha(en)</keywords>
+      <keywords>*hookah(en)</keywords>
+      <keywords>*narguileh(en)</keywords>
+      <keywords>*hubble-bubble(en)</keywords>
+      <keywords>*roll-up(en)</keywords>
+      <keywords>*RYO(en)</keywords>
+      <keywords>*rollie(en)</keywords>
+      <keywords>*roll-your-own(en)</keywords>
+      <use>Verwenden Sie diese Option, um zusammenfassende Informationen über das individuelle Rauchverhalten von Tabak und tabakhaltigen Produkten aufzuzeichnen.&#xD;
+&#xD;
+Dieser Archetyp soll genutzt werden, um Informationen über das aktuelle und frühere Rauchverhalten aufzuzeichnen.&#xD;
+&#xD;
+Der spezifische Anwendungsbereich dieses Archetyps liegt in der Dokumentation über die Verwendung aller Arten von inhaliertem Tabakrauch aufgrund der damit verbundenen Gesundheitsrisiken durch das direkte Einatmen von Tabak und damit verbundenen Chemikalien. Die Menge an Nikotin und Teer, die Verwendung von Filtern und Additiven wurde für den Kernarchetyp nicht berücksichtigt, kann aber bei Bedarf in den Episoden-Slot aufgenommen werden. Bitte beachten Sie, dass der Anwendungsbereich dieses Archetyps keine unbeabsichtigte Exposition gegenüber Tabakrauch umfasst (siehe Missbrauch). &#xD;
+&#xD;
+Der 'Pro Typ' Cluster von Datenelementen ermöglicht die Aufzeichnung von spezifischen Details und Episoden über jede Art von Tabak und kann einmal pro Typ wiederholt werden. Die Liste der Tabaksorten, die in der Laufzeitbeschränkung 'Pro Typ' aufgeführt ist, identifiziert die Art des Tabaks. Diese Namensbeschränkung kann während der Template-Modellierung oder zur Laufzeit innerhalb einer Software-Anwendung angewendet werden.&#xD;
+&#xD;
+In vielen Situationen raucht der Einzelne nur eine Art von Tabak, wie z.B. Zigaretten. Wenn andere Tabaksorten geraucht werden, werden die Details in einer anderen Instanz des Clusters "Pro Typ" aufgezeichnet.&#xD;
+&#xD;
+Die Historie des zu- und abnehmenden Gebrauchs für jede Art von Tabak im Laufe der Zeit kann mit dem wiederholbaren Cluster "Pro Episode" erfasst werden. Diese Gruppe von Datenelementen ermöglicht es, ein sehr detailliertes Muster des Rauchverhaltens für jede Art von Tabak zu erfassen, wie z.B. das tägliche rauchen von selbstgedrehten Zigaretten, neben dem wöchentlichen Zigarrenrauchen jeden Freitagabend und dem gelegentlichen Bidi-Rauchen im Urlaub auf Bali. &#xD;
+&#xD;
+Auslöser für das Beenden einer Episode und das Beginnen einer neuen Episode spiegeln weitgehend die lokalen Datenerfassungspräferenzen wider, auch wenn die Person: &#xD;
+- für einen längeren Zeitraum (der wahrscheinlich lokal definiert wird) das Rauchen aufgibt; oder&#xD;
+- ihre Nutzung oder ihr Rauchverhalten signifikant verändert&#xD;
+&#xD;
+Wenn nur eine Tabakart geraucht wird, ist der Wert für 'Packung pro Jahr' identisch mit dem Datenelement `Packung pro Jahr gesamt'. Wenn mehr als eine Tabakart geraucht wird, erfordert die Berechnung des Wertes für "Packung pro Jahr gesamt" einen komplexeren Algorithmus wie http://smokingpackyears.com/.&#xD;
+&#xD;
+Verwendung, um die narrativen Beschreibungen der Tabakrauchgewohnheiten innerhalb bestehender oder älterer klinischer Systeme in ein archetypisches Format zu integrieren, wobei das Datenelement "Gesamtbeschreibung" verwendet wird.</use>
+      <misuse>*Not to be used to record event-or period-based information about tobacco smoking, such as actual daily use or the average use over a specified period of time - use the OBSERVATION.tobacco_smoking archetype.&#xD;
+&#xD;
+Not to be used to record information about smokeless tobacco use - for example: snus; snuff; chewing tobacco; dip; and gutka. Use the archetype EVALUATION.smokeless_tobacco_summary archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record an assessment about cigarette or nicotine dependence. Use the archetype OBSERVATION.fagerstrom for this purpose.&#xD;
+&#xD;
+Not to be used to record details about unintended exposure to tobacco smoke or passive smoking. Use the archetype EVALUATION.exposure for this purpose.&#xD;
+&#xD;
+Not to be used for recording any other administration of nicotine, such as e-cigarettes, nicotine patches or nicotine chewing gum. Use seoparate archetypes for this purpose. &#xD;
+&#xD;
+Not to be used to record evidence of nicotine dependency. Use the OBSERVATION.fagerstrom for this purpose.(en)</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sv</code_string>
+      </language>
+      <purpose>Att registrera sammanfattande information om rökvanor gällande tobak och produkter som innehåller tobak.</purpose>
+      <keywords>rökning</keywords>
+      <keywords>rökanamnes</keywords>
+      <keywords>tobak</keywords>
+      <keywords>cigarett</keywords>
+      <keywords>cigarr</keywords>
+      <keywords>pipa</keywords>
+      <keywords>kretek</keywords>
+      <keywords>bidi</keywords>
+      <keywords>cigarill</keywords>
+      <keywords>rökare</keywords>
+      <keywords>vattenpipa</keywords>
+      <keywords>shisha</keywords>
+      <keywords>hookah</keywords>
+      <keywords>narguileh</keywords>
+      <keywords>n'arghile</keywords>
+      <keywords>ghelion</keywords>
+      <keywords>bong</keywords>
+      <keywords>rulltobak</keywords>
+      <use>Används för att beskriva sammanfattad information om individens rökvanor gällande tobak och tobaks-innehållande produkter.&#xD;
+&#xD;
+Denna arketyp kan användas för att beskriva både nuvarande och tidigare rökvanor.&#xD;
+&#xD;
+Arketypen omfattar dokumentation av rökvanor för alla sorters tobaksbruk där man andas in tobaksröken eftersom det finns specifika hälsorisker associerade till direkt inandning av tobaksrök och tillhörande kemikalier. &#xD;
+&#xD;
+Mängden nikotin och tjära, användning av filter och tillsatser har lämnats utanför vad kärnan av arketypen omfattar, men kan t.ex. läggas till (med hjälp av ytterligare arketyper) under rubriken "Episoddetaljer"&#xD;
+&#xD;
+Observera att denna arketyp inte omfattar oavsiktlig exponering för tobaksrök (se "Misuse"/felaktig användning).&#xD;
+&#xD;
+I många fall kommer individen bara röka en typ av tobak, till exempel vanliga cigaretter. Om flera sorters tobaksprodukter röks så används "Per typ"-delträdet ("cluster") på ett sätt som gör det möjligt att registrera specifika detaljer och episoder om varje typ av tobak som röks. Det kan upprepas för varje typ som behöver dokumenteras. Listan över tobakstyper som anges i "Per typ" (som ett "run-time name constraint") används då för att identifiera typ av tobaksprodukt. &#xD;
+&#xD;
+Detta "run-time name constraint" för detta "Cluster" (delträd) gör det enkelt att skapa röktyp-specifika delar i "templates" (mallar), eller att låta ett IT-system dynamiskt generera specifika delar vid användning. Det är tillåtet att lägga till ytterligare typer av tobaksrökning, om det har identifierats som ett lokalt behov.&#xD;
+&#xD;
+Att rökvanor varierar i omfattning och typ av rökning kan fångas med det repeterbara "Per episod"-klustret (delträdet). Detta kluster av dataelement gör det möjligt att beskriva mönster av rökvanor mycket detaljerat för varje typ av tobak som röks, exempelvis daglig rökning av handrullade cigaretter, kombinerat med veckovis cigarrrökning varje fredagskväll och ibland Bidi-rökning på semester på Bali.&#xD;
+&#xD;
+Anledningar för att stänga en episod och starta en ny kommer i hög grad att återspegla lokala datainsamlingspreferenser, inklusive om personen:&#xD;
+- slutar röka under en betydande tidsperiod (vilket sannolikt kommer att vara lokalt definierat) eller&#xD;
+- signifikant ändrar rökmönster eller mängd&#xD;
+&#xD;
+Om endast en typ av tobak rökts, kommer värdet för "Paketår" att vara identiskt med värdet för "Totala paketår". Om mer än en typ av tobak har rökts så kommer beräkningen för värdet för "Totala paketår" att kräva en mer komplex algoritm, exempelvis från http://smokingpackyears.com/.&#xD;
+&#xD;
+För att införliva beskrivande information (t.ex. fritext) om alkoholvanor från befintliga eller gamla vård-IT-system till arketyp-baserade system, används lämpligen dataelementet "Övergripande beskrivning".</use>
+      <misuse>Använd inte denna arketyp för att registrera specifik händelse- eller periodbaserad information om rökning, till exempel faktisk daglig användning eller genomsnittlig användning under en viss tidsperiod - använd då istället arketypen OBSERVATION.tobacco_smoking&#xD;
+&#xD;
+Använd inte denna arketyp för att registrera information om rökfri tobaksanvändning, exempelvis snus, tuggtobak eller gutka - använd då istället arketypen EVALUATION.smokeless_tobacco_summary&#xD;
+&#xD;
+Använd inte denna arketyp för att registrera evidens eller bedömning av cigarett- eller nikotinberoende. Använd då istället arketypen OBSERVATION.fagerstrom&#xD;
+&#xD;
+Använd inte denna arketyp för att registrera detaljer om oavsiktilg tobaksröksexponering eller passiv rökning. Använd då istället arketypen EVALUATION.exposure.&#xD;
+&#xD;
+Använd inte denna arketyp för att registrera annat nikotinbruk, exempelvis e-cigaretter, nikotinplåster eller nikotintuggummi. Använd separata arketyper för de ändamålen.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For å registrere et sammendrag om individets mønster for røyking av tobakk og produkter som inneholder tobakk.</purpose>
+      <keywords>tobakk</keywords>
+      <keywords>sigarett</keywords>
+      <keywords>sigar</keywords>
+      <keywords>pipe</keywords>
+      <keywords>røyking</keywords>
+      <keywords>kretek</keywords>
+      <keywords>beedi</keywords>
+      <keywords>bidi</keywords>
+      <keywords>sigarillo</keywords>
+      <keywords>røyker</keywords>
+      <keywords>vannpipe</keywords>
+      <keywords>shisha</keywords>
+      <keywords>hookah</keywords>
+      <keywords>narguileh</keywords>
+      <keywords>rulletobakk</keywords>
+      <keywords>rullings</keywords>
+      <keywords>røyk</keywords>
+      <use>Brukes for å registrere et sammendrag om individets mønster for røyking av tobakk og produkter som inneholder tobakk.&#xD;
+&#xD;
+Denne arketypen brukes for å registrere både nåværende og tidligere tobakksrøyking.&#xD;
+&#xD;
+Arketypen fokuserer spesifikt på dokumentasjon om bruk av alle typer inhalert tobakksrøyk, på grunn av helserisikoen knyttet til inhalering og kjemikaliene tilknyttet dette. Mengden av nikotin og tjære, filterbruk og tilsetningstoffer er ikke dekket av arketypen, men kan legges til i SLOTet "Episodedetaljer" ved behov. Arketypen omfatter ikke utilsiktet eksponering for tobakksrøyk (se Feil bruk).&#xD;
+&#xD;
+Clusteret "Per type" tillater registrering av spesifikke detaljer og episoder om hver enkelt ulik type tobakk som røykes og kan repeteres en gang per type. &#xD;
+Tobakkstyper er listet i "run-time name constraint" (navnebegrensning) lagt på "Per type". Denne navnebegrensningen kan brukes ved templatmodellering eller i applikasjonen.&#xD;
+&#xD;
+I mange tilfeller vil individet bare røyke en type tobakk, for eksempel filtersigaretter. Røykes også andre typer tobakk, legges detaljene om dette i en annen instans av Clusteret "Per type".&#xD;
+&#xD;
+Historikken knyttet til økt eller redusert bruk av hver enkelt tobakkstype over tid kan registreres ved å bruke Clusteret "Per episode". Denne samlingen av dataelementer åpner for en veldig detaljert registrering av røykeadferd, for eksempel kan en registrere at man daglig røyker rullings, en sigar hver fredag og Bidi-røyking når man er på ferie på Bali.&#xD;
+&#xD;
+Hva som trigger en avslutning av en episode og start av en ny avhenger av behovet, for eksempel:&#xD;
+- Individet slutter å røyke en periode (kan defineres lokalt).&#xD;
+- Betydningsfulle endringer i mengde eller røykemønster.&#xD;
+&#xD;
+Røyker individet kun en type tobakk vil verdien for dataelementet "Pakkeår" være identisk med dataelementet "Overordnet pakkeår". Røykes mer enn en type tobakk vil kalkulasjonen av verdien for "Overordnet pakkeår" kreve en mer kompleks algoritme som http://smokingpackyears.com/.&#xD;
+&#xD;
+Dataelementet "Overordnet beskrivelse" brukes til å overføre fritekstbeskrivelser fra eksisterende eller tidligere kliniske systemer til arketypeformat</use>
+      <misuse>Brukes ikke for å registrere informasjon som ikke handler om tobakksrøyking eller som handler om tobakk blandet med andre rusmidler, bruk egne arketyper for dette formålet.&#xD;
+&#xD;
+Brukes ikke for å registrere hendelses- eller periodisk informasjon om tobakksrøyking, for eksempel: faktisk daglig bruk eller gjennomsnittlig bruk over en spesifisert tidsperiode. Bruk arketypen OBSERVATION.tobacco_smoking for dette formålet.&#xD;
+&#xD;
+Brukes ikke for å registrere informasjon om bruk av røykfri tobakk, for eksempel snus, luktsnus/snuff, tyggetobakk, dip og gutka. Bruk arketypen EVALUATION.smokeless_tobacco_summary for dette formålet.&#xD;
+&#xD;
+Brukes ikke for å registrere en vurdering av sigarett- eller nikotinavhengighet. Arketypen OBSERVATION.fagerstrom kan brukes for dette formålet.&#xD;
+&#xD;
+Brukes heller ikke for annen tilførsel av nikotin som e-sigarett, nikotinplaster eller niktotintyggegummi. Bruk egne arketyper for dette formålet.&#xD;
+&#xD;
+Brukes ikke for å registrere informasjon om nikotinavhengighet. Bruk arketypen OBSERVATION.fagerstrom til dette formålet.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record summary information about the individual's pattern of smoking of tobacco and tobacco-containing products.</purpose>
+      <keywords>tobacco</keywords>
+      <keywords>cigarette</keywords>
+      <keywords>cigar</keywords>
+      <keywords>pipe</keywords>
+      <keywords>smoking</keywords>
+      <keywords>kretek</keywords>
+      <keywords>beedi</keywords>
+      <keywords>bidi</keywords>
+      <keywords>cigarillo</keywords>
+      <keywords>smoker</keywords>
+      <keywords>waterpipe</keywords>
+      <keywords>shisha</keywords>
+      <keywords>hookah</keywords>
+      <keywords>narguileh</keywords>
+      <keywords>hubble-bubble</keywords>
+      <keywords>roll-up</keywords>
+      <keywords>RYO</keywords>
+      <keywords>rollie</keywords>
+      <keywords>roll-your-own</keywords>
+      <use>Use to record summary information about the individual's pattern of smoking of tobacco and tobacco-containing products.&#xD;
+&#xD;
+This archetype is to be used to record information about both current and previous smoking behaviour.&#xD;
+&#xD;
+The specific scope of this archetype is on documentation about the use of all types of inhaled tobacco smoke because of the associated health risks from direct inhalation of tobacco and associated chemicals. Amount of nicotine and tar, use of filters and additives has been left outside of scope for the core archetype, but could be added into the Episode SLOT if required. Please note that the scope of this archetype does not include unintentional exposure to tobacco smoke (see Misuse). &#xD;
+&#xD;
+The 'Per type' cluster of data elements allows for recording of specific details and episodes about each type of tobacco smoked and can be repeated once per type. The list of tobacco types listed in the 'Per type' run-time name constraint identifies the type of tobacco. This name constraint can be applied during template modelling or at run-time within a software application.&#xD;
+&#xD;
+In many situations the individual will only smoke one type of tobacco, such as manufactured cigarettes.  If other types of tobacco are smoked, the details will be recorded in another instance of the 'Per type' cluster.&#xD;
+&#xD;
+The history of waxing and waning of use for each type of tobacco over time can be captured using the repeatable 'Per episode' cluster. This cluster of data elements allows for a very detailed pattern of smoking behaviour to be recorded for each type of tobacco smoked such as daily 'roll-your-own' cigarette smoking, alongside weekly cigar smoking every Friday night and occasional Bidi smoking while on holiday in Bali. &#xD;
+&#xD;
+Triggers for closing one episode and commencing a new one will largely reflect local data collection preferences, including if the individual: &#xD;
+- quits for a significant period of time (which will likely be locally defined); or&#xD;
+- significantly changes their amount of use or pattern of their smoking.&#xD;
+&#xD;
+If only one type of tobacco is smoked, the value for 'Pack years' will be identical to the 'Overall pack years' data element. If more than one type of tobacco is smoked, the calculation for the value for 'Overall pack years' will require a more complex algorithm such as http://smokingpackyears.com/.&#xD;
+&#xD;
+Use to incorporate the narrative descriptions of tobacco smoking habits within existing or legacy clinical systems into an archetyped format, using the 'Overall description' data element.&#xD;
+&#xD;
+Note: Definitions of 'Current smoker' may vary. For example: the CDC uses 1 month/31 days and New Zealand uses 28 days.</use>
+      <misuse>Not to be used to record event-or period-based information about tobacco smoking, such as actual daily use or the average use over a specified period of time - use the OBSERVATION.tobacco_smoking archetype.&#xD;
+&#xD;
+Not to be used to record information about smokeless tobacco use - for example: snus; snuff; chewing tobacco; dip; and gutka. Use the archetype EVALUATION.smokeless_tobacco_summary archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record evidence of nicotine dependency. Use the OBSERVATION.fagerstrom for this purpose.&#xD;
+&#xD;
+Not to be used to record details about unintended exposure to tobacco smoke or passive smoking. Use the archetype EVALUATION.exposure for this purpose.&#xD;
+&#xD;
+Not to be used for recording any other administration of nicotine, such as e-cigarettes, nicotine patches or nicotine chewing gum. Use separate archetypes for this purpose.</misuse>
+      <copyright>© openEHR Foundation, Australian Digital Health Agency, Nasjonal IKT (Norway)</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Caroline Thoms</author>
+    <author id="organisation">MI UMG</author>
+    <author id="email">Caroline.Thoms@med.uni-goettingen.de</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sv</code_string>
+    </language>
+    <author id="name">Erik Sundvall</author>
+    <author id="organisation">Region Östergötland + Linköping University</author>
+    <author id="email">erik.sundvall@regionostergotland.se</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">John Tore Valand</author>
+    <author id="organisation">Helse Bergen HF</author>
+  </translations>
+  <uid>
+    <value>b60b9e07-ea2b-40ff-a56c-4b520558d712</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-EVALUATION.tobacco_smoking_summary.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>EVALUATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0089</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>defining_code</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_CODE_PHRASE">
+                    <rm_type_name>CODE_PHRASE</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <terminology_id>
+                      <value>local</value>
+                    </terminology_id>
+                    <code_list>at0006</code_list>
+                    <code_list>at0003</code_list>
+                    <code_list>at0005</code_list>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0043</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0015</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0080</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0029</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>name</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>defining_code</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_CODE_PHRASE">
+                    <rm_type_name>CODE_PHRASE</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <terminology_id>
+                      <value>local</value>
+                    </terminology_id>
+                    <code_list>at0054</code_list>
+                    <code_list>at0055</code_list>
+                    <code_list>at0056</code_list>
+                    <code_list>at0066</code_list>
+                    <code_list>at0057</code_list>
+                    <code_list>at0062</code_list>
+                    <code_list>at0078</code_list>
+                    <code_list>at0088</code_list>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+            <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+              <rm_attribute_name>items</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0052</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>defining_code</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>1</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_CODE_PHRASE">
+                        <rm_type_name>CODE_PHRASE</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <terminology_id>
+                          <value>local</value>
+                        </terminology_id>
+                        <code_list>at0061</code_list>
+                        <code_list>at0059</code_list>
+                        <code_list>at0091</code_list>
+                      </children>
+                    </attributes>
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0053</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>CLUSTER</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>0</lower>
+                </occurrences>
+                <node_id>at0064</node_id>
+                <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                  <rm_attribute_name>items</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0081</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_COUNT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>magnitude</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_PRIMITIVE_OBJECT">
+                            <rm_type_name>INTEGER</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <item xsi:type="C_INTEGER">
+                              <range>
+                                <lower_included>true</lower_included>
+                                <lower_unbounded>false</lower_unbounded>
+                                <upper_unbounded>true</upper_unbounded>
+                                <lower>1</lower>
+                              </range>
+                            </item>
+                          </children>
+                        </attributes>
+                      </children>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0013</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_DATE</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0082</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_DATE</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0030</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>defining_code</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_CODE_PHRASE">
+                            <rm_type_name>CODE_PHRASE</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <terminology_id>
+                              <value>local</value>
+                            </terminology_id>
+                            <code_list>at0083</code_list>
+                            <code_list>at0084</code_list>
+                          </children>
+                        </attributes>
+                      </children>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0023</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_QUANTITY">
+                        <rm_type_name>DV_QUANTITY</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <list>
+                          <units>1/d</units>
+                        </list>
+                        <list>
+                          <units>1/wk</units>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0065</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_QUANTITY">
+                        <rm_type_name>DV_QUANTITY</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <property>
+                          <terminology_id>
+                            <value>openehr</value>
+                          </terminology_id>
+                          <code_string>347</code_string>
+                        </property>
+                        <list>
+                          <magnitude>
+                            <lower_included>true</lower_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>true</upper_unbounded>
+                            <lower>0.0</lower>
+                          </magnitude>
+                          <precision>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>0</lower>
+                            <upper>0</upper>
+                          </precision>
+                          <units>g/d</units>
+                        </list>
+                        <list>
+                          <magnitude>
+                            <lower_included>true</lower_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>true</upper_unbounded>
+                            <lower>0.0</lower>
+                          </magnitude>
+                          <precision>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>0</lower>
+                            <upper>0</upper>
+                          </precision>
+                          <units>g/wk</units>
+                        </list>
+                        <list>
+                          <units>[oz_av]/d</units>
+                        </list>
+                        <list>
+                          <units>[oz_av]/wk</units>
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0025</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_COUNT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>magnitude</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_PRIMITIVE_OBJECT">
+                            <rm_type_name>INTEGER</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <item xsi:type="C_INTEGER">
+                              <range>
+                                <lower_included>true</lower_included>
+                                <lower_unbounded>false</lower_unbounded>
+                                <upper_unbounded>true</upper_unbounded>
+                                <lower>0</lower>
+                              </range>
+                            </item>
+                          </children>
+                        </attributes>
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="ARCHETYPE_SLOT">
+                    <rm_type_name>CLUSTER</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </occurrences>
+                    <node_id>at0026</node_id>
+                    <includes>
+                      <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.cessation_attempts(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+                      <expression xsi:type="EXPR_BINARY_OPERATOR">
+                        <type>Boolean</type>
+                        <operator>2007</operator>
+                        <precedence_overridden>false</precedence_overridden>
+                        <left_operand xsi:type="EXPR_LEAF">
+                          <type>String</type>
+                          <item xsi:type="xsd:string">archetype_id/value</item>
+                          <reference_type>attribute</reference_type>
+                        </left_operand>
+                        <right_operand xsi:type="EXPR_LEAF">
+                          <type>C_STRING</type>
+                          <item xsi:type="C_STRING">
+                            <pattern>openEHR-EHR-CLUSTER\.cessation_attempts(-[a-zA-Z0-9_]+)*\.v1</pattern>
+                          </item>
+                          <reference_type>constraint</reference_type>
+                        </right_operand>
+                      </expression>
+                    </includes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0087</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <cardinality>
+                    <is_ordered>false</is_ordered>
+                    <is_unique>false</is_unique>
+                    <interval>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>1</lower>
+                    </interval>
+                  </cardinality>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0014</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_DATE</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="ARCHETYPE_SLOT">
+                <rm_type_name>CLUSTER</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>0</lower>
+                </occurrences>
+                <node_id>at0077</node_id>
+                <includes>
+                  <string_expression>archetype_id/value matches {/.*/}</string_expression>
+                  <expression xsi:type="EXPR_BINARY_OPERATOR">
+                    <type>Boolean</type>
+                    <operator>2007</operator>
+                    <precedence_overridden>false</precedence_overridden>
+                    <left_operand xsi:type="EXPR_LEAF">
+                      <type>String</type>
+                      <item xsi:type="xsd:string">archetype_id/value</item>
+                      <reference_type>attribute</reference_type>
+                    </left_operand>
+                    <right_operand xsi:type="EXPR_LEAF">
+                      <type>C_STRING</type>
+                      <item xsi:type="C_STRING">
+                        <pattern>.*</pattern>
+                      </item>
+                      <reference_type>constraint</reference_type>
+                    </right_operand>
+                  </expression>
+                </includes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0017</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_COUNT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>magnitude</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>1</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_PRIMITIVE_OBJECT">
+                        <rm_type_name>INTEGER</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <item xsi:type="C_INTEGER">
+                          <range>
+                            <lower_included>true</lower_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>true</upper_unbounded>
+                            <lower>0</lower>
+                          </range>
+                        </item>
+                      </children>
+                    </attributes>
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0069</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <cardinality>
+                <is_ordered>false</is_ordered>
+                <is_unique>false</is_unique>
+                <interval>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>1</lower>
+                </interval>
+              </cardinality>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0086</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.change(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>openEHR-EHR-CLUSTER\.change(-[a-zA-Z0-9_]+)*\.v1</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0016</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0093</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_DV_QUANTITY">
+                <rm_type_name>DV_QUANTITY</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <list>
+                  <magnitude>
+                    <lower_included>true</lower_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>true</upper_unbounded>
+                    <lower>0.0</lower>
+                  </magnitude>
+                  <precision>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>2</lower>
+                    <upper>2</upper>
+                  </precision>
+                  <units>a</units>
+                </list>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0094</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_COUNT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>magnitude</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_PRIMITIVE_OBJECT">
+                    <rm_type_name>INTEGER</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <item xsi:type="C_INTEGER">
+                      <range>
+                        <lower_included>true</lower_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>true</upper_unbounded>
+                        <lower>0</lower>
+                      </range>
+                    </item>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0074</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_COUNT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>magnitude</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_PRIMITIVE_OBJECT">
+                    <rm_type_name>INTEGER</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <item xsi:type="C_INTEGER">
+                      <range>
+                        <lower_included>true</lower_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>true</upper_unbounded>
+                        <lower>0</lower>
+                      </range>
+                    </item>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0019</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>protocol</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0021</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0073</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/.*/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>.*</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0071</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0085</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0075</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0076</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0079</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0072</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_COUNT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>magnitude</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_PRIMITIVE_OBJECT">
+                    <rm_type_name>INTEGER</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <item xsi:type="C_INTEGER">
+                      <range>
+                        <lower_included>true</lower_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>true</upper_unbounded>
+                        <lower>0</lower>
+                      </range>
+                    </item>
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_DV_QUANTITY">
+                <rm_type_name>DV_QUANTITY</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <property>
+                  <terminology_id>
+                    <value>openehr</value>
+                  </terminology_id>
+                  <code_string>124</code_string>
+                </property>
+                <list>
+                  <magnitude>
+                    <lower_included>true</lower_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>true</upper_unbounded>
+                    <lower>0.0</lower>
+                  </magnitude>
+                  <precision>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>0</upper>
+                  </precision>
+                  <units>g</units>
+                </list>
+                <list>
+                  <magnitude>
+                    <lower_included>true</lower_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>true</upper_unbounded>
+                    <lower>0.0</lower>
+                  </magnitude>
+                  <precision>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>0</upper>
+                  </precision>
+                  <units>[oz_av]</units>
+                </list>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0022</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Tobacco smoking summary</items>
+        <items id="description">Summary or persistent information about the tobacco smoking habit of an individual.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Current smoker</items>
+        <items id="description">Individual is a current smoker of tobacco.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Former smoker</items>
+        <items id="description">Individual has previously smoked tobacco but is not a current smoker.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Never smoked</items>
+        <items id="description">Individual has never smoked any type of tobacco.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Episode start date</items>
+        <items id="description">Date when this episode commenced.</items>
+        <items id="comment">Can be a partial date, for example, only a year.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Quit date</items>
+        <items id="description">Date when the individual last smoked the specified type of tobacco.</items>
+        <items id="comment">Can be a partial date, for example, only a year. Definitions for a 'Quit date' vary enormously and can be defined using the 'Quit data definition' data element in the Protocol section of this archetype. This date will be identical to the 'Episode end date' for the most recent episode. This date could be used by decision support guidance to determine if the  individual is at risk of relapse, for example in the first 12 months since quitting.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Regular smoking commenced</items>
+        <items id="description">The date or partial date when the individual first started frequent or regular, but usually non-daily, smoking of tobacco of any type.</items>
+        <items id="comment">Can be a partial date, for example, only a year. For example, this date could represent when the individual commenced smoking every Friday night or at parties.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Overall quit date</items>
+        <items id="description">The date when the individual last ceased using tobacco of any type.</items>
+        <items id="comment">Can be a partial date, for example, only a year. This date could be used by decision support guidance to determine if the  individual is at risk of relapse, for example in the first 12 months since quitting.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Pack years</items>
+        <items id="description">Estimate of the cumulative amount of tobacco smoked using the specified type of tobacco.</items>
+        <items id="comment">Commonly used in assessment of cigarette use. It is calculated by multiplying the number of packs of cigarettes smoked per day by the number of years the individual has smoked. One pack year equals 365 packs of cigarettes. Details about how to calculate pack years for other types of tobacco can be found at http://smokingpackyears.com. The definition of a pack can be recorded in the protocol of this archetype using the 'Pack definition' data element.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Overall comment</items>
+        <items id="description">Additional narrative about all tobacco smoking that has not been captured in other fields.</items>
+        <items id="comment">For example: stopped smoking or reduced amount on becoming pregnant.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Last updated</items>
+        <items id="description">The date this tobacco smoking summary was last updated.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Typical use (units)</items>
+        <items id="description">Estimate of number of units of the specified type of tobacco consumed.</items>
+        <items id="comment">For example: the number of 'sticks' or 'full pipes' per day or per week. This data element is redundant if a value is recorded for 'Typical use(mass)'.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Number of quit attempts</items>
+        <items id="description">Total number of times the individual has attempted to stop smoking the specified type of tobacco within this episode.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Episode details</items>
+        <items id="description">Additional structured details about the specified episode of tobacco smoking.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">Per type</items>
+        <items id="description">Details about smoking activity for a specified type of inhaled tobacco.</items>
+        <items id="comment">The run-time name constraint on this Cluster enables simple templates for each required type to be designed in templates, or the types to be managed exclusively at run-time. The list of names can be extended at run-time if additional types of tobacco smoking are identified locally.</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Pattern</items>
+        <items id="description">The typical pattern of smoking for the specified type of tobacco.</items>
+      </items>
+      <items code="at0043">
+        <items id="text">Overall description</items>
+        <items id="description">Narrative summary about the individual's overall tobacco smoking pattern and history.</items>
+        <items id="comment">Use this data element to record a narrative description of the tobacco smoking habits for this individual or to incorporate unstructured tobacco smoking information from existing or legacy clinical systems into an archetyped format.</items>
+      </items>
+      <items code="at0052">
+        <items id="text">Status</items>
+        <items id="description">Statement about current smoking behaviour for the specified type of tobacco.</items>
+      </items>
+      <items code="at0053">
+        <items id="text">Description</items>
+        <items id="description">Narrative summary about smoking behaviour for the specified type of tobacco.</items>
+      </items>
+      <items code="at0054">
+        <items id="text">Cigarettes</items>
+        <items id="description">Also known as manufactured cigarettes, 'factory made' cigarettes or 'tailor made' cigarettes. Processed tobacco, manufactured into cylinder made of paper or a substance that does not contain tobacco.</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Hand-rolled cigarettes</items>
+        <items id="description">Also known as "rollies" or "roll-ups". Loose tobacco, hand rolled into a cylinder using cigarette papers.</items>
+      </items>
+      <items code="at0056">
+        <items id="text">Cigars</items>
+        <items id="description">Also known as "large cigar". Roll of tobacco wrapped within a leaf tobacco or in a substance that contains tobacco.</items>
+      </items>
+      <items code="at0057">
+        <items id="text">Pipe</items>
+        <items id="description">Loose tobacco placed inside a pipe bowl.</items>
+      </items>
+      <items code="at0059">
+        <items id="text">Former smoker</items>
+        <items id="description">Individual has previously smoked the specified type of tobacco but is not a current smoker.</items>
+      </items>
+      <items code="at0061">
+        <items id="text">Current smoker</items>
+        <items id="description">Individual is a current smoker of the specified type of tobacco.</items>
+      </items>
+      <items code="at0062">
+        <items id="text">Waterpipe</items>
+        <items id="description">Also known as "hookah", "shisha", "narguileh" and "hubble-bubble". Tobacco, often flavoured, is burned then cooled through a basin of water and consumed through a hose and mouthpiece.</items>
+      </items>
+      <items code="at0064">
+        <items id="text">Per episode</items>
+        <items id="description">Details about a discrete period of smoking activity for the specified type of tobacco.</items>
+      </items>
+      <items code="at0065">
+        <items id="text">Typical use (mass)</items>
+        <items id="description">Estimate of the weight of loose leaf tobacco smoked.</items>
+        <items id="comment">This data element will typically be used for pipes and hand-rolled cigarettes and is redundant if a value is recorded for 'Typical use (units)'.</items>
+      </items>
+      <items code="at0066">
+        <items id="text">Cigarillos</items>
+        <items id="description">Also known as mini cigars. Short and narrow cigar.</items>
+      </items>
+      <items code="at0069">
+        <items id="text">Comment</items>
+        <items id="description">Additional narrative about smoking of the specified type of tobacco, not captured in other fields.</items>
+      </items>
+      <items code="at0071">
+        <items id="text">Quit date definition</items>
+        <items id="description">The applied definition for the 'Quit date' data elements used in this archetype.</items>
+      </items>
+      <items code="at0072">
+        <items id="text">Pack definition</items>
+        <items id="description">The definition of the size of pack used as part of the algorithm for calculating 'Pack years' data elements used in this archetype.</items>
+        <items id="comment">Definition may need to be specified per type. For example, the number of units in a pack used for cigarettes may be different to cigars; the mass of loose tobacco in a pack used for hand-rolled cigarettes or pipes.</items>
+      </items>
+      <items code="at0073">
+        <items id="text">Extension</items>
+        <items id="description">Additional information required to capture local content or to align with other reference models/formalisms.</items>
+        <items id="comment">For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.</items>
+      </items>
+      <items code="at0074">
+        <items id="text">Overall pack years</items>
+        <items id="description">Estimate of the cumulative amount for all types of tobacco smoked.</items>
+        <items id="comment">The definition of a pack can be recorded in the protocol of this archetype using the 'Pack definition' data element.</items>
+      </items>
+      <items code="at0075">
+        <items id="text">Current smoker definition</items>
+        <items id="description">The applied definition for the 'Current smoker' value in each of the 'Status' data elements used in this archetype.</items>
+        <items id="comment">Definition may need to be specified per type. Current smoker definitions vary in different jurisdictions. For example: USA Centre for Disease Control refers to smoking during the past one month and New Zealand Ministry of Health uses 28 days.</items>
+      </items>
+      <items code="at0076">
+        <items id="text">Former smoker definition</items>
+        <items id="description">The applied definition for the 'Former smoker' value in each of the 'Status' data elements used in this archetype.</items>
+        <items id="comment">Definition may need to be specified per type of tobacco. Former smoker definitions vary in different jurisdictions. For example: New Zealand Ministry of Health refers to not having smoked during the past 28 days.</items>
+      </items>
+      <items code="at0077">
+        <items id="text">Type details</items>
+        <items id="description">Additional structured details about the specified type of tobacco smoking.</items>
+      </items>
+      <items code="at0078">
+        <items id="text">Bidis</items>
+        <items id="description">Also known as Beedis. Thin hand-rolled cigarettes filled with tobacco and wrapped in a leaf, often tied with colorful string at one or both ends. They can be flavoured or unflavoured.</items>
+      </items>
+      <items code="at0079">
+        <items id="text">Never smoked definition</items>
+        <items id="description">The applied definition for the 'Never smoked' value in each of the 'Status' data elements used in this archetype.</items>
+        <items id="comment">Definition may need to be specified per type. For example, the definition may not be zero, but less than a specified amount (as units or mass) smoked during a specified time interval.</items>
+      </items>
+      <items code="at0080">
+        <items id="text">Daily smoking commenced</items>
+        <items id="description">The date or partial date when the individual first started daily smoking of tobacco of any type.</items>
+        <items id="comment">Can be a partial date, for example, only a year.</items>
+      </items>
+      <items code="at0081">
+        <items id="text">Episode label</items>
+        <items id="description">Identification of an episode of smoking activity - either as a number in a sequence and/or a named event.</items>
+        <items id="comment">For example: '2' as the second episode within a sequence of episodes; or 'Pregnancy with twins' if describing the smoking activity during a health event such as during a specific pregnancy.</items>
+      </items>
+      <items code="at0082">
+        <items id="text">Episode end date</items>
+        <items id="description">Date when this episode ceased.</items>
+        <items id="comment">Can be a partial date, for example, only a year. This data field will be empty if the episode is current and ongoing.</items>
+      </items>
+      <items code="at0083">
+        <items id="text">Daily</items>
+        <items id="description">Smoking the specified type of tobacco at least once every day.</items>
+      </items>
+      <items code="at0084">
+        <items id="text">Non-daily</items>
+        <items id="description">Not smoking the specified type of tobacco every day.</items>
+      </items>
+      <items code="at0085">
+        <items id="text">Quit attempt definition</items>
+        <items id="description">The applied definition for a Quit attempt used to determine value for the 'Number of quit attempts' data element used in this archetype.</items>
+        <items id="comment">For example: 'stopped smoking for one day or longer with the intention of quitting'.</items>
+      </items>
+      <items code="at0086">
+        <items id="text">Overall details</items>
+        <items id="description">Additional structured details about the overall tobacco smoking behaviour.</items>
+      </items>
+      <items code="at0087">
+        <items id="text">Episode comment</items>
+        <items id="description">Additional narrative about tobacco smoking during the specified episode, not captured in other fields.</items>
+      </items>
+      <items code="at0088">
+        <items id="text">Kreteks</items>
+        <items id="description">Also known as clove cigarettes. Cigarettes that contain a mixture of tobacco, cloves and other additives.</items>
+      </items>
+      <items code="at0089">
+        <items id="text">Overall status</items>
+        <items id="description">Statement about current smoking behaviour for all types of tobacco.</items>
+      </items>
+      <items code="at0091">
+        <items id="text">Never smoked</items>
+        <items id="description">Individual has never smoked the specified type of tobacco.</items>
+      </items>
+      <items code="at0093">
+        <items id="text">Overall years of smoking</items>
+        <items id="description">The cumulative number of years that the individual has smoked tobacco.</items>
+        <items id="comment">This data element does not take into account the amount of tobacco smoked. It may be used to calculate the 'Smoking index'.</items>
+      </items>
+      <items code="at0094">
+        <items id="text">Smoking index</items>
+        <items id="description">An indication of the cumulative amount of tobacco smoking exposure.</items>
+        <items id="comment">This parameter is similar to Pack Years but based on units of cigarettes, bidis etc smoked per day, rather than packs.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Røykeanamnese</items>
+        <items id="description">Sammendrag eller detaljer om et individs tidligere og nåværende tobakksrøykevaner.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Røyker</items>
+        <items id="description">Individet er en nåværende tobakksrøyker.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Tidligere røyker</items>
+        <items id="description">Individet har tidligere røykt tobakk, men er ikke en nåværende røyker.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Aldri røykt</items>
+        <items id="description">Individet har aldri røykt tobakk.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Episodens startdato</items>
+        <items id="description">Dato da episoden startet.</items>
+        <items id="comment">Kan være en deldato, for eksempel kun årstall.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Sluttdato</items>
+        <items id="description">Datoen da individet sist røykte den spesifiserte tobakkstypen.</items>
+        <items id="comment">Kan være en deldato, for eksempel årstall. Definisjoner for "Sluttdato" varierer enormt og kan defineres ved å bruke datalementet "Definisjon på Sluttdato" i protokolldelen av denne arketypen. Denne datoen vil være identisk med "Episodens sluttdato" for den siste episoden. Denne datoen kan brukes av beslutningsstøttesystemer for å beregne om individet er i faresonen for tilbakefall, for eksempel i løpet av de først 12 månedene etter å ha sluttet.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Startet regelmessig røyking</items>
+        <items id="description">Dato eller deldato da individet for første gang begynte å røyke hyppig eller regelmessig, men ikke daglig.</items>
+        <items id="comment">Kan være en deldato, for eksempel kun årstall. For eksempel kan denne datoen representere tidspunktet da individet begynte å røyke hver fredagskveld eller på fest.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Samlet sluttdato</items>
+        <items id="description">Datoen da individet sist røykte en hvilken som helst type tobakk.</items>
+        <items id="comment">Kan være en deldato, for eksempel årstall. Denne datoen kan brukes av beslutningsstøttesystemer for å beregne om individet er i faresonen for tilbakefall, for eksempel i løpet av de først 12 månedene etter å ha sluttet.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Pakkeår</items>
+        <items id="description">Anslått kumulativ mengde tobakk røykt av den spesifiserte typen tobakk.</items>
+        <items id="comment">Vanligvis gjøres vurderingen på sigarettbruk. Den kalkuleres ved å multiplisere antall sigarettpakker røykt hver dag med antall år individet har røykt. Et pakkeår tilsvarer 365 pakker sigaretter. Detaljer om hvordan man kalkulerer pakkeår for andre typer tobakk kan finnes på http://smokingpackyears.com. Definisjonen på en pakke kan registreres i protokollen av denne arketypen, ved å bruke dataelementet "Pakkedefinisjon".</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Samlet kommentar</items>
+        <items id="description">Ytterligere fritekst om tobakksrøyking som ikke er omfattet av andre felt.</items>
+        <items id="comment">For eksempel: Sluttet å røyke eller reduserte mengde ved graviditet.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Sist oppdatert</items>
+        <items id="description">Datoen da sammendraget av tobakksbruk sist ble oppdatert.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Typisk bruk (enheter)</items>
+        <items id="description">Anslått forbruk av spesifisert tobakkstype, antall enheter.</items>
+        <items id="comment">For eksempel: Antall sigaretter eller piper per dag eller per uke. Dette dataelementet er overflødig om verdien er registrert for "Typisk bruk (vekt)".</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Antall forsøk på å slutte</items>
+        <items id="description">Totalt antall ganger individet har forsøkt å slutte å røyke den spesifiserte typen tobakk innenfor denne episoden.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Episodedetaljer</items>
+        <items id="description">Ytterligere strukturerte detaljer om den spesifiserte episoden med tobakksrøyking.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">Per type</items>
+        <items id="description">Detaljer om røyking for en spesifikk type røyketobakk.</items>
+        <items id="comment">Navnebegrensningen på dette clusteret gjør det mulig å enkelt spesifisere hver type røykt tobakk i templater, eller i en applikasjon. Listen over navn kan utvides i en applikasjon dersom flere typer tobakk finnes lokalt.</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Mønster</items>
+        <items id="description">Typisk røykemønster for den spesifiserte tobakkstypen.</items>
+        <items id="comment">Bruksmønster kan kodes med en terminologi eller med et lokalt verdisett i et templat.</items>
+      </items>
+      <items code="at0043">
+        <items id="text">Overordnet beskrivelse</items>
+        <items id="description">Fritekstsammendrag om individets overordnede røykemønster og historikk.</items>
+        <items id="comment">*Use this data element to record a narrative description of the tobacco smoking habits for this individual or to incorporate unstructured tobacco smoking information from existing or legacy clinical systems into an archetyped format. (en)</items>
+      </items>
+      <items code="at0052">
+        <items id="text">Status</items>
+        <items id="description">Utsagn om nåværende røykeadferd for en spesifisert tobakkstype.</items>
+      </items>
+      <items code="at0053">
+        <items id="text">Beskrivelse</items>
+        <items id="description">Fritekstsammendrag om røykeadferden for den spesifiserte tobakkstypen.</items>
+      </items>
+      <items code="at0054">
+        <items id="text">Sigaretter</items>
+        <items id="description">Også kjent som ferdigsigaretter eller fabrikksigaretter. Fint skåret tobakk, rullet inn i en sylinder laget av papir eller en annen substans som ikke inneholder tobakk.</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Håndrullede sigaretter</items>
+        <items id="description">Også kjent som "rullings". Løs tobakk som rulles inn i sigarettpapir.</items>
+      </items>
+      <items code="at0056">
+        <items id="text">Sigarer</items>
+        <items id="description">Tobakk som rulles i et tobakksblad eller i en substans som inneholder tobakk.</items>
+      </items>
+      <items code="at0057">
+        <items id="text">Pipe</items>
+        <items id="description">Løs tobakk plassert i pipens hode.</items>
+      </items>
+      <items code="at0059">
+        <items id="text">Tidligere røyker</items>
+        <items id="description">Individet har tidligere røykt den spesifiserte typen tobakk, men er ikke en nåværende røyker.</items>
+      </items>
+      <items code="at0061">
+        <items id="text">Røyker</items>
+        <items id="description">Individet er en nåværende røyker av den spesifiserte typen tobakk.</items>
+      </items>
+      <items code="at0062">
+        <items id="text">Vannpipe</items>
+        <items id="description">Også kjent som "hookah", "shisha" og "narguileh". Tobakk som ofte er smaksatt brennes, for deretter å kjøles ned i en vannfylt beholder. Røyken inhaleres gjennom en slange og et munnstykke.</items>
+      </items>
+      <items code="at0064">
+        <items id="text">Per episode</items>
+        <items id="description">Detaljer om en avgrenset periode med røyking av den spesifiserte tobakkstypen.</items>
+      </items>
+      <items code="at0065">
+        <items id="text">Typisk bruk (vekt)</items>
+        <items id="description">Anslått forbruk av spesifisert tobakkstype, vekt.</items>
+        <items id="comment">Dette dataelementet vil vanligvis brukes for piper eller håndrullede sigaretter. For eksempel: Antall gram løstobakk per dag eller per uke. Dette dataelementet er overflødig om verdien er registrert for "Typisk bruk (enheter)".</items>
+      </items>
+      <items code="at0066">
+        <items id="text">Cigarillos</items>
+        <items id="description">Også kjent som minisigar. Kort og smal sigar.</items>
+      </items>
+      <items code="at0069">
+        <items id="text">Kommentar</items>
+        <items id="description">Ytterligere fritekst om røyking av den spesifiserte tobakkstypen som ikke er omfattet av andre felt.</items>
+      </items>
+      <items code="at0071">
+        <items id="text">Definisjon på Sluttdato</items>
+        <items id="description">Den anvendte definisjonen på dataelementet "Sluttdato" benyttet i denne arketypen.</items>
+      </items>
+      <items code="at0072">
+        <items id="text">Pakkedefinisjon</items>
+        <items id="description">Definisjon for pakkestørrelse som brukes som en del av algoritmen for å kalkulere datelementene for "Pakkeår" benyttet i denne arketypen.</items>
+        <items id="comment">Definisjonen kan spesifiseres per tobakkstype. For eksempel, antall enheter i en pakke sigaretter kan være annerledes for sigarer; mengden løstobakk i en pakke som benyttes for håndrullede sigaretter eller piper.</items>
+      </items>
+      <items code="at0073">
+        <items id="text">Tilleggsinformasjon</items>
+        <items id="description">Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.</items>
+        <items id="comment">For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.</items>
+      </items>
+      <items code="at0074">
+        <items id="text">Samlet pakkeår</items>
+        <items id="description">Anslått kumulativ mengde av alle tobakkstyper som er røykt.</items>
+        <items id="comment">Definisjonen på en pakke kan registreres i protokollen av denne arketypen, ved å bruke dataelementet "Pakkedefinisjon".</items>
+      </items>
+      <items code="at0075">
+        <items id="text">Definisjon på Nåværende røyker</items>
+        <items id="description">Den anvendte definisjonen på verdien "Nåværende røyker" i datalementet "Status" benyttet i denne arketypen.</items>
+        <items id="comment">Definisjonen kan spesifiseres per tobakkstype. Definisjon av nåværende røyker kan variere fra land til land. For eksempel refererer USAs Center for Disease Control til røyking den siste måneden, og New Zealand Ministry of Health til røyking i løpet av de siste 28 dagene.</items>
+      </items>
+      <items code="at0076">
+        <items id="text">Definisjon på Tidligere røyker</items>
+        <items id="description">Den anvendte definisjonen på verdien "Tidligere røyker" i dataelementet "Status" benyttet i denne arketypen.</items>
+        <items id="comment">*Definition may need to be specified per type of tobacco. Former smoker definitions vary in different jurisdictions. For example: New Zealand Ministry of Health refers to not having smoked during the past 28 days. (en)</items>
+      </items>
+      <items code="at0077">
+        <items id="text">Detaljer om tobakkstypen</items>
+        <items id="description">Ytterligere strukturerte detaljer om den spesifiserte typen tobakksrøyking.</items>
+      </items>
+      <items code="at0078">
+        <items id="text">Bidis</items>
+        <items id="description">Også kjent som Beedis. Tynne håndrullede sigaretter fylt med tobakk, pakket inn i et blad ofte bundet sammen med en fargerik tråd i en eller begge endene. Kan være både smaksatt og ikke smaksatt.</items>
+      </items>
+      <items code="at0079">
+        <items id="text">Definisjon på Aldri røykt</items>
+        <items id="description">Den anvendte definisjonen på verdien "Tidligere røyker" i dataelementet "Status" benyttet i denne arketypen.</items>
+        <items id="comment">Definisjonen kan spesifiseres per tobakkstype. For eksempel kan definisjon være ikke null, men mindre enn en spesifisert mengde (som antall enheter eller vekt) røykt over et spesifisert tidsintervall.</items>
+      </items>
+      <items code="at0080">
+        <items id="text">Start daglig røyking</items>
+        <items id="description">Dato eller deldato individet begynte å røyke daglig.</items>
+        <items id="comment">Kan være en deldato, for eksempel kun årstall.</items>
+      </items>
+      <items code="at0081">
+        <items id="text">Episodenavn</items>
+        <items id="description">Identifisering av en episode med røyking, enten som et nummer i en sekvens eller som en navngitt hendelse.</items>
+        <items id="comment">For eksempel: "2" som den andre episoden i en serie av episoder, eller "Gravid med tvillinger" om en beskriver røyking under en helserelatert hendelse som for eksempel under graviditet.</items>
+      </items>
+      <items code="at0082">
+        <items id="text">Episodens sluttdato</items>
+        <items id="description">Datoen episoden opphørte.</items>
+        <items id="comment">Kan være en deldato, for eksempel årstall. Dette dataelementet vil være tomt om episoden er pågående.</items>
+      </items>
+      <items code="at0083">
+        <items id="text">Daglig</items>
+        <items id="description">Individet røyker den spesifiserte tobakkstypen minst en gang per dag.</items>
+      </items>
+      <items code="at0084">
+        <items id="text">Ikke daglig</items>
+        <items id="description">Individet røyker ikke den spesifiserte tobakkstypen daglig.</items>
+      </items>
+      <items code="at0085">
+        <items id="text">Definisjon på Forsøk på å slutte</items>
+        <items id="description">Den anvendte definisjonen på dataelementet "Antall forsøk på å slutte" benyttet i denne arketypen.</items>
+        <items id="comment">For eksempel "sluttet å røyke i en dag eller lenger, med den hensikt å slutte".</items>
+      </items>
+      <items code="at0086">
+        <items id="text">Samlede detaljer</items>
+        <items id="description">Ytterligere strukturerte detaljer om overordnet røykeadferd.</items>
+      </items>
+      <items code="at0087">
+        <items id="text">Kommentar til episoden</items>
+        <items id="description">Ytterligere fritekst om tobakksrøyking innenfor den spesifiserte episoden, som ikke er omfattet av andre felt.</items>
+      </items>
+      <items code="at0088">
+        <items id="text">Kretek</items>
+        <items id="description">Sigaretter som inneholder en blanding av tobakk, nellik og andre tilsetningsstoffer.</items>
+      </items>
+      <items code="at0089">
+        <items id="text">Overordnet status</items>
+        <items id="description">Utsagn om nåværende røykeadferd for alle typer tobakk.</items>
+      </items>
+      <items code="at0091">
+        <items id="text">Aldri røykt</items>
+        <items id="description">Individet har aldri røykt den spesifiserte typen tobakk.</items>
+      </items>
+      <items code="at0093">
+        <items id="text">*Overall years of smoking (en)</items>
+        <items id="description">*The cumulative number of years that the individual has smoked tobacco. (en)</items>
+        <items id="comment">*This data element does not take into account the amount of tobacco smoked. It may be used to calculate the 'Smoking index'. (en)</items>
+      </items>
+      <items code="at0094">
+        <items id="text">*Smoking index (en)</items>
+        <items id="description">*An indication of the cumulative amount of tobacco smoking exposure. (en)</items>
+        <items id="comment">*This parameter is similar to Pack Years but based on units of cigarettes, bidis etc smoked per day, rather than packs. (en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="sv">
+      <items code="at0000">
+        <items id="text">Sammanfattning av rökvanor för tobak</items>
+        <items id="description">Samlad information om en individs tobaks-rökvanor.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Rökare</items>
+        <items id="description">Individen röker tobak.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Före detta rökare</items>
+        <items id="description">Individen har varit rökare men har slutat röka.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Har aldrig rökt</items>
+        <items id="description">Individen har aldrig rökt någon form av tobak.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Episodens startdatum</items>
+        <items id="description">Datum när den här episoden startade.</items>
+        <items id="comment">Kan vara del av ett datum, till exempel bara ett årtal.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Slutdatum</items>
+        <items id="description">Datum när individen senast rökte den angivna sortens tobaksprodukt.</items>
+        <items id="comment">Kan vara del av ett datum, till exempel bara ett årtal.&#xD;
+&#xD;
+Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan preciseras/definieras med hjälp av dataelementet "Definition av slutdatum" i protokolldelen i den här arketypen. Detta datum kommer att vara identiskt med "Episodens slutdatum" för den senaste episoden. Detta datum kan användas av beslutsstödssystem för att avgöra om individen är i riskzonen för återfall, till exempel under de första 12 månaderna sedan hen slutade röka.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Började röka regelbundet</items>
+        <items id="description">Datum, eller del av datum när individen först började röka någon sorts tobak regelbundet, men inte dagligen</items>
+        <items id="comment">Det kan vara del av ett datum, till exempel bara ett årtal. Datumet kan t.ex. representera när individen började röka varje fredagskväll eller på fester.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Övergripande slutdatum</items>
+        <items id="description">Det datum då individen (senast) helt slutade röka tobak.</items>
+        <items id="comment">Kan vara del av ett datum, till exempel bara ett årtal. Detta datum kan användas av beslutsstödssystem för att avgöra om individen är i riskzonen för återfall, till exempel under de första 12 månaderna sedan hen slutade röka.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Paketår (pack years)</items>
+        <items id="description">En uppskattning av den totala mängden av denna sorts tobaksprodukt som en person har rökt under sin livstid.</items>
+        <items id="comment">Används för att bedöma cigarettförbrukning. Det beräknas genom att multiplicera antalet cigarettpaket rökta per dag med det antal år som personen rökt. Ett paketår motsvarar 365 förpackningar cigaretter. Detaljer om hur man beräknar paketår för olika typer av tobaksprodukter finns på http://smokingpackyears.com. Definitionen av ett paket kan anges fältet "Definition av paket" i protokoll-delen ("Protocol") av den här arketypen.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Övergripande kommentar</items>
+        <items id="description">Ytterligare övergripande beskrivning av rökvanor som inte redan beskrivits i andra fält.</items>
+        <items id="comment">Exempelvis: slutade röka eller minskade rökning i samband med graviditet</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Senaste uppdatering</items>
+        <items id="description">Det datum då denna sammanfattning av individens rökvanor senast reviderades.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Typisk användning (enheter)</items>
+        <items id="description">Uppskattning av antal enheter av den angivna typen av tobaksprodukt som konsumeras.</items>
+        <items id="comment">Till exempel: antalet cigaretter eller "portioner" per dag eller per vecka. Detta dataelement är överflödigt/redundant om ett värde registrerats för "Typisk användning (massa)".</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Antal försök att sluta</items>
+        <items id="description">Totalt antal gånger under denna period som personen har försökt sluta röka denna typ av tobaksprodukt.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Episoddetaljer</items>
+        <items id="description">Plats för att infoga ytterligare strukturerad information om den angivna episoden.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">Per typ</items>
+        <items id="description">Detaljerad beskrivning av rökvanor för en specifik typ av tobaksprodukt.</items>
+        <items id="comment">Detta "run-time name constraint" för detta "Cluster" (delträd) gör det enkelt att skapa röktyp-specifika delar i "templates" (mallar), eller att låta ett IT-system dynamiskt generera specifika delar vid användning. Det är tillåtet att lägga till ytterligare typer av tobaksrökning, om det har identifierats som ett lokalt behov.</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Mönster</items>
+        <items id="description">Typiskt konsumtionsmönster för den angivna typen av tobak.</items>
+      </items>
+      <items code="at0043">
+        <items id="text">Övergripande beskrivning</items>
+        <items id="description">Beskrivande sammanfattning av en individs rökvanor och rökhistorik.</items>
+        <items id="comment">*Use this data element to record a narrative description of the tobacco smoking habits for this individual or to incorporate unstructured tobacco smoking information from existing or legacy clinical systems into an archetyped format. (en)</items>
+      </items>
+      <items code="at0052">
+        <items id="text">Status</items>
+        <items id="description">Nuvarande rökbeteende/status för just denna sorts tobak</items>
+      </items>
+      <items code="at0053">
+        <items id="text">Beskrivning</items>
+        <items id="description">Beskrivande sammanfattning om rökvanor för den angivna typen av rökning.</items>
+      </items>
+      <items code="at0054">
+        <items id="text">Cigaretter</items>
+        <items id="description">"Vanliga" fabrikstillverkade cigaretter. Processad tobak i cylinder av papper eller annat material (som inte är tobak).</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Handrullade cigaretter, rulltobak</items>
+        <items id="description">Lös tobak som för hand rullas till cylindrar med hjälp av cigarettpapper.</items>
+      </items>
+      <items code="at0056">
+        <items id="text">Cigarrer</items>
+        <items id="description">"Stora" cigarrer. Rulle av tobak inrullad i ett tobaksblad eller i annat tobaksinehållande material.</items>
+      </items>
+      <items code="at0057">
+        <items id="text">Pipa</items>
+        <items id="description">Lös tobak som röks i en pipa.</items>
+      </items>
+      <items code="at0059">
+        <items id="text">Före detta rökare</items>
+        <items id="description">Individen har tidigare rökt den här sortens tobak, men gör det inte nuförtiden.</items>
+      </items>
+      <items code="at0061">
+        <items id="text">Rökare</items>
+        <items id="description">Individen röker denna typ av tobak</items>
+      </items>
+      <items code="at0062">
+        <items id="text">Vattenpipa</items>
+        <items id="description">Tobak, ofta smaksatt som bränns och sedan kyls genom ett vattenbad och inhaleras genom en slang och munstycke. Kallas även shisha, hookah, n'arghile, narguileh, ghelion</items>
+      </items>
+      <items code="at0064">
+        <items id="text">Per episod</items>
+        <items id="description">Detaljerad beskrivning av en specifik konsumtionsperiod för den angivna typen av tobak.</items>
+      </items>
+      <items code="at0065">
+        <items id="text">Typisk användning (massa)</items>
+        <items id="description">Beräkning/uppskattning av motsvarande vikt lös tobak som röks.</items>
+        <items id="comment">Detta dataelement används typiskt för tobaksbruk med lös tobak, t.ex. pipor och handrullade cigaretter. Detta värde är överflödigt/redundant om ett värde registrerats för "Typisk användning (enheter)".</items>
+      </items>
+      <items code="at0066">
+        <items id="text">Cigariller</items>
+        <items id="description">"Mini-cigarrer". Kort och smal cigarr.</items>
+      </items>
+      <items code="at0069">
+        <items id="text">Kommentar</items>
+        <items id="description">Ytterligare beskrivning av rökvanor, för denna sorts tobaksprodukt, som inte redan beskrivits i andra fält.</items>
+      </items>
+      <items code="at0071">
+        <items id="text">Definition av slutdatum</items>
+        <items id="description">Definitionen av "slutdatum" som använts i denna arketyps fält/dataelement</items>
+      </items>
+      <items code="at0072">
+        <items id="text">Definition av paket</items>
+        <items id="description">Definition av den paketstorlek som används som en del i beräkningen av "Paketår" i "data"-delen av denna arketyp.</items>
+        <items id="comment">Definitionen kan behöva anges per typ. Till exempel kan antalet enheter (cigaretter) i ett cigarettpaket skilja sig från antalet cigarrer i ett cigarr-paket. Definitionen kan också baseras på massan (vikten) lös tobak i en förpackning som används för handrullade cigaretter eller pipor.</items>
+      </items>
+      <items code="at0073">
+        <items id="text">Tilläggsinformation</items>
+        <items id="description">Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.</items>
+        <items id="comment">Exempelvis lokala informationskrav eller metadata för anpassning till FHIR- eller CIMI-motsvarigheter.</items>
+      </items>
+      <items code="at0074">
+        <items id="text">Totala paketår</items>
+        <items id="description">En uppskattning av den totala mängden tobak som en person har rökt under sin livstid.</items>
+        <items id="comment">Definitionen av ett paket kan anges fältet "Definition av paket" i protokoll-delen ("Protocol") av den här arketypen.</items>
+      </items>
+      <items code="at0075">
+        <items id="text">Definition av rökare</items>
+        <items id="description">Definitionen av "rökare" som använts i denna arketyps fält "Status" och "Övergripande status"</items>
+        <items id="comment">Definitionen kan behöva anges per typ. Defintionen av "rökare" varierar mellan olika sammanhang och länder . Till exempel: USA Center for Disease Control definierar det som rökning under den senaste en månaden och New Zealand Ministry of Health använder 28 dagar</items>
+      </items>
+      <items code="at0076">
+        <items id="text">Definition av "Före detta rökare"</items>
+        <items id="description">Definitionen av "Före detta rökare" som använts i denna arketyps fält "Status" och "Övergripande status"</items>
+        <items id="comment">*Definition may need to be specified per type of tobacco. Former smoker definitions vary in different jurisdictions. For example: New Zealand Ministry of Health refers to not having smoked during the past 28 days. (en)</items>
+      </items>
+      <items code="at0077">
+        <items id="text">Typdetaljer</items>
+        <items id="description">Plats för att infoga ytterligare strukturerad information om den angivna sortens rökning.</items>
+      </items>
+      <items code="at0078">
+        <items id="text">Bidi</items>
+        <items id="description">Tunna handrullade cigaretter fyllda med tobak och inslagna i ett blad, ofta bundna med färgstarka snören i ena eller båda ändarna. De kan vara smaksatta eller ej smaksatta.</items>
+      </items>
+      <items code="at0079">
+        <items id="text">Definition av "Har aldrig rökt"</items>
+        <items id="description">Definitionen av "Har aldrig rökt" som använts i denna arketyps fält "Status" och "Övergripande status"</items>
+        <items id="comment">Definitionen kan behöva anges per typ. Exempelvis så behöver den inte vara noll, men kanske istället mindre än en specificerad mängd (antal eller massa) rökt tobak under en specificerad tidsperiod.</items>
+      </items>
+      <items code="at0080">
+        <items id="text">Började röka dagligen</items>
+        <items id="description">Datum, eller del av datum när individen först började röka någon sorts tobak dagligen.</items>
+        <items id="comment">Det kan vara del av ett datum, t.ex. bara ett årtal.</items>
+      </items>
+      <items code="at0081">
+        <items id="text">Episodbeteckning</items>
+        <items id="description">Beskrivande beteckning/namn för att identifiera en specifik konsumtionsperiod för den angivna typen av tobak.</items>
+        <items id="comment">Till exempel: "2" som den andra episoden inom en sekvens av episoder om man inte ger beskrivande namn; eller "Graviditeten med tvillingar" om man beskriver tobaksbruket under en hälsotillståndsperiod, t.ex. under en viss graviditet.</items>
+      </items>
+      <items code="at0082">
+        <items id="text">Episodens slutdatum</items>
+        <items id="description">Datum när den här episoden slutade.</items>
+        <items id="comment">Kan vara del av ett datum, till exempel bara ett årtal. Det här fältet kommer att vara tomt om epsioden är aktuell och pågående.</items>
+      </items>
+      <items code="at0083">
+        <items id="text">Dagligen</items>
+        <items id="description">Röker denna sorts tobak minst en gång varje dag.</items>
+      </items>
+      <items code="at0084">
+        <items id="text">Inte dagligen</items>
+        <items id="description">Röker inte denna sorts tobak varje dag.</items>
+      </items>
+      <items code="at0085">
+        <items id="text">Definition av avslutningsförsök</items>
+        <items id="description">Definitionen av avslutningsförsök som använts i denna arketyps fält "Antal försök att sluta".</items>
+        <items id="comment">Exempelvis: "Slutade röka en dag eller längre, med avsikt att sluta röka"</items>
+      </items>
+      <items code="at0086">
+        <items id="text">Övergripande detaljer</items>
+        <items id="description">Plats för ytterligare strukturerade detaljer om individens övergripande rökvanor.</items>
+      </items>
+      <items code="at0087">
+        <items id="text">Kommentarer om episoden</items>
+        <items id="description">Ytterligare beskrivning av rökvanor under det angivna episoden som inte redan beskrivits i andra fält.</items>
+      </items>
+      <items code="at0088">
+        <items id="text">Kretek</items>
+        <items id="description">Cigarett smaksatt med kryddnejlika, populär bl.a. i Indonesien. Cigaretten innehåller en blandning av tobak, kryddnejlika och andra tillsatser.</items>
+      </items>
+      <items code="at0089">
+        <items id="text">Övergripande status</items>
+        <items id="description">Beskrivning av aktuellt bruk för alla typer av röktobak</items>
+      </items>
+      <items code="at0091">
+        <items id="text">Har aldrig rökt</items>
+        <items id="description">Individen har aldrig rökt denna typ av tobak</items>
+      </items>
+      <items code="at0093">
+        <items id="text">*Overall years of smoking (en)</items>
+        <items id="description">*The cumulative number of years that the individual has smoked tobacco. (en)</items>
+        <items id="comment">*This data element does not take into account the amount of tobacco smoked. It may be used to calculate the 'Smoking index'. (en)</items>
+      </items>
+      <items code="at0094">
+        <items id="text">*Smoking index (en)</items>
+        <items id="description">*An indication of the cumulative amount of tobacco smoking exposure. (en)</items>
+        <items id="comment">*This parameter is similar to Pack Years but based on units of cigarettes, bidis etc smoked per day, rather than packs. (en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">*Tobacco smoking summary(en)</items>
+        <items id="description">*Summary or persistent information about the tobacco smoking habit of an individual.(en)</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Current smoker(en)</items>
+        <items id="description">*Individual is a current smoker of tobacco.(en)</items>
+      </items>
+      <items code="at0005">
+        <items id="text">*Former smoker(en)</items>
+        <items id="description">*Individual has previously smoked tobacco but is not a current smoker.(en)</items>
+      </items>
+      <items code="at0006">
+        <items id="text">*Never smoked(en)</items>
+        <items id="description">*Individual has never smoked any type of tobacco.(en)</items>
+      </items>
+      <items code="at0013">
+        <items id="text">*Episode start date(en)</items>
+        <items id="description">*Date when this episode commenced.(en)</items>
+        <items id="comment">*Can be a partial date, for example, only a year.(en)</items>
+      </items>
+      <items code="at0014">
+        <items id="text">*Quit date(en)</items>
+        <items id="description">*Date when the individual last smoked the specified type of tobacco.(en)</items>
+        <items id="comment">*Can be a partial date, for example, only a year. Definitions for a 'Quit date' vary enormously and can be defined using the 'Quit data definition' data element in the Protocol section of this archetype. This date will be identical to the 'Episode end date' for the most recent episode. This date could be used by decision support guidance to determine if the  individual is at risk of relapse, for example in the first 12 months since quitting.(en)</items>
+      </items>
+      <items code="at0015">
+        <items id="text">*Regular smoking commenced(en)</items>
+        <items id="description">*The date or partial date when the individual first started frequent or regular, but usually non-daily, smoking of tobacco of any type.(en)</items>
+        <items id="comment">*Can be a partial date, for example, only a year. For example, this date could represent when the individual commenced smoking every Friday night or at parties. (en)</items>
+      </items>
+      <items code="at0016">
+        <items id="text">*Overall quit date(en)</items>
+        <items id="description">*The date when the individual last ceased using tobacco of any type.(en)</items>
+        <items id="comment">*Can be a partial date, for example, only a year. This date could be used by decision support guidance to determine if the  individual is at risk of relapse, for example in the first 12 months since quitting.(en)</items>
+      </items>
+      <items code="at0017">
+        <items id="text">*Pack years(en)</items>
+        <items id="description">*Estimate of the cumulative amount of tobacco smoked using the specified type of tobacco.(en)</items>
+        <items id="comment">*Commonly used in assessment of cigarette use. It is calculated by multiplying the number of packs of cigarettes smoked per day by the number of years the individual has smoked. One pack year equals 365 packs of cigarettes. Details about how to calculate pack years for other types of tobacco can be found at http://smokingpackyears.com. The definition of a pack can be recorded in the protocol of this archetype using the 'Pack definition' data element.(en)</items>
+      </items>
+      <items code="at0019">
+        <items id="text">*Overall comment(en)</items>
+        <items id="description">*Additional narrative about all tobacco smoking that has not been captured in other fields.(en)</items>
+        <items id="comment">*For example: stopped smoking or reduced amount on becoming pregnant.(en)</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0022">
+        <items id="text">*Last updated(en)</items>
+        <items id="description">*The date this tobacco smoking summary was last updated.(en)</items>
+      </items>
+      <items code="at0023">
+        <items id="text">*Typical use (units)(en)</items>
+        <items id="description">*Estimate of number of units of the specified type of tobacco consumed.(en)</items>
+        <items id="comment">*For example: the number of 'sticks' or 'full pipes' per day or per week. This data element is redundant if a value is recorded for 'Typical use(mass)'.(en)</items>
+      </items>
+      <items code="at0025">
+        <items id="text">*Number of quit attempts(en)</items>
+        <items id="description">*Total number of times the individual has attempted to stop smoking the specified type of tobacco within this episode.(en)</items>
+      </items>
+      <items code="at0026">
+        <items id="text">*Episode details(en)</items>
+        <items id="description">*Additional structured details about the specified episode of tobacco smoking.(en)</items>
+      </items>
+      <items code="at0029">
+        <items id="text">*Per type(en)</items>
+        <items id="description">*Details about smoking activity for a specified type of inhaled tobacco.(en)</items>
+        <items id="comment">*The run-time name constraint on this Cluster enables simple templates for each required type to be designed in templates, or the types to be managed exclusively at run-time. The list of names can be extended at run-time if additional types of tobacco smoking are identified locally.(en)</items>
+      </items>
+      <items code="at0030">
+        <items id="text">*Pattern(en)</items>
+        <items id="description">*The typical pattern of smoking for the specified type of tobacco.(en)</items>
+      </items>
+      <items code="at0043">
+        <items id="text">*Overall description(en)</items>
+        <items id="description">*Narrative summary about the individual's overall tobacco smoking pattern and history.(en)</items>
+        <items id="comment">*Use this data element to record a narrative description of the tobacco smoking habits for this individual or to incorporate unstructured tobacco smoking information from existing or legacy clinical systems into an archetyped format. (en)</items>
+      </items>
+      <items code="at0052">
+        <items id="text">*Status(en)</items>
+        <items id="description">*Statement about current smoking behaviour for the specified type of tobacco.(en)</items>
+      </items>
+      <items code="at0053">
+        <items id="text">*Description(en)</items>
+        <items id="description">*Narrative summary about smoking behaviour for the specified type of tobacco.(en)</items>
+      </items>
+      <items code="at0054">
+        <items id="text">*Cigarettes(en)</items>
+        <items id="description">*Also known as manufactured cigarettes, 'factory made' cigarettes or 'tailor made' cigarettes. Processed tobacco, manufactured into cylinder made of paper or a substance that does not contain tobacco.(en)</items>
+      </items>
+      <items code="at0055">
+        <items id="text">*Hand-rolled cigarettes(en)</items>
+        <items id="description">*Also known as "rollies" or "roll-ups". Loose tobacco, hand rolled into a cylinder using cigarette papers.(en)</items>
+      </items>
+      <items code="at0056">
+        <items id="text">*Cigars(en)</items>
+        <items id="description">*Also known as "large cigar". Roll of tobacco wrapped within a leaf tobacco or in a substance that contains tobacco.(en)</items>
+      </items>
+      <items code="at0057">
+        <items id="text">*Pipe(en)</items>
+        <items id="description">*Loose tobacco placed inside a pipe bowl.(en)</items>
+      </items>
+      <items code="at0059">
+        <items id="text">*Former smoker(en)</items>
+        <items id="description">*Individual has previously smoked the specified type of tobacco but is not a current smoker.(en)</items>
+      </items>
+      <items code="at0061">
+        <items id="text">*Current smoker(en)</items>
+        <items id="description">*Individual is a current smoker of the specified type of tobacco.(en)</items>
+      </items>
+      <items code="at0062">
+        <items id="text">*Waterpipe(en)</items>
+        <items id="description">*Also known as "hookah", "shisha", "narguileh" and "hubble-bubble". Tobacco, often flavoured, is burned then cooled through a basin of water and consumed through a hose and mouthpiece.(en)</items>
+      </items>
+      <items code="at0064">
+        <items id="text">*Per episode(en)</items>
+        <items id="description">*Details about a discrete period of smoking activity for the specified type of tobacco.(en)</items>
+      </items>
+      <items code="at0065">
+        <items id="text">*Typical use (mass)(en)</items>
+        <items id="description">*Estimate of the weight of loose leaf tobacco smoked.(en)</items>
+        <items id="comment">*This data element will typically be used for pipes and hand-rolled cigarettes and is redundant if a value is recorded for 'Typical use (units)'.(en)</items>
+      </items>
+      <items code="at0066">
+        <items id="text">*Cigarillos(en)</items>
+        <items id="description">*Also known as mini cigars. Short and narrow cigar.(en)</items>
+      </items>
+      <items code="at0069">
+        <items id="text">*Comment(en)</items>
+        <items id="description">*Additional narrative about smoking of the specified type of tobacco, not captured in other fields.(en)</items>
+      </items>
+      <items code="at0071">
+        <items id="text">*Quit date definition(en)</items>
+        <items id="description">*The applied definition for the 'Quit date' data elements used in this archetype.(en)</items>
+      </items>
+      <items code="at0072">
+        <items id="text">*Pack definition(en)</items>
+        <items id="description">*The definition of the size of pack used as part of the algorithm for calculating 'Pack years' data elements used in this archetype.(en)</items>
+        <items id="comment">*Definition may need to be specified per type. For example, the number of units in a pack used for cigarettes may be different to cigars; the mass of loose tobacco in a pack used for hand-rolled cigarettes or pipes.(en)</items>
+      </items>
+      <items code="at0073">
+        <items id="text">*Extension(en)</items>
+        <items id="description">*Additional information required to capture local content or to align with other reference models/formalisms.(en)</items>
+        <items id="comment">*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)</items>
+      </items>
+      <items code="at0074">
+        <items id="text">*Overall pack years(en)</items>
+        <items id="description">*Estimate of the cumulative amount for all types of tobacco smoked.(en)</items>
+        <items id="comment">*The definition of a pack can be recorded in the protocol of this archetype using the 'Pack definition' data element.(en)</items>
+      </items>
+      <items code="at0075">
+        <items id="text">*Current smoker definition(en)</items>
+        <items id="description">*The applied definition for the 'Current smoker' value in each of the 'Status' data elements used in this archetype.(en)</items>
+        <items id="comment">*Definition may need to be specified per type. Current smoker definitions vary in different jurisdictions. For example: USA Centre for Disease Control refers to smoking during the past one month and New Zealand Ministry of Health uses 28 days.&#xD;
+(en)</items>
+      </items>
+      <items code="at0076">
+        <items id="text">*Former smoker definition(en)</items>
+        <items id="description">*The applied definition for the 'Former smoker' value in each of the 'Status' data elements used in this archetype.(en)</items>
+        <items id="comment">*Definition may need to be specified per type of tobacco. Former smoker definitions vary in different jurisdictions. For example: New Zealand Ministry of Health refers to not having smoked during the past 28 days. (en)</items>
+      </items>
+      <items code="at0077">
+        <items id="text">*Type details(en)</items>
+        <items id="description">*Additional structured details about the specified type of tobacco smoking.(en)</items>
+      </items>
+      <items code="at0078">
+        <items id="text">*Bidis(en)</items>
+        <items id="description">*Also known as Beedis. Thin hand-rolled cigarettes filled with tobacco and wrapped in a leaf, often tied with colorful string at one or both ends. They can be flavoured or unflavoured.(en)</items>
+      </items>
+      <items code="at0079">
+        <items id="text">*Never smoked definition(en)</items>
+        <items id="description">*The applied definition for the 'Never smoked' value in each of the 'Status' data elements used in this archetype.(en)</items>
+        <items id="comment">*Definition may need to be specified per type. For example, the definition may not be zero, but less than a specified amount (as units or mass) smoked during a specified time interval.(en)</items>
+      </items>
+      <items code="at0080">
+        <items id="text">*Daily smoking commenced(en)</items>
+        <items id="description">*The date or partial date when the individual first started daily smoking of tobacco of any type.(en)</items>
+        <items id="comment">*Can be a partial date, for example, only a year.(en)</items>
+      </items>
+      <items code="at0081">
+        <items id="text">*Episode label(en)</items>
+        <items id="description">*Identification of an episode of smoking activity - either as a number in a sequence and/or a named event.(en)</items>
+        <items id="comment">*For example: '2' as the second episode within a sequence of episodes; or 'Pregnancy with twins' if describing the smoking activity during a health event such as during a specific pregnancy.(en)</items>
+      </items>
+      <items code="at0082">
+        <items id="text">*Episode end date(en)</items>
+        <items id="description">*Date when this episode ceased.(en)</items>
+        <items id="comment">*Can be a partial date, for example, only a year. This data field will be empty if the episode is current and ongoing.(en)</items>
+      </items>
+      <items code="at0083">
+        <items id="text">*Daily(en)</items>
+        <items id="description">*Smoking the specified type of tobacco at least once every day.(en)</items>
+      </items>
+      <items code="at0084">
+        <items id="text">*Non-daily(en)</items>
+        <items id="description">*Not smoking the specified type of tobacco every day.(en)</items>
+      </items>
+      <items code="at0085">
+        <items id="text">*Quit attempt definition(en)</items>
+        <items id="description">*The applied definition for a Quit attempt used to determine value for the 'Number of quit attempts' data element used in this archetype.(en)</items>
+        <items id="comment">*For example: 'stopped smoking for one day or longer with the intention of quitting'.(en)</items>
+      </items>
+      <items code="at0086">
+        <items id="text">*Overall details(en)</items>
+        <items id="description">*Additional structured details about the overall tobacco smoking behaviour.(en)</items>
+      </items>
+      <items code="at0087">
+        <items id="text">*Episode comment(en)</items>
+        <items id="description">*Additional narrative about tobacco smoking during the specified episode, not captured in other fields.(en)</items>
+      </items>
+      <items code="at0088">
+        <items id="text">*Kreteks(en)</items>
+        <items id="description">*Also known as clove cigarettes. Cigarettes that contain a mixture of tobacco, cloves and other additives.(en)</items>
+      </items>
+      <items code="at0089">
+        <items id="text">*Overall status(en)</items>
+        <items id="description">*Statement about current smoking behaviour for all types of tobacco.(en)</items>
+      </items>
+      <items code="at0091">
+        <items id="text">*Never smoked(en)</items>
+        <items id="description">*Individual has never smoked the specified type of tobacco.(en)</items>
+      </items>
+      <items code="at0093">
+        <items id="text">*Overall years of smoking (en)</items>
+        <items id="description">*The cumulative number of years that the individual has smoked tobacco. (en)</items>
+        <items id="comment">*This data element does not take into account the amount of tobacco smoked. It may be used to calculate the 'Smoking index'. (en)</items>
+      </items>
+      <items code="at0094">
+        <items id="text">*Smoking index (en)</items>
+        <items id="description">*An indication of the cumulative amount of tobacco smoking exposure. (en)</items>
+        <items id="comment">*This parameter is similar to Pack Years but based on units of cigarettes, bidis etc smoked per day, rather than packs. (en)</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

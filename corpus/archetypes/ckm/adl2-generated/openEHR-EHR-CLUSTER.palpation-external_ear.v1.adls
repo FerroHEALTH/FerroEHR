@@ -1,0 +1,149 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.palpation-external_ear.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.palpation.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics">
+        ["date"] = <"02/11/2007">
+    >
+    lifecycle_state = <"Rejected">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"951379AC698DE8983753C0393AC1A89A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Findings identified through palpation of the external ear.">
+            keywords = <"palpate", "ear">
+            use = <"To be embedded in the openEHR-EHR-OBSERVATION.exam cluster to express findings determined by palpation.">
+            misuse = <"Not for use in any other context at present.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"الموجودات التي يتم التعرف عليها من خلال جس الأذن الخارجية.">
+            keywords = <"يجس", "الأذن">
+            use = <"يتم إدماجه كعنقود في نموذج ملاحظة.فحص, للتعبير عن الموجودات التي يتم تحديدها بالجس.">
+            misuse = <"لا تستخدم في أي سياق آخر في الوقت الحالي.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Palpation of the external ear
+        /items[at0080]/items matches {
+            CLUSTER[at0019] matches {
+                items matches {
+                    after [at0005]
+                    use_node ELEMENT[at0.9003] occurrences matches {1} /items[at0080]/items[at0011]    -- Tenderness (synthesised)
+                }
+            }
+            CLUSTER[at0010] matches {
+                items matches {
+                    after [at0081]
+                    allow_archetype CLUSTER[at0083] matches {
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.palpation\.v1\..*/}
+                    }
+                }
+            }
+            before [at0019]
+            ELEMENT[at0.83] occurrences matches {0..1} matches {    -- Part of the ear palpated
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.9000]}    -- Part of the ear palpated (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0011] occurrences matches {1} matches {
+                value matches {
+                    DV_TEXT[at0.9002]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.83"] = <
+                text = <"Part of the ear palpated">
+                description = <"Specific parts of the ear.">
+            >
+            ["at0.84"] = <
+                text = <"Auricle">
+                description = <"*">
+            >
+            ["at0.85"] = <
+                text = <"Mastoid">
+                description = <"*">
+            >
+            ["at0.86"] = <
+                text = <"External meatus">
+                description = <"*">
+            >
+            ["at0000.1"] = <
+                text = <"Palpation of the external ear">
+                description = <"Findings on palpation of the external ear.">
+            >
+            ["ac0.9000"] = <
+                text = <"Part of the ear palpated (synthesised)">
+                description = <"Specific parts of the ear. (synthesised)">
+            >
+            ["at0.9003"] = <
+                text = <"Tenderness (synthesised)">
+                description = <"A group of statements about a tenderness finding. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0.83"] = <
+                text = <"الجزء الذي تم جسه من الأذن">
+                description = <"أجزاء محددة من الأذن">
+            >
+            ["at0.84"] = <
+                text = <"صيوان الأذن/الأذن الظاهرة">
+                description = <"*">
+            >
+            ["at0.85"] = <
+                text = <"الخُشَّاء">
+                description = <"*">
+            >
+            ["at0.86"] = <
+                text = <"الصماخ الخارجي">
+                description = <"*">
+            >
+            ["at0000.1"] = <
+                text = <"جس الأذن الخارجية">
+                description = <"الموجودات عند جس الأذن الخارجية">
+            >
+            ["ac0.9000"] = <
+                text = <"الجزء الذي تم جسه من الأذن (synthesised)">
+                description = <"أجزاء محددة من الأذن (synthesised)">
+            >
+            ["at0.9003"] = <
+                text = <"الإيلام/المضض (synthesised)">
+                description = <"مجموعة من البيانات حول وجود الألم (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.84", "at0.85", "at0.86">
+        >
+    >

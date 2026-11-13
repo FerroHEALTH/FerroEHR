@@ -1,5 +1,6 @@
 ---
-source: crates/openehr-its/tests/it/flat.rs
+source: crates/openehr-sdt/tests/it/flat.rs
+assertion_line: 219
 expression: map
 ---
 {
@@ -21,5 +22,6 @@ expression: map
   "minimal/context/_participation:0|mode": "not specified",
   "minimal/context/_participation:0|name": "Martha Stewart",
   "minimal/minimal:0/history_origin": "2019-01-28T21:22:19,552+00:00",
-  "minimal/minimal:0/text": "original value"
+  "minimal/minimal:0/text": "original value",
+  "minimal/minimal:0/time": "2019-01-28T21:22:19,562+00:00"
 }

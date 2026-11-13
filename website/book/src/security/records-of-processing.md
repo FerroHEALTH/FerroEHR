@@ -112,7 +112,7 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 
 | Art. 30 field | What the software does |
 |---|---|
-| Purpose | Telling downstream systems that a commit happened, when `[record.change_feed] readers` names a reader |
+| Purpose | Telling downstream systems that a commit happened, while a `read_change_feed` grant in the CDR names a reader |
 | Categories of data subject | Record subjects, indirectly |
 | Categories of personal data | A PHI-free envelope: the contribution id, the EHR id, the commit instant, and per version the object id, kind, version number, change type and template. No clinical content |
 | Recipients | The configured readers (FerroBRIDGE, for one), and whoever they deliver to |

@@ -14,7 +14,6 @@
 use std::sync::Arc;
 
 use axum::Router;
-use ferroehr::config::clients::{Facility, Origin, SystemClient};
 use ferroehr::party_binding::source::BindingSource;
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
@@ -51,8 +50,8 @@ const COLLEAGUE: &str = "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e";
 const ADMINISTRATOR: &str = "3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f";
 
 /// The binding configuration of `party_binding_http`, also trusting the
-/// machines issuer with `lab` declared as a relay client and the patients
-/// issuer, with `ISSUER`'s role claims granting the administrator role.
+/// machines issuer and the patients issuer, with `ISSUER`'s role claims
+/// granting the administrator role.
 fn deployment() -> AppConfig {
     let mut config = config(None);
     let jwks_file = common::jwks_file().display().to_string();
@@ -75,30 +74,27 @@ fn deployment() -> AppConfig {
         });
     }
     config.rbac = common::rbac_trusting(ISSUER);
-    config.system_clients = vec![SystemClient {
-        issuer: MACHINES.to_owned(),
-        client_id: "lab".to_owned(),
-        origins: vec![Origin::Relay],
-        writes: vec![IPS.to_owned()],
-        facilities: vec![Facility {
-            issuer: FACILITIES.to_owned(),
-            id: Some("ward-7".to_owned()),
-            id_prefix: None,
-        }],
-        ..SystemClient::default()
-    }];
-    config.auth.smart.patient_issuers = vec![PATIENTS.to_owned()];
+    config.auth.smart.patient_issuers =
+        vec![ferrohealth_secret::secret_url::SecretUrl::new(PATIENTS)];
     config
 }
 
 /// The platform service over a fresh database, its binding mapping naming
-/// [`ADMIN`] the administrator role, and the router over it.
+/// [`ADMIN`] the administrator role, the client `lab` granted as a relay of
+/// [`IPS`] at `ward-7` in the policy parties, and the router over it.
 async fn app() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     let (db, pool) = common::migrated_pool().await;
     let svc = Arc::new(
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_binding_mapping(mapping().with_admin_role(ADMIN)),
     );
+    crate::system_grants::system_client(
+        &svc,
+        &[(MACHINES, "lab")],
+        Some(("urn:oid:2.16.528.1.1007.3.3", "90000001")),
+        &[crate::system_grants::relays(IPS, (FACILITIES, "ward-7"))],
+    )
+    .await;
     let source: Arc<dyn BindingSource> = Arc::new(svc.party_source("demographic"));
     let app = router_with(Arc::clone(&svc), deployment(), source).await;
     (db, svc, app)

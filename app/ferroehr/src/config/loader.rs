@@ -62,9 +62,6 @@ pub enum ConfigError {
     /// A semantic (cross-field) validation failure.
     #[error("{0}")]
     Semantic(String),
-    /// A key the tree no longer reads, named with what replaced it.
-    #[error("{0}")]
-    Removed(ferrohealth_config::removed::Removal),
 }
 
 impl ConfigError {
@@ -151,7 +148,6 @@ pub fn load_process(
     overrides: &[(String, String)],
 ) -> Result<(Loaded<FerroEhrConfig>, FerroEhrConfig), ConfigErrors> {
     let sources = loader()?;
-    refuse_shared(sources.load_with::<toml::Table>(cli_config, overrides))?;
     let loaded = sources
         .load_with::<FerroEhrConfig>(cli_config, overrides)
         .map_err(ConfigError::from)?;
@@ -198,12 +194,6 @@ pub fn assemble_from<S: std::hash::BuildHasher>(
         .map(|(name, value)| (name.clone(), value.clone()))
         .collect();
     let sources = loader()?;
-    refuse_shared(sources.load_sources_with::<toml::Table>(
-        text.as_deref(),
-        file,
-        &environment,
-        overrides,
-    ))?;
     let loaded = sources
         .load_sources_with::<FerroEhrConfig>(text.as_deref(), file, &environment, overrides)
         .map_err(ConfigError::from)?;
@@ -211,44 +201,8 @@ pub fn assemble_from<S: std::hash::BuildHasher>(
     Ok((loaded, config))
 }
 
-/// Refuses every retired key of a family section the merged tree sets, which
-/// the typed load would refuse only as unknown.
-fn refuse_shared(
-    tree: Result<Loaded<toml::Table>, ferrohealth_config::error::ConfigError>,
-) -> Result<(), ConfigErrors> {
-    // NOTE: no specification governs this: our own design; a tree that does not
-    // merge is refused by the typed load that follows, with its position.
-    let Ok(tree) = tree else {
-        return Ok(());
-    };
-    let removals = super::retired_shared::removals(tree.settings());
-    if removals.is_empty() {
-        return Ok(());
-    }
-    Err(ConfigErrors(
-        removals
-            .removals()
-            .iter()
-            .cloned()
-            .map(ConfigError::Removed)
-            .collect(),
-    ))
-}
-
-/// Refuses every retired key `config` sets, then resolves every `*_file`
-/// secret sibling of it.
+/// Resolves every `*_file` secret sibling of `config`.
 fn finish(mut config: FerroEhrConfig) -> Result<FerroEhrConfig, ConfigErrors> {
-    let removals = super::retired::removals(&config);
-    if !removals.is_empty() {
-        return Err(ConfigErrors(
-            removals
-                .removals()
-                .iter()
-                .cloned()
-                .map(ConfigError::Removed)
-                .collect(),
-        ));
-    }
     let mut errors = Vec::new();
     resolve_secret_files(&mut config, &mut errors);
     if errors.is_empty() {
@@ -386,8 +340,8 @@ mod tests {
     #[test]
     fn the_server_defaults_are_the_products() {
         let (loaded, config) = assemble_from(None, &env(&[]), &[]).expect("zero-config load");
-        assert_eq!(config.server.listen.to_string(), "0.0.0.0:8080");
-        assert_eq!(config.server.body_limit_bytes(), 64 * 1024 * 1024);
+        assert_eq!(config.server.shared.listen.to_string(), "0.0.0.0:8080");
+        assert_eq!(config.server.shared.body_limit_bytes(), 64 * 1024 * 1024);
         assert_eq!(
             loaded.provenance().source("server.body_limit"),
             ferrohealth_config::provenance::Source::Default
@@ -406,12 +360,12 @@ mod tests {
         .expect("write");
         let (_, config) =
             assemble_from(Some(file.path()), &env(&[]), &[]).expect("a partial table loads");
-        assert_eq!(config.server.listen.to_string(), "10.0.0.5:9090");
+        assert_eq!(config.server.shared.listen.to_string(), "10.0.0.5:9090");
         assert_eq!(
-            config.server.request_timeout,
+            config.server.shared.request_timeout,
             ferrohealth_config::units::Duration::from_secs(5)
         );
-        assert_eq!(config.server.body_limit_bytes(), 64 * 1024 * 1024);
+        assert_eq!(config.server.shared.body_limit_bytes(), 64 * 1024 * 1024);
 
         let (_, config) = assemble_from(
             Some(file.path()),
@@ -419,7 +373,33 @@ mod tests {
             &[],
         )
         .expect("an override loads");
-        assert_eq!(config.server.body_limit_bytes(), 1_048_576);
+        assert_eq!(config.server.shared.body_limit_bytes(), 1_048_576);
+    }
+
+    /// `[server] public_base_url` is read from the environment beside the
+    /// family section's keys, and the public root keeps the mount path.
+    #[test]
+    fn the_public_base_url_maps_from_the_environment() {
+        let (_, config) = assemble_from(
+            None,
+            &env(&[
+                (
+                    "FERROEHR__SERVER__PUBLIC_BASE_URL",
+                    "https://gw.example/cdr",
+                ),
+                ("FERROEHR__SERVER__BASE_PATH", "/ehr"),
+            ]),
+            &[],
+        )
+        .expect("the public URL loads");
+        assert_eq!(
+            config
+                .server
+                .public_root()
+                .map(|root| root.to_string())
+                .as_deref(),
+            Some("https://gw.example/cdr/ehr")
+        );
     }
 
     /// An unknown key set from the environment names its full dotted path and

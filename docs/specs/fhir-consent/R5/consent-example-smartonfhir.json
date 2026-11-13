@@ -1,0 +1,56 @@
+{
+  "resourceType" : "Consent",
+  "id" : "consent-example-smartonfhir",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p><b>Generated Narrative: Consent</b><a name=\"consent-example-smartonfhir\"> </a></p><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Resource Consent &quot;consent-example-smartonfhir&quot; </p></div><p><b>status</b>: active</p><p><b>category</b>: Patient Consent <span style=\"background: LightGoldenRodYellow; margin: 4px; border: 1px solid khaki\"> (<a href=\"https://loinc.org/\">LOINC</a>#59284-0)</span></p><p><b>subject</b>: <span title=\"  In this SMART on FHIR login, the user consents for data sharing for their elderly parent's record  \"><a href=\"patient-example-xcda.html\">Patient/xcda</a> &quot;Henry LEVIN&quot;</span></p><p><b>date</b>: 2016-06-23</p><p><b>grantor</b>: <a href=\"relatedperson-example-peter.html\">RelatedPerson/peter</a> &quot;Peter CHALMERS&quot;</p><p><b>controller</b>: <a href=\"organization-example-f001-burgers.html\">Organization/f001</a> &quot;Burgers University Medical Center&quot;</p><p><b>regulatoryBasis</b>: <span title=\"  there's no source record for a Smart on FHIR consent\n    smart on fhir requires a base opt-in policy  \">information access <span style=\"background: LightGoldenRodYellow; margin: 4px; border: 1px solid khaki\"> (<a href=\"http://terminology.hl7.org/5.1.0/CodeSystem-v3-ActCode.html\">ActCode</a>#INFA)</span></span></p><p><b>decision</b>: <span title=\"  each scope that relates to FHIR resource access is represented as an exception  \">permit</span></p><blockquote><p><b>provision</b></p><p><b>period</b>: 2016-06-23T17:02:33+10:00 --&gt; 2016-06-23T17:32:33+10:00</p><h3>Provisions</h3><table class=\"grid\"><tr><td>-</td><td><b>Action</b></td><td><b>ResourceType</b></td></tr><tr><td>*</td><td><span title=\"  this rule corresponds to MedicationRequest/read  &amp;#10;  no actors here, or anything, just read/write and the resource type  \">Access <span style=\"background: LightGoldenRodYellow; margin: 4px; border: 1px solid khaki\"> (<a href=\"http://terminology.hl7.org/5.1.0/CodeSystem-consentaction.html\">Consent Action Codes</a>#access)</span></span>, Access and Correct <span style=\"background: LightGoldenRodYellow; margin: 4px; border: 1px solid khaki\"> (<a href=\"http://terminology.hl7.org/5.1.0/CodeSystem-consentaction.html\">Consent Action Codes</a>#correct)</span></td><td>MedicationRequest (Details: http://hl7.org/fhir/resource-types code MedicationRequest = 'MedicationRequest', stated as 'null')</td></tr></table></blockquote></div>"
+  },
+  "status" : "active",
+  "category" : [{
+    "coding" : [{
+      "system" : "http://loinc.org",
+      "code" : "59284-0"
+    }]
+  }],
+  "subject" : {
+    "reference" : "Patient/xcda"
+  },
+  "date" : "2016-06-23",
+  "grantor" : [{
+    "reference" : "RelatedPerson/peter"
+  }],
+  "controller" : [{
+    "reference" : "Organization/f001"
+  }],
+  "regulatoryBasis" : [{
+    "coding" : [{
+      "system" : "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+      "code" : "INFA"
+    }]
+  }],
+  "decision" : "permit",
+  "provision" : [{
+    "period" : {
+      "start" : "2016-06-23T17:02:33+10:00",
+      "end" : "2016-06-23T17:32:33+10:00"
+    },
+    "provision" : [{
+      "action" : [{
+        "coding" : [{
+          "system" : "http://terminology.hl7.org/CodeSystem/consentaction",
+          "code" : "access"
+        }]
+      },
+      {
+        "coding" : [{
+          "system" : "http://terminology.hl7.org/CodeSystem/consentaction",
+          "code" : "correct"
+        }]
+      }],
+      "resourceType" : [{
+        "system" : "http://hl7.org/fhir/resource-types",
+        "code" : "MedicationRequest"
+      }]
+    }]
+  }]
+}

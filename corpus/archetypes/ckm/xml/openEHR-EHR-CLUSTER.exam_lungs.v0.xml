@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2015-07-01</original_author>
+    <original_author id="name">Heather Leslie</original_author>
+    <original_author id="organisation">Ocean Informatics</original_author>
+    <original_author id="email">heather.leslie@oceaninformatics.com</original_author>
+    <other_contributors>Silje Ljosland Bakke, Bergen Hospital Trust, Norway</other_contributors>
+    <other_contributors>Ian McNicoll, freshEHR Clinical Informatics, United Kingdom</other_contributors>
+    <other_contributors>John Tore Valand, Haukeland Universitetssjukehus, Norway</other_contributors>
+    <other_contributors>Heather Leslie, Ocean Informatics, Australia</other_contributors>
+    <lifecycle_state>rejected</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="current_contact">Heather Leslie, Ocean Informatics&lt;heather.leslie@oceaninformatics.com&gt;</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">0DC8A1C072AD71D7974A21619CF40C17</other_details>
+    <other_details id="build_uid">d9694876-bc27-4c25-81df-fd3ec0341854</other_details>
+    <other_details id="revision">0.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>Dokumentasjon av samlede funn og klinisk interpretasjon observert ved klinisk undersøkelse av begge lunger.</purpose>
+      <use>Brukes for å dokumentere en beskrivelse av samlede funn og klinisk interpretasjon ved klinisk undersøkelse av begge lunger. Denne første mønsterarketypen inneholder kun kjernedata (som i CLUSTER.exam_pattern) og vil sannsynligvis utvides over tid, etter som nye kliniske behov kommer frem.&#xD;
+&#xD;
+Denne arketypen er spesiell utviklet for bruk i "Undersøkelsesfunn" SLOT-en i arketype CLUSTER.exam_chest, men kan også brukes i OBSERVATION.funn_ved_klinisk_undersøkelse arketypen eller innenfor andre OBSERVATION eller CLUSTER arketyper, der dette er klinisk hensiktsmessig. Dokumenter funn sv den andre lungen i en annen instans av denne arketypen i samme SLOT.&#xD;
+&#xD;
+Brukes for å gi et rammeverk hvor andre CLUSTER arketyper kan legges inn i "Undersøkelsesfunn" SLOT for å dokumentere tilleggsfunn på en strukturert måte, f.eks. CLUSTER arketypen "CLUSTER.auscultation_lung".&#xD;
+&#xD;
+Cluster arketypen "CLUSTER.exclusion_exam" kan legges inn i "Undersøkelse ikke gjennomført" SLOT-et for å dokumentere eksplisitte detaljer som beskriver at undersøkelsen ikke ble gjennomført.&#xD;
+&#xD;
+Brukes for å bygge en beskrivelse av kliniske funn i eksisterende eller .... (legacy) kliniske sytemer i arketypeformat ved å bruke dataelementet "klinisk beskrivelse".</use>
+      <misuse>Skal ikke brukes for å dokumentere data som ikke er relatert til klinisk undersøkelse av lungene. &#xD;
+&#xD;
+Skal ikke brukes for å dokumentere anamnese - bruk spesifikke OBSERVATION og CLUSTER arKetyper til dette formålet. For eksempel OBSERVATION.anamnese og CLUSTER.symptom.&#xD;
+&#xD;
+Skal ikke brukes for å dokumenterE egenstendige kliniske observasjoner, målinger eller testresultaer. For eksempel OBSERVATION.blodtrykk eller OBSERVATION.resultat_av_funn_ved_billeddiagnostisk_undersøkelse</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>For recording a narrative description and clinical interpretation of the findings observed during the physical examination of both lungs.</purpose>
+      <use>Use to record a narrative description of the overall findings observed during the physical examination of both lungs. This initial draft archetype consists only of the core examination pattern data elements (as per CLUSTER.exam_pattern) and will likely be expanded further over time as specific clinical requirements are identified.&#xD;
+&#xD;
+This archetype has been specifically designed to be used in the 'Examination findings' SLOT within the CLUSTER.exam_chest archetype or the OBSERVATION.exam, but can also be used within any other OBSERVATION or CLUSTER archetypes, where clinically appropriate.&#xD;
+&#xD;
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings - for example, the detail of each lung, one at a time in CLUSTER.exam_lung. &#xD;
+&#xD;
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.&#xD;
+&#xD;
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.</use>
+      <misuse>Not to be used for recording data not related to the physical examination of lungs.&#xD;
+&#xD;
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom.&#xD;
+&#xD;
+Not to be used to record stand-alone clinical observations or measurements or test results - use specific OBSERVATION archetypes. For example OBSERVATION.blood_pressure or OBSERVATION.imaging_exam.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="ahe@dips.no">ahe@dips.no</author>
+    <author id="name">Anca Heyd</author>
+    <author id="organisation">Dips ASA</author>
+  </translations>
+  <uid>
+    <value>ea200cd8-65da-48a2-ba86-4710e749a415</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-CLUSTER.exam_lungs.v0</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0002</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_BOOLEAN</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_PRIMITIVE_OBJECT">
+                <rm_type_name>BOOLEAN</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <item xsi:type="C_BOOLEAN">
+                  <true_valid>true</true_valid>
+                  <false_valid>false</false_valid>
+                </item>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0003</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0004</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_lung(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.auscultation_lung(-[a-zA-Z0-9_]+)*\.v0/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-CLUSTER\.exam_lung(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.auscultation_lung(-[a-zA-Z0-9_]+)*\.v0</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0005</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0006</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0007</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0008</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>1</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Examination of both lungs</items>
+        <items id="description">Findings observed during the physical examination of both lungs.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">No abnormality detected</items>
+        <items id="description">Statement that no abnormality was detected (NAD) on physical examination.</items>
+        <items id="comment">Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Clinical description</items>
+        <items id="description">Narrative description of the overall findings observed during the physical examination.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Examination findings</items>
+        <items id="description">Structured details about the  physical examination findings.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Multimedia representation</items>
+        <items id="description">Digital image, video or diagram representing the physical examination findings.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Clinical interpretation</items>
+        <items id="description">Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Comment</items>
+        <items id="description">Additional narrative about the physical examination findings, not captured in other fields.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Examination not done</items>
+        <items id="description">Details to explicitly record that this examination was not performed.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Undersøkelse av begge lunger</items>
+        <items id="description">Funn observert ved klinisk undersøkelse av begge lunger.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Uten anmerkning</items>
+        <items id="description">Konstatering at funn ved undersøkelse ikke viste noe unormalt.</items>
+        <items id="comment">Dokumenter som Sann dersom intet unormalt ble funnet ved undersøkelse. Spesifikke uttalelser vedrørende undersøkelse kan bli inkludert i dataelementet "klinisk interpretasjon".</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Klinisk beskrivelse</items>
+        <items id="description">En tekstlig beskrivelse av samlete funn observert ved den kliniske undersøkelsen.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Undersøkelsesfunn</items>
+        <items id="description">Strukturerte detaljer vedrørende funn ved klinisk undersøkelse.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Multimedia representasjon</items>
+        <items id="description">Digitale bilder, video eller diagram som representerer funnene ved klinisk undersøkelse.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Klinisk interpretasjon</items>
+        <items id="description">Enkelt ord, frase eller kort beskrivelse som representerer klinisk betyning og signifikans av funnene ved klinisk undersøkelse.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Kommentar</items>
+        <items id="description">Tekstlig tilleggsinformasjon vedrørende klinisk undersøkelse, som ikke er fanget opp i de andre dataelementene.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Undersøkelse ikke gjennomført</items>
+        <items id="description">Detaljer for eksplisitt dokumentasjon av at undersøkelsen ikke ble gjennomført.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

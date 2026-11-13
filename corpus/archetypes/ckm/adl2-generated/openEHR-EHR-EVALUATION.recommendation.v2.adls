@@ -1,5 +1,5 @@
-archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a15aad41-4ae9-4588-be4e-5c67f83e442f; build_uid=1c00256d-4057-4075-a7d1-7161980e7684)
-    openEHR-EHR-EVALUATION.recommendation.v2.0.4
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a15aad41-4ae9-4588-be4e-5c67f83e442f; build_uid=30819ab8-c96e-484e-b49b-90def9b62844)
+    openEHR-EHR-EVALUATION.recommendation.v2.0.5
 
 language
     original_language = <[ISO_639-1::en]>
@@ -45,6 +45,14 @@ language
                 ["email"] = <"vladimir.pizzo@hsl.org.br">
             >
         >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"Vanja Maravić, Ana Milošev, Anđela Marjanović, Vuk Radnić">
+                ["organisation"] = <"Better Deutschland GmbH, Better d.o.o.">
+                ["email"] = <"vanja.maravic@better.care, ana.milosev@better.care, andjela.marjanovic@better.care, vuk.radnic@better.care">
+            >
+        >
         ["nl"] = <
             language = <[ISO_639-1::nl]>
             author = <
@@ -88,7 +96,7 @@ description
     licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
     other_details = <
         ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
-        ["MD5-CAM-1.0.1"] = <"99B27EB9818E4FDB6D7BEFCEAFB15F51">
+        ["MD5-CAM-1.0.1"] = <"0D4B9682FE630A641B219074256FB4C7">
     >
     details = <
         ["de"] = <
@@ -149,6 +157,17 @@ The intended use case is to support a clinician recording a recommendation, or r
 For example, as a component of the conclusions drawn as part of a clinical consultation.">
             misuse = <"Not to be used to carry structured data elements detailing additional instructions, such as timing, frequency, duration or dosage - use appropriate INSTRUCTION archetypes for this purpose.">
             copyright = <"© openEHR Foundation">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"Za beleženje predloga, nasveta ali priporočila za klinično vodenje v določenem času.">
+            keywords = <"nasvet", "predlog", "priporočilo", "sugestija">
+            use = <"Uporabiti za beleženje predloga, nasveta ali pobude za klinično obravnavo v določenem trenutku.
+
+Namen uporabe je podpora zdravstvenemu delavcu pri beleženju priporočila ali priporočil v določenem trenutku.
+Na primer kot sestavni del zaključkov, oblikovanih v okviru kliničnega posveta.">
+            misuse = <"Ni namenjeno beleženju strukturiranih podatkovnih elementov, ki podrobno opredeljujejo dodatna navodila, kot so časovni okvir, pogostost, trajanje ali odmerek – za ta namen uporabite ustrezne arhetipe INSTRUCTION.
+ ">
         >
         ["nl"] = <
             language = <[ISO_639-1::nl]>
@@ -396,6 +415,35 @@ terminology
             ["at0007"] = <
                 text = <"Last updated">
                 description = <"The date this recommendation was last updated.">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"Priporočilo">
+                description = <"Predlog, nasvet ali priporočilo za klinično vodenje.">
+            >
+            ["at0002"] = <
+                text = <"Priporočilo">
+                description = <"Pripovedni opis priporočila.">
+                comment = <"Lahko se kodira s terminologijo, če je potrebno.">
+            >
+            ["at0003"] = <
+                text = <"Utemeljitev">
+                description = <"Utemeljitve za priporočilo.">
+            >
+            ["at0005"] = <
+                text = <"Razširitev">
+                description = <"Dodatne informacije, potrebne za zajemanje lokalnega konteksta ali za uskladitev z drugimi referenčnimi modeli/formalizmi.">
+                comment = <"Na primer: informacije lokalnega bolnišničnega oddelka ali dodatni metapodatki za uskladitev z ekvivalenti FHIR.">
+            >
+            ["at0006"] = <
+                text = <"Tema">
+                description = <"Tema ali predmet priporočila.">
+                comment = <"Uporabno, če se hkrati podaja več vrst priporočil znotraj istega nabora podatkov.">
+            >
+            ["at0007"] = <
+                text = <"Zadnja posodobitev">
+                description = <"Datum zadnje posodobitve tega priporočila.">
             >
         >
         ["nl"] = <

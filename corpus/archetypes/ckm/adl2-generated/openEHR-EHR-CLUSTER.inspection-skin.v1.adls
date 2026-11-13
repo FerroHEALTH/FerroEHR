@@ -1,0 +1,132 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6353367f-8e89-4115-bb59-645148e81e10; build_uid=f080d83e-b146-45f1-b3eb-98d960993b35)
+    openEHR-EHR-CLUSTER.inspection-skin.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.inspection.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"10/04/2007">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"3A3AEDDD82F33A7398FC672707B91FFA">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording the findings on inspection of the skin">
+            keywords = <"inspect", "visual", "skin">
+            use = <"For use with the exam clusters for recording findings on inspection">
+            misuse = <"Should only be used in the exam observation">
+            copyright = <"copyright (c) 2009 openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Inspection of skin
+        /items[at0006]/items matches {
+            CLUSTER[at0005] matches {
+                /items[at0022]/value matches {
+                    DV_TEXT[at0.9003]
+                }
+            }
+            before [at0036]
+            ELEMENT[at0.52] occurrences matches {0..1} matches {    -- Method
+                value matches {
+                    DV_CODED_TEXT[at0.9002] matches {
+                        defining_code matches {[ac0.9000]}    -- Method (synthesised)
+                    }
+                }
+            }
+            after [at0027]
+            ELEMENT[at0.56] occurrences matches {0..1} matches {    -- Thickness
+                value matches {
+                    DV_CODED_TEXT[at0.9004] matches {
+                        defining_code matches {[ac0.9001]}    -- Thickness (synthesised)
+                    }
+                }
+            }
+            after [at0024]
+            ELEMENT[at0.60] occurrences matches {0..1} matches {    -- Pigmentation
+                value matches {
+                    DV_TEXT[at0.9005]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.52"] = <
+                text = <"Method">
+                description = <"Record of findings on inspection using a specific method">
+            >
+            ["at0.53"] = <
+                text = <"Direct visualisation">
+                description = <"Macroscopic; By eye">
+            >
+            ["at0.54"] = <
+                text = <"Wood's lamp">
+                description = <"*">
+            >
+            ["at0.55"] = <
+                text = <"Dermatoscope">
+                description = <"*">
+            >
+            ["at0.56"] = <
+                text = <"Thickness">
+                description = <"Thickness of skin">
+            >
+            ["at0.57"] = <
+                text = <"Thickened">
+                description = <"*">
+            >
+            ["at0.58"] = <
+                text = <"Normal">
+                description = <"*">
+            >
+            ["at0.59"] = <
+                text = <"Thinned/Atrophic">
+                description = <"*">
+            >
+            ["at0.60"] = <
+                text = <"Pigmentation">
+                description = <"Pigmentation of skin">
+            >
+            ["at0000.1"] = <
+                text = <"Inspection of skin">
+                description = <"The findings on inspection of the skin">
+            >
+            ["ac0.9000"] = <
+                text = <"Method (synthesised)">
+                description = <"Record of findings on inspection using a specific method (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Thickness (synthesised)">
+                description = <"Thickness of skin (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.53", "at0.54", "at0.55">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.57", "at0.58", "at0.59">
+        >
+    >

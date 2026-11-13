@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -95,8 +95,7 @@ Jede Flüssigkeitsmessung sollte mit einer separaten Instanz dieses Archetyps au
 &#xD;
 Die Details, die unter Verwendung dieses Archetyps für die Flüssigkeitsgabe aufgezeichnet wurden, können die Berechnung des Flüssigkeitshaushalts beeinflussen.&#xD;
 &#xD;
-Ein Diagramm über den Flüssigkeitshaushalt erfordert normalerweise eine Kombination aus mehreren Instanzen dieses Archetyps und mehreren Instanzen des Archetyps OBSERVATION.fluid_output, um alle verschiedenen Ein- und Ausgänge zu erfassen, sowie eine einzelne Instanz der OBSERVATION.fluid_balance, um den gesamten Flüssigkeitsstatus aufzuzeichnen.&#xD;
-</use>
+Ein Diagramm über den Flüssigkeitshaushalt erfordert normalerweise eine Kombination aus mehreren Instanzen dieses Archetyps und mehreren Instanzen des Archetyps OBSERVATION.fluid_output, um alle verschiedenen Ein- und Ausgänge zu erfassen, sowie eine einzelne Instanz der OBSERVATION.fluid_balance, um den gesamten Flüssigkeitsstatus aufzuzeichnen.</use>
       <misuse>Nicht zur Darstellung des Flüssigkeitsabgangs verwenden. Verwenden Sie zu diesem Zweck OBSERVATION.fluid_output.&#xD;
 &#xD;
 Nicht für den Auftrag einer Flüssigkeitsverabreichung verwenden - Verwenden Sie INSTRUCTION.medication oder einen INSTRUCTION-Archetyp spezifisch für die Flüssigkeitsgabe.&#xD;
@@ -131,16 +130,14 @@ Används för detaljer om:&#xD;
 &#xD;
 Varje vätskemätning ska registreras separat i denna arketyp. De detaljer som registreras med denna arketyp kan delges till beräkningar av vätskebalansen.&#xD;
 &#xD;
-Ett vätskebalansdiagram kräver vanligtvis flera registreringar av denna arketyp samt flera av OBSERVATION.fluid_output-arketypen för att fånga alla olika intag och utsöndringar, plus en registrering av OBSERVATION.fluid_balance för att få fram den totala vätskestatusen.&#xD;
-</use>
+Ett vätskebalansdiagram kräver vanligtvis flera registreringar av denna arketyp samt flera av OBSERVATION.fluid_output-arketypen för att fånga alla olika intag och utsöndringar, plus en registrering av OBSERVATION.fluid_balance för att få fram den totala vätskestatusen.</use>
       <misuse>Ska inte användas för att registrera vätskeutsöndring. För det ändamålet används OBSERVATION.fluid_output.&#xD;
 &#xD;
 Ska inte användas för att ordinera administrering av vätska. För det ändamålet används INSTRUCTION.medication eller en specifik instruktion för vätskeintag.&#xD;
 &#xD;
 Används inte för att ordinera förändringar i vätskeintaget, såsom vätskerestriktion. Använd en lämplig instruktion-arketyp för det ändamålet.&#xD;
 &#xD;
-Används inte för att registrera vätskebalans-beräkningar. Använd OBSERVATION.fluid_balance för det ändamålet.&#xD;
-</misuse>
+Används inte för att registrera vätskebalans-beräkningar. Använd OBSERVATION.fluid_balance för det ändamålet.</misuse>
       <copyright />
     </details>
     <details>
@@ -1457,4 +1454,3 @@ Not to be used to record fluid balance calculations. Use OBSERVATION.fluid_balan
     </term_definitions>
   </ontology>
 </archetype>
-

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -57,8 +57,7 @@
     <other_contributors>Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway</other_contributors>
     <other_contributors>Dennis Valk, Code24 BV, Netherlands</other_contributors>
     <lifecycle_state>published</lifecycle_state>
-    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.&#xD;
-</other_details>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
     <other_details id="custodian_organisation">openEHR Foundation</other_details>
     <other_details id="references">Wikipedia contributors. Body surface area. Wikipedia, The Free Encyclopedia. April 3, 2018. Available at: https://en.wikipedia.org/wiki/Body_surface_area. Accessed April 18, 2018.&#xD;
 &#xD;
@@ -1132,4 +1131,3 @@ Not to be used to record the adjusted Body surface area eg a calculation of the 
     </term_definitions>
   </ontology>
 </archetype>
-

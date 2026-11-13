@@ -79,7 +79,7 @@ Assuming the current duration is positive, the negated version represents a time
 h|*1..1 +
 (effected)*
 |*magnitude* (): `link:/releases/BASE/{base_release}/foundation_types.html#_double_class[Double^]`
-a|Numeric value of the duration as a number of seconds. Computed using the method `_to_seconds()_` inherited from `Iso8601_duration`.
+a|Numeric value of the duration as a number of seconds. Computed using the method `_to_seconds()_` inherited from `link:/releases/BASE/latest/foundation_types.html#_iso8601_duration_class[Iso8601_duration^]`.
 
 h|*Invariants*
 2+a|__Value_valid__: `valid_iso8601_duration (value)`

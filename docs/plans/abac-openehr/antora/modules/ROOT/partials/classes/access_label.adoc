@@ -1,0 +1,13 @@
+=== ACCESS_LABEL Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_label.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_label.adoc[]
+
+====

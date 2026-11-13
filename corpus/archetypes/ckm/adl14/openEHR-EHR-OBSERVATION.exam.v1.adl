@@ -333,8 +333,6 @@ definition
 		}
 	}
 
-
-
 ontology
 	term_definitions = <
 		["ar-sy"] = <

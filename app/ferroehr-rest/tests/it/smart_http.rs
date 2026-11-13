@@ -66,11 +66,13 @@ fn config(issuer: &str, smart_enabled: bool, patient_bound: bool) -> AppConfig {
         ..common::api_config(false)
     };
     cfg.auth.smart.discovery = smart_enabled;
-    cfg.auth.smart.public_base_url = Some(ferrohealth_secret::secret_url::SecretUrl::new(
-        "https://cdr.example.com",
-    ));
+    cfg.public_root = Some(
+        ferroehr::config::server::PublicRoot::new("https://cdr.example.com", "")
+            .expect("a public root"),
+    );
     if patient_bound {
-        cfg.auth.smart.patient_issuers = vec![issuer.to_owned()];
+        cfg.auth.smart.patient_issuers =
+            vec![ferrohealth_secret::secret_url::SecretUrl::new(issuer)];
     }
     cfg
 }
@@ -118,6 +120,32 @@ fn capabilities(doc: &Value) -> Vec<&str> {
 }
 
 // ── discovery ─────────────────────────────────────────────────────────────────
+
+/// The document's `baseUrl` hangs off the one public URL of `[server]`, after
+/// the mount path the server serves every route under (#5465).
+#[tokio::test]
+async fn discovery_names_the_base_url_under_the_server_s_public_url_and_mount_path() {
+    let issuer = issuer().await;
+    let mut config = config(&issuer.uri(), true, false);
+    let server = ferroehr::config::server::ServerConfig {
+        shared: ferrohealth_server::section::ServerSection {
+            base_path: ferrohealth_server::section::BasePath::new("/ehr").expect("a mount path"),
+            ..config.server.clone()
+        },
+        public_base_url: Some(ferrohealth_secret::secret_url::SecretUrl::new(
+            "https://gw.example/cdr",
+        )),
+    };
+    config.public_root = server.public_root();
+    config.server = server.shared;
+    let (_pg, app) = common::app(config).await;
+    let (status, doc) = common::send_json(&app, get(&format!("/ehr{DISCOVERY}"), None)).await;
+    assert_eq!(status, StatusCode::OK, "{doc}");
+    assert_eq!(
+        doc["services"]["org.openehr.rest"]["baseUrl"],
+        format!("https://gw.example/cdr/ehr{BASE}")
+    );
+}
 
 #[tokio::test]
 async fn discovery_serves_absolute_base_urls_and_the_enforced_capabilities() {
@@ -176,6 +204,33 @@ async fn a_bound_issuer_declares_patient_permission() {
     let (_pg, app) = common::app(config(&issuer.uri(), true, true)).await;
     let (_status, doc) = common::send_json(&app, get(DISCOVERY, None)).await;
     assert!(capabilities(&doc).contains(&"permission-patient"));
+}
+
+/// A `machines` issuer signs client credentials tokens only, so the document
+/// describes the `persons` issuer beside it, whichever table comes first, and
+/// carries that issuer's authorization and token endpoints (SMART App Launch
+/// 2.2.0, Conformance, §Metadata).
+#[tokio::test]
+async fn discovery_describes_the_persons_issuer_beside_a_machines_issuer() {
+    let machines = issuer().await;
+    let persons = issuer().await;
+    let mut cfg = config(&persons.uri(), true, false);
+    cfg.auth.shared = common::trusting(vec![
+        ferrohealth_smart::config::IssuerEntry {
+            kind: Some(ferrohealth_smart::kind::IssuerKind::Machines),
+            ..common::entry(&machines.uri(), AUDIENCE)
+        },
+        common::entry(&persons.uri(), AUDIENCE),
+    ])
+    .shared;
+    let (_pg, app) = common::app(cfg).await;
+    let (status, doc) = common::send_json(&app, get(DISCOVERY, None)).await;
+    assert_eq!(status, StatusCode::OK, "{doc}");
+    assert_eq!(
+        doc["authorization_endpoint"],
+        format!("{}/authorize", persons.uri())
+    );
+    assert_eq!(doc["token_endpoint"], format!("{}/token", persons.uri()));
 }
 
 #[tokio::test]
@@ -401,14 +456,13 @@ async fn rbac_app(issuer: &str) -> (testkit::TestDb, Router) {
         common::null_resolvers(),
     )
     .map(std::sync::Arc::new);
-    let app = ferroehr_rest::build_full(
+    let app = common::build_full(
         cfg,
         service,
         authz,
         ferroehr_rest::extensions::management::Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     (pg, app)
 }
 

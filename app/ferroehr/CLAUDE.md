@@ -1,5 +1,24 @@
 # `ferroehr` — the platform library
 
+**Two generated modules live here: `access_log_draft` and
+`access_control_draft`.** `openehr-codegen emit-drafts` emits each from its
+FerroEHR-local draft BMM under `tools/openehr-codegen/draft/bmm/`
+(`org.openehr.rm.access_log` and `org.openehr.rm.access_control` 0.1.0, our
+change proposals, no openEHR release), with the canonical-JSON serde the spec
+crates get. Never hand-edit them: change the draft BMM or the emitter and
+regenerate (`codegen-drift` checks them). Their class invariants are
+hand-written in `access_log_invariants` and `access_control_invariants`, over
+the shared report of `draft_invariants`; `access_control_invariants` reads
+every coded attribute through `access_terminology`, the access control
+groups of `ferroehr-operations` and the only codes the access evaluator and
+write checks read. `access_control_draft` re-emits the
+RM polymorphic parents its `LOCATABLE` and `VERSIONED_OBJECT` subtypes join
+(`LOCATABLE`, `VERSIONED_OBJECT` and the EHR Extract classes that hold a
+`LOCATABLE`), and its `open_seam` converts `ACCESS_DIRECTIVE_SETTINGS` to and
+from the `OpenSubtype` carrier of `EHR_ACCESS.settings`. If openEHR adopts a
+package, it moves to `openehr-rm` as a generation of the RM and leaves this
+crate.
+
 The application core (five app crates, zero re-exports). Top-level modules
 (`src/lib.rs`): `service` (the service layer), `storage`, `aql` (the query
 engine), `versioning` (change control + VERSION `signature` signing),
@@ -14,9 +33,25 @@ with its selector unique indexes, the protection of the parties it relies on
 judged in that commit (`protect`), the first fill and refill under the
 mapping's digest with the replica leases (`fill`), and the
 `ferrohealth-smart` `PartySource` over it, no cache; the mapping's
-configuration is `config::binding::person`),
+configuration is `config::binding::person`; `policy` recognises the policy
+parties by archetype and carries their default definitions from
+`assets/definitions/policy/`, and `shipped` carries the default demographic
+definitions of `deploy/definitions/` and the ids the default mapping names;
+`service::demographic::default_definitions` seeds both sets at boot when
+absent; `grants` derives the client identifiers of any `ACTOR` and the
+operations of the `ferroehr-operations` terminology coded in any `ROLE`'s
+capability credentials into the side table in each commit, never by
+archetype, refuses an operation above `[authz.grants] allowed` or a grant
+without its terms, holds each client's acts-for provider, and keeps them in
+memory per replica (`LiveGrants`, invalidated through `NOTIFY`) for
+`Capabilities::current()`, which decides a system client's commits
+(`versioning::system`), imports and exports (`service::message::import_policy`)),
 `origins` (the
 `[origins]` register of recognised data origins, EHDS Annex II 3.4),
+`policy_register` (the operational-policy admin registers: the audit category
+map, the access delay and the Cedar policy set, versioned in the clinical
+`policy_register` table, held in memory and read again when `listen::Listened`
+says a write notified),
 `licence`, `ids`, `extensions`, `banner`, `decommission` (the `ferroehr db
 erase` operation: blobs first, then `db::erase_schema` drops every schema,
 behind a confirmation naming the instance), `manufacturer` (the one source of
@@ -118,6 +153,13 @@ module.**
   exactly): syslog frames through its `Spool` and `Forwarder`, the FHIR Feed
   through a `Forwarder` over the store's `Outbox` (`feed.rs`). Never re-implement what those crates hold: a
   missing field or shape is a FerroAUDIT issue, not local code.
+- **Access log** (`src/access_log/`, #5121): `store` keeps each draft
+  `ACCESS_LOG_ENTRY` in `audit.access_log_record` as its RFC 8785 canonical
+  form without its link; the insert trigger gives it its `ACCESS_LOG_LINK` in
+  the chain `audit_event` shares and derives the search columns from it, and
+  an entry changes only by its replacement with its own tombstone. Never
+  compute a link outside the trigger, and never write a search column: both
+  are read from the content.
 - **Consume `openehr-*` types directly** — never re-model the RM or re-serialize;
   canonical JSON/XML goes through `openehr-its`.
 - DB tests take their database from the shared harness — `testkit::db()`

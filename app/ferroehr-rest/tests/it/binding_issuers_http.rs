@@ -51,7 +51,7 @@ const SHARED: &str = "6c7d8e9f-0a1b-4c2d-8e3f-4a5b6c7d8e9f";
 /// `identifier_issuer`.
 fn party(issuer: &str, identifier_issuer: &str) -> PartySection {
     PartySection {
-        issuer: issuer.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer),
         identifier_issuer: identifier_issuer.to_owned(),
         identifier_type: "guid".to_owned(),
         ..PartySection::default()
@@ -97,11 +97,13 @@ fn two_issuers() -> AppConfig {
 /// party source.
 async fn router(svc: Arc<FerroEhrService>, config: AppConfig) -> Router {
     let source = Arc::new(svc.party_source("demographic"));
+    common::first_party(&svc, &config).await;
     let authenticator = Authenticator::new(
         &config,
         None,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        common::standing(&svc),
     )
     .await
     .expect("the authenticator builds");

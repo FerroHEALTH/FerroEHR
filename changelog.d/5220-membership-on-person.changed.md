@@ -1,6 +1,0 @@
-- A SCIM Group membership is now held by the member: an inline `PARTY_RELATIONSHIP` from the member's `PERSON` to the `GROUP`, stored in the `PERSON`'s version (RM demographic §Party Relationships). A membership change versions only that `PERSON`, so its cost no longer grows with the Group's size. The `GROUP` is versioned only by a rename, an `externalId` change or its deletion. The Group's `members` is read from the membership index.
-- A Group's `ETag` is now its `GROUP` version plus a membership revision, so it still changes with every membership change. The member User's `ETag` now changes too, while its body stays the same.
-- Deactivating a User (`active = false`) drops all of its memberships in the same version, because an inactive `PERSON` cannot be versioned again. A reactivated User belongs to no Group until its client adds it again.
-- Microsoft Entra ID's disable-then-remove order now succeeds, since the later `remove` finds nothing to remove. An `add` naming an inactive User is `400 invalidValue` ("reactivate the User first").
-- A refused SCIM write now names the rule it breaks in `detail`.
-- `scripts/perf/scim-groups.sh` keeps the database log, `df -h` and `free -m` of a failed run (#5220).

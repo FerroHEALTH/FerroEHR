@@ -7,6 +7,16 @@ concept
 	[at0000.1]	-- Fetal heart monitoring
 language
 	original_language = <[ISO_639-1::en]>
+	translations = <
+		["sv"] = <
+			language = <[ISO_639-1::sv]>
+			author = <
+				["name"] = <"Manna Vosta">
+				["organisation"] = <"Karolinska University Hospital">
+				["email"] = <"manna.vosta@regionstockholm.se">
+			>
+		>
+	>
 description
 	original_author = <
 		["name"] = <"Heather Leslie">
@@ -15,6 +25,20 @@ description
 		["date"] = <"2011-12-20">
 	>
 	details = <
+		["sv"] = <
+			language = <[ISO_639-1::sv]>
+			purpose = <"Att registrera observationer av fostrets hjärtfrekvens över tid, vanligtvis med hjälp av kardiotokograf eller liknande utrustning under senare delen av graviditeten eller under förlossningen, som underlag för bedömning av fostrets tillstånd i livmodern.">
+			use = <"Används för att registrera observationer av fostrets hjärtfrekvens över tid, vanligtvis med hjälp av kardiotokograf eller liknande utrustning under senare delen av graviditeten eller under förlossningen, som underlag för bedömning av fostrets tillstånd.
+
+Används för att registrera fynd från elektronisk övervakning, inklusive kardiotokografi (CTG).
+
+Används endast för att registrera uppgifter om fostrets hjärtslag.">
+			keywords = <"foster", "fosterhjärta", "fosterhjärtfrekvens", "hjärtfrekvens", "hjärtrytm", "hjärtslag", "fosterövervakning", "fosterhjärtövervakning", "CTG", "kardiotokografi">
+			misuse = <"Ska inte användas för att registrera enstaka, intermittenta mätningar av fostrets hjärtfrekvens. Använd i stället den överordnade arketypen OBSERVATION.fetal_heart.
+
+Ska inte användas för att registrera hjärtfrekvens hos spädbarn, barn eller vuxna.">
+			copyright = <"© openEHR Foundation">
+		>
 		["en"] = <
 			language = <[ISO_639-1::en]>
 			purpose = <"To record observations about the fetal heart rate, usually using a cardiotocograph or similar device over a time in late pregnancy or labour, as an assessment about fetal wellbeing in utero.">
@@ -34,12 +58,16 @@ Not to be used for recording the heart rate of infants, children or adults.">
 	other_contributors = <>
 	other_details = <
 		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
 		["references"] = <"SOGC Fetal health Surveillance: antepartum and intrapartum Consensus Guideline: http://www.sogc.org/guidelines/documents/gui197CPG0709r.pdf
 
 Intrapartum care: management and delivery of care to women in labour: http://www.nice.org.uk/nicemedia/live/11837/36275/36275.pdf">
 		["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia">
-		["MD5-CAM-1.0.1"] = <"E30FED2FE0AE5E457C2CE6CC28CC0110">
-		["build_uid"] = <"3120cd50-4b70-4f4e-8ab8-c91910d26bfa">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"96E11E016F0ED92A24010E62B4D7648A">
+		["build_uid"] = <"f16ae29a-090c-47c1-bcb3-209ff84cfddd">
 		["revision"] = <"0.0.1-alpha">
 	>
 
@@ -277,7 +305,6 @@ definition
 		}
 	}
 
-
 ontology
 	term_definitions = <
 		["en"] = <
@@ -505,6 +532,234 @@ ontology
 				["at0.30"] = <
 					text = <"Repetitive">
 					description = <"Decelerations detected in association with over 50% of uterine contractions.">
+				>
+			>
+		>
+		["sv"] = <
+			items = <
+				["at0.1"] = <
+					text = <"Variabilitet">
+					description = <"Variabilitet i fostrets hjärtfrekvens som observerats under övervakningsperioden.">
+				>
+				["at0.10"] = <
+					text = <"Multimediarepresentation">
+					description = <"Digital representation av fynd från övervakningen.">
+					comment = <"Exempelvis video eller CTG-registrering.">
+				>
+				["at0.11"] = <
+					text = <"Ingen">
+					description = <"Variabilitet i hjärtfrekvensen kan inte detekteras.">
+				>
+				["at0.12"] = <
+					text = <"Minimal">
+					description = <"Variabiliteten i hjärtfrekvensen är detekterbar men högst 5 slag per minut.">
+				>
+				["at0.13"] = <
+					text = <"Måttlig">
+					description = <"Variabiliteten i hjärtfrekvensen är 6–25 slag per minut.">
+				>
+				["at0.14"] = <
+					text = <"Uttalad">
+					description = <"Variabiliteten i hjärtfrekvensen är större än 25 slag per minut.">
+				>
+				["at0.15"] = <
+					text = <"Saknas">
+					description = <"Accelerationer i fostrets hjärtfrekvens kan inte detekteras.">
+				>
+				["at0.16"] = <
+					text = <"Förekommer spontant">
+					description = <"Accelerationer i fostrets hjärtfrekvens förekommer spontant.">
+				>
+				["at0.17"] = <
+					text = <"Förekommer vid skalpstimulering">
+					description = <"Accelerationer i fostrets hjärtfrekvens detekteras som resultat av skalpstimulering.">
+				>
+				["at0.18"] = <
+					text = <"Saknas vid skalpstimulering">
+					description = <"Accelerationer i fostrets hjärtfrekvens detekteras inte vid skalpstimulering.">
+				>
+				["at0.19"] = <
+					text = <"Inga">
+					description = <"Inga decelerationer har detekterats.">
+				>
+				["at0.2"] = <
+					text = <"Variabilitetskategori">
+					description = <"Kategori för variabiliteten i fostrets hjärtfrekvens som observerats under övervakningsperioden.">
+				>
+				["at0.20"] = <
+					text = <"Enstaka">
+					description = <"Decelerationer har detekterats i samband med mindre än 50 % av livmodersammandragningarna.">
+				>
+				["at0.21"] = <
+					text = <"Återkommande">
+					description = <"Decelerationer har detekterats i samband med mer än 50 % av livmodersammandragningarna.">
+				>
+				["at0.22"] = <
+					text = <"Inga">
+					description = <"Inga decelerationer har detekterats.">
+				>
+				["at0.23"] = <
+					text = <"Enstaka">
+					description = <"Decelerationer har detekterats i samband med mindre än 50 % av livmodersammandragningarna.">
+				>
+				["at0.24"] = <
+					text = <"Återkommande">
+					description = <"Decelerationer har detekterats i samband med mer än 50 % av livmodersammandragningarna.">
+				>
+				["at0.25"] = <
+					text = <"Inga">
+					description = <"Inga decelerationer har detekterats.">
+				>
+				["at0.26"] = <
+					text = <"Enstaka">
+					description = <"Decelerationer har detekterats i samband med mindre än 50 % av livmodersammandragningarna.">
+				>
+				["at0.27"] = <
+					text = <"Återkommande">
+					description = <"Decelerationer har detekterats i samband med mer än 50 % av livmodersammandragningarna.">
+				>
+				["at0.28"] = <
+					text = <"Inga">
+					description = <"Inga decelerationer har detekterats.">
+				>
+				["at0.29"] = <
+					text = <"Enstaka">
+					description = <"Decelerationer har detekterats i samband med mindre än 50 % av livmodersammandragningarna.">
+				>
+				["at0.3"] = <
+					text = <"Beskrivning av variabilitet">
+					description = <"Beskrivning av det variabilitetsmönster som observerats under övervakningsperioden. ">
+					comment = <"Exempelvis ett sinusoidalt mönster.">
+				>
+				["at0.30"] = <
+					text = <"Återkommande">
+					description = <"Decelerationer har detekterats i samband med mer än 50 % av livmodersammandragningarna.">
+				>
+				["at0.4"] = <
+					text = <"Accelerationer">
+					description = <"Förekomst av accelerationer som observerats under övervakningsperioden.">
+				>
+				["at0.5"] = <
+					text = <"Tidiga decelerationer">
+					description = <"Frekvens av tidiga decelerationer som observerats under övervakningsperioden.">
+				>
+				["at0.6"] = <
+					text = <"Okomplicerade variabla decelerationer">
+					description = <"Frekvens av okomplicerade variabla decelerationer som observerats under övervakningsperioden.">
+				>
+				["at0.7"] = <
+					text = <"Okomplicerade variabla decelerationer">
+					description = <"Frekvens av komplicerade variabla decelerationer som observerats under övervakningsperioden.">
+				>
+				["at0.8"] = <
+					text = <"Sena decelerationer">
+					description = <"Frekvens av sena decelerationer som observerats under övervakningsperioden.">
+				>
+				["at0.9"] = <
+					text = <"Förlängda decelerationer">
+					description = <"Varaktigheten av en enskild förlängd deceleration som observerats under övervakningsperioden.">
+					comment = <"Kan registreras flera gånger under övervakningsperioden, med en varaktighet för varje enskild deceleration.">
+				>
+				["at0000.1"] = <
+					text = <"Fosterhjärtövervakning">
+					description = <"Observationer av fostrets hjärtfrekvens över tid, vanligtvis med hjälp av kardiotokograf eller liknande utrustning.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Ospecificerad händelse">
+					description = <"Ospecificerad standardhändelse vid en tidpunkt eller inom ett tidsintervall som explicit kan definieras i en template eller genereras automatiskt av vissa IT-system.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Förekomst">
+					description = <"Fostrets hjärtslag kan detekteras.">
+					comment = <"Förekomst antas om fostrets hjärtfrekvens är > 0.">
+				>
+				["at0005"] = <
+					text = <"Frekvens">
+					description = <"Fostrets observerade hjärtfrekvens.">
+				>
+				["at0009"] = <
+					text = <"Kommentar">
+					description = <"Kommentarer avseende fostrets hjärtfrekvens som inte beskrivs i övriga datafält.">
+				>
+				["at0010"] = <
+					text = <"Klinisk tolkning">
+					description = <"Enstaka ord, fras eller kort beskrivning som anger den kliniska innebörden och relevansen av fostrets hjärtfrekvens.">
+					comment = <"Exempelvis bradykardi eller takykardi.">
+				>
+				["at0011"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0012"] = <
+					text = <"Moderns kroppsställning">
+					description = <"Moderns kroppsställning när fostrets hjärtfrekvens mättes.">
+				>
+				["at0013"] = <
+					text = <"Stående">
+					description = <"Modern står vid mätningen av fostrets hjärtfrekvens.">
+				>
+				["at0014"] = <
+					text = <"Sittande">
+					description = <"Modern sitter vid mätningen av fostrets hjärtfrekvens.">
+				>
+				["at0015"] = <
+					text = <"Halvliggande">
+					description = <"Modern är halvliggande vid mätningen av fostrets hjärtfrekvens.">
+				>
+				["at0016"] = <
+					text = <"Liggande">
+					description = <"Modern ligger plant vid mätningen av fostrets hjärtfrekvens.">
+				>
+				["at0017"] = <
+					text = <"Liggande med vänsterlutning">
+					description = <"Modern ligger plant med viss sidolutning åt vänster.">
+				>
+				["at0018"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0020"] = <
+					text = <"Utrustning">
+					description = <"Uppgifter om den utrustning som används för att detektera fostrets hjärtfrekvens.">
+					comment = <"Exempelvis Pinardstetoskop eller dopplerultraljud.">
+				>
+				["at0021"] = <
+					text = <"Tilläggsinformation">
+					description = <"Plats för tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+					comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR.">
+				>
+				["at0022"] = <
+					text = <"Möjliga felkällor">
+					description = <"Beskrivning av faktorer och felkällor som inte registrerats i övriga datafält och som kan påverka mätningen av fostrets hjärtfrekvens.">
+					comment = <"Exempelvis feber hos modern eller fysisk ansträngning.">
+				>
+				["at0023"] = <
+					text = <"Pågående förlossning">
+					description = <"Är modern i aktiv förlossning under observationen?">
+				>
+				["at0024"] = <
+					text = <"Pågående förlossning">
+					description = <"Modern är i förlossning när observationen görs.">
+				>
+				["at0025"] = <
+					text = <"Ingen pågående förlossning">
+					description = <"Modern är inte i förlossning när observationen görs.">
+				>
+				["at0026"] = <
+					text = <"Förekommer">
+					description = <"Fostrets hjärtslag kan detekteras.">
+				>
+				["at0027"] = <
+					text = <"Frånvarande">
+					description = <"Fostrets hjärtslag kan inte detekteras.">
 				>
 			>
 		>

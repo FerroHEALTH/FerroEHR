@@ -17,9 +17,9 @@ language
 		["sv"] = <
 			language = <[ISO_639-1::sv]>
 			author = <
-				["name"] = <"Linda Aulin, Erik Sundvall">
-				["organisation"] = <"Region Stockholm, Karolinska Institutet + Karolinska University Hospital, Region Stockholm + Linköping University">
-				["email"] = <"linda.aulin-lundeqvist@regionstockholm.se, erik.sundvall@regionstockholm.se">
+				["name"] = <"Linda Aulin, Erik Sundvall, Per Nemirovski, Jörgen Kuylenstierna, Manna Vosta">
+				["organisation"] = <"Region Stockholm, Karolinska Institutet + Karolinska University Hospital, Region Stockholm + Linköping University, B3 HealthTech, eWeave">
+				["email"] = <"linda.aulin-lundeqvist@regionstockholm.se, erik.sundvall@regionstockholm.se, per.nemirovski@b3.se, jorgen@eweave.se, manna.vosta@regionstockholm.se">
 			>
 		>
 		["nb"] = <
@@ -44,6 +44,30 @@ language
 			language = <[ISO_639-1::ar-sy]>
 			author = <
 				["name"] = <"Mona Saleh">
+			>
+		>
+		["fr"] = <
+			language = <[ISO_639-1::fr]>
+			author = <
+				["name"] = <"Jonas Bucher">
+				["organisation"] = <"Cistec AG">
+				["email"] = <"jonas.bucher@cistec.com">
+			>
+		>
+		["ca"] = <
+			language = <[ISO_639-1::ca]>
+			author = <
+				["name"] = <"Julio de Sosa">
+				["organisation"] = <"Servei Català de la Salut">
+				["email"] = <"juliodesosa@catsalut.cat">
+			>
+		>
+		["es"] = <
+			language = <[ISO_639-1::es]>
+			author = <
+				["name"] = <"Julio de Sosa">
+				["organisation"] = <"Servei Català de la Salut">
+				["email"] = <"juliodesosa@catsalut.cat">
 			>
 		>
 	>
@@ -82,29 +106,29 @@ Der Begriff \"Entnahme\" (EN: collection), das in diesem Archetyp verwendet wird
 		>
 		["sv"] = <
 			language = <[ISO_639-1::sv]>
-			purpose = <"Att registrera detaljer om ett fysiskt provmaterial som tagits från eller relaterat till en individ för undersökning eller analys.">
-			use = <"Används för att registrera detaljer om ett fysiskt provmaterial som tagits från eller relaterat till en individ för undersökning eller analys.
+			purpose = <"Att registrera detaljer om ett provmaterial som tagits från, eller är relaterat till, en individ för undersökning eller analys.">
+			use = <"Används för att registrera detaljer om ett provmaterial som tagits från, eller är relaterat till, en individ för undersökning eller analys.
 
-Denna CLUSTER-arketyp är utformad för användning i de tre huvudkontexterna som beskrivs nedan:
-- Inom INSTRUCTION.service_request eller annan laboratorierelaterad INSTRUCTION-arketyp för att beskriva ett provmaterial som ska tas eller för att beskriva ett prov som åtföljer en begäran om laboratorietjänst.
-- Inom en laboratorierelaterad ACTION-arketyp för att beskriva provtagning eller provtaget material.
+Denna CLUSTER-arketyp är utformad för användning i kontexterna som beskrivs nedan:
+- Inom INSTRUCTION.service_request eller annan laboratorierelaterad INSTRUCTION-arketyp för att beskriva ett provmaterial som ska tas eller för att beskriva ett provmaterial som åtföljer en begäran om laboratorietjänst.
+- Inom en laboratorierelaterad ACTION-arketyp för att beskriva en provtagning **ALTERNATIV: insamling av ett provmaterial** eller ett provtaget material.
 - Inom OBSERVATION.laboratory_test_result eller annan laboratorierelaterad OBSERVATION-arketyp för att beskriva det provmaterial som ett laboratorieresultat bygger på.
-Dessutom kan arketypen också användas inom andra ENTRY- eller CLUSTER-arketyper, där det är kliniskt lämpligt.
+Dessutom kan arketypen också nästlas i andra ENTRY- eller CLUSTER-arketyper, där det är kliniskt lämpligt.
 
-Detaljnivån i denna arketyp överstiger sannolikt det som för närvarande registreras i de flesta laboratorier. Arketypen är avsedd att vara användbar för en enkel provtagning, samtidig provtagning av flera provmaterial utifrån en och samma beställning eller komplexa situationer där minsta detalj om beredning och uppdelning av ett provmaterial måste registreras.
+Detaljnivån i denna arketyp är sannolikt högre än vad som för närvarande registreras i de flesta laboratorier. Den är avsiktligt utformad för att stödja både enkel provtagning av ett enskilt prov, samtidig provtagning av flera prov vid en och samma beställning, samt mer komplexa situationer där mycket detaljerad information om hur ett prov förbereds och delas upp behöver dokumenteras.
 
-De specifika betydelserna för flera element i den här arketypen kommer att ändras beroende på den överordnade arketyp där arketypen för provmaterial är infogad. Till exempel kommer elementet \"Provtagningsmetod\" i samband med en INSTRUCTION-arketyp att vara den erforderliga provtagningsmetoden, medan samma element i sammanhanget av en ACTION-arketyp i det \"färdiga\" tillståndet är den faktiska provtagningsmetod som används.
+De specifika betydelserna för flera datafält i den här arketypen kan variera beroende på sammanhanget i den överordnade arketyp där denna arketyp är nästlad. Till exempel kommer datafältet \"Provtagningsmetod\" i kontexten för en INSTRUCTION-arketyp avse den planerade provtagningsmetoden, medan samma datafält i kontexten för en ACTION-arketyp med status \"completed\" avse den metod som faktiskt användes.
 
-Denna arketyp kompletteras av andra CLUSTER-arketyper för begrepp som exempelvis behållare, provberedning, transport och lagring av provmaterial.
+Denna arketyp kompletteras av andra CLUSTER-arketyper med detaljer om \"Specimen container\", \"Specimen preparation\" och \"Transport of an item\".
 
-Den här arketypen har utformats för att användas med arketypen ”Specimen Container” på två huvudsakliga sätt:
-- ”Specimen Container” nästlad i ”Specimen” (till exempel när ett venöst blodprov är uppdelat mellan två injektionsflaskor eller om en hel tjocktarm är uppdelad i tre hinkar) eller
-- \"Specimen\" nästlad i \" Specimen Container\" (till exempel när en hink med formalin innehåller en sektion av tjocktarmen och en rektum).
+Denna arketyp har utformats för att användas med arketypen ”Specimen container” på två huvudsakliga sätt:
+- ”Specimen container” nästlad i ”Specimen” (till exempel när ett venöst blodprov är uppdelat mellan två rör eller om en hel tjocktarm är uppdelad i tre hinkar) eller
+- \"Specimen\" nästlad i \" Specimen container\" (till exempel när en hink med formalin innehåller en sektion av tjocktarmen och en sektion av rektumet).
 
-OBS! Termen \"provtagning\" i denna arketyp är avsedd att betyda aktiviteten för att samla in provmaterial från en individ. Det är inte avsett att representera transporten från individen till laboratoriet.
+OBS! Termen \"provtagning\" i denna arketyp är avsedd att betyda aktiviteten för att samla in provmaterial från en individ. Det är inte avsett att representera transporten av ett provmaterial från en individ till laboratoriet.
 ">
-			keywords = <"provmaterial", "laboratoriu", "prov", "provtagning", "samplimg", "biopsi", "vävnad", "kroppsvävnad", "vävnadsprov", "cytologi", "mikobiologi", "patologi", "histopatologi", "histologi", "labb", "vätska", "utstryk", "blod", "exudat", "serum", "plasma", "urin", "saliv", "sekret", "cysta", "lymfa", "avföring", "faeces", "ascites", "hostar upp", "sekret", "kompress", "bröstmjölk", "pus", "var", "dränagevätska", "benmärg", "mikroorganism", "odling", "skrapning", "aspirat", "venesektion", "test", "cerebrospinalvätska", "pleuravätska", "resektion", "excision">
-			misuse = <"Ej avsedd att användas för att registrera information om provmaterial som inte är relaterat till en viss individ, såsom exempelvis rutinprover från vattenverk eller slumpmässiga prover från livsmedelsproduktion.">
+			keywords = <"provmaterial", "laboratorium", "prov", "provtagning", "biopsi", "vävnad", "kroppsvävnad", "vävnadsprov", "cytologi", "mikobiologi", "patologi", "histopatologi", "histologi", "labb", "vätska", "utstryk", "blod", "exudat", "serum", "plasma", "urin", "saliv", "sekret", "ledvätska", "cysta", "lymfa", "avföring", "faeces", "ascites", "upphostningar", "svabb", "sekret", "kompress", "bröstmjölk", "pus", "var", "dränagevätska", "benmärg", "mikroorganism", "odling", "skrapning", "aspirat", "test", "cerebrospinalvätska", "pleuravätska", "resektion", "excision">
+			misuse = <"Ska inte användas för att registrera information om provmaterial som inte är relaterat till en specifik patient, såsom exempelvis rutinprover från vattenverk eller slumpmässiga prover från livsmedelsproduktion.">
 		>
 		["nb"] = <
 			language = <[ISO_639-1::nb]>
@@ -177,6 +201,81 @@ Please note: The term 'collection' used in this archetype always refers to the a
 			misuse = <"">
 			copyright = <"© openEHR Foundation">
 		>
+		["fr"] = <
+			language = <[ISO_639-1::fr]>
+			purpose = <"Pour enregistrer les informations relatives à un échantillon physique prélevé sur une personne ou lié à celle-ci à des fins d'enquête, d'examen ou d'analyse.">
+			use = <"À utiliser pour enregistrer les détails relatifs à un échantillon physique prélevé sur une personne ou lié à celle-ci à des fins d’investigation, d’examen ou d’analyse.
+
+Cet archétype a été spécialement conçu pour être utilisé dans les cas d’utilisation suivants :
+- au sein de INSTRUCTION.service_request ou d’un autre archétype INSTRUCTION lié à un laboratoire, pour décrire un échantillon devant être prélevé, ou pour décrire un échantillon accompagnant une demande de service de laboratoire ; 
+- au sein d’un archétype ACTION lié à un laboratoire pour décrire le prélèvement d’un échantillon ou un échantillon qui a été prélevé ; ou
+- au sein d’OBSERVATION.laboratory_test_result ou d’autres archétypes OBSERVATION relatifs aux rapports de laboratoire pour décrire l’échantillon faisant l’objet du rapport.
+De plus, cet archétype peut également être imbriqué dans d’autres archétypes ENTRY ou CLUSTER, lorsque cela est cliniquement approprié.
+
+Le niveau de détail de cet archétype est susceptible de dépasser celui actuellement recueilli dans la plupart des laboratoires. Il a été délibérément conçu pour prendre en charge un prélèvement simple et unique d’un échantillon ; le prélèvement simultané de plusieurs échantillons dans le cadre d’une seule demande ; ainsi que des situations complexes où il est nécessaire d’enregistrer les moindres détails concernant la préparation et la subdivision d’un seul échantillon.
+
+La sémantique exacte de plusieurs éléments de cet archétype peut varier en fonction du contexte fourni par l’archétype parent dans lequel il est imbriqué. Par exemple, l’élément « Méthode de prélèvement » dans le contexte d’un archétype INSTRUCTION correspond à la méthode de prélèvement demandée, tandis que ce même élément, dans le contexte d’un archétype ACTION à l’état « terminé », correspond à la méthode de prélèvement effective.
+
+D’autres archétypes complémentaires fourniront les détails concernant le « Récipient pour échantillons », la « Préparation de l’échantillon » et le « Transport de l’échantillon ».
+
+Cet archétype a été conçu pour être utilisé avec l’archétype « Specimen container » de deux manières principales : 
+- « Récipient pour échantillons » imbriqué dans « Échantillon » (par exemple lorsqu’un échantillon de sang veineux est réparti entre deux flacons, ou qu’un gros intestin entier est divisé en trois seaux) ; ou
+- « Échantillon » imbriqué dans « Récipient pour échantillons » (par exemple lorsqu’un seau de formol contient une section du gros intestin et un rectum, ou qu’un bocal contient cinq grains de beauté marqués individuellement).
+
+Remarque : le terme « prélèvement » utilisé dans cet archétype fait toujours référence à l’activité consistant à prélever un échantillon sur une personne. Il n’est pas destiné à désigner le transport de l’échantillon de la personne vers le laboratoire d’analyse.">
+			keywords = <"échantillon", "laboratoire", "prélèvement", "biopsie", "tissu", "cytologie", "microbiologie", "pathologie", "histopathologie", "histologie", "lab", "liquide", "frottis", "sang", "exsudat", "sérum", "plasma", "urine", "salive", "sécrétion", "synovial", "lymph", "matières fécales", "ascite", "expectoration", "écouvillon", "lait maternel", "pus", "liquide de drainage", "moelle osseuse", "culture", "prélèvement par raclage", "aspirat", "phlébotomie", "test", "liquide céphalo-rachidien", "liquide pleural", "résection", "excision">
+			misuse = <"À ne pas utiliser pour enregistrer des informations concernant des échantillons qui ne sont pas liés à une personne spécifique. Par exemple, des prélèvements d’eau de routine effectués dans une station de traitement d’eau ou des prélèvements ponctuels effectués dans des installations de production alimentaire.">
+		>
+		["ca"] = <
+			language = <[ISO_639-1::ca]>
+			purpose = <"Registrar detalls sobre una mostra física recollida a un pacient o relacionada amb ell, amb finalitats de recerca, examen o anàlisi.">
+			use = <"S'utilitza per registrar detalls sobre una mostra física recollida a un pacient o relacionada amb ell, amb finalitats de recerca, examen o anàlisi.
+
+Aquest arquetip ha estat dissenyat específicament per utilitzar-se en els casos d'ús següents:
+- dins d'INSTRUCTION.service_request o un altre arquetip de tipus INSTRUCTION relacionat amb el laboratori, per descriure una mostra que s'ha de recollir o per descriure una mostra que acompanya una petició de laboratori;
+- dins un arquetip de tipus ACTION relacionat amb el laboratori per descriure la recollida de mostres o una mostra que s'ha recollit; o
+- dins d'OBSERVATION.laboratory_test_result o altres arquetips de tipus OBSERVATION d'informes de laboratori per descriure la mostra que se n'informa.
+A més, aquest arquetip també es pot niar dins d'altres arquetips de tipus ENTRY o CLUSTER, quan sigui clínicament apropiat.
+
+És probable que el nivell de detall d'aquest arquetip superi el que es recull actualment a la majoria dels laboratoris. Ha estat dissenyat a propòsit per atendre una recollida simple d'una sola mostra; recollida simultània de múltiples mostres amb una sola sol·licitud; i situacions complexes en què cal registrar detalls minuciosos sobre la preparació i subdivisió d'una sola mostra.
+
+La semàntica d'alguns elements d'aquest arquetip pot canviar segons el context proporcionat per l'arquetip principal al qual estigui imbricat. Per exemple, l'element 'Mètode de recollida' dins el context d'un arquetip de tipus INSTRUCTION és el mètode de recollida sol·licitat, mentre que el mateix element dins el context d'un arquetip de tipus ACTION a l'estat 'completat' és el mètode de recollida real.
+
+Altres arquetips complementaris inclouran detalls sobre \"Contenidor de mostres\", \"Preparació de mostres\" i \"Transport de mostres\".
+
+Aquest arquetip ha estat dissenyat per utilitzar-se juntament amb l'arquetip de contenidor de mostres de dues maneres principals:
+- 'Contenidor de mostra' imbricat dins de 'Mostra' (per exemple, quan una mostra de sang venosa es divideix en dos vials o una mostra de l'intestí gruixut es divideix en tres pots); o
+- 'Mostra' imbricada dins de 'Contenidor de mostra' (per exemple, quan un pot de formaldehid conté una secció d'intestí gruixut i un recte, o un flascó conté cinc mostres cutànies marcades individualment).
+
+Cal tenir en compte: el terme \"recollida\" utilitzat en aquest arquetip sempre fa referència a l'activitat d'obtenir una mostra d'un individu. No vol representar el transport de la mostra des de l'individu fins al laboratori de proves.">
+			keywords = <"mostra", "laboratori", "recollida", "mostreig", "biòpsia", "teixit", "citologia", "microbiologia", "patologia", "histopatologia", "histologia", "laboratori", "líquid", "frotis", "sang", "exsudat", "sèrum", "plasma", "orina", "saliva", "secreció", "sinovial", "limfa", "excrements", "excrements", "ascitis", "expectorar", "hisop", "llet materna", "pus", "drenar líquid", "medul·la òssia", "cultura", "raspat", "aspirar", "flebotomia", "prova", "líquid cefaloraquidi", "líquid pleural", "resecció", "excissió">
+			misuse = <"No està destinat a ser utilitzat per registrar informació sobre mostres que no estiguin relacionades amb un pacient concret. Per exemple, mostres d'aigua d'una planta d'abastament d'aigua o mostres puntuals d'instal·lacions de producció d'aliments.">
+		>
+		["es"] = <
+			language = <[ISO_639-1::es]>
+			purpose = <"Registrar detalles sobre una muestra física recogida a un paciente o relacionada con él, con fines de investigación, examen o análisis.">
+			use = <"Se utiliza para registrar detalles sobre una muestra física recogida a un paciente o relacionada con él, con fines de investigación, examen o análisis.
+
+Este arquetipo ha sido diseñado específicamente para usarse en los siguientes casos de uso:
+- dentro de INSTRUCTION.service_request u otro arquetipo de tipo INSTRUCTION relacionado con el laboratorio, para describir una muestra que se va a recoger o para describir una muestra que acompaña a una petición de laboratorio;
+- dentro de un arquetipo de tipo ACTION relacionado con el laboratorio para describir la recogida de muestras o una muestra que se ha recogido; o
+- dentro de OBSERVATION.laboratory_test_result u otros arquetipos de tipo OBSERVATION de informes de laboratorio para describir la muestra que se informa.
+Además, este arquetipo también puede anidarse dentro de otros arquetipos de tipo ENTRY o CLUSTER, cuando sea clínicamente apropiado.
+
+Es probable que el nivel de detalle de este arquetipo supere el que se recoge actualmente en la mayoría de los laboratorios. Ha sido diseñado a propósito para atender una recogida simple de una sola muestra; recogida simultánea de múltiples muestras con una sola solicitud; y situaciones complejas en las que es necesario registrar detalles minuciosos sobre la preparación y subdivisión de una sola muestra.
+
+La semántica de algunos elementos de este arquetipo puede cambiar según el contexto proporcionado por el arquetipo principal al que esté anidado. Por ejemplo, el elemento 'Método de recogida' dentro del contexto de un arquetipo de tipo INSTRUCTION, es el método de recogida solicitado, mientras que el mismo elemento dentro del contexto de un arquetipo de tipo ACTION en el estado 'completado', es el método de recogida real.
+
+Otros arquetipos complementarios incluirán detalles sobre \"Contenedor de muestras\", \"Preparación de muestras\" y \"Transporte de muestras\".
+
+Este arquetipo ha sido diseñado para usarse junto con el arquetipo de contenedor de muestras de dos maneras principales:
+- 'Contenedor de muestra' anidado dentro de 'Muestra' (por ejemplo, cuando una muestra de sangre venosa se divide en dos viales o una muestra del intestino grueso se divide en tres botes); o
+- 'Muestra' anidada dentro de 'Contenedor de muestra' (por ejemplo, cuando un bote de formaldehído contiene una sección de intestino grueso y un recto, o un frasco contiene cinco muestras cutáneas marcadas individualmente).
+
+A tener en cuenta: el término \"recogida\" utilizado en este arquetipo siempre se refiere a la actividad de obtener una muestra de un individuo. No pretende representar el transporte de la muestra desde el individuo hasta el laboratorio de pruebas.">
+			keywords = <"muestra", "laboratorio", "recogida", "muestreo", "biopsia", "tejido", "citología", "microbiología", "patología", "histopatología", "histología", "laboratorio", "líquido", "frotis", "sangre", "exudado", "suero", "plasma", "orina", "saliva", "secreción", "sinovial", "linfa", "heces", "excrementos", "ascitis", "expectorar", "hisopo", "leche materna", "pus", "drenar liquido", "médula ósea", "cultura", "raspado", "aspirar", "flebotomía", "prueba", "líquido cefalorraquídeo", "líquido pleural", "resección", "excisión">
+			misuse = <"No está destinado a ser utilizado para registrar información sobre muestras que no estén relacionadas con un paciente en concreto. Por ejemplo, muestras de agua de una planta de abastecimiento de agua o muestras puntuales de instalaciones de producción de alimentos.">
+		>
 	>
 	lifecycle_state = <"published">
 	other_contributors = <"Marit Alice Venheim, Helse Vest IKT, Norway", "Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Koray Atalag, University of Auckland, New Zealand", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Greg Burch, Tiny Medical Apps, United Kingdom", "Ady Angelica Castro Acosta, CIBERES-Hospital 12 de Octubre, Spain", "Stefan Dubois, Dep't of Pathology and Genetics, University Hospitals of Lund and Malmö, Sweden", "Peter Fedorcsak, Oslo universitetssykehus, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Francesca Frexia, CRS4 - Center for advanced studies, research and development in Sardinia, Italy", "Heather Grain, Llewelyn Grain Informatics, Australia", "Åshild Halvorsen, Helse Nord RHF, Norway", "Sam Heard, Ocean Informatics, Australia", "Anca Heyd, DIPS AS, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Morten Hørthe, DIPS AS, Norway", "Lars Ivar Mehlum, Nasjonal IKT HF, Norway", "Christina Jaeger-Schmidt, Heidelberg University Hospital, Germany", "Lars Morgan Karlsen, DIPS ASA, Norway", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Ronald Krawec, Alberta Health Services, Canada", "Runar Kristiansen, DIPS AS, Norway", "Tomi Laptoš, Marand, Slovenia", "Siri Laronningen, Kreftregisteret, Norway", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Sabine Leh, Helse Bergen, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Jens Lien, Bouvet Norge AS, Norway", "Neranga Liyanaarachchige, Division of Global HIV and TB, CDC, United States", "Anne M Gromsrud, DIPS AS, Norway", "Gunn Marit Barstad, Stavanger Universitetssykehus HF, Norway", "Ole Martin Ryeng Sand, DIPS AS, Norway", "Ole Martin Sand, DIPS ASA, Norway", "Shane McKee, Belfast Health & Social Care Trust, United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "John Meredith, NHS Wales Informatics Service, United Kingdom", "Pourya Nasimi, Iran Ministry of Health and Medical Education, IT Department, National EHR R&D group, Iran", "Arunakiry Natarajan, medondo, Germany", "Gunnar Nordin, Equalis AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Jayashree Panickar, Karolinska Institute, Sweden", "Ana Pereira, CINTESIS, CUF-Porto, Portugal", "Nils Petter Tveranger, Helse Vest IKT, Norway", "Niklas Reimer, University Hospital Schleswig-Holstein, Germany", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Ingrid Skard, Edproof, Norway", "Lídia Sousa, CINTESIS; Faculty of Medicine of Oporto University, Portugal", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "German Review Summary, HiGHmed Germany, Germany", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Health Systems, Australia", "Micaela Thierley, Helse Bergen/Haraldsplass sykehus, Norway", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Anders Thurin, VGR, Sweden", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Ørjan Vermeer, Haukeland Universitetssjukehus, Kvinneklinikken, Norway", "Marianne Wilhelmsen, HDS, Norway", "Lin Zhang, Taikang Insurance Group, China", "Enagnon ZOUNCTHEME, Aix Marseille Univerity, Benin">
@@ -189,9 +288,9 @@ Laboratory Technical Framework, Volume 3: Content, Revision 10 [Internet]. USA: 
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"22CC4D6E678D5921D1235F94FF1DDDB1">
-		["build_uid"] = <"2135a42f-2b06-49c7-a71b-dd68896fa178">
-		["revision"] = <"1.1.2">
+		["MD5-CAM-1.0.1"] = <"7872180A0DB94F368B0B4B041F020400">
+		["build_uid"] = <"eb43fe33-6b2a-4a8e-acb0-2cf0620ff474">
+		["revision"] = <"1.1.3">
 	>
 
 definition
@@ -365,7 +464,6 @@ definition
 			}
 		}
 	}
-
 
 ontology
 	term_definitions = <
@@ -1408,20 +1506,20 @@ Nach Möglichkeit wird die Codierung des Namens der Probenentnahmestelle mit ein
 			items = <
 				["at0000"] = <
 					text = <"Provmaterial">
-					description = <"Ett fysiskt prov/provmaterial taget från, eller relaterat till, en individ i syfte att utföra en bedömning, undersökning eller analys.">
+					description = <"Ett provmaterial taget från, eller relaterat till, en individ i syfte att utföra en bedömning, undersökning eller analys.">
 					comment = <"Exempelvis vävnad eller kroppsvätska.">
 				>
 				["at0001"] = <
 					text = <"Laboritoriets providentifierare">
-					description = <"En unik providentifierare, vanligen angiven av laboratoriet.">
-					comment = <"Syftet är identifiering av ett prov i laboratorieinformationssystemet. Provbehållare såsom exempelvis vakuumflaskor och vävnadskassetter har sina egna ID-nummer vilka kan anges i \"Container-elementet\" i arketyper Specimen Container.
+					description = <"En unik providentifierare för provmaterialet, vanligen angiven av laboratoriet.">
+					comment = <"Syftet är identifiering av ett provmaterial i ett laboratorieinformationssystem. Provbehållare såsom exempelvis vakuumflaskor och vävnadskassetter har sina egna ID-nummer vilka kan anges i datafältet \"Container ID\" i arketypen CLUSTER.specimen_container.
 
 ">
 				>
 				["at0003"] = <
 					text = <"Ursprungsprovets identifierare">
-					description = <"Unik identifierare för ursprungsprovet, där provet delats upp i delprover.">
-					comment = <"Till exempel: Ett specifikt objektglas för histologi kan ha ett specifikt paraffinvaxblock som sitt ursprungsprov.
+					description = <"Unik identifierare för ursprungsprovet, där provmaterialet har delats upp i delprover.">
+					comment = <"Till exempel: Ett specifikt objektglas inom histologi kan ha ett specifikt paraffinvaxblock som sitt ursprungsprov.
 ">
 				>
 				["at0005"] = <
@@ -1433,24 +1531,23 @@ Nach Möglichkeit wird die Codierung des Namens der Probenentnahmestelle mit ein
 				["at0007"] = <
 					text = <"Provtagningsmetod">
 					description = <"Den metod som används för att ta provet.">
-					comment = <"Exempelvis venpunktion, biopsi eller resektion. Kodning av provtagningsmetod till en terminologi är att föredra i de fall det är möjligt. Om provtagningsmetoden inkluderas i \"Provtyp\" via prekoordinerade koder blir detta dataelement redundant. 
+					comment = <"Exempelvis venpunktion, biopsi eller resektion. Kodning av provtagningsmetod till en terminologi är att föredra i de fall det är möjligt. Om provtagningsmetoden inkluderas i \"Provtyp\" via prekoordinerade koder blir detta datafält överflödigt. 
 ">
 				>
 				["at0008"] = <
 					text = <"Provtagningskontext">
 					description = <"Den kontext i vilken provet togs.">
-					comment = <"Exempel: fastande, full urinblåsa, sterilt fält. Alternativt specialinstruktioner avseende hanteringen av provet eller omedelbar beredning av provet såsom \"centrifugera vid mottagande\". Det här dataelementet kan även användas för att dokumentera olika typer av kända avvikelser vid provtagning eller hanteringsinstruktioner såsom exempelvis att patienten inte hade fastat trots att det uttryckligen hade begärts. Kodning av provtagningskontexten till en terminologi är att föredra i de fall det är möjligt. 
+					comment = <"Exempel: fastande, full urinblåsa, sterilt fält. Alternativt specialinstruktioner avseende hanteringen av provmaterialet eller omedelbar beredning av provmaterialet såsom \"centrifugera vid mottagande\". Det här datafältet kan även användas för att dokumentera olika typer av kända avvikelser vid provtagning eller instruktioner kring hantering såsom exempelvis att patienten inte hade fastat trots att det uttryckligen hade begärts. Kodning av provtagningskontexten till en terminologi är att föredra i de fall det är möjligt. 
 
-Om den här arketypen används i en annan arketyp av typen INSTRUCTION kommer kontexten att återspegla de avsedda eller önskade förhållandena under provtagningen.
+Om arketypen är nästlad i en INSTRUCTION-arketyp kommer kontexten att återspegla de avsedda eller önskade förhållandena för provtagningen.
 
-Om den arketypen används för att representera ett steg i en arketyp av typen ACTION som härrör till att provtagningen utförs eller slutförs kommer kontexten att återspegla de förhållanden som fanns vid provtagningen och detta kan även kopieras till elementet \"Möjliga felkällor\" i arketypen OBSERVATION.laboratory_test_result archetype.
+Om arketypen används för att representera ett steg i en ACTION-arketyp som härrör till att provtagningen utförs eller slutförs kommer kontexten att återspegla de förhållanden som fanns vid provtagningen och detta kan även kopieras till datafältet \"Möjliga felkällor\" i arketypen OBSERVATION.laboratory_test_result.
 ">
 				>
 				["at0013"] = <
-					text = <"Strukturerad anatomisk lokalisation">
-					description = <"En strukturerad beskrivning av den anatomiska plats från vilken provet togs.
-">
-					comment = <"Använd de mer detaljerade arketyperna för att beskriva strukturerade eller mer komplexa anatomiska platser, eller för att stödja applikationen för att upptäcka platsen. Om den anatomiska platsen ingår i \"Provkälla\" via förkoordinerade koder blir denna SLOT överflödig.
+					text = <"Strukturerad provkälla">
+					description = <"En beskrivning av den strukturerade anatomiska positionen från vilken provet togs.">
+					comment = <"Använd de mer detaljerade arketyperna för att beskriva strukturerade eller mer komplexa anatomiska positioner, eller för att stödja applikationen för att upptäcka positionen. Om den anatomiska platsen ingår i \"Provkälla\" via förkoordinerade koder blir denna SLOT överflödig.
 ">
 				>
 				["at0015"] = <
@@ -1463,22 +1560,22 @@ Om den arketypen används för att representera ett steg i en arketyp av typen A
 				["at0027"] = <
 					text = <"Fysiska egenskaper">
 					description = <"Provmaterialets fysiska dimensioner, massa eller icke mätbara egenskaper.">
-					comment = <"Till exempel: Volym, massa, omkrets, färg, lukt eller turbiditet. Detta dataelement kan användas i en arketyp av typen INSTRUCTION för att specificera egenskaperna hos ett provmaterial som ska samlas in, alternativt i en arketyp av typen ACTION eller OBSERVATION för att ange egenskaper hos ett provmaterial som redan har samlats in.">
+					comment = <"Till exempel: Volym, massa, omkrets, färg, lukt eller turbiditet (grumlighet). Detta datafält kan nästlas i en INSTRUCTION-arketyp för att specificera egenskaperna hos ett provmaterial som ska samlas in, alternativt i en ACTION-arketyp eller OBSERVATION-arketyp för att ange egenskaper hos ett provmaterial som redan har samlats in. Till exempel kan en INSTRUCTION-arketyp begära att 20 mL blod ska samlas in, medan motsvarande ACTION-arketyp registrerar att 15 mL blod insamlades.">
 					fhir_mapping = <"Specimen.collection.quantity">
 				>
 				["at0029"] = <
-					text = <"Provtyp">
-					description = <"Typ av prov">
+					text = <"Provtyp ELLER Typ av provmaterial">
+					description = <"Typ av provmaterial">
 					comment = <"Exempelvis venöst blod, bakteriekultur, cytologi eller vävnadsprov. Kodning av provtypen till en terminologi är att föredra i de fall det är möjligt.">
 				>
 				["at0034"] = <
-					text = <"Datum/tid ankomst till labb">
-					description = <"Datum och tid när provet togs emot av laboratoriet.">
+					text = <"Datum/tid ankomst">
+					description = <"Datum och tid när provmaterialet togs emot av laboratoriet.">
 				>
 				["at0041"] = <
 					text = <"Analysbarhet">
 					description = <"Information om huruvida provmaterialet var av tillräcklig kvalitet för analys.">
-					comment = <"Detta element är avsett för att registrera ett beslut om huruvida provmaterialet var tillräckligt bra för analys och om analysen har genomförts. Kodning av analysbarheten till en terminologi är att föredra där det är möjligt.">
+					comment = <"Detta datafält är avsett för att registrera ett beslut om huruvida kvaliteten av provmaterialet var tillräckligt bra för att genomföra en analys och om analysen har genomförts. Kodning av analysbarheten till en terminologi är att föredra där det är möjligt.">
 				>
 				["at0042"] = <
 					text = <"Provkvalitetsproblem">
@@ -1487,11 +1584,11 @@ Om den arketypen används för att representera ett steg i en arketyp av typen A
 				>
 				["at0045"] = <
 					text = <"Kommentar">
-					description = <"Ytterligare fritext om provmaterialet som inte omfattas av andra fält.">
+					description = <"Ytterligare fritext om provmaterialet som inte omfattas av andra datafält.">
 				>
 				["at0052"] = <
 					text = <"Hemolyserat">
-					description = <"Provmaterialet har hemolyserats.">
+					description = <"Provmaterialet var hemolyserat.">
 				>
 				["at0053"] = <
 					text = <"Lipemiskt">
@@ -1499,7 +1596,7 @@ Om den arketypen används för att representera ett steg i en arketyp av typen A
 				>
 				["at0054"] = <
 					text = <"Felaktigt additiv">
-					description = <"Provet har tillsatts ett felaktigt additiv såsom ett transportmedium eller konserveringsmedel.">
+					description = <"Ett felaktigt tillsatsmedel, såsom ett transportmedium eller konserveringsmedel, tillsattes till provmaterialet.">
 				>
 				["at0055"] = <
 					text = <"Otillräcklig mängd">
@@ -1507,31 +1604,31 @@ Om den arketypen används för att representera ett steg i en arketyp av typen A
 				>
 				["at0062"] = <
 					text = <"Tillfredställande">
-					description = <"Provet är av tillfredsställande kvalitet.">
+					description = <"Provmaterialet är av tillfredsställande kvalitet.">
 				>
 				["at0063"] = <
 					text = <"Otillfredsställande - behandlat">
-					description = <"Provet är av otillfredsställande kvalitet men har analyserats.">
+					description = <"Provmaterialet är av otillfredsställande kvalitet men har analyserats.">
 				>
 				["at0064"] = <
 					text = <"Otillfredsställande - ej behandlat">
-					description = <"Provet är av otillfredsställande kvalitet och har inte analyserats.">
+					description = <"Provmaterialet är av otillfredsställande kvalitet och har inte analyserats.">
 				>
 				["at0067"] = <
 					text = <"Provtagningsmiljö">
-					description = <"Den fysiska miljös i vilken provmaterialet samlades in.">
-					comment = <"Till exempel: Laboratoriets öppenvårdsmottagning, hemma eller sjukhusavdelning. Detta dataelement specificerar i vilken typ av miljö provmaterialet samlades in. Provtagningssituationen kan också ge ytterligare information som är relevant för tolkningen av resultatet.
+					description = <"Den fysiska miljö i vilken provmaterialet samlades in.">
+					comment = <"Till exempel: Laboratoriets öppenvårdsmottagning, hemma eller sjukhusavdelning. Detta datafält specificerar i vilken typ av miljö provmaterialet samlades in. Provtagningssituationen kan också ge ytterligare information som är relevant för tolkningen av resultatet.
 ">
 				>
 				["at0068"] = <
 					text = <"Information om bearbetning">
-					description = <"Strukturerade detaljer om beredning eller bearbetning av provet.">
-					comment = <"Till exempel: färgning eller fixering.">
+					description = <"Strukturerade detaljer om beredning eller bearbetning av provmaterialet.">
+					comment = <"Till exempel: fixering eller färgning.">
 				>
 				["at0070"] = <
 					text = <"Provtagaridentifierare">
-					description = <"Identifierare för den person eller organisation som ansvarar för provtagningen.">
-					comment = <"Detta dataelement är avsett att användas när provmaterialet redan har samlats in och den faktiska provtagaren är känd.">
+					description = <"Identifierare av den person eller organisation som ansvarar för provtagningen.">
+					comment = <"Detta datafältet är avsett att användas när provmaterialet redan har samlats in och den faktiska provtagaren är känd.">
 				>
 				["at0071"] = <
 					text = <"Detaljer om provtagaren">
@@ -1542,8 +1639,8 @@ Om den arketypen används för att representera ett steg i en arketyp av typen A
 					description = <"Fritextbeskrivning av provtagningen.">
 				>
 				["at0080"] = <
-					text = <"Antal behållare">
-					description = <"Det totala antalet fysiska enheter som provmaterialet är distribuerat i. 
+					text = <"Antal provbehållare">
+					description = <"Det totala antalet enheter som provmaterialet är distribuerat i. 
 ">
 					comment = <"Till exempel: antal provbehållare, provrör, provflaskor, block, objektglas eller galler.
 
@@ -1551,8 +1648,8 @@ Om den arketypen används för att representera ett steg i en arketyp av typen A
 				>
 				["at0083"] = <
 					text = <"Ytterligare detaljer">
-					description = <"Ytterligare strukturerade detaljer om provet.">
-					comment = <"Exempelvis: detaljer om nålbiopsier vid prostatacancer, där både remiss och svarsrapportering om provet är detaljerade och specifika.">
+					description = <"Ytterligare strukturerade detaljer om provmaterialet.">
+					comment = <"Exempelvis: detaljer om mellannålsbiopsier vid prostatacancer, där både beställning och svarsrapportering om provmaterialet är detaljerade och specifika.">
 				>
 				["at0085"] = <
 					text = <"Detaljer om provbehållare">
@@ -1560,16 +1657,15 @@ Om den arketypen används för att representera ett steg i en arketyp av typen A
 				>
 				["at0087"] = <
 					text = <"Provkälla">
-					description = <"Identifiering av var på kroppen eller annat ställe som provet är taget från.
-">
+					description = <"Identifiering av den anatomiska positionen eller annat ställe som provet är taget från.">
 					comment = <"Exempelvis \"sår på vänster underben\", \"venkateter på höger arm\", \"höger njure\". Kodning av provkälla till en terminologi är att föredra i de fall det är möjligt.
 
-Använd detta dataelement för att ange prekoordinerade provkällor. Om behoven för registrering av den anatomiska platsen bestäms i applikationen eller kräver komplex modellering såsom relativa platser, använd SLOT \"Strukturerad anatomisk lokalisation\" i denna arketyp. Om den anatomiska platsen ingår i \"Provtyp\" via förkoordinerade koder blir detta dataelement överflödigt.
+Använd detta datafält för att ange prekoordinerade provkällor. Om behoven för registrering av den anatomiska positionen kan genereras automatiskt av vissa IT-system eller kräver komplex modellering såsom relativa platser, använd SLOT \"Strukturerad anatomisk position\" i denna arketyp. Om den anatomiska positionen ingår i \"Provtyp\" via förkoordinerade koder blir detta datafält överflödigt.
 ">
 				>
 				["at0088"] = <
 					text = <"Extern identifierare">
-					description = <"En unik providentifierare som anges av en extern part utanför laboratoriet.">
+					description = <"En unik identifierare för provmaterial som anges av en extern part utanför laboratoriet.">
 					comment = <"Exempelvis remiss-ID, beställnings-ID, arkiverings-ID, Biobank-ID.">
 				>
 				["at0089"] = <
@@ -1578,11 +1674,11 @@ Använd detta dataelement för att ange prekoordinerade provkällor. Om behoven 
 				>
 				["at0090"] = <
 					text = <"Hanteringsfel">
-					description = <"Ett fel inträffade vid hantering av provet. Till exempel: Felaktig lagring eller trasig behållare.">
+					description = <"Ett fel inträffade vid hantering av provmaterialet. Till exempel: Felaktig lagring eller trasig behållare.">
 				>
 				["at0091"] = <
 					text = <"Ålder">
-					description = <"Provet var för gammalt för att analysera eller för att analysera korrekt.">
+					description = <"Provmaterialet var för gammalt för att analysera eller för att analysera korrekt.">
 				>
 				["at0092"] = <
 					text = <"Tekniskt fel">
@@ -1590,7 +1686,7 @@ Använd detta dataelement för att ange prekoordinerade provkällor. Om behoven 
 				>
 				["at0093"] = <
 					text = <"Transportdetaljer">
-					description = <"Strukturerade detaljer om transport av provet.">
+					description = <"Strukturerade detaljer om transport av provmaterialet.">
 				>
 				["at0094"] = <
 					text = <"Koagulerat">
@@ -1598,33 +1694,668 @@ Använd detta dataelement för att ange prekoordinerade provkällor. Om behoven 
 				>
 				["at0095"] = <
 					text = <"Felaktig märkning">
-					description = <"Provet var felaktigt märkt.">
+					description = <"Provmaterialet var felaktigt märkt.">
 				>
 				["at0096"] = <
 					text = <"Digital representation">
 					description = <"Strukturerade detaljer om digital representation av provmaterialet.">
-					comment = <"Till exempel den skannade bilden av en histopatologibild.
-">
+					comment = <"Till exempel den inskannade bilden av ett histopatologiskt objektglas.">
 				>
 				["at0097"] = <
-					text = <"Provbeskrivning">
-					description = <"Berättande beskrivning av det prov som undersöks.">
+					text = <"Beskrivning av provmaterial ELLER Provbeskrivning">
+					description = <"Beskrivning av det provmaterial som undersöks.">
 					comment = <"Till exempel: färgen och viskositeten hos en vätska; formen av en fast vävnad; eller en beskrivning av vävnadsfragment.
 ">
 				>
 				["at0098"] = <
-					text = <"Provets benämning">
-					description = <"Namn eller etikett som beskriver provet">
-					comment = <"Vanligtvis endast relevant för anatomiska patologiprover. Till exempel: 'Sigmoid resektion med en bit av blåsväggen' eller 'Aggregering av flera hudbiopsifragment'.">
+					text = <"Provmaterialets benämning">
+					description = <"Namn eller etikett som beskriver provmaterialet.">
+					comment = <"Vanligtvis endast relevant för anatomiska patologiprover. Till exempel: 'resektion av sigmoideum med en bit av blåsväggen' eller 'aggregering av flera hudbiopsifragment'.">
 				>
 				["at0099"] = <
 					text = <"Antal fragment">
-					description = <"Antalet vävnadsfragment som ingår i provet.">
-					comment = <"Vanligtvis endast relevant när ett antal vävnadsfragment undersöks tillsammans och rapporteras gemensamt som ett enda prov.">
+					description = <"Antal vävnadsfragment som ingår i provmaterialet.">
+					comment = <"Vanligtvis endast relevant när ett antal vävnadsfragment undersöks tillsammans och rapporteras gemensamt som ett enda provmaterial.">
 				>
 				["at0100"] = <
 					text = <"Lagringsdetaljer">
-					description = <"Strukturerade detaljer om förvaringen av provet.">
+					description = <"Strukturerade detaljer om förvaringen av provmaterialet.">
+				>
+			>
+		>
+		["fr"] = <
+			items = <
+				["at0000"] = <
+					text = <"Échantillon">
+					description = <"Échantillon physique prélevé sur une personne ou lié à celle-ci à des fins d’enquête, d’examen ou d’analyse.">
+					comment = <"Par exemple : un tissu ou un liquide biologique.">
+				>
+				["at0001"] = <
+					text = <"Identifiant de l'échantillon de laboratoire">
+					description = <"Identifiant unique de l'échantillon, généralement attribué par le laboratoire.">
+					comment = <"Parfois appelé « identifiant d’enregistrement ». Les récipients contenant les échantillons, par exemple les tubes sous vide ou les cassettes de tissus, possèdent leurs propres identifiants qui peuvent être enregistrés dans l’élément « Identifiant du récipient » de l’archétype « Récipient pour échantillons ».">
+					fhir_mapping = <"Specimen.accessionIdentifier">
+				>
+				["at0003"] = <
+					text = <"Identifiant de l'échantillon parent">
+					description = <"Identifiant unique de l’échantillon parent, lorsque celui-ci est divisé en sous-échantillons.">
+					comment = <"Par exemple : un échantillon spécifique destiné à une préparation histologique peut avoir pour échantillon d'origine un bloc de paraffine spécifique.">
+				>
+				["at0005"] = <
+					text = <"Avertissement de danger">
+					description = <"Risque sanitaire ou risque biologique identifié pour le préleveur ou le personnel de laboratoire en raison d’une exposition à l’échantillon ou d’un contact avec celui-ci.">
+					comment = <"Par exemple : « hépatite B » ; « agent neurotoxique ». Il est préférable, dans la mesure du possible, de coder l’« avertissement de danger » à l’aide d’une terminologie spécifique.">
+				>
+				["at0007"] = <
+					text = <"Méthode de prélèvement">
+					description = <"La méthode de prélèvement utilisée.">
+					comment = <"Par exemple : ponction veineuse, biopsie, résection. Il est préférable, dans la mesure du possible, de coder la méthode de prélèvement à l’aide d’une terminologie. Si la méthode de prélèvement est incluse dans le champ « Type d’échantillon » via des codes précoordonnés, cet élément de données devient redondant.">
+					fhir_mapping = <"Specimen.collection.method">
+				>
+				["at0008"] = <
+					text = <"Conditions de prélèvement">
+					description = <"Le contexte dans lequel l'échantillon est prélevé.">
+					comment = <"Par exemple : « à jeun » ; « vessie pleine » ; « champ stérile » ; ou des instructions spéciales concernant la manipulation ou le traitement immédiat de l’échantillon, telles que « centrifuger dès réception ». Cet élément de données peut également servir à consigner tout écart connu par rapport aux instructions de prélèvement ou de manipulation, par exemple le fait que le patient n’ait pas été à jeun, même si cela avait été initialement demandé. Il est préférable, dans la mesure du possible, de coder les « Conditions de prélèvement » à l’aide d’une terminologie.
+
+Si cet archétype est utilisé au sein d’un archétype INSTRUCTION, le contexte reflétera les conditions prévues ou souhaitées lors du prélèvement de l’échantillon. Si cet archétype est utilisé pour représenter une étape d’un parcours d’archétype ACTION qui correspond au prélèvement en cours ou achevé, le contexte reflétera les conditions qui existaient au moment du prélèvement de l’échantillon et celles-ci pourront également être copiées dans l’élément « Facteurs de confusion » de l’archétype OBSERVATION.laboratory_test_result.">
+				>
+				["at0013"] = <
+					text = <"Site corporel de prélèvement structuré">
+					description = <"Description structurée de la partie du corps sur laquelle l'échantillon a été prélevé.">
+					comment = <"Utiliser les archétypes plus détaillés pour décrire des sites anatomiques structurés ou plus complexes, ou pour faciliter l’enregistrement du site source par l’application lors de son exécution. Si le site corporel a été entièrement identifié dans l’élément de données « Site source », ce slot devient superflu.">
+					fhir_mapping = <"Specimen.collection.sourceSite">
+				>
+				["at0015"] = <
+					text = <"Date/heure de prélèvement">
+					description = <"La date/heure auxquelles le prélèvement a été prescrit à avoir lieu ou a eu lieu.">
+					comment = <"Cette date et cette heure seront principalement saisies dans les champs de timing « INSTRUCTION », ou de date/heure « ACTION » ou « OBSERVATION ». Toutefois, comme il s'agit d'une information essentielle, il peut être utile de l'associer également directement à l'échantillon lui-même.">
+				>
+				["at0027"] = <
+					text = <"Propriétés physiques">
+					description = <"Dimensions physiques, masse ou propriétés non mesurables de l’échantillon.">
+					comment = <"Par exemple : volume, masse, circonférence, couleur, odeur, turbidité. Cet élément peut être utilisé pour préciser les propriétés de l’échantillon à prélever, dans le cadre d’un archétype INSTRUCTION, ou les propriétés de l’échantillon qui a été prélevé, dans le cadre d’un archétype ACTION ou OBSERVATION. Par exemple, une INSTRUCTION peut demander le prélèvement de 20 ml de sang, tandis que l’ACTION correspondante enregistre que seuls 15 ml ont été prélevés.">
+					fhir_mapping = <"Specimen.collection.quantity">
+				>
+				["at0029"] = <
+					text = <"Type d'échantillon">
+					description = <"Le type d'échantillon.">
+					comment = <"Par exemple : sang veineux, culture bactérienne, cytologie ou échantillon tissulaire. Dans la mesure du possible, il est préférable de coder le type d’échantillon à l’aide d’une terminologie spécifique.">
+					fhir_mapping = <"Specimen.type">
+				>
+				["at0034"] = <
+					text = <"Date/heure de réception">
+					description = <"Date et heure de réception de l'échantillon au laboratoire.">
+					fhir_mapping = <"Specimen.receivedTime">
+				>
+				["at0041"] = <
+					text = <"Aptitude à l'analyse">
+					description = <"Informations indiquant si l’échantillon était adapté aux examens">
+					comment = <"Cet élément est destiné à permettre d’indiquer si la qualité de l’échantillon était suffisante pour permettre la réalisation d’un test, et si ce test a été effectué ou non. Dans la mesure du possible, il est préférable de coder les problèmes liés à la qualité de l’échantillon à l’aide d’une terminologie spécifique.">
+				>
+				["at0042"] = <
+					text = <"Problèmes de qualité de l'échantillon">
+					description = <"Problèmes de qualité spécifiques concernant un échantillon.">
+					comment = <"Dans la mesure du possible, il est préférable de recourir à une terminologie spécifique pour codifier les problèmes de qualité des échantillons.">
+				>
+				["at0045"] = <
+					text = <"Remarque">
+					description = <"Informations supplémentaires concernant l’échantillon qui ne figurent pas dans les autres champs.">
+					fhir_mapping = <"Specimen.note">
+				>
+				["at0052"] = <
+					text = <"Hémolysé">
+					description = <"L'échantillon était hémolysé.">
+				>
+				["at0053"] = <
+					text = <"Lipémique">
+					description = <"L'échantillon était lipémique.">
+				>
+				["at0054"] = <
+					text = <"Additif incorrect">
+					description = <"Un additif inapproprié, tel qu'un milieu de transport ou un conservateur, a été ajouté à l'échantillon.">
+				>
+				["at0055"] = <
+					text = <"Quantité insuffisante">
+					description = <"La quantité d'échantillon disponible était insuffisante pour procéder à l'examen.">
+				>
+				["at0062"] = <
+					text = <"Satisfaisant">
+					description = <"L'échantillon est d'une qualité suffisante pour permettre l'établissement d'un rapport.">
+				>
+				["at0063"] = <
+					text = <"Insatisfaisant - analysé">
+					description = <"L'échantillon n'est pas conforme, mais il a été analysé.">
+				>
+				["at0064"] = <
+					text = <"Insatisfaisant – non analysé">
+					description = <"L'échantillon n'est pas conforme et n'a pas été analysé.">
+				>
+				["at0067"] = <
+					text = <"Contexte de prélèvement">
+					description = <"Identification du contexte physique dans lequel l'échantillon a été prélevé.">
+					comment = <"Par exemple : service de consultation externe d’un laboratoire, à domicile ou dans un service hospitalier. Cela précise le type de lieu de prélèvement de l’échantillon au sein de l’environnement de soins. Le cadre de prélèvement de l’échantillon peut fournir des informations supplémentaires pertinentes pour l’analyse du résultat.">
+				>
+				["at0068"] = <
+					text = <"Détails du procédé">
+					description = <"Informations structurées concernant la préparation ou le processus de traitement de l'échantillon.">
+					comment = <"Par exemple : coloration ou fixation.">
+				>
+				["at0070"] = <
+					text = <"Identifiant du préleveur de l'échantillon">
+					description = <"Identifiant de la personne ou de l'organisation chargé du prélèvement de l'échantillon.">
+					comment = <"Cet élément est destiné à être utilisé lorsque l’échantillon a déjà été prélevé et que l’identité de la personne ayant effectué le prélèvement est connue.">
+					fhir_mapping = <"Specimen.collection.collector">
+				>
+				["at0071"] = <
+					text = <"Détails du préleveur de l'échantillon">
+					description = <"La personne ou l'organisation chargé du prélèvement de l'échantillon.">
+					fhir_mapping = <"Specimen.collection.collector">
+				>
+				["at0079"] = <
+					text = <"Description du prélèvement">
+					description = <"Description narrative du prélèvement de l'échantillon.">
+				>
+				["at0080"] = <
+					text = <"Nombre de récipients">
+					description = <"Nombre total d'unités physiques contenant cet échantillon.">
+					comment = <"Par exemple : nombre de seaux, bocaux, flacons, tubes, blocs, lames ou grilles.">
+				>
+				["at0083"] = <
+					text = <"Détails supplémentaires">
+					description = <"Informations structurées supplémentaires concernant l'échantillon.">
+					comment = <"Par exemple : les informations relatives aux biopsies à l'aiguille dans le cadre d'un cancer de la prostate, où tant la demande que le compte rendu concernant l'échantillon sont détaillés et précis.">
+				>
+				["at0085"] = <
+					text = <"Détails des récipients">
+					description = <"Informations relatives aux récipients utilisés.">
+				>
+				["at0087"] = <
+					text = <"Site corporel de prélèvement">
+					description = <"Identification du site corporel ou de tout autre endroit où l'échantillon a été prélevé.">
+					comment = <"Par exemple : « plaie au mollet gauche », « canule intraveineuse au bras droit », « rein droit ».
+Dans la mesure du possible, il est préférable de coder le nom du site source à l’aide d’une terminologie. Utilisez cet élément de données pour enregistrer les sites sources précoordonnés. Si les exigences relatives à l’enregistrement du site source sont déterminées au moment de l’exécution par l’application ou nécessitent une modélisation plus complexe, telle que des emplacements relatifs, utilisez alors le slot « Site corporel de prélèvement structuré » de cet archétype. Si le site source est inclus dans le « Type d’échantillon » via des codes précoordonnés, cet élément de données devient redondant.">
+				>
+				["at0088"] = <
+					text = <"Identifiant externe">
+					description = <"Identifiant unique de l'échantillon, attribué par une entité extérieure au laboratoire.">
+					comment = <"Par exemple : « Identifiant du demandeur », « Identifiant d'archive », « Identifiant de la biobanque ».">
+					fhir_mapping = <"Specimen.identifier">
+				>
+				["at0089"] = <
+					text = <"Ictérique">
+					description = <"L'échantillon présentait un aspect ictérique.">
+				>
+				["at0090"] = <
+					text = <"Erreur de manipulation">
+					description = <"Une erreur s'est produite lors de la manipulation de l'échantillon. Par exemple : stockage incorrect, récipient cassé.">
+				>
+				["at0091"] = <
+					text = <"Âge">
+					description = <"L'échantillon était trop vieux pour être analysé ou pour faire l'objet d'une analyse précise.">
+				>
+				["at0092"] = <
+					text = <"Panne technique">
+					description = <"L'échantillon n'a pas pu être analysé pour des raisons techniques.">
+				>
+				["at0093"] = <
+					text = <"Détails du transport">
+					description = <"Informations structurées concernant le transport de l'échantillon.">
+				>
+				["at0094"] = <
+					text = <"Coagulé">
+					description = <"L'échantillon était coagulé.">
+				>
+				["at0095"] = <
+					text = <"Étiquetage incorrect">
+					description = <"L'échantillon a été incorrectement étiqueté.">
+				>
+				["at0096"] = <
+					text = <"Représentation numérique">
+					description = <"Informations structurées concernant une représentation numérique de l'échantillon.">
+					comment = <"Par exemple, l’image numérisée d’une lame d’histopathologie.">
+				>
+				["at0097"] = <
+					text = <"Description de l'échantillon">
+					description = <"Description narrative de l’échantillon examiné.">
+					comment = <"Par exemple : la couleur et la viscosité d’un liquide ; la forme d’un tissu solide ; ou la description de fragments de tissu.">
+				>
+				["at0098"] = <
+					text = <"Étiquette de l’échantillon">
+					description = <"Nom ou étiquette décrivant l'échantillon.">
+					comment = <"Ne concerne généralement que les échantillons de pathologie anatomique. Par exemple : « Résection sigmoïdienne avec un fragment de paroi vésicale » ou « Ensemble de plusieurs fragments issus de biopsies cutanées ».">
+				>
+				["at0099"] = <
+					text = <"Nombre de fragments">
+					description = <"Nombre de fragments de tissu composant l’échantillon.">
+					comment = <"Généralement pertinent que lorsque plusieurs fragments de tissu sont examinés et font l'objet d'un rapport en tant qu'échantillon unique.">
+				>
+				["at0100"] = <
+					text = <"Détails du stockage">
+					description = <"Informations structurées concernant le stockage de l'échantillon.">
+				>
+			>
+		>
+		["ca"] = <
+			items = <
+				["at0000"] = <
+					text = <"Mostra">
+					description = <"Mostra física recollida d'un pacient o relacionada amb ell, amb finalitats de recerca, examen o anàlisi.">
+					comment = <"Per exemple: teixit o fluid corporal.">
+				>
+				["at0001"] = <
+					text = <"Identificador de mostra de laboratori">
+					description = <"Un identificador únic de la mostra, normalment assignat pel laboratori.">
+					comment = <"De vegades se'n diu Identificador d'Accés. Els contenidors de mostres, per exemple, vials o cassets d'inclusió per a teixits, tenen els seus propis identificadors que es poden registrar a l'element \"Identificador de contenidor\" a l'arquetip \"Contenidor de mostres\".">
+					fhir_mapping = <"Specimen.accessionIdentifier">
+				>
+				["at0003"] = <
+					text = <"Identificador de mostra origen">
+					description = <"Identificador únic de la mostra original, on aquesta es divideix en submostres.">
+					comment = <"Per exemple: una mostra de portaobjectes d'histologia pot tenir un bloc de cera de parafina específic com a mostra original.">
+				>
+				["at0005"] = <
+					text = <"Avís de perill">
+					description = <"Risc per a la salut o risc biològic identificat per al recol·lector o personal del laboratori a causa de l'exposició o el contacte amb la mostra.">
+					comment = <"Per exemple: 'Hepatitis B'; \"agent nerviós\". Sempre que sigui possible, es prefereix codificar l'“avís de perill” amb una terminologia.">
+				>
+				["at0007"] = <
+					text = <"Mètode de recollida">
+					description = <"Mètode de recollida utilitzat.">
+					comment = <"Per exemple: venopunció, biòpsia, resecció. Sempre que sigui possible, es prefereix codificar el mètode de recollida amb una terminologia. Si el mètode de recollida s'inclou al 'Tipus de mostra' mitjançant codis precoordinats, aquest element de dades es torna redundant.">
+					fhir_mapping = <"Specimen.collection.method">
+				>
+				["at0008"] = <
+					text = <"Context del mostreig">
+					description = <"Context pel qual es recull la mostra.">
+					comment = <"Per exemple: 'dejuni'; 'bufeta plena'; 'camp estèril'; o instruccions especials sobre la manipulació o processament immediat de la mostra, com ara \"centrifugar en rebre-la\". Aquest element de dades també s'utilitzarà per documentar qualsevol desviació a la recollida o manipulació, per exemple, que el pacient no havia dejunat, fins i tot quan així s'havia sol·licitat originalment. Sempre que sigui possible, es prefereix la codificació del 'context del mostreig' amb una terminologia.
+
+Si aquest arquetip s'utilitza dins un arquetip de tipus INSTRUCTION, el context reflectirà les condicions previstes o desitjades a la recollida de la mostra. Si aquest arquetip és utilitzat per representar una fase del procés de l'arquetip ACTION que es correlaciona amb la recollida que s'està realitzant o completant, el context reflectirà les condicions que existien a la recollida de la mostra i això també es pot copiar a l'element \" Factors de confusió\" de l'arquetip OBSERVATION.laboratory_test_result.">
+				>
+				["at0013"] = <
+					text = <"Lloc d'origen estructurat">
+					description = <"Descripció estructurada de l'àrea del cos on es recull la mostra.">
+					comment = <"Utilitzar arquetips més detallats per descriure zones anatòmiques estructurades o més complexes, o per donar suport al registre del lloc dorigen en temps dexecució per part de laplicació. Si la zona corporal ha estat identificada a l'element de dades 'Lloc d'origen', aquest SLOT es torna redundant.">
+					fhir_mapping = <"Specimen.collection.sourceSite">
+				>
+				["at0015"] = <
+					text = <"Data/hora de recollida">
+					description = <"Data i hora en què s'ha ordenat o ha tingut lloc la recollida.">
+					comment = <"Aquesta data i hora es registrarà principalment al timing INSTRUCTION, ACTION o OBSERVATION. No obstant això, com que es tracta d'una informació fonamental, pot ser útil associar-la també directament amb la mateixa mostra.">
+				>
+				["at0027"] = <
+					text = <"Propietats físiques">
+					description = <"Dimensions físiques, massa o propietats no mesurables de la mostra.">
+					comment = <"Per exemple: Volum, massa, perímetre, color, olor, terbolesa. Aquest element es pot utilitzar per especificar les propietats de la mostra que es recollirà, en el context d'un arquetip de tipus INSTRUCTION, o les propietats de la mostra que es va recollir, en el context d'un arquetip de tipus ACTION o OBSERVATION. Per exemple, una INSTRUCTION pot sol·licitar la recollida de 20 ml de sang, mentre que l'ACTION corresponent registra que només es van recollir 15 ml.">
+					fhir_mapping = <"Specimen.collection.quantity">
+				>
+				["at0029"] = <
+					text = <"Tipus de mostra">
+					description = <"Tipus de mostra.">
+					comment = <"Per exemple: sang venosa, cultiu bacterià, citologia o mostra de teixit. Sempre que sigui possible, es prefereix codificar el tipus de mostra amb una terminologia.">
+					fhir_mapping = <"Specimen.type">
+				>
+				["at0034"] = <
+					text = <"Data/hora de recepció">
+					description = <"Data i hora en què es va rebre la mostra al laboratori.">
+					fhir_mapping = <"Specimen.receivedTime">
+				>
+				["at0041"] = <
+					text = <"Adequació per a les proves">
+					description = <"Informació sobre si la mostra era adequada per a la prova.">
+					comment = <"Aquest element està destinat a ser utilitzat per registrar un judici sobre si la qualitat de la mostra va ser prou bona per a la prova i si la prova es va fer o no. Sempre que sigui possible, es prefereix codificar els problemes de qualitat de les mostres amb una terminologia.">
+				>
+				["at0042"] = <
+					text = <"Problema en qualitat de la mostra">
+					description = <"Problema de qualitat amb una mostra específica.">
+					comment = <"Sempre que sigui possible, es prefereix codificar els problemes de qualitat de les mostres amb una terminologia.">
+				>
+				["at0045"] = <
+					text = <"Comentaris">
+					description = <"Informació addicional sobre la mostra no registrada a altres camps.">
+					fhir_mapping = <"Specimen.note">
+				>
+				["at0052"] = <
+					text = <"Hemolitzada">
+					description = <"La mostra es troba hemolitzada.">
+				>
+				["at0053"] = <
+					text = <"Lipèmica">
+					description = <"La mostra es troba lipèmica.">
+				>
+				["at0054"] = <
+					text = <"Additiu incorrecte">
+					description = <"S'hi va afegir a la mostra un additiu incorrecte, com un mitjà de transport o un conservant.">
+				>
+				["at0055"] = <
+					text = <"Quantitat insuficient">
+					description = <"La quantitat de mostra disponible és insuficient per fer l'examen.">
+				>
+				["at0062"] = <
+					text = <"Satisfactòria">
+					description = <"La mostra és de qualitat suficient per permetre l'emissió d'informes.">
+				>
+				["at0063"] = <
+					text = <"Insatisfactòria - analitzada">
+					description = <"La mostra no és satisfactòria, però ha estat analitzada.">
+				>
+				["at0064"] = <
+					text = <"Insatisfactòria - no analitzada">
+					description = <"La mostra no és satisfactòria i no ha estat analitzada.">
+				>
+				["at0067"] = <
+					text = <"Escenari de recollida">
+					description = <"Identificació de l'entorn físic on es recull la mostra.">
+					comment = <"Per exemple: laboratori ambulatori, a domicili o a la sala d'un hospital. Detalleu el tipus d'ubicació de recollida de mostres dins l'entorn sanitari. L'entorn de recollida de mostres pot proporcionar informació addicional rellevant per a l'anàlisi del resultat.">
+				>
+				["at0068"] = <
+					text = <"Detalls del processament">
+					description = <"Detalls estructurats sobre la preparació o el processament de la mostra.">
+					comment = <"Per exemple: Tinció o fixació.">
+				>
+				["at0070"] = <
+					text = <"Identificador del col·lector">
+					description = <"Identificador de la persona o organització responsable de recollir la mostra.">
+					comment = <"Aquest element està pensat per a ser utilitzat quan la mostra ja ha estat recollida i es coneix el col·lector real.">
+					fhir_mapping = <"Specimen.collection.collector">
+				>
+				["at0071"] = <
+					text = <"Detalls del col·lector">
+					description = <"Persona o organització responsable de recollir la mostra.">
+					fhir_mapping = <"Specimen.collection.collector">
+				>
+				["at0079"] = <
+					text = <"Descripció de la recollida">
+					description = <"Descripció narrativa sobre la recollida de la mostra.">
+				>
+				["at0080"] = <
+					text = <"Nombre de recipients">
+					description = <"Número total d'unitats físiques que contenen aquesta mostra.">
+					comment = <"Per exemple: Nombre de pots, flascons, vials, tubs, blocs, portaobjectes o reixetes.">
+				>
+				["at0083"] = <
+					text = <"Detalls addicionals">
+					description = <"Detalls addicionals sobre la mostra.">
+					comment = <"Per exemple: detalls sobre biòpsies de pròstata, on tant la sol·licitud com l'informe sobre la mostra són detallats i específics.">
+				>
+				["at0085"] = <
+					text = <"Detalls del recipient">
+					description = <"Detalls sobre els recipients utilitzats.">
+				>
+				["at0087"] = <
+					text = <"Lloc d'origen">
+					description = <"Identificació de la zona del cos o un altre lloc on es recull la mostra.">
+					comment = <"Per exemple: 'ferida en panxell esquerre', 'cànula intravenosa braç dret', 'ronyó dret'.
+Sempre que sigui possible, cal codificar el nom del lloc d'origen amb una terminologia. Utilitzeu aquest element de dades per registrar llocs d'origen precoordinats. Si els requisits per registrar el lloc d'origen els determina l'aplicació en temps d'execució o requereixen un modelatge més complex, com ara ubicacions relatives, utilitzeu el SLOT 'Lloc d'origen estructurat', dins aquest arquetip. Si el lloc d'origen s'inclou al 'Tipus de mostra' mitjançant codis precoordinats, aquest element de dades es torna redundant.">
+				>
+				["at0088"] = <
+					text = <"Identificador extern">
+					description = <"Un identificador únic de la mostra assignat per un equip extern al laboratori.">
+					comment = <"Per exemple: 'ID del sol·licitant', 'ID de l'arxiu, 'ID del biobanc'.">
+					fhir_mapping = <"Specimen.identifier">
+				>
+				["at0089"] = <
+					text = <"Ictèrica">
+					description = <"La mostra es troba ictèrica.">
+				>
+				["at0090"] = <
+					text = <"Error de maneig">
+					description = <"Va sorgir un problema en manipular la mostra. Per exemple: emmagatzematge incorrecte, contenidor trencat.">
+				>
+				["at0091"] = <
+					text = <"Antiquada">
+					description = <"La mostra era massa antiquada per analitzar-la o analitzar-la amb precisió.">
+				>
+				["at0092"] = <
+					text = <"Fallada tècnica">
+					description = <"La mostra no es va poder analitzar per motius tècnics.">
+				>
+				["at0093"] = <
+					text = <"Detalls de transport">
+					description = <"Detalls estructurats sobre el transport de la mostra.">
+				>
+				["at0094"] = <
+					text = <"Coagulada">
+					description = <"La mostra ha estat coagulada.">
+				>
+				["at0095"] = <
+					text = <"Etiquetada incorrectament">
+					description = <"La mostra va ser etiquetada incorrectament.">
+				>
+				["at0096"] = <
+					text = <"Representació digital">
+					description = <"Detalls estructurats sobre una representació digital de la mostra.">
+					comment = <"Per exemple, la imatge escanejada d'un portaobjectes d'histopatologia.">
+				>
+				["at0097"] = <
+					text = <"Descripció de la mostra">
+					description = <"Descripció narrativa sobre la mostra que cal examinar.">
+					comment = <"Per exemple: color i viscositat dʻun fluid; forma d'un teixit sòlid; o descripció de fragments del teixit.">
+				>
+				["at0098"] = <
+					text = <"Etiqueta de la mostra">
+					description = <"Nom o etiqueta que descrigui la mostra.">
+					comment = <"En general només és rellevant per a mostres d'anatomia patològica. Per exemple: 'Resecció sigmoidea d'un tros de paret de la bufeta' o 'Agregat de múltiples fragments de biòpsia de pell'.">
+				>
+				["at0099"] = <
+					text = <"Nombre de fragments">
+					description = <"Número de fragments de teixit que componen la mostra.">
+					comment = <"En general només és rellevant quan s'examinen diversos fragments de teixit i s'informen com una sola mostra.">
+				>
+				["at0100"] = <
+					text = <"Detalls d'emmagatzematge">
+					description = <"Detalls estructurats sobre el desament de la mostra.">
+				>
+			>
+		>
+		["es"] = <
+			items = <
+				["at0000"] = <
+					text = <"Muestra">
+					description = <"Muestra física recogida de un paciente o relacionada con él, con fines de investigación, examen o análisis.">
+					comment = <"Por ejemplo: tejido o fluido corporal.">
+				>
+				["at0001"] = <
+					text = <"Identificador de muestra de laboratorio">
+					description = <"Un identificador único de la muestra, normalmente asignado por el laboratorio.">
+					comment = <"A veces se le llama Identificador de Acceso. Los contenedores de muestras, por ejemplo, viales o casetes de inclusión para tejidos, tienen sus propios identificadores que pueden registrarse en el elemento \"Identificador de contenedor\" en el arquetipo \"Contenedor de muestras\".">
+					fhir_mapping = <"Specimen.accessionIdentifier">
+				>
+				["at0003"] = <
+					text = <"Identificador de muestra origen">
+					description = <"Identificador único de la muestra original, donde ésta se divide en submuestras.">
+					comment = <"Por ejemplo: una muestra de portaobjetos de histología puede tener un bloque de cera de parafina específico como muestra original.">
+				>
+				["at0005"] = <
+					text = <"Aviso de peligro">
+					description = <"Riesgo para la salud o riesgo biológico identificado para el recolector o personal del laboratorio debido a la exposición o contacto con la muestra.">
+					comment = <"Por ejemplo: 'Hepatitis B'; \"agente nervioso\". Siempre que sea posible, se prefiere codificar el \"aviso de peligro\" con una terminología.">
+				>
+				["at0007"] = <
+					text = <"Método de recogida">
+					description = <"Método de recogida utilizado.">
+					comment = <"Por ejemplo: venopunción, biopsia, resección. Siempre que sea posible, se prefiere codificar el método de recogida con una terminología. Si el método de recogida se incluye en el 'Tipo de muestra' mediante códigos precoordinados, este elemento de datos se vuelve redundante.">
+					fhir_mapping = <"Specimen.collection.method">
+				>
+				["at0008"] = <
+					text = <"Contexto del muestreo">
+					description = <"Contexto por el cual se recoge la muestra.">
+					comment = <"Por ejemplo: 'ayuno'; 'vejiga llena'; 'campo estéril'; o instrucciones especiales sobre la manipulación o procesamiento inmediato de la muestra, como \"centrifugar al recibirla\". Este elemento de datos también se utilizará para documentar cualquier desviación en la recogida o manipulación, por ejemplo, que el paciente no había ayunado, incluso cuando así se había solicitado originalmente. Siempre que sea posible, se prefiere la codificación del 'contexto del muestreo' con una terminología.
+
+Si este arquetipo se utiliza dentro de un arquetipo de tipo INSTRUCTION, el contexto reflejará las condiciones previstas o deseadas en la recogida de la muestra. Si este arquetipo es utilizado para representar una fase del proceso del arquetipo ACTION que se correlaciona con la recogida que se está realizando o completando, el contexto reflejará las condiciones que existían en la recogida de la muestra y esto también se puede copiar en el elemento \"Factores de confusión\" del arquetipo OBSERVATION.laboratory_test_result.">
+				>
+				["at0013"] = <
+					text = <"Lugar de origen estructurado">
+					description = <"Descripción estructurada del área del cuerpo de donde se recoge la muestra.">
+					comment = <"Utilizar arquetipos más detallados para describir zonas anatómicas estructuradas o más complejas, o para dar soporte en el registro del lugar de origen en tiempo de ejecución por parte de la aplicación. Si la zona corporal ha sido identificada n el elemento de datos 'Lugar de origen', este SLOT se vuelve redundante.">
+					fhir_mapping = <"Specimen.collection.sourceSite">
+				>
+				["at0015"] = <
+					text = <"Fecha/hora de recogida">
+					description = <"Fecha y hora en que se ha ordenado o ha tenido lugar la recogida.">
+					comment = <"Esta fecha y hora se registrará principalmente en el timing INSTRUCTION, ACTION u OBSERVATION. Sin embargo, como se trata de una información fundamental, puede resultar útil asociarla también directamente con la muestra misma.">
+				>
+				["at0027"] = <
+					text = <"Propiedades físicas">
+					description = <"Dimensiones físicas, masa o propiedades no medibles de la muestra.">
+					comment = <"Por ejemplo: Volumen, masa, perímetro, color, olor, turbidez. Este elemento se puede utilizar para especificar las propiedades de la muestra que se recogerá, en el contexto de un arquetipo de tipo INSTRUCTION, o las propiedades de la muestra que se recogió, en el contexto de un arquetipo de tipo ACTION u OBSERVATION. Por ejemplo, una INSTRUCTION puede solicitar la recogida de 20 ml de sangre, mientras que la ACTION correspondiente registra que solo se recogieron 15 ml.">
+					fhir_mapping = <"Specimen.collection.quantity">
+				>
+				["at0029"] = <
+					text = <"Tipo de muestra">
+					description = <"Tipo de muestra.">
+					comment = <"Por ejemplo: sangre venosa, cultivo bacteriano, citología o muestra de tejido. Siempre que sea posible, se prefiere codificar el tipo de muestra con una terminología.">
+					fhir_mapping = <"Specimen.type">
+				>
+				["at0034"] = <
+					text = <"Fecha/hora de recepción">
+					description = <"Fecha y hora en que se recibió la muestra en el laboratorio.">
+					fhir_mapping = <"Specimen.receivedTime">
+				>
+				["at0041"] = <
+					text = <"Adecuación para las pruebas">
+					description = <"Información sobre si la muestra era adecuada para la prueba.">
+					comment = <"Este elemento está destinado a ser utilizado para registrar un juicio sobre si la calidad de la muestra fue lo suficientemente buena para la prueba y si la prueba se llevó a cabo o no. Siempre que sea posible, se prefiere codificar los problemas de calidad de las muestras con una terminología.">
+				>
+				["at0042"] = <
+					text = <"Problema en calidad de la muestra">
+					description = <"Problema en calidad con una muestra específica.">
+					comment = <"Siempre que sea posible, se prefiere codificar los problemas de calidad de las muestras con una terminología.">
+				>
+				["at0045"] = <
+					text = <"Comentarios">
+					description = <"Información adicional sobre la muestra no registrada en otros campos.">
+					fhir_mapping = <"Specimen.note">
+				>
+				["at0052"] = <
+					text = <"Hemolizada">
+					description = <"La muestra se encuentra hemolizada.">
+				>
+				["at0053"] = <
+					text = <"Lipémica">
+					description = <"La muestra se encuentra lipémica.">
+				>
+				["at0054"] = <
+					text = <"Aditivo incorrecto">
+					description = <"Se añadió a la muestra un aditivo incorrecto, como un medio de transporte o un conservante.">
+				>
+				["at0055"] = <
+					text = <"Cantidad insuficiente">
+					description = <"La cantidad de muestra disponible es insuficiente para realizar el examen.">
+				>
+				["at0062"] = <
+					text = <"Satisfactoria">
+					description = <"La muestra es de una calidad suficiente para permitir la emisión de informes.">
+				>
+				["at0063"] = <
+					text = <"Insatisfactoria - analizada">
+					description = <"La muestra no es satisfactoria pero ha sido analizada.">
+				>
+				["at0064"] = <
+					text = <"Insatisfactoria - no analizada">
+					description = <"La muestra no es satisfactoria y no ha sido analizada.">
+				>
+				["at0067"] = <
+					text = <"Escenario de recogida">
+					description = <"Identificación del entorno físico en el que se recoge la muestra.">
+					comment = <"Por ejemplo: laboratorio ambulatorio, a domicilio o en la sala de un hospital. Detalla el tipo de ubicación de recogida de muestras dentro del entorno sanitario. El entorno de recogida de muestras puede proporcionar información adicional relevante para el análisis del resultado.">
+				>
+				["at0068"] = <
+					text = <"Detalles del procesado">
+					description = <"Detalles estructurados sobre la preparación o procesado de la muestra.">
+					comment = <"Por ejemplo: Tinción o fijación.">
+				>
+				["at0070"] = <
+					text = <"Identificador del colector">
+					description = <"Identificador de la persona u organización responsable de recoger la muestra.">
+					comment = <"Este elemento está pensado para a ser utilizado cuando la muestra ya ha sido recogida y se conoce al colector real.">
+					fhir_mapping = <"Specimen.collection.collector">
+				>
+				["at0071"] = <
+					text = <"Detalles del colector">
+					description = <"Persona u organización responsable de recoger la muestra.">
+					fhir_mapping = <"Specimen.collection.collector">
+				>
+				["at0079"] = <
+					text = <"Descripción de la recogida">
+					description = <"Descripción narrativa sobre la recogida de la muestra.">
+				>
+				["at0080"] = <
+					text = <"Número de recipientes">
+					description = <"Número total de unidades físicas que contienen esta muestra.">
+					comment = <"Por ejemplo: Número de botes, frascos, viales, tubos, bloques, portaobjetos o rejillas.">
+				>
+				["at0083"] = <
+					text = <"Detalles adicionales">
+					description = <"Detalles adicionales sobre la muestra.">
+					comment = <"Por ejemplo: detalles sobre biopsias de próstata, donde tanto la solicitud como el informe sobre la muestra son detallados y específicos.">
+				>
+				["at0085"] = <
+					text = <"Detalles del recipiente">
+					description = <"Detalles sobre los recipientes utilizados.">
+				>
+				["at0087"] = <
+					text = <"Lugar de origen">
+					description = <"Identificación de la zona del cuerpo u otro lugar de donde se recoge la muestra.">
+					comment = <"Por ejemplo: 'herida en pantorrilla izquierda', 'cánula intravenosa brazo derecho', 'riñón derecho'.
+Siempre que sea posible, se prefiere codificar el nombre del lugar de origen con una terminología. Utilice este elemento de datos para registrar lugares de origen precoordinados. Si los requisitos para registrar el lugar de origen los determina la aplicación en tiempo de ejecución o requieren un modelado más complejo, como ubicaciones relativas, utilizar el SLOT 'Lugar de origen estructurado', dentro de este arquetipo. Si el lugar de origen se incluye en el 'Tipo de muestra' mediante códigos precoordinados, este elemento de datos se vuelve redundante.">
+				>
+				["at0088"] = <
+					text = <"Identificador externo">
+					description = <"Un identificador único de la muestra, asignado por un equipo externo al laboratorio.">
+					comment = <"Por ejemplo: 'ID del solicitante', 'ID del archivo, 'ID del biobanco'.">
+					fhir_mapping = <"Specimen.identifier">
+				>
+				["at0089"] = <
+					text = <"Ictérica">
+					description = <"La muestra se encuentra ictérica.">
+				>
+				["at0090"] = <
+					text = <"Error de manejo">
+					description = <"Surgió un problema al manipular la muestra. Por ejemplo: almacenamiento incorrecto, contenedor roto.">
+				>
+				["at0091"] = <
+					text = <"Anticuada">
+					description = <"La muestra era demasiado anticuada para analizarla o analizarla con precisión.">
+				>
+				["at0092"] = <
+					text = <"Fallo técnico">
+					description = <"La muestra no pudo analizarse por motivos técnicos.">
+				>
+				["at0093"] = <
+					text = <"Detalles de transporte">
+					description = <"Detalles estructurados sobre el transporte de la muestra.">
+				>
+				["at0094"] = <
+					text = <"Coagulada">
+					description = <"La muestra se ha coagulado.">
+				>
+				["at0095"] = <
+					text = <"Etiquetada incorrectamente">
+					description = <"La muestra fue etiquetada incorrectamente.">
+				>
+				["at0096"] = <
+					text = <"Representación digital">
+					description = <"Detalles estructurados sobre una representación digital de la muestra.">
+					comment = <"Por ejemplo, imagen escaneada de un portaobjetos de histopatología.">
+				>
+				["at0097"] = <
+					text = <"Descripción de la muestra">
+					description = <"Descripción narrativa sobre la muestra a examinar.">
+					comment = <"Por ejemplo: color y viscosidad de un fluido; forma de un tejido sólido; o descripción de fragmentos del tejido.">
+				>
+				["at0098"] = <
+					text = <"Etiqueta de la muestra">
+					description = <"Nombre o etiqueta que describa la muestra.">
+					comment = <"Por lo general, sólo es relevante para muestras de anatomía patológica. Por ejemplo: 'Resección sigmoidea de un trozo de pared de la vejiga' o 'Agregado de múltiples fragmentos de biopsia de piel'.">
+				>
+				["at0099"] = <
+					text = <"Número de fragmentos">
+					description = <"Número de fragmentos de tejido que componen la muestra.">
+					comment = <"Por lo general, sólo es relevante cuando se examinan varios fragmentos de tejido y se informan como una sola muestra.">
+				>
+				["at0100"] = <
+					text = <"Detalles de almacenamiento">
+					description = <"Detalles estructurados sobre el guardado de la muestra.">
 				>
 			>
 		>

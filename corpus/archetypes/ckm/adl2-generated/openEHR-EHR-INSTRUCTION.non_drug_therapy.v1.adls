@@ -1,0 +1,79 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-INSTRUCTION.non_drug_therapy.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jasmin Buck, Sebastian Garde">
+                ["organisation"] = <"University of Heidelberg, Central Queensland University">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"unknown">
+    >
+    lifecycle_state = <"Rejected">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F2CBA85244EEB01D74179AE22D984E06">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation von Anweisungen zu nicht-medikamentösen Therapien">
+            keywords = <"nicht-medikamentös", "Sauerstoff">
+            use = <"">
+            misuse = <"">
+            copyright = <"copyright (c) 2009 openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record instructions about non-drug therapy">
+            keywords = <"non-drug", "oxygen">
+            use = <"">
+            misuse = <"">
+            copyright = <"copyright (c) 2009 openEHR Foundation">
+        >
+    >
+
+definition
+    INSTRUCTION[at0000] matches {    -- Non-drug therapy
+        activities cardinality matches {0..*; unordered} matches {
+            ACTIVITY[at0001] occurrences matches {0..1} matches {    -- new activity
+                description matches {
+                    allow_archetype ITEM_TREE[at9000] matches {
+                        include
+                            archetype_id/value matches {/openEHR-EHR-ITEM_TREE\.gas_administration\.v1/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"nicht-medikamentöse Therapie">
+                description = <"Zur Verschreibung nicht-medikamentöser Therapien">
+            >
+            ["at0001"] = <
+                text = <"neue Handlung">
+                description = <"*">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Non-drug therapy">
+                description = <"For orders of non-drug therapy">
+            >
+            ["at0001"] = <
+                text = <"new activity">
+                description = <"*">
+            >
+        >
+    >

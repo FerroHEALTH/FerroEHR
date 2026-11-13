@@ -1,0 +1,245 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en_US">
+  <head>
+    <meta xmlns="" charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title xmlns="">IHE ITI TF Vol3</title>
+    <link xmlns="" rel="stylesheet" href="../../../css/styles.css" />
+    <script type="text/javascript" src="https://www.googletagmanager.com/gtag/js?id=G-HLBNC861DJ" async> </script> 
+</head>
+  <body xmlns="">
+    <header>
+        <div class="title-bar" data-responsive-toggle="responsive-menu" data-hide-for="medium">
+          <button class="menu-icon" type="button" data-toggle="responsive-menu"></button>
+          <div class="title-bar-title">IHE ITI Technical Framework</div>
+        </div>
+        <div class="top-bar" id="responsive-menu">
+          <div class="top-bar-left">
+            <img src="../../../IHE_INTERNATIONAL.png" class="IHE logo hide-for-small-only" alt="IHE logo" />
+            <ul id="tf-small-menu" class="menu vertical show-for-small-only">
+              <li><a class="ihe-purple" href="https://ihe.net" target="_blank">About IHE</a></li>
+              <li class="menu-text">Sections
+                <ul id="tf-small-menu-list" class="nested vertical menu">
+                </ul>
+              </li>
+            </ul>
+          </div>
+          <div class="top-bar-right hide-for-small-only">
+            <ul class="menu">
+              <li class="menu-text tf-version">IHE IT Infrastructure (ITI) Technical Framework, Volume <span id="volumeNo"></span><br />Revision 20.0, August 4, 2023 – Final Text</li>
+            </ul>
+              <ul class="menu align-right">
+                    <li><input id="ihe-search-field" type="search" placeholder="Search"></li>
+                    <li><button id="ihe-search-button" type="button" class="button search">Search</button></li>
+                </ul>
+            </div>
+        </div>
+         </header>
+    <div class="navigation">
+      <nav aria-label="You are here:" role="navigation">
+        <ul class="breadcrumbs">
+        </ul>
+      </nav>
+    </div>
+    <div class="scroll-top-wrapper">
+      <span class="scroll-top-inner">
+        <i class="size-icon-lg fi-arrow-up"></i>
+      </span>
+    </div>
+    <div class="grid-container fluid">
+      <div class="grid-x grid-margin-x align-center">
+        <div class="cell medium-11">
+          <div class="callout disclaimer warning text-center">              
+          The Final Text ITI Technical Framework is published here in HTML format and is no longer published as PDF. Trial Implementation supplements are available from the <a href=https://profiles.ihe.net/ITI/TF/Volume1/index.html>Volume 1 Table of Contents</a>.
+          </div>
+        </div>
+      </div>
+      <main>
+        <div class="grid-x grid-margin-x align-center">
+          <div class="hide-for-small-only cell medium-2 large-2" data-sticky-container>
+            <div id="section-menu" class="sticky" data-sticky data-anchor="main-top">
+            </div>
+          </div>
+          <div id="main-top" class="cell medium-10 large-10">
+      <h2 id="5.1">5.1 Basic Patient Privacy Consents Module</h2>
+      <p>This section describes the encoding requirements for the Basic Patient Privacy Consents Document Content.</p>
+      <p>The BPPC document has two possible document templates, one without a scanned document part, and one in Section 5.1.2 defines the requirements of the BPPC document without a scanned document part; Section 5.1.3 explains with a scanned document part.</p>
+      <h3 id="5.1.1">5.1.1 References</h3>
+      <ul>
+        <li class="bullet-list1">
+          <a href="http://www.hl7.org/library/standards_non1.htm#CDA">HL7 CDA Release 2.0</a>
+          <span>(denoted HL7 CDA R2, or just CDA, in subsequent text)</span>
+        </li>
+      </ul>
+      <h3 id="5.1.2">5.1.2 Patient Privacy Consent Acknowledgment Document Specification 1.3.6.1.4.1.19376.1.5.3.1.1.7 – With no Scanned Document Part</h3>
+      <p>A patient acknowledgement of a Patient Privacy Consent Policy is a document that contains machine readable indication. This specification describes the BPPC document without a scanned part. When the Patient Privacy Consent Acknowledgment Document contains a Scanned Document (XDS-SD), it will conform to Section 5.1.3.</p>
+      <h4 id="5.1.2.1">5.1.2.1 XDS Metadata</h4>
+      <h5 id="5.1.2.1.1">5.1.2.1.1 XDS DocumentEntry Metadata</h5>
+      <p>
+        <span>Content Creators shall populate DocumentEntry Metadata requirements in</span>
+        <a href="http://www.ihe.net/uploadedFiles/Documents/PCC/IHE_PCC_TF_Vol2.pdf#nameddest=4_1_Medical_Document_Binding_to">PCC TF-2: 4.1.1</a>
+        <span>(e.g., authorInstitution, authorPerson, authorRole, authorSpeciality, typeCode, confidentialityCode, creationTime, healthcareFacilityTypeCode, languageCode, mimeType, practiceSettingCode, serviceStartTime, serviceStopTime, sourcePatientId, and sourcePatientInfo) unless otherwise specified below.</span>
+      </p>
+      <h6 id="5.1.2.1.1.1">5.1.2.1.1.1 XDSDocumentEntry.classCode</h6>
+      <p>The LOINC code for these documents is “57016-8” “Privacy Policy Acknowledgement Document” and the codeSystem is 2.16.840.1.113883.6.1.</p>
+      <p>For backward compatibility historic documents may be registered with:</p>
+      <ul>
+        <li class="bullet-list1">classCode – This attribute may have been set to the value "Consent".</li>
+        <li class="bullet-list1">classCodeDisplayName – This attribute may have been set to the value "Consent".</li>
+      </ul>
+      <h6 id="5.1.2.1.1.2">5.1.2.1.1.2 XDSDocumentEntry.eventCodeList</h6>
+      <ul>
+        <li class="bullet-list1">eventCodeList – the eventCodeList shall be populated using the Patient Privacy Policy Identifiers that have been acknowledged to within the document.</li>
+        <li class="bullet-list1">/ClinicalDocument/documentationOf/serviceEvent[templateId/@root='1.3.6.1.4.1.19376.1.5.3.1.2.6']/code/@code</li>
+        <li class="bullet-list1">eventCodeDisplayNameList -- The eventCodeDisplayNameList shall be populated using the display names for those policies.              </li>
+        <li class="bullet-list1">/ClinicalDocument/documentationOf/serviceEvent[templateId/@root='1.3.6.1.4.1.19376.1.5.3.1.2.6']/code/@displayName</li>
+      </ul>
+      <h6 id="5.1.2.1.1.3">5.1.2.1.1.3 XDSDocumentEntry.formatCode</h6>
+      <p>
+        <span>The XDSDocumentEntry format code for this content shall be</span>
+        <span class"XMLname">urn:ihe:iti:bppc:2007</span>
+        <span>. The formatCode codeSystem shall be</span>
+        <span style="font-weight:bold">1.3.6.1.4.1.19376.1.2.3</span>
+        <span>.</span>
+      </p>
+      <h6 id="5.1.2.1.1.4">5.1.2.1.1.4 XDSDocumentEntry.uniqueId</h6>
+      <p>
+        <span>This value shall be the</span>
+        <span style="font-size:10pt">ClinicalDocument/id</span>
+        <span>in the HL7 CDA R2 header. The root attribute is required, and the extension attribute is optional. The total length is limited to 256 characters. See PCC TF-2: 4.1.1, for further content specification.</span>
+      </p>
+      <h5 id="5.1.2.1.2">5.1.2.1.2 XDS SubmissionSet Metadata</h5>
+      <p>No additional constraints. For more information, see PCC TF-2: 4.1.1.1.</p>
+      <h5 id="5.1.2.1.3">5.1.2.1.3 XDS Folder Metadata</h5>
+      <p>No additional requirements.</p>
+      <h4 id="5.1.2.2">5.1.2.2 Specification</h4>
+      <p>CDA Release 2.0 documents that conform to the requirements of this content module shall indicate their conformance by the inclusion of the appropriate &lt;templateId&gt; elements in the header of the document. This is shown in the sample document below. A CDA Document may conform to more than one template. This content module inherits from the Medical Document content module, and so must conform to the requirements of that template as well, thus all &lt;templateId&gt; elements shown in the example below shall be included.</p>
+      <div id="f5.1.2.2-1">
+        <code class="code-block">&lt;ClinicalDocument xmlns='urn:hl7-org:v3'&gt;
+  &lt;typeId extension="POCD_HD000040" root="2.16.840.1.113883.1.3"/&gt;
+  &lt;templateId root='1.3.6.1.4.1.19376.1.5.3.1.1.1'/&gt;
+ &lt;templateId root='1.3.6.1.4.1.19376.1.5.3.1.1.7'/&gt;
+  &lt;id root=' ' extension=' '/&gt;
+  &lt;code code='57016-8' displayName='PATIENT PRIVACY ACKNOWLEDGEMENT'
+    codeSystem='2.16.840.1.113883.6.1' codeSystemName='LOINC'/&gt;
+  &lt;title&gt;Consent to Share Information&lt;/title&gt;
+  &lt;effectiveTime value='20070619012005'/&gt;
+  &lt;confidentialityCode code='N' displayName='Normal'
+    codeSystem='2.16.840.1.113883.5.25' codeSystemName='Confidentiality' /&gt;
+  &lt;languageCode code='en-US'/&gt;    
+     :
+  &lt;component&gt;&lt;structuredBody&gt;
+       
+  &lt;/structuredBody&gt;&lt;/component&gt;
+&lt;/ClinicalDocument&gt;</code>
+      </div>
+      <p class="figureTitle">Figure 5.1.2.2-1: Sample Consent to Share Information Document</p>
+      <p>A Patient Privacy Acknowledgement Document shall contain a text description of what the patient consented to, a list of codes indicating the policy(s) agreed to, and a time range indicating the effective time of the consent. It may be attested to using an electronic digital signature, conforming to the ITI Document Digital Signature (DSG) Profile.</p>
+      <p>A Patient Privacy Acknowledgement Document shall have one or more &lt;serviceEvent&gt; elements in the header identifying the policies acknowledged by the document (see Section 4.2.3.4 of CDA R2). Each &lt;serviceEvent&gt; element indicates an acknowledgement of a Patient Privacy Policy. More than one policy may be acknowledged to within a given document.</p>
+      <table cellspacing="0" cellpadding="0">
+        <thead>
+          <tr>
+          <td class="tableHeader">Data Element Name</td>
+          <td class="tableHeader">Opt</td>
+          <td class="tableHeader">Template ID</td>
+        </tr>
+        </thead>
+        <tr>
+          <td>
+            <p>
+              <span>Patient Privacy Acknowledgement Service Event</span>
+              <br />
+              <span>At least one, and possibly more than one acknowledgement can be provided within the document.</span>
+            </p>
+          </td>
+          <td>R</td>
+          <td>1.3.6.1.4.1.19376.1.5.3.1.2.6</td>
+        </tr>
+      </table>
+      <p>
+        <a name="_Toc367877057"> </a>
+      </p>
+      <h5 id="5.1.2.2.1">5.1.2.2.1 Patient Privacy Acknowledgement Service Events 1.3.6.1.4.1.19376.1.5.3.1.2.6</h5>
+      <p>Within a Patient Privacy Acknowledgement Document, there shall be a Patient Privacy Acknowledgement Service Event with the effective time of the consent shall be specified within the documentationOf/serviceEvent element.</p>
+      <div id="f5.1.2.2-2">
+        <code class="code-block">&lt;documentationOf typeCode='DOC'&gt;
+  &lt;serviceEvent classCode='ACT' moodCode='EVN'&gt;
+    &lt;templateId root='1.3.6.1.4.1.19376.1.5.3.1.2.6'/&gt;
+    &lt;id root='1.2.3.4.5.6'/&gt;
+    &lt;code code='9.8.7.6.5.4.3.2.1' displayName='Chicken Costume Consent' codeSystem='9.8.7.6.5.4.3.2.2' codeSystemName='Silly Policy Land'/&gt;
+    &lt;effectiveTime&gt;
+      &lt;low value='20101130'/&gt;
+    &lt;/effectiveTime&gt;
+  &lt;/serviceEvent&gt;
+&lt;/documentationOf&gt;
+        </code>
+      </div>
+      <p class="figureTitle">Figure 5.1.2.2-2: Patient Privacy Acknowledgement Service Events Example</p>
+      <h5 id="5.1.2.2.2">5.1.2.2.2 &lt;documentationOf typeCode='DOC'&gt;</h5>
+      <p>At least one &lt;documentationOf&gt; element shall exist, describing the service event. This element shall have a typeCode attribute with the value DOC.</p>
+      <h5 id="5.1.2.2.3">5.1.2.2.3 &lt;serviceEvent classCode='ACT' moodCode='EVN'&gt;</h5>
+      <p>One &lt;serviceEvent&gt; shall exist for each Patient Privacy Policy acknowledged. This element shall have a classCode attribute set to ACT, and a moodCode attribute of EVN.</p>
+      <h5 id="5.1.2.2.4">5.1.2.2.4 &lt;templateId root='1.3.6.1.4.1.19376.1.5.3.1.2.6'/&gt;</h5>
+      <p>The &lt;templateId&gt; element shall be recorded exactly as shown above, and identifies this &lt;serviceEvent&gt; as recording the acknowledgement of a Patient Privacy Policy.</p>
+      <h5 id="5.1.2.2.5">5.1.2.2.5 &lt;id root=' ' /&gt;</h5>
+      <p>The service event shall have one &lt;id&gt; element, providing an identifier for the service event. The root attribute of this element shall be present, and shall be a GUID or OID. The extension attribute shall not be present.</p>
+      <h5 id="5.1.2.2.6">5.1.2.2.6 &lt;code code=' ' displayName=' ' codeSystem=' ' codeSystemName=' '/&gt;</h5>
+      <p>The &lt;code&gt; element shall be present, and shall indicate the Patient Privacy Policy acknowledged. The code attribute indicates the Patient Privacy Policy Identifier, and the codeSystem attribute indicates the code system for the Patient Privacy Policy Domain from which this Patient Privacy Policy Identifier is assigned. The displayName attribute may be present, and describes the Patient Privacy Policy acknowledgement. The codeSystemName attribute may be present, and describes the Patient Privacy Policy Domain code system.</p>
+      <h5 id="5.1.2.2.7">5.1.2.2.7 &lt;effectiveTime&gt;&lt;low value=' '/&gt;&lt;high value=' '/&gt;&lt;/effectiveTime&gt;</h5>
+      <p>The &lt;effectiveTime&gt; element shall be present, and shall indicate the effective time range over which acknowledgement is given. The low value must be provided. The high value may be present. If present, it shall indicate the maximum effective time of the consent. The effectiveTime must be the same for all ServiceEvents in one Patient Privacy Acknowledgement Document. If different effectiveTimes are needed then different documents should be generated.</p>
+      <h3 id="5.1.3">5.1.3 Patient Privacy Consent Acknowledgment Document Specification 1.3.6.1.4.1.19376.1.5.3.1.1.7.1 – With Scanned Document</h3>
+      <p>A patient acknowledgement of a Patient Privacy Consent Policy is a document that contains machine-readable indication. This section specifies the BPPC document with a scanned document part.</p>
+      <h4 id="5.1.3.1">5.1.3.1 XDS Metadata</h4>
+      <p>The BPPC document shall conform to the requirements in Section 5.1.2.1 with the formatCode exception listed below.</p>
+      <h5 id="5.1.3.1.1">5.1.3.1.1 XDS DocumentEntry Metadata</h5>
+      <p>The BPPC document shall conform to the DocumentEntry Metadata requirements in the IHE PCC TF-2: 4.1.1 unless otherwise specified below.</p>
+      <h6 id="5.1.3.1.1.1">5.1.3.1.1.1 XDSDocumentEntry.formatCode</h6>
+      <p>
+        <span>The XDSDocumentEntry format code for this content is</span>
+        <code>urn:ihe:iti:bppc-sd:2007</code>
+        <span>. The formatCode codeSystem shall be 1.3.6.1.4.1.19376.1.2.3.</span>
+      </p>
+      <h5 id="5.1.3.1.2">5.1.3.1.2 XDS SubmissionSet Metadata</h5>
+      <p>No additional constraints. For more information, see PCC TF-2: 4.1.1.1.</p>
+      <h5 id="5.1.3.1.3">5.1.3.1.3 XDS Folder Metadata</h5>
+      <p>No additional requirements.</p>
+      <h4 id="5.1.3.2">5.1.3.2 Specification</h4>
+      <p>This BPPC document shall conform to the XDS-SD (Section 5.2) specification and shall have the additional requirements stated in Section 5.1.2.2.</p>
+      <h4 id="5.1.3.3">5.1.3.3 Conformance</h4>
+      <p>See Section 5.1.2.2.</p>
+      <p>
+        <br style="page-break-before:always; clear:both" />
+      </p>
+          </div>
+        </div>
+      </main>
+    </div>
+   <footer class="ihe-footer">
+    <div class="grid-container fluid">
+      <div class="grid-x grid-margin-x align-middle">
+        <div class="cell medium-9 small-order-2 medium-order-1 text-center medium-text-left">
+          © 2000 &mdash; <span id="current-year"></span> IHE International | TEL 1-630-481-1004 | 820&nbsp;Jorie&nbsp;Boulevard,
+          Oak&nbsp;Brook, IL&nbsp;60523
+        </div>
+        <div class="cell medium-3 small-order-1 medium-order-2 text-center medium-text-right ihe-footer-icons">
+          <a href="mailto:secretary@ihe.net"><i class="fi fi-mail"></i></a>
+          <a href="https://www.linkedin.com/company/iheintl"><i class="fi fi-social-linkedin"></i></a>
+          <a href="https://twitter.com/IHEIntl"><i class="fi fi-social-twitter" aria-hidden="true"></i></a>
+          <a href="https://www.youtube.com/user/IHEIntl"><i class="fi fi-social-youtube" aria-hidden="true"></i></a>
+        </div>
+      </div>
+    </div>
+  </footer>
+    <script src="../../../js/vendor/jquery.min.js"></script>
+    <script src="../../../js/vendor/motion-ui.min.js"></script>
+    <script src="../../../js/vendor/what-input.js"></script>
+    <script src="../../../js/vendor/foundation.min.js"></script>
+    <script src="../../../js/app.js"></script>
+  	<script>
+	 window.dataLayer = window.dataLayer || [];
+	function gtag(){dataLayer.push(arguments);}
+	gtag('js', new Date());
+	gtag('config', 'G-HLBNC861DJ');
+	</script>
+</body>
+</html>

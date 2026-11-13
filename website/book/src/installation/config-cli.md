@@ -41,6 +41,83 @@ failure written to stderr with its whole cause:
 An orchestrator can tell a configuration to fix from a failure to retry by the
 status alone.
 
+### Where the binary runs
+
+Every command on this page is the same binary, `/usr/local/bin/ferroehr`,
+and the published image's entrypoint. The image is distroless and has no
+shell, so you run a command by naming the binary or by passing the
+subcommand to the entrypoint, never through `sh -c`. A command runs in one
+of three places.
+
+**The binary on a host:**
+
+```sh
+ferroehr config check --config /etc/ferroehr/ferroehr.toml
+ferroehr party-binding check --admin <ADMIN_PARTY_ID>
+```
+
+**The image under Docker or Docker Compose.** `config check` touches no
+database, so you can check a file before an upgrade with the new image
+alone, mounting the file where `FERROEHR_CONFIG` names it:
+
+```sh
+docker run --rm   -v "$PWD/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro"   -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml   ghcr.io/ferrohealth/ferroehr:<version> config check
+```
+
+This form sees only the file and the variables you pass. To check the
+configuration a Compose service actually gets (its file, its
+`FERROEHR__` environment and its secrets), run the subcommand in a
+one-off container of that service. It works while the server refuses to
+start, because `--no-deps` starts nothing else:
+
+```sh
+docker compose run --rm --no-deps ferroehr config check
+```
+
+The commands that read the database run inside the running server's
+container:
+
+```sh
+docker compose exec ferroehr /usr/local/bin/ferroehr party-binding check --admin <ADMIN_PARTY_ID>
+docker compose exec ferroehr /usr/local/bin/ferroehr party-binding adopt --admin <ADMIN_PARTY_ID> <PARTY_ID>...
+```
+
+**The Helm chart.** The server container is `ferroehr` in the Deployment
+`<release>-ferroehr`, and `kubectl exec` runs a command in it with the
+pod's configuration, environment and secrets:
+
+```sh
+kubectl exec deploy/<release>-ferroehr -c ferroehr -- /usr/local/bin/ferroehr config check
+kubectl exec deploy/<release>-ferroehr -c ferroehr -- /usr/local/bin/ferroehr party-binding check --admin <ADMIN_PARTY_ID>
+kubectl exec deploy/<release>-ferroehr -c ferroehr -- /usr/local/bin/ferroehr party-binding adopt --admin <ADMIN_PARTY_ID> <PARTY_ID>...
+```
+
+The chart mounts the configuration from its ConfigMap, so after a
+`helm upgrade` an existing pod reads the new file as soon as the kubelet
+syncs it, before any pod restarts. A configuration the server refuses
+leaves the new pod failing in its `definitions` init container, which
+runs `definitions load` and refuses first. `kubectl logs <pod> -c
+definitions` shows the refusal. To run `config check` on that pod's
+configuration, copy the pod into a one-off pod with no init container that
+runs the check once:
+
+```sh
+kubectl get pod <failing-pod> -o json \
+  | jq '{apiVersion, kind, metadata: {name: "<release>-ferroehr-config-check"},
+         spec: (.spec | del(.initContainers, .nodeName) | .restartPolicy = "Never"
+           | .containers |= map(select(.name == "ferroehr") | .args = ["config", "check"]
+               | del(.livenessProbe, .readinessProbe, .startupProbe)))}' \
+  | kubectl create -f -
+kubectl logs <release>-ferroehr-config-check
+kubectl delete pod <release>-ferroehr-config-check
+```
+
+The pod ends `Failed` with exit status `78` when the configuration is
+refused and `Succeeded` with `0` when it is valid.
+
+A file argument, such as `party-binding check --expected`, names a path
+inside the container.
+
 ### `ferroehr config …`
 
 ```text
@@ -49,7 +126,7 @@ ferroehr config check [--config P]  # validate file + environment + --set
 
 The starting point for a real `ferroehr.toml` is
 [`app/ferroehr/assets/ferroehr.default.toml`](https://github.com/FerroHEALTH/FerroEHR/blob/main/app/ferroehr/assets/ferroehr.default.toml),
-every key under its description and set to its default, generated from the
+every key under its description with its default, generated from the
 configuration types. [Every configuration key](config-keys.md) shows it whole.
 
 `config check` runs the same validation the server runs at boot (the strict
@@ -58,7 +135,9 @@ unknown-key sweep, the type pass, the aggregated semantic rules, and the
 so it is safe in CI and before a rollout. It exits 0 when the configuration is
 valid and 78 otherwise; on success it prints the effective configuration as TOML
 with every secret redacted, and notes on stderr when `database.url` is still the
-built-in development default.
+built-in development default. [Where the binary runs](#where-the-binary-runs)
+shows it under Docker Compose and Helm, including for a configuration the
+server refuses.
 
 ### `ferroehr db …`
 
@@ -92,14 +171,12 @@ the same text is left alone, so the step runs at every start; one stored
 under the same id with other text is refused, because a stored definition
 never changes and a changed one takes a new version in its id.
 
-A deployment that maps its professionals to demographic parties runs it
-first, so the [party mapping](config-auth.md#the-party-mapping) finds its
-templates when the server boots: as a one-shot compose service, a Helm init
-container or a setup step. The repository's
-`deploy/definitions/professional/` holds the PERSON and ROLE pair the
-development lanes and the quickstart load, adapted from openEHR CKM
-archetypes; a production deployment loads the templates its own modelling
-chose.
+A deployment whose [party mapping](config-auth.md#the-party-mapping) names
+templates of its own runs it first, so the mapping finds them when the server
+boots: as a one-shot compose service, a Helm init container or a setup step.
+The [default demographic definitions](default-demographic-definitions.md),
+which the default mapping names, need no load: the server stores them as it
+boots.
 
 ### `ferroehr party-binding refill`
 
@@ -126,7 +203,8 @@ under the configured [party mapping](config-auth.md#the-party-mapping) and
 writes nothing: the side-table categories are read from a refill inside a
 transaction that is rolled back, so it runs before any boot fill and beside a
 running server. It connects with the configured database credentials and
-runs no migration.
+runs no migration. Under Docker Compose or Helm it runs in the server's
+container ([Where the binary runs](#where-the-binary-runs)).
 
 The report is a JSON document on stdout:
 
@@ -150,10 +228,11 @@ The report is a JSON document on stdout:
   no live `PERSON` carries.
 
 A key passes the provenance rule when the version that introduced it was
-committed by a `[[auth.scim.client]]` (its client identifier under its token
-issuer), by an administrator, by a declared migration, or by just-in-time
-creation at a first login of an `[[authz.party_binding.issuer]]` with
-`jit = true` (a `249|creation|` version carrying its description, committed
+committed by a SCIM client, a client whose `ACTOR` holds or held a
+`scim_provision` grant (its client identifier under its token issuer), by an
+administrator, by a declared migration, or by just-in-time creation at a first
+login of a `persons` issuer an `[[auth.party]]` table binds (a
+`249|creation|` version carrying its description, committed
 by the new `PERSON` itself). A stored version
 records no role its committer held, so you name the administrators: by the
 id of their `PERSON` with `--admin`, or by the `identifier_issuer` and value
@@ -191,6 +270,36 @@ another committer. It also refuses a party that is no live key-bearing
 which two `PERSON`s carry one selector value. A `PERSON` that already
 performs the `ROLE` is reported under `already` and left alone. The report
 is a JSON document on stdout with the CONTRIBUTION and each new `ROLE`.
+
+### `ferroehr party-binding grant`
+
+```text
+ferroehr party-binding grant --issuer <ISSUER> --client-id <CLIENT_ID>
+                             --operation <CODE> [--element <CODE>=<TEXT>]...
+```
+
+Grants an operation of the `ferroehr-operations` terminology to a client, on
+the operator's authority: an `AGENT` carrying the client identifier under the
+token issuer, unless an `ACTOR` names the client already, and a `ROLE` it
+performs whose capability grants the operation, with one scope element per
+`--element`. It is the first grant of a new deployment, typically the
+`scim_provision` of the client that provisions the administrators, since no
+administrator can log in before their `PERSON` exists; every later grant is
+an administrator's write through the Demographic API. The commits take the
+path a Demographic API write takes, with the server's own committer: a code
+`[authz.grants] allowed` does not admit, or an element named other than as
+the operation reads it, refuses the run. A client that holds the operation
+already gets nothing, so the command runs again safely. The report is a JSON
+document on stdout naming the `AGENT` and the new `ROLE`, or `already`. The
+operations and elements are on
+[Operational policy](../operational-policy.md#how-a-request-reads-its-grants).
+
+```sh
+docker compose exec ferroehr /usr/local/bin/ferroehr party-binding grant \
+  --issuer https://login.example.org/machines --client-id entra-provisioning \
+  --operation scim_provision \
+  --element binding_issuer=urn:example:login --element token_scope=ferroehr/scim
+```
 
 ### `ferroehr healthcheck`
 

@@ -146,7 +146,7 @@ probes_oidc() {
     assert_eq "200" "$(http_code -X POST -H "Authorization: Bearer $service" \
       -H 'Content-Type: application/json' -d '{"q":"SELECT e/ehr_id/value FROM EHR e LIMIT 1"}' \
       "$API/query/aql")" \
-      "a system/aql-* grant counts only for a client listed in [smart] backend_clients"
+      "a system/aql-* grant counts only for a client the CDR grants query_system_wide"
   fi
   probe_done
 

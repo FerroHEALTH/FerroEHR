@@ -18,7 +18,9 @@ and a credential whose scopes do not meet it is refused with `403` and the
 `insufficient_scope` challenge (RFC 6750 §3.1). There is no switch: a route the
 table does not know is refused too, so a route can never answer to a token
 that carries no grant for it. A bearer token's scopes come from its `scope`
-claim; a Basic user's from its `scopes` in `[[auth.basic.users]]`. With
+claim; a Basic user's from the `hold_scopes` grants of its `PERSON`
+([Operational policy](operational-policy.md)), and the first administrator's
+`[auth] product_scope` from `[authz.rbac] first_admin`. With
 authentication off nothing is checked.
 
 The scopes and the RBAC and ABAC layers are all checked: SMART only narrows,
@@ -65,7 +67,7 @@ route.
 | operational templates, archetypes and artefacts | `template-<template>` with the operation's permission, the template from the `{template_id}` path parameter |
 | query execution | `aql-<query>` with `s`, the query from the `{qualified_query_name}` path parameter |
 | stored-query definitions | `aql-<query>` with the operation's permission |
-| the DEMOGRAPHIC API | a client listed in `[auth.smart] demographic_clients`, or the `[auth] product_scope`: no SMART on openEHR scope covers demographic data |
+| the DEMOGRAPHIC API | a client the CDR grants `access_demographic`, or the `[auth] product_scope`: no SMART on openEHR scope covers demographic data |
 | the ADMIN API | the `[auth] product_scope` |
 | the terminology API, the ITI-81 audit retrieval | an authenticated caller |
 
@@ -77,7 +79,16 @@ route.
 
 A `system/aql-*` grant "would grant access to all registered and ad-hoc AQL
 queries system-wide" (master08 §Resource Scopes), so it counts only for a
-backend client listed in `[auth.smart] backend_clients`.
+backend client: a client the CDR grants `query_system_wide`.
+
+Both client grants are policy the CDR holds, read on every request with no
+restart: a capability of a `ROLE` the client's `AGENT` performs, coded
+`ferroehr-operations::query_system_wide` or
+`ferroehr-operations::access_demographic`, under an `[authz.grants] allowed`
+that admits the code. See
+[Operational policy](operational-policy.md#a-backend-client-and-a-demographic-client)
+for a worked example. A grant counts for a client's own app-only token; a
+person signed in through that client holds the person's grants.
 
 ## Launch context: binding to one EHR
 
@@ -103,8 +114,8 @@ covers the same operation the wider grant wins.
 A `system/` grant belongs to a backend client acting for no person. A token
 its issuer's profile marks app-only holds `system/` grants alone: one that
 carries a `user/` or `patient/` scope is refused with `403`, because no person
-stands behind it. Such a client commits only as a declared
-`[[authz.system_client]]` ([Who the caller is](identity-providers.md#who-the-caller-is)).
+stands behind it. Such a client commits only under a grant of the CDR
+([Who the caller is](identity-providers.md#who-the-caller-is)).
 
 ## The discovery document
 
@@ -116,10 +127,11 @@ GET /ferroehr/rest/.well-known/smart-configuration
 ```
 
 (relative to the REST root, or to `[auth.smart] platform_base_url` when set). The
-document is built from the metadata of one `[auth]` issuer, read at boot: the
-first introspected issuer, else the issuer `[auth.smart] issuer_metadata_file`
-names, else the first issuer whose metadata is read from it, else the first
-issuer. It carries the
+document is built from the metadata of one `[auth]` issuer, read at boot:
+`[auth] described_issuer`, else the one issuer that is not of kind
+`machines` and whose metadata FerroEHR has. Several such issuers without
+`described_issuer`, or none, refuse the start
+([the described issuer](installation/config-auth.md#the-described-issuer)). It carries the
 authorization, token, registration, introspection and revocation endpoints,
 the grant types and client authentication methods it supports, and its
 `jwks_uri`. It therefore needs an issuer whose metadata names a
@@ -135,11 +147,15 @@ it, `enabled = true` refuses the start.
 export FERROEHR__AUTH__ISSUER__0__ISSUER=https://as.example/realms/ferroehr
 export FERROEHR__AUTH__ISSUER__0__KIND=persons
 export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
-export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=my-smart-app
 export FERROEHR__AUTH__SMART__DISCOVERY=true
-# The external origin absolute service URLs are built from; required.
-export FERROEHR__AUTH__SMART__PUBLIC_BASE_URL=https://cdr.example.com
+# The URL clients reach the server at, which the absolute service URLs hang
+# off; required.
+export FERROEHR__SERVER__PUBLIC_BASE_URL=https://cdr.example.com
 ```
+
+The app signs persons in once the CDR grants it `sign_in_persons`, on the
+`AGENT` carrying `my-smart-app` under the issuer
+([Operational policy](operational-policy.md)).
 
 A document looks like:
 
@@ -173,8 +189,9 @@ A document looks like:
 
 - **`services`** names the openEHR REST service; `org.fhir.rest` is never
   advertised, because FerroEHR serves no FHIR API for clinical data. Each
-  `baseUrl` is **absolute**, built by prefixing the CDR's own base path with
-  `public_base_url`, which is why that key is required.
+  `baseUrl` is **absolute**, built from
+  [`server.public_base_url`](installation/config-server.md#public_base_url-the-one-public-url),
+  `server.base_path` and `api.base_path`, which is why that key is required.
 - **`capabilities`** carries what the server enforces: `context-openehr-ehr`
   and `openehr-permission-v1` always, `permission-user`, and
   `permission-patient` only when `patient_issuers` binds an issuer; the client
@@ -203,13 +220,11 @@ The keys live in `[auth]` and `[auth.smart]`; see the
 | Key | Default | Meaning |
 |---|---|---|
 | `FERROEHR__AUTH__SMART__DISCOVERY` | `false` | Serve the discovery document. |
-| `FERROEHR__AUTH__SMART__PUBLIC_BASE_URL` | unset (**required when enabled**) | The external origin absolute `services.*.baseUrl` values are built from, e.g. `https://cdr.example.com`. |
+| `FERROEHR__SERVER__PUBLIC_BASE_URL` | unset (**required when enabled**) | The URL clients reach the server at, e.g. `https://cdr.example.com`: the absolute `services.*.baseUrl` values are it, `server.base_path` and `api.base_path`. |
 | `FERROEHR__AUTH__SMART__PLATFORM_BASE_URL` | unset | Base the discovery document hangs off. Unset = the REST root (`/ferroehr/rest`). A leading path is honoured (`/gateway/v1` → `/gateway/v1/.well-known/smart-configuration`). |
-| `FERROEHR__AUTH__SMART__BACKEND_CLIENTS` | `[]` | The `client_id`s a `system/aql-*` grant counts for. |
 | `FERROEHR__AUTH__SMART__PATIENT_ISSUERS` | `[]` | The issuers whose `patient/` grants count. |
-| `FERROEHR__AUTH__SMART__DEMOGRAPHIC_CLIENTS` | `[]` | The `client_id`s that reach the DEMOGRAPHIC API. |
 | `FERROEHR__AUTH__SMART__EPISODE_LAUNCH` | `false` | Advertise and accept episode launch context (experimental; advisory only, no episode filtering). |
-| `FERROEHR__AUTH__PRODUCT_SCOPE` | `__ferroehr.platform` | The scope that admits the ADMIN API and the DEMOGRAPHIC API. |
+| `FERROEHR__AUTH__PRODUCT_SCOPE` | `__ferroehr.platform` | The scope that admits the ADMIN API and, beside a client the CDR grants `access_demographic`, the DEMOGRAPHIC API. |
 | `FERROEHR__AUTH__CAPABILITIES` | `[]` | Capabilities the discovery document adds. |
 | `FERROEHR__AUTH__SCOPES_SUPPORTED` | `[]` | The scopes the discovery document lists. |
 

@@ -1,0 +1,155 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-OBSERVATION.third_party_observation-hearing.v1
+specialise
+	openEHR-EHR-OBSERVATION.third_party_observation.v1
+
+concept
+	[at0000.1]	-- Carer observation about hearing of subject
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"????">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record details about a third party observer/carer's observation of subject
+'s hearing">
+			use = <"">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <>
+	other_details = <
+		["references"] = <"">
+	>
+
+definition
+	OBSERVATION[at0000.1] matches {	-- Carer observation about hearing of subject
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..1} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0004] occurrences matches {0..1} matches {	-- Stimulus
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0.17, 	-- Quiet sounds
+													at0.18, 	-- Music
+													at0.19, 	-- Loud Sounds
+													at0.20, 	-- Television
+													at0.21]	-- School room
+												}
+											}
+										}
+									}
+									ELEMENT[at0005] occurrences matches {0..1} matches {	-- Description
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0006] occurrences matches {0..1} matches {	-- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0007] occurrences matches {0..1} matches {	-- Level of concern
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									CLUSTER[at0013] occurrences matches {0..1} matches {	-- Third Party details
+										items cardinality matches {0..*; unordered} matches {
+											allow_archetype CLUSTER[at0014] occurrences matches {0..*} matches {
+												include
+													archetype_id/value matches {/openEHR-EHR-CLUSTER\.individual_personal\.v1/}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.17"] = <
+					text = <"Quiet sounds">
+					description = <"*">
+				>
+				["at0.18"] = <
+					text = <"Music">
+					description = <"*">
+				>
+				["at0.19"] = <
+					text = <"Loud Sounds">
+					description = <"*">
+				>
+				["at0.20"] = <
+					text = <"Television">
+					description = <"*">
+				>
+				["at0.21"] = <
+					text = <"School room">
+					description = <"*">
+				>
+				["at0000"] = <
+					text = <"Carer observation">
+					description = <"Third party observier/carer's observation of subject">
+				>
+				["at0000.1"] = <
+					text = <"Carer observation about hearing of subject">
+					description = <"Third party observier/carer's observation of subject's hearing">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Stimulus">
+					description = <"Stimulus triggering the response being observed">
+				>
+				["at0005"] = <
+					text = <"Description">
+					description = <"Detailed description of response by subject to stimulus">
+				>
+				["at0006"] = <
+					text = <"Comment">
+					description = <"Additional comments about the observation and response">
+				>
+				["at0007"] = <
+					text = <"Level of concern">
+					description = <"Degree of concern displayed by third party">
+				>
+				["at0013"] = <
+					text = <"Third Party details">
+					description = <"*">
+				>
+				["at0014"] = <
+					text = <"Cluster: Third Party details">
+					description = <"*">
+				>
+			>
+		>
+	>

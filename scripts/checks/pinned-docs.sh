@@ -42,6 +42,9 @@ readonly TREES=(
   docs/specs/mitz
   docs/specs/ihe-balp
   docs/specs/fhir-auditevent
+  docs/specs/fhir-consent
+  docs/specs/ihe-consents
+  docs/specs/xacml
   docs/specs/dicom-ps3-15
   docs/specs/rfc-independent
   docs/specs/nen-7513-sources

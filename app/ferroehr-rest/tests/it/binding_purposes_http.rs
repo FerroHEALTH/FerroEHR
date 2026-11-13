@@ -41,7 +41,7 @@ const KEY: &str = "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b";
 async fn router(svc: Arc<FerroEhrService>) -> Router {
     let mut config = config(None);
     config.auth.shared.attributes = vec![AttributesSection {
-        issuer: ISSUER.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
         mapping: Some(Mapping::Iua),
         ..AttributesSection::default()
     }];

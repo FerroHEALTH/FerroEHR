@@ -61,8 +61,9 @@ pub(crate) fn person_body() -> Value {
     })
 }
 
-/// A spec-valid ROLE body (needs a `performer` `PARTY_REF`; no `capabilities`).
-fn role_body() -> Value {
+/// A spec-valid ROLE body (needs a `performer` `PARTY_REF` naming an Actor's
+/// container, RM demographic `role.adoc` `performer`; no `capabilities`).
+fn role_body(performer: &str) -> Value {
     json!({
         "_type": "ROLE",
         "archetype_node_id": "openEHR-DEMOGRAPHIC-ROLE.role.v1",
@@ -83,20 +84,21 @@ fn role_body() -> Value {
         }],
         "performer": {
             "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
-            "id": { "_type": "HIER_OBJECT_ID", "value": "cccccccc-cccc-4ccc-8ccc-cccccccccccc" }
+            "id": { "_type": "HIER_OBJECT_ID", "value": performer }
         }
     })
 }
 
-fn relationship_body() -> Value {
+/// A `PARTY_RELATIONSHIP` from the PERSON container `source` to `target`.
+fn relationship_body(source: &str, target: &str) -> Value {
     json!({
         "_type": "PARTY_RELATIONSHIP",
         "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.relationship.v1",
         "name": { "_type": "DV_TEXT", "value": "parent-of" },
         "source": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
-                    "id": { "_type": "HIER_OBJECT_ID", "value": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" } },
+                    "id": { "_type": "HIER_OBJECT_ID", "value": source } },
         "target": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
-                    "id": { "_type": "HIER_OBJECT_ID", "value": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" } }
+                    "id": { "_type": "HIER_OBJECT_ID", "value": target } }
     })
 }
 
@@ -119,6 +121,18 @@ async fn create(app: &Router, seg: &str, body: &Value) -> String {
 /// The bare versioned-object uuid from an `OBJECT_VERSION_ID`.
 fn vo_of(ovid: &str) -> &str {
     ovid.split("::").next().expect("vo uuid")
+}
+
+/// Creates a PERSON and returns its container id.
+async fn person(app: &Router) -> String {
+    vo_of(&create(app, "person", &person_body()).await).to_owned()
+}
+
+/// A relationship between two PERSONs this server holds: its `source` and
+/// `target` name party containers (RM demographic master02 §Party
+/// Relationships).
+async fn held_relationship(app: &Router) -> Value {
+    relationship_body(&person(app).await, &person(app).await)
 }
 
 #[tokio::test]
@@ -281,7 +295,7 @@ async fn party_delete_by_versioned_object_uid_is_400_for_every_kind() {
         ("group", actor_body("GROUP")),
         ("organisation", actor_body("ORGANISATION")),
         ("person", person_body()),
-        ("role", role_body()),
+        ("role", role_body(&person(&app).await)),
     ];
     for (seg, body) in kinds {
         let ovid = create(&app, seg, &body).await;
@@ -685,7 +699,7 @@ async fn version_at_time_without_offset_resolves_in_the_local_timezone() {
 #[tokio::test]
 async fn versioned_party_relationship_reads_emit_versioning_headers() {
     let (_pg, app) = common::app(common::api_config(false)).await;
-    let ovid = create(&app, "party_relationship", &relationship_body()).await;
+    let ovid = create(&app, "party_relationship", &held_relationship(&app).await).await;
     let vo = vo_of(&ovid).to_owned();
 
     for (uri, expected_etag) in [
@@ -723,7 +737,7 @@ async fn role_create_uses_role_segment() {
     // The 5× kind fan-out routes each kind to its own segment.
     let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("POST", format!("{BASE}/demographic/role"))
-        .json(role_body().to_string())
+        .json(role_body(&person(&app).await).to_string())
         .build();
     let (status, h, _body) = send(&app, req).await;
     assert_eq!(status, StatusCode::CREATED);
@@ -742,7 +756,7 @@ async fn party_relationship_create_is_mounted_with_headers() {
     let (_pg, app) = common::app(common::api_config(false)).await;
     let req = common::req("POST", format!("{EXT}/demographic/party_relationship"))
         .prefer_representation()
-        .json(relationship_body().to_string())
+        .json(held_relationship(&app).await.to_string())
         .build();
     let (status, h, body) = send(&app, req).await;
 
@@ -763,7 +777,7 @@ async fn party_relationship_create_is_mounted_with_headers() {
 #[tokio::test]
 async fn party_relationship_get_is_mounted() {
     let (_pg, app) = common::app(common::api_config(false)).await;
-    let ovid = create(&app, "party_relationship", &relationship_body()).await;
+    let ovid = create(&app, "party_relationship", &held_relationship(&app).await).await;
     let vo = vo_of(&ovid);
 
     let req = common::req("GET", format!("{EXT}/demographic/party_relationship/{vo}")).build();
@@ -784,7 +798,7 @@ async fn party_relationship_get_is_mounted() {
 #[tokio::test]
 async fn party_relationship_delete_needs_the_version_uid() {
     let (_pg, app) = common::app(common::api_config(false)).await;
-    let ovid = create(&app, "party_relationship", &relationship_body()).await;
+    let ovid = create(&app, "party_relationship", &held_relationship(&app).await).await;
     let vo = vo_of(&ovid).to_owned();
 
     let req = common::req(
@@ -815,7 +829,7 @@ async fn versioned_party_relationship_is_mounted() {
     // created relationship reads back its VERSIONED_PARTY_RELATIONSHIP → `200`
     // (an unmounted path would 404), which still proves the route is mounted.
     let (_pg, app) = common::app(common::api_config(false)).await;
-    let ovid = create(&app, "party_relationship", &relationship_body()).await;
+    let ovid = create(&app, "party_relationship", &held_relationship(&app).await).await;
     let vo = vo_of(&ovid);
 
     let req = common::req(

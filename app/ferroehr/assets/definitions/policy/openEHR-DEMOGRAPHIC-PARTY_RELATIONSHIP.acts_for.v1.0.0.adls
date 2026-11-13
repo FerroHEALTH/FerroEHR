@@ -1,0 +1,64 @@
+archetype (adl_version=2.0.6; rm_release=1.1.0)
+    openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"FerroEHR">
+        ["organisation"] = <"Cadasto B.V.">
+    >
+    lifecycle_state = <"unmanaged">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"The relationship of a system to the healthcare provider it acts for: a PARTY_RELATIONSHIP from the system's AGENT, its source, to the provider's ORGANISATION, its target.">
+            use = <"Held in the AGENT.relationships of the system, with time_validity bounding when it holds. Adapted from the PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+    other_details = <
+        ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+        ["derived_from"] = <"openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0 (openEHR CKM 1013.1.475, modified 2019-08-09)">
+    >
+
+definition
+    PARTY_RELATIONSHIP[id1] matches {
+        name matches {
+            DV_CODED_TEXT[id2] matches {
+                defining_code matches {[ac1]}
+            }
+        }
+        details matches {
+            ITEM_TREE[id3] matches {
+                items matches {
+                    ELEMENT[id6] occurrences matches {1} matches {
+                        value matches { DV_CODED_TEXT[id7] }
+                    }
+                    ELEMENT[id4] occurrences matches {0..1} matches {
+                        value matches { DV_TEXT[id5] }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["id1"] = <text = <"Acts for"> description = <"The relationship of a system to the healthcare provider it acts for.">>
+            ["id2"] = <text = <"Type of relationship"> description = <"The type of the relationship, which is its name.">>
+            ["id3"] = <text = <"Details"> description = <"The details of the relationship.">>
+            ["id4"] = <text = <"Agreement reference"> description = <"The reference of the agreement under which the system acts for the provider, such as a processing agreement.">>
+            ["id6"] = <text = <"Acts-for code"> description = <"The code that makes the relationship an acts-for relationship: acts_for of FerroEHR's operation terminology ferroehr-operations.">>
+            ["ac1"] = <text = <"Types of acting for"> description = <"The types of the relationship.">>
+            ["at10"] = <text = <"Acts for"> description = <"The system acts for the provider.">>
+        >
+    >
+    value_sets = <
+        ["ac1"] = <
+            id = <"ac1">
+            members = <"at10">
+        >
+    >

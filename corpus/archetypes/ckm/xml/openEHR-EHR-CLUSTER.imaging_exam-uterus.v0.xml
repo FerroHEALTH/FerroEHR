@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1561,7 +1561,7 @@ Not to be used to record details related to the overall findings, context or tec
     <term_definitions language="en">
       <items code="at0.1">
         <items id="text">Uterus</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.13">
         <items id="text">Length</items>
@@ -1576,7 +1576,7 @@ Not to be used to record details related to the overall findings, context or tec
       <items code="at0.15">
         <items id="text">Height (AP)</items>
         <items id="description">The anteroposterior height of the uterus.</items>
-        <items id="comment">Usually measured in the midsagittal plane anteroposteriorly from outer to outer serosal surfaces. </items>
+        <items id="comment">Usually measured in the midsagittal plane anteroposteriorly from outer to outer serosal surfaces.</items>
       </items>
       <items code="at0.16">
         <items id="text">Endometrium description</items>
@@ -1808,7 +1808,7 @@ Not to be used to record details related to the overall findings, context or tec
     <term_definitions language="nb">
       <items code="at0.1">
         <items id="text">Uterus</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.13">
         <items id="text">Lengde</items>
@@ -2055,7 +2055,7 @@ Not to be used to record details related to the overall findings, context or tec
     <term_definitions language="de">
       <items code="at0.1">
         <items id="text">*Uterus (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0.13">
         <items id="text">Length</items>
@@ -2311,4 +2311,3 @@ Not to be used to record details related to the overall findings, context or tec
     </term_bindings>
   </ontology>
 </archetype>
-

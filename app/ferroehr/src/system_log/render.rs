@@ -49,23 +49,24 @@ pub struct RenderPolicy {
     /// The store horizon, which a record outside the EHDS access record
     /// states as its retention.
     pub horizon: Retention,
-    /// `[audit.categories]`: the map every access is classified through.
+    /// The audit category register version every access is classified
+    /// through.
     pub categories: CategoryMapConfig,
     /// `[audit] emergency_purpose_codes`.
     pub emergency_purpose_codes: Vec<String>,
 }
 
 impl RenderPolicy {
-    /// The policy `config` states.
+    /// The policy `config` states with `categories` as the category map.
     #[must_use]
-    pub fn of(config: &AuditConfig) -> Self {
+    pub fn of(config: &AuditConfig, categories: &CategoryMapConfig) -> Self {
         Self {
             source_id: config.source_id.clone(),
             enterprise_site_id: config.enterprise_site_id.clone().unwrap_or_default(),
             server_host: config.server_host.clone().unwrap_or_default(),
             value_if_missing: config.value_if_missing.clone(),
             horizon: config.store.horizon(),
-            categories: config.categories.clone(),
+            categories: categories.clone(),
             emergency_purpose_codes: config.emergency_purpose_codes.clone(),
         }
     }
@@ -99,7 +100,7 @@ impl RenderPolicy {
 
 impl Default for RenderPolicy {
     fn default() -> Self {
-        Self::of(&AuditConfig::default())
+        Self::of(&AuditConfig::default(), &CategoryMapConfig::default())
     }
 }
 
@@ -277,12 +278,17 @@ mod tests {
             emergency_purpose_codes = ["ETREAT"]
             [store]
             retention = "P10Y"
-            [categories.templates]
-            "Lab Report" = ["Laboratory-Reports"]
             "#,
         )
         .expect("parse");
-        let policy = RenderPolicy::of(&config);
+        let categories: CategoryMapConfig = toml::from_str(
+            r#"
+            [templates]
+            "Lab Report" = ["Laboratory-Reports"]
+            "#,
+        )
+        .expect("parse the map");
+        let policy = RenderPolicy::of(&config, &categories);
         let stored = serde_json::to_value(&policy).expect("serialize");
         let again: RenderPolicy = serde_json::from_value(stored).expect("read back");
         assert_eq!(policy, again);

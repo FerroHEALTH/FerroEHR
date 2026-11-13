@@ -54,6 +54,7 @@ pub const NONE: &str = ehds_logging::map::NONE;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct CategoryMapConfig {
     /// Whether the map FerroEHR ships applies while this section declares no
     /// template and no archetype (`shipped_map`, on by default). Off with

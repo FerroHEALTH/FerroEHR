@@ -1,0 +1,296 @@
+﻿archetype (adl_version=1.4; uid=4a0e9bfb-a896-47ea-8622-918cd429c947)
+	openEHR-EHR-CLUSTER.exam_cranial_nerves.v0
+
+concept
+	[at0000]	-- Examination of cranial nerves
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"2015-06-24">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For recording a narrative description and clinical interpretation of the findings observed during the physical examination of the cranial nerves.">
+			use = <"Use to record a narrative description of the overall findings observed during the physical examination of the cranial nerves. This initial draft archetype consists only of the core examination pattern data elements (as per CLUSTER.exam_pattern) and will likely be expanded further over time as specific clinical requirements are identified.
+
+This archetype has been specifically designed to be used in the 'Examination findings' SLOT within the CLUSTER.exam_nervous_system archetype, but can also be used within the OBSERVATION.exam and other OBSERVATION or CLUSTER archetypes, where clinically appropriate.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+			misuse = <"Not to be used for recording the clinical history about cranial nerve function - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom.
+
+Not to be used to record stand-alone clinical measurements or test results. Visual acuity testing should be captured using OBSERVATION.visual.field.measurement. Visual acuity test results should be captured using OBSERVATION.visual.acuity.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Silje Ljosland Bakke, Bergen Hospital Trust, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "John Tore Valand, Haukeland Universitetssjukehus, Norway", "Heather Leslie, Ocean Informatics, Australia">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["current_contact"] = <"Heather Leslie, Ocean Informatics<heather.leslie@oceaninformatics.com>">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"51C1436A113F78019E054D35ECBF198D">
+		["build_uid"] = <"615cbf79-6e31-447f-8838-80318e5acc42">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	CLUSTER[at0000] matches {	-- Examination of cranial nerves
+		items cardinality matches {1..*; unordered} matches {
+			ELEMENT[at0002] occurrences matches {0..1} matches {	-- No abnormality detected
+				value matches {
+					DV_BOOLEAN matches {
+						value matches {True}
+					}
+				}
+			}
+			ELEMENT[at0003] occurrences matches {0..1} matches {	-- Clinical description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			allow_archetype CLUSTER[at0009] occurrences matches {0..*} matches {	-- I
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_smell(-[a-zA-Z0-9_]+)*\.v0/}
+				exclude
+					archetype_id/value matches {/.*/}
+			}
+			allow_archetype CLUSTER[at0010] occurrences matches {0..*} matches {	-- II
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_retina(-[a-zA-Z0-9_]+)*\.v0/}
+			}
+			allow_archetype CLUSTER[at0011] occurrences matches {0..*} matches {	-- III, IV & VI
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_eyes(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.exam_eom(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.exam_eye(-[a-zA-Z0-9_]+)*\.v0/}
+			}
+			allow_archetype CLUSTER[at0012] occurrences matches {0..*} matches {	-- V
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_nerve_sensation(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.exam_muscle(-[a-zA-Z0-9_]+)*\.v0/}
+			}
+			ELEMENT[at0013] occurrences matches {0..1} matches {	-- Corneal reflex
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0014, 	-- Present
+							at0015, 	-- Absent
+							at0016]	-- Equivocal
+						}
+					}
+				}
+			}
+			ELEMENT[at0017] occurrences matches {0..1} matches {	-- Jaw jerk
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0018, 	-- Present
+							at0019, 	-- Absent
+							at0020]	-- Equivocal
+						}
+					}
+				}
+			}
+			allow_archetype CLUSTER[at0021] occurrences matches {0..*} matches {	-- VII
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_face(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.exam_muscle(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.exam_taste(-[a-zA-Z0-9_]+)*\.v0/}
+			}
+			allow_archetype CLUSTER[at0022] occurrences matches {0..*} matches {	-- VIII
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_ears(-[a-zA-Z0-9_]+)*\.v0/}
+			}
+			allow_archetype CLUSTER[at0023] occurrences matches {0..*} matches {	-- IX & X
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_throat(-[a-zA-Z0-9_]+)*\.v0/}
+			}
+			ELEMENT[at0024] occurrences matches {0..1} matches {	-- Pharyngeal reflex
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0025, 	-- Present
+							at0026, 	-- Absent
+							at0027]	-- Equivocal
+						}
+					}
+				}
+			}
+			ELEMENT[at0028] occurrences matches {0..1} matches {	-- Pharyngeal reflex description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			allow_archetype CLUSTER[at0029] occurrences matches {0..*} matches {	-- XI
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_muscle(-[a-zA-Z0-9_]+)*\.v0/}
+			}
+			allow_archetype CLUSTER[at0030] occurrences matches {0..*} matches {	-- XII
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_tongue(-[a-zA-Z0-9_]+)*\.v0/}
+			}
+			allow_archetype CLUSTER[at0004] occurrences matches {0..*} matches {	-- Additional findings
+				include
+					archetype_id/value matches {/.*/}
+			}
+			allow_archetype CLUSTER[at0005] occurrences matches {0..*} matches {	-- Multimedia representation
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1/}
+			}
+			ELEMENT[at0006] occurrences matches {0..*} matches {	-- Clinical interpretation
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0007] occurrences matches {0..1} matches {	-- Comment
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			allow_archetype CLUSTER[at0008] occurrences matches {0..*} matches {	-- Examination not done
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1/}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Examination of cranial nerves">
+					description = <"Findings observed during the physical examination of the cranial nerves.">
+				>
+				["at0002"] = <
+					text = <"No abnormality detected">
+					description = <"Statement that no abnormality was detected (NAD) on physical examination.">
+					comment = <"Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element.">
+				>
+				["at0003"] = <
+					text = <"Clinical description">
+					description = <"Narrative description of the overall findings observed during the physical examination.">
+				>
+				["at0004"] = <
+					text = <"Additional findings">
+					description = <"Structured details about other physical examination findings.">
+				>
+				["at0005"] = <
+					text = <"Multimedia representation">
+					description = <"Digital image, video or diagram representing the physical examination findings.">
+				>
+				["at0006"] = <
+					text = <"Clinical interpretation">
+					description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings.">
+				>
+				["at0007"] = <
+					text = <"Comment">
+					description = <"Additional narrative about the physical examination findings, not captured in other fields.">
+				>
+				["at0008"] = <
+					text = <"Examination not done">
+					description = <"Details to explicitly record that this examination was not performed.">
+				>
+				["at0009"] = <
+					text = <"I">
+					description = <"Details about function of the olfactory nerve.">
+				>
+				["at0010"] = <
+					text = <"II">
+					description = <"Details about the function of the optic nerve.">
+					comment = <"Visual acuity testing should be captured using OBSERVATION.visual.field.measurement. Visual acuity test results should be captured using OBSERVATION.visual.acuity.">
+				>
+				["at0011"] = <
+					text = <"III, IV & VI">
+					description = <"Details about the function of the oculomotor, trochlear and abducens nerves.">
+				>
+				["at0012"] = <
+					text = <"V">
+					description = <"Details about the function of the trigeminal nerve.">
+				>
+				["at0013"] = <
+					text = <"Corneal reflex">
+					description = <"Response elicited by stimulation of the cornea.">
+					comment = <"Also known as the Blink reflex. Provides information about the function of V and VII.">
+				>
+				["at0014"] = <
+					text = <"Present">
+					description = <"The corneal reflex is present.">
+				>
+				["at0015"] = <
+					text = <"Absent">
+					description = <"The corneal reflex is absent.">
+				>
+				["at0016"] = <
+					text = <"Equivocal">
+					description = <"It is not possible to determine if the corneal reflex is clearly present or absent.">
+				>
+				["at0017"] = <
+					text = <"Jaw jerk">
+					description = <"Response to tapping chin with a reflex hammer.">
+					comment = <"Also known as the Masseter reflex.">
+				>
+				["at0018"] = <
+					text = <"Present">
+					description = <"The jaw jerk is present.">
+				>
+				["at0019"] = <
+					text = <"Absent">
+					description = <"The jaw jerk is absent.">
+				>
+				["at0020"] = <
+					text = <"Equivocal">
+					description = <"It is not possible to determine if the jaw jerk is clearly present or absent.">
+				>
+				["at0021"] = <
+					text = <"VII">
+					description = <"Details about the function of the facial nerve.">
+				>
+				["at0022"] = <
+					text = <"VIII">
+					description = <"Details about the function of the vestibulococchlear nerve.">
+				>
+				["at0023"] = <
+					text = <"IX & X">
+					description = <"Details about the function of the glossopharyngeal and vagus nerves.">
+				>
+				["at0024"] = <
+					text = <"Pharyngeal reflex">
+					description = <"Response elicited by stimulation of the roof of the mouth, back of tongue, tonsils, uvula and the throat.">
+					comment = <"Also known as the Gag reflex.">
+				>
+				["at0025"] = <
+					text = <"Present">
+					description = <"The pharyngeal reflex is present.">
+				>
+				["at0026"] = <
+					text = <"Absent">
+					description = <"The pharyngeal reflex is absent.">
+				>
+				["at0027"] = <
+					text = <"Equivocal">
+					description = <"It is not possible to determine if the pharyngeal reflex is present or absent.">
+				>
+				["at0028"] = <
+					text = <"Pharyngeal reflex description">
+					description = <"Narrative description about the pharyngeal reflex.">
+				>
+				["at0029"] = <
+					text = <"XI">
+					description = <"Details about the function of the accessory nerve.">
+				>
+				["at0030"] = <
+					text = <"XII">
+					description = <"Details about the function of the hypoglossal nerve.">
+				>
+			>
+		>
+	>

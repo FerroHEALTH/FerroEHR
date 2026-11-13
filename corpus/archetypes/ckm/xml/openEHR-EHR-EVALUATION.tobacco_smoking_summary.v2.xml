@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -2452,7 +2452,7 @@ Niet te gebruiken voor het vastleggen van enige andere vorm van toediening van n
       <items code="at0015">
         <items id="text">Regular smoking commenced</items>
         <items id="description">The date or partial date when the individual first started frequent or regular, but usually non-daily, smoking of tobacco of any type.</items>
-        <items id="comment">Can be a partial date, for example, only a year. For example, this date could represent when the individual commenced smoking every Friday night or at parties. </items>
+        <items id="comment">Can be a partial date, for example, only a year. For example, this date could represent when the individual commenced smoking every Friday night or at parties.</items>
       </items>
       <items code="at0016">
         <items id="text">Overall quit date</items>
@@ -2578,8 +2578,7 @@ Niet te gebruiken voor het vastleggen van enige andere vorm van toediening van n
       <items code="at0075">
         <items id="text">Current smoker definition</items>
         <items id="description">The applied definition for the 'Current smoker' value in each of the 'Status' data elements used in this archetype.</items>
-        <items id="comment">Definition may need to be specified per type. Current smoker definitions vary in different jurisdictions. For example: USA Centre for Disease Control refers to smoking during the past one month and New Zealand Ministry of Health uses 28 days.&#xD;
-</items>
+        <items id="comment">Definition may need to be specified per type. Current smoker definitions vary in different jurisdictions. For example: USA Centre for Disease Control refers to smoking during the past one month and New Zealand Ministry of Health uses 28 days.</items>
       </items>
       <items code="at0076">
         <items id="text">Former smoker definition</items>
@@ -2663,7 +2662,7 @@ Niet te gebruiken voor het vastleggen van enige andere vorm van toediening van n
       </items>
       <items code="at0096">
         <items id="text">Status</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0097">
         <items id="text">Smoker</items>
@@ -2919,7 +2918,7 @@ Niet te gebruiken voor het vastleggen van enige andere vorm van toediening van n
       </items>
       <items code="at0096">
         <items id="text">Status</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0097">
         <items id="text">Røykte</items>
@@ -2933,8 +2932,7 @@ Niet te gebruiken voor het vastleggen van enige andere vorm van toediening van n
     <term_definitions language="sv">
       <items code="at0000">
         <items id="text">Sammanfattning av rökvanor för tobak</items>
-        <items id="description">Samlad information om en individs tobaks-rökvanor. &#xD;
-</items>
+        <items id="description">Samlad information om en individs tobaks-rökvanor.</items>
       </items>
       <items code="at0001">
         <items id="text">Tree</items>
@@ -2972,14 +2970,11 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
       <items code="at0016">
         <items id="text">Övergripande slutdatum</items>
         <items id="description">Det datum då individen (senast) helt slutade röka tobak.</items>
-        <items id="comment">Kan vara del av ett datum, till exempel endast ett årtal. Detta datum kan användas av beslutsstödssystem för att avgöra om individen är i riskzonen för återfall, till exempel under de första 12 månaderna sedan hen slutade röka.&#xD;
-&#xD;
-</items>
+        <items id="comment">Kan vara del av ett datum, till exempel endast ett årtal. Detta datum kan användas av beslutsstödssystem för att avgöra om individen är i riskzonen för återfall, till exempel under de första 12 månaderna sedan hen slutade röka.</items>
       </items>
       <items code="at0017">
         <items id="text">Paketår (pack years)</items>
-        <items id="description">En uppskattning av den totala mängden av denna sorts tobaksprodukt som en person har rökt under sin livstid.&#xD;
-</items>
+        <items id="description">En uppskattning av den totala mängden av denna sorts tobaksprodukt som en person har rökt under sin livstid.</items>
         <items id="comment">Används för att bedöma cigarettförbrukning. Det beräknas genom att multiplicera antalet cigarettpaket rökta per dag med det antal år som personen rökt. Ett paketår motsvarar 365 förpackningar cigaretter. Detaljer om hur man beräknar paketår för olika typer av tobaksprodukter finns på http://smokingpackyears.com. Definitionen av ett paket kan anges fältet "Definition av paket" i protokoll-delen ("Protocol") av den här arketypen.</items>
       </items>
       <items code="at0019">
@@ -3047,8 +3042,7 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
       </items>
       <items code="at0059">
         <items id="text">Före detta rökare</items>
-        <items id="description">Individen har tidigare rökt den här sortens tobak, men gör inte det nuförtiden.&#xD;
-</items>
+        <items id="description">Individen har tidigare rökt den här sortens tobak, men gör inte det nuförtiden.</items>
       </items>
       <items code="at0061">
         <items id="text">Rökare</items>
@@ -3056,8 +3050,7 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
       </items>
       <items code="at0062">
         <items id="text">Vattenpipa</items>
-        <items id="description">Tobak, ofta smaksatt som bränns och sedan kyls genom ett vattenbad och inhaleras genom en slang och munstycke. Kallas även shisha, hookah, n'arghile, narguileh, ghelion.&#xD;
-</items>
+        <items id="description">Tobak, ofta smaksatt som bränns och sedan kyls genom ett vattenbad och inhaleras genom en slang och munstycke. Kallas även shisha, hookah, n'arghile, narguileh, ghelion.</items>
       </items>
       <items code="at0064">
         <items id="text">Per episod</items>
@@ -3078,8 +3071,7 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
       </items>
       <items code="at0071">
         <items id="text">Definition av slutdatum</items>
-        <items id="description">Definitionen av "slutdatum" som använts i denna arketyps datafält.&#xD;
-</items>
+        <items id="description">Definitionen av "slutdatum" som använts i denna arketyps datafält.</items>
       </items>
       <items code="at0072">
         <items id="text">Definition av paket</items>
@@ -3089,20 +3081,16 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
       <items code="at0073">
         <items id="text">Tilläggsinformation</items>
         <items id="description">Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.</items>
-        <items id="comment">Exempelvis lokala informationskrav eller metadata för anpassning till FHIR motsvarigheter.&#xD;
-&#xD;
-</items>
+        <items id="comment">Exempelvis lokala informationskrav eller metadata för anpassning till FHIR motsvarigheter.</items>
       </items>
       <items code="at0074">
         <items id="text">Totala paketår</items>
-        <items id="description">En uppskattning av den totala mängden tobak som en person har rökt under sin livstid.&#xD;
-</items>
+        <items id="description">En uppskattning av den totala mängden tobak som en person har rökt under sin livstid.</items>
         <items id="comment">Definitionen av ett paket kan anges fältet "Definition av paket" i protokoll-delen ("Protocol") av den här arketypen.</items>
       </items>
       <items code="at0075">
         <items id="text">Definition av rökare</items>
-        <items id="description">Definitionen av "rökare" som använts i denna arketyps datafält "Status" och "Övergripande status".&#xD;
-</items>
+        <items id="description">Definitionen av "rökare" som använts i denna arketyps datafält "Status" och "Övergripande status".</items>
         <items id="comment">Definitionen kan behöva anges per typ. Definitionen av "rökare" varierar mellan olika sammanhang och länder . Till exempel: USA Center for Disease Control definierar det som rökning under den senaste en månaden och New Zealand Ministry of Health använder 28 dagar.</items>
       </items>
       <items code="at0076">
@@ -3148,8 +3136,7 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
       </items>
       <items code="at0085">
         <items id="text">Definition av avslutningsförsök</items>
-        <items id="description">Definitionen av avslutningsförsök som använts i denna arketyps datafält "Antal försök att sluta".&#xD;
-</items>
+        <items id="description">Definitionen av avslutningsförsök som använts i denna arketyps datafält "Antal försök att sluta".</items>
         <items id="comment">Exempelvis: "Slutade röka en dag eller längre, med avsikt att sluta röka".</items>
       </items>
       <items code="at0086">
@@ -3179,9 +3166,7 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
       </items>
       <items code="at0094">
         <items id="text">Rökningsindex</items>
-        <items id="description">En uppskattning av den totala mängden rökning (Engelska: "Smoking index")&#xD;
-&#xD;
-</items>
+        <items id="description">En uppskattning av den totala mängden rökning (Engelska: "Smoking index")</items>
         <items id="comment">Denna parameter liknar "paketår" men baseras på antal enskilda cigaretter etc. rökta per dag, istället för antalet paket.</items>
       </items>
       <items code="at0095">
@@ -3190,7 +3175,7 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
       </items>
       <items code="at0096">
         <items id="text">*Status (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0097">
         <items id="text">*Smoker (en)</items>
@@ -3230,9 +3215,7 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
       <items code="at0014">
         <items id="text">Zeitpunkt des Aufhörens</items>
         <items id="description">Datum, an dem die Person zuletzt die angegebene Tabakart geraucht hat.</items>
-        <items id="comment">Kann ein Teildatum sein, z.B. nur ein Jahr. Die Definitionen für ein "Zeitpunkt des Aufhörens" sind sehr unterschiedlich und können über das Datenelement "Definition Zeitpunkts des Aufhörens" im Abschnitt "Protokoll" dieses Archetyps definiert werden. Dieses Datum ist identisch mit dem "Enddatum der Episode" der letzten Episode. Dieses Datum könnte von der Entscheidungshilfe genutzt werden, um festzustellen, ob die Person, zum Beispiel in den ersten 12 Monaten nach der Kündigung, einem Rückfallrisiko ausgesetzt ist.&#xD;
-&#xD;
-</items>
+        <items id="comment">Kann ein Teildatum sein, z.B. nur ein Jahr. Die Definitionen für ein "Zeitpunkt des Aufhörens" sind sehr unterschiedlich und können über das Datenelement "Definition Zeitpunkts des Aufhörens" im Abschnitt "Protokoll" dieses Archetyps definiert werden. Dieses Datum ist identisch mit dem "Enddatum der Episode" der letzten Episode. Dieses Datum könnte von der Entscheidungshilfe genutzt werden, um festzustellen, ob die Person, zum Beispiel in den ersten 12 Monaten nach der Kündigung, einem Rückfallrisiko ausgesetzt ist.</items>
       </items>
       <items code="at0015">
         <items id="text">Beginn regelmäßigen Rauchens</items>
@@ -3247,8 +3230,7 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
       <items code="at0017">
         <items id="text">Packungsjahre</items>
         <items id="description">Schätzung der kumulierten Menge an Tabak der angegebenen Art, die geraucht wurde.</items>
-        <items id="comment">Wird häufig bei der Beurteilung des Zigarettenkonsums verwendet. Sie errechnet sich aus der Zahl der täglich gerauchten Zigarettenpackungen multipliziert mit der Anzahl der Raucherjahre. Ein Packungsjahr entspricht 365 Packungen Zigaretten. Details zur Berechnung der Packungsjahre für andere Tabakarten finden Sie unter http://smokingpackyears.com. Die Definition einer Packung kann im Protokoll dieses Archetyps mit dem Datenelement "Definition Packung" beschrieben werden.&#xD;
-</items>
+        <items id="comment">Wird häufig bei der Beurteilung des Zigarettenkonsums verwendet. Sie errechnet sich aus der Zahl der täglich gerauchten Zigarettenpackungen multipliziert mit der Anzahl der Raucherjahre. Ein Packungsjahr entspricht 365 Packungen Zigaretten. Details zur Berechnung der Packungsjahre für andere Tabakarten finden Sie unter http://smokingpackyears.com. Die Definition einer Packung kann im Protokoll dieses Archetyps mit dem Datenelement "Definition Packung" beschrieben werden.</items>
       </items>
       <items code="at0019">
         <items id="text">Zusätzliche Anmerkungen</items>
@@ -3448,7 +3430,7 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
       </items>
       <items code="at0096">
         <items id="text">Status</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0097">
         <items id="text">Raucher</items>
@@ -3619,8 +3601,7 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
       <items code="at0075">
         <items id="text">Définition du fumeur actuel</items>
         <items id="description">La définition appliquée pour la valeur "Fumeur actuel" dans chacun des éléments de données "Statut" utilisés dans cet archétype.</items>
-        <items id="comment">Il peut être nécessaire de préciser la définition par type. Les définitions actuelles des fumeurs varient d'une juridiction à l'autre. Par exemple : Le Centre de contrôle des maladies des États-Unis fait référence au fait de fumer au cours du dernier mois et le ministère de la santé de Nouvelle-Zélande utilise 28 jours.&#xD;
-</items>
+        <items id="comment">Il peut être nécessaire de préciser la définition par type. Les définitions actuelles des fumeurs varient d'une juridiction à l'autre. Par exemple : Le Centre de contrôle des maladies des États-Unis fait référence au fait de fumer au cours du dernier mois et le ministère de la santé de Nouvelle-Zélande utilise 28 jours.</items>
       </items>
       <items code="at0076">
         <items id="text">Définition de l'ancien fumeur</items>
@@ -3704,7 +3685,7 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
       </items>
       <items code="at0096">
         <items id="text">*Status (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0097">
         <items id="text">*Smoker (en)</items>
@@ -3959,7 +3940,7 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
       </items>
       <items code="at0096">
         <items id="text">*Status (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0097">
         <items id="text">*Smoker (en)</items>
@@ -3972,4 +3953,3 @@ Definitionen av vad som menas med ett "Slutdatum" kan variera enormt och kan pre
     </term_definitions>
   </ontology>
 </archetype>
-

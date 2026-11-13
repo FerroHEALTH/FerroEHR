@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -83,9 +83,9 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">371BFF1565B1BD334E071A3753B967A2</other_details>
-    <other_details id="build_uid">2fa540e5-07b9-4640-a0a6-ef7e143b2dee</other_details>
-    <other_details id="revision">1.5.2</other_details>
+    <other_details id="MD5-CAM-1.0.1">91AEB451145319A9810AA9703E608596</other_details>
+    <other_details id="build_uid">3c27f0de-6c9d-4ce1-9fab-051969ccc6c6</other_details>
+    <other_details id="revision">1.5.3</other_details>
     <details>
       <language>
         <terminology_id>
@@ -287,8 +287,7 @@ Ska inte användas för att registrera detaljer om administrativa aktiviteter. A
 &#xD;
 Ska inte användas för att registrera detaljer om relaterade aktiviteter, såsom användning av fryssnitt som tagits under en operation, läkemedel som administreras som en del av åtgärden eller när vägledning för bildvisning används under åtgärden. Använd separata och specifika ACTION-arketyper inom samma template för detta syfte. &#xD;
 &#xD;
-Ska inte användas för att registrera en hel operation eller rapport för åtgärd. Använd en template där den här arketypen bara är en av flera komponenter i rapporten.&#xD;
-</misuse>
+Ska inte användas för att registrera en hel operation eller rapport för åtgärd. Använd en template där den här arketypen bara är en av flera komponenter i rapporten.</misuse>
       <copyright />
     </details>
     <details>
@@ -563,8 +562,7 @@ Not to be used to record a whole operation or procedure report - use a template 
 - 记录为胃镜检查（已排程操作）所排程的开始日期/时间；&#xD;
 - 记录胃镜检查已完成，包括操作详情（已完成操作）的相关信息。&#xD;
 &#xD;
-请注意，在openEHR参考模型中，其中设有的时间属性“Time”，用于记录相应行动（Action）之中每个路径步骤的实际执行日期/时间。该属性旨在用于记录当前操作的开始（利用“已执行操作”路径步骤）或当前操作的中止时间（利用“已中止操作”路径步骤）。&#xD;
-</use>
+请注意，在openEHR参考模型中，其中设有的时间属性“Time”，用于记录相应行动（Action）之中每个路径步骤的实际执行日期/时间。该属性旨在用于记录当前操作的开始（利用“已执行操作”路径步骤）或当前操作的中止时间（利用“已中止操作”路径步骤）。</use>
       <misuse>并非旨在用于记录麻醉的相关详情 —— 应当采用单独的行动类原始型（ACTION）来记录此类的信息。&#xD;
 &#xD;
 并非旨在用于记录影像检查的相关详情 —— 应当采用行动类影像检查原始型（ACTION.imaging_exam）来记录此类的信息。&#xD;
@@ -3384,7 +3382,7 @@ No s'ha de fer servir per registrar un informe d'operació o procediment complet
       </items>
       <items code="at0071">
         <items id="text">*DV_TEXT (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0072">
         <items id="text">*Intent (en)</items>
@@ -3568,7 +3566,7 @@ No s'ha de fer servir per registrar un informe d'operació o procediment complet
       </items>
       <items code="at0071">
         <items id="text">Impact</items>
-        <items id="description">Overall assessment of the impact of a health problem for the specific patient. </items>
+        <items id="description">Overall assessment of the impact of a health problem for the specific patient.</items>
         <items id="comment">The same diagnosis, with the same severity, has a different impact on each patient. This relevance qualifier implies adjusting the overall impact of that health problem according to the patient's characteristics.&#xD;
 For example: Two patients have the same diagnosis. First-degree burn.&#xD;
 One is a healthy person, the other is a diabetic patient.&#xD;
@@ -3954,7 +3952,7 @@ This element is intended to allow for multiple types of impact, including but no
       </items>
       <items code="at0071">
         <items id="text">*DV_TEXT (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0072">
         <items id="text">*Intent (en)</items>
@@ -4138,7 +4136,7 @@ This element is intended to allow for multiple types of impact, including but no
       </items>
       <items code="at0071">
         <items id="text">Impact</items>
-        <items id="description">Overall assessment of the impact of a health problem for the specific patient. </items>
+        <items id="description">Overall assessment of the impact of a health problem for the specific patient.</items>
         <items id="comment">The same diagnosis, with the same severity, has a different impact on each patient. This relevance qualifier implies adjusting the overall impact of that health problem according to the patient's characteristics.&#xD;
 For example: Two patients have the same diagnosis. First-degree burn.&#xD;
 One is a healthy person, the other is a diabetic patient.&#xD;
@@ -4919,7 +4917,7 @@ Dieses Element soll verschiedene Arten von Auswirkungen berücksichtigen, darunt
       </items>
       <items code="at0071">
         <items id="text">Impact</items>
-        <items id="description">Overall assessment of the impact of a health problem for the specific patient. </items>
+        <items id="description">Overall assessment of the impact of a health problem for the specific patient.</items>
         <items id="comment">The same diagnosis, with the same severity, has a different impact on each patient. This relevance qualifier implies adjusting the overall impact of that health problem according to the patient's characteristics.&#xD;
 For example: Two patients have the same diagnosis. First-degree burn.&#xD;
 One is a healthy person, the other is a diabetic patient.&#xD;
@@ -4953,7 +4951,7 @@ This element is meant to allow for multiple types of impact, including but not l
       <items code="at0002">
         <items id="text">Benämning på åtgärd</items>
         <items id="description">Åtgärdens benämning.</items>
-        <items id="comment">Om möjligt, koda "benämning på åtgärd" till en terminologi.</items>
+        <items id="comment">Om möjligt, koda "benämning på åtgärd" med en terminologi.</items>
       </items>
       <items code="at0003">
         <items id="text">Åtgärdsdetaljer</items>
@@ -4977,8 +4975,7 @@ Exempelvis hematuri efter njurbiopsi eller vävnadsirritation efter insättning 
       </items>
       <items code="at0007">
         <items id="text">Förfrågan om åtgärd skickad</items>
-        <items id="description">Förfrågan om åtgärd är skickad.&#xD;
-</items>
+        <items id="description">Förfrågan om åtgärd är skickad.</items>
       </items>
       <items code="at0014">
         <items id="text">Anledning</items>
@@ -4987,8 +4984,7 @@ Exempelvis hematuri efter njurbiopsi eller vävnadsirritation efter insättning 
       </items>
       <items code="at0034">
         <items id="text">X - Åtgärd planerad</items>
-        <items id="description">Detta steg har upphört att gälla eftersom det felaktigt var associerat med status "initial". Använd det nya steget "Åtgärd planerad" (at0004) som är korrekt associerat med status "planerad" . &#xD;
-</items>
+        <items id="description">Detta steg har upphört att gälla eftersom det felaktigt var associerat med status "initial". Använd det nya steget "Åtgärd planerad" (at0004) som är korrekt associerat med status "planerad" .</items>
         <items id="comment">(Var: Den åtgärd som ska utföras är planerad.)</items>
       </items>
       <items code="at0035">
@@ -5002,8 +4998,7 @@ Exempelvis hematuri efter njurbiopsi eller vävnadsirritation efter insättning 
       </items>
       <items code="at0038">
         <items id="text">Åtgärd uppskjuten</items>
-        <items id="description">Åtgärden är uppskjuten.&#xD;
-</items>
+        <items id="description">Åtgärden är uppskjuten.</items>
       </items>
       <items code="at0039">
         <items id="text">Åtgärd inställd</items>
@@ -5015,8 +5010,7 @@ Exempelvis hematuri efter njurbiopsi eller vävnadsirritation efter insättning 
       </items>
       <items code="at0041">
         <items id="text">Åtgärd avbruten</items>
-        <items id="description">Åtgärden är avbruten.&#xD;
-</items>
+        <items id="description">Åtgärden är avbruten.</items>
       </items>
       <items code="at0043">
         <items id="text">Åtgärd slutförd</items>
@@ -5028,8 +5022,8 @@ Exempelvis hematuri efter njurbiopsi eller vävnadsirritation efter insättning 
       </items>
       <items code="at0048">
         <items id="text">Resultat</items>
-        <items id="description">Resultat av genomförd åtgärd</items>
-        <items id="comment">Om möjligt, koda "resultat" till en terminologi.</items>
+        <items id="description">Resultat av genomförd åtgärd.</items>
+        <items id="comment">Om möjligt, koda "resultat" med en terminologi.</items>
       </items>
       <items code="at0049">
         <items id="text">Beskrivning</items>
@@ -5061,11 +5055,11 @@ Exempelvis hematuri efter njurbiopsi eller vävnadsirritation efter insättning 
       <items code="at0058">
         <items id="text">Brådskandegrad</items>
         <items id="description">Åtgärdens brådskandegrad.</items>
-        <items id="comment">Om möjligt, koda "brådskandegrad" till en terminologi.</items>
+        <items id="comment">Om möjligt, koda "brådskandegrad" med en terminologi.</items>
       </items>
       <items code="at0060">
-        <items id="text">Slut datum/tid</items>
-        <items id="description">Det datum, eller datum och tid, då hela åtgärden avslutades eller det sista delmomentet i en åtgärd som består av flera delmoment.</items>
+        <items id="text">Sluttidpunkt</items>
+        <items id="description">Det datum eller den tidpunkt, då hela åtgärden avslutades eller det sista delmomentet i en åtgärd som består av flera delmoment.</items>
         <items id="comment">Kan endast användas i samband med steget "Åtgärd utförd" och i situationer där åtgärden upprepas vid flera tillfällen innan den avslutas eller om det finns flera delåtgärder i hela åtgärden. Detta kan vara detsamma som referensmodellens attribut för steget "Åtgärd slutförd".</items>
       </items>
       <items code="at0061">
@@ -5078,9 +5072,9 @@ Exempelvis hematuri efter njurbiopsi eller vävnadsirritation efter insättning 
         <items id="description">Multimedierepresentation av utförd åtgärd.</items>
       </items>
       <items code="at0063">
-        <items id="text">Anatomisk position</items>
+        <items id="text">Kroppslokalisation</items>
         <items id="description">Identifiering av anatomisk plats för åtgärden.</items>
-        <items id="comment">Förekomsten av detta datafält är obegränsat för att möjliggöra kliniska scenarier som att ta bort flera hudförändringar på olika platser, men där alla andra attribut är identiska. Använd detta datafält för att dokumentera enkla termer eller prekoordinerade anatomiska platser. Om kraven på dokumentation av den anatomiska platsen bestäms vid körning av applikationen eller kräver mer komplex modellering, till exempel relativa platser (exempelvis 3 cm ovanför vänster knä), använd CLUSTER.anatomical_location eller CLUSTER.relative_location i SLOT "Åtgärdsdetaljer" i denna arketyp. Om den anatomiska platsen ingår i "Benämning på åtgärd" genom prekoordinerade koder blir detta datafält överflödigt.</items>
+        <items id="comment">Förekomsten av detta datafält är obegränsat för att möjliggöra kliniska scenarier som att ta bort flera hudförändringar på olika lokalisationer, men där alla andra attribut är identiska. Använd detta datafält för att dokumentera enkla termer eller prekoordinerade kroppslokalisationer. Om kraven på dokumentation av den lokalisationen bestäms vid körning av applikationen eller kräver mer komplex modellering, till exempel relativa lokalisationer (exempelvis 3 cm ovanför vänster knä), använd CLUSTER.anatomical_location eller CLUSTER.relative_location i SLOT "Åtgärdsdetaljer" i denna arketyp. Om kroppslokalisationen ingår i "Benämning på åtgärd" genom prekoordinerade koder blir detta datafält överflödigt.</items>
       </items>
       <items code="at0064">
         <items id="text">Tilläggsinformation</items>
@@ -5090,17 +5084,17 @@ Exempelvis hematuri efter njurbiopsi eller vävnadsirritation efter insättning 
       <items code="at0065">
         <items id="text">Metod</items>
         <items id="description">Identifiering av specifik metod eller teknik för åtgärden.</items>
-        <items id="comment">Använd detta fält för att dokumentera metoden. Om kraven för dokumentation av metoden kräver mer komplex modellering kan detta representeras av ytterligare arketyper i SLOT "Åtgärdsdetalj" i denna arketyp. Om metoden ingår i "Benämning på åtgärd" genom prekoordinerade koder blir detta fält överflödigt.</items>
+        <items id="comment">Använd detta datafält för att dokumentera metoden. Om kraven för dokumentation av metoden kräver mer komplex modellering kan detta representeras av ytterligare arketyper i SLOT "Åtgärdsdetalj" i denna arketyp. Om metoden ingår i "Benämning på åtgärd" genom prekoordinerade koder blir detta datafält överflödigt.</items>
       </items>
       <items code="at0066">
-        <items id="text">Planerat datum/tid</items>
-        <items id="description">Det datum eller datum/tid som åtgärden är planerad att utföras.</items>
+        <items id="text">Planerad tidpunkt</items>
+        <items id="description">Det datum eller den tidpunkt som åtgärden är planerad att utföras.</items>
         <items id="comment">Ska endast användas i samband med steget "Åtgärd bokad".</items>
       </items>
       <items code="at0067">
         <items id="text">Åtgärdstyp</items>
-        <items id="description">Typ av åtgärd</items>
-        <items id="comment">Detta fält kan användas för att stödja en verksamhet genom användargränssnittet.</items>
+        <items id="description">Typ av åtgärd.</items>
+        <items id="comment">Detta datafält kan användas för att tydliggöra användargränssnittets struktur.</items>
       </items>
       <items code="at0068">
         <items id="text">Åtgärd påbörjad</items>
@@ -5128,11 +5122,11 @@ Detta datafält är avsett att möjliggöra registrering av olika typer av påve
       <items code="at0072">
         <items id="text">Avsikt</items>
         <items id="description">Det avsedda resultatet av åtgärden.</items>
-        <items id="comment">Exempelvis en operation med kurativ avsikt kan planeras, men under operationen visar det sig att kurativ behandling inte är möjlig och att ingreppet istället genomförs med palliativ avsikt. Om möjligt, koda "avsikt" till en terminologi. Detta datafält kan vid behov registreras flera gånger för att möjliggöra dokumentation av flera indikationer.</items>
+        <items id="comment">Exempelvis en operation med kurativ avsikt kan planeras, men under operationen visar det sig att kurativ behandling inte är möjlig och att ingreppet istället genomförs med palliativ avsikt. Om möjligt, koda "avsikt" med en terminologi. Detta datafält kan vid behov registreras flera gånger för att möjliggöra dokumentation av flera indikationer.</items>
       </items>
       <items code="at0073">
-        <items id="text">Start datum/tid</items>
-        <items id="description">Det datum, eller datum och tid, då hela åtgärden påbörjades eller den första delen av en åtgärd som består av flera delmoment.</items>
+        <items id="text">Starttidpunkt</items>
+        <items id="description">Det datum eller den tidpunkt, då hela åtgärden påbörjades eller den första delen av en åtgärd som består av flera delmoment.</items>
         <items id="comment">Exempelvis tidpunkten för första incisionen ("knife-to-skin time"). Används endast tillsammans med processtegen "Åtgärd utförd", "Åtgärd pausad", "Åtgärd avbruten" eller "Åtgärd slutförd". Detta värde kan vara detsamma som referensmodellens attribut "time" för processteget "Åtgärd påbörjad".</items>
       </items>
       <items code="at0074">
@@ -5470,9 +5464,7 @@ Aquest element està destinat a permetre múltiples tipus d'impacte, inclosos pe
       </items>
       <items code="at0064">
         <items id="text">扩展</items>
-        <items id="description">为了利益本地内容来扩展模型或与其他参考模型或形式化体系保持一致时所需的附加信息。&#xD;
-&#xD;
-</items>
+        <items id="description">为了利益本地内容来扩展模型或与其他参考模型或形式化体系保持一致时所需的附加信息。</items>
         <items id="comment">例如：本地信息需求；或用于与FHIR保持一致时所需的额外元数据。</items>
       </items>
       <items code="at0065">
@@ -5534,4 +5526,3 @@ Aquest element està destinat a permetre múltiples tipus d'impacte, inclosos pe
     </term_definitions>
   </ontology>
 </archetype>
-

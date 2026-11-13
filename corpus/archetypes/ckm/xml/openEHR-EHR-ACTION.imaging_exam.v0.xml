@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -16,10 +16,7 @@
     <lifecycle_state>in_development</lifecycle_state>
     <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
     <other_details id="custodian_organisation">openEHR Foundation</other_details>
-    <other_details id="references">Derived from Imaging Examination (action) , draft archetype, National eHealth Transition Authority [Internet]. NEHTA Clinical Knowledge Manager. Authored: 08 Nov 2010. Available at: http://dcm.nehta.org.au/ckm/OKM.html#showarchetype_1013.1.999 (accessed Jan 16, 2012).&#xD;
-&#xD;
-&#xD;
-</other_details>
+    <other_details id="references">Derived from Imaging Examination (action) , draft archetype, National eHealth Transition Authority [Internet]. NEHTA Clinical Knowledge Manager. Authored: 08 Nov 2010. Available at: http://dcm.nehta.org.au/ckm/OKM.html#showarchetype_1013.1.999 (accessed Jan 16, 2012).</other_details>
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
@@ -2074,13 +2071,11 @@
       </items>
       <items code="at0017">
         <items id="text">Name der Untersuchung</items>
-        <items id="description">Der Name der durchzuführenden Untersuchung. Wenn möglich, wird die Kodierung mit einer Terminologie bevorzugt.&#xD;
-</items>
+        <items id="description">Der Name der durchzuführenden Untersuchung. Wenn möglich, wird die Kodierung mit einer Terminologie bevorzugt.</items>
       </items>
       <items code="at0018">
         <items id="text">Beschreibung</items>
-        <items id="description">Beschreibung der Aktivität oder der Verlaufsschritte für die identifizierte Untersuchung, z. B. Beschreibung der Durchführung und der Ergebnisse der Untersuchung, des fehlgeschlagenen Versuchs oder des Abbruchs der Untersuchung.&#xD;
-</items>
+        <items id="description">Beschreibung der Aktivität oder der Verlaufsschritte für die identifizierte Untersuchung, z. B. Beschreibung der Durchführung und der Ergebnisse der Untersuchung, des fehlgeschlagenen Versuchs oder des Abbruchs der Untersuchung.</items>
       </items>
       <items code="at0019">
         <items id="text">Grund</items>
@@ -2092,9 +2087,7 @@
       </items>
       <items code="at0021">
         <items id="text">Details zur Untersuchung</items>
-        <items id="description">Strukturierte Informationen über die Untersuchung. Zur Erfassung detaillierter, strukturierter Informationen über die Methode und Technik usw.&#xD;
-&#xD;
-</items>
+        <items id="description">Strukturierte Informationen über die Untersuchung. Zur Erfassung detaillierter, strukturierter Informationen über die Methode und Technik usw.</items>
       </items>
       <items code="at0022">
         <items id="text">Anatomische Lokalisation</items>
@@ -2168,15 +2161,11 @@
       </items>
       <items code="at0018">
         <items id="text">Beskrivning</items>
-        <items id="description">Fritextbeskrivning av undersökningen, anpassad till relevant processteg. Till exempel en beskrivning av genomförandet och undersökningsresultaten, det avbrutna försöket eller annulleringen av undersökningen.&#xD;
-&#xD;
-</items>
+        <items id="description">Fritextbeskrivning av undersökningen, anpassad till relevant processteg. Till exempel en beskrivning av genomförandet och undersökningsresultaten, det avbrutna försöket eller annulleringen av undersökningen.</items>
       </items>
       <items code="at0019">
         <items id="text">Orsak</items>
-        <items id="description">Motivering för aktivitets- eller processteget för att relevant undersökning genomfördes. Till exempel anledningen till att undersökningen avbröts eller tillfälligt stoppades.&#xD;
-&#xD;
-</items>
+        <items id="description">Motivering för aktivitets- eller processteget för att relevant undersökning genomfördes. Till exempel anledningen till att undersökningen avbröts eller tillfälligt stoppades.</items>
       </items>
       <items code="at0020">
         <items id="text">Kommentar</items>
@@ -2193,4 +2182,3 @@
     </term_definitions>
   </ontology>
 </archetype>
-

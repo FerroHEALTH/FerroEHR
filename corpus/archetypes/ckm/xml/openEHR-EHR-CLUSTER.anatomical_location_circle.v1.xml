@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -103,8 +103,7 @@ Den här arketypen är speciellt utformad för att användas inom ramen för all
 I situationer där CLUSTER.anatomical_location endast kan användas för att ange ett större och/eller ospecifikt kroppsområde kan användningen av denna arketyp inom SLOT för "Alternativ struktur" stödja en mer exakt registrering. Till exempel hemorrojder vid klockan 7, där referenspunkten vid klockan 12 är perineum eller den främre ytan av kroppen, med patienten i litotomiläge.</use>
       <misuse>Används inte för att ange en enkel plats för en namngiven plats på kroppen, t.ex. vänster lårben eller den mediala aspekten av näsan. Använd CLUSTER.anatomical_location för detta ändamål.&#xD;
 &#xD;
-Används inte för att ange en relativ plats för en fysisk plats på kroppen, t.ex. ett blåmärke som ligger 5 cm under naveln. Använd CLUSTER.anatomical_location_relative för detta ändamål.&#xD;
-</misuse>
+Används inte för att ange en relativ plats för en fysisk plats på kroppen, t.ex. ett blåmärke som ligger 5 cm under naveln. Använd CLUSTER.anatomical_location_relative för detta ändamål.</misuse>
       <copyright />
     </details>
     <details>
@@ -137,8 +136,7 @@ Arketypen er spesifikt utviklet for å brukes innenfor en hvilken som helst pass
 I situasjoner der CLUSTER.anatomical_location kun kan brukes for å angi et større og/eller uspesifikt kroppsområde, kan bruk av denne arketypen innenfor "Alternativ struktur"-SLOTet støtte en mer presis registrering. For eksempel en hemorroide kl 7, der referansepunktet kl 12 er perineum eller den anteriore overflaten av kroppen, med pasienten i litotomiposisjon.</use>
       <misuse>Brukes ikke for å angi en enkel lokalisering av et navngitt sted på kroppen, som f.eks. venstre femur eller det mediale aspektet av nesen. Bruk CLUSTER.anatomical_location for dette formålet.&#xD;
 &#xD;
-Brukes ikke for å angi en relativ lokalisering av et fysisk sted på kroppen, som f.eks. et blåmerke som ligger 5 cm under navlen. Bruk CLUSTER.anatomical_location_relative for dette formålet.&#xD;
-</misuse>
+Brukes ikke for å angi en relativ lokalisering av et fysisk sted på kroppen, som f.eks. et blåmerke som ligger 5 cm under navlen. Bruk CLUSTER.anatomical_location_relative for dette formålet.</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
     <details>
@@ -1071,9 +1069,7 @@ No debe usarse para especificar la ubicación relativa de un sitio físico en el
     <term_definitions language="sv">
       <items code="at0000">
         <items id="text">Cirkulär anatomisk lokalisation</items>
-        <items id="description">En fysisk plats på eller inom människokroppen som beskrivs i termer av riktningen och eventuellt avståndet till platsen från ett centralt landmärke.&#xD;
-&#xD;
-</items>
+        <items id="description">En fysisk plats på eller inom människokroppen som beskrivs i termer av riktningen och eventuellt avståndet till platsen från ett centralt landmärke.</items>
       </items>
       <items code="at0023">
         <items id="text">Beskrivning</items>
@@ -1081,22 +1077,17 @@ No debe usarse para especificar la ubicación relativa de un sitio físico en el
       </items>
       <items code="at0054">
         <items id="text">Digital representation</items>
-        <items id="description">Bild eller annat media som används för att stödja identifiering av kroppsstället.&#xD;
-</items>
+        <items id="description">Bild eller annat media som används för att stödja identifiering av kroppsstället.</items>
       </items>
       <items code="at0061">
         <items id="text">Cirkulär riktning</items>
-        <items id="description">Riktningens vinkel mot det fysiska stället i förhållande till referensriktningen, antingen som positionen för en timme på en urtavla eller som ett antal grader.&#xD;
-</items>
-        <items id="comment">Till exempel: lokalisering av hemorrojder i analkanalen beskrivs ofta som klockan 3, 7 och 11. I detta exempel är perineum klockan tolv när patienten är i litotomiläge och betraktas som referensriktningen. För grader är positiva värden medsols, medan negativa värden är moturs.&#xD;
-</items>
+        <items id="description">Riktningens vinkel mot det fysiska stället i förhållande till referensriktningen, antingen som positionen för en timme på en urtavla eller som ett antal grader.</items>
+        <items id="comment">Till exempel: lokalisering av hemorrojder i analkanalen beskrivs ofta som klockan 3, 7 och 11. I detta exempel är perineum klockan tolv när patienten är i litotomiläge och betraktas som referensriktningen. För grader är positiva värden medsols, medan negativa värden är moturs.</items>
       </items>
       <items code="at0065">
         <items id="text">Referensriktning</items>
-        <items id="description">En enda riktning som representerar klockan 12 eller 0° på en imaginär cirkel placerad över en plats på kroppen, som observerats av den person som utför undersökningen.&#xD;
-</items>
-        <items id="comment">Till exempel: referensaxeln är vanligtvis mot huvudet när man undersöker ett bröst eller en detalj av en hudskada, mot perineum när man undersöker anus i litotomiläge eller mot den främre övre extremitetslinjen när man undersöker humerus.&#xD;
-</items>
+        <items id="description">En enda riktning som representerar klockan 12 eller 0° på en imaginär cirkel placerad över en plats på kroppen, som observerats av den person som utför undersökningen.</items>
+        <items id="comment">Till exempel: referensaxeln är vanligtvis mot huvudet när man undersöker ett bröst eller en detalj av en hudskada, mot perineum när man undersöker anus i litotomiläge eller mot den främre övre extremitetslinjen när man undersöker humerus.</items>
       </items>
       <items code="at0067">
         <items id="text">Klockan ett</items>
@@ -1320,4 +1311,3 @@ No debe usarse para especificar la ubicación relativa de un sitio físico en el
     </term_definitions>
   </ontology>
 </archetype>
-

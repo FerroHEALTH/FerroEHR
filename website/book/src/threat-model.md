@@ -181,16 +181,15 @@ allowed, which is what makes an optional stage safe to leave off:
    classification: it is governed endpoint-by-endpoint by its own configuration,
    and an endpoint you do not name is not mounted at all.)
 4. **ABAC** (off by default) evaluates subject and resource attributes through
-   embedded Cedar or an external policy decision point, fanning multi-valued
+   the embedded Cedar engine, fanning multi-valued
    attributes out as a cartesian product with all-must-permit and short-circuit
    deny.
 5. **SMART scopes** (off by default) are AND-composed onto the ABAC decision.
 
 Deny-by-default throughout, and **fail-closed in both senses**: no stage permits
-by omission (an unconfigured resource kind on the external PDP denies, and the
-missing rule is a boot error), and a stage that cannot *decide* is never read as
-a decision: an unreachable issuer is `503`, a policy server answering `5xx` or a
-Cedar policy that errors during evaluation is a fail-closed `500`. Silence is
+by omission, and a stage that cannot *decide* is never read as a decision: an
+unreachable issuer is `503`, and a Cedar policy that errors during evaluation is
+a fail-closed `500`. Silence is
 never consent, and a broken control never looks like a policy outcome.
 
 **Residual risk.**
@@ -203,9 +202,6 @@ never consent, and a broken control never looks like a policy outcome.
 - **Policy is only as good as the attributes.** Every decision is made from
   claims the identity provider asserted. A wrong `organization` claim produces a
   correct decision on a false premise.
-- **The external PDP is a network dependency in the request path.** Fail-closed
-  means an outage is an outage: correct, and an availability risk you should
-  size.
 - **Authorization is enforced at the API.** Anything with a direct database
   connection is past it entirely; see B6.
 - **A legitimate caller acting outside their remit is not prevented, only

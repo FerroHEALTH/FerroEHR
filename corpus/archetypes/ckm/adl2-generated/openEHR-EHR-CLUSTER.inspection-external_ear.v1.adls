@@ -1,0 +1,169 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8dee2afc-f2c9-48cc-92f6-3023a21705f6; build_uid=389e9352-a760-481f-8e68-eda3b8cb08b6)
+    openEHR-EHR-CLUSTER.inspection-external_ear.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.inspection.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics">
+        ["date"] = <"02/11/2007">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7154439714E142D33698D3E9340D41E2">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording the findings on inspection of the external ear">
+            keywords = <"inspect", "visual", "ear", "external">
+            use = <"For use with the exam clusters for recording findings on inspection">
+            misuse = <"Should only be used in the exam observation">
+            copyright = <"copyright (c) 2009 openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Inspection of External ear
+        items matches {
+            CLUSTER[at0001] matches {
+                items matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {
+                        value matches {
+                            DV_CODED_TEXT[at9007.1] matches {
+                                defining_code matches {[ac0.9000]}    -- Normal statement (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0006] matches {
+                items matches {
+                    CLUSTER[at0005] matches {
+                        items matches {
+                            ELEMENT[at0022] matches {
+                                value matches {
+                                    DV_TEXT[at0.9004]
+                                }
+                            }
+                            before [at0022]
+                            ELEMENT[at0.61] occurrences matches {0..1} matches {    -- Anatomical area
+                                value matches {
+                                    DV_CODED_TEXT[at0.9003] matches {
+                                        defining_code matches {[ac0.9001]}    -- Anatomical area (synthesised)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0018] matches {
+                        /items[at0019]/value matches {
+                            DV_CODED_TEXT[at9011.1] matches {
+                                defining_code matches {[ac0.9002]}    -- Description (synthesised)
+                            }
+                        }
+                    }
+                    after [at0034]
+                    ELEMENT[at0.52] occurrences matches {0..1} matches {    -- Operative scars
+                        value matches {
+                            DV_TEXT[at0.9005]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.52"] = <
+                text = <"Operative scars">
+                description = <"Any ear related operative scars">
+            >
+            ["at0.53"] = <
+                text = <"External ear normal">
+                description = <"*">
+            >
+            ["at0.54"] = <
+                text = <"Pinna">
+                description = <"*">
+            >
+            ["at0.55"] = <
+                text = <"External audiroty Canal">
+                description = <"*">
+            >
+            ["at0.56"] = <
+                text = <"Pinna normal">
+                description = <"*">
+            >
+            ["at0.57"] = <
+                text = <"External Auditory Canal normal">
+                description = <"*">
+            >
+            ["at0.58"] = <
+                text = <"Hypoplasia">
+                description = <"*">
+            >
+            ["at0.59"] = <
+                text = <"Atresia">
+                description = <"*">
+            >
+            ["at0.60"] = <
+                text = <"Bat">
+                description = <"*">
+            >
+            ["at0.61"] = <
+                text = <"Anatomical area">
+                description = <"*">
+            >
+            ["at0.62"] = <
+                text = <"Pinna">
+                description = <"*">
+            >
+            ["at0.63"] = <
+                text = <"External Auditory Canal">
+                description = <"*">
+            >
+            ["at0000.1"] = <
+                text = <"Inspection of External ear">
+                description = <"The findings on physical examination by inspection of external ear">
+            >
+            ["ac0.9000"] = <
+                text = <"Normal statement (synthesised)">
+                description = <"A specific statement about the normality of inspection (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Anatomical area (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Description (synthesised)">
+                description = <"Description of the external ear (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.53", "at0.56", "at0.57">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.62", "at0.63">
+        >
+        ["ac0.9002"] = <
+            id = <"ac0.9002">
+            members = <"at0.58", "at0.59", "at0.60">
+        >
+    >

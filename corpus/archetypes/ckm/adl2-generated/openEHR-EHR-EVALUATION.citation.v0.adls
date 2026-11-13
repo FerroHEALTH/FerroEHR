@@ -1,0 +1,141 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3a4cbf30-77f5-465d-9e12-da3761bba7b5; build_uid=9199c86d-b3b5-4c43-a1cd-bfa383cb4823)
+    openEHR-EHR-EVALUATION.citation.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Marivan Abrahao">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2010-06-18">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"318082012C035C8EF82BE16BA38E1F63">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Arquétipo envelope ENTRY utilizado para conter o cluster Citação.">
+            keywords = <"citação", "referência">
+            use = <"Usado como o arquétipo envelope ENTRY para conter o arquétipo CLUSTER.citation (cluster Citação) quando é necessário que uma citação ocorra como uma instância de informação independente. Os elementos de dados reais são descritos detalhadamente dentro do CLUSTER.citation, o qual é capaz de ser inserido dentro de um SLOT neste aquétipo EVALUATION ou como parte de um contexto mais amplo de qualquer outro arquétipo, conforme necessário.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Shell ENTRY archetype to contain the Citation cluster.">
+            keywords = <"citation", "reference">
+            use = <"Use as the shell ENTRY archetype to contain the CLUSTER.citation archetype when a citation is required to occur as a stand-alone instance of information. The actual data elements are fully detailed within CLUSTER.citation, which is able to be inserted within a slot in this EVALUATION or as part of the fuller context of any other archetype, as required.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"هيكل لنموذج لإدخال البيانات التي تحتوي على عنقود الاقتباس/المرجعية">
+            keywords = <"اقتباس/مرجعية", "المرجع">
+            use = <"يستخدم كهيكل لنموذج لإدخال البيانات التي تحتوي على عنقود الاقتباس/المرجعية في الحالات التي تكون فيها الحاجة لتسجيل معلومات المرجعية كمعلومة مستقلة. 
+و توجد تفاصيل كاملة لعناصر البيانات الفعلية في داخل العنقود.مرجعية, و الذي يمكن أن يتم إدراجه في شرفة في هذا التقييم أو كجزء من السياق الكلي لأي نموذج آخر, حسب الطلب.">
+            misuse = <"">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Citation
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0002] matches {    -- Citation content
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.citation(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.citation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0003] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0004] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Citação">
+                description = <"Referência a informação mantida em outro lugar, no mesmo RES ou externo ao RES.">
+            >
+            ["at0002"] = <
+                text = <"Conteúdo da citação">
+                description = <"Detalhes da citação (especificados no arquétipo CLUSTER).">
+            >
+            ["at0004"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms. (en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents. (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Citation">
+                description = <"Reference to information held elsewhere, in the same EHR or external to the EHR.">
+            >
+            ["at0002"] = <
+                text = <"Citation content">
+                description = <"Citation details (specified in CLUSTER archetype).">
+            >
+            ["at0004"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"الاقتباس/المرجعية">
+                description = <"مرجع للمعلومات الموجودة في مكان آخر من ذات السجل الطبي الإلكتروني أو في خارج السجل الطبي الإلكتروني.">
+            >
+            ["at0002"] = <
+                text = <"محتوى الاقتباس/المرجعية">
+                description = <"تفاصيل الاقتباس/المرجعية - يتم تحديدها في نموذج عنقود">
+            >
+            ["at0004"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms. (en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents. (en)">
+            >
+        >
+    >

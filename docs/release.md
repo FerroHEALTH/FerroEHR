@@ -34,7 +34,7 @@ The checks, in the order the plan job runs them:
 | No fragment is left under `changelog.d/`: the cut assembled every one (`scripts/release/changelog.sh --assemble X.Y.Z YYYY-MM-DD`). At a pre-release tag (`vX.Y.Z-rcN`) the fragments stay for the stable cut, and the section must carry each of them. CI runs this check (`plan.sh fragments vX.Y.Z`) in the merge queue on every change that moves the workspace version, so a fragment merged ahead of the release PR fails the PR before the tag, and again on the push to `main`, so a release commit merged past the queue turns `main` red before the tag | `plan.sh`, `scripts/release/changelog.sh --check`, `--covered` |
 | The technical documentation and the CRA risk assessment follow their paths since the previous release | `scripts/checks/technical-documentation.sh`, `scripts/checks/cra-risk-assessment.sh` |
 | The changelog section becomes the notes, with the support period and the CRA user-information link | `plan.sh notes`, `scripts/checks/release-notes.sh` |
-| The chart's `appVersion`, its unpublished version, the party statement, `CITATION.cff`, `.zenodo.json`, the compose image tags and the documented keys | the scripts `plan.sh` names |
+| The chart's `appVersion`, its unpublished version, the party statement, `CITATION.cff`, `.zenodo.json`, the compose image tags, the default demographic definitions' release assets and the documented keys | the scripts `plan.sh` names |
 
 The previous release is resolved the way the plan job resolves it: from
 `git ls-remote --tags origin 'v*'`, by version order. A tag that was pushed but
@@ -67,6 +67,12 @@ job writes the tag's version in place of `:main` in the copy it attaches
 image still names `:main` or another version. The plan job runs the same
 rewrite on a scratch copy, so a tag whose quickstart cannot be pinned is
 refused before anything is published.
+
+The default demographic definitions under `deploy/definitions/` ride every
+release as well, one asset per `.adls` file with a `.sha256sum` beside it
+(`scripts/release/definition-assets.sh`). The `github-release` job stages
+them, the plan job stages them on a scratch directory first, and
+`finalize-release` refuses to publish a draft that lacks one of them.
 
 ## Recovering the chart leg
 
@@ -134,10 +140,11 @@ over this tree's `perf/plan.toml`, with each arm's seeded ids:
 
 Runners of one CPU model differ by 25 to 45 % in latency and CPU per
 request, so the change is judged against its base on the same runner in the
-same job, never against a stored number. The release's `performance` job runs
-`gate.sh run` on the release image: the idle limits, with the load phase
-reported; the candidate's load against the previous release is the A/B run
-beside it.
+same job, never against a stored number (#5095). The release's
+`performance` job runs `gate.sh ab` the same way, with the release image as
+the head and the previous published release as the base: its images, pulled
+from GHCR, run under the tree of its tag's commit. No baseline is stored
+anywhere.
 
 The job first runs `gate.sh self-test`. It polls a table with no wait during
 the idle phase, and the self-test passes only when the gate fails that run on
@@ -156,41 +163,5 @@ and says why: a phase that stalled, a generator that lagged, a window that
 was not steady, or a base that fell behind the schedule. A request the head
 answered with a status other than the plan's expected one fails the run
 too. `target/perf/base-rev` names the base commit. Locally, `PERF_SERVER`,
-`PERF_DATABASE` and `PERF_TARGET` point `gate.sh run` at a server you
+`PERF_DATABASE` and `PERF_TARGET` point `gate.sh self-test` at a server you
 started yourself (see the script's header).
-
-### Writing the baseline
-
-The pull-request gate needs no baseline. `gate.sh run` and the
-**Performance baseline** workflow still measure one server against
-`perf/baseline.toml` (#5095). The load baseline is kept per CPU model of the runner pool the gate runs on
-(`ubuntu-26.04`), because one model's latencies say nothing about another's.
-`perf/baseline.toml` holds one `[[baseline]]` entry per model, keyed by the
-`model name` line of `/proc/cpuinfo`. Until that file is committed (#5095), a
-run judges the idle limits, which are absolute, and reports the load phase
-without judging it: a run whose only reason it could not be judged is the
-missing baseline passes, and every other reason fails it.
-
-A baseline is measured on the runner, never on a developer machine. Run the
-**Performance baseline** workflow (`perf-baseline.yml`) by hand on `main`:
-
-1. It builds the server binary the `perf` job gates, then runs its `legs`
-   measuring jobs one after another. Each job lands on whatever CPU model the
-   pool gives it and runs `scripts/perf/gate.sh update` over the file the
-   previous job wrote.
-2. `update` measures five load phases, each after its own warm-up. It writes
-   each metric of the runner's model as the median of the phases, and how far
-   the worst phase strayed from that median as the metric's noise floor. It
-   leaves every other model's entry as it was.
-3. The run's `perf-baseline` artifact holds the final file, and each job's
-   summary lists the models the file holds. Commit it in a change of its own.
-
-To add a model, run the workflow again, with the committed file in place,
-until the summary lists it. A pull request whose runner has a model with no
-entry cannot be judged, and its summary names the model.
-
-On the same plan, `update` moves a metric only to the better of the entry and
-the new median. A metric fails when it is worse than its entry by more than
-the larger of its tolerance and its noise floor, so no tolerance is loosened.
-Raising a metric is a hand edit in a change that says why. Changing the rate,
-the windows or the request set writes the entry afresh.

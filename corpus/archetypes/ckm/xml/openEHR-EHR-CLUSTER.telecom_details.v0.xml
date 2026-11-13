@@ -1,0 +1,975 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2007-11-04</original_author>
+    <original_author id="name">Ian McNicoll</original_author>
+    <original_author id="organisation">Ocean Informatics</original_author>
+    <original_author id="email">ian.mcnicoll@oceaninformatics.com</original_author>
+    <other_contributors>Heather Leslie, Ocean Informatics, Australia</other_contributors>
+    <lifecycle_state>rejected</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Telephone, facsimile or similar telecommunications type/number for a patient.  ENV 13606 - 4:2000 7.11.14 From NHS Scotland SCI-XML messaging standards http://www.isdscotland.org/isd/files/general-v2-7.xsd NHS Scotland Interoperability Working Group http://www.isdscotland.org/isd/5194.html.</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">7C5220D490285A2548A935D41CF43F83</other_details>
+    <other_details id="build_uid">a54de5ea-e516-4dd4-96ca-522037a06973</other_details>
+    <other_details id="revision">0.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Repräsentation von Kontaktdaten einer Person oder Einrichtung.</purpose>
+      <keywords>Telefon</keywords>
+      <keywords>Mobilfunk</keywords>
+      <keywords>Email</keywords>
+      <keywords>Pager</keywords>
+      <keywords>Handy</keywords>
+      <keywords>Telefax</keywords>
+      <keywords>Fax</keywords>
+      <use>Zur Repräsentation von Kontaktdaten einer Person oder Einrichtung, einschließlich Email oder weiterer internetbasierter Kommunikationsmittel.</use>
+      <misuse />
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>pt-br</code_string>
+      </language>
+      <purpose>Registrar detalhes de telecomunicações de um indivíduo ou organização.</purpose>
+      <keywords>Telefone</keywords>
+      <keywords>fax</keywords>
+      <keywords>Celular</keywords>
+      <keywords>email</keywords>
+      <keywords>pager</keywords>
+      <use>Use para registrar detalhes de telecomunicações de um indivíduo ou organização, incluindo email ou outra comunicação baseada na Internet.</use>
+      <misuse />
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record telecommunications details for an individual or organisation.</purpose>
+      <keywords>telephone</keywords>
+      <keywords>facsimile</keywords>
+      <keywords>fax</keywords>
+      <keywords>mobile</keywords>
+      <keywords>email</keywords>
+      <keywords>pager</keywords>
+      <use>Use to record telecommunications details for an individual or organisation, including email or other internet based communication.</use>
+      <misuse />
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ar-sy</code_string>
+      </language>
+      <purpose>لتسجيل تفاصيل الاتصالات السلكية و اللاسلكية لفرد أو مؤسسة</purpose>
+      <keywords>الهاتف</keywords>
+      <keywords>صورة طبق الأصل</keywords>
+      <keywords>الفاكس</keywords>
+      <keywords>الهاتف النقال</keywords>
+      <keywords>البريد الإلكتروني</keywords>
+      <keywords>جهاز الإخطار</keywords>
+      <use>يستخدم لتسجيل تفاصيل الاتصالات السلكية و اللاسلكية للفرد أو المؤسسة, بما في ذلك البريد الإلكتروني أو أي وسيلة اتصالات قائمة على استخدام الشكبة العنكبيوتية</use>
+      <misuse />
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Sarah Ballout</author>
+    <author id="organisation">MHH-Hannover</author>
+    <author id="email">Ballout.Sarah@mh-hannover.de</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>pt-br</code_string>
+    </language>
+    <author id="name">Danielle Santos Alves</author>
+    <author id="organisation">Federal University of Pernambuco</author>
+    <author id="email">angeldannyalves@gmail.com</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ar-sy</code_string>
+    </language>
+    <author id="name">Mona Saleh</author>
+  </translations>
+  <uid>
+    <value>e67a6d2a-7c7d-4737-958b-e18a43599ca0</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-CLUSTER.telecom_details.v0</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0010</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_CODE_PHRASE">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <terminology_id>
+                  <value>local</value>
+                </terminology_id>
+                <code_list>at0011</code_list>
+                <code_list>at0012</code_list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>1</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0004</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>defining_code</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_CODE_PHRASE">
+                    <rm_type_name>CODE_PHRASE</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <terminology_id>
+                      <value>local</value>
+                    </terminology_id>
+                    <code_list>at0013</code_list>
+                    <code_list>at0014</code_list>
+                    <code_list>at0015</code_list>
+                    <code_list>at0016</code_list>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0002</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0003</node_id>
+            <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+              <rm_attribute_name>items</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0005</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0006</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0007</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0019</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <cardinality>
+                <is_ordered>false</is_ordered>
+                <is_unique>false</is_unique>
+                <interval>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>1</lower>
+                </interval>
+              </cardinality>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0020</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>1</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0021</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0009</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_URI</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>2</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>1</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Communication details</items>
+        <items id="description">Personal or organisational communication details.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Telecoms</items>
+        <items id="description">One or more telecoms contacts for an individual.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Unstructured telecoms</items>
+        <items id="description">An unstructured description of telecoms.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Structured telecoms</items>
+        <items id="description">A structure for telephone numbers composed of separately identifiable elements. ENV13606-4:2000 7.11.18.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Telecoms type</items>
+        <items id="description">Telecom mechanism e.g. telephone, facsimile, pager etc.  ENV 13606-4:2000 7.11.19.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Country code</items>
+        <items id="description">Telephone country code.  ENV13606-4:2000 7.11.18.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Area code</items>
+        <items id="description">Telephone area code.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Number</items>
+        <items id="description">Telephone number.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Address</items>
+        <items id="description">The address or identifier used to communicate on the specified communication channel.</items>
+        <items id="comment">For example an email address or a URI.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Mode</items>
+        <items id="description">A qualifier for a telecom contact, describing its context e.g. 'Work', 'Private'.   ENV 13606 - 4:2000 7.11.19.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Private</items>
+        <items id="description">Details of private communication channels.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Work</items>
+        <items id="description">Details of work communication channels.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Telephone</items>
+        <items id="description">Telephone number details.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Fax</items>
+        <items id="description">Facsimile number details.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Mobile phone</items>
+        <items id="description">Mobile phone number details.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Pager</items>
+        <items id="description">Pager number details.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Extension</items>
+        <items id="description">Telephone extension number.  ENV13606-4:2000 7.11.18.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Internet communication</items>
+        <items id="description">Details of internet based communication.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Channel</items>
+        <items id="description">The type of communication channel or service used.</items>
+        <items id="comment">For example e-mail, SIP, Skype, or other type of synchronous or asynchronous internet based communication channel.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Einzelheiten der Kommunikation</items>
+        <items id="description">Angaben zur persönlichen oder organisatorischen Kommunikation.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Kontaktdaten</items>
+        <items id="description">Eine oder mehrere Kontaktadressen einer Person oder Einrichtung.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Unstrukturierte Kontaktadresse</items>
+        <items id="description">Eine unstrukturierte Zusammenfassung der Kontaktadresse.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Strukturierte Kontaktadresse</items>
+        <items id="description">Strukturierte Angabe von Telefonnummern mit Feldern nach ENV13606-4:2000 7.11.18.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Kontakttyp</items>
+        <items id="description">Typ des Kontakts z.B. Telefon, Fax, Pager etc. ENV 13606-4:2000 7.11.19.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Landesvorwahl</items>
+        <items id="description">Landesvorwahl. ENV13606-4:2000 7.11.18.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Ortsvorwahl</items>
+        <items id="description">Telefonvorwahl.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Nummer</items>
+        <items id="description">Telefonnummer.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Adresse</items>
+        <items id="description">Die Adresse oder Kennung, die zur Kommunikation auf dem angegebenen Kommunikationsweg verwendet wird.</items>
+        <items id="comment">Zum Beispiel eine E-Mail-Adresse oder eine URI.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Modus</items>
+        <items id="description">Eine Kennzeichnung für einen Telekommunikationskontakt, die dessen Kontext beschreibt, z.B. "Arbeit", "Privat". ENV 13606 - 4:2000 7.11.19.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Privat</items>
+        <items id="description">Angaben zu den privaten Kommunikationswegen.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Arbeit</items>
+        <items id="description">Angaben zu den Kommunikationswegen der Arbeit.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Telefon</items>
+        <items id="description">Angaben zur Telefonnummer.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Telefax</items>
+        <items id="description">Angaben zur Faxnummer.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Mobiltelefon</items>
+        <items id="description">Angaben zur Mobiltelefonnummer.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Pager</items>
+        <items id="description">Angaben zur Pager-Nummer.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Durchwahl</items>
+        <items id="description">Durchwahl des Telefons. ENV13606-4:2000 7.11.18.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Internet-Kommunikation</items>
+        <items id="description">Angaben zur internetbasierten Kommunikation.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Sender</items>
+        <items id="description">Die Art des verwendeten Kommunikationsmediums oder Dienstes.</items>
+        <items id="comment">Zum Beispiel E-Mail, SIP, Skype oder andere Arten von synchronen oder asynchronen internetbasierten Kommunikationsmitteln.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="ar-sy">
+      <items code="at0000">
+        <items id="text">*Communication details(en)</items>
+        <items id="description">*Personal or organisational communication details.(en)</items>
+      </items>
+      <items code="at0001">
+        <items id="text">الاتصالات السلكية و اللاسلكية</items>
+        <items id="description">واحد أو أكثر من جهات الاتصال الخاصة بفرد</items>
+      </items>
+      <items code="at0002">
+        <items id="text">الاتصالات السلكية و اللاسلكية - غير تركيبي</items>
+        <items id="description">وصف غير تركيبي للاتصالات السلكية و اللاسلكية</items>
+      </items>
+      <items code="at0003">
+        <items id="text">الاتصالات السلكية و اللاسلكية - بشكل تركيبي</items>
+        <items id="description">تركيب يصف أرقام الهاتف التي تتكون من عناصر منفردة فريدة. &#xD;
+ENV13606-4:2000 7.11.18.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">نوع الاتصالات السلكية و اللاسلكية</items>
+        <items id="description">آلية الاتصال السلكي/اللاسلكي, مثل: الهاتف, صورة طبق الأصل, جهاز الإخطار, إلى آخره.&#xD;
+ ENV 13606-4:2000 7.11.19.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">رمز الدولة</items>
+        <items id="description">رمز الدولة الهاتفي.&#xD;
+ENV13606-4:2000 7.11.18.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">رمز المنطقة</items>
+        <items id="description">رمز المنطقة الهاتفي</items>
+      </items>
+      <items code="at0007">
+        <items id="text">الرقم</items>
+        <items id="description">رقم الهاتف</items>
+      </items>
+      <items code="at0009">
+        <items id="text">*Address(en)</items>
+        <items id="description">*The address or identifier used to communicate on the specified communication channel.(en)</items>
+        <items id="comment">*For example an email address or a URI.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">*Mode(en)</items>
+        <items id="description">*A qualifier for a telecom contact, describing its context e.g. 'Work', 'Private'.   ENV 13606 - 4:2000 7.11.19.(en)</items>
+      </items>
+      <items code="at0011">
+        <items id="text">*Private(en)</items>
+        <items id="description">*Details of private communication channels.(en)</items>
+      </items>
+      <items code="at0012">
+        <items id="text">*Work(en)</items>
+        <items id="description">*Details of work communication channels.(en)</items>
+      </items>
+      <items code="at0013">
+        <items id="text">الهاتف</items>
+        <items id="description">تفاصيل رقم الهاتف</items>
+      </items>
+      <items code="at0014">
+        <items id="text">الفاكس</items>
+        <items id="description">تفاصيل رقم الفاكس</items>
+      </items>
+      <items code="at0015">
+        <items id="text">الهاتف النقال</items>
+        <items id="description">تفاصيل رقم الهاتف النقال</items>
+      </items>
+      <items code="at0016">
+        <items id="text">جهاز الإخطار</items>
+        <items id="description">تفاصيل رقم جهاز الإخطار</items>
+      </items>
+      <items code="at0019">
+        <items id="text">الامتداد</items>
+        <items id="description">رقم امتداد الهاتف.&#xD;
+ENV13606-4:2000 7.11.18.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">*Internet communication(en)</items>
+        <items id="description">*Details of internet based communication.(en)</items>
+      </items>
+      <items code="at0021">
+        <items id="text">*Channel(en)</items>
+        <items id="description">*The type of communication channel or service used.(en)</items>
+        <items id="comment">*For example e-mail, SIP, Skype, or other type of synchronous or asynchronous internet based communication channel.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="pt-br">
+      <items code="at0000">
+        <items id="text">Detalhes de comunicação</items>
+        <items id="description">Detalhes de comunicação pessoal ou organizacional.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Telecomunicações</items>
+        <items id="description">Um ou mais contatos de telecomunicações para um indivíduo.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Telecomunicações não estruturadas</items>
+        <items id="description">Uma descrição não estruturada de telecomunicações.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Telecomunicações estruturadas</items>
+        <items id="description">Uma estrutura para números de telefone composta por elementos identificáveis separadamente. ENV13606-4: 2000 7.11.18.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Tipo de telecomunicação</items>
+        <items id="description">Mecanismo de telecomunicações, por exemplo telefone, fax, pager, etc. ENV 13606-4: 2000 7.11.19.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Código do país</items>
+        <items id="description">Código do país do telefone</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Código de área</items>
+        <items id="description">Código de área do telefone</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Número</items>
+        <items id="description">Número de telefone.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Endereço</items>
+        <items id="description">O endereço ou identificador usado para se comunicar através do canal de comunicação especificado.</items>
+        <items id="comment">Por exemplo, um endereço de email ou um URL.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Modo</items>
+        <items id="description">Um qualificador para um contato de telecomunicações, descrevendo seu contexto, p. 'Trabalho', 'Privado'. ENV 13606 - 4: 2000 7.11.19.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Privado</items>
+        <items id="description">Detalhes dos canais de comunicação privados.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Trabalho</items>
+        <items id="description">Detalhes dos canais de comunicação de trabalho.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Telefone</items>
+        <items id="description">Detalhes de número de telefone</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Fax</items>
+        <items id="description">Detalhes de número de fax.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Telefone celular</items>
+        <items id="description">Detalhes do número de telefone celular</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Pager</items>
+        <items id="description">Detalhes do número de pager.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Extensão</items>
+        <items id="description">Extensão do número de telefone</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Comunicação de internet</items>
+        <items id="description">Detalhes de comunicação baseada na Internet.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Canal de comunicação</items>
+        <items id="description">O tipo de canal de comunicação ou serviço usado.</items>
+        <items id="comment">Por exemplo, email, Skype ou outro tipo de canal de comunicação síncrono ou assíncrono com base na Internet.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

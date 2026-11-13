@@ -1,0 +1,753 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2021-04-14</original_author>
+    <original_author id="name">Heather Leslie</original_author>
+    <original_author id="organisation">Atomica Informatics</original_author>
+    <original_author id="email">heather.leslie@atomicainformatics.com</original_author>
+    <lifecycle_state>rejected</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Health Care Client Identification - AS 5017-2006. New South Wales (AU): Standards Australia; 2006.&#xD;
+&#xD;
+Health Care Provider Identification - AS 4846-2006. New South Wales (AU): Standards Australia; 2006.&#xD;
+&#xD;
+Health informatics — Identification of subjects of health care - ISO/TS 22220:2007. Geneva: International Organization for Standardization; 2007.&#xD;
+&#xD;
+HL7 FHIR Resource - Person v4.0.1: R4 [Internet]. Health Level Seven International; [accessed 2021 05 04]. Available from: http://hl7.org/fhir/2021May/person.html.</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">084034BBFD6596C1E2AFE185406E1A7B</other_details>
+    <other_details id="build_uid">a093de57-b8f9-4c9f-8292-c68d7def0324</other_details>
+    <other_details id="revision">0.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Darstellung von strukturierten Details, die eine feingranulierte, lokale Ebene der geografischen/physischen Beschreibung eines Orts darstellen in einer Gesundheitsakte.</purpose>
+      <use>Zur darstellung strukturierter Details, die in Verbindung mit den anderen übergeordneten Adresskomponenten, d. h. „Vorort/Stadt/Ort“, „Postleitzahl“ und „Staat/Gebiet/Provinz“, eine vollständige geografische/physische Adresse bilden.&#xD;
+&#xD;
+In den meisten Anwendungsfällen, in denen eine Adresse in eine Gesundheitsakte aufgenommen werden muss, reicht die Freitexteingabe im Element „Adresse unstrukturiert“ im Archetyp CLUSTER.address aus. Verwenden Sie diesen Archetyp nur in Situationen, in denen genauere Details zu einer oder mehreren untergeordneten Adresskomponenten erforderlich sind, indem Sie diesen Archetyp in den SLOT "Strukturierte Adressdaten" in CLUSTER.address verschachteln.</use>
+      <misuse>Darf nicht verwendet werden, um eine Adresse im Rahmen der Führung eines offiziellen demografischen Registers oder Index zu erfassen. Verwenden Sie zu diesem Zweck einen formellen Master Patient Index oder Health Provider Index oder Archetypen, die auf dem openEHR Demographic Information Model basieren.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For å registrere strukturerte detaljer som representerer et finkornet nivå for en geografisk/fysisk lokalisering for bruk i pasientjournalen.</purpose>
+      <use>Brukes for å registrere strukturerte detaljer, som sammen med elementer som By, Postnummer, Poststed utgjør en fullstendig geografisk/fysisk adresse.&#xD;
+&#xD;
+I de mest vanlige brukscasene der navn skal registreres i pasientjournalen, vil fritekstregistrering i ett eller flere "Ustrukturert adresse" elementer være tilstrekkelig. Bruk denne arketypen i situasjoner hvor det er behov for en detaljert beskrivelse av en geografisk/fysisk lokalisering ved å nøste denne arketypen i SLOTet "Strukturert adresse" i arketypen CLUSTER.address.</use>
+      <misuse>Brukes ikke til å representere eller erstatte de formelle demografiske detaljene for en adresse eller for å opprettholde et demografisk register eller en indeks. Bruk formelle pasientregister, helsepersonellregister eller arketyper basert på openEHR demografisk informasjonsmodell til dette formålet.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record structured details that represent a fine-grained, local level of geographical/physical description of a location for use within a health record.</purpose>
+      <use>Use to record structured details that, used in conjunction with the other high-level address components i.e. ‘Suburb/Town/Locality’, ‘Postcode’, and ‘State/Territory/Province’, forms a complete geographical/physical address.&#xD;
+&#xD;
+In most common use cases where an address needs to be included within a health record, the free text entry within the 'Unstructured address' element in the CLUSTER.address archetype will be sufficient. Use this archetype only in situations when finer-grained detail about one or more lower-level address components is required, by nesting this archetype within the 'Structured address' SLOT in CLUSTER.address.</use>
+      <misuse>Not to be used to record an address as part of maintaining an official demographic register or index. Use a formal Master Patient Index or Health Provider Index for this purpose, or archetypes based on the openEHR Demographic Information Model.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Natalia Strauch</author>
+    <author id="organisation">Medizinische Hochschule Hannover</author>
+    <author id="email">Strauch.Natalia@mh-hannover.de</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">John Tore Valand, Vebjørn Arntzen</author>
+    <author id="organisation">Helse Vest IKT AS, Helse Bergen, Oslo University Hospital</author>
+    <author id="email">john.tore.valand@helse-vest-ikt.no, varntzen@ous-hf.no</author>
+  </translations>
+  <uid>
+    <value>87cb4a1f-b326-4bdc-ae36-aec11b835023</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-CLUSTER.structured_address.v0</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0002</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0003</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0004</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0005</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0006</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0007</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0008</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0009</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0010</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0011</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0012</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>1</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Structured address</items>
+        <items id="description">Structured details that represent a fine-grained, local level of geographical/physical description of a location for use within a health record.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Unit type</items>
+        <items id="description">The specification of the type of a separately identifiable portion within a building/complex, marina etc. to clearly distinguish it from another.</items>
+        <items id="comment">Coding with an external terminology is preferred, where possible. For example: Apartment or unit; or Shop. Where a building or other type of unit is present in a complex of such buildings or units, the data elements 'Unit type' and 'Unit number' should be used in conjunction - Apartment 35A; or Shop 209.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Unit number</items>
+        <items id="description">The specification of the number or identifier of  a building/complex, marina etc. to clearly distinguish it  from another.</items>
+        <items id="comment">For example: 35A; or 209. Where a building or other type of unit is present in a complex of such buildings or units, the data elements 'Unit type' and 'Unit number' should be used in conjunction - Apartment 35A; or Shop 209.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Site name</items>
+        <items id="description">The full name used to identify a physical building or property as part of its location.</items>
+        <items id="comment">If a 'Site name' requires additional specific details, such as including a reference to a wing or other components of a building complex, use a comma to separate the wing reference from the rest of the site name. For example: Victoria wing, Treasury building; Brindabella station.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Level type</items>
+        <items id="description">Descriptor used to classify the type of floor or level of a multi-storey building or complex.</items>
+        <items id="comment">Coding with an external terminology is preferred, where possible. For example: Floor (FL); Level (L); Basement (B); Lower Ground (LG); Upper Ground (UG); Ground Level (G); or Mezzanine (M). If 'Level' or 'Floor' are selected then they need to be paired with the 'Level number' data element.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Level number</items>
+        <items id="description">Numeric or alphanumeric descriptor used to identify the floor or level of a multi-storey building or complex.</items>
+        <items id="comment">A 'Level number' must be recorded with its corresponding 'Level type'. For example: L3; or FL1A.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Street number</items>
+        <items id="description">The numeric or alphanumeric reference number of a house or property that is unique within a street name.</items>
+        <items id="comment">For example: '17'; '39A'; or '401-403'. If a Lot number is recorded, this data element is redundant - only one of 'Street number' or 'Lot number' is permitted in an address.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Lot number</items>
+        <items id="description">The Lot reference allocated to an address  in  the  absence of street numbering.</items>
+        <items id="comment">For example: 'Lot 17A'; or 'Lot 716-718'. If a Street number is recorded, this data element is redundant - only one of 'Street number' or 'Lot number' is permitted in an address.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Street name</items>
+        <items id="description">The name that identifies a public thoroughfare and differentiates it from others in the same suburb, town, city or locality.</items>
+        <items id="comment">For example: 'Jessie'; or 'Bourke'.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Street type</items>
+        <items id="description">A descriptor for the type of public thoroughfare.</items>
+        <items id="comment">Coding with an external terminology is preferred, where possible. For example: Hwy (Highway).</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Street suffix</items>
+        <items id="description">Descriptor used to qualify the 'Street name' used for directional references.</items>
+        <items id="comment">Coding with an external terminology is preferred, where possible. For example: North; or Upper.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Postal delivery type</items>
+        <items id="description">Identification for the channel of postal delivery.</items>
+        <items id="comment">Coding with an external terminology is preferred, where possible. Used where mail is to be delivered to a box, bag or agent for pick-up by the intended recipient or to a rural mail box number where no other address exists. For example: 'Poste Restante' (also known as Care-of Post Office); 'Roadside Delivery' (RSD); or 'Post Office Box' (PO Box)</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Postal delivery number</items>
+        <items id="description">Identification number for the channel of postal delivery.</items>
+        <items id="comment">For example: 'C96'.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Adresse strukturiert</items>
+        <items id="description">Strukturierte Details, die eine feingranulierte, lokale Ebene der geografischen/physischen Beschreibung eines Standorts zur Verwendung in einer Gesundheitsakte darstellen.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Einheitstyp</items>
+        <items id="description">Die Angabe der Art eines separat identifizierbaren Teils innerhalb eines Gebäudes / Komplexes, Hafens usw., um ihn klar von anderen zu unterscheiden.</items>
+        <items id="comment">Die Codierung mit einer externen Terminologie wird nach Möglichkeit bevorzugt. Zum Beispiel: Wohnung, Einheit oder Shop. Wenn ein Gebäude oder eine andere Art von Einheit in einem Komplex aus solchen Gebäuden oder Einheiten vorhanden ist, sollten die Datenelemente "Einheitstyp" und "Einheitsnummer" in Verbindung verwendet werden - Wohnung 35A oder Shop 209.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Einheitsnummer</items>
+        <items id="description">Die Angabe der Nummer oder Kennung eines Gebäudes / Komplexes, Hafens usw., um diese klar von anderen zu unterscheiden.</items>
+        <items id="comment">Zum Beispiel: 35A oder 209. Wenn ein Gebäude oder eine andere Art von Einheit in einem Komplex solcher Gebäude oder Einheiten vorhanden ist, sollten die Datenelemente „Einheitstyp“ und „Einheitsnummer“ in Verbindung verwendet werden – Wohnung 35A oder Shop 209.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Standortname</items>
+        <items id="description">Der vollständige Name, der verwendet wird, um ein physisches Gebäude oder eine Immobilie als Teil seines Standorts zu identifizieren.</items>
+        <items id="comment">Wenn ein "Standortname" zusätzliche spezifische Details erfordert, z. B. einen Verweis auf einen Flügel oder andere Komponenten eines Gebäudekomplexes, verwenden Sie ein Komma, um die Flügelreferenz vom Rest des Standortnamens zu trennen. Zum Beispiel: Victoria-Flügel, Treasury-Gebäude; Bahnhof Brindabella.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Ebenentyp</items>
+        <items id="description">Deskriptor, der verwendet wird, um die Art des Stockwerks oder der Ebene eines mehrstöckigen Gebäudes oder Komplexes zu klassifizieren.</items>
+        <items id="comment">Die Codierung mit einer externen Terminologie wird nach Möglichkeit bevorzugt. Zum Beispiel: Etage (Et.), Ebene (E), Kellergeschoss (KG), Untergeschoss (UG), Obergeschoss (OG), Erdgeschoss (EG) oder Zwischengeschoss (ZG). Wenn "Ebene" oder "Stockwerk" ausgewählt sind, müssen sie mit dem Datenelement "Ebene-Nummer" gepaart werden.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Ebene-Nummer</items>
+        <items id="description">Numerischer oder alphanumerischer Deskriptor zur Identifizierung des Stockwerks oder der Ebene eines mehrstöckigen Gebäudes oder Komplexes.</items>
+        <items id="comment">Eine „Ebene-Nummer“ muss mit ihrem entsprechenden „Ebenentyp“ aufgezeichnet werden. Zum Beispiel: E3 oder Et.1A.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Straßennummer</items>
+        <items id="description">Die numerische oder alphanumerische Referenznummer eines Hauses oder Grundstücks, die innerhalb eines Straßennamens eindeutig ist.</items>
+        <items id="comment">Beispiel: "17", "39A" oder "401-403". Wenn eine Losnummer erfasst wird, ist dieses Datenelement redundant - in einer Adresse ist nur eine von "Straßennummer" oder "Grundstücksnummer" zulässig.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Grundstücksnummer</items>
+        <items id="description">Die Grundstücksreferenznummer, die einer Adresse ohne Straßennummerierung zugeordnet ist.</items>
+        <items id="comment">Beispiel: "Grundstück 17A" oder "Grundstück 716-718". Wenn eine Straßennummer erfasst wird, ist dieses Datenelement redundant - in einer Adresse ist nur eine von "Straßennummer" oder "Grundstücksnummer" zulässig.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Straßenname</items>
+        <items id="description">Der Name, der eine öffentliche Durchgangsstraße identifiziert und von anderen im selben Ort, im derselben Dorf, in derselben Stadt oder in derselben Ortschaft unterscheidet.</items>
+        <items id="comment">Beispiel: Deisterallee oder Breiter Weg</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Straßentyp</items>
+        <items id="description">Ein Deskriptor für die Art der öffentlichen Durchgangsstraße.</items>
+        <items id="comment">Die Codierung mit einer externen Terminologie wird nach Möglichkeit bevorzugt. Beispiel: Highway (Hauptstraße).</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Straße-Zusatz</items>
+        <items id="description">Deskriptor, der verwendet wird, um den "Straßennamen" zu qualifizieren, der für Richtungsreferenzen verwendet wird.</items>
+        <items id="comment">Die Codierung mit einer externen Terminologie wird nach Möglichkeit bevorzugt. Zum Beispiel: Norden oder Ober.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Postversandart</items>
+        <items id="description">Identifikation für den Postweg.</items>
+        <items id="comment">Die Codierung mit einer externen Terminologie wird nach Möglichkeit bevorzugt. Wird verwendet, wenn Post an eine Poststelle, PaketShop oder eine Postfiliale zur Abholung durch den vorgesehenen Empfänger oder an eine ländliche Postfachnummer zugestellt werden soll, für die keine andere Adresse existiert. Zum Beispiel: "Postlagernd" (auch bekannt als Care-of Post Office), „Roadside Delivery“ (RSD) oder "Postfach" (Postfach).</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Postversandnummer</items>
+        <items id="description">Identifikationsnummer für den Postweg.</items>
+        <items id="comment">Beispiel: "C96".</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Strukturert adresse</items>
+        <items id="description">Strukturerte detaljer som representerer et finkornet nivå for en geografisk/fysisk lokalisering for bruk i pasientjournalen.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Type bruksenhet</items>
+        <items id="description">Spesifikasjon av en identifiserbar separat del av en bygning eller bygningskompleks, marina eller lignende, som gjør det enkelt å skille den fra andre enheter.</items>
+        <items id="comment">Koding av type bruksenhet med en terminologi er å foretrekke når det er mulig. For eksempel Leilighet eller enhet, Seksjon eller Andel. Dersom en bygning eller bruksenhet er i et bygningskompleks eller er en av flere enheter, bør "Type bruksenhet" og "Enhetsnummer" kombineres, som "Leilighet 35A", eller "Seksjonsnummer 9".</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Enhetsnummer</items>
+        <items id="description">Nummer eller annen identifikator til en bygning, marina eller lignende, som gjør det enkelt å skille den fra andre enheter.</items>
+        <items id="comment">For eksempel 35A eller 209. Dersom en bygning eller bruksenhet er i et bygningskompleks eller er en av flere enheter, bør "Type bruksenhet" og "Enhetsnummer" kombineres, som "Leilighet 35A", eller "Seksjonsnummer 9".</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Eiendomsnavn</items>
+        <items id="description">Hele navnet som brukes for å identifisere en fysisk bygning eller eiendom, for eksempel "Bislett stadion" eller "Buckingham palace".</items>
+        <items id="comment">Hvis eiendomsnavnet trenger detaljer i tillegg, som en referanse til en spesifikk del av bygningen eller eiendommen, bruk komma for å separere dem. For eksempel "Bislett stadion, nordre sving".</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Nivå</items>
+        <items id="description">Beskrivelse for å angi på hvilket nivå eller i hvilken etasje en enhet er på i en fleretasjes bygning eller bygningskompleks.</items>
+        <items id="comment">Koding med en ekstern terminologi er anbefalt, dersom mulig. For eksempel "Etasje (Etg)", "Grunnplan", "Mezzanin" eller "Underetasje (U)". Dersom Etasje er brukt, må den kombineres med elementet "Nivånummer" for å bli entydig.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Nivånummer</items>
+        <items id="description">Tall eller alfanumerisk betegnelse for å identifisere hvilken etasje eller nivå en enhet er på i en fleretasjet bygning eller bygningskompleks.</items>
+        <items id="comment">Nivånummer må bli lagret sammen med det tilhørende Nivå, for eksempel "4. etasje", eller "U1".</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Gatenummer</items>
+        <items id="description">Tall eller alfanumerisk betegnelse for å identifisere en bygning eller eiendom i en gate eller vei.</items>
+        <items id="comment">For eksempel "17", "39A" eller "401-403". Dersom Lot-nummer er brukt, er dette dataelementet unødvendig. Kun enten "Gatenummer" eller "Lot-nummer" er tillatt i en adresse.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Lot-nummer</items>
+        <items id="description">Det allokerte Lot-nummer til en adresse, for eksempel om det mangler gateadresse og gatenummer.</items>
+        <items id="comment">For eksempel "Lot 17", "Lot 39A" eller "Lot 401-403". Dersom Gatenummer brukt, er dette dataelementet unødvendig. Kun enten "Gatenummer" eller "Lot-nummer" er tillatt i en adresse. I Norge kan et Lot-nummer være en sammenslått verdi bestående av kommunenummer, gardsnummer, bruksnummer.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Gatenavn</items>
+        <items id="description">Navnet som identifiserer en offentlig trafikkåre eller adkomst, og som skiller den fra andre i samme by eller område.</items>
+        <items id="comment">For eksempel "Karl Johans gate" eller "Kirkegata".</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Type gate</items>
+        <items id="description">Et uttrykk for typen trafikkåre eller adkomst.</items>
+        <items id="comment">Koding med en ekstern terminologi anbefales, dersom mulig. For eksempel "Hwy (Highway)" eller "Fv (Fylkesvei)".</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Gatesuffiks</items>
+        <items id="description">Et veiledende uttrykk bak "Gatenavn" til for eksempel finne retning.</items>
+        <items id="comment">Koding med en ekstern terminologi er anbefalt, dersom mulig. For eksempel "Nord", "Øvre del" eller "Mot øst".</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Postleveringstype</items>
+        <items id="description">Identifikasjon av type postlevering.</items>
+        <items id="comment">Koding med en ekstern terminologi er anbefalt, dersom mulig. Brukes når post skal leveres i en postkasse, til et postkontor eller et annet leveringssted dersom det ikke finnes en egen adresse eller eget leveringssted. For eksempel "C/O", "Poste restante", "Postboks" (Pb) eller "Roadside Delivery" (RSD).</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Postleveringsnummer</items>
+        <items id="description">Nummer som identifiserer hvor posten skal leveres.</items>
+        <items id="comment">For eksempel "7777", i adressen til Norge Rundt, NRK Hordaland, Postboks 7777, 5020 Bergen.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

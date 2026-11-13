@@ -94,13 +94,15 @@ their rights come from an agreement, never from a role
   professional's or the organisation's fields, and the countries, issuing
   authorities and provider identifier prefixes a token must stay within.
   A token outside them is refused with `401`.
-- **One agreement per issuer and accessor.** Each
-  [`[[authz.federation.agreement]]`](../installation/config-auth.md#authzfederationagreement)
-  names its `reads` (`patient/` scopes only), its `writes`, `discard`,
-  `accessor` (`person` or `organisation`), the `access_class` of an
-  organisation, its `legal_ground`, a `consent` condition kept apart from the
-  legal ground, its `caller_rate` (required on every agreement) and
-  `opt_out_override`.
+- **One agreement per partner and accessor.** Each
+  [federation agreement](../operational-policy.md#federation-agreements) is
+  a grant on the partner's party in the CDR, written through the Demographic
+  API by an administrator and judged at its commit. It names its read scopes
+  (`patient/` scopes only), the templates it writes, its discard window, its
+  accessor (`federated_person_access` or `federated_organisation_access`),
+  the access class of an organisation, its legal ground, a consent condition
+  kept apart from the legal ground, its caller rate (required on every
+  agreement) and its opt-out override.
 - **The opt-out holds for every outside caller.** Every verified external
   person and organisation is an access-service caller by its kind (EHDS
   Art. 10(1)), so an opted-out EHR answers as an unknown one. Only a person

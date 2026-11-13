@@ -83,9 +83,6 @@ definition
             }
      }
 
-
-
-
 ontology
 	term_definitions = <
 		["pt-br"] = <

@@ -1,0 +1,166 @@
+﻿archetype (adl_version=1.4; uid=7abb55fd-627c-4d2e-8d8f-0a5927ec041e)
+	openEHR-EHR-OBSERVATION.oral_fluid_intake.v1
+
+concept
+	[at0000]	-- Oral fluid intake
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.biz">
+		["date"] = <"18/04/2007">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record the measured or estimated oral fluid intake.">
+			use = <"">
+			keywords = <"oral", "fluid", "intake", "thirst">
+			misuse = <"">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["references"] = <"">
+		["build_uid"] = <"781feedd-573e-44e2-b7ed-948ae45072a4">
+		["original_publisher"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"23C10EAD9097D26882627DB18A587EF8">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	OBSERVATION[at0000] matches {	-- Oral fluid intake
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					POINT_EVENT[at0002] occurrences matches {0..1} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									CLUSTER[at0007] occurrences matches {0..*} matches {	-- Oral intake
+										items cardinality matches {0..*; unordered} matches {
+											ELEMENT[at0005] occurrences matches {0..1} matches {	-- Fluid
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {[local::]}
+													}
+												}
+											}
+											ELEMENT[at0006] occurrences matches {0..1} matches {	-- Nature of fluid
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {[local::]}
+													}
+												}
+											}
+											ELEMENT[at0008] occurrences matches {0..1} matches {	-- Volume
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::129]>
+														list = <
+															["1"] = <
+																units = <"ml">
+															>
+															["2"] = <
+																units = <"l">
+															>
+															["3"] = <
+																units = <"fl oz">
+															>
+															["4"] = <
+																units = <"cl">
+															>
+															["5"] = <
+																units = <"cc">
+															>
+															["6"] = <
+																units = <"pt(US)">
+															>
+														>
+													>
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					INTERVAL_EVENT[at0014] occurrences matches {0..1} matches {	-- Total
+						math_function matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {[openehr::148]}
+							}
+						}
+						data matches {
+							use_node ITEM_TREE /data[at0001]/events[at0002]/data[at0003]
+						}
+					}
+					INTERVAL_EVENT[at0015] occurrences matches {0..1} matches {	-- Actual
+						math_function matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {[openehr::640]}
+							}
+						}
+						data matches {
+							use_node ITEM_TREE /data[at0001]/events[at0002]/data[at0003]
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Oral fluid intake">
+					description = <"Recording of measurement (or estimation) of oral fluid intake.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"The estimation of oral fluid intake without specifying the period of time">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Fluid">
+					description = <"Name of fluid ingested">
+				>
+				["at0006"] = <
+					text = <"Nature of fluid">
+					description = <"Description of type of fluid ingested">
+				>
+				["at0007"] = <
+					text = <"Oral intake">
+					description = <"Details about fluid ingested">
+				>
+				["at0008"] = <
+					text = <"Volume">
+					description = <"Measured or estimated oral intake">
+				>
+				["at0014"] = <
+					text = <"Total">
+					description = <"For recording total oral fluid intake over a period (may transcend a number of interval or point in time records)">
+				>
+				["at0015"] = <
+					text = <"Actual">
+					description = <"For recording the oral fluid intake over a period of time, when this will later be totalled.">
+				>
+			>
+		>
+	>

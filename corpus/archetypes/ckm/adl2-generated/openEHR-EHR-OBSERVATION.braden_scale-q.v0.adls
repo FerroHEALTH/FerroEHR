@@ -1,0 +1,97 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=57bf4d16-86e4-4d99-95eb-deb8e3935b71; build_uid=7738902b-0958-4fb3-acf3-d97f6e89325f)
+    openEHR-EHR-OBSERVATION.braden_scale-q.v0.0.1
+
+specialize
+    openEHR-EHR-OBSERVATION.braden_scale.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2011-08-01">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Curley  MAQ, Razmus IS, Roberts KE, Wypij D. Predicting  pressure ulcer risk  in pediatric patients-the Braden Q scale. Nursing Research. 2003; 52(1) 22-31.">
+        ["2"] = <"Bergstrom, N., Braden, B., Laguzza, A. & Holman, A. (1987). The Braden Scale for predicting pressure sore risk. Nursing Research. 36(4), 205-210.">
+        ["3"] = <"Braden, B. J. & Blanchard, S. (2007). Risk assessment in pressure ulcer prevention. In D. L. Krasner, G. T. Rodeheaver, & R. G. Sibbald (Eds.), Chronic Wound Care: A Clinical Source Book for Healthcare Professionals (4th ed.). Wayne PA: HMP Communications">
+        ["4"] = <"Ayello, E.A. & Braden, B. (2002) How and why to do pressure ulcer risk assessment. Advances in Wound Care, 15 (3), 125-131.">
+        ["5"] = <"Prevention Plus - Home of the Braden Scale [Internet]. [date unknown];[cited 2011 Aug 1] Available from: http://bradenscale.com/index.htm">
+        ["6"] = <"Modified Braden Q Scale for Paediatric Use [Internet]. [date unknown];[cited 2011 Aug 8] Available from: http://nursing.advanceweb.com/SharedResources/Downloads/2007/090107/NW/nng090107_p55table1.pdf">
+    >
+    other_details = <
+        ["current_contact"] = <"Ian McNicoll, Ocean Informatics, UK, ian.mcnicoll@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"3BE26F76D2C0CC1C10FECB1058C0C8FD">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"The Modified Braden Q Scale for Predicting Pressure Sore Risk is an assessment tool used to assess the risk of pressure ulcer development in children aged between 21 days and 5 years.">
+            keywords = <"pressure", "sore", "ulcer", "Braden", "child", "paediatric">
+            use = <"To assess risk of pressure ulcer development in children from 21 days to 5 years of age.
+The Braden Scale is copyrighted as \"Copyright Nursecom Inc\".">
+            misuse = <"The Braden Q Scale should not be used unless the terms of copyright have been observed.
+The Braden Scale should not be used for adults or children over 5 years of age - use OPENEHR-EHR-OBSERVATION.braden_scale
+The Braden Scale should not be used for children less than  21 days old - use OPENEHR-EHR-OBSERVATION.braden_scale_neonate.v1">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] matches {    -- Modified Braden Q Scale
+        /data[at0001]/events matches {
+            EVENT[at0002] occurrences matches {0..1} matches {
+                /data[at0003]/items matches {
+                    ELEMENT[at0022] matches {
+                        /value[at9013]/magnitude matches {|6..20|}
+                    }
+                    after [at0022]
+                    ELEMENT[at0035] occurrences matches {0..1} matches {
+                        value matches {
+                            DV_ORDINAL[at0.9001] matches {
+                                [value, symbol] matches {
+                                    [{0}, {[at0036]}],
+                                    [{1}, {[at0037]}],
+                                    [{2}, {[at0038]}],
+                                    [{3}, {[at0039]}],
+                                    [{4}, {[at0040]}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Modified Braden Q Scale">
+                description = <"The Modified Braden Q Scale for paediatric use.">
+            >
+            ["ac0.9001"] = <
+                text = <"Braden risk grade (synthesised)">
+                description = <"A graded risk score based upon addition of all sub-scores that determines the patient's overall risk for developing a pressure ulcer. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0036", "at0037", "at0038", "at0039", "at0040">
+        >
+    >

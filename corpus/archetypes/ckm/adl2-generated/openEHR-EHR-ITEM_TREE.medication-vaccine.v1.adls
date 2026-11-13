@@ -1,0 +1,151 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-ITEM_TREE.medication-vaccine.v1.0.0
+
+specialize
+    openEHR-EHR-ITEM_TREE.medication.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.biz">
+        ["date"] = <"12/03/2006">
+    >
+    lifecycle_state = <"Rejected">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Specifies the description of the medication as part of an INSTRUCTION or ACTION recording taken with regard to medication. This will usually be in response to a medication order or prescription, but may be self administered or supplied by a pharmacy.">
+            keywords = <"medication", "description">
+            use = <"For use with INSTRUCTION.medication and ACTION.medication to describe the medication">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ITEM_TREE[at0000.1] matches {    -- Vaccine description
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Vaccine
+                value matches {
+                    DV_TEXT[at0.9000]
+                }
+            }
+            ELEMENT[at0003] matches {
+                value matches {
+                    DV_QUANTITY[at0.9002]
+                }
+            }
+            ELEMENT[at0004] matches {
+                value matches {
+                    DV_CODED_TEXT[at9070.1] matches {
+                        defining_code matches {[ac1]}
+                    }
+                }
+            }
+            ELEMENT[at0007] matches {
+                value matches {
+                    DV_QUANTITY[at9030] matches {
+                        [units] matches {
+                            [{"h"}],
+                            [{"min"}],
+                            [{"d"}],
+                            [{"s"}]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0010] matches {
+                items matches {
+                    ELEMENT[at0011.1] matches {    -- Vaccine target
+                        value matches {
+                            DV_TEXT[at0.9007]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0013] matches {
+                items matches {
+                    ELEMENT[at0016] matches {
+                        value matches {
+                            DV_QUANTITY[at9049] matches {
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"h"}],
+                                    [{|>=0.0|}, {"d"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0017] matches {
+                        value matches {
+                            DV_QUANTITY[at9050] matches {
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"h"}],
+                                    [{|>=0.0|}, {"min"}],
+                                    [{|>=0.0|}, {"s"}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0018] matches {
+                items matches {
+                    ELEMENT[at0019] matches {
+                        /value[at9052]/value
+                    }
+                    ELEMENT[at0032] matches {
+                        /value[at9056]/value
+                    }
+                }
+            }
+            after [at0001.1]
+            ELEMENT[at0002] occurrences matches {0..1} matches {
+                value matches {
+                    DV_TEXT[at0.9001]
+                }
+            }
+            after [at0004]
+            ELEMENT[at0005] occurrences matches {0..1} matches {
+                value matches {
+                    DV_COUNT[at0.9003] matches {
+                        magnitude matches {|>=1|}
+                    }
+                    DV_INTERVAL<DV_COUNT>[at0.9004] matches {
+                        upper matches {
+                            DV_COUNT[at0.9005]
+                        }
+                        lower matches {
+                            DV_COUNT[at0.9006] matches {
+                                magnitude matches {|>=1|}
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0006]
+            after [at0010]
+            ELEMENT[at0012]
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Vaccine description">
+                description = <"The description of a vaccine for recording as part of an ACTION or INSTRUCTION.">
+            >
+            ["at0001.1"] = <
+                text = <"Vaccine">
+                description = <"The name of the vaccine - which may be coded">
+            >
+            ["at0011.1"] = <
+                text = <"Vaccine target">
+                description = <"The indication for the intervention">
+            >
+        >
+    >

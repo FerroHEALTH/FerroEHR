@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -18,9 +18,31 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">6B8C30CF0E654F7B95C68F9252B6A33C</other_details>
-    <other_details id="build_uid">cc347ae1-e30c-4a2f-90e7-0c39180cbd53</other_details>
+    <other_details id="MD5-CAM-1.0.1">98A7F096D2E7B294925CA810958050ED</other_details>
+    <other_details id="build_uid">35e6c3a6-c48c-40b9-bdd7-6c720439084e</other_details>
     <other_details id="revision">0.0.1-alpha</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sv</code_string>
+      </language>
+      <purpose>Att registrera en individs blodgrupp och RhD-status.</purpose>
+      <keywords>blod</keywords>
+      <keywords>blodgrupp</keywords>
+      <keywords>blodgruppering</keywords>
+      <keywords>blodgruppsbestämning</keywords>
+      <keywords>ABO</keywords>
+      <keywords>rhesus</keywords>
+      <keywords>Rh</keywords>
+      <keywords>RhD</keywords>
+      <use>Används för att registrera en individs blodgrupp och RhD-status.&#xD;
+&#xD;
+Eftersom en individs blodgrupp och RhD-status vanligtvis är stabila under hela livet har denna arketyp modellerats som en EVALUATION.</use>
+      <misuse>Ska inte användas för att registrera resultat från blodgrupps- och antigentester som kan behöva utföras vid olika tillfällen under en individs liv, exempelvis för att bekräfta blodgrupp och antigenstatus inför transfusion eller organtransplantation, under graviditet eller vid utredning av vissa tillstånd hos nyfödda. Använd CLUSTER.laboratory_test_analyte som nästlas i OBSERVATION.laboratory_test_result för att registrera resultatet från varje enskilt test.</misuse>
+      <copyright />
+    </details>
     <details>
       <language>
         <terminology_id>
@@ -38,7 +60,74 @@ As the blood group and rhesus status of an individual is usually stable over the
       <misuse>Not to be used to record the result of blood group and antigen test results which may need to be performed at various times over an individual's life - for example, to confirm their blood group and antigen status prior to transfusion, organ transplantation, in pregnancy and investigating certain neonatal conditions. Use the CLUSTER.laboratory_test_analyte nested within the OBSERVATION.laboratory_test_result archetype to record the result of each individual test.</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ca</code_string>
+      </language>
+      <purpose>Registrar el grup sanguini i el factor Rh d'un individu.</purpose>
+      <keywords>sang</keywords>
+      <keywords>agrupació</keywords>
+      <keywords>Rh</keywords>
+      <use>Es fa servir per registrar el grup sanguini i el factor Rh d'un individu.&#xD;
+&#xD;
+Atès que el grup sanguini i el factor Rh d'un individu solen ser estables al llarg de la vida, aquest arquetip s'ha modelat com una EVALUATION.</use>
+      <misuse>No s'ha d'utilitzar per registrar el resultat de les proves de grup sanguini i antígens, les quals pot ser necessari realitzar diverses vegades al llarg de la vida d'un individu, per exemple, per confirmar el seu estat de grup sanguini i antígens abans d'una transfusió, un trasplantament d'òrgans, a l'embaràs i per investigar determinades afeccions neonatals. Utilitzeu l'arquetip CLUSTER.laboratory_test_analyte imbricat dins de l'arquetip OBSERVATION.laboratory_test_result per registrar el resultat de cada prova individual.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>es</code_string>
+      </language>
+      <purpose>Registrar el grupo sanguíneo y el factor Rh de un individuo.</purpose>
+      <keywords>sangre</keywords>
+      <keywords>agrupación</keywords>
+      <keywords>Rh</keywords>
+      <use>Se utiliza para registrar el grupo sanguíneo y el factor Rh de un individuo.&#xD;
+&#xD;
+Dado que el grupo sanguíneo y el factor Rh de un individuo suelen ser estables a lo largo de su vida, este arquetipo se ha modelado como una EVALUATION.</use>
+      <misuse>No debe utilizarse para registrar el resultado de las pruebas de grupo sanguíneo y antígenos, las cuales puede ser necesario realizar en varias ocasiones a lo largo de la vida de un individuo, por ejemplo, para confirmar su estado de grupo sanguíneo y antígenos antes de una transfusión, un trasplante de órganos, en el embarazo y para investigar determinadas afecciones neonatales. Utilice el arquetipo CLUSTER.laboratory_test_analyte anidado dentro del arquetipo OBSERVATION.laboratory_test_result para registrar el resultado de cada prueba individual.</misuse>
+      <copyright />
+    </details>
   </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sv</code_string>
+    </language>
+    <author id="name">Manna Vosta</author>
+    <author id="organisation">Karolinska University Hospital</author>
+    <author id="email">manna.vosta@regionstockholm.se</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ca</code_string>
+    </language>
+    <author id="name">Julio de Sosa</author>
+    <author id="organisation">Servei Català de la Salut</author>
+    <author id="email">juliodesosa@catsalut.cat</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>es</code_string>
+    </language>
+    <author id="name">Julio de Sosa</author>
+    <author id="organisation">Servei Català de la Salut</author>
+    <author id="email">juliodesosa@catsalut.cat</author>
+  </translations>
   <uid>
     <value>1b2f42dd-0683-406c-9c2a-35336f771cee</value>
   </uid>
@@ -356,7 +445,7 @@ As the blood group and rhesus status of an individual is usually stable over the
       </items>
       <items code="at0003">
         <items id="text">ABO blood group</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0004">
         <items id="text">Rh(D) antigen status</items>
@@ -364,27 +453,27 @@ As the blood group and rhesus status of an individual is usually stable over the
       </items>
       <items code="at0005">
         <items id="text">Last updated</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Extension</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">O</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">A</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">B</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">AB</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Positive</items>
@@ -395,6 +484,167 @@ As the blood group and rhesus status of an individual is usually stable over the
         <items id="description">Rh(D) antigen is not detected.</items>
       </items>
     </term_definitions>
+    <term_definitions language="sv">
+      <items code="at0000">
+        <items id="text">Blodgrupp</items>
+        <items id="description">Identifiering av en individs bestående blodgrupp och RhD-status.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">ABO-blodgrupp</items>
+        <items id="description" />
+      </items>
+      <items code="at0004">
+        <items id="text">RhD-antigen status</items>
+        <items id="description">Angivelse av förekomst eller avsaknad av RhD-antigen.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Senast uppdaterad</items>
+        <items id="description" />
+      </items>
+      <items code="at0006">
+        <items id="text">Extension</items>
+        <items id="description" />
+      </items>
+      <items code="at0007">
+        <items id="text">O</items>
+        <items id="description" />
+      </items>
+      <items code="at0008">
+        <items id="text">A</items>
+        <items id="description" />
+      </items>
+      <items code="at0009">
+        <items id="text">B</items>
+        <items id="description" />
+      </items>
+      <items code="at0010">
+        <items id="text">AB</items>
+        <items id="description" />
+      </items>
+      <items code="at0011">
+        <items id="text">Positiv</items>
+        <items id="description">RhD-antigen har påvisats.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Negativ</items>
+        <items id="description">RhD-antigen har inte påvisats.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="ca">
+      <items code="at0000">
+        <items id="text">Grup sanguini</items>
+        <items id="description">Identificació del grup sanguini i del factor Rh d'un individu.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Grup sanguini ABO</items>
+        <items id="description" />
+      </items>
+      <items code="at0004">
+        <items id="text">Factor Rh (antigen Rh [D])</items>
+        <items id="description">Presència o absència de l'antigen Rh(D).</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Última actualització</items>
+        <items id="description" />
+      </items>
+      <items code="at0006">
+        <items id="text">Extensió</items>
+        <items id="description" />
+      </items>
+      <items code="at0007">
+        <items id="text">O</items>
+        <items id="description" />
+      </items>
+      <items code="at0008">
+        <items id="text">A</items>
+        <items id="description" />
+      </items>
+      <items code="at0009">
+        <items id="text">B</items>
+        <items id="description" />
+      </items>
+      <items code="at0010">
+        <items id="text">AB</items>
+        <items id="description" />
+      </items>
+      <items code="at0011">
+        <items id="text">Positiu</items>
+        <items id="description">Es detecta l'antigen Rh(D).</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Negatiu</items>
+        <items id="description">No es detecta l'antigen Rh(D).</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="es">
+      <items code="at0000">
+        <items id="text">Grupo sanguíneo</items>
+        <items id="description">Identificación del grupo sanguíneo y del factor Rh de un individuo.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Grupo sanguíneo ABO</items>
+        <items id="description" />
+      </items>
+      <items code="at0004">
+        <items id="text">Factor Rh (antígeno Rh [D])</items>
+        <items id="description">Presencia o ausencia del antígeno Rh(D).</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Última actualización</items>
+        <items id="description" />
+      </items>
+      <items code="at0006">
+        <items id="text">Extensión</items>
+        <items id="description" />
+      </items>
+      <items code="at0007">
+        <items id="text">O</items>
+        <items id="description" />
+      </items>
+      <items code="at0008">
+        <items id="text">A</items>
+        <items id="description" />
+      </items>
+      <items code="at0009">
+        <items id="text">B</items>
+        <items id="description" />
+      </items>
+      <items code="at0010">
+        <items id="text">AB</items>
+        <items id="description" />
+      </items>
+      <items code="at0011">
+        <items id="text">Positivo</items>
+        <items id="description">Se detecta el antígeno Rh(D).</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Negativo</items>
+        <items id="description">No se detecta el antígeno Rh(D).</items>
+      </items>
+    </term_definitions>
   </ontology>
 </archetype>
-

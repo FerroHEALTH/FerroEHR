@@ -1,0 +1,1 @@
+- The worked `[authz.party_binding]` example of the book's authentication page names only definitions that exist: its `PERSON`, `ROLE`, `GROUP`, membership and representation ids and paths are those of the shipped default set, and a test boots the example from the page against the files.

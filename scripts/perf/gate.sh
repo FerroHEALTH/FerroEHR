@@ -6,19 +6,22 @@
 # judges the head of a change against its base, both measured side by side on
 # one runner in one job (ferrohealth-perf's A/B mode), each arm the image of
 # its own tree under its own tree's gate configuration, templates, SCIM
-# client and seed data (the family rule). `run` measures one server and holds
-# it to the idle limits. Either fails when the head works while idle (CPU, or
-# transactions in its database); `ab` also fails when the head is slower,
+# client and seed data (the family rule). It fails when the head works while
+# idle (CPU, or transactions in its database), or when the head is slower,
 # heavier or busier under load than its base by more than the plan's
-# tolerance. No openEHR spec governs this: our own design.
+# tolerance. The pull-request gate runs it against main and the release lane
+# against the previous published release, so no baseline is stored (#5095).
+# No openEHR spec governs this: our own design.
 #
 # The server runs in a container of the image under test with
 # perf/ferroehr.toml as its configuration, its database in a container of the
 # FerroEHR PostgreSQL image, both on a network of their own; ferrohealth-perf
 # reads the server's cgroup and counts the transactions of its database.
-# Before serve, the professional templates of deploy/definitions/professional/
-# are loaded, and once it is ready the Basic user is bound to a PERSON through
-# SCIM (scripts/scim-provision.sh). The seed writes one EHR the reads use and
+# The server stores its default demographic definitions at boot (a base tree
+# that predates that has them loaded before serve), and once it is ready the
+# Basic user is bound to a PERSON through SCIM (scripts/scim-provision.sh, which grants
+# the client scim_provision through the server first, and the PERSON its
+# scopes and role after). The seed writes one EHR the reads use and
 # never changes, one EHR the commits write into, the lab-results template with
 # a result, and a PERSON, and the plan is rendered with their ids
 # (perf/plan.toml, `@NAME@`).
@@ -30,8 +33,6 @@
 #       <base-rev>, or the commit the base image names
 #       (org.opencontainers.image.revision), taken from this clone's history
 #       with `git archive`
-#   scripts/perf/gate.sh run <image> <pg-image>      one server: the idle limits, the load reported
-#   scripts/perf/gate.sh update <image> <pg-image>   one server, writing perf/baseline.toml
 #   scripts/perf/gate.sh self-test <image> <pg-image>
 #       an idle busy-loop against the database must fail the idle phase,
 #       naming idle.transactions_per_second
@@ -77,7 +78,7 @@ OUT="${PERF_OUT:-$ROOT/target/perf}"
 readonly OUT
 
 usage() {
-  sed -n '26,39p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+  sed -n '/^# Usage:$/,/^#$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
@@ -158,17 +159,30 @@ up() {
     -v "$tree/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro"
     -v "$tree/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"
     -v "$tree/deploy/definitions/professional:/etc/ferroehr/definitions:ro")
-  # The professional templates the party mapping names are stored before serve.
-  docker run --rm "${process[@]}" "$image" definitions load \
-    /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls \
-    /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls >/dev/null
+  # A base tree whose configuration still names the professional templates
+  # predates the default party mapping, and its server stores no default
+  # definitions, so they are stored before serve; a newer server stores them
+  # at boot.
+  if grep -q '^template_id' "$tree/perf/ferroehr.toml"; then
+    docker run --rm "${process[@]}" "$image" definitions load \
+      /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls \
+      /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls >/dev/null
+  fi
   docker run -d --name "$server" -p "127.0.0.1:${http_port}:8080" "${process[@]}" \
     "$image" >/dev/null
   SERVER_URL="http://127.0.0.1:${http_port}"
   DATABASE_URL="postgres://postgres:${PG_SUPER_SECRET}@127.0.0.1:${pg_port}/ferroehr"
   TARGET=(--container "$(docker inspect -f '{{.Id}}' "$server")")
   wait_for "FerroEHR$suffix" 120 curl -fsS "$SERVER_URL/health/readiness"
-  bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users ferroehr >/dev/null
+  # A tree whose SCIM clients are grants in the CDR grants its client through
+  # the server first; an older tree declares it in its configuration.
+  if grep -q 'binding-issuer' "$tree/scripts/scim-provision.sh"; then
+    SCIM_GRANT="docker exec $server /usr/local/bin/ferroehr" \
+      bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users urn:ferroehr:basic-user \
+      ferroehr >/dev/null
+  else
+    bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users ferroehr >/dev/null
+  fi
   seed "$tree"
 }
 
@@ -258,28 +272,6 @@ prepare() { # <image> <pg-image>
   fi
 }
 
-gate() { # <update: true|false> <image> <pg-image>
-  local update="$1" bin
-  shift
-  bin=$(binary)
-  prepare "$@"
-  render "$ROOT/perf/plan.toml" "$OUT/plan.toml"
-  local -a extra=()
-  [[ "$update" == true ]] && extra=(--update)
-  local status=0
-  "$bin" run --plan "$OUT/plan.toml" --baseline "$ROOT/perf/baseline.toml" "${TARGET[@]}" \
-    --base-url "$SERVER_URL" --database-url "$DATABASE_URL" --out-dir "$OUT" \
-    --summary "$OUT/summary.md" ${extra[@]+"${extra[@]}"} || status=$?
-  # TODO(#5095): commit the load baseline perf-baseline.yml writes per CPU
-  # model; until then a run judges the idle limits and reports the load.
-  if [[ "$status" == 2 && "$update" == false && ! -f "$ROOT/perf/baseline.toml" ]] \
-    && unjudged_for_no_baseline "$OUT/summary.md"; then
-    echo "perf gate: the idle limits held; the load phase is reported, not judged, until perf/baseline.toml lands (#5095)"
-    return 0
-  fi
-  return "$status"
-}
-
 # base_tree <base-image> [<rev>]: the source tree of <rev>, or of the commit
 # the base image names (org.opencontainers.image.revision), archived from
 # this clone into BASE_TREE, so the base arm runs under its own tree's
@@ -326,16 +318,6 @@ ab() {
   return "$status"
 }
 
-# Whether the run's only reason it could not be judged is the missing
-# baseline: every check passed, every request was answered as the plan
-# expects, and the generator and the window were sound.
-unjudged_for_no_baseline() { # <summary.md>
-  local reasons
-  reasons=$(awk '/^### Why it could not be judged/ { on = 1; next } /^### / { on = 0 } on && /^- / { print }' "$1")
-  [[ "$reasons" == "- there is no baseline; write one with --update" ]] || return 1
-  ! grep -qE '^### Breaches|^### Requests answered other than expected|\| FAIL \|$' "$1"
-}
-
 # The plan with a short idle window and a short load, so the self-test spends
 # about half a minute; the idle limits are the committed plan's own.
 short_plan() { # <out>
@@ -379,12 +361,10 @@ shift
 case "$command" in
 pin) pin ;;
 install) install ;;
-ab | run | update | self-test)
+ab | self-test)
   trap teardown EXIT
   case "$command" in
   ab) ab "$@" ;;
-  run) gate false "$@" ;;
-  update) gate true "$@" ;;
   self-test) self_test "$@" ;;
   esac
   ;;

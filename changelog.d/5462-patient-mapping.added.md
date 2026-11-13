@@ -1,0 +1,1 @@
+- `[authz.party_binding.patient]` names the template of a patient's `PERSON` (`template_id`), the path of its identifiers (`identifier`) and the path of its name (`name`), and defaults to the shipped `openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0`. Boot judges it against the definition store, and a `PERSON` written under that template is validated against it.
