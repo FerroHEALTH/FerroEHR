@@ -6,7 +6,8 @@
 //! module's previously generated files, and declare the hand-written modules
 //! beside them.
 
-use crate::cli::{declare_hand_written_modules, remove_generated_files, rustfmt, write_emitted};
+use crate::cli::{rustfmt, write_emitted};
+use crate::generated_tree::{declare_hand_written_modules, remove_generated_files};
 use crate::render::emit_drafts::{draft_roots, render_draft_files, workspace_root};
 
 /// Regenerate every draft module of `plan::drafts::DRAFTS`.

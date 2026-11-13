@@ -67,10 +67,14 @@ impl DraftModule {
     }
 }
 
-/// Whether `crate_name` receives at least one draft module, so its generated
-/// `lib.rs` declares the feature-gated [`MODULE`].
-pub(crate) fn has_drafts(crate_name: &str) -> bool {
-    DRAFTS.iter().any(|d| d.crate_name == crate_name)
+/// The feature-gated declaration of [`MODULE`] the generated `lib.rs` of
+/// `crate_name` carries when it receives at least one draft, else nothing.
+pub(crate) fn lib_declaration(crate_name: &str) -> String {
+    if DRAFTS.iter().any(|d| d.crate_name == crate_name) {
+        format!("#[cfg(feature = \"{MODULE}\")]\npub mod {MODULE};\n")
+    } else {
+        String::new()
+    }
 }
 
 /// Refuse a row whose target is no openEHR crate of `crates/`: a draft is an

@@ -35,5 +35,6 @@ pub(crate) mod emit_xml_guards;
 pub(crate) mod json_bounds;
 pub(crate) mod model_query;
 pub(crate) mod model_types;
+pub(crate) mod module_tree;
 pub(crate) mod naming;
 pub(crate) mod spdx;
