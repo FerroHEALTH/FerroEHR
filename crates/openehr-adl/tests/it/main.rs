@@ -25,6 +25,7 @@ mod adl14_custom_constraints;
 mod adl14_dadl_breadth;
 mod adl14_header_sections;
 mod assembly;
+mod c_string_constraint;
 mod ckm_adl2_generated;
 mod ckm_archetype_packs;
 mod ckm_conversion_breadth;

@@ -33,6 +33,7 @@ use crate::aom::access::{aom_type, child_occurrences, complex_attributes, object
 use crate::aom::interval::finite_upper;
 use crate::artefact::ArchetypeView;
 use crate::hrid::is_archetype_id;
+use crate::odin::is_delimited_regex;
 use crate::parse::Dialect;
 use crate::paths::child_path;
 use openehr_am::v2_4::aom2::definitions::adl_code_definitions::AdlCodeDefinitionsData;
@@ -124,7 +125,6 @@ impl StructureScan<'_> {
             CObject::CBoolean(_)
             | CObject::CInteger(_)
             | CObject::CReal(_)
-            | CObject::CString(_)
             | CObject::CDate(_)
             | CObject::CTime(_)
             | CObject::CDateTime(_)
@@ -133,6 +133,10 @@ impl StructureScan<'_> {
             // flat-form (phase-3) check, so it runs in [`super::flat`]
             // (`master08` §Phase 3; `master04.5` VUNP), not in the phase-1 walk.
             CObject::CComplexObjectProxy(_) => {}
+            CObject::CString(s) => {
+                self.check_string_constraint(path, s.constraint.as_deref().unwrap_or_default());
+                self.check_primitive_assumed(path, obj);
+            }
         }
         if let Some(outer_ids) = outer_ids {
             self.seen_node_ids = outer_ids;
@@ -485,6 +489,33 @@ impl StructureScan<'_> {
                 path,
             );
         }
+    }
+
+    /// `C_STRING.constraint`: a string constraint is either a list of fixed
+    /// Strings or a single regular expression
+    /// (`ADL2/master04.5-cadl_primitive_types.adoc` §Constraints on String).
+    ///
+    /// A regular expression is told apart by its `/` or `^` delimiters, the
+    /// stored form the AOM2 `C_STRING` class table defines, so a mixture and a
+    /// second regular expression are both refused.
+    fn check_string_constraint(&mut self, path: &str, constraint: &[String]) {
+        let regexes = constraint.iter().filter(|c| is_delimited_regex(c)).count();
+        if regexes == 0 || constraint.len() == 1 {
+            return;
+        }
+        let message = if regexes == constraint.len() {
+            "string constraint carries more than one regular expression"
+        } else {
+            "string constraint mixes fixed Strings with a regular expression"
+        };
+        // NOTE: `AOM2/master08-validation.adoc` names no validity code for this
+        // rule, so `C_STRING.constraint` is our own.
+        push_issue(
+            &mut self.issues,
+            ValidationCode::CStringConstraint,
+            message,
+            path,
+        );
     }
 
     /// VOBAV: a primitive assumed value must fall within its own constraint
