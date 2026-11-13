@@ -26,7 +26,7 @@ use openehr_rm::v1_2::data_types::quantity::date_time::dv_date::DvDate;
 use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
-use crate::access_log_draft::access_log::access_retention::AccessRetention;
+use openehr_rm::draft::access_log::access_log::access_retention::AccessRetention;
 
 /// The terminology a retention ground is coded in.
 ///

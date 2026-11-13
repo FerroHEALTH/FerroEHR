@@ -38,13 +38,13 @@ use serde_json::Value;
 use sqlx::postgres::PgRow;
 use sqlx::{Connection, PgPool, Row};
 
-use crate::access_log_draft::access_log::access_log_entry::AccessLogEntry;
-use crate::access_log_draft::access_log::access_log_link::AccessLogLink;
-use crate::access_log_draft::access_log::access_log_record::AccessLogRecord;
-use crate::access_log_draft::access_log::access_log_tombstone::AccessLogTombstone;
-use crate::access_log_invariants::{check_entry, check_tombstone};
 use crate::db::acquire::{AcquireError, acquire};
-use crate::draft_invariants::Violations;
+use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
+use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
+use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
+use openehr_rm::draft::access_log::access_log::access_log_tombstone::AccessLogTombstone;
+use openehr_rm::draft::access_log::invariants::{check_entry, check_tombstone};
+use openehr_rm::draft::invariants::Violations;
 
 /// The member of a record's ITS-JSON form its canonical form leaves out.
 const LINK: &str = "link";

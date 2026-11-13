@@ -38,6 +38,7 @@
 mod analyze;
 mod cli;
 mod draft_cli;
+mod generated_tree;
 mod load;
 mod plan;
 mod render;

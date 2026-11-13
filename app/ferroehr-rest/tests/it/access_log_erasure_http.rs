@@ -17,13 +17,13 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::access_log::store::AccessLogStore;
-use ferroehr::access_log_draft::access_log::access_log_record::AccessLogRecord;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::{AuditStore, VerifyScope};
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
 use http::{Request, StatusCode, header};
+use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 use serde_json::{Value, json};
 use sqlx::PgPool;
 

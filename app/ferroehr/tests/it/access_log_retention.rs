@@ -15,13 +15,13 @@ use sqlx::PgPool;
 
 use ferroehr::access_log::expiry::expire;
 use ferroehr::access_log::store::{AccessLogStore, canonical_form};
-use ferroehr::access_log_draft::access_log::access_log_entry::AccessLogEntry;
-use ferroehr::access_log_draft::access_log::access_log_record::AccessLogRecord;
+use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
+use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
 /// The proposal's example entry with the uid and EHR of number `n`, kept to
 /// the end of `retain_until`.
 fn entry(n: u32, retain_until: &str) -> AccessLogEntry {
-    let mut value = crate::access_log_draft::example();
+    let mut value = crate::access_log_store::example();
     value["uid"]["value"] = json!(uid(n));
     value["ehr_id"]["value"] = json!(format!("7d44b88c-4199-4bad-97dc-{n:012x}"));
     value["retention"]["retain_until"]["value"] = json!(retain_until);

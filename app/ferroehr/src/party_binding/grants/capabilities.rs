@@ -24,6 +24,7 @@ use std::sync::Arc;
 use serde_json::Value;
 use uuid::Uuid;
 
+use crate::party_binding::grants::caller::CallerFacts;
 use crate::party_binding::grants::derive::walk;
 use crate::party_binding::grants::operation::{NO_SUBJECT_NAMESPACE, Operation, SCOPES};
 use crate::party_binding::policy_mark::coded;
@@ -264,19 +265,39 @@ impl<'a> Credentials<'a> {
     }
 }
 
-/// What one caller may do: the `ACTOR` its client identifier names, and the
-/// grants in force on the request.
+/// What one caller may do: the `ACTOR` its client identifier names, the
+/// grants in force on the request, and the caller facts the access
+/// evaluator reads.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Capabilities {
     client: Option<Client>,
     grants: Vec<Grant>,
+    facts: CallerFacts,
 }
 
 impl Capabilities {
     /// The capabilities of the client `client` or of a party, holding
-    /// `grants`.
+    /// `grants` and no caller facts.
     pub(crate) fn new(client: Option<Client>, grants: Vec<Grant>) -> Self {
-        Self { client, grants }
+        Self {
+            client,
+            grants,
+            facts: CallerFacts::default(),
+        }
+    }
+
+    /// These capabilities holding the caller facts `facts`.
+    #[must_use]
+    pub(crate) fn with_facts(mut self, facts: CallerFacts) -> Self {
+        self.facts = facts;
+        self
+    }
+
+    /// The caller's clearances, permitted purposes and care teams in force
+    /// on the request.
+    #[must_use]
+    pub fn facts(&self) -> &CallerFacts {
+        &self.facts
     }
 
     /// The capabilities of the caller of the running request; none outside

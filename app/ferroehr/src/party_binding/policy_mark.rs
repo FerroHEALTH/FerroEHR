@@ -230,6 +230,16 @@ mod tests {
 
     use super::*;
 
+    #[test]
+    fn the_draft_access_control_terminology_is_the_operation_terminology() {
+        // The draft access control's groups live in this terminology until
+        // openEHR adopts them, so its invariants and the policy marks agree.
+        assert_eq!(
+            TERMINOLOGY,
+            openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL
+        );
+    }
+
     /// A `DV_CODED_TEXT` of `code` in `terminology`.
     fn coded_text(code: &str, terminology: &str) -> Value {
         json!({ "_type": "DV_CODED_TEXT", "value": code,

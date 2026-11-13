@@ -16,14 +16,14 @@ use openehr_base::containers::NonEmptyVec;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
 use crate::access_log::store::{AccessLogError, AccessLogStore};
-use crate::access_log_draft::access_log::access_log_record::AccessLogRecord;
-use crate::access_log_draft::access_log::access_log_tombstone::AccessLogTombstone;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
 use crate::versioning::audit::dv_date_time;
+use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
+use openehr_rm::draft::access_log::access_log::access_log_tombstone::AccessLogTombstone;
 
 /// The name the access record gives the act.
 const ACT: &str = "access-log-erasure";
