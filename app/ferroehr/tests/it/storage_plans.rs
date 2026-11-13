@@ -865,6 +865,7 @@ fn aql_sql_for(
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
         policy_parties,
+        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
     };
     ferroehr::aql::sql::build(&ir, params, &ctx).expect("the AQL lowers to SQL")
 }

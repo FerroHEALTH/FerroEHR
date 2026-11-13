@@ -156,6 +156,9 @@ impl FerroEhrService {
         // Multi-EHR scoping (`ehr_ids: List<UUID>`): an absent id raises
         // `ehr_id_does_not_exist`.
         self.check_ehr_ids(&request.ehr_ids).await?;
+        let access_settings = Box::pin(self.ehr_access_readers())
+            .await
+            .map_err(Failure::analysis)?;
         let ctx = SqlCtx {
             system_id: self.effective_system_id(),
             ehr_ids: request.ehr_ids.clone(),
@@ -175,6 +178,7 @@ impl FerroEhrService {
             // because SQL building is synchronous.
             archetype_lineage: self.archetype_lineage().await,
             policy_parties: PolicyParties::of_request(&self.binding),
+            access_settings,
         };
 
         let exec_start = Instant::now();
@@ -760,6 +764,7 @@ mod tests {
             offset: None,
             archetype_lineage: std::sync::Arc::new(crate::aql::lineage::ArchetypeLineage::default()),
             policy_parties: crate::aql::sql::PolicyParties::Served,
+            access_settings: crate::aql::sql::EhrAccessReaders::Every,
         };
         let pool = closed_pool().await;
         let failure = crate::aql::exec::execute(&pool, &ir, &params, &ctx, profile)

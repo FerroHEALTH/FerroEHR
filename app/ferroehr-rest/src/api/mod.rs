@@ -363,7 +363,7 @@ where
     // an access-service caller unless it declares a vital interest under Art. 10(2).
     let opted_out = opt_out::applies(&state, op);
     let guarded = Box::pin(async move {
-        match ehr_access::enforce(&state, op, &parts).await {
+        match ehr_access::enforce(&state, &parts).await {
             Ok(()) => {
                 if enforced {
                     match restriction::refuse_restricted(&state, op, &parts).await {

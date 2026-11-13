@@ -24,9 +24,11 @@
 
 use std::sync::Arc;
 
+use crate::aql::sql::EhrAccessReaders;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
-use crate::service::ehr::access_types::{EhrAccessIndex, EhrAccessSettings};
+use crate::service::ehr::access_rule::SettingsCaller;
+use crate::service::ehr::access_settings::{EhrAccessIndex, EhrAccessSettings};
 use moka::future::Cache;
 use openehr_rm::prelude::{DvText, DvTextData, EhrAccess};
 use serde_json::Value;
@@ -100,15 +102,45 @@ impl FerroEhrService {
         Ok(())
     }
 
+    /// Commits the default [`initial_ehr_access`] for every EHR that holds no
+    /// `EHR_ACCESS`, each in its own transaction, and returns how many it
+    /// restored.
+    ///
+    /// `EHR.ehr_access` is 1..1 (RM ehr `ehr.adoc` invariant
+    /// `Ehr_access_valid`); an EHR is left without one only when a migration
+    /// drops settings of a scheme the server no longer keeps, so a boot finds
+    /// none on every other occasion.
+    ///
+    /// # Errors
+    /// The storage read errors and the
+    /// [`crate::versioning::change::commit_contribution`] write errors.
+    pub async fn restore_default_ehr_access(&self) -> Result<usize, ServiceError> {
+        let missing = crate::storage::version_repo::ehr_access::ehrs_without_ehr_access(&self.pool)
+            .await
+            .map_err(ServiceError::from)?;
+        for ehr_id in &missing {
+            let mut conn = crate::db::acquire::acquire(&self.pool).await?;
+            let mut tx = sqlx::Connection::begin(&mut *conn).await?;
+            self.commit_default_ehr_access(&mut tx, *ehr_id, "EHR_ACCESS restored at boot")
+                .await?;
+            tx.commit().await?;
+            self.invalidate_ehr_access(*ehr_id).await;
+        }
+        if !missing.is_empty() {
+            tracing::info!(restored = missing.len(), "default EHR_ACCESS restored");
+        }
+        Ok(missing.len())
+    }
+
     /// Read + parse the EHR's current `EHR_ACCESS` scheme settings from
-    /// storage (the cache-miss path). `None` when the EHR has no `EHR_ACCESS`,
-    /// its settings are absent, or they belong to another scheme — all
-    /// default-open.
+    /// storage (the cache-miss path). `None` when the EHR has no `EHR_ACCESS`
+    /// or its `EHR_ACCESS` carries no settings, which the server-wide default
+    /// governs.
     ///
     /// # Errors
     /// [`ServiceError`] when the storage read fails, and an internal fault
-    /// naming the EHR when its settings carry this server's scheme but do not
-    /// parse: a privacy control that cannot be read refuses the EHR.
+    /// naming the EHR when its settings do not read as the `access_directives`
+    /// scheme: a privacy control that cannot be read refuses the EHR.
     async fn load_ehr_access_settings(
         &self,
         ehr_id: EhrId,
@@ -137,9 +169,8 @@ impl FerroEhrService {
     /// never clones an access list) — the `EhrAccessAdapter` native-API
     /// extension: the protocol adapter (`ferroehr-rest`), the access-decision
     /// point, reads the settings through this seam. No openEHR spec governs
-    /// this adapter, our own extension. `None` = default-open (no settings, or
-    /// a scheme this
-    /// server does not understand).
+    /// this adapter, our own extension. `None` when the EHR carries no
+    /// settings, which the server-wide default governs.
     ///
     /// # Errors
     /// [`ServiceError`] when the cache-miss load (the `current_vo` + `read_current`
@@ -165,8 +196,8 @@ impl FerroEhrService {
         .await
     }
 
-    /// Every EHR whose current `EHR_ACCESS` carries settings this server
-    /// understands, with those settings: the input of the per-EHR decision a
+    /// Every EHR whose current `EHR_ACCESS` carries settings, with those
+    /// settings: the input of the per-EHR decision a
     /// query applies to every EHR it could reach, where the path routes decide
     /// one EHR at a time ([`Self::current_ehr_access_settings`]). An EHR absent
     /// from the list has no settings and falls to the server-wide default.
@@ -189,10 +220,81 @@ impl FerroEhrService {
         .await
     }
 
+    /// Refuses a caller who may not commit the next `EHR_ACCESS` version of
+    /// `ehr_id`, judged against the current settings read on the commit's
+    /// own transaction ([`SettingsCaller::may_write`]).
+    ///
+    /// # Errors
+    /// [`ServiceError::Forbidden`] (`403`) for a caller who is neither an
+    /// administrator nor a gate-keeper of the current settings, and the
+    /// storage error of the read.
+    pub(in crate::service) async fn check_ehr_access_writer(
+        &self,
+        tx: &mut PgConnection,
+        ehr_id: EhrId,
+    ) -> Result<(), ServiceError> {
+        let caller = self.settings_caller();
+        if caller.administrator() {
+            return Ok(());
+        }
+        let body =
+            crate::storage::version_repo::ehr_access::current_ehr_access_body(tx, ehr_id).await?;
+        let current = match body {
+            Some(body) => {
+                let value: Value = serde_json::from_str(&body)
+                    .map_err(|e| ServiceError::internal("read a stored EHR_ACCESS body", e))?;
+                EhrAccessSettings::held_or_read(&value)
+            }
+            None => None,
+        };
+        caller.may_write(current.as_ref())
+    }
+
+    /// Who the running request's caller is to the `EHR_ACCESS` settings.
+    #[must_use]
+    pub fn settings_caller(&self) -> SettingsCaller {
+        SettingsCaller::current(&self.binding)
+    }
+
+    /// Whether the running request's caller may read the `EHR_ACCESS`
+    /// settings of `ehr_id` ([`SettingsCaller::may_read`]).
+    ///
+    /// # Errors
+    /// [`ServiceError`] when the settings cannot be read.
+    pub async fn may_read_ehr_access(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
+        let caller = self.settings_caller();
+        if caller.reads_every() {
+            return Ok(true);
+        }
+        let settings = self.current_ehr_access_settings(ehr_id).await?;
+        Ok(caller.may_read((*settings).as_ref()))
+    }
+
+    /// The EHRs whose `EHR_ACCESS` objects the running request's query reads:
+    /// every EHR's for a caller who reads them all, otherwise the EHRs whose
+    /// settings name the caller a gate-keeper.
+    ///
+    /// # Errors
+    /// [`ServiceError`] when the settings index cannot be read.
+    pub async fn ehr_access_readers(&self) -> Result<EhrAccessReaders, ServiceError> {
+        let caller = self.settings_caller();
+        if caller.reads_every() {
+            return Ok(EhrAccessReaders::Every);
+        }
+        let index = self.ehr_access_settings_index().await?;
+        Ok(EhrAccessReaders::Only(
+            index
+                .iter()
+                .filter(|(_, settings)| caller.is_gate_keeper(Some(settings)))
+                .map(|(ehr_id, _)| *ehr_id)
+                .collect(),
+        ))
+    }
+
     /// The cache-miss path of [`Self::ehr_access_settings_index`].
     async fn load_ehr_access_index(&self) -> Result<Vec<(EhrId, EhrAccessSettings)>, ServiceError> {
         let bodies =
-            crate::storage::version_repo::meta::ehr_access_bodies_with_settings(&self.pool)
+            crate::storage::version_repo::ehr_access::ehr_access_bodies_with_settings(&self.pool)
                 .await
                 .map_err(ServiceError::from)?;
         let mut index = Vec::with_capacity(bodies.len());
@@ -209,7 +311,7 @@ impl FerroEhrService {
                         error = cause,
                         "EHR_ACCESS settings do not parse; no query reaches the EHR"
                     );
-                    index.push((ehr_id, EhrAccessSettings::held_closed()));
+                    index.push((ehr_id, EhrAccessSettings::HeldClosed));
                 }
             }
         }
