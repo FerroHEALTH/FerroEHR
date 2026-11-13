@@ -500,7 +500,9 @@ fn the_settings_definition_validates_against_the_rm_with_the_drafts() {
 fn the_settings_definition_is_refused_by_the_rm_without_the_drafts() {
     let errors = errors_against(&openehr_adl::validate::rm::ProductionRmModel);
     assert!(
-        errors.iter().any(|e| e.starts_with("VCORM") && e.contains("ACCESS_DIRECTIVE_SETTINGS")),
+        errors
+            .iter()
+            .any(|e| e.starts_with("VCORM") && e.contains("ACCESS_DIRECTIVE_SETTINGS")),
         "{errors:?}"
     );
 }
