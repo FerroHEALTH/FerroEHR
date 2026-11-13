@@ -198,6 +198,71 @@ async fn an_entry_that_breaks_an_invariant_is_not_written() {
     assert_eq!(count, 0, "the batch leaves nothing behind");
 }
 
+/// An openEHR-coded term of the draft's groups.
+fn openehr(rubric: &str) -> Value {
+    json!({ "_type": "DV_CODED_TEXT", "value": rubric,
+            "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": rubric } })
+}
+
+/// An entry carries the grounds of its access decision and its emergency
+/// mark through the store unchanged, and a refused access that reached no
+/// EHR is stored with no EHR: the two shapes the request path (#5126) and
+/// the decision grounds (#5514) write.
+#[tokio::test]
+async fn an_entry_keeps_its_decision_grounds_and_a_refusal_needs_no_ehr() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AccessLogStore::new(pool.clone());
+
+    let mut grounded = serde_json::to_value(entry(1)).expect("the entry writes");
+    grounded["is_emergency"] = json!(true);
+    grounded["authorisations"] = json!([
+        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("role") },
+        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("treatment relationship") },
+        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("consent"),
+          "reference": { "_type": "DV_IDENTIFIER", "issuer": "cdr.example.org",
+              "id": "8849182c-82ad-4088-a07f-48ead4180515::cdr.example.org::2",
+              "type": "EHR_ACCESS" } },
+        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("agreement"),
+          "policy": { "_type": "DV_URI", "value": "ehr://cdr.example.org/access_policy/1" },
+          "name": "access policy", "version": "3",
+          "legal_grounds": [openehr("legal obligation")] },
+        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("emergency") }
+    ]);
+    let grounded: AccessLogEntry =
+        serde_json::from_value(grounded).expect("the grounded entry reads");
+
+    let mut refused = serde_json::to_value(entry(2)).expect("the entry writes");
+    refused["outcome"] = json!({ "_type": "ACCESS_OUTCOME", "result": openehr("refused"),
+        "reason": { "_type": "DV_CODED_TEXT", "value": "no grant",
+            "defining_code": { "terminology_id": { "value": "local" }, "code_string": "no-grant" } },
+        "delivered": 0 });
+    let members = refused.as_object_mut().expect("an object");
+    members.remove("ehr_id");
+    members.remove("items");
+    let refused: AccessLogEntry = serde_json::from_value(refused).expect("the refusal reads");
+
+    let written = store
+        .append(vec![grounded, refused])
+        .await
+        .expect("both append");
+    for entry in &written {
+        let read = store.read(entry.uid.value()).await.expect("read");
+        assert_eq!(read, Some(AccessLogRecord::AccessLogEntry(entry.clone())));
+    }
+    let grounds = written[0].authorisations.as_deref().unwrap_or_default();
+    assert_eq!(grounds.len(), 5, "every ground is kept");
+    assert!(written[0].is_emergency);
+
+    let row = sqlx::query("SELECT ehr_id, result FROM audit.access_log_record WHERE chain_seq = 2")
+        .fetch_one(&pool)
+        .await
+        .expect("the refusal's search columns");
+    assert_eq!(row.get::<Option<String>, _>("ehr_id"), None);
+    assert_eq!(row.get::<String, _>("result"), "refused");
+    assert_eq!(findings(&pool).await, Vec::new(), "both verify");
+}
+
 /// The statements that insert a forged record at position 2 and move every
 /// later record one on, its link correct for the record before it.
 const INSERTED: &[&str] = &[
