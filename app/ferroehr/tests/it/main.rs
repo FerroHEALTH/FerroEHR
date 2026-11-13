@@ -36,10 +36,8 @@
               approval 2026-11-02, #4767)"
 )]
 
-mod access_control_draft;
 mod access_delay_sinks;
 mod access_event_fail_closed;
-mod access_log_draft;
 mod access_log_store;
 mod access_origins;
 mod adl14_knowledge_archetypes;
@@ -59,6 +57,7 @@ mod audit_ehds_mapping;
 mod audit_feed;
 mod audit_store;
 mod audit_text;
+mod caller_facts;
 mod canonical_json_literals;
 mod codec_corpus;
 mod cohort_bench;

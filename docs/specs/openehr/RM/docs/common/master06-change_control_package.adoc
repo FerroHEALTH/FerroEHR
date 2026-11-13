@@ -202,7 +202,7 @@ Logical deletion can be used for various reasons, including patient direction to
 
 The version identification scheme described here is adapted from cite:[Hnìtynka2004]. `VERSION` objects are identified by a `_uid_` attribute of type `OBJECT_VERSION_ID`, which is a three-part String identifier consisting of the sub-parts extractable via the accessors `_object_id()_`, `_creating_system_id()_` and `_version_tree_id()_` (see the {openehr_base_types}#_identification_package[`base_types.identification` package] in the BASE component), in which the `__object_id()__` part is a copy of the `__uid__` of the owning `VERSIONED_OBJECT` version container.
 
-The following figure illustrates the scheme. The `VERSIONED_OBJECT._uid_` value - here, `"1234"` - is used as the `_object_id()_` part of the `_uid_` of every contained `VERSION`. Accordingly, each of those versions will have a `_uid_` following the pattern `"1234:system_id:version_tree_id"`. The use of the `_version_tree_id_` and `_system_id_` parts of the identifier are explained in the sections below. The function `VERSION._owner_id()_` is provided to enable a caller to easily obtain the 'owning version container' identifier.
+The following figure illustrates the scheme. The `VERSIONED_OBJECT._uid_` value - here, `"1234"` - is used as the `_object_id()_` part of the `_uid_` of every contained `VERSION`. Accordingly, each of those versions will have a `_uid_` following the pattern `"1234::system_id::version_tree_id"`. The use of the `_version_tree_id_` and `_system_id_` parts of the identifier are explained in the sections below. The function `VERSION._owner_id()_` is provided to enable a caller to easily obtain the 'owning version container' identifier.
 
 [.text-center]
 .Version identification system
@@ -233,7 +233,7 @@ However, in a distributed environment where copying and subsequent modification 
 * it must be possible to send more recent versions from the original system to a target system that has already received earlier versions, and for these versions to be distinguishable from versions in the receiving system, including the previously imported versions - this enables the receiving system to know how and where to commit the received versions;
 * it must be guaranteed that any version of any object is uniquely identified globally, no matter whether it is a locally created trunk version, a locally created branch version or a version containing changes made to a copied version.
 
-To satisfy these needs, two modifications are made to the identification scheme. The first is the addition of the `_creating_system_id_` attribute of `VERSION._uid_`, representing the system where the version was created. This is a machine processable identifier, such as a reverse internet address or GUID.
+To satisfy these needs, two modifications are made to the identification scheme. The first is the addition of the `_creating_system_id_` attribute of `VERSION._uid_`, representing the system where the version was created. This is a machine processable identifier, such as a reverse domain name, GUID or ISO OID.
 
 Whenever a new `ORIGINAL_VERSION` in a particular `VERSIONED_OBJECT` (with a particular UID) is created locally, the `VERSION._uid.creating_system_id_` is set to the identifier of the local system; if the version was imported, `_creating_system_id_` will already have been set to the identifier of the system of original creation.
 

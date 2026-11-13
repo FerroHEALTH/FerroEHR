@@ -1,0 +1,13 @@
+=== ACCESS_ACTOR_SCOPE Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_actor_scope.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_actor_scope.adoc[]
+
+====

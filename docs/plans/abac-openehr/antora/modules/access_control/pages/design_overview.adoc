@@ -1,0 +1,62 @@
+include::partial$module_vars.adoc[]
+
+= Design Overview
+
+include::partial$draft_notice.adoc[]
+
+== Facts and a Fixed Procedure
+
+The scheme records facts and fixes the procedure that decides from them (xref:decision_procedure.adoc[The Decision Procedure]). It holds no rule language. The reasons:
+
+* *Meaning stays in the model.* A directive is read from RM attributes and coded terms, which any archetype can constrain and any openEHR system can read. A rule program stored beside the record would make the meaning of the record depend on that program.
+* *Exchange.* A directive maps to a FHIR `Consent` provision and to an IHE APPC policy (xref:mappings.adoc[Mappings]), and an EHR Extract carries it in `X_VERSIONED_EHR_ACCESS`.
+* *Auditability.* A refusal names the directive, the policy version and the code that decided it, so the patient can read why.
+* *Safety.* A deployment cannot write a rule that fails at evaluation, makes a restriction visible to providers, or opens data by accident.
+
+A deployment combines every attribute the model has (scope, exception, effect, time, purpose, sensitivity) in every way the model allows. A new kind of condition is a new attribute or code in a later version of the package.
+
+== Three Sets of Facts
+
+----
+ caller facts                       EHR facts                          controller facts
+ (Demographic IM)                   (EHR_ACCESS, per EHR)              (ACCESS_POLICY, per controller)
+
+ PERSON/AGENT --performs--> ROLE    EHR_ACCESS                         ACCESS_POLICY
+     |                  +-CAPABILITY  settings: ACCESS_DIRECTIVE_         controller -> ORGANISATION
+     |                     credentials  SETTINGS                          classifications
+     +--member of--> GROUP            default_access                    care_relationship_required
+                       ^              gate_keepers                      relationship_grace
+ subject PERSON --under care of--+    directives (+ exceptions)         purpose_required
+     ^                                labels                            catalogue
+     +--represents-- PERSON           evidence -> ADMIN_ENTRY
+----
+
+* *Per EHR*, `ACCESS_DIRECTIVE_SETTINGS` in `EHR_ACCESS._settings_`: the default disposition, the gate-keepers, the subject's directives and sensitivity labels on single objects. It is versioned with the EHR and travels in an EHR Extract.
+* *Per caller*, the Demographic IM as it stands: the `ROLE` a caller performs, the codes its `CAPABILITY._credentials_` carry (the operations it may perform, the sensitivities it is cleared for, the purposes it may declare), and `PARTY_RELATIONSHIP` instances for care-team membership and for the subject being under the care of a team or a unit. This follows The Problem of Roles: the care delivery environment evaluates "care deliverer", and the EHR system reads the outcome. The package adds no demographic class.
+* *Per controller*, `ACCESS_POLICY`: the classification of kinds of data into sensitivities, whether clinical access needs a care relationship and a declared purpose, and a catalogue of named directives a subject accepts by reference. It is not about one EHR and it is not a party, so it is a versioned root of its own, `VERSIONED_ACCESS_POLICY`.
+
+== Placement of the Controller Policy
+
+Two homes were weighed for the controller's facts. The `_details_` of the controller's `ORGANISATION` uses only released classes, but gives a party a meaning the Demographic IM does not give it, and puts every policy change into the organisation's demographic history. A versioned root committed in contributions with `AUDIT_DETAILS`, like any versioned object, keeps the policy's history apart and can be exchanged and proposed on its own. The package takes the second.
+
+`ACCESS_POLICY` holds no emergency rule and no floor for the default disposition. Those belong to the deployment, so that an emergency access works when the policy store does not answer; the policy can only tighten them.
+
+== Package Structure
+
+The `{pkg}` package sits in the RM beside `ehr` and `demographic`. It depends on `common.archetyped` (`LOCATABLE`), `common.change_control` (`VERSIONED_OBJECT`), `common.generic` (`PARTY_PROXY`), `ehr` (`ACCESS_CONTROL_SETTINGS`), `data_types`, `data_structures` and the BASE identification classes, and changes no existing class.
+
+----
+ACCESS_CONTROL_SETTINGS (ehr, abstract)
+  └── ACCESS_DIRECTIVE_SETTINGS
+LOCATABLE (common.archetyped)
+  ├── ACCESS_DIRECTIVE
+  ├── ACCESS_POLICY
+  └── ACCESS_CLASSIFICATION
+VERSIONED_OBJECT<T> (common.change_control)
+  └── VERSIONED_ACCESS_POLICY
+ACCESS_ACTOR_SCOPE, ACCESS_DATA_SCOPE, ACCESS_LABEL
+----
+
+`ACCESS_DIRECTIVE`, `ACCESS_POLICY` and `ACCESS_CLASSIFICATION` are `LOCATABLE`, so archetypes name directives and classifications in a deployment's language and add `_details_`. `ACCESS_POLICY` is an archetype root. The procedure never reads an archetype identifier: it reads the typed attributes and their codes, so a deployment's own archetypes are read the same way as any other.
+
+The computable form of the package is `computable/BMM/openehr_access_control_0.1.0.bmm.json`, a BMM 2.4 schema that includes `openehr_rm_1.2.0`. Its UML diagram and the Effective and UML tabs of each class are generated from it by bmm-publisher.

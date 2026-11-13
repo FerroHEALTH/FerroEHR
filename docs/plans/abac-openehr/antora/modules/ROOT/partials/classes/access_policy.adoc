@@ -1,0 +1,13 @@
+=== ACCESS_POLICY Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_policy.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_policy.adoc[]
+
+====
