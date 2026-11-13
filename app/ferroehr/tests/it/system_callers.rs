@@ -123,8 +123,8 @@ async fn an_ungranted_system_client_commits_nothing_into_an_ehr() {
     let idle = system(&svc, "idle").await;
     assert!(idle.granted.client().is_some());
     forbidden(commit(&svc, ehr, Some(&idle), &body).await);
-    // A grant whose client acts for no provider commits nothing (EHDS Art.
-    // 13(4)).
+    // A client whose ACTOR names no provider acts for the deployment's own
+    // provider, which its access record names (EHDS Annex II 3.2(a)).
     system_client(&svc, "orphan", false, &[writes(&template, &["relay"])]).await;
     let orphan = system(&svc, "orphan").await;
     assert!(
@@ -133,7 +133,9 @@ async fn an_ungranted_system_client_commits_nothing_into_an_ehr() {
             .client()
             .is_some_and(|client| client.provider.is_none())
     );
-    forbidden(commit(&svc, ehr, Some(&orphan), &body).await);
+    commit(&svc, ehr, Some(&orphan), &body)
+        .await
+        .expect("a client acting for the deployment's provider commits");
 }
 
 #[tokio::test]

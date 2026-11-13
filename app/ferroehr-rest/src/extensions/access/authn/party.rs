@@ -198,7 +198,7 @@ impl Binding {
 
     /// The healthcare provider `caller` acts for, as `(issuer, id)`: the one
     /// provider, or the table of the tenant its token names.
-    fn provider_of(&self, caller: &Caller) -> Option<(String, String)> {
+    pub(super) fn provider_of(&self, caller: &Caller) -> Option<(String, String)> {
         match self.provider.as_ref()? {
             Providers::One(one) => Some((one.issuer.clone(), one.id.clone())),
             Providers::ByTenant(tables) => {

@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The checks on what a system caller commits: only a client whose `ACTOR`
-//! acts for a provider and performs a `ROLE` granting `commit_composition`
-//! commits into an EHR, a COMPOSITION only of a template a grant lists, and
+//! performs a `ROLE` granting `commit_composition` commits into an EHR, a COMPOSITION only of a template a grant lists, and
 //! each COMPOSITION names a facility of that grant and is either a device act
 //! of a `device` grant or a relayed person act of a `relay` grant.
 //!
@@ -48,7 +47,7 @@ use crate::versioning::Kind;
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) for a system caller holding no
-/// `commit_composition` grant, or whose client acts for no provider.
+/// `commit_composition` grant.
 fn composing_grants(kind: Kind) -> Result<Option<Arc<Capabilities>>, ServiceError> {
     let Some(identity) = crate::versioning::committer::current_committer() else {
         return Ok(None);
@@ -64,17 +63,6 @@ fn composing_grants(kind: Kind) -> Result<Option<Arc<Capabilities>>, ServiceErro
              ferroehr-operations::commit_composition",
         ));
     }
-    if capabilities
-        .client()
-        .and_then(|client| client.provider.as_ref())
-        .is_none()
-    {
-        return Err(ServiceError::not_permitted(
-            "a system caller commits into an EHR only when its client's ACTOR acts for a \
-             provider, by a PARTY_RELATIONSHIP coding ferroehr-operations::acts_for to the \
-             provider's ORGANISATION (EHDS Art. 13(4))",
-        ));
-    }
     Ok((kind == Kind::Composition).then_some(capabilities))
 }
 
@@ -82,8 +70,8 @@ fn composing_grants(kind: Kind) -> Result<Option<Arc<Capabilities>>, ServiceErro
 /// system caller; any other caller passes.
 ///
 /// # Errors
-/// [`ServiceError::Forbidden`] (`403`) for a caller without a grant or a
-/// provider, a template no grant lists, a person act under no `relay` grant
+/// [`ServiceError::Forbidden`] (`403`) for a caller without a grant, a
+/// template no grant lists, a person act under no `relay` grant
 /// and a device act under no `device` grant;
 /// [`ServiceError::Unprocessable`] (`422`) for an organisation composer, a
 /// person act naming no professional by an identifier, and a COMPOSITION
@@ -163,7 +151,7 @@ fn of_origin<'a>(grants: &[Credentials<'a>], origin: &str) -> Vec<Credentials<'a
     grants
         .iter()
         .copied()
-        .filter(|grant| grant.codes(ORIGIN).contains(&origin))
+        .filter(|grant| grant.terms(ORIGIN).contains(&origin))
         .collect()
 }
 
@@ -184,8 +172,8 @@ pub(crate) fn template_of<'a>(
 /// caller; any other caller passes.
 ///
 /// # Errors
-/// [`ServiceError::Forbidden`] (`403`) for a caller without a grant or a
-/// provider, or a COMPOSITION of a template no grant lists; the storage
+/// [`ServiceError::Forbidden`] (`403`) for a caller without a grant, or a
+/// COMPOSITION of a template no grant lists; the storage
 /// error of the template read.
 pub(crate) async fn admit_delete(
     tx: &mut PgConnection,

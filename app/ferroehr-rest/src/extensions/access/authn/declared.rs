@@ -219,7 +219,7 @@ pub(super) fn over_rate(principal: &super::Principal) -> Option<Response> {
     let wait = limit.take(&caller, tokio::time::Instant::now()).err()?;
     let mut refusal = caller_rate::refusal(wait);
     let committer = super::party::committer_identity(principal, &Capabilities::default());
-    if let Some(mut binding) = super::record::of_request(principal, &committer, None) {
+    if let Some(mut binding) = super::record::of_request(principal, &committer, None, None) {
         binding
             .detail
             .insert("refusal".to_owned(), vec!["caller-rate".to_owned()]);

@@ -208,6 +208,21 @@ impl<'a> Credentials<'a> {
             .collect()
     }
 
+    /// The term of each element `code` names: the code of a `DV_CODED_TEXT`
+    /// value, or the text of a `DV_TEXT` one, such as an origin written
+    /// either way.
+    #[must_use]
+    pub fn terms(self, code: &str) -> Vec<&'a str> {
+        self.values(code)
+            .filter_map(|value| {
+                value
+                    .pointer("/defining_code/code_string")
+                    .or_else(|| value.get("value"))
+                    .and_then(Value::as_str)
+            })
+            .collect()
+    }
+
     /// The magnitude of the first `DV_COUNT` element `code` names.
     #[must_use]
     pub fn count(self, code: &str) -> Option<i64> {

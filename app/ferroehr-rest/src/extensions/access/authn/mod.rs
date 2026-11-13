@@ -630,7 +630,12 @@ pub(crate) async fn middleware(
             // scope, so a record the service layer emits by itself carries
             // them too (#3239).
             let roles = for_audit.roles.clone();
-            let binding = record::of_request(&for_audit, &committer, granted.client());
+            let deployment = auth
+                .party
+                .as_deref()
+                .zip(for_audit.access.caller())
+                .and_then(|(binding, caller)| binding.provider_of(caller));
+            let binding = record::of_request(&for_audit, &committer, granted.client(), deployment);
             let mut resp = REQUEST_PRINCIPAL
                 .scope(
                     Some(principal),

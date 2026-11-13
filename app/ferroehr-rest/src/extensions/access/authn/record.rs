@@ -68,19 +68,23 @@ pub(super) fn refused(
 
 /// The binding record of the request `principal` commits as `committer`,
 /// whose client `ACTOR` the policy parties name as `client` when it is a
-/// system caller; `None` for a caller the binding names nothing about.
+/// system caller, in a deployment acting for `deployment`; `None` for a
+/// caller the binding names nothing about.
 ///
-/// A system caller's record names its client `ACTOR` as the party and the
-/// identifier of the provider its acts-for relationship targets.
+/// A system caller's record names its client `ACTOR` as the party, and the
+/// identifier of the provider its acts-for relationship targets or, when it
+/// names none, the deployment's provider (EHDS Annex II 3.2(a)).
 pub(super) fn of_request(
     principal: &super::Principal,
     committer: &ferroehr::versioning::committer::CommitterIdentity,
     client: Option<&Client>,
+    deployment: Option<(String, String)>,
 ) -> Option<BindingRecord> {
     let client = client.filter(|_| committer.system);
     let provider = client
         .and_then(|client| client.provider.as_ref())
         .and_then(|provider| provider.identifier.clone())
+        .or(deployment.filter(|_| committer.system))
         .map(|(issuer, id)| Identified { issuer, id });
     let mut record = of(
         principal.access.caller()?,

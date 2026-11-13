@@ -22,7 +22,7 @@ impl Authenticator {
     {
         let granted = Capabilities::default();
         let committer = party::committer_identity(&principal, &granted);
-        let binding = record::of_request(&principal, &committer, None);
+        let binding = record::of_request(&principal, &committer, None, None);
         let mut resp = ferroehr::system_log::access_context::with_roles(
             principal.roles.clone(),
             record::recorded(

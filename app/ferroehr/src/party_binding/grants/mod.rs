@@ -131,7 +131,7 @@ pub(crate) fn check_terms(facts: &Facts) -> Result<(), ServiceError> {
 /// What a `commit_composition` grant's `credentials` lack, when they lack a
 /// term.
 fn commit_terms(credentials: Credentials<'_>) -> Option<&'static str> {
-    let origins = credentials.codes(ORIGIN);
+    let origins = credentials.terms(ORIGIN);
     if origins.is_empty()
         || origins
             .iter()
