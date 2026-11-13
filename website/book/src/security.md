@@ -358,14 +358,13 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
   (`ehr-access-repair:<versioned object uid>`) naming the administrator. The
   repair is refused with `409` for an EHR that is not held; such an EHR
   changes its settings with a CONTRIBUTION.
-- **The default definitions:** every boot stores the archetypes
-  `openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0` and `v1.1.0` when no
-  definition of their id is stored, and never over a stored one. `v1.1.0`
-  constrains the settings to `ACCESS_DIRECTIVE_SETTINGS` and its attributes;
-  the definition upload validates an archetype that names a class of the
-  draft access control package against the RM extended by that package.
-  FerroEHR reads the settings by their codes, never by these ids, so a
-  deployment may use its own.
+- **The default definition:** every boot stores the archetype
+  `openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0` when no definition of its
+  id is stored, and never over a stored one. It constrains the settings to
+  `ACCESS_DIRECTIVE_SETTINGS` and its attributes; the definition upload
+  validates an archetype that names a class of the draft access control
+  package against the RM extended by that package. FerroEHR reads the
+  settings by their codes, never by this id, so a deployment may use its own.
 
 The scheme is a FerroEHR extension: openEHR mandates the `EHR_ACCESS` object
 and its change control but publishes no concrete access-control scheme. The

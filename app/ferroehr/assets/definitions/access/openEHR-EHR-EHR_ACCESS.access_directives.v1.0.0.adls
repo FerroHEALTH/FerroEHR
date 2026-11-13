@@ -14,7 +14,7 @@ description
         ["en"] = <
             language = <[ISO_639-1::en]>
             purpose = <"The access settings of one EHR in the access_directives scheme: the default disposition, the gate-keepers who change the settings, the subject's directives and the sensitivity labels.">
-            use = <"Holds EHR_ACCESS.settings, which FerroEHR accepts only as an ACCESS_DIRECTIVE_SETTINGS of the draft access control package. FerroEHR reads the settings by their coded attributes in its access control terminology, never by this archetype's id, so a deployment may replace it with its own.">
+            use = <"Holds EHR_ACCESS.settings as an ACCESS_DIRECTIVE_SETTINGS of FerroEHR's draft access control package, which is no openEHR release. FerroEHR reads the settings by their coded attributes in its access control terminology, never by this archetype's id, so a deployment may replace it with its own.">
             copyright = <"© Cadasto B.V.">
         >
     >
@@ -22,7 +22,34 @@ description
 definition
     EHR_ACCESS[id1] matches {
         settings matches {
-            ACCESS_CONTROL_SETTINGS[id2]
+            ACCESS_DIRECTIVE_SETTINGS[id2] matches {
+                default_access matches {
+                    DV_CODED_TEXT[id3]
+                }
+                gate_keepers matches {
+                    PARTY_PROXY[id4] occurrences matches {0..*}
+                }
+                directives matches {
+                    ACCESS_DIRECTIVE[id5] occurrences matches {0..*} matches {
+                        kind matches {
+                            DV_CODED_TEXT[id6]
+                        }
+                        effect matches {
+                            DV_CODED_TEXT[id7]
+                        }
+                    }
+                }
+                labels matches {
+                    ACCESS_LABEL[id8] occurrences matches {0..*} matches {
+                        target matches {
+                            OBJECT_REF[id9]
+                        }
+                        sensitivities matches {
+                            DV_CODED_TEXT[id10] occurrences matches {1..*}
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -30,6 +57,14 @@ terminology
     term_definitions = <
         ["en"] = <
             ["id1"] = <text = <"EHR access"> description = <"The access settings of the EHR.">>
-            ["id2"] = <text = <"Access directive settings"> description = <"The settings of the access_directives scheme, an ACCESS_DIRECTIVE_SETTINGS of the draft access control package.">>
+            ["id2"] = <text = <"Access directive settings"> description = <"The settings of the access_directives scheme.">>
+            ["id3"] = <text = <"Default access"> description = <"What the EHR admits where no directive applies, a code of the access default group of FerroEHR's access control terminology.">>
+            ["id4"] = <text = <"Gate-keeper"> description = <"A party who may change the settings, PARTY_SELF for the record's person.">>
+            ["id5"] = <text = <"Directive"> description = <"A consent, restriction, opt-out or delegation the subject gives.">>
+            ["id6"] = <text = <"Kind"> description = <"The kind of the directive, a code of the access directive kind group.">>
+            ["id7"] = <text = <"Effect"> description = <"Whether the directive permits or denies, a code of the access effect group.">>
+            ["id8"] = <text = <"Label"> description = <"A sensitivity label on content of the EHR.">>
+            ["id9"] = <text = <"Target"> description = <"The content the label applies to.">>
+            ["id10"] = <text = <"Sensitivity"> description = <"A sensitivity the labelled content carries.">>
         >
     >
