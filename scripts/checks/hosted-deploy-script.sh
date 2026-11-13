@@ -132,6 +132,66 @@ verb_contract() {
   return "$rc"
 }
 
+# The seed's subjects (#5409): the `identities` verb of script $1 runs on a
+# stand-in box holding the sandbox configuration $2, with a `docker` that
+# answers the way $3 (ferropix-seed.sh) does, and every EHR_STATUS body
+# scripts/sandbox/reseed.sh renders from that answer must name a pseudonym
+# namespace $2 declares in privacy.subject_namespaces, with a UUID id. The
+# 5.7.0 CDR refuses any other subject, and a verb that answered `provider local`
+# reached the box before anything else saw it.
+seed_subjects() {
+  local script="$1" toml="$2" seed="$3" work clinical namespaces f ns id rc=0
+  work="$(mktemp -d)"
+  # shellcheck disable=SC2064 # the path is expanded now, on purpose
+  trap "rm -rf '$work'" RETURN
+  mkdir "$work/box" "$work/bin" "$work/bodies"
+  cp "$toml" "$work/box/ferroehr.sandbox.toml"
+  clinical="$(sed -n 's/^clinical="\(.*\)"$/\1/p' "$seed")"
+  if [[ -z "$clinical" ]]; then
+    echo "::error::$seed names no clinical pseudonym namespace" >&2
+    return 1
+  fi
+  if ! grep -qx 'cd /opt/ferroehr-sandbox' "$script"; then
+    echo "::error::the deploy script no longer changes into /opt/ferroehr-sandbox, so the stand-in box cannot run it" >&2
+    return 1
+  fi
+  sed "s|^cd /opt/ferroehr-sandbox\$|cd '$work/box'|" "$script" > "$work/deploy.sh"
+  # The FerroPIX one-shot's answer, in ferropix-seed.sh's output form.
+  cat > "$work/bin/docker" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+[[ "\$*" == "compose --profile seed run --rm -T ferropix-seed" ]] || { echo "stand-in docker: \$*" >&2; exit 1; }
+echo "provider ihe"
+echo "pseudonym_namespace $clinical"
+n=0
+while IFS= read -r subject; do
+  n=\$((n + 1))
+  printf 'subject %s 00000000-0000-4000-8000-%012d\n' "\$subject" "\$n"
+done
+EOF
+  chmod +x "$work/bin/docker"
+  if ! jq -r '.ehrs[].subject, .marker.subject' scripts/sandbox/seed/manifest.json \
+    | SSH_ORIGINAL_COMMAND=identities PATH="$work/bin:$PATH" bash "$work/deploy.sh" > "$work/identities"; then
+    echo "::error::the identities verb failed on the stand-in box" >&2
+    return 1
+  fi
+  SANDBOX_IDENTITIES="$work/identities" bash scripts/sandbox/reseed.sh --render-ehrs "$work/bodies" || return 1
+  namespaces="$(yq -p toml -o json '.privacy.subject_namespaces // []' "$toml")"
+  for f in "$work"/bodies/*.json; do
+    ns="$(jq -r '.subject.external_ref.namespace' "$f")"
+    id="$(jq -r '.subject.external_ref.id.value' "$f")"
+    if ! jq -e --arg ns "$ns" 'any(.[]; . == $ns)' <<< "$namespaces" > /dev/null; then
+      echo "::error::the seed's ${f##*/} names the subject namespace '$ns', which $toml does not declare in privacy.subject_namespaces" >&2
+      rc=1
+    fi
+    if ! [[ "$id" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]; then
+      echo "::error::the seed's ${f##*/} names the subject '$id', which is no UUID pseudonym" >&2
+      rc=1
+    fi
+  done
+  return "$rc"
+}
+
 readonly VERB_CALLERS=(
   .github/actions/hosted-deploy/action.yml
   .github/workflows/sandbox-reseed.yml
@@ -190,7 +250,26 @@ if [[ "${1:-}" == "--self-test" ]]; then
   fi
   extract "$CLOUD_INIT" > "$scratch/committed.sh"
   verb_contract "$scratch/committed.sh" "${VERB_CALLERS[@]}" >/dev/null
-  echo "hosted-deploy-script: self-test OK (a seeded unquoted expansion, an unbaked compose path, a verb the script lacks and a verbs answer that disagrees are caught, the committed files pass)."
+  # The identities verb as it stood before #5409: it read a configuration key
+  # the 5.7.0 CDR no longer has, answered `provider local`, and the seed named
+  # its subjects outside every pseudonym namespace.
+  cat > "$scratch/local-branch" <<'EOF'
+  if ! grep -qE '^provider = "ihe"' ferroehr.sandbox.toml; then echo "provider local"; exit 0; fi
+EOF
+  awk -v branch="$scratch/local-branch" '
+    { print }
+    $0 == "if [[ \"$verb\" == \"identities\" ]]; then" { while ((getline line < branch) > 0) print line }
+  ' "$scratch/committed.sh" > "$scratch/local.sh"
+  if ! grep -q 'echo "provider local"' "$scratch/local.sh"; then
+    echo "::error::the self-test could not seed the provider-local identities verb" >&2
+    exit 1
+  fi
+  if seed_subjects "$scratch/local.sh" deploy/hosted/ferroehr.sandbox.toml deploy/hosted/ferropix-seed.sh >/dev/null 2>&1; then
+    echo "::error::the self-test's identities verb that answers provider local was not caught" >&2
+    exit 1
+  fi
+  seed_subjects "$scratch/committed.sh" deploy/hosted/ferroehr.sandbox.toml deploy/hosted/ferropix-seed.sh >/dev/null
+  echo "hosted-deploy-script: self-test OK (a seeded unquoted expansion, an unbaked compose path, a verb the script lacks, a verbs answer that disagrees and an identities verb whose seed names subjects outside privacy.subject_namespaces are caught, the committed files pass)."
   exit 0
 fi
 
@@ -216,10 +295,11 @@ compose_paths_baked deploy/hosted/docker-compose.yml docker/Dockerfile || missin
 script_tmp="$(mktemp)"
 extract "$CLOUD_INIT" > "$script_tmp"
 verb_contract "$script_tmp" "${VERB_CALLERS[@]}" || missing=1
+seed_subjects "$script_tmp" deploy/hosted/ferroehr.sandbox.toml deploy/hosted/ferropix-seed.sh || missing=1
 rm -f "$script_tmp"
 
 # An explicit exit: bash before 4.1 does not stop on a failing [[ ]] under set -e.
 if [[ "$missing" -ne 0 ]]; then
   exit 1
 fi
-echo "hosted-deploy-script: the $SCRIPT_PATH embedded in $CLOUD_INIT is shellcheck-clean, every posture path it reads is baked, and every verb a caller names is one it offers — OK."
+echo "hosted-deploy-script: the $SCRIPT_PATH embedded in $CLOUD_INIT is shellcheck-clean, every posture path it reads is baked, every verb a caller names is one it offers, and the seed names its subjects in privacy.subject_namespaces: OK."

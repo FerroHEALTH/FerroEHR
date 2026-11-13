@@ -98,9 +98,9 @@ services:
       # Required: the audience this CDR answers to (RFC 7519 §4.1.3), which the
       # realm's two clients put in every access token.
       FERROEHR__AUTH__ISSUER__2__AUDIENCE: ferroehr
-      # A person signs in through the viewer; the service client's tokens carry
+      # A person signs in through the viewer, which ferroehr-provision-keycloak
+      # grants sign_in_persons in the CDR; the service client's tokens carry
       # its `client_id` session note, which marks them app-only.
-      FERROEHR__AUTH__ISSUER__2__FIRST_PARTY_CLIENTS: ferroehr-viewer
       FERROEHR__AUTH__ISSUER__2__APP_ONLY__0__CLAIM: client_id
       FERROEHR__AUTH__ISSUER__2__APP_ONLY__0__VALUE: ferroehr-service
       # Keycloak writes the realm roles under the nested `realm_access.roles`,
@@ -111,15 +111,16 @@ services:
       FERROEHR__AUTH__PARTY__1__ISSUER: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:ferroehr:keycloak-quickstart-login
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: login
+      # The realm's group claim, read under the identifier issuer the Groups
+      # its SCIM client provisions are named under.
+      FERROEHR__AUTH__PARTY__1__GROUP_CLAIM: groups
+      FERROEHR__AUTH__PARTY__1__GROUP_IDENTIFIER_ISSUER: urn:ferroehr:keycloak-quickstart-groups
       FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
       # A person is refused until a demographic party carries their login, so
       # the realm's four users are provisioned through SCIM under that
       # identifier issuer by the ferroehr-provision-keycloak one-shot below,
-      # with a second client of the development issuer.
-      FERROEHR__AUTH__SCIM__CLIENT__1__ISSUER: http://localhost:8180/quickstart
-      FERROEHR__AUTH__SCIM__CLIENT__1__CLIENT_ID: quickstart-scim-keycloak
-      FERROEHR__AUTH__SCIM__CLIENT__1__SCOPE: ferroehr/scim
-      FERROEHR__AUTH__SCIM__CLIENT__1__BINDING_ISSUER: urn:ferroehr:keycloak-quickstart-login
+      # as a second client of the development issuer, which the
+      # ferroehr-grant-keycloak one-shot grants scim_provision in the CDR.
       # The development CA, trusted for the issuer's metadata and key set
       # beside the platform roots (`[auth.tls] trust_roots_file`) on every platform. It
       # needs a 5.5.0 or later image: 5.4.2 refuses the key.
@@ -131,18 +132,13 @@ services:
       # authenticated caller may use every surface and the four users below are
       # decoration.
       FERROEHR__AUTHZ__RBAC__ENABLED: "true"
-      # The realm's service client, whose system/aql-* grant counts only when
-      # it is named here (SMART on openEHR §Resource Scopes).
-      FERROEHR__AUTH__SMART__BACKEND_CLIENTS: ferroehr-service
-      # The service client is declared as a system client, the only way a
-      # caller acting for no person commits into an EHR. It writes no
-      # COMPOSITION here (no `writes`), so it creates EHRs and reads; the
-      # provider is the example id the base quickstart acts for.
-      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__ISSUER: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
-      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__CLIENT_ID: ferroehr-service
-      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__PROVIDER__ISSUER: urn:oid:2.999.7.9
-      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__PROVIDER__ID: quickstart
-      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__ORIGINS: relay
+      # The realm's service client's system/aql-* grant counts only for a
+      # client the CDR grants query_system_wide (SMART on openEHR §Resource
+      # Scopes), and it creates EHRs only under a commit_composition grant:
+      # ferroehr-provision-keycloak writes its AGENT and ROLE, and the viewer's
+      # with sign_in_persons, and the ceiling admits the three operations beside
+      # the SCIM clients' scim_provision and the quickstart user's hold_scopes.
+      FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,query_system_wide,scim_provision,hold_scopes,sign_in_persons
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 
@@ -165,18 +161,66 @@ services:
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 
+  # Grants the `quickstart-scim-keycloak` client scim_provision in the CDR
+  # for the realm's identifier issuer, on the operator's authority, as the
+  # base file's ferroehr-grant does for the Basic user's client.
+  ferroehr-grant-keycloak:
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:main}
+    network_mode: service:identity-issuer
+    depends_on:
+      ferroehr:
+        condition: service_healthy
+    environment:
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
+      FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
+      FERROEHR__USAGE_REPORT__ENABLED: "false"
+    configs:
+      - source: ferroehr-config${FERROEHR_EHR_INDEX:+-${FERROEHR_EHR_INDEX}}
+        target: /etc/ferroehr/ferroehr.toml
+    command:
+      - party-binding
+      - grant
+      - --issuer
+      - http://localhost:8180/quickstart
+      - --client-id
+      - quickstart-scim-keycloak
+      - --operation
+      - scim_provision
+      - --element
+      - binding_issuer=urn:ferroehr:keycloak-quickstart-login
+      - --element
+      - token_scope=ferroehr/scim
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+
   # Provisions the realm's four users as professional PERSONs through
   # FerroEHR's SCIM endpoint (RFC 7644 §3.3), as the base file's
   # ferroehr-provision does for the Basic user: each User's loginIdentifier is
   # the fixed `id` the realm import gives that user, which Keycloak puts in
-  # `sub`. The service account is a system client and binds to no party. A
-  # User that exists already (409) is kept, and the one-shot then stays up and
-  # reports healthy, so `up --wait` returns once every login is bound.
+  # `sub`. The service account is a system client and binds to no party:
+  # the quickstart administrator writes its AGENT, which carries its
+  # `client_id`, and a ROLE granting `query_system_wide`, so its system/aql-*
+  # grant counts, and `commit_composition` with the origin relay and no
+  # template, so it creates EHRs and commits no COMPOSITION, for the provider
+  # the deployment acts for, through the Demographic API. It writes the
+  # viewer's AGENT the same way, with a ROLE granting `sign_in_persons`, so a
+  # person's token through the viewer is the person's. A User or an AGENT that
+  # exists already (409) is kept, and the one-shot then stays up and reports
+  # healthy, so `up --wait` returns once every login is bound and the grant is
+  # written.
   ferroehr-provision-keycloak:
     image: ${FERROEHR_CURL_IMAGE:-curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777}
     network_mode: service:identity-issuer
     depends_on:
       ferroehr:
+        condition: service_healthy
+      ferroehr-grant-keycloak:
+        condition: service_completed_successfully
+      ferroehr-provision:
         condition: service_healthy
     entrypoint:
       - sh
@@ -198,7 +242,34 @@ services:
         http://localhost:8080/scim/v2/Users);
         case $$status in 201|409) ;; *) echo "provisioning $$1 answered $$status" >&2; cat /tmp/answer >&2; exit 1;; esac;
         done;
-        touch /tmp/provisioned; echo 'the realm users are provisioned'; exec sleep infinity
+        demographic=http://localhost:8080/ferroehr/rest/openehr/v1/demographic;
+        printf '%s' '{"_type":"AGENT","archetype_node_id":"openEHR-DEMOGRAPHIC-AGENT.quickstart_service.v1","archetype_details":{"_type":"ARCHETYPED","archetype_id":{"_type":"ARCHETYPE_ID","value":"openEHR-DEMOGRAPHIC-AGENT.quickstart_service.v1"},"rm_version":"1.1.0"},"name":{"_type":"DV_TEXT","value":"Quickstart service"},"details":{"_type":"ITEM_TREE","archetype_node_id":"at0010","name":{"_type":"DV_TEXT","value":"details"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0011","name":{"_type":"DV_TEXT","value":"client"},"value":{"_type":"DV_IDENTIFIER","issuer":"${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr","id":"ferroehr-service","type":"client_id"}}]},"identities":[{"_type":"PARTY_IDENTITY","archetype_node_id":"at0001","name":{"_type":"DV_TEXT","value":"name"},"details":{"_type":"ITEM_TREE","archetype_node_id":"at0002","name":{"_type":"DV_TEXT","value":"details"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0003","name":{"_type":"DV_TEXT","value":"name"},"value":{"_type":"DV_TEXT","value":"ferroehr-service"}}]}}]}' > /tmp/agent.json;
+        status=$$(curl -sS -o /tmp/answer -D /tmp/headers -w '%{http_code}' -X POST -u ferroehr:ferroehr
+        -H 'Content-Type: application/json' --data @/tmp/agent.json $$demographic/agent);
+        case $$status in
+        201)
+        agent=$$(sed -n 's|^[Ee][Tt][Aa][Gg]:.*"\([0-9a-f-]*\)::.*|\1|p' /tmp/headers);
+        printf '%s%s%s' '{"_type":"ROLE","archetype_node_id":"openEHR-DEMOGRAPHIC-ROLE.quickstart_query.v1","archetype_details":{"_type":"ARCHETYPED","archetype_id":{"_type":"ARCHETYPE_ID","value":"openEHR-DEMOGRAPHIC-ROLE.quickstart_query.v1"},"rm_version":"1.1.0"},"name":{"_type":"DV_TEXT","value":"System-wide query"},"identities":[{"_type":"PARTY_IDENTITY","archetype_node_id":"at0001","name":{"_type":"DV_TEXT","value":"name"},"details":{"_type":"ITEM_TREE","archetype_node_id":"at0002","name":{"_type":"DV_TEXT","value":"details"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0003","name":{"_type":"DV_TEXT","value":"name"},"value":{"_type":"DV_TEXT","value":"system-wide query"}}]}}],"performer":{"_type":"PARTY_REF","namespace":"demographic","type":"AGENT","id":{"_type":"HIER_OBJECT_ID","value":"' "$$agent" '"}},"capabilities":[{"_type":"CAPABILITY","archetype_node_id":"at0020","name":{"_type":"DV_TEXT","value":"grant"},"credentials":{"_type":"ITEM_TREE","archetype_node_id":"at0021","name":{"_type":"DV_TEXT","value":"terms"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0022","name":{"_type":"DV_TEXT","value":"operation"},"value":{"_type":"DV_CODED_TEXT","value":"query_system_wide","defining_code":{"_type":"CODE_PHRASE","terminology_id":{"_type":"TERMINOLOGY_ID","value":"ferroehr-operations"},"code_string":"query_system_wide"}}}]}},{"_type":"CAPABILITY","archetype_node_id":"at0020","name":{"_type":"DV_TEXT","value":"grant"},"credentials":{"_type":"ITEM_TREE","archetype_node_id":"at0021","name":{"_type":"DV_TEXT","value":"terms"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0022","name":{"_type":"DV_TEXT","value":"operation"},"value":{"_type":"DV_CODED_TEXT","value":"commit_composition","defining_code":{"_type":"CODE_PHRASE","terminology_id":{"_type":"TERMINOLOGY_ID","value":"ferroehr-operations"},"code_string":"commit_composition"}}},{"_type":"ELEMENT","archetype_node_id":"at0023","name":{"_type":"DV_CODED_TEXT","value":"origin","defining_code":{"_type":"CODE_PHRASE","terminology_id":{"_type":"TERMINOLOGY_ID","value":"ferroehr-operations"},"code_string":"origin"}},"value":{"_type":"DV_TEXT","value":"relay"}}]}}]}' > /tmp/role.json;
+        status=$$(curl -sS -o /tmp/answer -w '%{http_code}' -X POST -u ferroehr:ferroehr
+        -H 'Content-Type: application/json' --data @/tmp/role.json $$demographic/role);
+        case $$status in 201) ;; *) echo "granting ferroehr-service answered $$status" >&2; cat /tmp/answer >&2; exit 1;; esac;;
+        409) ;;
+        *) echo "writing the ferroehr-service AGENT answered $$status" >&2; cat /tmp/answer >&2; exit 1;;
+        esac;
+        printf '%s' '{"_type":"AGENT","archetype_node_id":"openEHR-DEMOGRAPHIC-AGENT.quickstart_service.v1","archetype_details":{"_type":"ARCHETYPED","archetype_id":{"_type":"ARCHETYPE_ID","value":"openEHR-DEMOGRAPHIC-AGENT.quickstart_service.v1"},"rm_version":"1.1.0"},"name":{"_type":"DV_TEXT","value":"Quickstart viewer"},"details":{"_type":"ITEM_TREE","archetype_node_id":"at0010","name":{"_type":"DV_TEXT","value":"details"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0011","name":{"_type":"DV_TEXT","value":"client"},"value":{"_type":"DV_IDENTIFIER","issuer":"${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr","id":"ferroehr-viewer","type":"client_id"}}]},"identities":[{"_type":"PARTY_IDENTITY","archetype_node_id":"at0001","name":{"_type":"DV_TEXT","value":"name"},"details":{"_type":"ITEM_TREE","archetype_node_id":"at0002","name":{"_type":"DV_TEXT","value":"details"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0003","name":{"_type":"DV_TEXT","value":"name"},"value":{"_type":"DV_TEXT","value":"ferroehr-viewer"}}]}}]}' > /tmp/viewer.json;
+        status=$$(curl -sS -o /tmp/answer -D /tmp/headers -w '%{http_code}' -X POST -u ferroehr:ferroehr
+        -H 'Content-Type: application/json' --data @/tmp/viewer.json $$demographic/agent);
+        case $$status in
+        201)
+        viewer=$$(sed -n 's|^[Ee][Tt][Aa][Gg]:.*"\([0-9a-f-]*\)::.*|\1|p' /tmp/headers);
+        printf '%s%s%s' '{"_type":"ROLE","archetype_node_id":"openEHR-DEMOGRAPHIC-ROLE.quickstart_query.v1","archetype_details":{"_type":"ARCHETYPED","archetype_id":{"_type":"ARCHETYPE_ID","value":"openEHR-DEMOGRAPHIC-ROLE.quickstart_query.v1"},"rm_version":"1.1.0"},"name":{"_type":"DV_TEXT","value":"Sign-in client"},"identities":[{"_type":"PARTY_IDENTITY","archetype_node_id":"at0001","name":{"_type":"DV_TEXT","value":"name"},"details":{"_type":"ITEM_TREE","archetype_node_id":"at0002","name":{"_type":"DV_TEXT","value":"details"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0003","name":{"_type":"DV_TEXT","value":"name"},"value":{"_type":"DV_TEXT","value":"sign-in client"}}]}}],"performer":{"_type":"PARTY_REF","namespace":"demographic","type":"AGENT","id":{"_type":"HIER_OBJECT_ID","value":"' "$$viewer" '"}},"capabilities":[{"_type":"CAPABILITY","archetype_node_id":"at0020","name":{"_type":"DV_TEXT","value":"grant"},"credentials":{"_type":"ITEM_TREE","archetype_node_id":"at0021","name":{"_type":"DV_TEXT","value":"terms"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0022","name":{"_type":"DV_TEXT","value":"operation"},"value":{"_type":"DV_CODED_TEXT","value":"sign_in_persons","defining_code":{"_type":"CODE_PHRASE","terminology_id":{"_type":"TERMINOLOGY_ID","value":"ferroehr-operations"},"code_string":"sign_in_persons"}}}]}}]}' > /tmp/viewer-role.json;
+        status=$$(curl -sS -o /tmp/answer -w '%{http_code}' -X POST -u ferroehr:ferroehr
+        -H 'Content-Type: application/json' --data @/tmp/viewer-role.json $$demographic/role);
+        case $$status in 201) ;; *) echo "granting ferroehr-viewer answered $$status" >&2; cat /tmp/answer >&2; exit 1;; esac;;
+        409) ;;
+        *) echo "writing the ferroehr-viewer AGENT answered $$status" >&2; cat /tmp/answer >&2; exit 1;;
+        esac;
+        touch /tmp/provisioned; echo 'the realm users are provisioned and the service and viewer clients are granted'; exec sleep infinity
     healthcheck:
       test: ["CMD", "test", "-f", "/tmp/provisioned"]
       interval: 2s
@@ -348,7 +419,7 @@ configs:
   # password grant for curl-friendly token fetching. `ferroehr-service`
   # (ferroehr-service-quickstart-secret) has only the client-credentials grant,
   # a service account holding USER, the `system/` scopes and a `client_id`
-  # claim, which `[smart] backend_clients` matches. A realm that declares
+  # claim, which its AGENT's `client_id` identifier matches. A realm that declares
   # `clientScopes` gets none of Keycloak's built-in ones, so the two the CDR
   # reads are declared as Keycloak defines them: `basic` (the `sub` claim) and
   # `roles` (the realm roles in `realm_access.roles`, the CDR's default role

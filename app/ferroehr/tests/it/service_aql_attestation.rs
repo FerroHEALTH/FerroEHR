@@ -66,6 +66,7 @@ fn build_sql(q: &str) -> ferroehr::aql::sql::PreparedQuery {
         limit: None,
         offset: None,
         archetype_lineage: std::sync::Arc::new(ferroehr::aql::lineage::ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
     };
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))

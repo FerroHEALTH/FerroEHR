@@ -21,10 +21,9 @@ use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use crate::fixtures::{composition, uv};
-use ferroehr::config::access_delay::{AccessDelayConfig, AccessDelayPolicy};
-use ferroehr::extensions::outbox::{OutboxDomain, reconcile};
+use ferroehr::extensions::outbox::OutboxDomain;
+use ferroehr::policy_register::Register;
 use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::categories::CategoryMapConfig;
 use ferroehr::system_log::config::{AuditConfig, FhirFeedConfig, StoreConfig, SyslogConfig};
 use ferroehr::system_log::event::{
     AuditEvent, EmitOutcome, EventActionCode, EventOutcome, ObjectClass,
@@ -49,7 +48,6 @@ async fn service(
             sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            ..StoreConfig::default()
         },
         ..AuditConfig::default()
     };
@@ -77,22 +75,23 @@ async fn service(
                 ..ferrohealth_smart::config::endpoint::EndpointSection::default()
             },
             poll_interval: ferrohealth_config::units::Duration::from_millis(100),
-            ..FhirFeedConfig::default()
         });
     }
     let (sender, handle) = start(audit, None, Some(pool.clone()))
         .await
         .expect("the audit sender");
-    let classifier = CategoryMapConfig::default()
-        .compile()
-        .expect("the shipped map compiles");
-    let section = AccessDelayConfig {
-        categories: vec!["Patient-Summaries".to_owned()],
-        max_delay: Some(ferrohealth_config::units::Duration::from_hours(72)),
-    };
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
-        .with_audit(sender.clone())
-        .with_access_delay(AccessDelayPolicy::compile(&section, &classifier));
+    let svc = crate::policy_fixtures::granting(
+        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
+            .with_audit(sender.clone()),
+    )
+    .await;
+    svc.put_policy_register(
+        Register::AccessDelay,
+        0,
+        r#"{"enabled": true, "categories": ["Patient-Summaries"], "max_delay": "72h"}"#,
+    )
+    .await
+    .expect("turn the access delay on");
     (svc, sender, handle)
 }
 
@@ -210,10 +209,8 @@ async fn the_fhir_feed_carries_a_record_about_a_held_composition() {
 async fn the_event_stream_carries_the_commit_of_a_held_composition() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    reconcile(&pool, &["ferrobridge".to_owned()])
-        .await
-        .expect("register the reader");
     let (svc, _sender, audit) = service(&pool, None, None).await;
+    crate::policy_fixtures::grant_reader(&svc, "ferrobridge").await;
     let (_ehr, vo) = held(&svc).await;
 
     let events = svc

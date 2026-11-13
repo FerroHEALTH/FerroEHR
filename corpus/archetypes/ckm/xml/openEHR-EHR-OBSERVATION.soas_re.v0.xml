@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -2547,7 +2547,7 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0002">
         <items id="text">Any event</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0003">
         <items id="text">Tree</items>
@@ -2559,47 +2559,47 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0007">
         <items id="text">Provocation of aggresive behaviour</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Means used by the aggressor</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Target of aggression</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Consequence(s) for victim(s)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Measure(s) to stop aggression</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Persons involved in measure(s) to stop aggression</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Provoked by</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Person had to wait</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">The person was denied something</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">The person disagreed about assessment/advice</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Involuntary assessment of health condition</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Description</items>
@@ -2607,135 +2607,135 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0020">
         <items id="text">No understandable provocation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Ordinary objects</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Parts of the body</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Room contents/ objects.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Hand</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Foot</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Other, describe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Other, describe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Dangerous objects or methods</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Attempt of strangulation.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Used/had weapon.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Used/had pointed weapon.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Other dangerous objects incl. syringe.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Target</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Furniture/objects</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Physician</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Nurse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Ambulance personnel</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Security guard</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Police</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Other patients</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Other persons, describe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Objects</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Person</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Damaged</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Psychological/ emotional stress</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Felt threatened</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Pain</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Visible injury</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Need for treatment by a physician</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Needed to be taken off duty</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Other, describe:</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Descritpion</items>
@@ -2743,15 +2743,15 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0059">
         <items id="text">Verbal aggression</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Threat</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Description</items>
@@ -2763,47 +2763,47 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0064">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Measure(s)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0066">
         <items id="text">Talked to person</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Took the person aside</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0068">
         <items id="text">Withdrew from situation /ended cal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0069">
         <items id="text">Complied with the person’s wish</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0070">
         <items id="text">Asked the person to leave the site</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Forced the person to leave</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0072">
         <items id="text">Held the person by force</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0073">
         <items id="text">Medication</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0074">
         <items id="text">Other, describe:</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0075">
         <items id="text">Description</items>
@@ -2811,39 +2811,39 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0076">
         <items id="text">Persons involved</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0077">
         <items id="text">Physician</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0078">
         <items id="text">Nurse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0079">
         <items id="text">Ambulance personnel</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0080">
         <items id="text">Security guard</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0081">
         <items id="text">Police</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0082">
         <items id="text">Other patients</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0083">
         <items id="text">Next-of-kin</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0084">
         <items id="text">Others, describe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0085">
         <items id="text">Description</items>
@@ -2856,67 +2856,67 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0087">
         <items id="text">Not severe at all</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0089">
         <items id="text">1</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0090">
         <items id="text">2</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0091">
         <items id="text">3</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0092">
         <items id="text">4</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0093">
         <items id="text">5</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0094">
         <items id="text">6</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0095">
         <items id="text">7</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0096">
         <items id="text">8</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0097">
         <items id="text">9</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0098">
         <items id="text">Extremely severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0099">
         <items id="text">Where was the incident?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0100">
         <items id="text">At the clinic</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0101">
         <items id="text">Over the phone</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0102">
         <items id="text">At home visit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0103">
         <items id="text">Other</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0104">
         <items id="text">Other place of incident</items>
@@ -2924,103 +2924,103 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0106">
         <items id="text">Staff member exposed to incident</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0107">
         <items id="text">Occupation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0108">
         <items id="text">Sex</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">Female</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">Male</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0111">
         <items id="text">Were you alone in the situation?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0112">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0113">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0114">
         <items id="text">Aggressor</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0115">
         <items id="text">Who</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0116">
         <items id="text">Patient</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0117">
         <items id="text">Next-of-kin</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0118">
         <items id="text">Other</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0119">
         <items id="text">Sex</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0120">
         <items id="text">Female</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0121">
         <items id="text">Male</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0122">
         <items id="text">Does the aggressor have a known mental illness?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0123">
         <items id="text">Was the aggressor under influence of drugs or alcohol?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0124">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0125">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0126">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0127">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0128">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0129">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0130">
         <items id="text">Age</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0132">
         <items id="text">When was the incident?</items>
@@ -3059,47 +3059,47 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0007">
         <items id="text">Utløsende faktor for aggressiv atferd</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Hva brukte utøver</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Mål for aggresjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Umiddelbar konsekvens for offer</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Umiddelbart tiltak for å stoppe aggresjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Personer involvert i tiltak for å stoppe aggresjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Utløst av</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">At personen må vente</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">At personen nektes noe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">At personen er uenig i vurdering/råd</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Ufrivillig vurdering av helsetilstand</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Beskrivelse</items>
@@ -3107,135 +3107,135 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0020">
         <items id="text">Tilsynelatende ingen utløsende faktor</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Gjenstander</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Kroppsdel</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Inventar/utstyr</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Hånd</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Fot</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Annet, beskriv</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Annet, beskriv</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Farlige gjenstander/metoder</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Kvelningsforsøk</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Brukte/hadde våpen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Brukte/hadde stikkvåpen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Andre farlige gjenstander inkl. sprøyte</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Mål</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Ting / inventar / utstyr</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Lege</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Sykepleier</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Ambulansepersonell</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Sikkerhetsvakt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Politi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Andre pasienter</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Andre personer, beskriv</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Ingen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Gjenstander</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Personer</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Skadet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Psykologisk / emosjonelt stress</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Opplevde sin egen sikkerhet truet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Smerte</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Synlig skade</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Behov for legebehandling</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Behov for å bli tatt av vakt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Annet, beskriv</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Beskrivelse</items>
@@ -3243,15 +3243,15 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0059">
         <items id="text">Verbal utskjelling</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Trussel</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Ingen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Beskrivelse</items>
@@ -3263,47 +3263,47 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0064">
         <items id="text">Ingen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Tiltak</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0066">
         <items id="text">Snakket med personen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Tok personen til side</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0068">
         <items id="text">Trakk seg ut av situasjonen / avsluttet telefonsamtale</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0069">
         <items id="text">Etterkom personens ønske</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0070">
         <items id="text">Ba personen om å gå fra legevakten</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Fjernet personen med makt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0072">
         <items id="text">Fastholding</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0073">
         <items id="text">Medisinering</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0074">
         <items id="text">Annet, beskriv</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0075">
         <items id="text">Beskrivelse</items>
@@ -3311,39 +3311,39 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0076">
         <items id="text">Personer involvert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0077">
         <items id="text">Lege</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0078">
         <items id="text">Sykepleier</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0079">
         <items id="text">Ambulansepersonell</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0080">
         <items id="text">Sikkerhetsvakt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0081">
         <items id="text">Politi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0082">
         <items id="text">Andre pasienter</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0083">
         <items id="text">Pårørende</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0084">
         <items id="text">Andre, beskriv</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0085">
         <items id="text">Beskrivelse</items>
@@ -3356,67 +3356,67 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0087">
         <items id="text">Ikke alvorlig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0089">
         <items id="text">1</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0090">
         <items id="text">2</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0091">
         <items id="text">3</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0092">
         <items id="text">4</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0093">
         <items id="text">5</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0094">
         <items id="text">6</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0095">
         <items id="text">7</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0096">
         <items id="text">8</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0097">
         <items id="text">9</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0098">
         <items id="text">Svært alvorlig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0099">
         <items id="text">Hvor skjedde hendelsen?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0100">
         <items id="text">På legevakt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0101">
         <items id="text">På telefon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0102">
         <items id="text">På hjemmebesøk</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0103">
         <items id="text">Annet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0104">
         <items id="text">Annen plass for hendelsen</items>
@@ -3424,103 +3424,103 @@ While openEHR archetypes are all freely available under an open license, the spe
       </items>
       <items code="at0106">
         <items id="text">Person utsatt for hendelse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0107">
         <items id="text">Yrke</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0108">
         <items id="text">Kjønn</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0109">
         <items id="text">Kvinne</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0110">
         <items id="text">Mann</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0111">
         <items id="text">Var du alene i situasjonen?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0112">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0113">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0114">
         <items id="text">Utøver av aggressiv atferd</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0115">
         <items id="text">Hvem</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0116">
         <items id="text">Pasient</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0117">
         <items id="text">Pårørende</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0118">
         <items id="text">Annet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0119">
         <items id="text">Kjønn</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0120">
         <items id="text">Kvinne</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0121">
         <items id="text">Mann</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0122">
         <items id="text">Har utøver en kjent psykisk lidelse?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0123">
         <items id="text">Var utøver ruset?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0124">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0125">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0126">
         <items id="text">Ukjent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0127">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0128">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0129">
         <items id="text">Ukjent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0130">
         <items id="text">Alder</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0132">
         <items id="text">Når skjedde hendelsen?</items>
@@ -3538,4 +3538,3 @@ While openEHR archetypes are all freely available under an open license, the spe
     </term_definitions>
   </ontology>
 </archetype>
-

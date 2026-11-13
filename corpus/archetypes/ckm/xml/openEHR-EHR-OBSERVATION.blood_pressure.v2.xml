@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -83,10 +83,10 @@ Perloff D, Grim C, Flack J, Frohlich ED, Hill M, McDonald M, Morgenstern BZ. Hum
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">17D4965B19A8339F74AF049209818DF1</other_details>
-    <other_details id="build_uid">d5acda15-3468-4043-8e68-55b4507881b7</other_details>
+    <other_details id="MD5-CAM-1.0.1">537933EFC88246EA43F6C7F16751362E</other_details>
+    <other_details id="build_uid">ac39a1a0-a269-4816-9391-7f475515f04e</other_details>
     <other_details id="ip_acknowledgements">This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.</other_details>
-    <other_details id="revision">2.0.16</other_details>
+    <other_details id="revision">2.0.17</other_details>
     <details>
       <language>
         <terminology_id>
@@ -131,8 +131,7 @@ In diesem Fall sollte der OBSERVATION.intravascular_pressure Archetyp bzw. desse
 Предполаагется интервал между измерениями 24 часа, однако может быть дополнено событиями (по умолчанию "любое событие") для удовлетворения специфических требований для измерения кровяного давления, такие как записи в отношении кровяного давления конкретные моменты времени, или в диапазоне интервалов.</use>
       <misuse>Не следует использовать для внутривенного давления.&#xD;
 Не следует использовать для измерения артериального давления, которое не является суррогатом артериального давления в системном кровотоке, например, конкретные измерения давления в легочной артерии.&#xD;
-Использовать OBSERVATION.intravascular_pressure и смежных специальностей в обоих этих ситуациях.&#xD;
-</misuse>
+Использовать OBSERVATION.intravascular_pressure и смежных специальностей в обоих этих ситуациях.</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
     <details>
@@ -466,13 +465,10 @@ No debe utilizarse para registrar mediciones de la presión intravenosa. En este
       <keywords>PANI(sp)</keywords>
       <use>Usar para registrar todas las representaciones de la presión arterial sistémica, sin importar que método o localización del cuerpo se use para el registro. El arquetipo se usa para capturar la medida de la presión arterial en todos los escenarios clínicos - por ejemplo: automedición con un tensiómetro de uso domiciliario; la evaluación en situación de emergencia, de la sistólica usando palpación y un esfingomanómetro; medidas tomadas durante la consulta clínica o durante la prueba de esfuerzo (ergometría); y la serie de medidas automáticas hechas en la Unidad de Cuidados Intensivos.&#xD;
 Existe un variado modelo de situaciones que soporta la interpretación de mediciones a través de la interpretación de la posición del paciente, ejercicio, factores confluentes y el ángulo de inclinación de la camilla en situaciones de investigación.&#xD;
-Los eventos se han limitado a promediarse sobre un intervalo de 24 horas, sin embargo plantillas pueden acotar la medida por defecto 'cualquier evento' para ajustarse a requerimientos específicos de medida de la presión arterial como el Registro de la Tensión Arterial durante momentos específicos de tiempo, o sobre un rango de intervalos (+/- funciones matemáticas)&#xD;
-&#xD;
- </use>
+Los eventos se han limitado a promediarse sobre un intervalo de 24 horas, sin embargo plantillas pueden acotar la medida por defecto 'cualquier evento' para ajustarse a requerimientos específicos de medida de la presión arterial como el Registro de la Tensión Arterial durante momentos específicos de tiempo, o sobre un rango de intervalos (+/- funciones matemáticas)</use>
       <misuse>No debe usarse para la presión intravenosa&#xD;
 No debe usarse para la medida de la presión arterial que NO deriva de la presión arterial de la circulación sistémica ej: la medida específica de la presión de la arteria Pulmonar (presión capilar)&#xD;
-Usen Observación.presión_intravascular y especializaciones relacionadas para estas dos situaciones en particular.&#xD;
-</misuse>
+Usen Observación.presión_intravascular y especializaciones relacionadas para estas dos situaciones en particular.</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
     <details>
@@ -538,14 +534,53 @@ Bruk OBSERVATION.intravascular_pressure og relaterte spesialiseringer i disse si
       <keywords>非観血血圧</keywords>
       <use>測定方法や身体部位を問わず、すべての血圧についての表現を記録するために使用される。このアーキタイプはすべての臨床シナリオを網羅することを目指している。以下に例を挙げる。&#xD;
 - 家庭用血圧計で自己測定した血圧&#xD;
-- 緊急時の評価として触診法で血圧計で測定された収縮期圧&#xD;
+- 緊急時の評価として触診法により血圧計で測定された収縮期圧&#xD;
 - 臨床上のコンサルテーションや運動負荷テストの間に測定されたもの&#xD;
 - 集中治療において機械的に計測された一連の血圧などである。&#xD;
 患者の体位や運動負荷、交絡因子やティルト台の角度など識別することにより、研究にて計測状態の解釈を手助けする豊富なステートモデルもある。&#xD;
 24時間平均血圧だけが特定のイベントとして名前がつけられているが、テンプレートではデフォルトの「任意のイベント」にさらなる制約を加えることで、特定の時間や間隔を指定したり（数学的機能を追加したり、削除して）、血圧を記録するように、血圧測定に対する特定の要求を行ったイベントを指定することができる。</use>
-      <misuse>たとえば、右肺動脈の血圧を特定の計測を行うように全身循環を表す指標としての代わりとならないような動脈血圧の測定には用いない。このような場合には、OBSERVATION.intravascular_pressureを利用すること。&#xD;
+      <misuse>全身循環を表す指標としての代わりとならない特定の動脈血圧、たとえば右肺動脈の血圧測定には用いない。このような場合には、OBSERVATION.intravascular_pressureを利用すること。&#xD;
 血管内圧の測定には用いられない。このような場合には、適切に特殊化されたOBSERVATION.intravascular_pressureを利用すること</misuse>
       <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sl</code_string>
+      </language>
+      <purpose>Za beleženje sistemskega arterijskega krvnega tlaka posameznika.</purpose>
+      <keywords>opazovanja</keywords>
+      <keywords>meritev</keywords>
+      <keywords>krvni</keywords>
+      <keywords>tlak</keywords>
+      <keywords>vitalni</keywords>
+      <keywords>znaki</keywords>
+      <keywords>srednji</keywords>
+      <keywords>arterijski</keywords>
+      <keywords>tlak</keywords>
+      <keywords>pulzni</keywords>
+      <keywords>tlak</keywords>
+      <keywords>sistolni</keywords>
+      <keywords>diastolni</keywords>
+      <keywords>RR</keywords>
+      <keywords>NIBP</keywords>
+      <use>Uporabiti za beleženje vseh predstavitev meritve sistemskega arterijskega krvnega tlaka, ne glede na to, katera metoda ali lokacija telesa se uporablja za njegovo beleženje.&#xD;
+&#xD;
+Arhetip je namenjen zajemanju meritev krvnega tlaka v vseh kliničnih scenarijih - na primer:&#xD;
+- samomerjenje z domačim aparatom za merjenje krvnega tlaka;&#xD;
+- ocena sistolnega tlaka v nujnih primerih s palpacijo in sfigmomanometrom;&#xD;
+- meritve, opravljene med kliničnimi pregledi ali med obremenitvenim testiranjem; in&#xD;
+- serija meritev, ki jih opravi naprava v intenzivni enoti.&#xD;
+&#xD;
+Obstaja bogat model stanja, ki podpira interpretacijo meritev z identifikacijo položaja pacienta, telesne aktivnosti, moteče dejavnike in kot nagibne mize pri raziskavah.&#xD;
+&#xD;
+Imenovani dogodki so bili omejeni na povprečje v 24-urnem obdobju, vendar lahko predloge dodatno omejijo privzeti dogodek "katerikoli dogodek" za specifične zahteve meritev krvnega tlaka, kot je beleženje krvnega tlaka ob specifičnih časovnih točkah ali skozi interval (+/- matematične funkcije).</use>
+      <misuse>Ne uporabljati za beleženje meritve arterijskega krvnega tlaka, ki NI nadomestek za arterijski tlak v sistemskem obtoku, npr. specifična meritev tlaka desne pljučne arterije. V tej situaciji uporabite OBSERVATION.intravascular_pressure.&#xD;
+&#xD;
+Ne uporabljati za beleženje meritev intravenskega tlaka. V tej situaciji uporabite ustrezne specializacije OBSERVATION.intravascular_pressure.</misuse>
+      <copyright />
     </details>
     <details>
       <language>
@@ -567,14 +602,11 @@ Bruk OBSERVATION.intravascular_pressure og relaterte spesialiseringer i disse si
       <keywords>فشار خون غیر تهاجمی</keywords>
       <use>برای ثبت هر چیز نشاندهنده اندازه گیری فشاره خون وریدی کل، جدا از ابنکه برای ثبت آن از چه شیوه ای یا کدام بخش از بدن استفاده شده باشد، بکار می رود. این الگوساز برای گردآوری اندازه گیری فشار خون در همه سناریوهای بالینی طراحی شده است، مانند اندازه گیری توسط خود فرد بوسیله دستگاه فشار خون خانگی، ارزیابی اورژانسی سیستولیک با لمس نبض و یک "فشارسنج خون"، اندازه گیریهای انجام گرفته در مشاوره بالینی یا حین تست ورزشی، و یا یک رشته از اندازه گیریهای دستگاه مراقبت های ویژه.&#xD;
 مدل حالت توانمندی وجود دارد که تفسیر اندازه گیری ها را از طریق شناسایی موقعیت بیمار، ورزش، فاکتورهای مبهم و تست تخت شیبدار، پشتیبانی می کند.&#xD;
-رویدادهای نام گذاری شده بگونه ای محدود شده اند که روی یک دوره 24 ساعته میانگین گیری کنند هر چند که الگو ها می توانند پیش فرض -هر گونه  رویداد- را برای فراهم کردن خواسته های خاص از اندازه گیری فشار خون، با محدودیتهایی نظیر ثبت فشار خون سر وقت یا روی رنجی از فاصله های زمانی (با عمل جمع یا منها)، بیشتر محدود کنند &#xD;
-</use>
+رویدادهای نام گذاری شده بگونه ای محدود شده اند که روی یک دوره 24 ساعته میانگین گیری کنند هر چند که الگو ها می توانند پیش فرض -هر گونه  رویداد- را برای فراهم کردن خواسته های خاص از اندازه گیری فشار خون، با محدودیتهایی نظیر ثبت فشار خون سر وقت یا روی رنجی از فاصله های زمانی (با عمل جمع یا منها)، بیشتر محدود کنند</use>
       <misuse>برای فشار داخل وریدی استفاده نشود.&#xD;
 برای اندازه گیری فشار خون وریدی نباید استفاده شود که جایگزینی برای فشار وریدی در گردش خون کلی نیست، بعنوان مثال اندازه گیری خاص فشار وریدی ریه راست.&#xD;
 &#xD;
- و تخصص های مربوطه برای موارد بالا بکار رود"OBSERVATION.intravascular_pressure"&#xD;
- &#xD;
-</misuse>
+ و تخصص های مربوطه برای موارد بالا بکار رود"OBSERVATION.intravascular_pressure"</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
     <details>
@@ -606,8 +638,7 @@ Het archetype is bedoeld om bloeddruk metingen in alle klinische scenario's vast
 &#xD;
 Er is een uitgebreid status model dat interpretatie van metingen ondersteunt, door patiënt positie, inspanning, beïnvloedende factoren en de hoek/het aantal graden waarin de onderzoekstafel staat, te specificeren.&#xD;
 &#xD;
-Genoemde gebeurtenissen zijn gelimiteerd tot een gemiddelde over een periode van 24 uur, maar templates kunnen de standaard 'iedere gebeurtenis' verder vernauwen om specifieke eisen voor de bloeddrukmeting, zoals registreren van de bloeddruk op een specifiek tijdsmoment, of over een reeks van intervallen (+/- statistisch gebruik) te faciliteren.&#xD;
-</use>
+Genoemde gebeurtenissen zijn gelimiteerd tot een gemiddelde over een periode van 24 uur, maar templates kunnen de standaard 'iedere gebeurtenis' verder vernauwen om specifieke eisen voor de bloeddrukmeting, zoals registreren van de bloeddruk op een specifiek tijdsmoment, of over een reeks van intervallen (+/- statistisch gebruik) te faciliteren.</use>
       <misuse>Niet te gebruiken voor de meting van de arteriële bloeddruk welke geen surrogaat is voor de arteriële druk in de systemische circulatie, bv de specifieke meting van de rechter arterie pulmonalis druk.&#xD;
 Gebruik OBSERVATION.intravascular_pressure in deze situatie.&#xD;
 &#xD;
@@ -794,6 +825,17 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
     <author id="name">Shinji Kobayashi</author>
     <author id="organisation">NPO openEHR Japan</author>
     <author id="email">skoba@moss.gr.jp</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sl</code_string>
+    </language>
+    <author id="name">Vanja Maravić, Lara Škufca, Anđela Marjanović, Ana Milošev, Vuk Radnić</author>
+    <author id="organisation">Better Deutschland GmbH, Better d.o.o.</author>
+    <author id="email">vanja.maravic@better.care, laras@better.care, andjela.marjanovic@better.care, ana.milosev@better.care, vuk.radnic@better.care</author>
   </translations>
   <translations>
     <language>
@@ -1647,10 +1689,7 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
                     </occurrences>
                     <node_id />
                     <item xsi:type="C_DURATION">
-                      <range>
-                        <lower_unbounded>true</lower_unbounded>
-                        <upper_unbounded>true</upper_unbounded>
-                      </range>
+                      <value>PT24H</value>
                     </item>
                   </children>
                 </attributes>
@@ -2283,7 +2322,7 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
       <items code="at0013">
         <items id="text">Cuff size</items>
         <items id="description">The size of the cuff used for blood pressure measurement.</items>
-        <items id="comment">Perloff D, Grim C, Flack J, Frohlich ED, Hill M, McDonald M, Morgenstern BZ. Human blood pressure determination by sphygmomanometry. Circulation 1993;88;2460-2470. </items>
+        <items id="comment">Perloff D, Grim C, Flack J, Frohlich ED, Hill M, McDonald M, Morgenstern BZ. Human blood pressure determination by sphygmomanometry. Circulation 1993;88;2460-2470.</items>
       </items>
       <items code="at0014">
         <items id="text">Location of measurement</items>
@@ -2499,7 +2538,7 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
       </items>
       <items code="at0003">
         <items id="text">血圧</items>
-        <items id="description">*@ internal @(en)</items>
+        <items id="description">@ internal @</items>
       </items>
       <items code="at0004">
         <items id="text">収縮期</items>
@@ -2514,12 +2553,12 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
         <items id="description">デフォルトで、テンプレートや実行時に明示的に定義されていない任意の時点や間隔を示す。</items>
       </items>
       <items code="at0007">
-        <items id="text">*state structure(en)</items>
-        <items id="description">*@ internal @(en)</items>
+        <items id="text">state structure</items>
+        <items id="description">@ internal @</items>
       </items>
       <items code="at0008">
         <items id="text">体位</items>
-        <items id="description">計測のときの対象者の体位</items>
+        <items id="description">測定時の対象者の体位</items>
       </items>
       <items code="at0011">
         <items id="text">ツリー</items>
@@ -3472,8 +3511,7 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
     <term_definitions language="ru">
       <items code="at0000">
         <items id="text">АД</items>
-        <items id="description">Локальное измерение артериального давления, которое является суррогатом артериального давления в системном кровотоке. Как правило, термин относится к давления плечевой артерии на предплечье.&#xD;
-</items>
+        <items id="description">Локальное измерение артериального давления, которое является суррогатом артериального давления в системном кровотоке. Как правило, термин относится к давления плечевой артерии на предплечье.</items>
         <items id="comment">*Most commonly, use of the term 'blood pressure' refers to measurement of brachial artery pressure in the upper arm.(en)</items>
       </items>
       <items code="at0001">
@@ -3724,7 +3762,7 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
       </items>
       <items code="at0001">
         <items id="text">تاریخچه</items>
-        <items id="description">گره ساختاری تاریخچه </items>
+        <items id="description">گره ساختاری تاریخچه</items>
       </items>
       <items code="at0003">
         <items id="text">*blood pressure(en)</items>
@@ -3732,7 +3770,7 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
       </items>
       <items code="at0004">
         <items id="text">سیستولیک</items>
-        <items id="description">اوج فشار خون وریدی کلی که در سیستولیک یا فاز انقباضی چرخه گردش خون اندازه گیری می شود </items>
+        <items id="description">اوج فشار خون وریدی کلی که در سیستولیک یا فاز انقباضی چرخه گردش خون اندازه گیری می شود</items>
       </items>
       <items code="at0005">
         <items id="text">دیاستولیک</items>
@@ -3748,11 +3786,11 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
       </items>
       <items code="at0008">
         <items id="text">موقعیت</items>
-        <items id="description">موقعیت فرد در زمان اندازه گیری </items>
+        <items id="description">موقعیت فرد در زمان اندازه گیری</items>
       </items>
       <items code="at0011">
         <items id="text">ساختار لیست</items>
-        <items id="description">ساختار لیست </items>
+        <items id="description">ساختار لیست</items>
       </items>
       <items code="at0013">
         <items id="text">اندازه کاف</items>
@@ -3873,7 +3911,7 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
       </items>
       <items code="at1030">
         <items id="text">تقلا</items>
-        <items id="description">جزییاتی درباره فعالیت فیزیکی انجام شده در زمان اندازه گیری فشار خون </items>
+        <items id="description">جزییاتی درباره فعالیت فیزیکی انجام شده در زمان اندازه گیری فشار خون</items>
       </items>
       <items code="at1031">
         <items id="text">*Left ankle(en)</items>
@@ -3913,11 +3951,11 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
       </items>
       <items code="at1043">
         <items id="text">وضعیت خواب</items>
-        <items id="description">وضعیت خواب- به تفسیر ثبتهای صورت گرفته از فشار خون در خانه در طول 24 ساعت کمک می کند </items>
+        <items id="description">وضعیت خواب- به تفسیر ثبتهای صورت گرفته از فشار خون در خانه در طول 24 ساعت کمک می کند</items>
       </items>
       <items code="at1044">
         <items id="text">هشیار و بیدار</items>
-        <items id="description">فرد کاملا به هوش است </items>
+        <items id="description">فرد کاملا به هوش است</items>
       </items>
       <items code="at1045">
         <items id="text">خوابیده</items>
@@ -3929,7 +3967,7 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
       </items>
       <items code="at1052">
         <items id="text">عوامل مبهم</items>
-        <items id="description">نظردهی و ثبت سایر عوامل ضمنی که ممکن است به اندازه گیری فشار خون کمک کنند . به عنوان مثال سطح اضطراب یا "سندرم روپوش سفید"، درد یا تب ، تغییرات فشار جوی و غیره </items>
+        <items id="description">نظردهی و ثبت سایر عوامل ضمنی که ممکن است به اندازه گیری فشار خون کمک کنند . به عنوان مثال سطح اضطراب یا "سندرم روپوش سفید"، درد یا تب ، تغییرات فشار جوی و غیره</items>
       </items>
       <items code="at1053">
         <items id="text">*Intra-arterial(en)</items>
@@ -4002,7 +4040,7 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
       <items code="at0013">
         <items id="text">حجم الكُفَّة</items>
         <items id="description">حجم الكُفَّة المستخدمة في قياس ضغط الدم</items>
-        <items id="comment">Perloff D, Grim C, Flack J, Frohlich ED, Hill M, McDonald M, Morgenstern BZ. Human blood pressure determination by sphygmomanometry. Circulation 1993;88;2460-2470. </items>
+        <items id="comment">Perloff D, Grim C, Flack J, Frohlich ED, Hill M, McDonald M, Morgenstern BZ. Human blood pressure determination by sphygmomanometry. Circulation 1993;88;2460-2470.</items>
       </items>
       <items code="at0014">
         <items id="text">*Location of measurement(en)</items>
@@ -4291,7 +4329,7 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
       </items>
       <items code="at1001">
         <items id="text">Sentado</items>
-        <items id="description">Sentado (en la cama o en una silla) durante el registro de la presión arterial </items>
+        <items id="description">Sentado (en la cama o en una silla) durante el registro de la presión arterial</items>
       </items>
       <items code="at1002">
         <items id="text">Reclinado</items>
@@ -4364,7 +4402,7 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
       </items>
       <items code="at1030">
         <items id="text">Ejercicio</items>
-        <items id="description">Detalles de la actividad física realizados durante la medición de la presión arterial </items>
+        <items id="description">Detalles de la actividad física realizados durante la medición de la presión arterial</items>
       </items>
       <items code="at1031">
         <items id="text">Tobillo izquierdo</items>
@@ -4822,9 +4860,7 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
       </items>
       <items code="at1012">
         <items id="text">*Phase V(en)</items>
-        <items id="description">*5번째 Korotkoff sound는 cuff 압력이 이완기 혈압 아래로 떨어져 소리가 없어짐으로써 확인된다.(ko)&#xD;
-&#xD;
-</items>
+        <items id="description">*5번째 Korotkoff sound는 cuff 압력이 이완기 혈압 아래로 떨어져 소리가 없어짐으로써 확인된다.(ko)</items>
       </items>
       <items code="at1014">
         <items id="text">왼쪽으로 누운 자세</items>
@@ -6416,6 +6452,251 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
         <items id="description">Μία λέξη, φράση ή σύντομη περιγραφή που αντιπροσωπεύει την κλινική έννοια και σημασία της μέτρησης της αρτηριακής πίεσης.</items>
       </items>
     </term_definitions>
+    <term_definitions language="sl">
+      <items code="at0000">
+        <items id="text">Krvni tlak</items>
+        <items id="description">Lokalna meritev arterijskega krvnega tlaka, ki je nadomestek za arterijski tlak v sistemskem obtoku.</items>
+        <items id="comment">Najpogosteje se uporaba izraza 'krvni tlak' nanaša na meritev tlaka brahialne arterije v nadlakti.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">History</items>
+        <items id="description">History Structural node.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">blood pressure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Sistolni</items>
+        <items id="description">Najvišji sistemski arterijski krvni tlak - merjen v sistolni ali v fazi kontrakcije srčnega cikla.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Diastolni</items>
+        <items id="description">Najnižji sistemski arterijski krvni tlak - merjen v diastolni ali v fazi relaksacije srčnega cikla.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Katerikoli dogodek</items>
+        <items id="description">Privzeta, nespecificirana časovna točka ali intervalni dogodek, ki je lahko eksplicitno določen v predlogi ali med izvajanjem.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">state structure</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Položaj</items>
+        <items id="description">Položaj posameznika v času meritve.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Tree</items>
+        <items id="description">List structure.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Velikost manšete</items>
+        <items id="description">Velikost manšete, uporabljene za merjenje krvnega tlaka.</items>
+        <items id="comment">Perloff D, Grim C, Flack J, Frohlich ED, Hill M, McDonald M, Morgenstern BZ. Human blood pressure determination by sphygmomanometry. Circulation 1993;88;2460-2470.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Lokacija meritve</items>
+        <items id="description">Preprosta lokacija telesa, kjer je bil krvni tlak merjen.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Stegno odraslega</items>
+        <items id="description">Manšeta za stegno odrasle osebe.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Večja odrasla oseba</items>
+        <items id="description">Manšeta za odrasle z večjimi rokami.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Odrasla oseba</items>
+        <items id="description">Manšeta, ki je standardna za odraslo osebo.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Desna roka</items>
+        <items id="description">Desna roka posameznika.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Leva roka</items>
+        <items id="description">Leva roka posameznika.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Desno stegno</items>
+        <items id="description">Desno stegno posameznika.</items>
+      </items>
+      <items code="at0028">
+        <items id="text">Levo stegno</items>
+        <items id="description">Levo stegno posameznika.</items>
+      </items>
+      <items code="at0033">
+        <items id="text">Komentar</items>
+        <items id="description">Dodatno besedilo o meritvi, ki ni zajeto v drugih poljih.</items>
+      </items>
+      <items code="at1000">
+        <items id="text">Stoje</items>
+        <items id="description">Stoje v času meritve krvnega tlaka.</items>
+      </items>
+      <items code="at1001">
+        <items id="text">Sede</items>
+        <items id="description">Sede (na primer na postelji ali stolu) v času meritve krvnega tlaka.</items>
+      </items>
+      <items code="at1002">
+        <items id="text">Polsede</items>
+        <items id="description">Polsede v času meritve krvnega tlaka.</items>
+      </items>
+      <items code="at1003">
+        <items id="text">Leže</items>
+        <items id="description">Leže v času meritve krvnega tlaka.</items>
+      </items>
+      <items code="at1005">
+        <items id="text">Nagib</items>
+        <items id="description">Kraniokavdalni nagib površine, na kateri oseba leži v času meritve.</items>
+      </items>
+      <items code="at1006">
+        <items id="text">Srednji arterijski tlak</items>
+        <items id="description">Povprečni arterijski tlak, ki se pojavi v celotnem poteku cikla sistole in diastole srca.</items>
+      </items>
+      <items code="at1007">
+        <items id="text">Pulzni tlak</items>
+        <items id="description">Razlika med sistolnim in diastolnim tlakom.</items>
+      </items>
+      <items code="at1008">
+        <items id="text">Manjša odrasla oseba</items>
+        <items id="description">Manšeta za manjšo odraslo osebo.</items>
+      </items>
+      <items code="at1009">
+        <items id="text">Pediatrična/otrok</items>
+        <items id="description">Manšeta, ki je primerna za otroka ali odraslo osebo s tanko roko.</items>
+      </items>
+      <items code="at1010">
+        <items id="text">Diastolna končna točka</items>
+        <items id="description">Zabeležite, kateri Korotkov zvok se uporablja za določanje diastolnega tlaka z avskultacijsko metodo.</items>
+      </items>
+      <items code="at1011">
+        <items id="text">Faza IV</items>
+        <items id="description">Četrti Korotkov zvok je zaznan kot nenaden pridušen zvok.</items>
+      </items>
+      <items code="at1012">
+        <items id="text">Faza V</items>
+        <items id="description">Peti Korotkov zvok je zaznan z odsotnostjo zvokov, ko tlak manšete pade pod diastolni krvni tlak.</items>
+      </items>
+      <items code="at1014">
+        <items id="text">Leže z nagibom v levo</items>
+        <items id="description">Leže z določenim lateralnim nagibom, običajno nagnjeno proti levi strani. Običajno potrebno v zadnjem trimesečju nosečnosti za olajšanje aortokavalne kompresije.</items>
+      </items>
+      <items code="at1018">
+        <items id="text">Dojenček</items>
+        <items id="description">Manšeta za dojenčke.</items>
+      </items>
+      <items code="at1019">
+        <items id="text">Novorojenček</items>
+        <items id="description">Manšeta za novorojenčka, ob predpostavki, da je manšeta ustrezne velikosti za zrelost in porodno težo novorojenčka.</items>
+      </items>
+      <items code="at1020">
+        <items id="text">Desno zapestje</items>
+        <items id="description">Desno zapestje posameznika.</items>
+      </items>
+      <items code="at1021">
+        <items id="text">Levo zapestje</items>
+        <items id="description">Levo zapestje posameznika.</items>
+      </items>
+      <items code="at1025">
+        <items id="text">Naprava</items>
+        <items id="description">Podrobnosti o sfigmomanometru ali drugi napravi, uporabljeni za merjenje krvnega tlaka.</items>
+      </items>
+      <items code="at1026">
+        <items id="text">Desni gleženj</items>
+        <items id="description">Desni gleženj posameznika.</items>
+      </items>
+      <items code="at1030">
+        <items id="text">Napor</items>
+        <items id="description">Podrobnosti o telesni aktivnosti, opravljeni v času meritve krvnega tlaka.</items>
+      </items>
+      <items code="at1031">
+        <items id="text">Levi gleženj</items>
+        <items id="description">Levi gleženj posameznika.</items>
+      </items>
+      <items code="at1032">
+        <items id="text">Prst</items>
+        <items id="description">Prst posameznika.</items>
+      </items>
+      <items code="at1035">
+        <items id="text">Metoda</items>
+        <items id="description">Metoda merjenja krvnega tlaka.</items>
+      </items>
+      <items code="at1036">
+        <items id="text">Avskultacija</items>
+        <items id="description">Metoda zunanjega merjenja krvnega tlaka, z uporabo stetoskopa in Korotkov zvokov.</items>
+      </items>
+      <items code="at1037">
+        <items id="text">Palpacija</items>
+        <items id="description">Metoda zunanjega merjenja krvnega tlaka, z uporabo palpacije (običajno brahialne ali radialne arterije).</items>
+      </items>
+      <items code="at1038">
+        <items id="text">Formula srednjega arterijskega tlaka</items>
+        <items id="description">Formula, uporabljena za izračun srednjega arterijskega tlaka (če je zabeleženo v podatkih).</items>
+      </items>
+      <items code="at1039">
+        <items id="text">Naprava</items>
+        <items id="description">Metoda zunanjega merjenja krvnega tlaka, z uporabo aparata za krvni tlak.</items>
+      </items>
+      <items code="at1040">
+        <items id="text">Invazivno</items>
+        <items id="description">Metoda notranjega merjenja krvnega tlaka, tj. vključuje penetracijo kože in merjenje znotraj krvnih žil.</items>
+      </items>
+      <items code="at1042">
+        <items id="text">24-urno povprečje</items>
+        <items id="description">Ocena povprečnega krvnega tlaka v 24-urnem obdobju.</items>
+      </items>
+      <items code="at1043">
+        <items id="text">Status spanja</items>
+        <items id="description">Status spanja - podpira interpretacijo 24-urnih ambulantnih zapisov krvnega tlaka.</items>
+      </items>
+      <items code="at1044">
+        <items id="text">Buden</items>
+        <items id="description">Posameznik je buden.</items>
+      </items>
+      <items code="at1045">
+        <items id="text">Spi</items>
+        <items id="description">Posameznik spi.</items>
+      </items>
+      <items code="at1051">
+        <items id="text">Prst na nogi</items>
+        <items id="description">Prst na nogi posameznika.</items>
+      </items>
+      <items code="at1052">
+        <items id="text">Moteči dejavniki</items>
+        <items id="description">Komentar in beleženje drugih naključnih dejavnikov, ki lahko prispevajo k meritvi krvnega tlaka. Na primer, raven anksioznosti ali 'sindrom belega plašča'; bolečina ali vročina; spremembe v atmosferskem tlaku itd.</items>
+      </items>
+      <items code="at1053">
+        <items id="text">Intra-arterijsko</items>
+        <items id="description">Invazivna meritev preko dostopne linije pretvornika znotraj arterije.</items>
+      </items>
+      <items code="at1054">
+        <items id="text">Formula sistolnega tlaka</items>
+        <items id="description">Formula, uporabljena za izračun sistolnega tlaka iz srednjega arterijskega tlaka (če je zabeleženo v podatkih).</items>
+      </items>
+      <items code="at1055">
+        <items id="text">Formula diastolnega tlaka</items>
+        <items id="description">Formula, uporabljena za izračun diastolnega tlaka iz srednjega arterijskega tlaka (če je zabeleženo v podatkih).</items>
+      </items>
+      <items code="at1057">
+        <items id="text">Strukturirana lokacija meritve</items>
+        <items id="description">Strukturirana anatomska lokacija, kjer je bila meritev opravljena.</items>
+      </items>
+      <items code="at1058">
+        <items id="text">Razširitev</items>
+        <items id="description">Dodatne informacije, potrebne za zajemanje lokalnega konteksta ali za uskladitev z drugimi referenčnimi modeli/formalizmi.</items>
+        <items id="comment">Na primer: informacije lokalnega bolnišničnega oddelka ali dodatni metapodatki za uskladitev z ekvivalenti FHIR ali CIMI.</items>
+      </items>
+      <items code="at1059">
+        <items id="text">Klinična interpretacija</items>
+        <items id="description">Ena beseda, fraza ali kratek opis, ki predstavlja klinični pomen in pomembnost meritve krvnega tlaka.</items>
+      </items>
+      <items code="at1056">
+        <items id="text">Hrbtišče stopala</items>
+        <items id="description">Dorzum stopala posameznika.</items>
+      </items>
+    </term_definitions>
     <term_bindings terminology="SNOMED-CT">
       <items code="at0000">
         <value>
@@ -6452,4 +6733,3 @@ Anna-Leena Karvonen, Tietoevry, Finland</other_details>
     </term_bindings>
   </ontology>
 </archetype>
-

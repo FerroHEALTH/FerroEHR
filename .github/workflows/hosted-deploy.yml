@@ -32,7 +32,7 @@ on:
 permissions: {}
 
 # One deploy at a time, whichever caller started it: `release.yml`'s `sandbox`
-# job and the reseed's restart name this same group, so nothing races for the
+# job and the reseed's bring-up name this same group, so nothing races for the
 # box.
 concurrency:
   group: hosted-deploy

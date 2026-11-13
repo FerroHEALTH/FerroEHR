@@ -57,7 +57,9 @@ impl Shape {
     pub(super) fn of(layer: &AuthLayer, req: &Request) -> Self {
         let (matched, uri) = super::gates::route(req);
         let requirement = match layer.smart.need(req.method(), matched, uri.path()) {
-            Need::Now(requirement) => requirement,
+            Need::Now(requirement)
+            | Need::Demographic(requirement)
+            | Need::Representation(requirement) => requirement,
             Need::Composition(_) => Requirement::Caller,
         };
         Self {
@@ -72,9 +74,9 @@ impl Shape {
 
 /// Holds the caller of `principal` to its agreement's `caller_rate`, then to
 /// the patient it may reach on `req`: a contact point's caller to the EHR of
-/// its TRC patient ([`confine`]), then a bound representative to the EHR of its
-/// subject; the refusal of any, before any patient lookup of the request
-/// itself.
+/// its TRC patient ([`confine`]), then a bound representative, of a `persons`
+/// or a `patients` issuer, to the EHR of its subject; the refusal of any,
+/// before any patient lookup of the request itself.
 ///
 /// What it reads of `req` is read before it awaits anything, so the future
 /// holds no borrow of the request.
@@ -86,14 +88,14 @@ pub(super) fn patient_context<'a>(
     let shape = Shape::of(layer, req);
     let headers = req.headers().clone();
     async move {
-        let clients = &layer.authenticator.declared.system_clients;
-        if let Some(refusal) = super::declared::over_rate(principal, clients) {
+        if let Some(refusal) = super::declared::over_rate(principal) {
             return Some(refusal);
         }
         if let Some(refusal) = confine(layer, principal, shape, &headers).await {
             return Some(refusal);
         }
-        match super::party::represented_ehr(&layer.service, &principal.access).await {
+        let namespace = &layer.authenticator.namespace;
+        match super::portal::represented_ehr(&layer.service, namespace, &principal.access).await {
             Ok(represented) => {
                 principal.represented = represented;
                 None

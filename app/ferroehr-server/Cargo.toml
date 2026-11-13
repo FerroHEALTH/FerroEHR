@@ -34,6 +34,7 @@ ferroehr-rest = { path = "../ferroehr-rest", default-features = false }
 
 anyhow.workspace = true
 clap.workspace = true
+jiff.workspace = true
 serde_json.workspace = true
 sqlx.workspace = true
 tokio.workspace = true
@@ -56,6 +57,7 @@ workspace = true
 anyhow.workspace = true
 assert_fs.workspace = true
 clap.workspace = true
+jiff.workspace = true
 openehr-its = { path = "../../crates/openehr-its" }
 openehr-sdt = { path = "../../crates/openehr-sdt" }
 tokio.workspace = true

@@ -324,11 +324,14 @@ k8s_pf_start() {
 }
 
 # Binds the Basic user `clinician` of the CI values to a demographic PERSON
-# through the SCIM client those values declare (docs/conformance/party/scim/),
-# so every probe that logs in as it acts as a bound person. A User that
-# exists already is kept, so each forward of a reinstall runs it again.
+# through the SCIM client the release's server grants scim_provision first
+# (docs/conformance/party/scim/), so every probe that logs in as it acts as a
+# bound person. A grant held and a User that exists already are kept, so each
+# forward of a reinstall runs it again.
 k8s_provision() {
-  bash scripts/scim-provision.sh "$K8S_CDR" basic-users clinician >/dev/null
+  SCIM_GRANT="kubectl -n $K8S_NS exec deploy/$K8S_RELEASE -c ferroehr -- /usr/local/bin/ferroehr" \
+    bash scripts/scim-provision.sh "$K8S_CDR" basic-users urn:ferroehr:basic-user \
+    clinician >/dev/null
 }
 
 # k8s_runtime_spec <node> <container-id>: the OCI runtime spec the node applied.

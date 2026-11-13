@@ -152,6 +152,40 @@ port. Set `ingressFrom` to your ingress controller, or set
 open state at all. And note that **none of it does anything unless your CNI
 enforces NetworkPolicy**. Check yours; several do not.
 
+## Demographic definitions and the party mapping
+
+The server stores FerroEHR's default demographic definitions as it boots,
+each one whose id the definition store does not hold, and with no mapping
+key set `config.authz.party_binding` maps them: the professional `PERSON`
+and `ROLE`, a care-team `GROUP`, the membership and representation
+`PARTY_RELATIONSHIP` archetypes and the patient `PERSON`. SCIM Users,
+Groups and representation work with no mapping key. A deployment with
+templates of its own sets the mapping section that names them and lists
+the files in `definitions.files`, which the `definitions` init container
+stores before the server starts; the list is empty by default.
+
+A deployment whose people log in under another identifier type sets the
+`person` section, whose key carries that type:
+
+```yaml
+config:
+  authz:
+    party_binding:
+      person:
+        template:
+          - template_id: openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0
+            default: true
+            key: { path: "/details[id2]/items[id3]", type: uuid }
+            user_name: { path: "/details[id2]/items[id3]", type: scim_user_name }
+            external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
+```
+
+Set the mapping before the first start: the binding side table is filled
+under its digest then, and a server whose mapping differs refuses to start
+until `ferroehr party-binding refill` has run with every replica stopped.
+The whole set is described at
+<https://ferroehr.eu/docs/latest/installation/default-demographic-definitions.html>.
+
 ## FerroBRIDGE alongside the CDR
 
 `bridge.enabled=true` deploys [FerroBRIDGE](https://github.com/FerroHEALTH/FerroBRIDGE),

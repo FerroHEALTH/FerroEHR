@@ -54,26 +54,29 @@ flowchart LR
 
 ## Naming the readers
 
-The feed is off until you name a reader. The keys live under `[record.change_feed]`:
+The feed is off until a reader is granted. A reader is policy, held in the
+CDR: the `reader` element of a `read_change_feed` grant in force on the
+`AGENT` of the client that reads it, a name matching
+`^[a-z][a-z0-9-]{0,62}$`. An administrator writes the grant through the
+Demographic API, and it takes effect on the next request with no restart
+([Operational policy](../operational-policy.md#what-the-grants-decide)).
+`[authz.grants] allowed` must admit `read_change_feed`.
+
+While a reader is granted, every commit writes its outbox row; with none, no
+commit does. The server registers each granted reader and marks every reader
+no grant names any more inactive at boot, on every feed call and before every
+prune. An inactive reader keeps its cursor, so granting it again resumes where
+it stopped, and it holds the prune back no longer.
+
+The retention is configuration, under `[record.change_feed]`:
 
 | Key | Environment variable | Default | Meaning |
 |---|---|---|---|
-| `readers` | `FERROEHR__RECORD__CHANGE_FEED__READERS` | `[]` | the readers of the feed, each matching `^[a-z][a-z0-9-]{0,62}$` |
 | `retention` | `FERROEHR__RECORD__CHANGE_FEED__RETENTION` | `"7d"` | how long an acknowledged row is kept after its commit |
 | `prune_interval` | `FERROEHR__RECORD__CHANGE_FEED__PRUNE_INTERVAL` | `"1h"` | how often the prune runs |
 
-With no reader named, no commit writes an outbox row. At every boot the server
-registers each named reader and marks every reader the list no longer names
-inactive. An inactive reader keeps its cursor, so naming it again resumes where
-it stopped, and it holds the prune back no longer.
-
-```toml
-[record.change_feed]
-readers = ["ferrobridge"]
-```
-
 On Kubernetes the chart renders its `config` tree into the server's
-configuration file, so the same keys are `config.outbox.*`.
+configuration file, so the same keys are `config.record.change_feed.*`.
 
 ## Reading the feed
 
@@ -116,8 +119,9 @@ moves no cursor:
 
 The acknowledgement takes `{"last_seq": 42}` and answers `204` once the cursor
 is there. Acknowledging the current cursor again is a `204` too. A `last_seq`
-below the cursor, or above the highest row, answers `409` and moves nothing. An
-unknown or inactive reader answers `404` on both routes.
+below the cursor, or above the highest row, answers `409` and moves nothing. A
+reader no grant in force names answers `404` on both routes, and a caller
+whose own `read_change_feed` grant does not name the reader `403`.
 
 ### The two outboxes
 
@@ -170,8 +174,8 @@ Earlier releases of FerroEHR published to RabbitMQ themselves, under
 gone. To keep the events flowing to the same broker through FerroBRIDGE 0.0.15
 or later:
 
-1. Name FerroBRIDGE's reader in `[record.change_feed] readers` and give its client the
-   `__ferroehr.outbox` scope.
+1. Grant FerroBRIDGE's client a `read_change_feed` grant naming its reader,
+   and give the client the `__ferroehr.outbox` scope.
 2. Configure FerroBRIDGE's events lane with the broker URL, the exchange and
    the queues your subscriptions used to declare.
 3. Remove `[events]` from FerroEHR's configuration, `secrets.eventsUrl` from the

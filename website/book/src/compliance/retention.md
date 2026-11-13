@@ -26,8 +26,8 @@ legal citation the period rests on.
 | Column | Meaning |
 |---|---|
 | `kind` | The content category: `COMPOSITION`, `EHR_STATUS`, `FOLDER`, or `EHR` for the whole record |
-| `category` | Optional: the EHDS category the period is keyed on, named as `[audit.categories]` names it: a priority category by its code (`Patient-Summaries`, `Electronic-Prescriptions`, `Electronic-Dispensations`, `Medical-Imaging`, `Laboratory-Reports`, `Discharge-Reports`) or as `<system>\|<code>`, a declared national category as its `<system>\|<code>`, or `none`; stored as the `<system>\|<code>` token; empty keys the period on every object of the kind |
-| `origin` | Optional: the origin the period is keyed on, the id of an origin [`[[authz.origin]]`](#keying-a-period-on-an-origin) registers; empty keys the period on every origin |
+| `category` | Optional: the EHDS category the period is keyed on, named as the [audit category register](../installation/config-audit.md#the-audit-category-register) names it: a priority category by its code (`Patient-Summaries`, `Electronic-Prescriptions`, `Electronic-Dispensations`, `Medical-Imaging`, `Laboratory-Reports`, `Discharge-Reports`) or as `<system>\|<code>`, a declared national category as its `<system>\|<code>`, or `none`; stored as the `<system>\|<code>` token; empty keys the period on every object of the kind |
+| `origin` | Optional: the origin the period is keyed on, the id a [`data_origin` grant](#keying-a-period-on-an-origin) in force names; empty keys the period on every origin |
 | `jurisdiction` | ISO 3166-1 alpha-2, the same key the [identifier scanner](../installation/config-privacy.md) rules use |
 | `period` | How long content of that category is kept |
 | `anchor` | What the period is measured from: `last_commit`, `death`, or `majority` |
@@ -76,7 +76,7 @@ whole register back, which is what an access answer and an audit both cite.
 EHDS Annex II 3.4 asks the storing components to support retention periods
 "that take into account the origins and categories of electronic health data".
 Add `"category": "Laboratory-Reports"` to the body above and the period covers only
-the objects your [`[audit.categories]`](../installation/config-audit.md#auditcategories)
+the objects your [audit category register](../installation/config-audit.md#the-audit-category-register)
 map places in that category. The server mirrors the map into the clinical
 domain at every boot, so the due list reads the map in force. An object's
 category comes from its latest version that carries content: the template id
@@ -90,22 +90,19 @@ category lists every object of its kind.
 
 Every version records its origins at commit: each `FEEDER_AUDIT`
 originating-system id the body carries (RM common, `FEEDER_AUDIT_DETAILS`), or,
-for a body that carries none, the origin of the client that committed it. The
-ids a sending system writes are free text, so you declare the origins your
-deployment recognises in `[[authz.origin]]`, each by the id its data carry and with the
-clients whose direct commits come from it:
+for a body that carries none, the origin of the caller that committed it. The
+ids a sending system writes are free text, so the origins your deployment
+recognises are policy in the CDR: each is the `origin` element of a
+`data_origin` grant in force, on the `AGENT` of the system the data come from
+([Operational policy](../operational-policy.md#what-the-grants-decide)). An
+administrator writes the grant through the Demographic API, and it takes
+effect on the next request.
 
-```toml
-[[authz.origin]]
-id = "lab.example"          # the FEEDER_AUDIT system_id the lab's feed writes
-clients = ["lab-gateway"]   # a Basic user, or the client its token's issuer profile names (client_claims)
-```
-
-A body without a `FEEDER_AUDIT` committed by `lab-gateway` is then stamped
-`lab.example`; a direct commit by any other caller keeps this server's
-`system_id`. Add `"origin": "lab.example"` to a period and it covers only the
+A body without a `FEEDER_AUDIT` committed by the holder of the grant naming
+`lab.example`, such as a lab gateway's client, is then stamped `lab.example`;
+a direct commit by any other caller keeps this server's `system_id`. Add `"origin": "lab.example"` to a period and it covers only the
 objects whose latest version carrying content came from that origin. A period
-names only a registered id, so a misspelt origin is refused with **400**
+names only an id a grant in force names, so a misspelt origin is refused with **400**
 instead of keying a period that reaches nothing. A period without an origin
 lists every object of its kind, and an origin row with no object is left out of
 the due list. Ids compare exactly. Origin and category combine: a period keyed

@@ -494,9 +494,8 @@ pub(super) fn fill_common(
 }
 
 /// The client a record names: the one the caller's issuer profile reads from
-/// `client_claims`, which the classification and the
-/// `[[authz.system_client]]` check admitted, never another client claim the
-/// token carries (#5194).
+/// `client_claims`, which the classification and the policy grants admitted,
+/// never another client claim the token carries (#5194).
 fn recorded_client(principal: &Principal) -> Option<String> {
     principal
         .access

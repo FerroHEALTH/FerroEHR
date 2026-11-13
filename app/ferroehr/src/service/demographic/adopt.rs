@@ -36,6 +36,7 @@ use crate::service::FerroEhrService;
 use crate::service::demographic::mapped_write::party_ref;
 use crate::service::demographic::support;
 use crate::service::demographic::types::PartyKind;
+use crate::service::demographic::validate::Container;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
@@ -223,13 +224,24 @@ impl FerroEhrService {
                 }
             }
         }
-        for (kind, data, incomplete) in [
-            (PartyKind::Role, &role, role_state == state::INCOMPLETE),
-            (PartyKind::Person, &body, lifecycle == state::INCOMPLETE),
+        for (kind, data, incomplete, container) in [
+            (
+                PartyKind::Role,
+                &role,
+                role_state == state::INCOMPLETE,
+                Container::New(role_vo),
+            ),
+            (
+                PartyKind::Person,
+                &body,
+                lifecycle == state::INCOMPLETE,
+                Container::Existing(person),
+            ),
         ] {
             let kind = support::kind_of(kind);
             typed_decode_gate(kind, data, incomplete)?;
-            self.validate_for_commit(kind, data, incomplete).await?;
+            self.demographic_commit_check(kind, data, incomplete, Some(container))
+                .await?;
         }
         let role_change = Change::create_allocated(
             role_id,

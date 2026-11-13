@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -770,11 +770,11 @@ Fleisher L, Beckman J, Brown K, Calkins H, Chaikof E, Fleischmann K, Freeman W, 
       </items>
       <items code="at0005">
         <items id="text">Preoperative serum creatinine  &lt;2 mg/dl or &lt;177 μmol/L.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Preoperative serum creatinine ≥2 mg/dl or ≥177 μmol/L.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Ischemic heart disease</items>
@@ -782,11 +782,11 @@ Fleisher L, Beckman J, Brown K, Calkins H, Chaikof E, Fleischmann K, Freeman W, 
       </items>
       <items code="at0008">
         <items id="text">Absent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Present</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Congestive heart failure</items>
@@ -794,11 +794,11 @@ Fleisher L, Beckman J, Brown K, Calkins H, Chaikof E, Fleischmann K, Freeman W, 
       </items>
       <items code="at0011">
         <items id="text">Absent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Present</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Cerebrovascular disease</items>
@@ -806,11 +806,11 @@ Fleisher L, Beckman J, Brown K, Calkins H, Chaikof E, Fleischmann K, Freeman W, 
       </items>
       <items code="at0014">
         <items id="text">Absent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Present</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Diabetes mellitus on insulin</items>
@@ -818,11 +818,11 @@ Fleisher L, Beckman J, Brown K, Calkins H, Chaikof E, Fleischmann K, Freeman W, 
       </items>
       <items code="at0017">
         <items id="text">Absent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Present</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">High risk surgery</items>
@@ -830,11 +830,11 @@ Fleisher L, Beckman J, Brown K, Calkins H, Chaikof E, Fleischmann K, Freeman W, 
       </items>
       <items code="at0023">
         <items id="text">Absent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Present</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Item tree</items>
@@ -897,11 +897,11 @@ Fleisher L, Beckman J, Brown K, Calkins H, Chaikof E, Fleischmann K, Freeman W, 
       </items>
       <items code="at0005">
         <items id="text">Präoperatives Serumkreatinin &lt;2 mg/dl oder &lt;177 μmol/L</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Präoperatives Serumkreatinin ≥2 mg/dl oder ≥177 μmol/L</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Koronare Herzkrankheit</items>
@@ -909,11 +909,11 @@ Fleisher L, Beckman J, Brown K, Calkins H, Chaikof E, Fleischmann K, Freeman W, 
       </items>
       <items code="at0008">
         <items id="text">Nicht vorhanden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Vorhanden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Dekompensierte Herzkrankheit</items>
@@ -921,11 +921,11 @@ Fleisher L, Beckman J, Brown K, Calkins H, Chaikof E, Fleischmann K, Freeman W, 
       </items>
       <items code="at0011">
         <items id="text">Nicht vorhanden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Vorhanden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Zerebrovaskuläre Verschlusskrankheit</items>
@@ -933,11 +933,11 @@ Fleisher L, Beckman J, Brown K, Calkins H, Chaikof E, Fleischmann K, Freeman W, 
       </items>
       <items code="at0014">
         <items id="text">Nicht vorhanden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Vorhanden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Insulinabhängiger Diabetes mellitus</items>
@@ -945,11 +945,11 @@ Fleisher L, Beckman J, Brown K, Calkins H, Chaikof E, Fleischmann K, Freeman W, 
       </items>
       <items code="at0017">
         <items id="text">Nicht vorhanden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Vorhanden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Hoch-Risiko Chirurgie</items>
@@ -957,11 +957,11 @@ Fleisher L, Beckman J, Brown K, Calkins H, Chaikof E, Fleischmann K, Freeman W, 
       </items>
       <items code="at0023">
         <items id="text">Nicht vorhanden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Vorhanden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Item tree</items>
@@ -1093,4 +1093,3 @@ Fleisher L, Beckman J, Brown K, Calkins H, Chaikof E, Fleischmann K, Freeman W, 
     </term_bindings>
   </ontology>
 </archetype>
-

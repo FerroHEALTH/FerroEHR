@@ -22,9 +22,9 @@ language
 		["sv"] = <
 			language = <[ISO_639-1::sv]>
 			author = <
-				["name"] = <"Erik Sundvall, Marit Alice Venheim, Samira Nikman">
-				["organisation"] = <"Karolinska Institutet + Karolinska University Hospital Region Stockholm + Linköping University, Helse Vest IKT, Karolinska Institutet + Karolinska University Hospital, Region Stockholm + Linköping University">
-				["email"] = <"erik.sundvall@regionstockholm.se, marit.alice.venheim@helse-vest-ikt.no, samira.nikman@regionstockholm.se">
+				["name"] = <"Erik Sundvall, Marit Alice Venheim, Samira Nikman, Åsa Skagerhult, Manna Vosta">
+				["organisation"] = <"Karolinska Institutet + Karolinska University Hospital Region Stockholm + Linköping University, Helse Vest IKT, Karolinska Institutet + Karolinska University Hospital, Region Stockholm + Linköping University, Västra Götalandsregionen">
+				["email"] = <"erik.sundvall@regionstockholm.se, marit.alice.venheim@helse-vest-ikt.no, samira.nikman@regionstockholm.se, asa.skagerhult@vgregion.se, manna.vosta@regionstockholm.se">
 			>
 			accreditation = <"Karolinska University Hospital">
 			other_details = <
@@ -171,26 +171,26 @@ Die Hauptkomponente Sections/Content wurde absichtlich nicht eingeschränkt. Dad
 		>
 		["sv"] = <
 			language = <[ISO_639-1::sv]>
-			purpose = <"En behållare för information som tillhandahålls av en individ, för att möjliggöra tydlig åtskillnad mellan hälsodata genererad av patient respektive vårdpersonal.">
-			use = <"Används som en generell behållare för att dokumentera information tillhandahållen av en individ, i syfte att möjliggöra en tydlig åtskillnad mellan hälsodata genererad av patient respektive av vårdpersonal. 
+			purpose = <"En behållare för uppgifter som lämnas av en individ, för att möjliggöra tydlig åtskillnad mellan hälsodata genererad av patient respektive vårdpersonal.">
+			use = <"Används som en generell behållare för att registrera information tillhandahållen av en individ, i syfte att möjliggöra en tydlig åtskillnad mellan hälsodata genererad av patient respektive av vårdpersonal. 
 
-Innehållet i denna arketyp kan vara mycket brett och omfatta många olika sammanhang. Förväntat innehåll inkluderar, men är inte begränsat till:
-- självgenererade svar på frågeformulär, inklusive PREM eller PROM
+Innehållet i denna arketyp kan vara mycket brett och omfatta många olika sammanhang. Förväntat innehåll inkluderar men är inte begränsat till:
+- egenregistrerade svar på frågeformulär, inklusive PREM eller PROM
 - smärt- eller humördagbok
 - dagbok över tobaksrökning
-- självgenererad hälsosammanfattning för delning med andra 
-- självmonitorering av mätvärden och observationer
+- egenregistrerad hälsosammanfattning för delning med andra 
+- egenmonitorering av mätvärden och observationer
 
-Förväntade användningsområden för denna arketyp inkluderar, men är inte begränsade till:
-- inlämning av ett självrapporterat frågeformulär till en vårdpersonal inför ett planerat vårdmöte
-- inlämning av ett kontaktförfrågningsformulär
+Förväntade användningsområden för denna arketyp inkluderar men är inte begränsade till:
+- inlämning av ett egenrapporterat frågeformulär till en vårdpersonal inför ett planerat vårdmöte
+- inlämning av ett formulär för kontaktförfrågan
 - dagliga mätningar i en personlig hälsodokumentation
-- patientinmatade data i en delad klinisk portal
-- patientgenererade dokumentation av registrerade uppgifter från personlig eller medicinteknisk utrustning
+- egeninmatade data i en gemensam klinisk portal
+- egengenererad dokumentation av registrerade uppgifter från personlig eller medicinteknisk utrustning
 
-Huvudsektionen eller innehållsdelen har medvetet lämnats obegränsad för att möjliggöra ifyllnad med valfria SECTION- eller ENTRY-arketyper som är lämpliga för det kliniska syftet inom en mall.">
-			keywords = <"frågeformulär,", "självrapport", "formulär", "enkät", "PROM", "PREM", "patientrapporterat utfall", "dagbok", "loggbok">
-			misuse = <"Ska inte användas för att representera information genererad av vårdpersonal.">
+Arketypens innehållsdel har medvetet lämnats obegränsad för att möjliggöra inkludering av valfria SECTION- eller ENTRY-arketyper som är lämpliga för det kliniska syftet inom en template.">
+			keywords = <"frågeformulär", "egenrapport", "egenregistrering", "egenmonitorering", "formulär", "enkät", "PROM", "PREM", "patientrapporterat utfall", "dagbok", "loggbok">
+			misuse = <"Ska inte användas för att representera information skapad av vårdpersonal.">
 		>
 		["fi"] = <
 			language = <[ISO_639-1::fi]>
@@ -433,9 +433,9 @@ Ana Bölümler/İçerik bileşeni özellikle kısıtlanmamıştır. Bu sayede kl
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"D1C4FAAB741EAA41EDA9E0651266BCFD">
-		["build_uid"] = <"250b2425-f684-40a1-ab14-e3490087649d">
-		["revision"] = <"1.1.5">
+		["MD5-CAM-1.0.1"] = <"B1C990759B32653BE06B8E37B9F51820">
+		["build_uid"] = <"d031553f-a62c-4240-916f-1fd4d6a5079b">
+		["revision"] = <"1.1.6">
 	>
 
 definition
@@ -470,8 +470,6 @@ definition
 			}
 		}
 	}
-
-
 
 ontology
 	term_definitions = <
@@ -556,8 +554,8 @@ ontology
 		["sv"] = <
 			items = <
 				["at0000"] = <
-					text = <"Självrapporterad data (1156040003 |Self reported (qualifier value)| självrapporterad)">
-					description = <"En generisk behållare för information tillhandahållen av en individ.">
+					text = <"Egenrapporterad data">
+					description = <"En generisk behållare för uppgifter som lämnas av en individ.">
 				>
 				["at0003"] = <
 					text = <"Item tree">
@@ -570,12 +568,12 @@ ontology
 				>
 				["at0005"] = <
 					text = <"Utrustning">
-					description = <"För att ange vilken utrustning som användes för att rapportera data.">
+					description = <"Anger vilken utrustning som använts för att rapportera data.">
 				>
 				["at0006"] = <
 					text = <"Informationskälla">
-					description = <"Om en eller flera källtyper för informationen i rapporten.">
-					comment = <"Detta dataelement kan användas när informationskällan skiljer sig från författaren eller den som registrerat uppgifterna. Till exempel: \"förälder\" eller \"vårdgivare\".">
+					description = <"En eller flera typer av källor för informationen i rapporten.">
+					comment = <"Detta datafält kan användas när informationskällan är en annan än författaren eller den som registrerat uppgifterna. Till exempel: \"förälder\" eller \"omsorgsgivare\".">
 				>
 			>
 		>

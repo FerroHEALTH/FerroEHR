@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -47,10 +47,9 @@
     <other_contributors>John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)</other_contributors>
     <other_contributors>Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)</other_contributors>
     <lifecycle_state>published</lifecycle_state>
-    <other_details id="licence">Licence: This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.&#xD;
-</other_details>
+    <other_details id="licence">Licence: This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
     <other_details id="custodian_organisation">openEHR Foundation</other_details>
-    <other_details id="references"></other_details>
+    <other_details id="references" />
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
@@ -818,9 +817,7 @@ Hvis det bare er ett et enkelt preparering eller behandlingstrinn eller hvis den
       </items>
       <items code="at0091">
         <items id="text">Tilsetningsstoff</items>
-        <items id="description">Identifisering av substansene som brukes i behandlingsaktiviteten.&#xD;
-&#xD;
-</items>
+        <items id="description">Identifisering av substansene som brukes i behandlingsaktiviteten.</items>
         <items id="comment">For eksempel: formalin til fiksering, embryokultur, bufferløsning. Dette dataelementet er gjort gjentagende for å tillate at mer enn ett tilsetningsstoff kan registreres.</items>
       </items>
       <items code="at0092">
@@ -851,4 +848,3 @@ Hvis det bare er ett et enkelt preparering eller behandlingstrinn eller hvis den
     </term_definitions>
   </ontology>
 </archetype>
-

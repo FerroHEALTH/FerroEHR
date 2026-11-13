@@ -171,22 +171,17 @@ pub struct FerroEhrService {
     /// bounds; `None` leaves such a query unbounded. See
     /// [`QueryConfig::max_result_rows`](crate::service::query::config::QueryConfig::max_result_rows).
     query_result_ceiling: Option<i64>,
-    /// Whether the transactional event outbox is written on every commit. The
-    /// outbox feeds the readers `[record.change_feed] readers` names — no openEHR spec
-    /// governs eventing (our own extension). With no reader the per-commit
+    /// When the transactional event outbox is written on a commit. The outbox
+    /// feeds the readers the change-feed grants name — no openEHR spec governs
+    /// eventing (our own extension). With no reader the per-commit
     /// `event_outbox` INSERT (and its envelope serialization) is pure overhead,
-    /// so the binary gates it on that list. Defaults to `true` in
+    /// so the binary gates it on those grants. [`crate::extensions::outbox::OutboxGate::Always`] in
     /// [`Self::new`] so a bare service (tests, embeddings) never silently drops
-    /// an event; the binary sets the real gate via [`Self::with_outbox_enabled`].
-    outbox_enabled: bool,
+    /// an event; the binary sets the real gate via [`Self::with_outbox_gate`].
+    pub(crate) outbox_gate: crate::extensions::outbox::OutboxGate,
     /// `[record.versioning] idempotent_resend` (#4415); the binary sets it via
     /// [`Self::with_skip_identical_resend`].
     skip_identical_resend: bool,
-    /// The `[[authz.origin]]` register: which origin a direct commit by a registered
-    /// client is stamped with, and which origins a retention period may name
-    /// (EHDS Annex II 3.4). Empty in [`Self::new`]; the binary sets it via
-    /// [`Self::with_origins`].
-    origins: Arc<crate::origins::OriginsConfig>,
     /// Short-lived stash of a just-created EHR's RM `EHR` wire body, built from
     /// the commit results at creation and popped by the `ehr_created_object`
     /// adapter seam so a `Prefer: return=representation` create response is
@@ -227,10 +222,15 @@ pub struct FerroEhrService {
     /// the binary installs the `[pixm]` provider or a test opts in to the
     /// local map.
     pub(in crate::service) ehr_index: ehr_index::provider::EhrIndexProvider,
-    /// The `[privacy.access_delay]` policy (EHDS Art. 3(3)); `None` in [`Self::new`],
-    /// which leaves the person's access immediate.
-    pub(in crate::service) access_delay:
-        Option<Arc<crate::config::access_delay::AccessDelayPolicy>>,
+    /// The operational-policy admin registers in force: the audit category
+    /// map, the EHDS Art. 3(3) access delay and the Cedar policy set, each at
+    /// its default in [`Self::new`] until [`Self::refresh_policy_registers`]
+    /// reads the stored versions.
+    pub(in crate::service) registers: Arc<crate::policy_register::LiveRegisters>,
+    /// Whether a category register that classifies nothing is refused: the
+    /// `no_category_map` floor of a production deployment that audits and has
+    /// not accepted the gap by name. `false` in [`Self::new`].
+    pub(in crate::service) require_category_map: bool,
     /// The demographic definitions of the shared party mapping; empty in
     /// [`Self::new`], which validates no party against a template.
     pub(in crate::service) party_templates: Arc<demographic::template::MappedPartyTemplates>,
@@ -238,6 +238,9 @@ pub struct FerroEhrService {
     /// under; empty in [`Self::new`], which derives no row, so every login is
     /// unbound until the mapping is installed.
     pub(in crate::service) binding: Arc<crate::party_binding::BindingMapping>,
+    /// The policy grants in force on the party pool, under the default
+    /// `[authz.grants] allowed` until the binary sets the configured one.
+    pub(in crate::service) grants: Arc<crate::party_binding::grants::live::LiveGrants>,
     /// Who may import and which wrapped committers an import may carry;
     /// [`Self::new`] lets every caller import with no wrapped-committer rule
     /// beyond its own issuer.
@@ -285,9 +288,8 @@ impl FerroEhrService {
             archetype_lineage: archetype_lineage_cache(),
             query_timeout: None,
             query_result_ceiling: None,
-            outbox_enabled: true,
+            outbox_gate: crate::extensions::outbox::OutboxGate::Always,
             skip_identical_resend: false,
-            origins: Arc::default(),
             created_ehr_repr: moka::future::Cache::builder()
                 .max_capacity(4096)
                 .time_to_live(Duration::from_secs(30))
@@ -296,9 +298,15 @@ impl FerroEhrService {
             privacy: Arc::new(crate::privacy::PrivacyPolicy::default()),
             cohort: Arc::new(linkage::cohort::config::CohortConfig::default()),
             ehr_index: ehr_index::provider::EhrIndexProvider::Unconfigured,
-            access_delay: None,
+            registers: Arc::new(crate::policy_register::LiveRegisters::new(
+                pools.clinical.clone(),
+            )),
+            require_category_map: false,
             party_templates: Arc::default(),
             binding: Arc::default(),
+            grants: Arc::new(crate::party_binding::grants::live::LiveGrants::new(
+                pools.party.clone(),
+            )),
             import_policy: Arc::default(),
         }
     }
@@ -374,6 +382,10 @@ impl FerroEhrService {
     /// the same schema separation over the clinical credential.
     #[must_use]
     pub fn with_demographic_pool(mut self, pool: PgPool) -> Self {
+        let grants = crate::party_binding::grants::live::LiveGrants::new(pool.clone());
+        grants.set_ceiling((*self.grants.ceiling()).clone());
+        grants.set_federation((*self.grants.federation()).clone());
+        self.grants = Arc::new(grants);
         self.demographic_pool = pool;
         self
     }
@@ -445,6 +457,7 @@ impl FerroEhrService {
     /// it and wires it here.
     #[must_use]
     pub fn with_audit(mut self, sender: AuditSender) -> Self {
+        self.registers.attach_audit(sender.clone());
         self.audit = Some(sender);
         self
     }
@@ -483,17 +496,35 @@ impl FerroEhrService {
         self
     }
 
-    /// Set the `[[authz.origin]]` register (EHDS Annex II 3.4).
-    #[must_use]
-    pub fn with_origins(mut self, origins: crate::origins::OriginsConfig) -> Self {
-        self.origins = Arc::new(origins);
-        self
+    /// The origins a retention period may be keyed on: those the grants of
+    /// `data_origin` in force name (EHDS Annex II 3.4, [`crate::origins`]).
+    ///
+    /// # Errors
+    /// [`crate::error::ServiceError::Storage`] when the grants must be read and the party
+    /// store cannot answer.
+    pub async fn registered_origins(
+        &self,
+    ) -> Result<std::collections::BTreeSet<String>, crate::error::ServiceError> {
+        Ok(crate::origins::registered(
+            self.fresh_grants().await?,
+            jiff::Timestamp::now(),
+        ))
     }
 
-    /// The `[[authz.origin]]` register in force.
-    #[must_use]
-    pub fn origins(&self) -> &crate::origins::OriginsConfig {
-        &self.origins
+    /// The policy grants, read again first when this replica's copy is
+    /// stale.
+    ///
+    /// # Errors
+    /// [`crate::error::ServiceError::Storage`] when the grants must be read
+    /// and the party store cannot answer.
+    pub(crate) async fn fresh_grants(
+        &self,
+    ) -> Result<&crate::party_binding::grants::live::LiveGrants, crate::error::ServiceError> {
+        self.grants
+            .refresh_if_stale()
+            .await
+            .map_err(|error| crate::error::ServiceError::from(error.into_inner()))?;
+        Ok(&self.grants)
     }
 
     /// Sets `[record.versioning] idempotent_resend` (#4415): an update whose
@@ -505,13 +536,13 @@ impl FerroEhrService {
         self
     }
 
-    /// Set whether the transactional event outbox is written on commit. The
-    /// binary calls this with whether `[record.change_feed] readers` names a reader, so the
-    /// `event_outbox` INSERT is skipped when no reader will ever read it. No
-    /// openEHR spec governs eventing — our own extension.
+    /// Set when the transactional event outbox is written on commit. The
+    /// binary sets [`crate::extensions::outbox::OutboxGate::WhileGranted`], so the `event_outbox` INSERT
+    /// is skipped while no change-feed grant names a reader. No openEHR spec
+    /// governs eventing — our own extension.
     #[must_use]
-    pub fn with_outbox_enabled(mut self, enabled: bool) -> Self {
-        self.outbox_enabled = enabled;
+    pub fn with_outbox_gate(mut self, gate: crate::extensions::outbox::OutboxGate) -> Self {
+        self.outbox_gate = gate;
         self
     }
 
@@ -561,16 +592,12 @@ impl FerroEhrService {
             #[cfg(feature = "multimedia")]
             multimedia: self.multimedia.as_deref(),
             identifiers: self.identifiers.as_deref(),
-            outbox_enabled: self.outbox_enabled,
+            outbox_enabled: self.outbox_written(),
             skip_identical_resend: self.skip_identical_resend,
             binding: &self.binding,
-            access_delay: self.access_delay.as_deref(),
-            direct_origin: self.origins.direct_origin(
-                crate::versioning::committer::current_committer()
-                    .and_then(|committer| committer.client)
-                    .as_deref(),
-                &self.system_id,
-            ),
+            grants: &self.grants,
+            access_delay: self.registers.access_delay().policy.clone(),
+            direct_origin: crate::origins::DirectOrigin::current(&self.system_id),
         }
     }
 }

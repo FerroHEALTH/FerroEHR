@@ -22,11 +22,11 @@
 
 use ferroehr::error::refusal::{Malformed, Missing};
 use serde_json::json;
-use sqlx::PgPool;
 
 use ferroehr::error::ServiceError;
-use ferroehr::extensions::outbox::{OutboxDomain, reconcile};
+use ferroehr::extensions::outbox::OutboxDomain;
 use ferroehr::ids::{EhrId, VoId};
+use ferroehr::policy_register::Register;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::storage::marks::RetentionPeriod;
@@ -109,10 +109,8 @@ async fn scoped_rows(svc: &FerroEhrService, ehr_id: EhrId) -> usize {
 
 /// The outbox feed's events of one EHR, for a reader that has acknowledged
 /// nothing.
-async fn feed_rows(svc: &FerroEhrService, pool: &PgPool, ehr_id: EhrId) -> usize {
-    reconcile(pool, &["legal-marks".to_owned()])
-        .await
-        .expect("register the reader");
+async fn feed_rows(svc: &FerroEhrService, ehr_id: EhrId) -> usize {
+    crate::policy_fixtures::grant_reader(svc, "legal-marks").await;
     let ehr = ehr_id.to_string();
     svc.outbox_events(OutboxDomain::Clinical, "legal-marks", 1000)
         .await
@@ -221,7 +219,10 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
 async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let svc = crate::policy_fixtures::granting(FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    ))
+    .await;
     let (ehr_id, _status_vo) = seed(&svc).await;
 
     svc.restrict_processing(ehr_id, None, "gdpr-18-1-b", Some("under review"))
@@ -253,7 +254,7 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
         .expect_err("an Extract of a restricted EHR is refused");
     assert!(matches!(&extract, ServiceError::Restricted(_)));
     assert_eq!(
-        feed_rows(&svc, &pool, ehr_id).await,
+        feed_rows(&svc, ehr_id).await,
         0,
         "no event of a restricted EHR is in the feed"
     );
@@ -266,7 +267,7 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
         .expect("the status reads again");
     assert_eq!(population_rows(&svc).await, 1);
     assert!(
-        feed_rows(&svc, &pool, ehr_id).await > 0,
+        feed_rows(&svc, ehr_id).await > 0,
         "the withheld events are served once the restriction is lifted"
     );
 }
@@ -340,7 +341,10 @@ async fn an_unknown_target_or_ground_is_refused_before_anything_is_recorded() {
 async fn a_research_objection_leaves_the_population_and_the_care_record_alone() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let svc = crate::policy_fixtures::granting(FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    ))
+    .await;
     let (ehr_id, _status_vo) = seed(&svc).await;
 
     assert_eq!(population_rows(&svc).await, 1);
@@ -374,7 +378,7 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
         extract.message()
     );
     assert_eq!(
-        feed_rows(&svc, &pool, ehr_id).await,
+        feed_rows(&svc, ehr_id).await,
         0,
         "no event of an objected EHR is in the feed"
     );
@@ -388,7 +392,7 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
     svc.extract_ehrs(ehr_id)
         .await
         .expect("an overridden objection exports again");
-    assert!(feed_rows(&svc, &pool, ehr_id).await > 0);
+    assert!(feed_rows(&svc, ehr_id).await > 0);
 
     // Withdrawing carries no ground: there is nothing left to override.
     let bad = svc
@@ -563,9 +567,10 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
         "#,
     )
     .expect("the map parses");
-    svc.mirror_category_map(&map.compile().expect("the map compiles"))
+    let document = serde_json::to_string(&map).expect("the map serializes");
+    svc.put_policy_register(Register::AuditCategories, 0, &document)
         .await
-        .expect("mirror the map");
+        .expect("write the category register, which mirrors the map");
 
     declare_category_periods(&svc).await;
     let bad = svc
@@ -615,9 +620,10 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
         "#,
     )
     .expect("the map parses");
-    svc.mirror_category_map(&map.compile().expect("the map compiles"))
+    let document = serde_json::to_string(&map).expect("the map serializes");
+    svc.put_policy_register(Register::AuditCategories, 1, &document)
         .await
-        .expect("mirror the second map");
+        .expect("write the second category register version");
     let due = svc.retention_due(100).await.expect("due list");
     assert!(
         due.iter()
@@ -633,23 +639,28 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
     );
 }
 
-/// A period keyed on a registered origin lists the objects whose latest
-/// version came from it, an unregistered origin is refused, and the period
-/// keyed on no origin still lists every object (Regulation (EU) 2025/327
-/// Annex II 3.4, `docs/law/eu/ehds/text.html`, #4299).
+/// A period keyed on an origin a `data_origin` grant in the CDR names lists
+/// the objects whose latest version came from it, an origin no grant names is
+/// refused, and the period keyed on no origin still lists every object
+/// (Regulation (EU) 2025/327 Annex II 3.4, `docs/law/eu/ehds/text.html`,
+/// #4299, #5439).
 #[tokio::test]
 async fn an_origin_keyed_period_lists_the_objects_of_its_origin() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let origins: ferroehr::origins::OriginsConfig = toml::from_str(
-        r#"
-        [[registered]]
-        id = "lab.example"
-        "#,
+    let svc = crate::policy_fixtures::granting(FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    ))
+    .await;
+    crate::policy_fixtures::granted(
+        &svc,
+        "lab-feed",
+        &[crate::policy_fixtures::capability(
+            "data_origin",
+            &[crate::policy_fixtures::identified("origin", "lab.example")],
+        )],
     )
-    .expect("the register parses");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
-        .with_origins(origins);
+    .await;
     let (ehr_id, _status_vo) = seed(&svc).await;
 
     let mut fed = crate::fixtures::composition("fed by the lab");
@@ -733,7 +744,6 @@ async fn setting_and_lifting_a_mark_is_recorded_in_the_access_trail() {
             sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            ..StoreConfig::default()
         },
         ..AuditConfig::default()
     };

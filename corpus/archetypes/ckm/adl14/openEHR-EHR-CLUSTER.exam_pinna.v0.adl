@@ -1,0 +1,223 @@
+﻿archetype (adl_version=1.4; uid=2d313cb8-07ff-4837-9c6e-f0114e00eaab)
+	openEHR-EHR-CLUSTER.exam_pinna.v0
+
+concept
+	[at0000]	-- Examination of pinna
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Atomica Informatics, Australia">
+		["email"] = <"heather.leslie@atomicainformatics.com">
+		["date"] = <"2013-02-05">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For recording a narrative description, structured details and clinical interpretation of the findings observed during the physical examination of external structure of the ears and immediate periauricular region, including scars.">
+			use = <"Use to record a narrative description, structured details and clinical interpretation of the findings observed during the physical examination of external structure of the ears and immediate periauricular region, including scars.
+
+This archetype has been specifically designed to be used in the 'Examination findings' SLOT within the CLUSTER.exam_ears archetype, but can also be used within the OBSERVATION.exam and other OBSERVATION or CLUSTER archetypes, where clinically appropriate.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+			keywords = <"examination", "physical", "clinical", "findings", "exam", "pinna", "ear", "external", "auricle">
+			misuse = <"Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom.
+
+Not to be used to record stand-alone clinical observations or measurements - use specific OBSERVATION archetypes. For example OBSERVATION.tympanogram_226hz.">
+			copyright = <"© Northern Territory Department of Health, Australia, openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Stephen Chu, NEHTA, Australia", "Harvey Coates, UWA, Australia", "Marissa Cookson, Dept of Health, Australia", "Kimberley Crebbin, NT Hearing Services, Australia", "Kathy Currie, Northern Territory Health, Australia", "Jade Frederiksen, Hearing Health Program, DoH, Australia", "Sam Heard, Ocean Informatics, Australia", "Paul Hickey, Hearing Health Program, Australia", "Oliver Hosking, Remote Health NT, Australia", "Anthony Leech, Hearing Health, Australia", "Kerrie Lee, Ngaanyatjarra Health Service, Australia (Editor)", "Heather Leslie, Atomica Informatics, Australia (Editor)", "Ian McNicoll, Ocean Informatics UK, United Kingdom", "Mark Ramjan, NT Department of Health, Australia", "Kelly Simmons, Department of Health, Australia", "Fiona Wake, RAHC, Australia", "Christine Wigger, Menzies School of Health Research, Australia">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"Derived from: Examination of Pinna, Draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. Authored: 2013 Feb 05. Available at: http://dcm.nehta.org.au/ckm#showArchetype_1013.1.1095_13 (discontinued).
+
+Communication with clinical domain experts associated with Australia's Northern Territory Hearing Health Program.
+
+Northern Territory Government, Department of Health: Hearing Health Program ENT Specialist Consultation Form 2011 12 07.
+
+Northern Territory Government, Department of Health: Northern Territory Hearing Health Program Teleotology Nurse Consultation Form 2011 12 07.
+
+Northern Territory Government, Department of Health: Northern Territory Hearing Health Program Audiologist Consultation Form 2011 12 07.
+
+OATSIH: The Recommendations for Clinical Care Guidelines on the Management of Otitis Media in Aboriginal and Torres Strait Islander Populations (2010). Available at: http://www.health.gov.au/internet/publications/publishing.nsf/Content/CA2578620005D57ACA25792800821BE8?OpenDocument.">
+		["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"4A61ED47ABEAE1BB3BC4913FA4D642F2">
+		["build_uid"] = <"c2aa6e56-12ad-484c-886f-9ac321c2d868">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	CLUSTER[at0000] matches {	-- Examination of pinna
+		items cardinality matches {1..*; unordered} matches {
+			ELEMENT[at0010] occurrences matches {0..1} matches {	-- Pinna examined
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0011, 	-- Left pinna
+							at0012]	-- Right pinna
+						}
+					}
+				}
+			}
+			ELEMENT[at0018] occurrences matches {0..1} matches {	-- No abnormality detected
+				value matches {
+					DV_BOOLEAN matches {
+						value matches {True}
+					}
+				}
+			}
+			ELEMENT[at0001] occurrences matches {0..1} matches {	-- Clinical description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0015] occurrences matches {0..*} matches {	-- Surgical scar
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0019] occurrences matches {0..1} matches {	-- Present?
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0020, 	-- Present
+									at0021]	-- Absent
+								}
+							}
+						}
+					}
+					ELEMENT[at0016] occurrences matches {0..1} matches {	-- Site of scar
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0017] occurrences matches {0..1} matches {	-- Scar description
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+			allow_archetype CLUSTER[at0002] occurrences matches {0..*} matches {	-- Pinna details
+				include
+					archetype_id/value matches {/.*/}
+			}
+			ELEMENT[at0005] occurrences matches {0..*} matches {	-- Multimedia representation
+				value matches {
+					DV_MULTIMEDIA matches {
+						media_type matches {
+							[openEHR::
+							425, 
+							426, 
+							427, 
+							428, 
+							429, 
+							401, 
+							402, 
+							404, 
+							405, 
+							406, 
+							407, 
+							414, 
+							518]
+						}
+					}
+				}
+			}
+			ELEMENT[at0003] occurrences matches {0..*} matches {	-- Clinical interpretation
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			allow_archetype CLUSTER[at0022] occurrences matches {0..*} matches {	-- Exam not done
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1/}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Examination of pinna">
+					description = <"Findings observed during the physical examination of the external structure of the ears and immediate periauricular region.">
+				>
+				["at0001"] = <
+					text = <"Clinical description">
+					description = <"Narrative description of the findings observed during a physical examination of a single identified pinna, including size, shape and position.">
+					comment = <"May be used to record a narrative summary of the complete clinical examination of the body system or anatomical strucutre or key aspects of physical examination findings, which will be further supported by the additional structured data, using CLUSTER archetypes in the 'Examination Detail' slot. This data element may be used to capture legacy data that is not available in a structured format.">
+				>
+				["at0002"] = <
+					text = <"Pinna details">
+					description = <"Structured details of physical examination findings for the specific parts of the identified pinna or related structures.">
+					comment = <"For examination, associated lymph nodes or skin.">
+				>
+				["at0003"] = <
+					text = <"Clinical interpretation">
+					description = <"Single word, phrase or brief description represents the clinical meaning and significance of the physical examination findings.">
+					comment = <"Coding with a terminology is preferred, if possible. For example, normal examination or a specific physical finding.">
+				>
+				["at0005"] = <
+					text = <"Multimedia representation">
+					description = <"Digital image or video taken, or a diagram drawn, during the physical examination of the body system or anatomical structure.">
+				>
+				["at0010"] = <
+					text = <"Pinna examined">
+					description = <"Identification of the pinna examined.">
+				>
+				["at0011"] = <
+					text = <"Left pinna">
+					description = <"Examination findings for the left pinna.">
+				>
+				["at0012"] = <
+					text = <"Right pinna">
+					description = <"Examination findings for the right pinna.">
+				>
+				["at0015"] = <
+					text = <"Surgical scar">
+					description = <"Findings about surgical scars identified on, or related to the identified pinna.">
+					comment = <"The key intent of these data element is to identify the possible existence of significant middle ear surgery where this has not been previously recorded in the subject. This is a not uncommon occurrence in the remote communities managed by NT Hearing Health.">
+				>
+				["at0016"] = <
+					text = <"Site of scar">
+					description = <"Identification of the the specific anatomical structure of the pinna or related anatomical region examined.">
+					comment = <"Coding of the System/Stucture with a terminology is desirable, where possible.">
+				>
+				["at0017"] = <
+					text = <"Scar description">
+					description = <"Narrative description of the scar, including likely aetiology and state of healing.">
+				>
+				["at0018"] = <
+					text = <"No abnormality detected">
+					description = <"Statement that no abnormality was detected on examination.">
+					comment = <"Record as True if no abnormality was detected on examination.">
+				>
+				["at0019"] = <
+					text = <"Present?">
+					description = <"Is a scar present in the periaural region?">
+				>
+				["at0020"] = <
+					text = <"Present">
+					description = <"A post-surgical scar is present.">
+				>
+				["at0021"] = <
+					text = <"Absent">
+					description = <"A post-surgical scar is not present.">
+				>
+				["at0022"] = <
+					text = <"Exam not done">
+					description = <"Details to explicitly record that this examination was not performed.">
+				>
+			>
+		>
+	>

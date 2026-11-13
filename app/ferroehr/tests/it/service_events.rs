@@ -19,7 +19,7 @@ use sqlx::{PgPool, Row};
 use crate::fixtures::commit_audit;
 use crate::fixtures::{committer, composition_by, uv};
 use crate::typed_body::typed;
-use ferroehr::extensions::outbox::{OutboxDomain, reconcile};
+use ferroehr::extensions::outbox::{OutboxDomain, OutboxGate};
 use ferroehr::service::FerroEhrService;
 
 // ── fixtures ─────────────────────────────────────────────────────────────────
@@ -179,13 +179,13 @@ async fn composition_and_contribution_commits_each_write_one_phi_free_outbox_row
 
 #[tokio::test]
 async fn outbox_disabled_writes_no_rows() {
-    // With no eventing consumer configured (`with_outbox_enabled(false)`), the
-    // per-commit `event_outbox` INSERT is skipped entirely — no consumer will
-    // ever read it. No openEHR spec governs eventing (our own extension).
+    // With no change-feed grant naming a reader (`OutboxGate::WhileGranted`),
+    // the per-commit `event_outbox` INSERT is skipped entirely — no consumer
+    // will ever read it. No openEHR spec governs eventing (our own extension).
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
-        .with_outbox_enabled(false);
+        .with_outbox_gate(OutboxGate::WhileGranted);
 
     // EHR creation, a direct composition commit, and a CONTRIBUTION commit —
     // none writes an outbox row.
@@ -227,6 +227,42 @@ async fn outbox_disabled_writes_no_rows() {
         total_count(&pool).await,
         0,
         "CONTRIBUTION commit writes none when the outbox is disabled"
+    );
+}
+
+/// A `read_change_feed` grant committed to the CDR turns the outbox on for
+/// the next commit, with no restart, under the binary's gate (#5439).
+#[tokio::test]
+async fn a_change_feed_grant_turns_the_outbox_on() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = crate::policy_fixtures::granting(
+        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+            .with_outbox_gate(OutboxGate::WhileGranted),
+    )
+    .await;
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    assert_eq!(total_count(&pool).await, 0, "no reader is granted yet");
+    crate::policy_fixtures::granted(
+        &svc,
+        "ferrobridge",
+        &[crate::policy_fixtures::capability(
+            "read_change_feed",
+            &[crate::policy_fixtures::scope("reader", "ferrobridge")],
+        )],
+    )
+    .await;
+    assert_eq!(
+        svc.change_feed_readers().await.expect("the grants read"),
+        ["ferrobridge"]
+    );
+    svc.create_composition(ehr, uv(&composition("v1"), "249", None))
+        .await
+        .expect("create_composition");
+    assert_eq!(
+        total_count(&pool).await,
+        1,
+        "the commit after the grant writes its outbox row"
     );
 }
 
@@ -286,10 +322,11 @@ async fn rolled_back_commit_writes_no_outbox_row() {
 async fn the_feed_serves_every_committed_row_in_seq_order_until_acknowledged() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    reconcile(&pool, &["ferrobridge".to_owned()])
-        .await
-        .expect("register the reader");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let svc = crate::policy_fixtures::granting(FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    ))
+    .await;
+    crate::policy_fixtures::grant_reader(&svc, "ferrobridge").await;
 
     // Commit some work: an EHR + two compositions ⇒ three outbox rows.
     let ehr = crate::fixtures::create_ehr(&svc).await;

@@ -1,0 +1,208 @@
+﻿archetype (adl_version=1.4; uid=6e3e8693-9c05-485e-8637-1bf93e345ad7)
+	openEHR-EHR-EVALUATION.advance_decision_refuse_treatment_uk.v0
+
+concept
+	[at0000]	-- Advance decision to refuse treatment
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Ian McNicoll">
+		["organisation"] = <"Ocean Informatics, UK">
+		["email"] = <"ian.mcnicoll@oceaninformatics.com">
+		["date"] = <"2013-10-11">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record an advance decision to refuse treatment (ADRT) , a decision to refuse a specific treatment, made in
+advance by a person who has capacity to do so.">
+			use = <"To record an advance decision to refuse treatment (ADRT) , a decision to refuse a specific treatment, made in
+advance by a person who has capacity to do so.">
+			keywords = <"DNACPR", "resuscitation", "EoL", "directive", "preference">
+			misuse = <"This archetype should not be used to convey the results of other advanced directives, patient preferences or resusciation activity *e.g. suction) which falls short of full cardio-pulminary resuscitation.">
+			copyright = <"© Clinical Models UK, openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"Information Standards Board ISB Data Dictionary Available at http://www.datadictionary.nhs.uk/
+
+End of Life Care Co-ordination: Core Content Standard Specification Available at http://www.isb.nhs.uk/documents/isb-1580/amd-29-2012/index_html
+
+NHS Scotland Key Information Summary
+
+Leeds ePaccs team">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"29C818F376313D8F671592D855FD0451">
+		["build_uid"] = <"e3b65eb1-fa49-4192-b307-c914962397a5">
+		["ip_acknowledgements"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	EVALUATION[at0000] matches {	-- Advance decision to refuse treatment
+		data matches {
+			ITEM_TREE[at0001] matches {	-- Tree
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0003] occurrences matches {0..1} matches {	-- Decision status
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0004, 	-- Advanced decision to refuse treatment signed
+									at0005, 	-- Has advance decision to refuse treatment (Mental Capacity Act 2005)
+									at0022, 	-- Has advance decision to refuse life sustaining treatment (Mental Capacity Act 2005)
+									at0028]	-- Advanced directive not signed
+								}
+							}
+						}
+					}
+					ELEMENT[at0002] occurrences matches {0..1} matches {	-- Date of decision
+						value matches {
+							DV_DATE_TIME matches {*}
+						}
+					}
+					ELEMENT[at0012] occurrences matches {0..1} matches {	-- Informal carer awareness of decision
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0025, 	-- Informal carer not aware of advanced directive
+									at0026]	-- Informal carer aware of advanced directive
+								}
+							}
+						}
+					}
+					ELEMENT[at0021] occurrences matches {0..1} matches {	-- Comment
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0010] matches {	-- Tree
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0013] occurrences matches {0..1} matches {	-- Discussion with healthcare professional
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {[local::at0027]}		-- Decision to refuse treatment discussed with healthcare professional
+							}
+						}
+					}
+					ELEMENT[at0011] occurrences matches {0..1} matches {	-- Location of advance directive documentation
+						value matches {
+							DV_TEXT matches {*}
+							DV_URI matches {*}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	terminologies_available = <"READ2", "RCD99", "SNOMED-CT">
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Advance decision to refuse treatment">
+					description = <"An advance decision to refuse treatment (ADRT) is a decision to refuse a specific treatment, made in
+ advance by a person who has capacity to do so.">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Date of decision">
+					description = <"The date at which the DNACPR decision was originally taken or last reviewed.">
+				>
+				["at0003"] = <
+					text = <"Decision status">
+					description = <"The state of the decision to refuse treatment.">
+				>
+				["at0004"] = <
+					text = <"Advanced decision to refuse treatment signed">
+					description = <"The subject has signed an advanced decision to refuse treatment.">
+				>
+				["at0005"] = <
+					text = <"Has advance decision to refuse treatment (Mental Capacity Act 2005)">
+					description = <"The subject has signed an advance decision to refuse treatment (Mental Capacity Act 2005).">
+				>
+				["at0010"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0011"] = <
+					text = <"Location of advance directive documentation">
+					description = <"The location of the original advanced directive document, either a text description or an electronic link.">
+				>
+				["at0012"] = <
+					text = <"Informal carer awareness of decision">
+					description = <"Is the informal carer, or carers, aware of the advanced directive?">
+				>
+				["at0013"] = <
+					text = <"Discussion with healthcare professional">
+					description = <"Has the advanced directive been discussed with a healthcare professional?">
+				>
+				["at0021"] = <
+					text = <"Comment">
+					description = <"Other narrative comment pertinent to the advanced directive.">
+				>
+				["at0022"] = <
+					text = <"Has advance decision to refuse life sustaining treatment (Mental Capacity Act 2005)">
+					description = <"The subject has signed an advance decision to refuse life sustaining treatment (Mental Capacity Act 2005).">
+				>
+				["at0025"] = <
+					text = <"Informal carer not aware of advanced directive">
+					description = <"The informal carer is not aware of the subject's advanced directive.">
+				>
+				["at0026"] = <
+					text = <"Informal carer aware of advanced directive">
+					description = <"The informal carer is aware of the subject's advanced directive.">
+				>
+				["at0027"] = <
+					text = <"Decision to refuse treatment discussed with healthcare professional">
+					description = <"The subject has discussed their decision to refuse treatment with a healthcare professional.">
+				>
+				["at0028"] = <
+					text = <"Advanced directive not signed">
+					description = <"The subject has not signed and advance directive or has rescinded an early directive.">
+				>
+			>
+		>
+	>
+	term_bindings = <
+		["READ2"] = <
+			items = <
+				["at0004"] = <[READ2::9x2..]>
+				["at0005"] = <[READ2::9NgG.]>
+				["at0022"] = <[READ2::9NgG0]>
+				["at0027"] = <[READ2::9NgK.]>
+			>
+		>
+		["RCD99"] = <
+			items = <
+				["at0004"] = <[RCD99::XaVy8]>
+				["at0005"] = <[RCD99::XaYld]>
+				["at0022"] = <[RCD99::XaYle]>
+				["at0027"] = <[RCD99::XaYv4]>
+			>
+		>
+		["SNOMED-CT"] = <
+			items = <
+				["at0005"] = <[SNOMED-CT::816301000000100]>
+				["at0022"] = <[SNOMED-CT::816321000000109]>
+				["at0027"] = <[SNOMED-CT::820621000000107]>
+			>
+		>
+	>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -78,9 +78,45 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">0EE9628D2B91CB934A0F3D31546F727F</other_details>
-    <other_details id="build_uid">40cda3d0-9891-468c-86a2-c9a024383b2a</other_details>
-    <other_details id="revision">1.0.1</other_details>
+    <other_details id="MD5-CAM-1.0.1">98E53091B6652F763099AFC190B4F437</other_details>
+    <other_details id="build_uid">f0f6ccba-a667-4709-acbc-00a6f2ef9298</other_details>
+    <other_details id="revision">1.0.2</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Erfassung strukturierter Details einer komplexen Anweisung für eine bestellte oder angeforderte Dienstleistung.</purpose>
+      <keywords>Anfrage</keywords>
+      <keywords>Dienstleistung</keywords>
+      <keywords>Verfahren</keywords>
+      <keywords>Untersuchung</keywords>
+      <keywords>Behandlung</keywords>
+      <keywords>Zeitpunkt</keywords>
+      <keywords>Timing</keywords>
+      <keywords>Anweisung</keywords>
+      <use>Zur Erfassung strukturierter Details einer einzelnen, komplexen Anweisung für eine bestellte oder angeforderte Dienstleistung. &#xD;
+&#xD;
+Dieser Archetyp wurde so konzipiert, dass er in den SLOT „Complex timing” (Komplexe Zeitplanung) des Archetyps INSTRUCTION.service_request eingebettet werden kann, kann aber bei Bedarf auch in anderen klinisch relevanten Archetypen verwendet werden. Es können mehrere Instanzen dieses Archetyps erforderlich sein, um eine komplexe Bestellung von Dienstleistungen darzustellen, insbesondere solche mit sich im Laufe der Zeit ändernden Häufigkeiten oder Liefermustern.&#xD;
+&#xD;
+Jede Leistungsanweisung enthält detaillierte Anweisungen zu einer oder mehreren aufeinanderfolgenden Aktivitäten, die jeweils eine Menge und einen zeitlichen Ablauf innerhalb eines Tages umfassen, zusammen mit einer Gesamtdauer der Anweisung und Details zu wiederkehrenden Mustern außerhalb eines einzelnen Tages. Jedes Aktivitätspaar ermöglicht die Beschreibung eines komplexen Tagesablaufs, z. B. 2 Stunden Pflegehilfe am Morgen und eine Stunde am Abend.&#xD;
+&#xD;
+Jede Leistungsanweisung kann für einen festen Zeitraum oder eine feste Anzahl von Leistungen gelten, die mit dem Datenelement „Gesamtbetrag” angegeben wird.&#xD;
+&#xD;
+Der Gesamtbetrag für die gesamte Leistungsanforderung wird in INSTRUCTION.service_request erfasst.&#xD;
+&#xD;
+Beispiele: &#xD;
+- „Häusliche Pflegehilfe für 2 Stunden am Morgen und 1 Stunde am Abend für einen Zeitraum von 6 Wochen, gefolgt von 1 Stunde am Morgen für weitere 6 Wochen”;&#xD;
+- „Durchzuführendes Dialyse-Bluttestpaket: Am zweiten Mittwoch des Monats im Januar, März, Mai, Juli, September und November”;&#xD;
+- „INR täglich für eine Woche, wöchentlich für einen Monat, monatlich für sechs Monate”; oder&#xD;
+- „Beobachtung der Vitalfunktionen stündlich für vier Stunden, anschließend alle zwei Stunden für 12 Stunden”.&#xD;
+&#xD;
+Der CLUSTER kann im Template oder zur Laufzeit umbenannt werden, um eine bestimmte LeistungsAnweisung darzustellen, z. B. „Erste vier Stunden nach der Operation”.</use>
+      <misuse>Nicht zur Erfassung von Informationen über Anfragen oder Bestellungen zu verwenden, bei denen eine Dosierung erforderlich ist, z. B. Medikamenten- oder Transfusionsbestellungen. Verwenden Sie für diese Zwecke CLUSTER.therapeutic_direction.</misuse>
+      <copyright />
+    </details>
     <details>
       <language>
         <terminology_id>
@@ -191,6 +227,17 @@ The CLUSTER can be renamed in template or at run-time to represent a specific se
       <copyright>© openEHR Foundation, Alberta Health Services (Canada)</copyright>
     </details>
   </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Jonas Bucher, Hendrik Heiser</author>
+    <author id="organisation">CISTEC AG</author>
+    <author id="email">jonas.bucher@cistec.com, hendrik.heiser@cistec.com</author>
+  </translations>
   <translations>
     <language>
       <terminology_id>
@@ -1055,6 +1102,64 @@ Där flera riktningar uttrycks gör "Riktningssekvensen" ordningen i vilken de s
         <items id="description">Mer information om en beställd artikelriktning.</items>
       </items>
     </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Dienstleistungsanweisung</items>
+        <items id="description">Strukturierte Details einer komplexen Anweisung für eine bestellte oder angeforderte Dienstleistung.</items>
+        <items id="comment">Beispiel: eine Reihe von Vitalparameter-Messungen in den ersten 24 Stunden nach der Operation; oder eine Anfrage für häusliche Pflege morgens und abends, die über einen Monat hinweg schrittweise reduziert wird.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Anweisungssequenz</items>
+        <items id="description">Die vorgesehene Position dieser Anweisung innerhalb der Gesamtsequenz der Anweisungen.</items>
+        <items id="comment">Beispiel: „1”, „2”, „3”.&#xD;
+Wenn mehrere Anweisungen angegeben sind, legt die „Anweisungssequenz” die Reihenfolge fest, in der sie ausgeführt werden sollen. Beispiel: (1) 4-mal täglich für 3 Tage, (2) 2-mal täglich für 4 Tage, (3) 1-mal täglich für 7 Tage.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Beschreibung der Anweisung</items>
+        <items id="description">Beschreibung der gesamten Anweisung.</items>
+        <items id="comment">Beispiel: „Jeden Montag um 07:00 Uhr, Dauer 30 Minuten, für die nächsten drei Monate“.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Aktivität</items>
+        <items id="description">Eine Gruppierung von Menge und Zeitpunkt für einen Teil einer Dienstleistungsanweisung.</items>
+        <items id="comment">Beispiel: Antrag auf häusliche Pflege für 2 Stunden am Morgen als eine Aktivität und 1 Stunde am Abend als zweite Aktivität.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Aktivitätsablauf</items>
+        <items id="description">Die vorgesehene sequenzielle Position dieser Aktivität innerhalb aller Aktivitäten für die Dienstleistungsanweisung.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Menge</items>
+        <items id="description">Die Menge der im Rahmen einer bestimmten Aktivität angeforderten Dienstleistung.</items>
+        <items id="comment">Dargestellt entweder als Anzahl der Leistungen oder als Dauer der Leistung(en).</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Täglicher Zeitablauf</items>
+        <items id="description">Strukturierte Details zum Zeitablauf der Dienstleistung innerhalb eines Tages.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Dauer der Anweisung</items>
+        <items id="description">Die Dauer, für die diese Anweisung gelten soll.</items>
+        <items id="comment">Beispiel: „7 Tage lang“, „unbefristet“. Ein Beispiel für mehrere Anweisungen mit unterschiedlicher Dauer wäre „1-mal täglich für 3 Tage, 2-mal täglich für 4 Tage, dann 3-mal unbefristet“.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Unbefristet</items>
+        <items id="description">Die Anweisung soll auf unbestimmte Zeit beibehalten werden.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Wiederholungsmuster</items>
+        <items id="description">Strukturierte Details zum Wiederholungsmuster für jede Reihe von Aktivitäten innerhalb eines Tages.</items>
+        <items id="comment">Beispiele: „alle 3 Tage“, „donnerstags und sonntags“, „3 Tage nach Beginn der Menstruation“. Dieser SLOT ist nicht für Zeitangaben innerhalb eines 24-Stunden-Intervalls vorgesehen.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Gesamtmenge</items>
+        <items id="description">Die Gesamtzahl der verfügbaren Dienstleistungen oder Stunden für alle Aktivitäten in dieser Anweisung.</items>
+        <items id="comment">Beispiel: „Einmalig durchführen“ = 1; oder „30 Stunden“.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Zusätzliche Details</items>
+        <items id="description">Zusätzliche Details zu einer angeforderten Dienstleistung.</items>
+      </items>
+    </term_definitions>
   </ontology>
 </archetype>
-

@@ -268,7 +268,7 @@ async fn service(pool: &PgPool) -> anyhow::Result<FerroEhrService> {
     };
     let binding = PartyBindingConfig {
         namespace: NAMESPACE.to_owned(),
-        person: PersonSection {
+        person: Some(PersonSection {
             template: vec![PersonTemplate {
                 template_id: PERSON.to_owned(),
                 key: selector("guid"),
@@ -277,7 +277,7 @@ async fn service(pool: &PgPool) -> anyhow::Result<FerroEhrService> {
                 default: true,
             }],
             attribute: Vec::new(),
-        },
+        }),
         professional_role: Some(RoleSection {
             template_id: ROLE.to_owned(),
         }),

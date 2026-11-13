@@ -557,6 +557,59 @@ fn generation_spec(
         })
 }
 
+/// Load the schemas of the dependency generations a generation's resolution
+/// model merges, in table order, every unit of each.
+///
+/// # Errors
+/// Returns an error if a dependency names a missing key or generation, or one
+/// of its BMM files cannot be loaded.
+pub(crate) fn generation_dep_schemas(
+    deps: &[DepGeneration],
+) -> Result<Vec<BmmSchema>, Box<dyn std::error::Error>> {
+    let mut dep_schemas = Vec::with_capacity(deps.len());
+    for dep in deps {
+        let dep_comp = lookup(dep.key)?;
+        let dep_spec = generation_spec(dep_comp, dep.generation)?;
+        for unit in dep_spec.units {
+            dep_schemas.push(load_bmm(unit.file)?);
+        }
+    }
+    Ok(dep_schemas)
+}
+
+/// The [`External`] index over `deps`: each dependency generation's emittable
+/// specs mapped to full generation-module paths, consulted first-wins across
+/// dependencies in table order, for references made from `crate_name`.
+///
+/// Within one dependency generation the units fold LAST-wins (a later unit's
+/// twin shadows an earlier one's, the retired merged-view semantics AM 2.4's
+/// LANG closure was built against), realized by one folded map per dependency
+/// generation.
+///
+/// # Errors
+/// Returns an error if a dependency names a missing key or generation, or one
+/// of its BMM files cannot be loaded.
+pub(crate) fn external_index(
+    deps: &[DepGeneration],
+    crate_name: &str,
+) -> Result<External, Box<dyn std::error::Error>> {
+    let mut external = External::default().in_crate(crate_name);
+    for dep in deps {
+        let dep_comp = lookup(dep.key)?;
+        let dep_spec = generation_spec(dep_comp, dep.generation)?;
+        let (dep_units, _) = generation_units(dep_spec)?;
+        let mut modules = BTreeMap::new();
+        for unit in &dep_units {
+            for s in emittable_specs(&unit.model, &unit.schema) {
+                let path = generation_module_path(dep_comp, dep.generation, &unit.schema, &s);
+                modules.insert(s, path);
+            }
+        }
+        external = external.with(modules);
+    }
+    Ok(external)
+}
+
 /// Load one generation's units plus each unit's merged resolution model
 /// (paired dependency generations below, the unit's own schema on top).
 ///
@@ -569,14 +622,7 @@ fn generation_units(
     if spec.units.is_empty() {
         return Err(format!("generation {:?} lists no specification unit", spec.module).into());
     }
-    let mut dep_schemas = Vec::with_capacity(spec.model_deps.len());
-    for dep in spec.model_deps {
-        let dep_comp = lookup(dep.key)?;
-        let dep_spec = generation_spec(dep_comp, dep.generation)?;
-        for unit in dep_spec.units {
-            dep_schemas.push(load_bmm(unit.file)?);
-        }
-    }
+    let dep_schemas = generation_dep_schemas(spec.model_deps)?;
     let mut units = Vec::with_capacity(spec.units.len());
     for unit in spec.units {
         let schema = load_bmm(unit.file)?;
@@ -622,27 +668,7 @@ pub(crate) fn compose(key: &str) -> Result<Composed, Box<dyn std::error::Error>>
     for spec in comp.generations {
         let (units, dep_schemas) = generation_units(spec)?;
 
-        // The External index over prelude_deps: each dependency generation's
-        // emittable specs mapped to full generation-module paths, consulted
-        // first-wins across dependencies in table order. Within one
-        // dependency generation the units fold LAST-wins (a later unit's
-        // twin shadows an earlier one's — the retired merged-view semantics
-        // AM 2.4's LANG closure was built against), realized here by one
-        // folded map per dependency generation.
-        let mut external = External::default().in_crate(comp.crate_name);
-        for dep in spec.prelude_deps {
-            let dep_comp = lookup(dep.key)?;
-            let dep_spec = generation_spec(dep_comp, dep.generation)?;
-            let (dep_units, _) = generation_units(dep_spec)?;
-            let mut modules = BTreeMap::new();
-            for unit in &dep_units {
-                for s in emittable_specs(&unit.model, &unit.schema) {
-                    let path = generation_module_path(dep_comp, dep.generation, &unit.schema, &s);
-                    modules.insert(s, path);
-                }
-            }
-            external = external.with(modules);
-        }
+        let external = external_index(spec.prelude_deps, comp.crate_name)?;
 
         generations.push(ComposedGeneration {
             spec,

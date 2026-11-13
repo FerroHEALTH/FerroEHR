@@ -96,7 +96,6 @@ definition
 		}
 	}
 
-
 ontology
 	terminologies_available = <"LOINC", ...>
 	term_definitions = <

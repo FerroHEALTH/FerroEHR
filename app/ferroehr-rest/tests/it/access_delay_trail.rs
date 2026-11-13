@@ -19,10 +19,9 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
-use ferroehr::config::access_delay::{AccessDelayConfig, AccessDelayPolicy};
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::categories::CategoryMapConfig;
+use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
+use ferroehr::policy_register::Register;
 use ferroehr::system_log::sender::{
     AuditHandle, ResolvedSubject, SubjectLookup, SubjectResolver, start,
 };
@@ -42,7 +41,7 @@ const PATIENT: &str = "patient-7";
 /// A deployment that holds patient summaries for 72 hours, audits to the
 /// local store with every EHR resolving to [`PATIENT`], and gates by role:
 /// `dr` a professional, `root` the controller, `portal` the person's portal
-/// holding the subject-scoped audit role.
+/// holding a `read_subject_audit` grant in the CDR.
 async fn app() -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
     let audit = common::local_audit();
@@ -57,34 +56,38 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     let (sender, _handle): (_, AuditHandle) = start(audit, Some(resolver), Some(pool.clone()))
         .await
         .expect("the audit sender");
-    let classifier = CategoryMapConfig::default()
-        .compile()
-        .expect("the shipped map compiles");
-    let section = AccessDelayConfig {
-        categories: vec!["Patient-Summaries".to_owned()],
-        max_delay: Some(ferrohealth_config::units::Duration::from_hours(72)),
-    };
     let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        common::binding_service(&pool)
             .with_audit(sender)
             .with_audit_store(AuditStore::new(pool.clone()))
-            .with_access_delay(AccessDelayPolicy::compile(&section, &classifier)),
+            .with_binding_mapping(crate::party_binding_http::mapping())
+            .with_grant_ceiling(GrantCeiling::new([Operation::ReadSubjectAudit])),
     );
-    svc.mirror_category_map(&classifier)
+    svc.put_policy_register(
+        Register::AccessDelay,
+        0,
+        r#"{"enabled": true, "categories": ["Patient-Summaries"], "max_delay": "72h"}"#,
+    )
+    .await
+    .expect("turn the access delay on");
+    svc.mirror_category_map()
         .await
         .expect("mirror the category map");
     let mut config = common::api_config(true);
     common::with_basic_users(
         &mut config,
+        &svc,
+        &pool,
         &[
             ("dr", &["USER"]),
             ("root", &["ADMIN"]),
             ("portal", &["PORTAL"]),
         ],
-    );
+    )
+    .await;
+    common::grant_to(&svc, &pool, "portal", Operation::ReadSubjectAudit).await;
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
-    authz.rbac.subject_audit_role = Some("PORTAL".to_owned());
     let handle = AuthzHandle::build(
         &authz,
         &config.api.base_path,
@@ -92,9 +95,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = ferroehr_rest::build_full(config, svc, handle, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, svc, handle, Observability::default()).await;
     let (status, body) = send(
         &app,
         "POST",

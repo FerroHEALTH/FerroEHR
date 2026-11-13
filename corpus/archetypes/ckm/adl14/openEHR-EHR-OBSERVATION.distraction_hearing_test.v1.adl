@@ -1,0 +1,230 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-OBSERVATION.distraction_hearing_test.v1
+
+concept
+	[at0000]	-- Distraction Hearing Test
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["date"] = <"10/11/2007">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"A structure to record the results of testing the hearing thresholds of patients with developmental age between seven months and 18 months of age">
+			use = <"To assess hearing thresholds of patients with developmental age between seven months and 18 months of age">
+			keywords = <"hearing", "test", "distraction">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <>
+
+definition
+	OBSERVATION[at0000] matches {	-- Distraction Hearing Test
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..1} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0004] occurrences matches {0..1} matches {	-- Side
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0005, 	-- Left
+													at0006]	-- Right
+												}
+											}
+										}
+									}
+									CLUSTER[at0018] occurrences matches {0..1} matches {	-- Details
+										items cardinality matches {0..*; unordered} matches {
+											ELEMENT[at0007] occurrences matches {0..1} matches {	-- Stimulus
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0012, 	-- High frequency rattle
+															at0013, 	-- Hum (vocal)
+															at0014, 	-- Sibilant 's' (vocal)
+															at0015, 	-- 'G' Chime bar
+															at0016]	-- 'C' Chime bar
+														}
+													}
+												}
+											}
+											ELEMENT[at0017] occurrences matches {0..1} matches {	-- Frequency
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::382]>
+														list = <
+															["1"] = <
+																units = <"Hz">
+															>
+															["2"] = <
+																units = <"kHz">
+															>
+														>
+													>
+												}
+											}
+											ELEMENT[at0020] occurrences matches {0..1} matches {	-- Hearing Threshold
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::123]>
+														list = <
+															["1"] = <
+																units = <"dB">
+															>
+														>
+													>
+												}
+											}
+											ELEMENT[at0019] occurrences matches {0..1} matches {	-- Response
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0021, 	-- Positive
+															at0022]	-- Negative
+														}
+													}
+												}
+											}
+											ELEMENT[at0024] occurrences matches {0..1} matches {	-- Image
+												value matches {
+													DV_MULTIMEDIA matches {
+														media_type matches {
+															[openEHR::
+															425, 
+															426, 
+															427, 
+															428, 
+															429]
+														}
+													}
+												}
+											}
+										}
+									}
+									ELEMENT[at0025] occurrences matches {0..1} matches {	-- Reliability
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0023] occurrences matches {0..1} matches {	-- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Distraction Hearing Test">
+					description = <"A paediatric behavioural test, for assessing hearing thresholds of patients with developmental age between seven months and 18 months of age">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Side">
+					description = <"Side being tested">
+				>
+				["at0005"] = <
+					text = <"Left">
+					description = <"*">
+				>
+				["at0006"] = <
+					text = <"Right">
+					description = <"*">
+				>
+				["at0007"] = <
+					text = <"Stimulus">
+					description = <"Nature of stimulus sound">
+				>
+				["at0012"] = <
+					text = <"High frequency rattle">
+					description = <"*">
+				>
+				["at0013"] = <
+					text = <"Hum (vocal)">
+					description = <"*">
+				>
+				["at0014"] = <
+					text = <"Sibilant 's' (vocal)">
+					description = <"*">
+				>
+				["at0015"] = <
+					text = <"'G' Chime bar">
+					description = <"*">
+				>
+				["at0016"] = <
+					text = <"'C' Chime bar">
+					description = <"*">
+				>
+				["at0017"] = <
+					text = <"Frequency">
+					description = <"Record frequency of stimulus presented">
+				>
+				["at0018"] = <
+					text = <"Details">
+					description = <"Details of the distraction hearing test">
+				>
+				["at0019"] = <
+					text = <"Response">
+					description = <"Consistent response of infant to stimulus">
+				>
+				["at0020"] = <
+					text = <"Hearing Threshold">
+					description = <"Record of hearing threshold in dB">
+				>
+				["at0021"] = <
+					text = <"Positive">
+					description = <"*">
+				>
+				["at0022"] = <
+					text = <"Negative">
+					description = <"*">
+				>
+				["at0023"] = <
+					text = <"Comment">
+					description = <"Comment on test">
+				>
+				["at0024"] = <
+					text = <"Image">
+					description = <"Image of test result">
+				>
+				["at0025"] = <
+					text = <"Reliability">
+					description = <"Estimation of the reliability of the test result - indicated by behaviour of child eg cooperative etc.">
+				>
+			>
+		>
+	>

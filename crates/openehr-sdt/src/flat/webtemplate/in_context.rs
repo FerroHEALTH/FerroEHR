@@ -47,6 +47,7 @@ pub(super) fn synthesize_in_context(node: &mut WebTemplateNode) {
     for child in &mut node.children {
         synthesize_in_context(child);
     }
+    synth_collapsed_event(node);
     if node.rm_type == "COMPOSITION" {
         synth_composition(node);
     } else if is_entry_family(&node.rm_type) {
@@ -197,6 +198,30 @@ fn synth_event(node: &mut WebTemplateNode) {
         datetime_inputs(),
         false,
     );
+}
+
+/// The `time` of a single EVENT the compactor collapsed into `node`
+/// (master04 §"Conditionally Collapsed Wrapper Types"): the wrapper goes, its
+/// RM-mandatory `EVENT.time` (RM data_structures, `EVENT.time` 1..1) does not,
+/// so the leaf stays addressable on the node that took the event's children,
+/// at the event's own `aqlPath`.
+fn synth_collapsed_event(node: &mut WebTemplateNode) {
+    let events: Vec<String> = node
+        .slots
+        .iter()
+        .filter(|slot| is_event_family(&slot.rm_type))
+        .map(|slot| slot.path.clone())
+        .collect();
+    for event in events {
+        ensure_child(
+            node,
+            &format!("{event}/time"),
+            "DV_DATE_TIME",
+            Some("Time"),
+            datetime_inputs(),
+            false,
+        );
+    }
 }
 
 /// Append an in-context leaf child at `aql_path` (min 1 / max 1, `inContext:

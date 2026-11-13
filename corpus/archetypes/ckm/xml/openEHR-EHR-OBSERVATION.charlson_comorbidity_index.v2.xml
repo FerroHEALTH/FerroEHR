@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1514,11 +1514,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0006">
         <items id="text">Perifere vaskulære sykdommer</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Ja</items>
@@ -1526,11 +1526,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0009">
         <items id="text">Kronisk hjertesvikt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Ja</items>
@@ -1538,11 +1538,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0012">
         <items id="text">Myokardinfarkt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Ja</items>
@@ -1550,11 +1550,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0015">
         <items id="text">Cerebrovaskulær hendelse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Ja</items>
@@ -1562,11 +1562,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0018">
         <items id="text">Demens</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Ja</items>
@@ -1574,11 +1574,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0021">
         <items id="text">Kronisk lungesykdom</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Ja</items>
@@ -1586,11 +1586,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0024">
         <items id="text">Ulcussykdom</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Ja</items>
@@ -1598,11 +1598,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0027">
         <items id="text">Leversykdom</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Ingen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Mild</items>
@@ -1610,23 +1610,23 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0030">
         <items id="text">Bindevevssykdom</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Diabetes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Ingen eller diettkontrollert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Ukompliser</items>
@@ -1634,23 +1634,23 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0036">
         <items id="text">Hemiplegi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Moderat til alvorlig nyresykdom</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Ja</items>
@@ -1658,15 +1658,15 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0045">
         <items id="text">Solid svulst</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Ingen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Leukemi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Lokalisert</items>
@@ -1674,27 +1674,27 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0049">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Lymfom</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">AIDS</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Aldersgruppe</items>
@@ -1702,23 +1702,23 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0062">
         <items id="text">&lt;50 år</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">50-59 år</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">60-69 år</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">70-79 år</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0066">
         <items id="text">≥80 år</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Moderat til alvorlig</items>
@@ -1734,7 +1734,7 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0070">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Ja</items>
@@ -1755,7 +1755,7 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0004">
         <items id="text">ITEM_TREE</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="en">
@@ -1777,11 +1777,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0006">
         <items id="text">Peripheral vascular disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Yes</items>
@@ -1789,11 +1789,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0009">
         <items id="text">Congestive heart failure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Yes</items>
@@ -1801,11 +1801,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0012">
         <items id="text">Myocardial infarction</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Yes</items>
@@ -1813,11 +1813,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0015">
         <items id="text">Cerebrovascular disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Yes</items>
@@ -1825,11 +1825,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0018">
         <items id="text">Dementia</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Yes</items>
@@ -1837,11 +1837,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0021">
         <items id="text">Chronic pulmonary disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Yes</items>
@@ -1849,11 +1849,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0024">
         <items id="text">Ulcer disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Yes</items>
@@ -1861,11 +1861,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0027">
         <items id="text">Liver disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Mild</items>
@@ -1873,23 +1873,23 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0030">
         <items id="text">Connective tissue disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Diabetes mellitus</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">None or diet-controlled</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Uncomplicated</items>
@@ -1897,23 +1897,23 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0036">
         <items id="text">Hemiplegia</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Moderate or severe renal disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Yes</items>
@@ -1921,15 +1921,15 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0045">
         <items id="text">Solid tumor</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Leukemia</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Localized</items>
@@ -1937,27 +1937,27 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0049">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Lymphoma</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">AIDS</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Age group</items>
@@ -1965,23 +1965,23 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0062">
         <items id="text">&lt;50 years</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">50–59 years</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">60-69 years</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">70–79 years</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0066">
         <items id="text">≥80 years</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Moderate to severe</items>
@@ -1997,7 +1997,7 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0070">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Yes</items>
@@ -2018,7 +2018,7 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0004">
         <items id="text">ITEM_TREE</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="es">
@@ -2040,11 +2040,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0006">
         <items id="text">Enfermedad vascular periférica</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Sí</items>
@@ -2052,11 +2052,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0009">
         <items id="text">Insuficiencia cardíaca congestiva</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Sí</items>
@@ -2064,11 +2064,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0012">
         <items id="text">Infarto de miocardio</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Sí</items>
@@ -2076,11 +2076,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0015">
         <items id="text">Enfermedad cerebrovascular</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Sí</items>
@@ -2088,11 +2088,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0018">
         <items id="text">Demencia</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Sí</items>
@@ -2100,11 +2100,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0021">
         <items id="text">Enfermedad pulmonar crónica</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Sí</items>
@@ -2112,11 +2112,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0024">
         <items id="text">Enfermedad ulcerosa</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Sí</items>
@@ -2124,11 +2124,11 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0027">
         <items id="text">Enfermedad hepática</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Ninguna</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Leve</items>
@@ -2136,23 +2136,23 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0030">
         <items id="text">Enfermedad del tejido conectivo</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Sí</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Diabetes mellitus</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Ausente o controlada con dieta</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">No complicada</items>
@@ -2160,23 +2160,23 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0036">
         <items id="text">Hemiplejía</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Sí</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Enfermedad renal moderada o severa</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Sí</items>
@@ -2184,15 +2184,15 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0045">
         <items id="text">Tumor sólido</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Ninguno</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Leucemia</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Localizado</items>
@@ -2200,27 +2200,27 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0049">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Linfoma</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Sí</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Sí</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">SIDA</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Grupo etario</items>
@@ -2228,23 +2228,23 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0062">
         <items id="text">&lt; 50 años</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">50-59 años</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">60-69 años</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">70-79 años</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0066">
         <items id="text">≥ años</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Moderada a severa</items>
@@ -2260,7 +2260,7 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0070">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Sí</items>
@@ -2281,9 +2281,8 @@ En el artículo original, se representaron 19 'enfermedades', incluyendo varias 
       </items>
       <items code="at0004">
         <items id="text">ITEM_TREE</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

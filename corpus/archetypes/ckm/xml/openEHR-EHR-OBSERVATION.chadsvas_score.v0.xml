@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -842,11 +842,11 @@ Lip GY, Nieuwlaat R, Pisters R, Lane DA, Crijns HJ. Refining clinical risk strat
       </items>
       <items code="at0001">
         <items id="text">Tree</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0002">
         <items id="text">history</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0003">
         <items id="text">Any event</items>
@@ -854,59 +854,59 @@ Lip GY, Nieuwlaat R, Pisters R, Lane DA, Crijns HJ. Refining clinical risk strat
       </items>
       <items code="at0026">
         <items id="text">Congestive Heart Failure</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Absent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Present</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Hypertension</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Diabetes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Age</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Under 65</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Between 65-74</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Above or equals to 75</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Previous stroke</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Gender</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Male</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Female</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Vascular disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0099">
         <items id="text">Total score</items>
@@ -1103,11 +1103,11 @@ Lip GY, Nieuwlaat R, Pisters R, Lane DA, Crijns HJ. Refining clinical risk strat
       </items>
       <items code="at0001">
         <items id="text">Listenstruktur</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0002">
         <items id="text">Historie</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0003">
         <items id="text">Beliebiges Ereignis</items>
@@ -1115,59 +1115,59 @@ Lip GY, Nieuwlaat R, Pisters R, Lane DA, Crijns HJ. Refining clinical risk strat
       </items>
       <items code="at0026">
         <items id="text">Herzinsuffizienz</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">nicht vorhanden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Vorhanden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Hypertonie</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Diabetes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Alter</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Unter 65</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Zwischen 65 und 74</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Ab 75 Jahren oder älter</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Vorangegangener Schlaganfall</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Geschlecht</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Männlich</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Weiblich</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Vaskuläre Erkrankung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0099">
         <items id="text">Gesamtpunktzahl</items>
@@ -1185,4 +1185,3 @@ Lip GY, Nieuwlaat R, Pisters R, Lane DA, Crijns HJ. Refining clinical risk strat
     </term_definitions>
   </ontology>
 </archetype>
-

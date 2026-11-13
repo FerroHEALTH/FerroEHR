@@ -1,0 +1,419 @@
+﻿archetype (adl_version=1.4; uid=8c7b1810-9599-402f-b3be-61b44da62ef4)
+	openEHR-EHR-OBSERVATION.substance_use-caffeine.v0
+specialise
+	openEHR-EHR-OBSERVATION.substance_use.v1
+
+concept
+	[at0000.1]	-- Caffeine consumption
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"?">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"6/05/2009">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"This is an archetype used to record details of the use of all common forms of caffeine">
+			use = <"Use to record details of the use of all common forms of caffeine.  This includes use at specific point in time, over intervals of time, and use of mathematical functions such as average or minimum eg average consumption over a week.  
+A typical use would be to record usage in an caffeine consumption diary.  ">
+			keywords = <"substance", "addiction", "consumption", "use", "caffeine", "coffee">
+			misuse = <"Not to be used for recording persistent and summary details about the use of caffeine - this should be captured using the EVALUATION.substance_use_summary-caffeine archetype.  ">
+			copyright = <"© 2011 openEHR Foundation, openEHR Foundation">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"يستخدم هذا النموذج لتسجيل تفاصيل عن استخدام جميع الأشكال الشائعة من الكافيين">
+			use = <"
+يستخدم لتسجيل تفاصيل عن استخدام جميع الأشكال الشائعة للكافيين. و هذا يتضمن الاستخدام في نقطة زمنية معينة, عبر فترات معينة, و استخدام دوال رياضية مثل المتوسط أو الحد الأدنى, مثل متوسط الاستهلاك خلال أسبوع.
+الاستخدام النمطي لهذا النموذج يتضمن تسجيل الاستخدام في ملاحظات يومية عن استهلاك الكافيين">
+			keywords = <"*substance(en)", "*addiction(en)", "*consumption(en)", "*use(en)", "*caffeine(en)", "*coffee(en)">
+			misuse = <"لا يتم استخدام النموذج لتسجيل التفاصيل المتكررة أو الملخصة عن استخدام المواد. يمكن استخدام نموذج تقييم. ملخص استخدام المواد - الكافيين">
+			copyright = <"© 2011 openEHR Foundation, openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Sam Heard, Ocean Informatics, Australia", ...>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"690F4B75D56957C170ED47A2FB91F2A9">
+		["build_uid"] = <"4e5e67f0-ceb5-47ca-a8f5-d17a68b54d07">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	OBSERVATION[at0000.1] matches {	-- Caffeine consumption
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..1} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0004] occurrences matches {0..1} matches {	-- Substance
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {[local::at0.19]}		-- Caffeine
+											}
+										}
+									}
+									CLUSTER[at0010] occurrences matches {0..1} matches {	-- Consumption details
+										items cardinality matches {0..*; unordered} matches {
+											ELEMENT[at0011] occurrences matches {0..1} matches {	-- Form
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0.20, 	-- Coffee - instant
+															at0.21, 	-- Coffee - brewed/filtered
+															at0.22, 	-- Coffee - espresso
+															at0.23, 	-- Tea
+															at0.24]	-- Soft drink
+														}
+													}
+												}
+											}
+											ELEMENT[at0018] occurrences matches {0..1} matches {	-- Method of use
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+											ELEMENT[at0005] occurrences matches {0..1} matches {	-- Frequency
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0006, 	-- Daily use
+															at0007, 	-- Weekly use
+															at0008, 	-- Irregular use
+															at0009]	-- No use
+														}
+													}
+												}
+											}
+											CLUSTER[at0.25] occurrences matches {0..1} matches {	-- Amount consumed
+												items cardinality matches {0..1; unordered} matches {
+													ELEMENT[at0012] occurrences matches {0..*} matches {*}
+													ELEMENT[at0012.1] occurrences matches {0..*} matches {	-- Cups of coffee or tea
+														value matches {
+															C_DV_QUANTITY <
+																property = <[openehr::382]>
+																list = <
+																	["1"] = <
+																		units = <"/d">
+																	>
+																	["2"] = <
+																		units = <"/wk">
+																	>
+																>
+															>
+														}
+													}
+													ELEMENT[at0012.2] occurrences matches {0..*} matches {	-- Shots of espresso coffee
+														value matches {
+															C_DV_QUANTITY <
+																property = <[openehr::382]>
+																list = <
+																	["1"] = <
+																		units = <"/d">
+																	>
+																	["2"] = <
+																		units = <"/wk">
+																	>
+																>
+															>
+														}
+													}
+													ELEMENT[at0012.3] occurrences matches {0..*} matches {	-- Volume of soft drink
+														value matches {
+															C_DV_QUANTITY <
+																property = <[openehr::126]>
+																list = <
+																	["1"] = <
+																		units = <"ml/d">
+																	>
+																	["2"] = <
+																		units = <"ml/wk">
+																	>
+																>
+															>
+														}
+													}
+												}
+											}
+										}
+									}
+									ELEMENT[at0013] occurrences matches {0..1} matches {	-- Triggers
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									allow_archetype CLUSTER[at0014] occurrences matches {0..*} matches {	-- Readiness for change
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.change\.v1/}
+									}
+									ELEMENT[at0016] occurrences matches {0..1} matches {	-- Evidence of dependence
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.19"] = <
+					text = <"Caffeine">
+					description = <"Caffeine consumption">
+				>
+				["at0.20"] = <
+					text = <"Coffee - instant">
+					description = <"Source of caffeine is instant coffee">
+				>
+				["at0.21"] = <
+					text = <"Coffee - brewed/filtered">
+					description = <"Source of caffeine is brewed or filtered coffee">
+				>
+				["at0.22"] = <
+					text = <"Coffee - espresso">
+					description = <"Source of caffeine is espresso coffee, including cappuchino, latte etc">
+				>
+				["at0.23"] = <
+					text = <"Tea">
+					description = <"Source of caffeine is tea">
+				>
+				["at0.24"] = <
+					text = <"Soft drink">
+					description = <"Source of caffeine is soft drink eg cola">
+				>
+				["at0.25"] = <
+					text = <"Amount consumed">
+					description = <"Amount consumed - only one quantity is permitted per form">
+				>
+				["at0000"] = <
+					text = <"Substance Use">
+					description = <"Generic archetype to record the actual use or consumption of a defined substance at the present time, a specific time or over a period of time. ">
+				>
+				["at0000.1"] = <
+					text = <"Caffeine consumption">
+					description = <"Archetype to record the actual use or consumption of caffeine at the present time, a specific time or over a period of time. ">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Any event">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Substance">
+					description = <"Identification of substance ">
+				>
+				["at0005"] = <
+					text = <"Frequency">
+					description = <"Frequency of use of caffeine">
+				>
+				["at0006"] = <
+					text = <"Daily use">
+					description = <"Used every day">
+				>
+				["at0007"] = <
+					text = <"Weekly use">
+					description = <"Used at least weekly">
+				>
+				["at0008"] = <
+					text = <"Irregular use">
+					description = <"Used irregularly">
+				>
+				["at0009"] = <
+					text = <"No use">
+					description = <"Not used at all">
+				>
+				["at0010"] = <
+					text = <"Consumption details">
+					description = <"Details about the consumption of caffeine">
+				>
+				["at0011"] = <
+					text = <"Form">
+					description = <"Form of caffeine consumed">
+				>
+				["at0012"] = <
+					text = <"Amount">
+					description = <"Amount of substance consumed.  Data type can be further specified in specialised archetypes or in templates">
+				>
+				["at0012.1"] = <
+					text = <"Cups of coffee or tea">
+					description = <"Consumption of instant coffee, brewed coffee, filtered coffee or tea, in cups">
+				>
+				["at0012.2"] = <
+					text = <"Shots of espresso coffee">
+					description = <"Consumption of espresso coffee by shots, whether alone or mixed with milk in cappuchino or latte etc">
+				>
+				["at0012.3"] = <
+					text = <"Volume of soft drink">
+					description = <"Consumption of caffeine-containing soft drink by volume">
+				>
+				["at0013"] = <
+					text = <"Triggers">
+					description = <"Identified triggers which stimulate or cause use">
+				>
+				["at0014"] = <
+					text = <"Readiness for change">
+					description = <"Details about the readiness to change use or consumption of caffeine">
+				>
+				["at0016"] = <
+					text = <"Evidence of dependence">
+					description = <"Description of any evidence of dependence on the caffeine">
+				>
+				["at0018"] = <
+					text = <"Method of use">
+					description = <"Method of use or consumption of caffeine">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0.19"] = <
+					text = <"الكافيين">
+					description = <"استهلاك الكافيين">
+				>
+				["at0.20"] = <
+					text = <"الكافيين - الفوري">
+					description = <"مصدر الكافيين هو القهوة الفورية">
+				>
+				["at0.21"] = <
+					text = <"القهوة - المخمرة أو المصفاة">
+					description = <"مصدر القهوة هو القهوة المخمرة أو المصفاة">
+				>
+				["at0.22"] = <
+					text = <"القهوة - الاسبريسو">
+					description = <"مصدر الكافيين هو القهوة الاسبريسو, و هو يتضمن الكابتشينو و اللاتيه, إلى آخره">
+				>
+				["at0.23"] = <
+					text = <"الشاي">
+					description = <"مصدر الكافيين هو الشاي">
+				>
+				["at0.24"] = <
+					text = <"المشروبات غير الكحولية">
+					description = <"مصدر الكافيين هو المشروبات غير الكحولية, مثلا الكولا">
+				>
+				["at0.25"] = <
+					text = <"الكمية المستهلكة">
+					description = <"الكمية المستهلكة, يتم تسجيل كمية واحدة للشكل الواحد">
+				>
+				["at0000"] = <
+					text = <"استخدام المواد">
+					description = <"نموذج جنيس (غير محدود الملكية) لتسجيل الاستخدام الفعلي أو الاستهلاك لمادة معينة في الوقت الحالي, أو في وقت معين, أو في فترة زمنية معينة  ">
+				>
+				["at0000.1"] = <
+					text = <"استهلاك الكافيين">
+					description = <"نموذج مستخدم لتسجيل الاستخدام الفعلي أو استهلاك الكافيين في الوقت الحالي, في فترة زمنية معينة, أو خلال مدة معينة.">
+				>
+				["at0001"] = <
+					text = <"سلسلة الوقائع">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"إحدى الوقائع">
+					description = <"إحدى الوقائع">
+				>
+				["at0003"] = <
+					text = <"شجرة">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"المادة">
+					description = <"تعريف المادة">
+				>
+				["at0005"] = <
+					text = <"التكرار">
+					description = <"تكرار استخدام الكافيين">
+				>
+				["at0006"] = <
+					text = <"استخدام يومي">
+					description = <"يتم استخدامه يوميا">
+				>
+				["at0007"] = <
+					text = <"استخدام أسبوعي">
+					description = <"يستخدم أسبوعيا على الأقل">
+				>
+				["at0008"] = <
+					text = <"استخدام غير منتظم">
+					description = <"يتم الاستخدام بشكل غير منتظم">
+				>
+				["at0009"] = <
+					text = <"لا يتم الاستخدام">
+					description = <"لا يتم الاستخدام على الإطلاق">
+				>
+				["at0010"] = <
+					text = <"تفاصيل الاستهلاك">
+					description = <"تفاصيل حول استهلاك الكافيين">
+				>
+				["at0011"] = <
+					text = <"الشكل">
+					description = <"شكل استهلاك الكافيين">
+				>
+				["at0012"] = <
+					text = <"الكمية">
+					description = <" كمية المادة المستهلكة. يمكن زيادة تحديد  نوعية البيانات في نموذج مخصص أو في قوالب">
+				>
+				["at0012.1"] = <
+					text = <"عدد أكواب الشاي أو القهوة">
+					description = <"استهلاك أكواب القهوة الفورية, القهوة المخمرة, القهوة المصفاة, أو الشاي ">
+				>
+				["at0012.2"] = <
+					text = <"جرعات قهوة الاسبريسو">
+					description = <"استهلاك قهوة الاسبريسو في جرعات, سواء وحدها أو مخلوطة باللبن في الكابتشينو أو اللاتيه , إلى آخره">
+				>
+				["at0012.3"] = <
+					text = <"حجم المشروبات غير الكحولية">
+					description = <"استهلاك (حجم) المشروبات غير الكحولية المحتوية على الكافيين ">
+				>
+				["at0013"] = <
+					text = <"المحفزات - المثيرات">
+					description = <"المحفزات التي تسبب أو تنبه لاستخدام الكافيين">
+				>
+				["at0014"] = <
+					text = <"الاستعداد للتغيير">
+					description = <"تفاصيل عن الاستعداد لتغيير استخدام أو استهلاك الكافيين">
+				>
+				["at0016"] = <
+					text = <"البينة على الاعتماد">
+					description = <"وصف أي بينة من الاعتماد على الكافيين">
+				>
+				["at0018"] = <
+					text = <"طريقة الاستخدام">
+					description = <"طريقة استهلاك أو استخدام الكافيين">
+				>
+			>
+		>
+	>

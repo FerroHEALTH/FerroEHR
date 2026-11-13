@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1646,7 +1646,7 @@ Dado que los factores de riesgo pueden identificarse gradualmente con el tiempo 
       <items code="at0028">
         <items id="text">Mitigated</items>
         <items id="description">The risk factor has been identified as present, but then subsequently been mitigated by treatment or investigation.</items>
-        <items id="comment">Record as True if the risk factor has been treated or investigated and risk from this risk factor is considered to be lessened. For example: an infant given gentamicin in neonatal intensive care is regarded as having a risk of permanent hearing loss. If diagnostic testing shows no evidence of hearing loss in the first year of life, the risk of later hearing loss is considered to be much reduced, but still possible. This data element allows clinicians to say that the risk has been mitigated but should still be considered as a possibility in future. In practice, the risk factor could be maintained in the risk assessment in case it might impact the individual's health at a future time, but flagging that its contribution to risk calculation may not be as great as if it had not been previously treated or investigated. </items>
+        <items id="comment">Record as True if the risk factor has been treated or investigated and risk from this risk factor is considered to be lessened. For example: an infant given gentamicin in neonatal intensive care is regarded as having a risk of permanent hearing loss. If diagnostic testing shows no evidence of hearing loss in the first year of life, the risk of later hearing loss is considered to be much reduced, but still possible. This data element allows clinicians to say that the risk has been mitigated but should still be considered as a possibility in future. In practice, the risk factor could be maintained in the risk assessment in case it might impact the individual's health at a future time, but flagging that its contribution to risk calculation may not be as great as if it had not been previously treated or investigated.</items>
       </items>
       <items code="at0029">
         <items id="text">Date identified</items>
@@ -1865,8 +1865,7 @@ Riskfaktor använd en terminologi om det är möjligt.</items>
       <items code="at0025">
         <items id="text">Bedömningsmetod</items>
         <items id="description">Identifiering av metoden eller riktlinjen som används för bedömning av risker.</items>
-        <items id="comment">Till exempel: Framingham kardiovaskulär riskkalkylator.&#xD;
-</items>
+        <items id="comment">Till exempel: Framingham kardiovaskulär riskkalkylator.</items>
       </items>
       <items code="at0026">
         <items id="text">Obestämd</items>
@@ -2043,8 +2042,7 @@ Riskfaktor använd en terminologi om det är möjligt.</items>
       </items>
       <items code="at0012">
         <items id="text">Lenke til underlag</items>
-        <items id="description">Sti til arketypen eller dataelementet der underlagsinformasjonen for risikofaktoren er lagret.&#xD;
-</items>
+        <items id="description">Sti til arketypen eller dataelementet der underlagsinformasjonen for risikofaktoren er lagret.</items>
         <items id="comment">For eksempel: Lenke til siste blodtrykksverdi, røykestatus eller kolesterolmåling i journalen.</items>
       </items>
       <items code="at0013">
@@ -2100,8 +2098,7 @@ Riskfaktor använd en terminologi om det är möjligt.</items>
       </items>
       <items code="at0025">
         <items id="text">Vurderingsmetode</items>
-        <items id="description">Algoritmen eller regelen som ble brukt til å gjøre risikovurderingen.&#xD;
-</items>
+        <items id="description">Algoritmen eller regelen som ble brukt til å gjøre risikovurderingen.</items>
         <items id="comment">For eksempel: Framingham cardiovascular risk calculator.</items>
       </items>
       <items code="at0026">
@@ -2110,8 +2107,7 @@ Riskfaktor använd en terminologi om det är möjligt.</items>
       </items>
       <items code="at0027">
         <items id="text">Detaljer</items>
-        <items id="description">Strukturerte detaljer om andre aspekter ved risikovurderingen.&#xD;
-</items>
+        <items id="description">Strukturerte detaljer om andre aspekter ved risikovurderingen.</items>
         <items id="comment">For eksempel: Forekomst av risikofaktorer hos familiemedlemmer.</items>
       </items>
       <items code="at0028">
@@ -2625,4 +2621,3 @@ Tradotto con www.DeepL.com/Translator (versione gratuita)</items>
     </term_bindings>
   </ontology>
 </archetype>
-

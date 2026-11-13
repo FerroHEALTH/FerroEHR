@@ -909,7 +909,17 @@ impl Element {
     }
 
     /// Scroll it to the middle of the viewport, clear of the sticky top bar
-    /// and the docked decision bar.
+    /// and the docked decision bar. A control in an open modal dialog stays
+    /// where it is.
+    ///
+    /// A modal dialog sits in the top layer, which the page's scroll never
+    /// brings into view. A popover form is one, placed against its trigger
+    /// by CSS anchor positioning, and the browser moves it with a scrolled
+    /// anchor only at its next rendering update (CSS Anchor Positioning,
+    /// "Taking Scroll Into Account"). Until then its controls still report
+    /// their place before the scroll, and a click aimed there lands outside
+    /// the dialog, which closes it as a press outside does and posts nothing
+    /// (#5503).
     ///
     /// # Panics
     /// When the `WebDriver` answers with anything but success.
@@ -921,7 +931,11 @@ impl Element {
         element_command(&format!("scroll_to_centre({})", self.what), async {
             self.inner
                 .handle()
-                .execute("arguments[0].scrollIntoView({block: 'center'});", vec![arg])
+                .execute(
+                    "if (!arguments[0].closest('dialog:modal')) \
+                     arguments[0].scrollIntoView({block: 'center'});",
+                    vec![arg],
+                )
                 .await
                 .map(|_| ())
         })

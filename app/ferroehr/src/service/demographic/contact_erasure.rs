@@ -40,6 +40,7 @@ use sqlx::PgConnection;
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::ids::VoId;
+use crate::party_binding::grants::operation::{BINDING_ISSUER, Operation};
 use crate::party_binding::provisioned;
 use crate::service::FerroEhrService;
 use crate::service::admin::integrity::rebuild::{NodeRebuildOutcome, rebuild_in_tx};
@@ -54,22 +55,32 @@ const SWEEP_BATCH: i64 = 100;
 
 impl FerroEhrService {
     /// Spawns the sweep that erases, every `every`, the contacts of the
-    /// deleted Users of `binding_issuers` once `delay_minutes` have passed;
-    /// nothing when no client is declared.
-    pub fn spawn_contact_erasure(
-        self: &Arc<Self>,
-        binding_issuers: Vec<String>,
-        delay_minutes: u32,
-        every: Duration,
-    ) {
-        if !binding_issuers.is_empty() {
-            tokio::spawn(sweep(
-                Arc::clone(self),
-                binding_issuers,
-                delay_minutes,
-                every,
-            ));
-        }
+    /// deleted Users of every SCIM client once `delay_minutes` have passed.
+    pub fn spawn_contact_erasure(self: &Arc<Self>, delay_minutes: u32, every: Duration) {
+        tokio::spawn(sweep(Arc::clone(self), delay_minutes, every));
+    }
+
+    /// The `binding_issuer` of every stored `scim_provision` grant, in force
+    /// or ended, sorted: the issuers whose deleted Users the contact erasure
+    /// reaches, so a client whose grant ended still has its deleted Users'
+    /// contacts erased.
+    ///
+    /// # Errors
+    /// [`ServiceError::Storage`] when the grants must be read and the party
+    /// store cannot answer.
+    pub async fn provisioned_binding_issuers(&self) -> Result<Vec<String>, ServiceError> {
+        let mut issuers: Vec<String> = self
+            .fresh_grants()
+            .await?
+            .all_stored(Operation::ScimProvision)
+            .iter()
+            .flat_map(|grant| grant.credentials().identified(BINDING_ISSUER))
+            .filter(|issuer| !issuer.is_empty())
+            .map(str::to_owned)
+            .collect();
+        issuers.sort_unstable();
+        issuers.dedup();
+        Ok(issuers)
     }
 
     /// Erases the contacts of the deleted Users of the clients of
@@ -165,20 +176,16 @@ impl FerroEhrService {
     reason = "a detached background task with no shutdown channel; it ends when the \
               runtime drops it, and `-> !` cannot be spawned on stable"
 )]
-async fn sweep(
-    service: Arc<FerroEhrService>,
-    binding_issuers: Vec<String>,
-    delay_minutes: u32,
-    every: Duration,
-) {
+async fn sweep(service: Arc<FerroEhrService>, delay_minutes: u32, every: Duration) {
     let mut ticks = tokio::time::interval(every);
     ticks.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
     loop {
         ticks.tick().await;
-        match service
-            .erase_due_contacts(&binding_issuers, delay_minutes)
-            .await
-        {
+        let erased = match service.provisioned_binding_issuers().await {
+            Ok(issuers) => service.erase_due_contacts(&issuers, delay_minutes).await,
+            Err(error) => Err(error),
+        };
+        match erased {
             Ok(0) => {}
             Ok(erased) => tracing::info!(erased, "erased the contacts of deleted SCIM Users"),
             Err(error) => tracing::warn!(

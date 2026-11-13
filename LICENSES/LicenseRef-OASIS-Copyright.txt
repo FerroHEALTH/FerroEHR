@@ -1,13 +1,15 @@
 OASIS copyright notice
 ======================
 
-This identifier covers the OASIS SAML V2.0 Profiles vendored at
-`docs/specs/oasis-saml/`, fetched by `scripts/vendor/oasis-saml.sh`. It is not
-an SPDX-listed licence. It is the grant the document states in its Appendix
-B, Notices, recorded in machine-readable form so that a glob elsewhere in
-REUSE.toml cannot assert the wrong terms over it.
+This identifier covers two OASIS Standards: the SAML V2.0 Profiles vendored
+at `docs/specs/oasis-saml/`, fetched by `scripts/vendor/oasis-saml.sh`, and
+the XACML 2.0 core specification vendored at `docs/specs/xacml/`, fetched by
+`scripts/vendor/xacml.sh`. It is not an SPDX-listed licence. It is the grant
+each document states in its Notices appendix, recorded in machine-readable
+form so that a glob elsewhere in REUSE.toml cannot assert the wrong terms
+over them.
 
-What the document states
+What the documents state
 ------------------------
 
 Quoted verbatim from Appendix B of "Profiles for the OASIS Security Assertion
@@ -38,11 +40,20 @@ https://docs.oasis-open.org/security/saml/v2.0/saml-profiles-2.0-os.pdf, read
   NOT INFRINGE ANY RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR
   FITNESS FOR A PARTICULAR PURPOSE.
 
+Appendix E, Notices, of "eXtensible Access Control Markup Language (XACML)
+Version 2.0", OASIS Standard, 1 Feb 2005,
+https://docs.oasis-open.org/xacml/2.0/access_control-xacml-2.0-core-spec-os.pdf,
+read 2026-11-13, carries the same text under "Copyright © OASIS Open
+2004-2005. All Rights Reserved.", word for word except that it reads "this
+document itself does not be modified" where the text above reads "may not
+be modified".
+
 The OASIS IPR Policy, https://www.oasis-open.org/policies-guidelines/ipr/,
-read 2026-11-05, states the same grant for OASIS documents.
+read 2026-11-05 and again 2026-11-13, states the same grant for OASIS
+documents (section 14.1).
 
 How this repository uses it
 ---------------------------
 
-The PDF is copied unmodified, with its copyright notice and this paragraph
+Each PDF is copied unmodified, with its copyright notice and this paragraph
 in it, which is the condition of the grant.

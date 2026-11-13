@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -288,8 +288,7 @@ Ska inte användas för registrering av invasiv blodgasmätning, exempelvis arte
       <keywords>hypoksemi</keywords>
       <use>Brukes til å registrere blodoksygen og beslektede målinger, målt ved pulsoksymetri eller puls-CO-oksymetri.&#xD;
 &#xD;
-Bølgeformer bør registreres her, når det benyttes til å dokumentere kvalitet på blodgassmåling.&#xD;
-</use>
+Bølgeformer bør registreres her, når det benyttes til å dokumentere kvalitet på blodgassmåling.</use>
       <misuse>Brukes ikke til å registrere andre non-invasive blodgassmålinger, som transkutan CO₂, sidestrøms endetidal CO₂ eller noninasiv cerebral oksymetri.&#xD;
 &#xD;
 Brukes ikke til å registrere pletysmografi. Bruk en annen passende arketype for dette formålet.&#xD;
@@ -355,8 +354,7 @@ No usar para registrar medidas directas de gases en sangre. Ej. SaO2 (saturació
         </terminology_id>
         <code_string>pt-br</code_string>
       </language>
-      <purpose>Para gravar medidas de oxigênio sanguíneo, medidas por oximetria de pulso ou por carbo-oximetria de pulso.&#xD;
-</purpose>
+      <purpose>Para gravar medidas de oxigênio sanguíneo, medidas por oximetria de pulso ou por carbo-oximetria de pulso.</purpose>
       <keywords>Oxigênio</keywords>
       <keywords>Oxigenação</keywords>
       <keywords>Saturação</keywords>
@@ -386,8 +384,7 @@ A forma das ondas podem ser usadas para documentar a qualidade das medidas de ga
 Não dever ser usado para avaliar alterações de volume. Usar outro arquétipo apropriado para este fim.&#xD;
 Não deve ser usado para obter outros tipos de medida, tais como medida de pulso uma vez que o processo de medida também oferce isso. Deveria ser obtido em um arquétipo separado, apropriado para esta medida particular para obter dados consistentes. No exemplo obtenha o pulso no aquétipo de observação de pulso.&#xD;
 Não deve ser usado para qualquer medida de gases de sangue periférico que envolva contato direto com sangue, por exemplo PaO₂, PaCO₂, poderiam ser obtidos usando o arquétipo de observações de resultados de teste de laboratório.&#xD;
-Não deve ser usado para obter medidas de gases sanguíneos invasivos. Por exemplo, saturação de oxigênio arterial (SaO₂), Venoso (SvO₂) ou conteúdo de oxigênio (CaOC) que geralmente são determinados por métodos invasivos, como gasometria de laboratório ou cateter vascular. Estes também devem ser registrados no arquétipo OBSERVATION.laboratory_test_result.&#xD;
-</misuse>
+Não deve ser usado para obter medidas de gases sanguíneos invasivos. Por exemplo, saturação de oxigênio arterial (SaO₂), Venoso (SvO₂) ou conteúdo de oxigênio (CaOC) que geralmente são determinados por métodos invasivos, como gasometria de laboratório ou cateter vascular. Estes também devem ser registrados no arquétipo OBSERVATION.laboratory_test_result.</misuse>
       <copyright />
     </details>
     <details>
@@ -482,8 +479,7 @@ plesmythography &#xD;
 ينبغي إضافة القياسات المباشرة لغازات الدم لنموذج ملاحظة. الاختبار المعملي. غازات الدم.&#xD;
 &#xD;
 لا ينبغي أن يستخدم لقياس قياسات غازات الدم المباشرة, مثل تشبع الدم شرياني بالأكسجين و تشبع الدم الوريدي بالأكسجين, أو المحتوى الأكسجيني, التي يتم تحديدها باستخدام الطرق الباضعة, مثل استخدام الأجهزة المعملية لقياس غازات الدم أو القثطار الوريدي &#xD;
-و ينبغي تسجيل هذه القياسات باستخدام نموذج ملاحظة. الاختبار المعملي. غازات الدم.&#xD;
-</misuse>
+و ينبغي تسجيل هذه القياسات باستخدام نموذج ملاحظة. الاختبار المعملي. غازات الدم.</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
     <details>
@@ -537,7 +533,7 @@ Ne uporabljajte za beleženje invazivnih meritev plinov v krvi. Na primer, arter
         <code_string>fa</code_string>
       </language>
       <purpose>برای ثبت اندازه گیری گاز خون بطور غیر مستقیم ،در حال حاضر غیر تهاجمی و غیر مستقیم بکار می رود، نظیر ....و ... از طریق اندازه گیری اکسیژن نبضی ، اندازه گیری اکسیژن زیر پوستی یا سایر روشها &#xD;
-این احتمال بالاست که از این الگو ساز بطور اولیه در ثبت برآوردهای تولید اکسیژن استفاده شوداما سایر اندازه گیری های گاز ممکن است در طول زمان اضافه شود  .   </purpose>
+این احتمال بالاست که از این الگو ساز بطور اولیه در ثبت برآوردهای تولید اکسیژن استفاده شوداما سایر اندازه گیری های گاز ممکن است در طول زمان اضافه شود  .</purpose>
       <keywords>اکسیژن</keywords>
       <keywords>تولید اکسیژن</keywords>
       <keywords>اشباع</keywords>
@@ -572,10 +568,9 @@ OBSERVATION.heart_rate-pulse&#xD;
 &#xD;
 شکل موج ها هنگامی که برای مستند کردن کیفیت اندازه گیری گاز خون استفاده می شوند بایستی در اینجا ثبت شوند. و در مقابل اگر برای اهداف تشخیصی اولیه مانند برونده قلبی بکار روند، "پلسمیتوگرافی" باید در الگوساز بالینی کلیدی مرتبط&#xD;
 OBSERVATION.heart_rate-pulse&#xD;
-ثبت شود&#xD;
-    </use>
+ثبت شود</use>
       <misuse>هر گونه اندازه گیری گاز خون که شامل تماس مستقیم با خون و اندازه گیری .... و .... نباید با استفاده از این الگو ساز ثبت شود . ازالگو ساز ..... استفاده کنید . اندازه گیری جدید فشار خو.ن باید به ... اضافه شود&#xD;
-نباید در ثبت اندازه گیری فشار گاز خون مستقیم استفاده شود به عنوان مثال .... ، .... اشباع اکسیژن یا محتوای اکسیژن .... که معمولا با روشهای غیر تهاجمی تعیین می شود.به عنوان مثال گازههای خونی آزمایشگاهی یا وسایل کاتتر عروقی . این موارد باید در الگو ساز ... ثبت شوند </misuse>
+نباید در ثبت اندازه گیری فشار گاز خون مستقیم استفاده شود به عنوان مثال .... ، .... اشباع اکسیژن یا محتوای اکسیژن .... که معمولا با روشهای غیر تهاجمی تعیین می شود.به عنوان مثال گازههای خونی آزمایشگاهی یا وسایل کاتتر عروقی . این موارد باید در الگو ساز ... ثبت شوند</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
     <details>
@@ -1678,9 +1673,7 @@ Niet te gebruiken voor het vastleggen van invasieve bloedgasmetingen. Bijvoorbee
       </items>
       <items code="at0002">
         <items id="text">إحدى الوقائع</items>
-        <items id="description"> &#xD;
-واقعة زمنية&#xD;
-</items>
+        <items id="description">واقعة زمنية</items>
       </items>
       <items code="at0003">
         <items id="text">*Tree(en)</items>
@@ -1716,15 +1709,11 @@ Niet te gebruiken voor het vastleggen van invasieve bloedgasmetingen. Bijvoorbee
       </items>
       <items code="at0018">
         <items id="text">الجهيزة</items>
-        <items id="description"> &#xD;
-تفاصيل حول جهيزة قياس التأكسج بطريقة غير باضعة.&#xD;
-</items>
+        <items id="description">تفاصيل حول جهيزة قياس التأكسج بطريقة غير باضعة.</items>
       </items>
       <items code="at0034">
         <items id="text">المجهود</items>
-        <items id="description"> &#xD;
-تفاصيل حول النشاط البدني الذي تتم ممارسته في وقت القياس.&#xD;
-</items>
+        <items id="description">تفاصيل حول النشاط البدني الذي تتم ممارسته في وقت القياس.</items>
       </items>
       <items code="at0036">
         <items id="text">*Comment(en)</items>
@@ -1744,9 +1733,7 @@ Niet te gebruiken voor het vastleggen van invasieve bloedgasmetingen. Bijvoorbee
       </items>
       <items code="at0054">
         <items id="text">التموج</items>
-        <items id="description"> &#xD;
-قراءة تموجية متعلقة بقياس التأكسج.&#xD;
-</items>
+        <items id="description">قراءة تموجية متعلقة بقياس التأكسج.</items>
       </items>
       <items code="at0058">
         <items id="text">*Interpretation(en)</items>
@@ -1925,11 +1912,8 @@ Niet te gebruiken voor het vastleggen van invasieve bloedgasmetingen. Bijvoorbee
       </items>
       <items code="at0016">
         <items id="text">Einflussfaktoren</items>
-        <items id="description">Kommentar und Aufzeichung anderer Faktoren die ggf. die Interpretation der Beobachtung beeinflussen können&#xD;
-&#xD;
-</items>
-        <items id="comment">Zum Beispiel Bewegung, Schmerzen, schlechte Durchblutung, Säuglingsernährung, periphere Unterkühlung, Sedierung.&#xD;
-</items>
+        <items id="description">Kommentar und Aufzeichung anderer Faktoren die ggf. die Interpretation der Beobachtung beeinflussen können</items>
+        <items id="comment">Zum Beispiel Bewegung, Schmerzen, schlechte Durchblutung, Säuglingsernährung, periphere Unterkühlung, Sedierung.</items>
       </items>
       <items code="at0018">
         <items id="text">Oxymetrie Gerät</items>
@@ -1966,8 +1950,7 @@ Niet te gebruiken voor het vastleggen van invasieve bloedgasmetingen. Bijvoorbee
       </items>
       <items code="at0059">
         <items id="text">Erweiterung</items>
-        <items id="description">Zusätzliche Information, die für die Erfassung des lokalen Kontexts oder für die Anpassung an andere Referenzmodelle/Formalismen benötigt wird.&#xD;
-</items>
+        <items id="description">Zusätzliche Information, die für die Erfassung des lokalen Kontexts oder für die Anpassung an andere Referenzmodelle/Formalismen benötigt wird.</items>
         <items id="comment">Zum Beispiel: Informationen bzgl. der lokalen Krankenhausabteilung oder zusätzliche Metadata zur Anpassung an entsprechende FHIR oder CIMI Gegenstücke.</items>
       </items>
       <items code="at0060">
@@ -1976,8 +1959,7 @@ Niet te gebruiken voor het vastleggen van invasieve bloedgasmetingen. Bijvoorbee
       </items>
       <items code="at0061">
         <items id="text">prä/postduktal</items>
-        <items id="description">Stelle des Sensors bezogen zum Ductus arteriosus bei Neugeborenen, um zu bestimmen, ob die Blutversorgung der Extremität der Sensorstelle prä- oder postduktal ist, wenn es sich um einen patentierten Ductus arteriosus handelt.&#xD;
-</items>
+        <items id="description">Stelle des Sensors bezogen zum Ductus arteriosus bei Neugeborenen, um zu bestimmen, ob die Blutversorgung der Extremität der Sensorstelle prä- oder postduktal ist, wenn es sich um einen patentierten Ductus arteriosus handelt.</items>
       </items>
       <items code="at0062">
         <items id="text">Präduktal</items>
@@ -2488,8 +2470,7 @@ Niet te gebruiken voor het vastleggen van invasieve bloedgasmetingen. Bijvoorbee
       </items>
       <items code="at0059">
         <items id="text">Tilläggsinformation</items>
-        <items id="description">Plats för tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.&#xD;
-</items>
+        <items id="description">Plats för tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.</items>
         <items id="comment">Exempelvis lokala informationskrav eller metadata för anpassning till FHIR.</items>
       </items>
       <items code="at0060">
@@ -3007,4 +2988,3 @@ Niet te gebruiken voor het vastleggen van invasieve bloedgasmetingen. Bijvoorbee
     </term_bindings>
   </ontology>
 </archetype>
-

@@ -25,13 +25,16 @@ fn separated() -> FerroEhrConfig {
                 },
                 ..crate::config::authz::AuthzConfig::default()
             },
-            server: ferrohealth_server::section::ServerSection {
-                listen: "0.0.0.0:8443".parse().expect("an address"),
-                tls: Some(ferrohealth_server::section::TlsSection::new(
-                    "server.pem".into(),
-                    "server.key".into(),
-                )),
-                ..ferrohealth_server::section::ServerSection::default()
+            server: crate::config::server::ServerConfig {
+                shared: ferrohealth_server::section::ServerSection {
+                    listen: "0.0.0.0:8443".parse().expect("an address"),
+                    tls: Some(ferrohealth_server::section::TlsSection::new(
+                        "server.pem".into(),
+                        "server.key".into(),
+                    )),
+                    ..ferrohealth_server::section::ServerSection::default()
+                },
+                public_base_url: None,
             },
             ..FerroEhrConfig::default()
         };
@@ -88,7 +91,7 @@ fn on(clusters: ClusterIdentities) -> DatabaseFacts {
 #[test]
 fn the_default_is_sandbox_and_a_stock_deployment_names_its_gaps() {
     let config = FerroEhrConfig::default();
-    assert_eq!(config.server.listen.to_string(), "0.0.0.0:8080");
+    assert_eq!(config.server.shared.listen.to_string(), "0.0.0.0:8080");
     assert_eq!(config.deployment.profile, DeploymentProfile::Sandbox);
     let clusters = ClusterIdentities {
         clinical: Some("1".to_owned()),
@@ -111,7 +114,7 @@ fn the_default_is_sandbox_and_a_stock_deployment_names_its_gaps() {
     );
     assert!(posture.permits_boot());
     let mut on_loopback = FerroEhrConfig::default();
-    on_loopback.server.listen = "127.0.0.1:8080".parse().expect("an address");
+    on_loopback.server.shared.listen = "127.0.0.1:8080".parse().expect("an address");
     let loopback = DeploymentPosture::evaluate(&on_loopback, &on(clusters_of("1")));
     assert!(
         !loopback.gaps.contains(&DeploymentGap::PlaintextListener),
@@ -463,22 +466,22 @@ fn production_refuses_rbac_off_and_a_restricted_default_stays_closed() {
 #[test]
 fn production_refuses_a_routable_plaintext_listener_and_exempts_loopback() {
     let mut config = production(separated());
-    config.server.tls = None;
+    config.server.shared.tls = None;
     for bind in ["0.0.0.0:8080", "10.0.0.4:8080", "[::]:8080"] {
-        config.server.listen = bind.parse().expect("an address");
+        config.server.shared.listen = bind.parse().expect("an address");
         let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert_eq!(posture.gaps, [DeploymentGap::PlaintextListener], "{bind}");
         assert!(!posture.permits_boot(), "{bind}");
     }
 
     for bind in ["127.0.0.1:8080", "[::1]:8080"] {
-        config.server.listen = bind.parse().expect("an address");
+        config.server.shared.listen = bind.parse().expect("an address");
         let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
         assert!(posture.gaps.is_empty(), "{bind} is loopback: {posture:?}");
         assert!(posture.permits_boot(), "{bind}");
     }
 
-    config.server.listen = "0.0.0.0:8080".parse().expect("an address");
+    config.server.shared.listen = "0.0.0.0:8080".parse().expect("an address");
     let accepted = accepting_the_plain_listener(&mut config);
     assert_eq!(accepted.gaps, [DeploymentGap::PlaintextListener]);
 }
@@ -600,37 +603,27 @@ fn production_refuses_a_plaintext_audit_feed_and_object_store_unless_accepted() 
     assert!(DeploymentPosture::evaluate(&accepted, &distinct_clusters()).permits_boot());
 }
 
-/// With the shipped map off and no key declared, no map classifies an
-/// access, and production refuses it unless accepted by name; the shipped
-/// map or a declared one closes the gap (EHDS Annex II 3.2(c)).
+/// The category map is the audit category register, so a map that
+/// classifies nothing is refused at the register write: production refuses it
+/// while it audits, unless `no_category_map` is accepted by name (EHDS Annex
+/// II 3.2(c)); a sandbox and a deployment that does not audit do not.
 #[test]
-fn production_refuses_a_trail_with_no_category_map() {
-    let unmapped = || {
-        let mut config = production(separated());
-        config.audit.categories.shipped_map = false;
-        config
-    };
-    let posture = DeploymentPosture::evaluate(&unmapped(), &distinct_clusters());
-    assert_eq!(posture.gaps, [DeploymentGap::NoCategoryMap]);
-    assert!(!posture.permits_boot());
-    assert!(posture.refusal_message().contains("no_category_map"));
-
-    let shipped = production(separated());
+fn production_requires_a_category_map_unless_accepted() {
+    assert!(DeploymentPosture::requires_category_map(&production(
+        separated()
+    )));
+    let accepted = accepting(production(separated()), vec![DeploymentGap::NoCategoryMap]);
+    assert!(!DeploymentPosture::requires_category_map(&accepted));
+    let mut silent = production(separated());
+    silent.audit.enabled = false;
+    assert!(!DeploymentPosture::requires_category_map(&silent));
+    assert!(!DeploymentPosture::requires_category_map(
+        &FerroEhrConfig::default()
+    ));
     assert!(
-        DeploymentPosture::evaluate(&shipped, &distinct_clusters())
+        !DeploymentPosture::evaluate(&production(separated()), &distinct_clusters())
             .gaps
-            .is_empty(),
-        "the shipped map applies by default"
+            .contains(&DeploymentGap::NoCategoryMap),
+        "the configuration holds no category map, so boot never finds the gap"
     );
-    let mut declared = unmapped();
-    declared.audit.categories.templates.insert(
-        "Lab Report".to_owned(),
-        ehds_logging::map::Declared::Codes(vec!["Laboratory-Reports".to_owned()]),
-    );
-    assert_eq!(
-        DeploymentPosture::evaluate(&declared, &distinct_clusters()).gaps,
-        Vec::<DeploymentGap>::new()
-    );
-    let accepted = accepting(unmapped(), vec![DeploymentGap::NoCategoryMap]);
-    assert!(DeploymentPosture::evaluate(&accepted, &distinct_clusters()).permits_boot());
 }

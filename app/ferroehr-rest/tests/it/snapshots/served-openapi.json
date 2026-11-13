@@ -441,10 +441,10 @@
         },
         "responses": {
           "204": {
-            "description": "The opt-out is recorded. A caller holding one of `authz.rbac.access_service_roles` then reads the EHR as absent at every route, query and export, unless it declares an emergency purpose and acts for no person (EHDS Art. 10(2)); every other caller reads it as before."
+            "description": "The opt-out is recorded. A caller holding an `access_service` grant in the CDR then reads the EHR as absent at every route, query and export, unless it declares an emergency purpose and acts for no person (EHDS Art. 10(2)); every other caller reads it as before."
           },
           "400": {
-            "description": "The body is not the object above, or the deployment declares no access-service caller (`authz.rbac.access_service_roles` is empty).",
+            "description": "The body is not the object above, or `authz.grants.allowed` does not allow `access_service`, so no caller can be an access service.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1831,7 +1831,7 @@
           {
             "name": "reader",
             "in": "path",
-            "description": "A reader `[record.change_feed] readers` names.",
+            "description": "A reader a `read_change_feed` grant in force names.",
             "required": true,
             "schema": {
               "type": "string"
@@ -1908,7 +1908,7 @@
             }
           },
           "403": {
-            "description": "Not in the Admin class, or the token lacks the `__ferroehr.outbox` scope.",
+            "description": "The token lacks the `__ferroehr.outbox` scope, or the caller's own `read_change_feed` grant does not name the reader.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1918,7 +1918,7 @@
             }
           },
           "404": {
-            "description": "The reader is unknown or inactive: `[record.change_feed] readers` does not name it.",
+            "description": "No `read_change_feed` grant in force names the reader.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1942,7 +1942,7 @@
           {
             "name": "reader",
             "in": "path",
-            "description": "A reader `[record.change_feed] readers` names.",
+            "description": "A reader a `read_change_feed` grant in force names.",
             "required": true,
             "schema": {
               "type": "string"
@@ -1995,7 +1995,7 @@
             }
           },
           "403": {
-            "description": "Not in the Admin class, or the token lacks the `__ferroehr.outbox` scope.",
+            "description": "The token lacks the `__ferroehr.outbox` scope, or the caller's own `read_change_feed` grant does not name the reader.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2005,7 +2005,7 @@
             }
           },
           "404": {
-            "description": "The reader is unknown or inactive.",
+            "description": "No `read_change_feed` grant in force names the reader.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2195,7 +2195,7 @@
             }
           },
           "403": {
-            "description": "Not in the Admin class, or not holding `authz.rbac.identifier_reader_role` (unset: nobody holds it).",
+            "description": "Not in the Admin class, or holding no policy grant of `read_identifiers`.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2406,6 +2406,285 @@
                 "description": "EMPTY — mandatory on every `405` (RFC 9110 §15.5.6) and emitted here explicitly because the status comes from a matched handler; the empty field value is RFC 9110 §10.2.1's own case for a resource \"temporarily disabled by configuration\"."
               }
             },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/registers/{register}": {
+      "get": {
+        "tags": [
+          "admin-registers"
+        ],
+        "summary": "Read one operational-policy register\n(`GET /admin/registers/{register}`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_policy_register_read",
+        "parameters": [
+          {
+            "name": "register",
+            "in": "path",
+            "description": "`audit-categories`, `access-delay` or `cedar-policies`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`{ \"register\": …, \"version\": …, \"committer\": …, \"committed_at\": …, \"document\": … }`: the newest version, or version 0, the default no one committed. The `ETag` is the version.",
+            "content": {
+              "application/json": {
+                "schema": {},
+                "example": {
+                  "register": "access-delay",
+                  "version": 2,
+                  "committer": "admin@example.org",
+                  "committed_at": "2026-11-12T09:15:00Z",
+                  "document": {
+                    "enabled": true,
+                    "categories": [
+                      "Laboratory-Reports"
+                    ],
+                    "max_delay": "72h"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such register.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin-registers"
+        ],
+        "summary": "Replace one operational-policy register whole\n(`PUT /admin/registers/{register}`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_policy_register_write",
+        "parameters": [
+          {
+            "name": "register",
+            "in": "path",
+            "description": "`audit-categories`, `access-delay` or `cedar-policies`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The version this write replaces, as the read's `ETag` gave it.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The whole register document. `audit-categories`: `{ \"shipped_map\": …, \"national\": [...], \"templates\": {...}, \"archetypes\": {...} }`. `access-delay`: `{ \"enabled\": …, \"categories\": [...], \"max_delay\": \"72h\" }`. `cedar-policies`: `{ \"policies\": \"<Cedar text>\" }`.",
+          "content": {
+            "application/json": {
+              "schema": {},
+              "example": {
+                "enabled": true,
+                "categories": [
+                  "Laboratory-Reports"
+                ],
+                "max_delay": "72h"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The new version, as a read answers it, with its version as the `ETag`. The next request on every replica runs under it.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`If-Match` is missing or no version, or the document is refused whole: not the register's shape, a category map that does not compile or classifies nothing under the production floor, an access delay with an unusable limit or an unknown category, or a Cedar policy set that does not parse or validate. The version in force stays.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such register.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "`If-Match` names a version that is no longer the newest: read the register again.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not `application/json`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/registers/{register}/history": {
+      "get": {
+        "tags": [
+          "admin-registers"
+        ],
+        "summary": "Read every version of one operational-policy register\n(`GET /admin/registers/{register}/history`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_policy_register_history",
+        "parameters": [
+          {
+            "name": "register",
+            "in": "path",
+            "description": "`audit-categories`, `access-delay` or `cedar-policies`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`{ \"register\": …, \"versions\": [...] }`: every version as a read answers it, newest first, ending with version 0, the default.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such register.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3414,7 +3693,7 @@
         "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
         "operationId": "admin_put_retention_policy",
         "requestBody": {
-          "description": "`{ \"kind\": …, \"jurisdiction\": …, \"category\": …?, \"origin\": …?, \"period\": …, \"anchor\": …, \"source\": … }`. `kind` is COMPOSITION | EHR_STATUS | FOLDER | EHR; `category`, when present, keys the period on one EHDS priority category as `[audit.categories]` names it (a priority category by its code: Patient-Summaries | Electronic-Prescriptions | Electronic-Dispensations | Medical-Imaging | Laboratory-Reports | Discharge-Reports, or as <system>|<code>; a national category as the <system>|<code> the map declares; or none), stored as its <system>|<code> token, and an object the map cannot classify takes the longest period configured for its kind; `origin`, when present, keys it on one origin `[[authz.origin]]` declares, by its id, matched against the origins each version recorded at commit; `period` is a PostgreSQL interval, `anchor` one of last_commit | death | majority, and `source` the legal citation the period rests on.",
+          "description": "`{ \"kind\": …, \"jurisdiction\": …, \"category\": …?, \"origin\": …?, \"period\": …, \"anchor\": …, \"source\": … }`. `kind` is COMPOSITION | EHR_STATUS | FOLDER | EHR; `category`, when present, keys the period on one EHDS priority category as `[audit.categories]` names it (a priority category by its code: Patient-Summaries | Electronic-Prescriptions | Electronic-Dispensations | Medical-Imaging | Laboratory-Reports | Discharge-Reports, or as <system>|<code>; a national category as the <system>|<code> the map declares; or none), stored as its <system>|<code> token, and an object the map cannot classify takes the longest period configured for its kind; `origin`, when present, keys it on one origin a `data_origin` grant in force names, by its id, matched against the origins each version recorded at commit; `period` is a PostgreSQL interval, `anchor` one of last_commit | death | majority, and `source` the legal citation the period rests on.",
           "content": {
             "application/json": {
               "schema": {},
@@ -4319,6 +4598,104 @@
           },
           "422": {
             "description": "The stored template no longer converts: it does not parse, or a root does not convert or print as ADL 2.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/demographic/party/{uid_based_id}/reverse_relationships": {
+      "get": {
+        "tags": [
+          "demographic-relationship"
+        ],
+        "summary": "Evaluate `PARTY.reverse_relationships()`\n(`GET /demographic/party/{uid_based_id}/reverse_relationships`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (see the\nmodule docs). The answer is the list of `LOCATABLE_REF`s to the\n`PARTY_RELATIONSHIP`s other parties hold with this party as target (RM\ndemographic `master02-demographic_package.adoc` §Party Relationships),\nthe list a stable-profile read of the same party and version carries\nin `reverse_relationships`.",
+        "operationId": "party_reverse_relationships_get",
+        "parameters": [
+          {
+            "name": "uid_based_id",
+            "in": "path",
+            "description": "The party: its `HIER_OBJECT_ID` container id, for the relationships as they stand now, or one version's `OBJECT_VERSION_ID`, for the relationships as they stood when that version was committed. Any of the five party kinds.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "8849182c-82ad-4088-a07f-48ead4180515"
+          },
+          {
+            "name": "version_at_time",
+            "in": "query",
+            "description": "An extended ISO 8601 instant: the version of the party current at that instant is found as the released party read finds it, and the relationships are answered as they stood when that version was committed.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2015-01-20T19:30:22.765+01:00"
+          },
+          {
+            "name": "Accept",
+            "in": "header",
+            "description": "`application/json` (default). The list is served in canonical JSON only.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "example": "application/json"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The evaluated function: a JSON array of canonical `LOCATABLE_REF`s, each naming the source party's container and the relationship's path in its data; `[]` when no relationship targets the party.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "204": {
+            "description": "The version the request selects is a deletion marker, as the released party read answers it."
+          },
+          "400": {
+            "description": "The `uid_based_id` is neither an OBJECT_VERSION_ID nor a HIER_OBJECT_ID, or `version_at_time` is not an extended ISO 8601 instant.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated (auth enabled, no valid principal).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No party has this id, or it has no version at the requested version or instant.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The `Accept` header admits no JSON.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6655,7 +7032,7 @@
           {
             "name": "patient",
             "in": "query",
-            "description": "The recorded patient (EHR subject) id. Required for a caller holding `authz.rbac.subject_audit_role`, which reads the log for one subject at a time.",
+            "description": "The recorded patient (EHR subject) id. Required for a caller whose access comes from a `read_subject_audit` grant, which reads the log for one subject at a time.",
             "required": false,
             "schema": {
               "type": "string"
@@ -6732,7 +7109,7 @@
             }
           },
           "403": {
-            "description": "Caller lacks the admin role, or holds only the subject-scoped audit role and named no `patient` (OperationOutcome).",
+            "description": "Caller lacks the admin role, or holds only a `read_subject_audit` grant and named no `patient` (OperationOutcome).",
             "content": {
               "application/fhir+json": {}
             }
@@ -25079,7 +25456,7 @@
           "management"
         ],
         "summary": "Build/spec provenance — version, git, spec pins, manufacturer\n(`GET /management/info`).",
-        "description": "OUR OWN EXTENSION — no openEHR spec governs this: the ITS-REST resource set\ndefines no management or introspection surface.\n\nAccess-level gated by the `info` endpoint's configured [`AccessLevel`];\nabsent (a router `404`) unless opted in — and that `404` is answered\n**before authentication**, because a non-opted-in endpoint is simply not a\nroute. Body: the [`BuildInfo`] record.",
+        "description": "OUR OWN EXTENSION — no openEHR spec governs this: the ITS-REST resource set\ndefines no management or introspection surface.\n\nAccess-level gated by the `info` endpoint's configured [`AccessLevel`];\nabsent (a router `404`) unless opted in — and that `404` is answered\n**before authentication**, because a non-opted-in endpoint is simply not a\nroute. Body: the [`BuildInfo`] record, whose binding lists the federation\nagreements in force, read from the CDR on the request.",
         "operationId": "info_view",
         "responses": {
           "200": {
@@ -25907,7 +26284,7 @@
     },
     {
       "name": "admin-identifiers",
-      "description": "The audited read of a party's protected national identifiers: a party version with the identifiers `[privacy.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and `authz.rbac.identifier_reader_role`, and every read is an access record naming the reader, the party and the scheme, never the value."
+      "description": "The audited read of a party's protected national identifiers: a party version with the identifiers `[privacy.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and a `read_identifiers` grant in the CDR, and every read is an access record naming the reader, the party and the scheme, never the value."
     },
     {
       "name": "admin-marks",
@@ -25920,6 +26297,10 @@
     {
       "name": "message",
       "description": "EHR-Extract export and import. OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no message/extract API at all, so no released operation governs any route here; they carry the ordinary clinical authentication class, not the admin gate."
+    },
+    {
+      "name": "admin-registers",
+      "description": "The operational-policy admin registers: the audit category map, the EHDS Art. 3(3) access delay and the Cedar policy set, each read, replaced whole over the version `If-Match` names and listed by version, by `admin_role` only. Every version keeps its committer, and a change applies on the next request with no restart. OUR OWN EXTENSION: no openEHR spec governs operational policy."
     },
     {
       "name": "admin-outbox",

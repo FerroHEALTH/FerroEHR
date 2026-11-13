@@ -156,3 +156,55 @@ pub async fn representations(
     }
     Ok(out)
 }
+
+/// The live key rows of the representatives whose binding key is `value`
+/// under the identifier issuer `issuer`, of any type, compared in the
+/// canonical form its type declares, as `(party, lifecycle_state)`.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn representative_keys(
+    conn: &mut PgConnection,
+    issuer: &str,
+    value: &str,
+) -> Result<Vec<(Uuid, String)>, StorageError> {
+    Ok(sqlx::query_as(
+        "SELECT party_id, lifecycle_state FROM binding_identifier \
+         WHERE selector = 'key' AND issuer = $1 AND retired_at IS NULL AND representative \
+           AND value = CASE WHEN lower(identifier_type) IN ('guid', 'uuid') \
+                            THEN lower($2) ELSE $2 END \
+         ORDER BY party_id",
+    )
+    .bind(issuer)
+    .bind(value)
+    .fetch_all(&mut *conn)
+    .await?)
+}
+
+/// Whether `representative` has ever represented `subject`.
+///
+/// `None` when no representation row, live or retired, names the pair, else
+/// whether one is live on `today` (`YYYY-MM-DD`), with the openEHR
+/// `subject_relationship` code of the row that decides it; answered from
+/// `ix_binding_representation_history`.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn representation_of(
+    conn: &mut PgConnection,
+    representative: Uuid,
+    subject: Uuid,
+    today: &str,
+) -> Result<Option<(bool, Option<String>)>, StorageError> {
+    Ok(sqlx::query_as(
+        "SELECT retired_at IS NULL AND validity @> $3::date AS live, relationship \
+         FROM binding_representation \
+         WHERE representative_id = $1 AND subject_id = $2 \
+         ORDER BY live DESC, relationship LIMIT 1",
+    )
+    .bind(representative)
+    .bind(subject)
+    .bind(today)
+    .fetch_optional(&mut *conn)
+    .await?)
+}

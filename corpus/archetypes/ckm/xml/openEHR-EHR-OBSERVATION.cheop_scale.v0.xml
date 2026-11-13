@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -894,27 +894,27 @@ McGrath PJ, Johnson G, Goodman JT, Dunn J, Chapman J. CHEOPS: A behavioral scale
       </items>
       <items code="at0008">
         <items id="text">Cry</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Facial expression</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Child verbal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Torso</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Wound evaluation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Legs</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Total score</items>
@@ -922,15 +922,15 @@ McGrath PJ, Johnson G, Goodman JT, Dunn J, Chapman J. CHEOPS: A behavioral scale
       </items>
       <items code="at0016">
         <items id="text">No crying</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Moaning</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Screaming</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Smiling</items>
@@ -946,91 +946,91 @@ McGrath PJ, Johnson G, Goodman JT, Dunn J, Chapman J. CHEOPS: A behavioral scale
       </items>
       <items code="at0022">
         <items id="text">Positive statements</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Not talking</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Complains about pain</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Neutral</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Shifting</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Child not touching their wound</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Reaching for their wound</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Neutral position</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Squirm/kicking</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Crying</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Complains but not about pain</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Complains about pain and other subjects</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Tense</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Shivering</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Upright</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Restrained</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Touching their wound</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Grabbing vigorously at wound</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Arms are restrained</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Drawn up/tensed legs</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Standing/kneeling</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Legs are restrained</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Item tree</items>
@@ -1061,7 +1061,7 @@ McGrath PJ, Johnson G, Goodman JT, Dunn J, Chapman J. CHEOPS: A behavioral scale
       </items>
       <items code="at0008">
         <items id="text">Gråt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">*Facial expression (en)</items>
@@ -1069,19 +1069,19 @@ McGrath PJ, Johnson G, Goodman JT, Dunn J, Chapman J. CHEOPS: A behavioral scale
       </items>
       <items code="at0010">
         <items id="text">Verbalt uttryck</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Kroppsposition</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">*Wound evaluation (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Benposition</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">*Total score (en)</items>
@@ -1117,7 +1117,7 @@ McGrath PJ, Johnson G, Goodman JT, Dunn J, Chapman J. CHEOPS: A behavioral scale
       </items>
       <items code="at0023">
         <items id="text">Inget eller annat klagomål</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Smärta eller båda typer av klagande</items>
@@ -1129,15 +1129,15 @@ McGrath PJ, Johnson G, Goodman JT, Dunn J, Chapman J. CHEOPS: A behavioral scale
       </items>
       <items code="at0026">
         <items id="text">Byter position, darrar, upprätt eller fastspänd</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Ingen aktiv beröring</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Sträcker sig, berör, greppar eller fastspänd</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Neutral</items>
@@ -1145,59 +1145,59 @@ McGrath PJ, Johnson G, Goodman JT, Dunn J, Chapman J. CHEOPS: A behavioral scale
       </items>
       <items code="at0030">
         <items id="text">Skruvar/sparker, sträckta, stående, eller fastspänd</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">*Crying (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">*Complains but not about pain (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">*Complains about pain and other subjects (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">*Tense (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">*Shivering (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">*Upright (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">*Restrained (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">*Touching their wound (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">*Grabbing vigorously at wound (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">*Arms are restrained (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">*Drawn up/tensed legs (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">*Standing/kneeling (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">*Legs are restrained (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">*Item tree (en)</items>
@@ -1205,10 +1205,9 @@ McGrath PJ, Johnson G, Goodman JT, Dunn J, Chapman J. CHEOPS: A behavioral scale
       </items>
       <items code="at0045">
         <items id="text">*Extension (en)</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">*For example: local information requirements; or additional metadata to align with FHIR. (en)</items>
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

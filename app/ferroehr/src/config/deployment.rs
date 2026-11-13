@@ -132,9 +132,11 @@ pub enum DeploymentGap {
     /// cannot take is dropped and the request succeeds: the access happened and
     /// nothing says so.
     AuditFailsOpen,
-    /// Auditing is on and no category map applies: `[audit.categories]`
-    /// declares no template and no archetype and `shipped_map` is `false`, so
-    /// every access is recorded `unclassified`.
+    /// Auditing is on and no category map applies: the audit category
+    /// register declares no template and no archetype and `shipped_map` is
+    /// `false`, so every access is recorded `unclassified`. The register is
+    /// data, so a write that would open this gap is refused while the profile
+    /// refuses it ([`DeploymentPosture::requires_category_map`]).
     ///
     /// `docs/law/eu/ehds/text.html Annex II 3.2(c)`: the logging records "the
     /// categories of data accessed".
@@ -247,9 +249,10 @@ impl DeploymentGap {
                  operation instead"
             }
             Self::NoCategoryMap => {
-                "no category map applies: [audit.categories] declares no template and no \
-                 archetype and shipped_map is false, so every access is recorded unclassified; \
-                 declare this deployment's templates and archetypes, or set shipped_map = true"
+                "no category map applies: the audit category register declares no template and \
+                 no archetype and shipped_map is false, so every access is recorded \
+                 unclassified; declare this deployment's templates and archetypes, or set \
+                 shipped_map = true"
             }
             Self::OpenEhrAccessDefault => {
                 "[authz.rbac] ehr_access_default is `open`, so an EHR carrying no \
@@ -392,11 +395,6 @@ impl DeploymentPosture {
             // moot, and naming both would report one posture twice.
             gaps.push(DeploymentGap::AuditFailsOpen);
         }
-        if audit.enabled
-            && audit.categories.source() == crate::system_log::categories::MapSource::None
-        {
-            gaps.push(DeploymentGap::NoCategoryMap);
-        }
         // NOTE: no openEHR spec governs this, our own design/extension; the configured default is the
         // effective one: the REST layer applies it with RBAC off, and validation refuses it unenforced.
         if config.authz.rbac.ehr_access_default == crate::config::authz::EhrAccessDefault::Open {
@@ -413,7 +411,8 @@ impl DeploymentPosture {
         } else if !config.authz.rbac.enabled {
             gaps.push(DeploymentGap::RbacOff);
         }
-        let plaintext_main = config.server.tls.is_none() && !binds_loopback(config.server.listen);
+        let plaintext_main =
+            config.server.shared.tls.is_none() && !binds_loopback(config.server.shared.listen);
         let plaintext_management = config.management.enabled && config.management.listen.is_some();
         if plaintext_main || plaintext_management {
             gaps.push(DeploymentGap::PlaintextListener);
@@ -450,6 +449,19 @@ impl DeploymentPosture {
             .copied()
             .filter(|gap| !self.accepted.contains(gap))
             .collect()
+    }
+
+    /// Whether a write of the audit category register that classifies
+    /// nothing is refused under `config`: a production deployment that audits
+    /// and has not accepted [`DeploymentGap::NoCategoryMap`] by name.
+    #[must_use]
+    pub fn requires_category_map(config: &FerroEhrConfig) -> bool {
+        config.deployment.profile == DeploymentProfile::Production
+            && config.audit.enabled
+            && !config
+                .deployment
+                .accepts
+                .contains(&DeploymentGap::NoCategoryMap)
     }
 
     /// Whether the server may start under this posture.

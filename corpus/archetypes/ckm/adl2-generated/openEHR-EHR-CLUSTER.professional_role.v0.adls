@@ -1,0 +1,125 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ae27a7f8-b7f2-4db8-89d1-1e20782b11bb; build_uid=c5dbb01e-cd63-4da0-a5f9-4fcc85fd28e3)
+    openEHR-EHR-CLUSTER.professional_role.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Hans Demski">
+                ["organisation"] = <"Helmholtz Zentrum München">
+                ["email"] = <"demski@helmholtz-muenchen.de">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"12/11/2007">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B84D0961F3E68F2EAA3E2CE71DCD2FF9">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation der Rolle eines Heilberuflers bei der Betreuung einer Person.">
+            keywords = <"Rolle", "Heilberufler">
+            use = <"Zur Dokumentation von Angaben zur Rolle eines Heilberuflers bei der Betreuung einer Person.">
+            misuse = <"Nicht zur Aufzeichnung einer rollenbasierten Zugangskontrolle (role-based access control) zu verwenden.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the role of a professional in care of an individual.">
+            keywords = <"role", "carer">
+            use = <"Use to record details about the role of a professional in care of an individual.">
+            misuse = <"Not to be used to record role-based access control.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل دور الشخص المهني في رعاية الفرد">
+            keywords = <"الدور", "مقدم الرعاية">
+            use = <"لتسجيل تفاصيل حول دور الشخص المهني في رعاية الفرد">
+            misuse = <"لا يستخدم لتسجيل التحكم في الإذن بالدخول حسب الدور">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Professional role
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Unstructured role
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            allow_archetype CLUSTER[at0003] matches {    -- Structured role
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Rolle">
+                description = <"Rolle eines Heilberuflers bei der Betreuung einer Person">
+            >
+            ["at0001"] = <
+                text = <"Unstrukturierte Rolle">
+                description = <"Unstrukturierte Beschreibung der Rolle">
+            >
+            ["at0003"] = <
+                text = <"Strukturierte Rolle">
+                description = <"Rolle in vordefiniertem Format (zu Erweitern sobald RBACS Standards entwickelt sind).">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Professional role">
+                description = <"Role of a professional in care of an individual.">
+            >
+            ["at0001"] = <
+                text = <"Unstructured role">
+                description = <"Unstructured description of the role.">
+            >
+            ["at0003"] = <
+                text = <"Structured role">
+                description = <"The role in structured format (to be expanded as RBACS standards are developed.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"الدور المهني">
+                description = <"دور الشخص المهني في رعاية الفرد">
+            >
+            ["at0001"] = <
+                text = <"دور غير مركب">
+                description = <"وصف غير مركب للدور">
+            >
+            ["at0003"] = <
+                text = <"دور مركب">
+                description = <"الدور في تنسيق مركب - سيتم تمديده عند وضع معايير تسجيل التحكم في الإذن بالدخول حسب الدور">
+            >
+        >
+    >

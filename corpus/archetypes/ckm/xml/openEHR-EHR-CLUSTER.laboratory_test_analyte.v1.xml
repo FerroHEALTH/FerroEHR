@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -74,8 +74,7 @@ Unter Umständen kann dieser Archetyp in einem CLUSTER.laboratory_test_panel Arc
 Dieser Archetyp kann im Rahmen einer komplexerem Labor/Pathologie-Befundung, z.B. in anatomisch-pathologischen Befunden verwendet werden, in denen oft quantitative Resultate, wie Durchfluss-Zytometrie-Analysen neben den üblichen makroskopischen und mikroskopischen Ergebnissen dokumentiert werden.</use>
       <misuse>Nicht zur Darstellung von strukturierten Details von makroskopischen/mikroskopischen Befunden der anatomischen Pathologie verwenden.&#xD;
 &#xD;
-Nicht zur Darstellung von detaillierten, strukturierten Ergebnissen für Mikrobiologische Befunde verwenden.&#xD;
-</misuse>
+Nicht zur Darstellung von detaillierten, strukturierten Ergebnissen für Mikrobiologische Befunde verwenden.</misuse>
       <copyright />
     </details>
     <details>
@@ -85,8 +84,7 @@ Nicht zur Darstellung von detaillierten, strukturierten Ergebnissen für Mikrobi
         </terminology_id>
         <code_string>sv</code_string>
       </language>
-      <purpose>Registrering av ett enskilt laboratorieanalysresultat som vanligtvis förekommer i undersökningar inom exempelvis klinisk kemi, kliniska mikrobiologi, klinisk genetik, immunologi och transfusionsmedicin.&#xD;
-</purpose>
+      <purpose>Registrering av ett enskilt laboratorieanalysresultat som vanligtvis förekommer i undersökningar inom exempelvis klinisk kemi, kliniska mikrobiologi, klinisk genetik, immunologi och transfusionsmedicin.</purpose>
       <keywords>laboratorium</keywords>
       <keywords>labb</keywords>
       <keywords>patologi</keywords>
@@ -140,8 +138,7 @@ Skal ikke brukes til å registrere detaljerte strukturerte resultater for mikrob
         </terminology_id>
         <code_string>pt-br</code_string>
       </language>
-      <purpose>Para gravar valores únicos e individuais de resultados laboratoriais de analitos comuns a testes patológicos clínicos como bioquímica, hematologia e imunologia.&#xD;
-</purpose>
+      <purpose>Para gravar valores únicos e individuais de resultados laboratoriais de analitos comuns a testes patológicos clínicos como bioquímica, hematologia e imunologia.</purpose>
       <keywords>laboratório</keywords>
       <keywords>patologia</keywords>
       <keywords>analito</keywords>
@@ -1368,8 +1365,7 @@ Dieses Element ermöglicht mehrere Vorkommen, um Anwendungsfälle zu unterstütz
         <items id="text">Bezeichnung des Analyts</items>
         <items id="description">Der Name des untersuchten Analyts.</items>
         <items id="comment">Der Wert dieses Elements wird normalerweise, meist durch eine Spezialisierung, in einem Template oder zur Laufzeit der Anwendung geliefert, um den aktuellen Analyt wiederzugeben. Zum Beispiel: 'Natrium im Serum', 'Hämoglobin'. &#xD;
-Die Codierung mit einer externen Terminologie, wie LOINC, NPU, SNOMED-CT oder lokalen Labor-Terminologien wird dringend empfohlen.&#xD;
-</items>
+Die Codierung mit einer externen Terminologie, wie LOINC, NPU, SNOMED-CT oder lokalen Labor-Terminologien wird dringend empfohlen.</items>
         <items id="hl7v2_mapping">OBX.3</items>
         <items id="fhir_mapping">Observation.code</items>
       </items>
@@ -1539,8 +1535,7 @@ Se https://specifications.openehr.org/releases/RM/latest/data_types.html#_dv_qua
       </items>
       <items code="at0004">
         <items id="text">Vägledning för referensintervall</items>
-        <items id="description">Ytterligare vägledning för information om referensintervallet är tillämpbart för detta resultat. Kan innehålla text eller kodad text med råd om huruvida resultatet ligger inom det normala intervallet.&#xD;
-</items>
+        <items id="description">Ytterligare vägledning för information om referensintervallet är tillämpbart för detta resultat. Kan innehålla text eller kodad text med råd om huruvida resultatet ligger inom det normala intervallet.</items>
         <items id="comment">Till exempel "inom normalområde avseende ålder och kön".</items>
       </items>
       <items code="at0005">
@@ -1562,9 +1557,7 @@ Det här fältet kan repeteras för att stödja användningsfall där behov finn
       </items>
       <items code="at0015">
         <items id="text">Registrerad</items>
-        <items id="description">Analysen är registrerad i laboratoriesystemet, men resultatet är ej ännu tillgängligt.&#xD;
-&#xD;
-</items>
+        <items id="description">Analysen är registrerad i laboratoriesystemet, men resultatet är ej ännu tillgängligt.</items>
       </items>
       <items code="at0016">
         <items id="text">Partiellt resultat</items>
@@ -1607,12 +1600,8 @@ Det här fältet kan repeteras för att stödja användningsfall där behov finn
       </items>
       <items code="at0025">
         <items id="text">Tidpunkt för validering</items>
-        <items id="description">Datum och tid då analysresultatet validerades medicinskt i laboratoriet.&#xD;
-</items>
-        <items id="comment">I många fall antas 'resultatstatus' inkludera medicinsk validering, dvs. ett "slutligt" resultat antas vara medicinskt validerat. I andra fall kommer detta att registreras och rapporteras separat med hjälp av detta fält.&#xD;
-&#xD;
-&#xD;
-</items>
+        <items id="description">Datum och tid då analysresultatet validerades medicinskt i laboratoriet.</items>
+        <items id="comment">I många fall antas 'resultatstatus' inkludera medicinsk validering, dvs. ett "slutligt" resultat antas vara medicinskt validerat. I andra fall kommer detta att registreras och rapporteras separat med hjälp av detta fält.</items>
       </items>
       <items code="at0026">
         <items id="text">Provmaterial</items>
@@ -1621,21 +1610,12 @@ Det här fältet kan repeteras för att stödja användningsfall där behov finn
       </items>
       <items code="at0027">
         <items id="text">Rapporteringsordning</items>
-        <items id="description">Den faktiska positionen för ett enskilt analysresultat i den totala rapporteringsordningen.&#xD;
-&#xD;
-&#xD;
-&#xD;
-</items>
-        <items id="comment">Till exempel 1, 2 eller 3. Om flera analysresultat rapporteras visar detta värde var i ordningsföljden detta resultat har besvarats. &#xD;
-&#xD;
-&#xD;
-&#xD;
-</items>
+        <items id="description">Den faktiska positionen för ett enskilt analysresultat i den totala rapporteringsordningen.</items>
+        <items id="comment">Till exempel 1, 2 eller 3. Om flera analysresultat rapporteras visar detta värde var i ordningsföljden detta resultat har besvarats.</items>
       </items>
       <items code="at0028">
         <items id="text">Testmetod</items>
-        <items id="description">Beskrivning av metoden som har använts för att utföra testet specifikt för denna analyt.&#xD;
-</items>
+        <items id="description">Beskrivning av metoden som har använts för att utföra testet specifikt för denna analyt.</items>
         <items id="comment">Om testmetoden gäller för en hel panel kan testmetoden fångas med hjälp av dataelementet 'Testmetod' i OBSERVATION.laboratory_test_result.</items>
       </items>
       <items code="at0031">
@@ -1669,8 +1649,7 @@ Det här fältet kan repeteras för att stödja användningsfall där behov finn
       </items>
       <items code="at0004">
         <items id="text">Intervalos de referencia</items>
-        <items id="description">Asesoramiento adicional sobre la aplicabilidad del intervalo de referencia a este resultado, o bien se puede incluir un texto o guía textual codificada sobre si el resultado está dentro del intervalo normal.&#xD;
-</items>
+        <items id="description">Asesoramiento adicional sobre la aplicabilidad del intervalo de referencia a este resultado, o bien se puede incluir un texto o guía textual codificada sobre si el resultado está dentro del intervalo normal.</items>
         <items id="comment">Por ejemplo, "dentro de los límites normales para la edad y el sexo".</items>
       </items>
       <items code="at0005">
@@ -2116,4 +2095,3 @@ Cet élément autorise plusieurs occurrences afin de prendre en charge les cas d
     </term_definitions>
   </ontology>
 </archetype>
-

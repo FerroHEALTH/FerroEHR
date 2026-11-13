@@ -7,10 +7,6 @@
 # messages in a directory named by its BCP 47 tag beside this one.
 
 no-ehr-id-delete = no EHR id to delete
-retired-same-table = each replacement is written in the same table as the key it replaces
-retired-form-duration = a duration is written with its unit, such as "30s", "10min" or "1h"
-retired-form-size = a size is written with its unit, such as "16MiB"
-retired-form-identity = tls.client_identity_file is one PEM file holding the certificate chain and its key
 stored-query-delete-needs-both-qualified = a stored-query delete needs both a qualified name and a version
 no-template-id-delete = no template id to delete
 row-order = Row order

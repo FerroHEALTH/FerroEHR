@@ -1,0 +1,141 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2590d32d-3b9f-47a2-9d75-981fc15a0950; build_uid=0d54bfad-5006-49b1-a16b-d4b43f1a0a0e)
+    openEHR-EHR-CLUSTER.medication_admin.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"Biljana Prinčič">
+                ["organisation"] = <"Marand, Ljubljana">
+                ["email"] = <"biljana.princic@marand.si">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"openEHR Foundation">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2013-05-16">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, Ocean Informatics, UK", ...>
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Medication administration, draft archetype, NEHTA Clinical Knowledge Manager [Internet]. : NEHTA. Authored: 10 Nov 2010. Available at: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.874_1 (accessed 15 May 2013).">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B30287867E5AC154A86D65C501D2B0E6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To describe how a medication should be administered or was actually administered.">
+            keywords = <"medication administration", "injection", "infusion">
+            use = <"To be used in INSTRUCTION.medication and ACTION.medication to describe the administration.">
+            misuse = <"Not to be used for administration of anything other than medication.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Medication administration
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Route
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Site
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Delivery method
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Dose duration
+                value matches {
+                    DV_DURATION[at9003] matches {
+                        value matches {|>=P0D|}
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0005] matches {    -- Infusion details
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.infusion_details(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Medication administration">
+                description = <"Information about the future or actual administration of medication.">
+            >
+            ["at0001"] = <
+                text = <"Route">
+                description = <"The route by which the medication is administered (e.g. oral, sublingual etc).">
+            >
+            ["at0002"] = <
+                text = <"Site">
+                description = <"A description of the site of administration.">
+            >
+            ["at0003"] = <
+                text = <"Delivery method">
+                description = <"The method of delivery if this should be specified (e.g. via a nebuliser or spacer).">
+            >
+            ["at0004"] = <
+                text = <"Dose duration">
+                description = <"The length of time over which to administer each dose (e.g. an intravenous administration may have to be over a period of 5 minutes).">
+            >
+            ["at0005"] = <
+                text = <"Infusion details">
+                description = <"Details of administration via infusion.">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"Aplikacija cepiva">
+                description = <"Podatki o aplikaciji cepiva">
+            >
+            ["at0001"] = <
+                text = <"Pot uporabe">
+                description = <"Poti uporabe zdravila">
+            >
+            ["at0002"] = <
+                text = <"Mesto aplikacije">
+                description = <"Mesto aplikacije">
+            >
+            ["at0003"] = <
+                text = <"Vrsta aplikacije">
+                description = <"Vrsta apliciranja, če je določena (npr. inhalacije, oralno...)">
+            >
+            ["at0004"] = <
+                text = <"Trajanje doze aplikacije">
+                description = <"Čas trajanja ene doze apliciranega zdravila">
+            >
+            ["at0005"] = <
+                text = <"Podatki o infuziji">
+                description = <"Podatki o infuziji">
+            >
+        >
+    >

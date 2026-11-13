@@ -24,14 +24,12 @@ config:
     # deployment supplies; Basic would mean shipping a password hash, which
     # this file has no business carrying.
     issuer:
-      # One table per issuer: `kind` says whose tokens it signs, `profile`
-      # the preset of their shape, and a persons token is admitted only
-      # through a client in `first_party_clients`.
+      # One table per issuer: `kind` says whose tokens it signs, and a
+      # persons token is admitted only through a client the CDR
+      # grants `sign_in_persons`.
       - issuer: https://idp.example.com/realms/ferroehr
         kind: persons
-        profile: rfc9068
         audience: [ferroehr]
-        first_party_clients: [ferroehr-viewer]
     # The issuer's logins bind to the PERSON carrying their `sub` under this
     # identifier issuer.
     party:
@@ -45,11 +43,10 @@ config:
       # The healthcare provider this deployment acts for (an example id
       # under the OID arc 2.999).
       provider: { issuer: "urn:oid:2.999.7.9", id: "default" }
-      # The party mapping over the professional PERSON and ROLE pair of
-      # deploy/definitions/professional/, which an install stores before boot
-      # through `definitions.files` (basic-auth-values.yaml carries them). The
-      # key is written under the identifier_type the [[auth.party]] table above
-      # looks logins up under, or no login of the issuer binds.
+      # The professional PERSON of the default party mapping, its key written
+      # under the identifier_type the [[auth.party]] table above looks logins
+      # up under, or no login of the issuer binds; the rest of the mapping is
+      # the default.
       person:
         template:
           - template_id: openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0
@@ -57,8 +54,6 @@ config:
             key: { path: "/details[id2]/items[id3]", type: uuid }
             user_name: { path: "/details[id2]/items[id3]", type: scim_user_name }
             external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
-      professional_role:
-        template_id: openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0
   # The clinical domain FerroPIX mints pseudonyms in, and the grant the EHR
   # index asks it with; the chart injects the provider and the in-cluster
   # PIXm URL. The client secret is secrets.ehrIndexClientSecret.

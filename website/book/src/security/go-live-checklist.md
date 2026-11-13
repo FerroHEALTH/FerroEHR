@@ -271,8 +271,9 @@ rate.
 - [ ] `[server.caller_rate]` is set. It limits each authenticated caller on
       the clinical API, is kept per replica, and is off unless configured
       ([`[server.caller_rate]`](../installation/config-server.md#servercaller_rate-per-caller-request-rates)).
-- [ ] Every `[[authz.federation.agreement]]` carries its own `caller_rate`;
-      boot refuses one without it.
+- [ ] Every federation agreement carries its own `requests_per_second` and
+      `burst`; its commit is refused without them
+      ([federation agreements](../operational-policy.md#federation-agreements)).
 
 ## 9. The paperwork exists
 

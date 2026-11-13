@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -446,11 +446,11 @@ Not to be used to record findings from antigen or antibody testing of a specimen
       </items>
       <items code="at0051">
         <items id="text">Detected</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Not detected</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Quantitative result</items>
@@ -463,7 +463,7 @@ Not to be used to record findings from antigen or antibody testing of a specimen
       </items>
       <items code="at0056">
         <items id="text">Indeterminate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0057">
         <items id="text">Molecular target</items>
@@ -501,11 +501,11 @@ Not to be used to record findings from antigen or antibody testing of a specimen
       </items>
       <items code="at0051">
         <items id="text">Nachgewiesen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Nicht nachgewiesen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Quantitatives Ergebnis</items>
@@ -518,7 +518,7 @@ Not to be used to record findings from antigen or antibody testing of a specimen
       </items>
       <items code="at0056">
         <items id="text">Unbestimmt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0057">
         <items id="text">Molekulares Ziel</items>
@@ -533,4 +533,3 @@ Not to be used to record findings from antigen or antibody testing of a specimen
     </term_definitions>
   </ontology>
 </archetype>
-

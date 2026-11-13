@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -44,9 +44,9 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">B8AD0C7EB492491CE6F7968C1AFFB40C</other_details>
-    <other_details id="build_uid">3a928712-c81a-4d9b-82ad-c01857468560</other_details>
-    <other_details id="revision">1.1.3</other_details>
+    <other_details id="MD5-CAM-1.0.1">1AE1CE5FEEA2C7BF49E562CF8F9521EA</other_details>
+    <other_details id="build_uid">0a3df5b6-9bf5-4746-add4-36d6652a2872</other_details>
+    <other_details id="revision">1.1.4</other_details>
     <details>
       <language>
         <terminology_id>
@@ -82,6 +82,34 @@ Darf nicht verwendet werden, um eine Zusammenfassung der Leistungsübertragung a
         <terminology_id>
           <value>ISO_639-1</value>
         </terminology_id>
+        <code_string>pt-pt</code_string>
+      </language>
+      <purpose>Para pedir aconselhamento, um serviço específico ou a transferência dos cuidados de um sujeito de uma organização ou prestador de cuidados de saúde para outra.</purpose>
+      <keywords>orientação</keywords>
+      <keywords>pedido</keywords>
+      <keywords>serviço</keywords>
+      <use>Utilizar como base para um pedido de aconselhamento, um serviço ou a transferência dos cuidados de um sujeito de uma organização ou prestador de cuidados de saúde. Normalmente, este documento incluirá detalhes sobre o âmbito e a duração da validade do pedido, bem como informações clínicas relevantes sobre o sujeito. Os pedidos podem variar desde um simples pedido de consulta, procura de recomendações sobre ações futuras, pedido de um procedimento específico ou um teste de diagnóstico, até à transferência total dos cuidados e responsabilidade clínica para o prestador de cuidados de saúde recetor.&#xD;
+&#xD;
+Os casos de uso incluem, mas não estão limitados a, um pedido de:&#xD;
+- uma consulta, segunda opinião ou aconselhamento de gestão de um especialista;&#xD;
+- um teste de diagnóstico;&#xD;
+- atendimento domiciliário de enfermeiros de visita;&#xD;
+- transferência de cuidados para uma instalação de reabilitação;&#xD;
+- para avaliação de cuidados a idosos;&#xD;
+- para revisão de medicamentos por um farmacêutico;&#xD;
+- e para a prestação de fisioterapia ou terapia ocupacional.&#xD;
+&#xD;
+Os pedidos podem ser direcionados (identificando um prestador de cuidados de saúde ou organização específica para realizar o pedido) ou não direcionados (identificando apenas o tipo de cuidados pretendidos).</use>
+      <misuse>Não deve ser utilizado para representar o documento registado como parte de um encontro ou visita clínica única. Utilize COMPOSITION.encounter para esta finalidade.&#xD;
+&#xD;
+Não deve ser utilizado para fornecer um resumo de transferência de cuidados para outra organização ou prestador - utilize COMPOSITION.transfer_summary para esta finalidade.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
         <code_string>sv</code_string>
       </language>
       <purpose>Att begära rådgivning, en specifik tjänst, eller vårdöverföring mellan vårdgivare eller organisation avseende en patient.</purpose>
@@ -100,8 +128,7 @@ Användningsområden inkluderar, men är inte begränsade till, att begära:&#xD
 - läkemedelsgenomgång med farmaceut&#xD;
 - tillhandahållande av sjukgymnastik eller arbetsterapi&#xD;
 &#xD;
-Begäran kan antingen vara riktad till en specifik vårdgivare eller organisation, eller peka ut vilken typ av vård som önskas.&#xD;
-</use>
+Begäran kan antingen vara riktad till en specifik vårdgivare eller organisation, eller peka ut vilken typ av vård som önskas.</use>
       <misuse>Ska inte användas för att dokumentera detaljer om ett vårdtillfälle eller ett besök. Använd istället arketypen Vårdtillfälle (COMPOSITION.encounter).&#xD;
 &#xD;
 Ska inte användas som epikris vid överflyttning av patient till annan organisation eller vårdgivare. Använd istället arketypen COMPOSITION.transfer_summary.</misuse>
@@ -141,6 +168,36 @@ Forespørselsdokumentet kan ha en spesifikk mottaker (spesifikk helsetjenesteyte
       <misuse>Brukes ikke for å registrere detaljer om en enkel interaksjon, kontakt eller omsorgshendelse mellom et individ og helsepersonell. Bruk arketypen Klinisk kontakt (COMPOSITION.encounter) for dette formålet&#xD;
 &#xD;
 Brukes ikke som overflyttingsnotat/epikrise til andre organisasjoner eller tjenesteytere. Bruk Overføringsdokument (COMPOSITION.transfer_summary) for dette formålet.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ja</code_string>
+      </language>
+      <purpose>ケア対象者について、医療従事者または医療機関に対し、助言、特定のサービス、または診療の移管を依頼するため。</purpose>
+      <keywords>紹介</keywords>
+      <keywords>依頼</keywords>
+      <keywords>サービス</keywords>
+      <keywords>紹介状</keywords>
+      <keywords>診療依頼</keywords>
+      <use>ケア対象者について、医療従事者または医療機関に対し、助言、サービス、または診療の移管を依頼する際の基盤として用いる。この文書には通常、依頼の範囲および有効期間に関する詳細と、ケア対象者に関する関連する臨床情報が含まれる。依頼の内容は、単純なコンサルテーションの依頼、今後の対応についての推奨を求めるもの、特定の処置や臨床検査の依頼から、受け手となる医療従事者への診療および臨床的責任の完全な引き継ぎまで多岐にわたる。&#xD;
+&#xD;
+ユースケースには以下の依頼が含まれるが、これらに限定されない：&#xD;
+- 専門医によるコンサルテーション、セカンドオピニオン、または診療方針に関する助言；&#xD;
+- 臨床検査；&#xD;
+- 訪問看護師による在宅ケア；&#xD;
+- リハビリテーション施設への診療の移管；&#xD;
+- 高齢者ケアのアセスメント；&#xD;
+- 薬剤師による薬剤監査；および&#xD;
+- 理学療法または作業療法の提供。&#xD;
+&#xD;
+依頼は、依頼を実施する特定の医療従事者または医療機関を指定するもの（宛先指定あり）でも、希望するケアの種類のみを示すもの（宛先指定なし）でもよい。</use>
+      <misuse>単一の診察の一部として記録される文書を表現するために用いてはならない。その目的にはCOMPOSITION.encounterを用いること。&#xD;
+&#xD;
+他の医療機関または医療従事者への診療移管サマリーを提供するために用いてはならない。その目的にはCOMPOSITION.transfer_summaryを用いること。</misuse>
       <copyright />
     </details>
     <details>
@@ -230,6 +287,17 @@ Niet te gebruiken om een samenvattende zorgoverdracht te leveren aan een andere 
       <terminology_id>
         <value>ISO_639-1</value>
       </terminology_id>
+      <code_string>pt-pt</code_string>
+    </language>
+    <author id="name">Hugo Silva</author>
+    <author id="organisation">University of Minho</author>
+    <author id="email">pg50416@uminho.pt</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
       <code_string>sv</code_string>
     </language>
     <author id="name">Lisa Axelsson</author>
@@ -245,6 +313,17 @@ Niet te gebruiken om een samenvattende zorgoverdracht te leveren aan een andere 
     </language>
     <author id="name">Lars Bitsch-Larsen, John Tore Valand</author>
     <author id="organisation">Haukeland Universitetssjukehus</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ja</code_string>
+    </language>
+    <author id="name">Shinji KOBAYASHI</author>
+    <author id="organisation">NPO openEHR Japan</author>
+    <author id="email">skoba@moss.gr.jp</author>
   </translations>
   <translations>
     <language>
@@ -525,6 +604,35 @@ Niet te gebruiken om een samenvattende zorgoverdracht te leveren aan een andere 
         <items id="comment">Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.</items>
       </items>
     </term_definitions>
+    <term_definitions language="ja">
+      <items code="at0000">
+        <items id="text">診療依頼書</items>
+        <items id="description">助言、サービス、または診療の移管を依頼する目的で、診療を担当する医療従事者または医療機関から別の医療従事者・医療機関へ送付される文書。</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0042">
+        <items id="text">Extension</items>
+        <items id="description">ローカルな文脈を取り込むため、または他の参照モデル／形式体系と整合させるために必要な追加情報。</items>
+        <items id="comment">例：院内の部門情報や、FHIRまたはCIMIの等価物と整合させるための追加メタデータ。</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="pt-pt">
+      <items code="at0000">
+        <items id="text">Pedido de serviço</items>
+        <items id="description">Documento enviado de um prestador ou organização de cuidados de saúde para outro, com a finalidade de solicitar aconselhamento, um serviço ou transferência de cuidados.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0042">
+        <items id="text">Extensão</items>
+        <items id="description">Informação adicional necessária para captar o contexto local ou para alinhar com outros modelos/formalismos de referência.</items>
+        <items id="comment">Por exemplo: Informação departamental do hospital local ou metadados adicionais para alinhar com os equivalentes FHIR ou CIMI.</items>
+      </items>
+    </term_definitions>
   </ontology>
 </archetype>
-

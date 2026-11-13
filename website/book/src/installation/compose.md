@@ -196,10 +196,10 @@ evaluation, not for production:
 
 - **Basic auth with one user:** `ferroehr` / `ferroehr` (stored as an Argon2id
   hash), carrying the `ADMIN` and `USER` roles.
-- **The user is a professional `PERSON`:** the `ferroehr-definitions` one-shot
-  loads the professional PERSON and ROLE templates the party mapping names
-  (`ferroehr definitions load`, copies of
-  `deploy/definitions/professional/`) before the server starts, and the
+- **The user is a professional `PERSON`:** the server stores the
+  [default demographic definitions](default-demographic-definitions.md) as
+  it boots, and the configuration sets no mapping key, so the default party
+  mapping names them and SCIM Users, Groups and representation work. The
   `ferroehr-provision` service then creates the user's `PERSON` through
   `/scim/v2/Users`, with a client credentials token the development
   `identity-issuer` signs for the client `quickstart-scim`. It stays up and
@@ -402,9 +402,10 @@ The server refuses a person whose login no demographic party carries, so the
 overlay binds each of the four before you sign in. The realm import gives
 every user a fixed `id`, which Keycloak puts in `sub`, and the one-shot
 `ferroehr-provision-keycloak` creates a SCIM User for each with that id as its
-login key, through a second `[[auth.scim.client]]` of the development issuer
-(`FERROEHR__AUTH__SCIM__CLIENT__1__*`) whose `binding_issuer` is the realm's
-identifier issuer, `urn:ferroehr:keycloak-quickstart-login`. The service
+login key, as a second client of the development issuer, which the one-shot
+`ferroehr-grant-keycloak` first grants `scim_provision` in the CDR with the
+realm's identifier issuer, `urn:ferroehr:keycloak-quickstart-login`, as its
+`binding_issuer`. The service
 account acts for nobody, so it binds to no party.
 
 Two confidential clients are defined, and both put `ferroehr`, the audience the
@@ -430,11 +431,15 @@ curl -H "Authorization: Bearer $TOKEN" -X POST -i \
 A service with no user behind it takes the client-credentials grant with
 `ferroehr-service`. Its service account holds `USER`, so the token reaches the
 clinical API and the admin routes refuse it with `403`. Its `system/aql-*`
-grant counts because the overlay names the client in `[auth.smart] backend_clients`
-(`FERROEHR__AUTH__SMART__BACKEND_CLIENTS`). It creates EHRs because the overlay
-declares it as an `[[authz.system_client]]` (`FERROEHR__AUTHZ__SYSTEM_CLIENT__0__*`),
-the only way a caller acting for no person commits; it lists no `writes`, so it
-commits no COMPOSITION:
+grant counts because the CDR grants the client `query_system_wide`, and it
+creates EHRs because the CDR grants it `commit_composition`, the only way a
+caller acting for no person commits: the `ferroehr-provision-keycloak`
+one-shot writes its `AGENT` and a `ROLE` coding both operations through the
+Demographic API, and the overlay admits them in `[authz.grants] allowed`
+(`FERROEHR__AUTHZ__GRANTS__ALLOWED`)
+([Operational policy](../operational-policy.md#what-a-system-client-may-do)).
+The `commit_composition` grant names no template, so it commits no
+COMPOSITION:
 
 ```shell
 TOKEN=$(curl -s -d client_id=ferroehr-service -d client_secret=ferroehr-service-quickstart-secret \

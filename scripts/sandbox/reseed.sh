@@ -25,10 +25,31 @@
 # (deploy/hosted/ferropix-seed.sh). Under an IHE patient identity source it maps
 # each manifest subject to the pseudonym FerroPIX minted for it, and every
 # EHR_STATUS names that pseudonym in the clinical domain (#4242). Unset, or
-# answering `provider local`, the subjects name themselves.
+# answering `provider local` (a CDR beside no FerroPIX), the subjects name
+# themselves.
 # SANDBOX_TERMINOLOGY=without-loinc: a run against a CDR whose terminology
 # server serves no LOINC, which moves the archetype-library pin (step 3).
+#
+# `--render-ehrs <dir>` sends nothing: it writes every EHR_STATUS body the seed
+# would send into <dir>, one file per subject, so a check can hold them to the
+# sandbox's privacy.subject_namespaces (scripts/checks/sandbox-seed-subjects.sh).
 set -Eeuo pipefail
+
+RENDER_DIR=""
+case "${1:-}" in
+  "") ;;
+  --render-ehrs)
+    RENDER_DIR="${2:-}"
+    [[ -n "$RENDER_DIR" && -d "$RENDER_DIR" ]] || {
+      echo "::error::--render-ehrs takes an existing directory" >&2
+      exit 2
+    }
+    ;;
+  *)
+    echo "::error::unknown argument '$1'; the one flag is --render-ehrs <dir>" >&2
+    exit 2
+    ;;
+esac
 
 BASE="${SANDBOX_BASE:-https://sandbox.ferroehr.eu}/ferroehr/rest/openehr/v1"
 # FerroEHR's own extensions sit beside the openEHR API (#4330).
@@ -179,13 +200,34 @@ render() {
   done
 }
 
+# The offline mode: the bodies of steps 5, 6 and 11, and nothing sent.
+if [[ -n "$RENDER_DIR" ]]; then
+  while read -r entry; do
+    subject=$(printf '%s' "$entry" | jq -r '.subject')
+    subject_ref="$(subject_id "$subject")"
+    render "$SEED_DIR/$(printf '%s' "$entry" | jq -r '.status')" "$RENDER_DIR/$subject.json" \
+      "__SUBJECT_ID__=$subject_ref" "__SUBJECT_NS__=$SUBJECT_NS"
+    final=$(printf '%s' "$entry" | jq -r '.final_status // empty')
+    if [[ -n "$final" ]]; then
+      render "$SEED_DIR/$final" "$RENDER_DIR/$subject.final.json" \
+        "__SUBJECT_ID__=$subject_ref" "__SUBJECT_NS__=$SUBJECT_NS"
+    fi
+  done < <(manifest_ehrs)
+  marker_ref="$(subject_id "$(mf '.marker.subject')")"
+  render "$SEED_DIR/$(mf '.marker.status')" "$RENDER_DIR/marker.json" \
+    "__SUBJECT_ID__=$marker_ref" "__SUBJECT_NS__=$SUBJECT_NS"
+  exit 0
+fi
+
 # ── 0. the demo PERSON ───────────────────────────────────────────────────────
 
 # The Basic user is a person bound by its key (#5009): every request is
-# refused `refused-unbound` until a PERSON carries it. The box's
-# ferroehr-provision service creates that PERSON through /scim/v2/ as the
-# `sandbox-scim` client after the wipe (deploy/hosted/docker-compose.yml), so
-# the seed waits for the login to bind before it commits anything.
+# refused `refused-unbound` until a PERSON carries it, and refused for its
+# scope until that PERSON holds them (#5438). The box's ferroehr-provision
+# service creates that PERSON through /scim/v2/ as the `sandbox-scim` client
+# after the wipe, and its ferroehr-hold service then grants it the scopes
+# (deploy/hosted/docker-compose.yml), so the seed waits for the login to bind
+# and hold them before it commits anything.
 echo "==> seeding $BASE"
 bound=""
 for attempt in $(seq 1 "$ATTEMPTS"); do
@@ -199,10 +241,15 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
     sleep "$RETRY_DELAY"
     continue
   fi
+  if [[ "$code" == 403 ]]; then
+    echo "  the demo PERSON holds no scopes yet (attempt $attempt/$ATTEMPTS); waiting for its grant" >&2
+    sleep "$RETRY_DELAY"
+    continue
+  fi
   expect "binding probe" "$code" 200
 done
 [[ -n "$bound" ]] || {
-  echo "::error::the demo login never bound a PERSON: read the box's ferroehr-provision log" >&2
+  echo "::error::the demo login never bound a PERSON holding its scopes: read the box's ferroehr-provision and ferroehr-hold logs" >&2
   exit 1
 }
 

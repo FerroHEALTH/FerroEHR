@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1411,283 +1411,283 @@ Norwegian Version of the Chelsea Critical Care Physical Assessment Tool (CPAx-NO
       </items>
       <items code="at0004">
         <items id="text">Respiratory function</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Complete ventilator dependence. Mandatory breaths only. May be fully sedated/ paralysed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Ventilator dependence. Mandatory breaths with some spontaneous effort</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Spontaneously breathing with continuous invasive or non-invasive ventilatory support</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Spontaneously breathing with intermittent invasive or non-invasive ventilatory supportor continuous high flow oxygen (&gt;15 L)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Receiving standardoxygen therapy (&lt;15L)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Self-ventilating with no oxygen therapy</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Cough</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Grip strength (predicted mean for age and gender on the strongest hand)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Moving within the bed (e.g. rolling)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Supine to sitting on the edge of the bed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Dynamic sitting (i.e. when sitting on the edge of the bed/unsupported sitting)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Standing balance</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Sit to stand (starting position: ≤90º hip flexion)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Transferring from bed to chair</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Stepping</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Absent cough, may be fully sedated or paralysed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Cough stimulated on deep suctioning only</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Weak ineffective voluntary cough, unable to clear independently (e.g. requires deep suction)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Weak, partially effective voluntary cough, sometimes able to clear secretions (e.g. requires Yankauer suctioning)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Effective cough, clearing secretions with airways clearance techniques</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Consistent effective voluntary cough, clearing secretions independently</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Unable, maybe fully sedated/ paralysed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Initiates movement. Requires assistance of two or more people (maximal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Initiates movement. Requires assistance of at least one person (moderate)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Initiates movement. Requires assistance of one person (minimal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Independent in ≥3 seconds</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Independent in &lt;3 seconds</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Unable/unstable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Initiates movement. Requires assistance of two or more people (maximal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Initiates movement. Requires assistance of at least one person (moderate)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Initiates movement. Requires assistance of one person (minimal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Independent in ≥3 seconds</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Independent in &lt;3 seconds</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Unable/unstable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Requires assistance of two or more people (maximal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Requires assistance of at least one person (moderate)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Requires assistance of one person (minimal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Independent with some dynamic sitting balance (i.e. able to alter trunk position within base of support)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Independent with full dynamic sitting balance (i.e. able to reach out of base of support)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Unable/unstable/bedbound</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Tilt table or similar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Standing hoist or similar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Dependent on frame, crutches or similar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Independent without aids</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Independent without aids and full dynamic standing balance (i.e. able to reach out of base of support)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Unable/unstable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Sit to stand with maximal assistance (standing hoist or similar)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Sit to stand with moderate assistance (e.g. one or two people)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Sit to stand with minimal assistance (e.g. one person)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Sit to stand independently pushing through arms of the chair</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Sit to stand independently without upper limb involvement</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0057">
         <items id="text">Unable/unstable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Full hoist</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0059">
         <items id="text">Standing hoist or similar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Pivot transfer (no stepping) with mobility aid or physical assistance</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Stand and step transfer with mobility aid or physical assistance</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Independent transfer without equipment</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">Unable/unstable</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">Using a standing hoist or similar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Using mobility aids and assistance of at least one person (moderate)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0066">
         <items id="text">Using mobility aid and assistance of one person (minimal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Using mobility aid or assistance of one person (minimal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0068">
         <items id="text">Independent without aid</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0069">
         <items id="text">Unable to assess</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0070">
         <items id="text">&lt;20%</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">&lt;40%</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0072">
         <items id="text">&lt;60%</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0073">
         <items id="text">&lt;80%</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0074">
         <items id="text">≥80%</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0076">
         <items id="text">Total score</items>
@@ -1722,283 +1722,283 @@ Norwegian Version of the Chelsea Critical Care Physical Assessment Tool (CPAx-NO
       </items>
       <items code="at0004">
         <items id="text">Respiratorisk funksjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Fullstendig avhengig av respirator. Kontrollert modus. Kan være helt sedert/muskelrelaksert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Avhengig av respirator. Kontrollert modus med noen spontane pust</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Puster selv med kontinuerlig invasiv eller non-invasiv ventilasjonsstøtte</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Puster selv med intermitterende invasiv eller noninvasiv ventilasjonsstøtte ELLER «High-flow» oksygentilskudd (&gt; 15 liter)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Får oksygentilskudd (&lt; 15 liter)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Selvpustende uten oksygentilskudd</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Hoste</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Gripestyrke (predikert gjennomsnitt for alder og kjønn for den sterkeste hånden)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Forflytning i seng f.eks. snu seg</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Liggende til sittende på sengekant</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Sittebalanse (dvs. sitter på sengekanten/ sitter uten støtte)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Stående balanse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Sittende til stående (Utgangsstilling: ≤90 grader hoftefleksjon)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Forflytning fra seng til stol</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Gange</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Ingen hoste, kan være helt sedert/muskelrelaksert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Hoste stimuleres kun av dyp suging</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Svak ineffektiv hoste, uten evne til sekretevakuering, f.eks. behov for dyp suging</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Svak, delvis effektiv hoste, med sporadisk evne til sekretevakuering, f.eks. behov for sug i munn/svelg</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Effektiv hoste, sekretevakuering ved hjelp av sekretmobiliserende teknikker</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Effektiv hoste, fjerner sekret selvstendig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Kan ikke, kan være helt sedert/muskelrelaksert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Initierer bevegelsen. Må ha hjelp av ≥2 personer (maksimal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Initierer bevegelsen. Må ha hjelp av ≥1 person (moderat)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Initierer bevegelsen. Må ha hjelp av 1 person (minimal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Selvstendig på ≥3 sekunder</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Selvstendig på &lt;3 sekunder</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Kan ikke/ustabil</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Initierer bevegelsen. Må ha hjelp av ≥ 2 personer (maksimal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Initierer bevegelsen. Må ha hjelp av ≥1 person (moderat)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Initierer bevegelsen. Må ha hjelp av 1 person (minimal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Selvstendig på ≥3 sekunder</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Selvstendig på &lt;3 sekunder</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Kan ikke/ustabil</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Må ha hjelp av ≥2 personer (maksimal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Må ha hjelp av ≥1 person (moderat)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Må ha hjelp av 1 person (minimal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Selvstendig med noe dynamisk sittebalanse, dvs. kan endre overkroppens stilling innenfor understøttelsesflaten</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Selvstendig med full dynamisk sittebalanse, dvs. kan strekke seg ut over understøttelsesflaten.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Kan ikke/ustabil/sengeleie</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Ståseng eller lignende</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Ståheis eller lignende</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Avhengig av prekestol, rullator, krykker eller lignende</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Selvstendig uten hjelpemidler</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Selvstendig uten hjelpemidler og full dynamisk stående balanse, dvs. kan strekke seg ut over understøttelsesflaten</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Kan ikke/ustabil</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Sittende til stående med maksimal hjelp, f.eks. ståheis eller lignende</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Sittende til stående med moderat hjelp, f. eks. 1-2 personer</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0054">
         <items id="text">Sittende til stående med minimal hjelp, f. eks. 1 person</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Selvstendig fra sittende til stående ved å skyve fra mot armlenene på stolen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Selvstendig fra sittende til stående uten armbruk</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0057">
         <items id="text">Kan ikke/ustabil</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Heis</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0059">
         <items id="text">Ståheis eller lignende</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Lav forflytning (ingen skritt) med forflytningshjelpemiddel eller fysisk hjelp</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Stående forflytning med skritt med forflytningshjelpemiddel ELLER fysisk hjelp</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Selvstendig forflytning uten utstyr</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">Kan ikke/ustabil</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">Bruker ståheis eller lignende</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Bruker forflytningshjelpemidler OG hjelp av &gt;1 person (moderat)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0066">
         <items id="text">Bruker forflytningshjelpemidler OG hjelp av 1 person (minimal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Bruker forflytningshjelpemiddel ELLER hjelp av 1 person (minimal)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0068">
         <items id="text">Selvstendig uten hjelp</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0069">
         <items id="text">Kan ikke testes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0070">
         <items id="text">&lt;20%</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">&lt;40%</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0072">
         <items id="text">&lt;60%</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0073">
         <items id="text">&lt;80%</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0074">
         <items id="text">≥80%</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0076">
         <items id="text">Sumskår</items>
@@ -2016,4 +2016,3 @@ Norwegian Version of the Chelsea Critical Care Physical Assessment Tool (CPAx-NO
     </term_definitions>
   </ontology>
 </archetype>
-

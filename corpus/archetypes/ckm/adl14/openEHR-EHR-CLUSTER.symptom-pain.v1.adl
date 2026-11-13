@@ -1,0 +1,1478 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-CLUSTER.symptom-pain.v1
+specialise
+	openEHR-EHR-CLUSTER.symptom.v1
+
+concept
+	[at0000.1]	-- Pain
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Jasmin Buck, Sebastian Garde">
+				["organisation"] = <"University of Heidelberg, Central Queensland University">
+			>
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+		["es"] = <
+			language = <[ISO_639-1::es]>
+			author = <
+				["name"] = <"Miguel Ángel Palacio Rodríguez">
+				["organisation"] = <"MiAnestesista.Com">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Tony Shannon">
+		["organisation"] = <"UK NHS, Connecting for Health">
+		["email"] = <"tony.shannon@nhs.net">
+		["date"] = <"2007-02-20">
+	>
+	details = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"*To record detail about a symptom - either self-recorded by an individual or recorded on the behalf of a patient by a clinician. A complete patient history may include varying level of details about a variety of symptoms.(en)">
+			use = <"*Use to record detailed information about a symptom as told to a clinician by a patient or self-recorded by the individual/patient.
+
+This archetype allows a 'nil significant' statement to be explicitly recorded.(en)">
+			misuse = <"*Not to be used to record details about pain. Use the specialisation of this archetype - the CLUSTER.symptom-pain instead.
+
+Not to be used for diagnoses and problems that form part of a persisting Problem List - use EVALUATION.problem_diagnosis.(en)">
+			copyright = <"© openEHR Foundation">
+		>
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"*To record detail about a symptom - either self-recorded by an individual or recorded on the behalf of a patient by a clinician. A complete patient history may include varying level of details about a variety of symptoms.(en)">
+			use = <"*Use to record detailed information about a symptom as told to a clinician by a patient or self-recorded by the individual/patient.
+
+This archetype allows a 'nil significant' statement to be explicitly recorded.(en)">
+			misuse = <"*Sollte nur für Symptome benutzt werden. (en)">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record detail about the subjective experience of pain - either self-recorded by an individual or recorded on the behalf of a patient by a clinician.">
+			use = <"Use to record detailed information about pain as told to a clinician by a patient or self-recorded by the individual/patient.
+
+This archetype allows a 'nil significant' statement to be explicitly recorded.">
+			keywords = <"complaint", "presenting", "symptom">
+			misuse = <"Not to be used to record details for symptoms other than pain. Use the generic parent of this archetype - the CLUSTER.symptom instead.
+
+Not to be used for diagnoses and problems that form part of a persisting Problem List - use EVALUATION.problem_diagnosis.">
+			copyright = <"© openEHR Foundation">
+		>
+		["es"] = <
+			language = <[ISO_639-1::es]>
+			purpose = <"Un arquetipo especializado para recoger los síntomas Dolor y la información sobre esos síntomas. Este arquetipo permite realizar una declaración de que el paciente no tiene el síntoma (sin ninguna otra información) o requerir una declaración más detallada. La razón de que se elija entre que una declaración negativa general pueda ser realizada o se permita una declaración más detallada es asegurar de que no hay posibilidad de error con declaraciones negativas sobre el síntoma, mezcladas con detalles de un síntoma que es claramente positivo.">
+			use = <"Para recoger información sobre el(los) dolor(dolores). La información puede ser codificada y estructurada en caso necesario o utiliza la descripción detallada con texto libre del síntoma como descripción clínica si lo requiere.">
+			keywords = <"*complaint(en)", "*presenting(en)", "*symptom(en)">
+			misuse = <"*Not to be used to record details for symptoms other than pain. Use the generic parent of this archetype - the CLUSTER.symptom instead.
+
+Not to be used for diagnoses and problems that form part of a persisting Problem List - use EVALUATION.problem_diagnosis.(en)">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <"Sam Heard, Ocean Informatics", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Ian McNicoll, Ocean Informatics, United Kingdom (Editor)">
+	other_details = <
+		["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+		["MD5-CAM-1.0.1"] = <"B458AAEDF747FA27D2A13B88AF32C9ED">
+	>
+
+definition
+	CLUSTER[at0000.1] matches {	-- Pain
+		items cardinality matches {1..*; unordered} matches {
+			ELEMENT[at0001.1] matches {	-- Pain Symptom
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0035] occurrences matches {0..1} matches {	-- Nil Significant
+				value matches {
+					DV_BOOLEAN matches {
+						value matches {True}
+					}
+				}
+			}
+			ELEMENT[at0002] occurrences matches {0..1} matches {	-- Description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0151] occurrences matches {0..1} matches {	-- Site
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			allow_archetype CLUSTER[at0147] occurrences matches {0..1} matches {	-- Site Details
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1/}
+				exclude
+					archetype_id/value matches {/.*/}
+			}
+			allow_archetype CLUSTER[at0.152] occurrences matches {0..*} matches {	-- Radiating To
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1/}
+			}
+			ELEMENT[at0021] occurrences matches {0..1} matches {	-- Impact
+				value matches {
+					1|[local::at0044], 	-- Trivial
+					2|[local::at0023], 	-- Mild
+					5|[local::at0024], 	-- Moderate
+					8|[local::at0025], 	-- Severe
+					9|[local::at0045]  	-- Very severe
+				}
+			}
+			CLUSTER[at0046] occurrences matches {0..*} matches {	-- Intensity
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0047] occurrences matches {0..1} matches {	-- Degree
+						value matches {
+							0|[local::at0022], 	-- Not present
+							1|[local::at0044], 	-- Trivial
+							2|[local::at0023], 	-- Mild
+							5|[local::at0024], 	-- Moderate
+							8|[local::at0025], 	-- Severe
+							9|[local::at0045]  	-- Very severe
+						}
+					}
+					ELEMENT[at0026.1] occurrences matches {0..1} matches {	-- Pain Score
+						value matches {
+							DV_COUNT matches {
+								magnitude matches {|0..10|}
+							}
+						}
+					}
+					ELEMENT[at0150] occurrences matches {0..1} matches {	-- Degree
+						value matches {
+							DV_PROPORTION matches {
+								numerator matches {|>=0.0|}
+								type matches {0}
+							}
+						}
+					}
+				}
+			}
+			ELEMENT[at0028] occurrences matches {0..1} matches {	-- Duration
+				value matches {
+					DV_DURATION matches {*}
+				}
+			}
+			ELEMENT[at0031] occurrences matches {0..1} matches {	-- Number of Occurrences
+				value matches {
+					DV_COUNT matches {*}
+				}
+			}
+			ELEMENT[at0032] occurrences matches {0..1} matches {	-- Character
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0003] occurrences matches {0..1} matches {	-- Variation
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0004, 	-- Constant
+							at0005, 	-- Intermittent
+							at0006]	-- Fluctuating
+						}
+					}
+				}
+			}
+			CLUSTER[at0058] occurrences matches {0..1} matches {	-- Previous Episodes
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0059] matches {	-- Any Previous Episodes
+						value matches {
+							DV_BOOLEAN matches {
+								value matches {True, False}
+							}
+						}
+					}
+					CLUSTER[at0090] occurrences matches {0..*} matches {	-- Previous Episode
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0142] occurrences matches {0..1} matches {	-- Date / time of previous episode
+								value matches {
+									DV_DATE_TIME matches {*}
+								}
+							}
+							ELEMENT[at0057] occurrences matches {0..1} matches {	-- Details
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0143] occurrences matches {0..1} matches {	-- Comparison
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0146] occurrences matches {0..1} matches {	-- Details
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.symptom\.v1/}
+							}
+						}
+					}
+					ELEMENT[at0098] occurrences matches {0..1} matches {	-- Number of Previous Episodes
+						value matches {
+							DV_COUNT matches {
+								magnitude matches {|>=0|}
+							}
+						}
+					}
+				}
+			}
+			CLUSTER[at0033] occurrences matches {0..1} matches {	-- Course
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0008] occurrences matches {0..1} matches {	-- Onset Type
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0009, 	-- Gradual
+									at0036, 	-- Rapid
+									at0010]	-- Sudden
+								}
+							}
+						}
+					}
+					ELEMENT[at0060] occurrences matches {0..1} matches {	-- Onset Description
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0030] occurrences matches {0..1} matches {	-- Time of Maximum Intensity
+						value matches {
+							DV_DATE_TIME matches {*}
+						}
+					}
+					ELEMENT[at0037] occurrences matches {0..1} matches {	-- Progression
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0038, 	-- Improving
+									at0039, 	-- Decreasing
+									at0040, 	-- Stable
+									at0041, 	-- Increasing
+									at0042, 	-- Worsening
+									at0043]	-- Has resolved
+								}
+							}
+						}
+					}
+					ELEMENT[at0011] occurrences matches {0..1} matches {	-- Cessation
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0009, 	-- Gradual
+									at0036, 	-- Rapid
+									at0010]	-- Sudden
+								}
+							}
+						}
+					}
+				}
+			}
+			CLUSTER[at0014] occurrences matches {0..1} matches {	-- Precipitating factors
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0015] occurrences matches {1..*} matches {	-- Precipitating Factor
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+			CLUSTER[at0016] occurrences matches {0..1} matches {	-- Modification
+				items cardinality matches {1..*; unordered} matches {
+					CLUSTER[at0018] occurrences matches {0..1} matches {	-- Modifying Factor
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0019] occurrences matches {0..*} matches {	-- Factor
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0017] occurrences matches {0..1} matches {	-- Change
+								value matches {
+									-3|[local::at0048], 	-- Relieved completely
+									-2|[local::at0049], 	-- Made better
+									-1|[local::at0050], 	-- Somewhat improved
+									0|[local::at0051], 	-- No change
+									1|[local::at0052], 	-- Somewhat worse
+									2|[local::at0053], 	-- Made worse
+									3|[local::at0054]  	-- Much worse
+								}
+							}
+							ELEMENT[at0056] occurrences matches {0..1} matches {	-- Details
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+						}
+					}
+				}
+			}
+			allow_archetype CLUSTER[at0063] occurrences matches {0..*} matches {	-- Associated symptoms
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.symptom(-[a-zA-Z0-9_]+)*\.v1/}
+			}
+			CLUSTER[at0061] occurrences matches {0..1} matches {	-- Features not present
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0062] occurrences matches {0..*} matches {	-- Absent feature
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	terminologies_available = <"SNOMED-CT", ...>
+	term_definitions = <
+		["ar-sy"] = <
+			items = <
+				["at0.152"] = <
+					text = <"*Radiating To(en)">
+					description = <"*Details about body location where the pain radiates to.(en)">
+				>
+				["at0000"] = <
+					text = <"*Symptom(en)">
+					description = <"*A subjective observation by an individual about departure from normal function and which may indicate the presence of disease or abnormality. Either self-recorded or recorded on the behalf of a patient by a clinician.(en)">
+				>
+				["at0000.1"] = <
+					text = <"*Pain(en)">
+					description = <"*A subjective observation by an individual about pain experienced. Either self-recorded or recorded on the behalf of a patient by a clinician.(en)">
+				>
+				["at0001"] = <
+					text = <"العرض">
+					description = <"العرض الذي يتم الشعور به">
+				>
+				["at0001.1"] = <
+					text = <"*Pain Symptom(en)">
+					description = <"*The pain symptom experienced.(en)">
+				>
+				["at0002"] = <
+					text = <"*Description(en)">
+					description = <"*A narrative description of the symptom.(en)">
+				>
+				["at0003"] = <
+					text = <"التنوع">
+					description = <"تنوع العرض">
+				>
+				["at0004"] = <
+					text = <"ثابت">
+					description = <"العرض موجود بشكل ثابت/مستمر">
+				>
+				["at0005"] = <
+					text = <"متقطع">
+					description = <"العرض موجود في بعض الأوقات و غائب في البعض الآخر">
+				>
+				["at0006"] = <
+					text = <"متموج">
+					description = <"العرض يتغير بشكل مؤثر و لكنه موجود في جميع الأوقات">
+				>
+				["at0008"] = <
+					text = <"نوع بداية الإصابة">
+					description = <"طبيعة بداية الإصابة بالعرض">
+				>
+				["at0009"] = <
+					text = <"تدريجي">
+					description = <"خلال فترة زمنية طويلة">
+				>
+				["at0010"] = <
+					text = <"مفاجئ">
+					description = <"حدث مباشرةً">
+				>
+				["at0011"] = <
+					text = <"التوقف التام">
+					description = <"طبيعة توقف هذا العرض">
+				>
+				["at0014"] = <
+					text = <"العوامل التي تُعجِّل العرض">
+					description = <"العوامل التي تحفز أو تتسبب في العرض">
+				>
+				["at0015"] = <
+					text = <"العامل الذي يُعجِّل العرض">
+					description = <"واقعة أو نشاط يتسبب في أو يحفز العرض">
+				>
+				["at0016"] = <
+					text = <"التعديل">
+					description = <"العوامل التي تغير مستوى شدة العرض">
+				>
+				["at0017"] = <
+					text = <"التغيير">
+					description = <"واقعة أو نشاط يؤدي إلى زيادة سوء حالة العرض">
+				>
+				["at0018"] = <
+					text = <"العامل المُعَدِّل">
+					description = <"المعلومات حول عامل معين يغير العرض">
+				>
+				["at0019"] = <
+					text = <"العامل">
+					description = <"واقعة أو نشاط يُعَدِّل العرض">
+				>
+				["at0021"] = <
+					text = <"*Impact(en)">
+					description = <"*The severity of the symptom in its impact on daily living.(en)">
+				>
+				["at0022"] = <
+					text = <"لا يوجد">
+					description = <"العرض غير موجود">
+				>
+				["at0023"] = <
+					text = <"متوسط">
+					description = <"العرض لا يتداخل بشكل كبير مع الأنشطة اليومية">
+				>
+				["at0024"] = <
+					text = <"متوسط">
+					description = <"العرض يؤثر على الأنشطة اليومية">
+				>
+				["at0025"] = <
+					text = <"شديد">
+					description = <"العرض يمنع بعض الأنشطة اليومية المحورية">
+				>
+				["at0026"] = <
+					text = <"حرز النظير البصري/المرئي">
+					description = <"حرز من 0 (غير موجود) إلى 10 (أسوأ ما يمكن)">
+				>
+				["at0026.1"] = <
+					text = <"*Pain Score(en)">
+					description = <"*A score from 0 (not present) to 10 (as bad as it could be).(en)">
+				>
+				["at0028"] = <
+					text = <"المدة">
+					description = <"مدة حدوث العرض منذ بدايته">
+				>
+				["at0030"] = <
+					text = <"وقت الحد الأقصى من الشدة">
+					description = <"التوقيت و/أو التاريخ الخاص بالحد الأقصى من الشدة لهذا العرض">
+				>
+				["at0031"] = <
+					text = <"عدد مرات الحدوث">
+					description = <"عدد المرات التي حدث فيها هذا العرض">
+				>
+				["at0032"] = <
+					text = <"الخاصية">
+					description = <"خاصية العرض">
+				>
+				["at0033"] = <
+					text = <"المَساق/المسار">
+					description = <"خصائص مسار العَرَض">
+				>
+				["at0035"] = <
+					text = <"غير مؤثر/لا يعتد به">
+					description = <"ليس لدى الشخص أي خبرة مؤثرة/يعتد بها للعرض">
+				>
+				["at0036"] = <
+					text = <"سريع">
+					description = <"خلال فترة زمنية قصيرة">
+				>
+				["at0037"] = <
+					text = <"التقدم">
+					description = <"تقدم العرض مقارنة بالماضي">
+				>
+				["at0038"] = <
+					text = <"يتحسن">
+					description = <"حدث تحسن للعرض عبر الزمن">
+				>
+				["at0039"] = <
+					text = <"يقل">
+					description = <"شدة العرض تقل بمرور الزمن">
+				>
+				["at0040"] = <
+					text = <"مستقر">
+					description = <"لم يتغير العرض عبر الزمن ">
+				>
+				["at0041"] = <
+					text = <"متزايد">
+					description = <"شدة العرض تزيد عبر الزمن">
+				>
+				["at0042"] = <
+					text = <"تسوء">
+					description = <"العرض يسوء عبر الزمن">
+				>
+				["at0043"] = <
+					text = <"انصرف/بَرَأَ">
+					description = <"برأ العرض عبر الزمن">
+				>
+				["at0044"] = <
+					text = <"طفيف">
+					description = <"العرض طفيف و لا يسبب مشكلة">
+				>
+				["at0045"] = <
+					text = <"شديد جدا">
+					description = <"العرض عند الحد الأقصى من الشدة و يمنع القيام بأي أنشطة">
+				>
+				["at0046"] = <
+					text = <"*Intensity(en)">
+					description = <"*Measures of the intensity of the symptom. Assumed to be current intensity unless otherwise specified but may be used to capture e.g. maximal and  minimal intensity.(en)">
+				>
+				["at0047"] = <
+					text = <"الدرجة">
+					description = <"الدرجة التي يسبب فيها العرَض إزعاجا للمريض">
+				>
+				["at0048"] = <
+					text = <"شفي بشكل تام">
+					description = <"تم شفاء العرض بواسطة هذا العامل">
+				>
+				["at0049"] = <
+					text = <"تحسن">
+					description = <"تم تحسن العرض بواسطة هذا العامل">
+				>
+				["at0050"] = <
+					text = <"تحسن إلى حد ما">
+					description = <"تم تحسن العرض إلى حد ما بواسطة هذا العامل">
+				>
+				["at0051"] = <
+					text = <"لا يوجد تغيير">
+					description = <"لم يتم تعديل العرض بواسطة هذا العامل">
+				>
+				["at0052"] = <
+					text = <"أسوأ إلى حد ما">
+					description = <"تم سوء حالة العرض إلى حد ما بواسطة هذا العرض">
+				>
+				["at0053"] = <
+					text = <"ساءت الحالة">
+					description = <"تم زيادة سوء العرض بواسطة هذا العامل">
+				>
+				["at0054"] = <
+					text = <"ساء بشكل كبير">
+					description = <"تم زيادة سوء العرض بشكل كبير بواسطة هذا العامل">
+				>
+				["at0056"] = <
+					text = <"التفاصيل">
+					description = <"التفاصيل حول التأثير">
+				>
+				["at0057"] = <
+					text = <"التفاصيل">
+					description = <"التفاصيل حول الأعراض السابقة و المقارنة بينها و بين هذه النوبة">
+				>
+				["at0058"] = <
+					text = <"النوبات السابقة">
+					description = <"تفاصيل حول النوبات السابقة">
+				>
+				["at0059"] = <
+					text = <"هل توجد أي نوبات سابقة">
+					description = <"هل كان هناك أي نوبات سابقة لهذا العرض">
+				>
+				["at0060"] = <
+					text = <"وصف بداية الإصابة">
+					description = <"النشاط أو الموقف عند بداية الإصابة و تفاصيل بداية الإصابة">
+				>
+				["at0061"] = <
+					text = <"الخصائص غير موجودة">
+					description = <"*">
+				>
+				["at0062"] = <
+					text = <"خصيصة غائبة">
+					description = <"خصيصة غير موجودة">
+				>
+				["at0063"] = <
+					text = <"عنقود: الأعراض المصاحبة">
+					description = <"الأعراض المصاحبة">
+				>
+				["at0090"] = <
+					text = <"النوبة السابقة">
+					description = <"تفاصيل حول نوبة بعينها">
+				>
+				["at0098"] = <
+					text = <"عدد النوبات السابقة">
+					description = <"عدد النوبات السابقة">
+				>
+				["at0142"] = <
+					text = <"التاريخ/التوقيت الخاص بالنوبة السابقة">
+					description = <"التاريخ/التوقيت الخاص بالنوبة السابقة">
+				>
+				["at0143"] = <
+					text = <"المقارنة">
+					description = <"مقارنة بين هذه النوبة و النوبة السابقة">
+				>
+				["at0146"] = <
+					text = <"التفاصيل">
+					description = <"تفاصيل مركبة للأعراض في النوبات السابقة">
+				>
+				["at0147"] = <
+					text = <"المكان من الجسم">
+					description = <"تفاصيل حول المكان من الجسم">
+				>
+				["at0150"] = <
+					text = <"عنصر جديد">
+					description = <"*">
+				>
+				["at0151"] = <
+					text = <"*Site(en)">
+					description = <"*The site on the body where the symptom was located.(en)">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0.152"] = <
+					text = <"*Radiating To(en)">
+					description = <"*Details about body location where the pain radiates to.(en)">
+				>
+				["at0000"] = <
+					text = <"Symptom">
+					description = <"*A subjective observation by an individual about departure from normal function and which may indicate the presence of disease or abnormality. Either self-recorded or recorded on the behalf of a patient by a clinician.(en)">
+				>
+				["at0000.1"] = <
+					text = <"*Pain(en)">
+					description = <"*A subjective observation by an individual about pain experienced. Either self-recorded or recorded on the behalf of a patient by a clinician.(en)">
+				>
+				["at0001"] = <
+					text = <"Symptom">
+					description = <"das aufgetretene Symptom">
+				>
+				["at0001.1"] = <
+					text = <"*Pain Symptom(en)">
+					description = <"*The pain symptom experienced.(en)">
+				>
+				["at0002"] = <
+					text = <"Klinische Beschreibung">
+					description = <"Beschreibung des Symptoms">
+				>
+				["at0003"] = <
+					text = <"Variation">
+					description = <"die Variationen des Symptoms">
+				>
+				["at0004"] = <
+					text = <"Dauerhaft">
+					description = <"das Symptom ist dauerhaft anwesend">
+				>
+				["at0005"] = <
+					text = <"Zeitweise">
+					description = <"das Symptom ist abwechselnd anwesend und nicht anwesend">
+				>
+				["at0006"] = <
+					text = <"Variabel">
+					description = <"das Symptom variiert deutlich, ist aber praktisch ständig anwesend">
+				>
+				["at0008"] = <
+					text = <"Art des Eintretens">
+					description = <"die Art des Eintretens des Symptoms">
+				>
+				["at0009"] = <
+					text = <"Graduell">
+					description = <"das Symptom ist allmählich über eine längere Zeitspanne hinweg aufgetaucht">
+				>
+				["at0010"] = <
+					text = <"Plötzlich">
+					description = <"das Symptom ist sofort aufgetaucht">
+				>
+				["at0011"] = <
+					text = <"Ende">
+					description = <"die Art des Abklingens des Symptoms">
+				>
+				["at0014"] = <
+					text = <"Beschleunigende Faktoren">
+					description = <"Faktoren, die das Symptom auslösen oder bewirken">
+				>
+				["at0015"] = <
+					text = <"Beschleunigender Faktor">
+					description = <"ein Ereignis oder eine Handlung, die das Symptom auslösen oder bewirken">
+				>
+				["at0016"] = <
+					text = <"Modifizierende Faktoren">
+					description = <"Faktoren, die den Intensitätsgrad des Symptoms verändern">
+				>
+				["at0017"] = <
+					text = <"Erschwerender Faktor">
+					description = <"ein Ereignis oder eine Handlung, die das Symptom verschlimmern">
+				>
+				["at0018"] = <
+					text = <"Modifizierender Faktor">
+					description = <"Information über einen bestimmten Faktor, der das Symptom verändert">
+				>
+				["at0019"] = <
+					text = <"Faktor">
+					description = <"ein Ereignis oder eine Handlung, die das Symptom verändert">
+				>
+				["at0021"] = <
+					text = <"Schwere">
+					description = <"der Schweregrad des Symptoms">
+				>
+				["at0022"] = <
+					text = <"nicht anwesend">
+					description = <"das Symptom ist nicht anwesend">
+				>
+				["at0023"] = <
+					text = <"gelinde">
+					description = <"das Symptom beeinträchtigt alltägliche Handlungen nicht ernsthaft">
+				>
+				["at0024"] = <
+					text = <"mäßig">
+					description = <"das Symptom beeinträchtigt alltägliche Handlungen">
+				>
+				["at0025"] = <
+					text = <"schwer">
+					description = <"das Symptom verhindert wichtige alltägliche Handlungen">
+				>
+				["at0026"] = <
+					text = <"Visuelle Analogskala">
+					description = <"eine Bewertung von 0 (nicht anwesend) bis 10 (schlimmer geht nicht)">
+				>
+				["at0026.1"] = <
+					text = <"*Pain Score(en)">
+					description = <"*A score from 0 (not present) to 10 (as bad as it could be).(en)">
+				>
+				["at0028"] = <
+					text = <"Dauer">
+					description = <"die Dauer des Symptoms seit dem Beginn">
+				>
+				["at0030"] = <
+					text = <"Zeitpunkt der maximalen Stärke">
+					description = <"Die Zeit (und/oder das  Datum) der maximalen Stärke des Symptoms">
+				>
+				["at0031"] = <
+					text = <"Anzahl der Vorkommnisse">
+					description = <"die Anzahl wie oft das Symptom aufgetreten ist">
+				>
+				["at0032"] = <
+					text = <"Art">
+					description = <"die Art des Symptoms">
+				>
+				["at0033"] = <
+					text = <"Verlauf">
+					description = <"Merkmale des Verlaufs des Symptoms">
+				>
+				["at0035"] = <
+					text = <"Nicht signifikant">
+					description = <"die Person hat keine signifikanten Erfahrungen mit dem Symptom">
+				>
+				["at0036"] = <
+					text = <"rasch">
+					description = <"über einen kurzen Zeitraum">
+				>
+				["at0037"] = <
+					text = <"Entwicklung">
+					description = <"die Entwicklung des Symptoms im Hinblick auf die Vergangenheit">
+				>
+				["at0038"] = <
+					text = <"sich bessernd">
+					description = <"das Symptom hat sich im Laufe der Zeit gebessert">
+				>
+				["at0039"] = <
+					text = <"nachlassend">
+					description = <"die Intensität des Symptoms hat im Laufe der Zeit nachgelassen">
+				>
+				["at0040"] = <
+					text = <"stabil">
+					description = <"das Symptom hat sich im Laufe der Zeit nicht verändert">
+				>
+				["at0041"] = <
+					text = <"zunehmend">
+					description = <"die Intensität des Symptoms hat im Laufe der Zeit zugenommen">
+				>
+				["at0042"] = <
+					text = <"sich verschlimmernd">
+					description = <"das Symptom hat sich im Laufe der Zeit verschlimmert">
+				>
+				["at0043"] = <
+					text = <"hat sich gelegt">
+					description = <"das Symptom hat sich im Laufe der Zeit gelegt">
+				>
+				["at0044"] = <
+					text = <"geringfügig">
+					description = <"das Symptom ist geringfügig und verursacht keine Probleme">
+				>
+				["at0045"] = <
+					text = <"sehr schwerwiegend">
+					description = <"das Symptom hat fast die maximal mögliche Intensität und verhindert jegliche Handlungen">
+				>
+				["at0046"] = <
+					text = <"*Intensity(en)">
+					description = <"*Measures of the intensity of the symptom at this time(en)">
+				>
+				["at0047"] = <
+					text = <"Grad">
+					description = <"der Grad der Beeinträchtigung des Patienten durch das Symptom">
+				>
+				["at0048"] = <
+					text = <"Komplett gelindert">
+					description = <"Das Symptom wird durch diesen Faktor gelindert">
+				>
+				["at0049"] = <
+					text = <"Verbessert">
+					description = <"Das Symptom wird durch diesen Faktor verbessert">
+				>
+				["at0050"] = <
+					text = <"Etwas verbessert">
+					description = <"Das Symptom wird durch diesen Faktor etwas verbessert">
+				>
+				["at0051"] = <
+					text = <"Keine Veränderung">
+					description = <"Das Symptom wird durch diesen Faktor nicht verändert">
+				>
+				["at0052"] = <
+					text = <"Etwas verschlechtert">
+					description = <"Das Symptom wird durch diesen Faktor etwas verschlechtert">
+				>
+				["at0053"] = <
+					text = <"Verschlechtert">
+					description = <"Das Symptom wird durch diesen Faktor verschlechtert">
+				>
+				["at0054"] = <
+					text = <"Sehr viel verschlechtert">
+					description = <"Das Symptom wird durch diesen Faktor sehr viel verschlechtert">
+				>
+				["at0056"] = <
+					text = <"Details über den Effekt">
+					description = <"Details über den Effekt">
+				>
+				["at0057"] = <
+					text = <"Details über vorherige Symptome">
+					description = <"Details über vorherige Symptome und Vergleich zu diesem Vorfall">
+				>
+				["at0058"] = <
+					text = <"Vorherige Vorfälle">
+					description = <"Details über vorherige Vorfälle">
+				>
+				["at0059"] = <
+					text = <"Frühere Vorfälle">
+					description = <"Ist dieses Symptom früher schon einmal aufgetreten">
+				>
+				["at0060"] = <
+					text = <"Beschreibung des Auftretens">
+					description = <"Taetigkeit oder Situation bei Auftreten des Symptoms und weitere Details">
+				>
+				["at0061"] = <
+					text = <"Nicht vorhandene Merkmale">
+					description = <"Nicht vorhandene Merkmale">
+				>
+				["at0062"] = <
+					text = <"Nicht vorhandenes Merkmal">
+					description = <"Ein nicht vorhandenes Merkmal">
+				>
+				["at0063"] = <
+					text = <"Cluster: Zugehörige Symptome">
+					description = <"Zugehörige Symptome">
+				>
+				["at0090"] = <
+					text = <"*Previous episode">
+					description = <"*Details about a specific episode (en)">
+				>
+				["at0098"] = <
+					text = <"*Number of previous episodes (en)">
+					description = <"*Number of previous episodes (en)">
+				>
+				["at0142"] = <
+					text = <"*Date / time of previous episode (en)">
+					description = <"*Date/time of previous episode (en)">
+				>
+				["at0143"] = <
+					text = <"*Comparison">
+					description = <"*How the previous episode compares with this one (en)">
+				>
+				["at0146"] = <
+					text = <"*Details (en)">
+					description = <"*Structured details of symptoms in previous episodes (en)">
+				>
+				["at0147"] = <
+					text = <"*Site Details(en)">
+					description = <"*Details of the location in the body.(en)">
+				>
+				["at0150"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0151"] = <
+					text = <"*Site(en)">
+					description = <"*The site on the body where the symptom was located.(en)">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0.152"] = <
+					text = <"Radiating To">
+					description = <"Details about body location where the pain radiates to.">
+				>
+				["at0000"] = <
+					text = <"Symptom">
+					description = <"A subjective observation by an individual about departure from normal function and which may indicate the presence of disease or abnormality. Either self-recorded or recorded on the behalf of a patient by a clinician.">
+				>
+				["at0000.1"] = <
+					text = <"Pain">
+					description = <"A subjective observation by an individual about pain experienced. Either self-recorded or recorded on the behalf of a patient by a clinician.">
+				>
+				["at0001"] = <
+					text = <"Symptom">
+					description = <"The symptom experienced.">
+					comment = <"Coding with an external terminology is preferred, where possible.">
+				>
+				["at0001.1"] = <
+					text = <"Pain Symptom">
+					description = <"The pain symptom experienced.">
+					comment = <"Coding with an external terminology is preferred where possible.">
+				>
+				["at0002"] = <
+					text = <"Description">
+					description = <"A narrative description of the symptom.">
+				>
+				["at0003"] = <
+					text = <"Variation">
+					description = <"The variation of the symptom.">
+				>
+				["at0004"] = <
+					text = <"Constant">
+					description = <"The symptom is constantly present.">
+				>
+				["at0005"] = <
+					text = <"Intermittent">
+					description = <"The symptom is present at times and not at others.">
+				>
+				["at0006"] = <
+					text = <"Fluctuating">
+					description = <"The symptom varys considerably but is almost always present.">
+				>
+				["at0008"] = <
+					text = <"Onset Type">
+					description = <"The nature of the onset of the symptom.">
+				>
+				["at0009"] = <
+					text = <"Gradual">
+					description = <"Over a longer period of time.">
+				>
+				["at0010"] = <
+					text = <"Sudden">
+					description = <"Almost immediate.">
+				>
+				["at0011"] = <
+					text = <"Cessation">
+					description = <"The nature of the cessation of the symptom.">
+				>
+				["at0014"] = <
+					text = <"Precipitating factors">
+					description = <"Factors that trigger or bring on the symptom.">
+				>
+				["at0015"] = <
+					text = <"Precipitating Factor">
+					description = <"An event or activity that brings on or triggers the symptom.">
+				>
+				["at0016"] = <
+					text = <"Modification">
+					description = <"Factors that change the level of intensity of the symptom.">
+				>
+				["at0017"] = <
+					text = <"Change">
+					description = <"An event or activity that makes the symptom worse.">
+				>
+				["at0018"] = <
+					text = <"Modifying Factor">
+					description = <"Information about a specific factor that changes the symptom.">
+				>
+				["at0019"] = <
+					text = <"Factor">
+					description = <"An event or activity that modifies the symptom.">
+				>
+				["at0021"] = <
+					text = <"Impact">
+					description = <"The severity of the symptom in its impact on daily living.">
+				>
+				["at0022"] = <
+					text = <"Not present">
+					description = <"The symptom is not present.">
+				>
+				["at0023"] = <
+					text = <"Mild">
+					description = <"The symptom does not interfere greatly with day to day activities.">
+				>
+				["at0024"] = <
+					text = <"Moderate">
+					description = <"The symptom interferes with day to day activities.">
+				>
+				["at0025"] = <
+					text = <"Severe">
+					description = <"The symptom prohibits some key daily activities.">
+				>
+				["at0026"] = <
+					text = <"Visual Analogue Score">
+					description = <"A score from 0 (not present) to 10 (as bad as it could be).">
+				>
+				["at0026.1"] = <
+					text = <"Pain Score">
+					description = <"A score from 0 (not present) to 10 (as bad as it could be).">
+				>
+				["at0028"] = <
+					text = <"Duration">
+					description = <"The duration of the symptom since onset.">
+				>
+				["at0030"] = <
+					text = <"Time of Maximum Intensity">
+					description = <"The time (and/or date) of maximum intensity of the symptom.">
+				>
+				["at0031"] = <
+					text = <"Number of Occurrences">
+					description = <"The number of times this symptom has occurred.">
+				>
+				["at0032"] = <
+					text = <"Character">
+					description = <"The character of the symptom.">
+				>
+				["at0033"] = <
+					text = <"Course">
+					description = <"Features of the course of the symptom.">
+				>
+				["at0035"] = <
+					text = <"Nil Significant">
+					description = <"The person has not had any significant experience of the symptom.">
+				>
+				["at0036"] = <
+					text = <"Rapid">
+					description = <"Over a short period of time.">
+				>
+				["at0037"] = <
+					text = <"Progression">
+					description = <"The progress of the symptom relative to the past.">
+				>
+				["at0038"] = <
+					text = <"Improving">
+					description = <"The symptom has improved over time.">
+				>
+				["at0039"] = <
+					text = <"Decreasing">
+					description = <"The symptom is decreasing in intensity over time.">
+				>
+				["at0040"] = <
+					text = <"Stable">
+					description = <"The symptom has not changed over time.">
+				>
+				["at0041"] = <
+					text = <"Increasing">
+					description = <"The symptom is increasing in intensity over time.">
+				>
+				["at0042"] = <
+					text = <"Worsening">
+					description = <"The symptom is getting worse over.">
+				>
+				["at0043"] = <
+					text = <"Has resolved">
+					description = <"The symptom has resolved over time.">
+				>
+				["at0044"] = <
+					text = <"Trivial">
+					description = <"The symptom is trivial and causes no problems.">
+				>
+				["at0045"] = <
+					text = <"Very severe">
+					description = <"The symptom is almost maximum possible intensity and prohibits any activity.">
+				>
+				["at0046"] = <
+					text = <"Intensity">
+					description = <"Measures of the intensity of the symptom. Assumed to be current intensity unless otherwise specified but may be used to capture e.g. maximal and  minimal intensity.">
+				>
+				["at0047"] = <
+					text = <"Degree">
+					description = <"The degree the symptom is bothering the patient.">
+				>
+				["at0048"] = <
+					text = <"Relieved completely">
+					description = <"The symptom is relieved by this factor.">
+				>
+				["at0049"] = <
+					text = <"Made better">
+					description = <"The symptom is made better by this factor.">
+				>
+				["at0050"] = <
+					text = <"Somewhat improved">
+					description = <"The symptom is somewhat improved by this factor.">
+				>
+				["at0051"] = <
+					text = <"No change">
+					description = <"The symptom is not modified by this factor.">
+				>
+				["at0052"] = <
+					text = <"Somewhat worse">
+					description = <"The symptom is made somewhat worse by this factor.">
+				>
+				["at0053"] = <
+					text = <"Made worse">
+					description = <"The symptom is made worse by this factor.">
+				>
+				["at0054"] = <
+					text = <"Much worse">
+					description = <"The symptom is made much worse by this factor.">
+				>
+				["at0056"] = <
+					text = <"Details">
+					description = <"Details of the effect.">
+				>
+				["at0057"] = <
+					text = <"Details">
+					description = <"Details of previous symptoms and comparison to this episode.">
+				>
+				["at0058"] = <
+					text = <"Previous Episodes">
+					description = <"Details about previous episodes.">
+				>
+				["at0059"] = <
+					text = <"Any Previous Episodes">
+					description = <"Have there been any previous episodes of this symptom.">
+				>
+				["at0060"] = <
+					text = <"Onset Description">
+					description = <"Activity or situation at and details of onset.">
+				>
+				["at0061"] = <
+					text = <"Features not present">
+					description = <"Anticipated features which are not present.">
+				>
+				["at0062"] = <
+					text = <"Absent feature">
+					description = <"A feature that is not present.">
+				>
+				["at0063"] = <
+					text = <"Associated symptoms">
+					description = <"Associated symptoms.">
+				>
+				["at0090"] = <
+					text = <"Previous Episode">
+					description = <"Details about a specific episode.">
+				>
+				["at0098"] = <
+					text = <"Number of Previous Episodes">
+					description = <"Number of previous episodes.">
+				>
+				["at0142"] = <
+					text = <"Date / time of previous episode">
+					description = <"Date/time of previous episode.">
+				>
+				["at0143"] = <
+					text = <"Comparison">
+					description = <"How the previous episode compares with this one.">
+				>
+				["at0146"] = <
+					text = <"Details">
+					description = <"Structured details of symptoms in previous episodes.">
+				>
+				["at0147"] = <
+					text = <"Site Details">
+					description = <"Details of the location in the body.">
+				>
+				["at0150"] = <
+					text = <"Degree">
+					description = <"The intensity of the symptom expressed as a proportion.">
+				>
+				["at0151"] = <
+					text = <"Site">
+					description = <"The site on the body where the symptom was located.">
+				>
+			>
+		>
+		["es"] = <
+			items = <
+				["at0000"] = <
+					text = <"*Symptom(en)">
+					description = <"*A subjective observation by an individual about departure from normal function and which may indicate the presence of disease or abnormality. Either self-recorded or recorded on the behalf of a patient by a clinician.(en)">
+				>
+				["at0000.1"] = <
+					text = <"Síntoma Dolor">
+					description = <"Un síntoma dolor experimentado por una persona">
+				>
+				["at0001"] = <
+					text = <"Síntoma">
+					description = <"El síntoma experimentado">
+					comment = <"*Coding with an external terminology is preferred, where possible.(en)">
+				>
+				["at0002"] = <
+					text = <"*Description(en)">
+					description = <"*A narrative description of the symptom.(en)">
+				>
+				["at0003"] = <
+					text = <"*Variation(en)">
+					description = <"*The variation of the symptom.(en)">
+				>
+				["at0004"] = <
+					text = <"*Constant(en)">
+					description = <"*The symptom is constantly present.(en)">
+				>
+				["at0005"] = <
+					text = <"*Intermittent(en)">
+					description = <"*The symptom is present at times and not at others.(en)">
+				>
+				["at0006"] = <
+					text = <"*Fluctuating(en)">
+					description = <"*The symptom varys considerably but is almost always present.(en)">
+				>
+				["at0008"] = <
+					text = <"*Onset Type(en)">
+					description = <"*The nature of the onset of the symptom.(en)">
+				>
+				["at0009"] = <
+					text = <"*Gradual(en)">
+					description = <"*Over a longer period of time.(en)">
+				>
+				["at0010"] = <
+					text = <"*Sudden(en)">
+					description = <"*Almost immediate.(en)">
+				>
+				["at0011"] = <
+					text = <"*Cessation(en)">
+					description = <"*The nature of the cessation of the symptom.(en)">
+				>
+				["at0014"] = <
+					text = <"*Precipitating factors(en)">
+					description = <"*Factors that trigger or bring on the symptom.(en)">
+				>
+				["at0015"] = <
+					text = <"*Precipitating Factor(en)">
+					description = <"*An event or activity that brings on or triggers the symptom.(en)">
+				>
+				["at0016"] = <
+					text = <"*Modification(en)">
+					description = <"*Factors that change the level of intensity of the symptom.(en)">
+				>
+				["at0017"] = <
+					text = <"*Change(en)">
+					description = <"*An event or activity that makes the symptom worse.(en)">
+				>
+				["at0018"] = <
+					text = <"*Modifying Factor(en)">
+					description = <"*Information about a specific factor that changes the symptom.(en)">
+				>
+				["at0019"] = <
+					text = <"*Factor(en)">
+					description = <"*An event or activity that modifies the symptom.(en)">
+				>
+				["at0021"] = <
+					text = <"*Impact(en)">
+					description = <"*The severity of the symptom in its impact on daily living.(en)">
+				>
+				["at0022"] = <
+					text = <"no presente">
+					description = <"el síntoma no está presente">
+				>
+				["at0023"] = <
+					text = <"*Mild(en)">
+					description = <"*The symptom does not interfere greatly with day to day activities.(en)">
+				>
+				["at0024"] = <
+					text = <"*Moderate(en)">
+					description = <"*The symptom interferes with day to day activities.(en)">
+				>
+				["at0025"] = <
+					text = <"*Severe(en)">
+					description = <"*The symptom prohibits some key daily activities.(en)">
+				>
+				["at0026"] = <
+					text = <"*Visual Analogue Score(en)">
+					description = <"*A score from 0 (not present) to 10 (as bad as it could be).(en)">
+				>
+				["at0026.1"] = <
+					text = <"*Pain Score(en)">
+					description = <"*A score from 0 (not present) to 10 (as bad as it could be).(en)">
+				>
+				["at0028"] = <
+					text = <"*Duration(en)">
+					description = <"*The duration of the symptom since onset.(en)">
+				>
+				["at0030"] = <
+					text = <"*Time of Maximum Intensity(en)">
+					description = <"*The time (and/or date) of maximum intensity of the symptom.(en)">
+				>
+				["at0031"] = <
+					text = <"*Number of Occurrences(en)">
+					description = <"*The number of times this symptom has occurred.(en)">
+				>
+				["at0032"] = <
+					text = <"*Character(en)">
+					description = <"*The character of the symptom.(en)">
+				>
+				["at0033"] = <
+					text = <"*Course(en)">
+					description = <"*Features of the course of the symptom.(en)">
+				>
+				["at0035"] = <
+					text = <"Ausente">
+					description = <"La persona no tiene ninguna experiencia significante del síntoma">
+				>
+				["at0036"] = <
+					text = <"*Rapid(en)">
+					description = <"*Over a short period of time.(en)">
+				>
+				["at0037"] = <
+					text = <"*Progression(en)">
+					description = <"*The progress of the symptom relative to the past.(en)">
+				>
+				["at0038"] = <
+					text = <"*Improving(en)">
+					description = <"*The symptom has improved over time.(en)">
+				>
+				["at0039"] = <
+					text = <"*Decreasing(en)">
+					description = <"*The symptom is decreasing in intensity over time.(en)">
+				>
+				["at0040"] = <
+					text = <"*Stable(en)">
+					description = <"*The symptom has not changed over time.(en)">
+				>
+				["at0041"] = <
+					text = <"*Increasing(en)">
+					description = <"*The symptom is increasing in intensity over time.(en)">
+				>
+				["at0042"] = <
+					text = <"*Worsening(en)">
+					description = <"*The symptom is getting worse over.(en)">
+				>
+				["at0043"] = <
+					text = <"*Has resolved(en)">
+					description = <"*The symptom has resolved over time.(en)">
+				>
+				["at0044"] = <
+					text = <"*Trivial(en)">
+					description = <"*The symptom is trivial and causes no problems.(en)">
+				>
+				["at0045"] = <
+					text = <"*Very severe(en)">
+					description = <"*The symptom is almost maximum possible intensity and prohibits any activity.(en)">
+				>
+				["at0046"] = <
+					text = <"*Intensity(en)">
+					description = <"*Measures of the intensity of the symptom. Assumed to be current intensity unless otherwise specified but may be used to capture e.g. maximal and  minimal intensity.(en)">
+				>
+				["at0047"] = <
+					text = <"Grado">
+					description = <"El grado en que el síntoma está molestando al paciente">
+				>
+				["at0048"] = <
+					text = <"*Relieved completely(en)">
+					description = <"*The symptom is relieved by this factor.(en)">
+				>
+				["at0049"] = <
+					text = <"*Made better(en)">
+					description = <"*The symptom is made better by this factor.(en)">
+				>
+				["at0050"] = <
+					text = <"*Somewhat improved(en)">
+					description = <"*The symptom is somewhat improved by this factor.(en)">
+				>
+				["at0051"] = <
+					text = <"*No change(en)">
+					description = <"*The symptom is not modified by this factor.(en)">
+				>
+				["at0052"] = <
+					text = <"*Somewhat worse(en)">
+					description = <"*The symptom is made somewhat worse by this factor.(en)">
+				>
+				["at0053"] = <
+					text = <"*Made worse(en)">
+					description = <"*The symptom is made worse by this factor.(en)">
+				>
+				["at0054"] = <
+					text = <"*Much worse(en)">
+					description = <"*The symptom is made much worse by this factor.(en)">
+				>
+				["at0056"] = <
+					text = <"*Details(en)">
+					description = <"*Details of the effect.(en)">
+				>
+				["at0057"] = <
+					text = <"*Details(en)">
+					description = <"*Details of previous symptoms and comparison to this episode.(en)">
+				>
+				["at0058"] = <
+					text = <"*Previous Episodes(en)">
+					description = <"*Details about previous episodes.(en)">
+				>
+				["at0059"] = <
+					text = <"*Any Previous Episodes(en)">
+					description = <"*Have there been any previous episodes of this symptom.(en)">
+				>
+				["at0060"] = <
+					text = <"*Onset Description(en)">
+					description = <"*Activity or situation at and details of onset.(en)">
+				>
+				["at0061"] = <
+					text = <"*Features not present(en)">
+					description = <"*Anticipated features which are not present.(en)">
+				>
+				["at0062"] = <
+					text = <"*Absent feature(en)">
+					description = <"*A feature that is not present.(en)">
+				>
+				["at0063"] = <
+					text = <"*Associated symptoms(en)">
+					description = <"*Associated symptoms.(en)">
+				>
+				["at0090"] = <
+					text = <"*Previous Episode(en)">
+					description = <"*Details about a specific episode.(en)">
+				>
+				["at0098"] = <
+					text = <"*Number of Previous Episodes(en)">
+					description = <"*Number of previous episodes.(en)">
+				>
+				["at0142"] = <
+					text = <"*Date / time of previous episode(en)">
+					description = <"*Date/time of previous episode.(en)">
+				>
+				["at0143"] = <
+					text = <"*Comparison(en)">
+					description = <"*How the previous episode compares with this one.(en)">
+				>
+				["at0146"] = <
+					text = <"*Details(en)">
+					description = <"*Structured details of symptoms in previous episodes.(en)">
+				>
+				["at0147"] = <
+					text = <"*Site Details(en)">
+					description = <"*Details of the location in the body.(en)">
+				>
+				["at0150"] = <
+					text = <"*Degree(en)">
+					description = <"*The intensity of the symptom expressed as a proportion.(en)">
+				>
+				["at0.152"] = <
+					text = <"*Radiating To(en)">
+					description = <"*Details about body location where the pain radiates to.(en)">
+				>
+				["at0001.1"] = <
+					text = <"*Pain Symptom(en)">
+					description = <"*The pain symptom experienced.(en)">
+					comment = <"*Coding with an external terminology is preferred where possible.(en)">
+				>
+				["at0151"] = <
+					text = <"*Site(en)">
+					description = <"*The site on the body where the symptom was located.(en)">
+				>
+			>
+		>
+	>
+	term_bindings = <
+		["SNOMED-CT"] = <
+			items = <
+				["at0000"] = <[SNOMED-CT::19019007]>
+				["at0000.1"] = <[SNOMED-CT::22253000]>
+				["at0001"] = <[SNOMED-CT::19019007]>
+				["at0001.1"] = <[SNOMED-CT::22253000]>
+				["at0002"] = <[SNOMED-CT::162408000]>
+				["at0014"] = <[SNOMED-CT::57465006]>
+				["at0015"] = <[SNOMED-CT::57465006]>
+				["at0016"] = <[SNOMED-CT::68027008]>
+				["at0021"] = <[SNOMED-CT::162465004]>
+				["at0023"] = <[SNOMED-CT::162468002]>
+				["at0024"] = <[SNOMED-CT::162469005]>
+				["at0025"] = <[SNOMED-CT::162470006]>
+				["at0026"] = <[SNOMED-CT::273903006]>
+				["at0028"] = <[SNOMED-CT::162442009]>
+				["at0033"] = <[SNOMED-CT::260908002]>
+				["at0038"] = <[SNOMED-CT::385633008]>
+				["at0039"] = <[SNOMED-CT::260371004]>
+				["at0040"] = <[SNOMED-CT::58158008]>
+				["at0041"] = <[SNOMED-CT::260369004]>
+				["at0042"] = <[SNOMED-CT::230993007]>
+				["at0043"] = <[SNOMED-CT::370996005]>
+				["at0044"] = <[SNOMED-CT::162466003]>
+				["at0045"] = <[SNOMED-CT::162471005]>
+			>
+		>
+	>

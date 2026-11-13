@@ -1,0 +1,774 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-CLUSTER.auscultation-chest.v1
+specialise
+	openEHR-EHR-CLUSTER.auscultation.v1
+
+concept
+	[at0000.1]	-- Auscultation of the chest
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"sam.heard@oceaninformatics.com">
+		["date"] = <"7/04/2007">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record data found on examination of the chest by auscultation/listening.">
+			use = <"To be embedded in an openEHR-EHR-OBSERVATION.exam cluster to express findings determined by auscultation of the chest.">
+			keywords = <"auscultate", "listen", "auscultation", "listening", "lungs", "chest", "bruit", "heart", "bowel sounds", "breath sounds", "heart sounds">
+			misuse = <"Not for use in any other context at present.">
+			copyright = <"copyright (c) 2010 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <"Heather Leslie", ...>
+	other_details = <
+		["references"] = <"">
+		["MD5-CAM-1.0.1"] = <"3324331C8FE6405B0A545EC8945CFCC5">
+	>
+
+definition
+	CLUSTER[at0000.1] matches {	-- Auscultation of the chest
+		items cardinality matches {1..*; unordered} matches {
+			CLUSTER[at0001] occurrences matches {0..1} matches {	-- Normal Statements
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0003] occurrences matches {0..*} matches {	-- Normal Statement
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0.1, 	-- Clear
+									at0.2, 	-- No rhonchi
+									at0.3, 	-- No wheeze
+									at0.4, 	-- No crepitations
+									at0.5, 	-- No crackles
+									at0.6, 	-- Two heart sounds, no bruits
+									at0.7, 	-- Two heart sounds, no murmurs
+									at0.8, 	-- Two normal heart sounds
+									at0056, 	-- No murmur
+									at0057, 	-- No bruit
+									at0.9, 	-- Normal first heart sound
+									at0.10, 	-- Normal second heart sound
+									at0.11, 	-- No Bronchial breathing
+									at0.12, 	-- No Amphoric breathing
+									at0.13, 	-- Normal Vocal Resonance
+									at0.14, 	-- No abnormal added sounds
+									at0073, 	-- Normal bowel sounds
+									at0085]	-- No abnormality detected
+								}
+							}
+						}
+					}
+				}
+			}
+			ELEMENT[at0004] occurrences matches {0..1} matches {	-- Clinical Description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0002] occurrences matches {0..1} matches {	-- Findings
+				items cardinality matches {1..*; unordered} matches {
+					CLUSTER[at0.15] occurrences matches {0..1} matches {	-- Heart sounds and bruits
+						items cardinality matches {1..*; unordered} matches {
+							CLUSTER[at0.16] occurrences matches {0..1} matches {	-- First heart sound
+								items cardinality matches {1..*; unordered} matches {
+									ELEMENT[at0.17] occurrences matches {0..1} matches {	-- Volume
+										value matches {
+											0|[local::at0.18], 	-- Not heard
+											1|[local::at0.19], 	-- Variable
+											2|[local::at0.20], 	-- Soft
+											3|[local::at0.21], 	-- Normal
+											4|[local::at0.22]; 	-- Loud
+											0  	-- assumed value
+										}
+									}
+									ELEMENT[at0.23] occurrences matches {0..1} matches {	-- Splitting
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0.24, 	-- No splitting
+													at0.25, 	-- Physiological splitting
+													at0.26, 	-- Fixed splitting
+													at0.27, 	-- Paradoxical splitting
+													at0.28]	-- Exaggerated splitting
+												}
+											}
+										}
+									}
+									use_node ELEMENT /items[at0004]	-- /items[Clinical Description]
+								}
+							}
+							CLUSTER[at0.29] occurrences matches {0..1} matches {	-- Second heart sound
+								items cardinality matches {1..*; unordered} matches {
+									use_node ELEMENT /items[at0002]/items[at0.15]/items[at0.16]/items[at0.17]	-- /items[Findings]/items[Heart sounds and bruits]/items[First heart sound]/items[Volume]
+									use_node ELEMENT /items[at0002]/items[at0.15]/items[at0.16]/items[at0.23]	-- /items[Findings]/items[Heart sounds and bruits]/items[First heart sound]/items[Splitting]
+									use_node ELEMENT /items[at0004]	-- /items[Clinical Description]
+								}
+							}
+							CLUSTER[at0.75] occurrences matches {0..*} matches {	-- Added heart sound
+								items cardinality matches {1..*; unordered} matches {
+									ELEMENT[at0.76] occurrences matches {0..*} matches {	-- Specific sound
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0.30, 	-- Opening snap
+													at0.32, 	-- Ejection click
+													at0.33, 	-- Pericardial rub
+													at0.57, 	-- Third heart sound
+													at0.58, 	-- Fourth heart sound
+													at0.65, 	-- Prosthetic valve sound
+													at0.66]	-- Gallop rythm
+												}
+											}
+										}
+									}
+									ELEMENT[at0.43] occurrences matches {0..*} matches {	-- Phase of heart cycle
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0.44, 	-- Continuous
+													at0.45, 	-- Systolic
+													at0.46, 	-- Diastolic
+													at0.47, 	-- Pan-systolic
+													at0.48, 	-- Pan-diastolic
+													at0.49, 	-- Early systolic
+													at0.50, 	-- Mid-Systolic
+													at0.51, 	-- Late Systolic
+													at0.52, 	-- Early Diastolic
+													at0.53, 	-- Mid-diastolic
+													at0.54]	-- Late Diastolic
+												}
+											}
+										}
+									}
+									ELEMENT[at0.59] occurrences matches {0..1} matches {	-- Volume
+										value matches {
+											0|[local::at0.60], 	-- Not audible
+											1|[local::at0.61], 	-- Variable
+											2|[local::at0.62], 	-- Soft
+											3|[local::at0.63], 	-- Moderate
+											4|[local::at0.64]; 	-- Loud
+											0  	-- assumed value
+										}
+									}
+									use_node ELEMENT /items[at0004]	-- /items[Clinical Description]
+								}
+							}
+							CLUSTER[at0.31] occurrences matches {0..*} matches {	-- Bruits
+								items cardinality matches {1..*; unordered} matches {
+									ELEMENT[at0.35] occurrences matches {0..1} matches {	-- Maximal Location
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0.36] occurrences matches {0..*} matches {	-- Radiation
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0.34] occurrences matches {0..1} matches {	-- Grading
+										value matches {
+											1|[local::at0.37], 	-- Grade 1
+											2|[local::at0.38], 	-- Grade 2
+											3|[local::at0.39], 	-- Grade 3
+											4|[local::at0.40], 	-- Grade 4
+											5|[local::at0.41], 	-- Grade 5
+											6|[local::at0.42]  	-- Grade 6
+										}
+									}
+									ELEMENT[at0.55] occurrences matches {0..1} matches {	-- Character
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0.56] occurrences matches {0..1} matches {	-- Pitch
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									use_node ELEMENT /items[at0002]/items[at0.15]/items[at0.75]/items[at0.43]	-- /items[Findings]/items[Heart sounds and bruits]/items[Added heart sound]/items[Phase of heart cycle]
+									use_node ELEMENT /items[at0004]	-- /items[Clinical Description]
+								}
+							}
+							ELEMENT[at0.67] occurrences matches {0..1} matches {	-- Drawing
+								value matches {
+									DV_MULTIMEDIA matches {
+										media_type matches {
+											[openEHR::
+											425, 
+											426, 
+											427, 
+											428, 
+											429]
+										}
+									}
+								}
+							}
+							ELEMENT[at0.68] occurrences matches {0..1} matches {	-- Phonogram
+								value matches {
+									DV_MULTIMEDIA matches {
+										media_type matches {
+											[openEHR::
+											409, 
+											410]
+										}
+									}
+								}
+							}
+						}
+					}
+					CLUSTER[at0.69] occurrences matches {0..1} matches {	-- Lung
+						items cardinality matches {1..*; unordered} matches {
+							CLUSTER[at0.70] occurrences matches {0..1} matches {	-- Area
+								items cardinality matches {1..*; unordered} matches {
+									ELEMENT[at0.83] occurrences matches {0..1} matches {	-- Region
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0.72] occurrences matches {0..1} matches {	-- Phase of respiratory cycle
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0.73, 	-- Inspiratory
+													at0.74, 	-- Expiratory
+													at0.77, 	-- Early Inspiratory
+													at0.78, 	-- Late inspiratory
+													at0.79, 	-- Early expiratory
+													at0.80]	-- Late expiratory
+												}
+											}
+										}
+									}
+									ELEMENT[at0.81] occurrences matches {0..1} matches {	-- Findings
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+							ELEMENT[at0.82] occurrences matches {0..1} matches {	-- Drawing
+								value matches {
+									DV_MULTIMEDIA matches {
+										media_type matches {
+											[openEHR::
+											425, 
+											426, 
+											427, 
+											428, 
+											429]
+										}
+									}
+								}
+							}
+							use_node ELEMENT /items[at0004]	-- /items[Clinical Description]
+						}
+					}
+					CLUSTER[at0009] occurrences matches {0..1} matches {	-- Bowel sounds
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0074] occurrences matches {0..*} matches {	-- Specific Findings
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+											[local::
+											at0078, 	-- Absent bowel sounds
+											at0079, 	-- Decreased bowel sounds
+											at0080, 	-- Increased bowel sounds
+											at0081]	-- Tinkling bowel sounds
+										}
+									}
+								}
+							}
+							use_node ELEMENT /items[at0004]	-- /items[Clinical Description]
+						}
+					}
+					CLUSTER[at0010] occurrences matches {0..1} matches {	-- Vessel bruit
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0088] matches {	-- Vessel name
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0030] occurrences matches {0..1} matches {	-- Maximal Location
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0091] occurrences matches {0..1} matches {	-- Description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+						}
+					}
+					CLUSTER[at0089] occurrences matches {0..1} matches {	-- Other sounds
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0090] matches {	-- Description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							use_node ELEMENT /items[at0002]/items[at0010]/items[at0030]	-- /items[Findings]/items[Vessel bruit]/items[Maximal Location]
+						}
+					}
+					CLUSTER[at0086] occurrences matches {0..*} matches {	-- Localised auscultation
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0087] matches {	-- Site or region
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0092] occurrences matches {0..1} matches {	-- Cluster auscultation
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.auscultation\.v1/}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.1"] = <
+					text = <"Clear">
+					description = <"No abnormal breath sounds.">
+				>
+				["at0.10"] = <
+					text = <"Normal second heart sound">
+					description = <"*">
+				>
+				["at0.11"] = <
+					text = <"No Bronchial breathing">
+					description = <"*">
+				>
+				["at0.12"] = <
+					text = <"No Amphoric breathing">
+					description = <"*">
+				>
+				["at0.13"] = <
+					text = <"Normal Vocal Resonance">
+					description = <"*">
+				>
+				["at0.14"] = <
+					text = <"No abnormal added sounds">
+					description = <"*">
+				>
+				["at0.15"] = <
+					text = <"Heart sounds and bruits">
+					description = <"*">
+				>
+				["at0.16"] = <
+					text = <"First heart sound">
+					description = <"Findings about the first heart sound.">
+				>
+				["at0.17"] = <
+					text = <"Volume">
+					description = <"The volume of the first heart sound.">
+				>
+				["at0.18"] = <
+					text = <"Not heard">
+					description = <"The first heart sound is not heard.">
+				>
+				["at0.19"] = <
+					text = <"Variable">
+					description = <"The sound is variable in volume.">
+				>
+				["at0.2"] = <
+					text = <"No rhonchi">
+					description = <"No high or low pitched wheezes.">
+				>
+				["at0.20"] = <
+					text = <"Soft">
+					description = <"The sound is softer than normal.">
+				>
+				["at0.21"] = <
+					text = <"Normal">
+					description = <"The sound is of normal volume.">
+				>
+				["at0.22"] = <
+					text = <"Loud">
+					description = <"The volume is increased.">
+				>
+				["at0.23"] = <
+					text = <"Splitting">
+					description = <"Splitting of the heart sound.">
+				>
+				["at0.24"] = <
+					text = <"No splitting">
+					description = <"The heart sound is not split.">
+				>
+				["at0.25"] = <
+					text = <"Physiological splitting">
+					description = <"The heart sound is split due to physiological changes.">
+				>
+				["at0.26"] = <
+					text = <"Fixed splitting">
+					description = <"The heart sound is always split.">
+				>
+				["at0.27"] = <
+					text = <"Paradoxical splitting">
+					description = <"The variable splitting is not physiological.">
+				>
+				["at0.28"] = <
+					text = <"Exaggerated splitting">
+					description = <"The timing of the splitting is physiological but it is more obvious than normal.">
+				>
+				["at0.29"] = <
+					text = <"Second heart sound">
+					description = <"Findings about the second heart sound.">
+				>
+				["at0.3"] = <
+					text = <"No wheeze">
+					description = <"No wheezing noises.">
+				>
+				["at0.30"] = <
+					text = <"Opening snap">
+					description = <"Opening sound of the mitral valve.">
+				>
+				["at0.31"] = <
+					text = <"Bruits">
+					description = <"Group of findings about auscultation of the heart.">
+				>
+				["at0.32"] = <
+					text = <"Ejection click">
+					description = <"Systolic click when the heart contracts.">
+				>
+				["at0.33"] = <
+					text = <"Pericardial rub">
+					description = <"Rubbing noise during contractions on the pericardium.">
+				>
+				["at0.34"] = <
+					text = <"Grading">
+					description = <"Grading of the loudness of a heart murmur.">
+				>
+				["at0.35"] = <
+					text = <"Maximal Location">
+					description = <"Site where finding is heard maximally.">
+				>
+				["at0.36"] = <
+					text = <"Radiation">
+					description = <"Sites where finding is heard in addition to maximal site.">
+				>
+				["at0.37"] = <
+					text = <"Grade 1">
+					description = <"very faint to recognize the murmur even after listening for a while.">
+				>
+				["at0.38"] = <
+					text = <"Grade 2">
+					description = <"faint, but easy to recognize the murmur right after the stethoscope is placed on the chest.">
+				>
+				["at0.39"] = <
+					text = <"Grade 3">
+					description = <"intermediate loudness between II/VI -IV/VI.">
+				>
+				["at0.4"] = <
+					text = <"No crepitations">
+					description = <"No high pitched crackling sounds.">
+				>
+				["at0.40"] = <
+					text = <"Grade 4">
+					description = <"with loud murmur (palpable thrill).">
+				>
+				["at0.41"] = <
+					text = <"Grade 5">
+					description = <"very loud, but you can not hear the murmur, if the stethoscope is away from the chest wall.">
+				>
+				["at0.42"] = <
+					text = <"Grade 6">
+					description = <"the loudest murmur you can hear, even if the stethoscope is off the chest wall.">
+				>
+				["at0.43"] = <
+					text = <"Phase of heart cycle">
+					description = <"The timing in relation to the contraction of the heart.">
+				>
+				["at0.44"] = <
+					text = <"Continuous">
+					description = <"*">
+				>
+				["at0.45"] = <
+					text = <"Systolic">
+					description = <"*">
+				>
+				["at0.46"] = <
+					text = <"Diastolic">
+					description = <"*">
+				>
+				["at0.47"] = <
+					text = <"Pan-systolic">
+					description = <"*">
+				>
+				["at0.48"] = <
+					text = <"Pan-diastolic">
+					description = <"*">
+				>
+				["at0.49"] = <
+					text = <"Early systolic">
+					description = <"*">
+				>
+				["at0.5"] = <
+					text = <"No crackles">
+					description = <"No high pitched crackling sounds.">
+				>
+				["at0.50"] = <
+					text = <"Mid-Systolic">
+					description = <"*">
+				>
+				["at0.51"] = <
+					text = <"Late Systolic">
+					description = <"*">
+				>
+				["at0.52"] = <
+					text = <"Early Diastolic">
+					description = <"*">
+				>
+				["at0.53"] = <
+					text = <"Mid-diastolic">
+					description = <"*">
+				>
+				["at0.54"] = <
+					text = <"Late Diastolic">
+					description = <"*">
+				>
+				["at0.55"] = <
+					text = <"Character">
+					description = <"The character of the sound.">
+				>
+				["at0.56"] = <
+					text = <"Pitch">
+					description = <"The pitch of the sound.">
+				>
+				["at0.57"] = <
+					text = <"Third heart sound">
+					description = <"A heart sound in early diastole.">
+				>
+				["at0.58"] = <
+					text = <"Fourth heart sound">
+					description = <"A heart sound in late diastole.">
+				>
+				["at0.59"] = <
+					text = <"Volume">
+					description = <"The volume of the sound.">
+				>
+				["at0.6"] = <
+					text = <"Two heart sounds, no bruits">
+					description = <"Normal heart sounds.">
+				>
+				["at0.60"] = <
+					text = <"Not audible">
+					description = <"The sound is not audible.">
+				>
+				["at0.61"] = <
+					text = <"Variable">
+					description = <"The sound is variable.">
+				>
+				["at0.62"] = <
+					text = <"Soft">
+					description = <"The sound is soft.">
+				>
+				["at0.63"] = <
+					text = <"Moderate">
+					description = <"The sound is at about the expected level the first heart sound.">
+				>
+				["at0.64"] = <
+					text = <"Loud">
+					description = <"The sound is louder than the first heart sound.">
+				>
+				["at0.65"] = <
+					text = <"Prosthetic valve sound">
+					description = <"Sound due to a prosthetic heart valve.">
+				>
+				["at0.66"] = <
+					text = <"Gallop rythm">
+					description = <"Audible rythm similar to a horse galloping due to added heart sounds.">
+				>
+				["at0.67"] = <
+					text = <"Drawing">
+					description = <"Drawing of the sounds of the heart.">
+				>
+				["at0.68"] = <
+					text = <"Phonogram">
+					description = <"Recording of the heart sounds.">
+				>
+				["at0.69"] = <
+					text = <"Lung">
+					description = <"Group of findings about auscultation of the lung.">
+				>
+				["at0.7"] = <
+					text = <"Two heart sounds, no murmurs">
+					description = <"Normal heart sounds.">
+				>
+				["at0.70"] = <
+					text = <"Area">
+					description = <"*">
+				>
+				["at0.72"] = <
+					text = <"Phase of respiratory cycle">
+					description = <"The timing of the sounds in relation to breathing.">
+				>
+				["at0.73"] = <
+					text = <"Inspiratory">
+					description = <"During inspiration.">
+				>
+				["at0.74"] = <
+					text = <"Expiratory">
+					description = <"During expiration.">
+				>
+				["at0.75"] = <
+					text = <"Added heart sound">
+					description = <"A grouping of discription of one or more added heart sounds.">
+				>
+				["at0.76"] = <
+					text = <"Specific sound">
+					description = <"Specific auscultatory findings related to examination of the heart.">
+				>
+				["at0.77"] = <
+					text = <"Early Inspiratory">
+					description = <"Soon after inspiration begins.">
+				>
+				["at0.78"] = <
+					text = <"Late inspiratory">
+					description = <"At the final stages of inspiration.">
+				>
+				["at0.79"] = <
+					text = <"Early expiratory">
+					description = <"Soon after expiration begins.">
+				>
+				["at0.8"] = <
+					text = <"Two normal heart sounds">
+					description = <"*">
+				>
+				["at0.80"] = <
+					text = <"Late expiratory">
+					description = <"At the late stages of expiration.">
+				>
+				["at0.81"] = <
+					text = <"Findings">
+					description = <"Specific auscultatory findings related to examination of the lungs.">
+				>
+				["at0.82"] = <
+					text = <"Drawing">
+					description = <"Drawing of the breath sounds.">
+				>
+				["at0.83"] = <
+					text = <"Region">
+					description = <"The region to which the findings relate.">
+				>
+				["at0.9"] = <
+					text = <"Normal first heart sound">
+					description = <"*">
+				>
+				["at0000"] = <
+					text = <"Auscultation">
+					description = <"Findings on Auscultation.">
+				>
+				["at0000.1"] = <
+					text = <"Auscultation of the chest">
+					description = <"Findings on auscultation of the chest.">
+				>
+				["at0001"] = <
+					text = <"Normal Statements">
+					description = <"A group of statements about the normality of auscultation.">
+				>
+				["at0002"] = <
+					text = <"Findings">
+					description = <"Findings on auscultation.">
+				>
+				["at0003"] = <
+					text = <"Normal Statement">
+					description = <"Statements about the normality of the auscultation.">
+				>
+				["at0004"] = <
+					text = <"Clinical Description">
+					description = <"Detailed clinical description of the findings on auscultation.">
+				>
+				["at0009"] = <
+					text = <"Bowel sounds">
+					description = <"Group of findings about auscultation of the bowel.">
+				>
+				["at0010"] = <
+					text = <"Vessel bruit">
+					description = <"Group of findings about auscultation of a major blood vessel.">
+				>
+				["at0030"] = <
+					text = <"Maximal Location">
+					description = <"Site where finding is heard maximally.">
+				>
+				["at0056"] = <
+					text = <"No murmur">
+					description = <"No murmur is heard.">
+				>
+				["at0057"] = <
+					text = <"No bruit">
+					description = <"No bruit is heard.">
+				>
+				["at0073"] = <
+					text = <"Normal bowel sounds">
+					description = <"Bowel sounds are normal in intensity and character.">
+				>
+				["at0074"] = <
+					text = <"Specific Findings">
+					description = <"Specific auscultatory findings related to examination of the bowels.">
+				>
+				["at0078"] = <
+					text = <"Absent bowel sounds">
+					description = <"No bowel sounds can be heard.">
+				>
+				["at0079"] = <
+					text = <"Decreased bowel sounds">
+					description = <"Bowel sounds are less than normal.">
+				>
+				["at0080"] = <
+					text = <"Increased bowel sounds">
+					description = <"Bowel sounds are more intense than normal.">
+				>
+				["at0081"] = <
+					text = <"Tinkling bowel sounds">
+					description = <"High pitched and very frequent bowel sounds can be heard.">
+				>
+				["at0085"] = <
+					text = <"No abnormality detected">
+					description = <"Nothing abnormal on auscultation.">
+				>
+				["at0086"] = <
+					text = <"Localised auscultation">
+					description = <"Auscultation in a particular site.">
+				>
+				["at0087"] = <
+					text = <"Site or region">
+					description = <"The site of the localised findings.">
+				>
+				["at0088"] = <
+					text = <"Vessel name">
+					description = <"The name of the vessel to which is being listened.">
+				>
+				["at0089"] = <
+					text = <"Other sounds">
+					description = <"Recording of sounds of a different nature.">
+				>
+				["at0090"] = <
+					text = <"Description">
+					description = <"Description of other sounds.">
+				>
+				["at0091"] = <
+					text = <"Description">
+					description = <"Description of the bruit.">
+				>
+				["at0092"] = <
+					text = <"Cluster auscultation">
+					description = <"Description of the cluster.">
+				>
+			>
+		>
+	>

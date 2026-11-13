@@ -3,8 +3,9 @@
 
 //! The party binding configuration through `ferroehr::config::assemble`: a
 //! full configuration of every issuer kind loads, and each boot refusal of
-//! `[auth]`, `[authz.party_binding]`, `[[authz.system_client]]` and
-//! `[[authz.federation.agreement]]` names its key. No openEHR spec governs
+//! `[auth]` and `[authz.party_binding]` names its key; the federation
+//! agreements and the system clients are CDR data, judged at their commit
+//! (`federation_agreements.rs`, `policy_grants.rs`). No openEHR spec governs
 //! configuration: our own design.
 
 use std::collections::HashMap;
@@ -17,7 +18,7 @@ use ferroehr::config::binding::{BindingPosture, Providers};
 const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaGhhc2hoYQ";
 
 /// A configuration with one issuer of every kind, a bound persons issuer,
-/// a mapped Basic user, a system client and two federation agreements.
+/// and a mapped Basic user.
 fn full() -> String {
     format!(
         r#"
@@ -28,7 +29,6 @@ subject_index = "local"
 issuer = "https://idp.example/realms/staff"
 kind = "persons"
 audience = ["ferroehr"]
-first_party_clients = ["ferroehr-viewer"]
 
 [[auth.issuer]]
 issuer = "https://idp.example/realms/patients"
@@ -65,11 +65,9 @@ identifier_type = "guid"
 [[auth.basic.users]]
 user = "alice"
 password_hash = "{HASH}"
-scopes = ["user/composition-*.cruds"]
 
 [authz.rbac]
 role_issuers = ["https://idp.example/realms/staff"]
-import_role = "IMPORTER"
 
 [authz.party_binding]
 provider = {{ issuer = "urn:oid:2.16.528.1.1007.3.3", id = "12345678" }}
@@ -79,33 +77,6 @@ user = "alice"
 key_issuer = "urn:example:staff-login"
 key = "3f2b0c1e-0000-4000-8000-000000000001"
 
-[authz.import]
-trusted_systems = ["legacy.example"]
-
-[[authz.system_client]]
-issuer = "https://idp.example/realms/machines"
-client_id = "ferrobridge"
-provider = {{ issuer = "urn:oid:2.16.528.1.1007.3.3", id = "12345678" }}
-facilities = [{{ issuer = "urn:example:facility", id_prefix = "ward-" }}]
-origins = ["relay"]
-
-[[authz.federation.agreement]]
-issuer = "https://federation.example"
-accessor = "person"
-jurisdiction = "DE"
-reads = ["patient/composition-*.r"]
-caller_rate = {{ requests_per_second = 5, burst = 10 }}
-
-[[authz.federation.agreement]]
-issuer = "https://federation.example"
-accessor = "organisation"
-name = "Summary exchange"
-version = "1.0"
-jurisdiction = "DE"
-legal_ground = {{ gdpr_6_1 = "e", gdpr_9_2 = "h", national = "a national provision" }}
-reads = ["patient/composition-*.r"]
-caller_rate = {{ requests_per_second = 5, burst = 10 }}
-access_class = "automated"
 "#
     )
 }
@@ -165,17 +136,20 @@ fn a_full_configuration_loads_and_states_its_binding() {
     );
     assert!(matches!(posture.provider, Some(Providers::One(_))));
     assert_eq!(posture.namespace, "demographic");
-    assert_eq!(posture.agreements.len(), 2);
-    assert_eq!(
-        posture.agreements[1].legal_ground.as_deref(),
-        Some("GDPR Art. 6(1)(e), Art. 9(2)(h), a national provision")
+    assert!(
+        posture.agreements.is_empty(),
+        "the configuration states no agreement: they are read from the CDR"
     );
     let info = serde_json::to_value(ferroehr::telemetry::build_info::BuildInfo::for_config(
         &config,
     ))
     .expect("renders");
     assert_eq!(info["binding"]["issuers"][0]["kind"], "persons", "{info}");
-    assert_eq!(info["binding"]["agreements"][1]["accessor"], "organisation");
+    assert_eq!(
+        info["binding"]["agreements"],
+        serde_json::json!([]),
+        "{info}"
+    );
 }
 
 #[test]
@@ -212,10 +186,19 @@ fn a_party_table_whose_identifier_type_no_template_key_carries_is_refused() {
     assert!(
         text.contains(
             "the [[auth.party]] table of \"https://idp.example/realms/staff\" looks logins up \
+             under identifier_type \"guid\", which no person template's key carries: the person \
+             templates' keys are of the types {\"login\"}"
+        ),
+        "the default person template's key is of the type login: {text}"
+    );
+    let text = refusal(&format!("{}\n[authz.party_binding.person]\n", full()));
+    assert!(
+        text.contains(
+            "the [[auth.party]] table of \"https://idp.example/realms/staff\" looks logins up \
              under identifier_type \"guid\", which no person template's key carries: no \
              [[authz.party_binding.person.template]] is declared"
         ),
-        "{text}"
+        "an empty person section maps no person: {text}"
     );
     let text = refusal(&bound(&full()).replacen("type = \"guid\" }", "type = \"login\" }", 1));
     assert!(
@@ -229,6 +212,44 @@ fn a_party_table_whose_identifier_type_no_template_key_carries_is_refused() {
         .expect("assembles")
         .validate()
         .expect("a table whose type a template's key carries loads");
+}
+
+/// A section a deployment sets replaces that section's default whole, and
+/// every section it leaves out keeps the shipped default.
+#[test]
+fn an_explicit_section_overrides_its_default_and_leaves_the_others() {
+    let config = assemble(&format!(
+        "{}\n[authz.party_binding.group]\ntemplate_id = \"own-team\"\nexternal_id = \
+         {{ path = \"/details[id2]/items[id3]\", type = \"team\" }}\n",
+        bound(&full())
+    ))
+    .expect("assembles");
+    let binding = &config.authz.party_binding;
+    let default = ferroehr::config::binding::PartyBindingConfig::default();
+    let group = binding.group.as_ref().expect("the group section is set");
+    assert_eq!(group.template_id, "own-team");
+    assert_eq!(
+        group.display_name, None,
+        "a key the set section leaves out takes no default"
+    );
+    assert_eq!(
+        binding.person().template[0].template_id,
+        "FerroEHR professional"
+    );
+    assert!(
+        binding.person().attribute.is_empty(),
+        "the person section is replaced whole, its default attributes with it"
+    );
+    assert_eq!(
+        binding
+            .professional_role
+            .as_ref()
+            .map(|role| role.template_id.as_str()),
+        Some("FerroEHR professional role")
+    );
+    assert_eq!(binding.membership, default.membership);
+    assert_eq!(binding.patient, default.patient);
+    assert_ne!(binding.group, default.group);
 }
 
 #[test]
@@ -256,26 +277,6 @@ fn a_basic_user_with_no_mapping_is_refused_naming_the_user() {
 
 #[test]
 fn a_table_for_an_issuer_of_the_wrong_kind_or_twice_is_refused() {
-    let text = refusal(&with(
-        "issuer = \"https://idp.example/realms/machines\"\nclient_id",
-        "issuer = \"https://federation.example\"\nclient_id",
-    ));
-    assert!(
-        text.contains(
-            "names a federation issuer: a system client's issuer is of kind machines or persons"
-        ),
-        "{text}"
-    );
-    let text = refusal(&with(
-        "issuer = \"https://federation.example\"\naccessor = \"person\"",
-        "issuer = \"https://idp.example/realms/staff\"\naccessor = \"person\"",
-    ));
-    assert!(
-        text.contains("names a persons issuer: an agreement's issuer is of kind federation"),
-        "{text}"
-    );
-    let doubled = with("accessor = \"organisation\"", "accessor = \"person\"");
-    assert!(refusal(&doubled).contains("is declared twice"), "{doubled}");
     let party = "[[auth.party]]\nissuer = \"https://idp.example/realms/staff\"\nidentifier_issuer = \"urn:example:staff-login\"\nidentifier_type = \"guid\"\n";
     let text = refusal(&with(
         party,
@@ -299,33 +300,37 @@ fn two_issuers_sharing_an_audience_are_refused() {
 }
 
 #[test]
-fn a_removed_key_is_refused_naming_the_new_shape() {
+fn a_removed_key_is_refused_as_unknown() {
     let text = refusal(&with(
         "[authz.party_binding]\n",
         "[authz.party_binding]\nenabled = true\n",
     ));
-    assert!(
-        text.contains("authz.party_binding.enabled was removed"),
-        "{text}"
-    );
+    assert!(text.contains("unknown field `enabled`"), "{text}");
     let text = refusal("[auth]\nissuer = \"https://idp.example\"\n");
     assert!(text.contains("issuer"), "{text}");
-    assert!(text.contains("[[auth.issuer]]"), "{text}");
-    for key in [
-        "acting_for_claim = \"act.sub\"",
-        "client_tokens = \"claim_absent\"",
+    for (key, name) in [
+        ("acting_for_claim = \"act.sub\"", "acting_for_claim"),
+        ("client_tokens = \"claim_absent\"", "client_tokens"),
     ] {
         let text = refusal(&with(
-            "first_party_clients = [\"ferroehr-viewer\"]",
-            &format!("first_party_clients = [\"ferroehr-viewer\"]\n{key}"),
+            "audience = [\"ferroehr\"]",
+            &format!("audience = [\"ferroehr\"]\n{key}"),
         ));
-        assert!(text.contains("was replaced by"), "{key}: {text}");
+        assert!(
+            text.contains(&format!("unknown field `{name}`")),
+            "{key}: {text}"
+        );
     }
     let text = refusal(&format!(
         "{}\n[authz.professional]\nclaim = \"sub\"\n",
         full()
     ));
-    assert!(text.contains("authz.professional was removed"), "{text}");
+    assert!(text.contains("unknown field `professional`"), "{text}");
+    let text = refusal(&format!(
+        "{}\n[[authz.federation.agreement]]\nissuer = \"https://federation.example\"\n",
+        full()
+    ));
+    assert!(text.contains("unknown field `federation`"), "{text}");
 }
 
 #[test]
@@ -379,233 +384,72 @@ fn a_party_claim_and_a_token_profile_are_refused() {
         "identifier_type = \"guid\"",
         "identifier_type = \"guid\"\nclaim = \"oid\"",
     ));
-    assert!(text.contains("auth.party[0].claim was removed"), "{text}");
+    assert!(text.contains("unknown field `claim`"), "{text}");
     let text = refusal(&with(
-        "first_party_clients = [\"ferroehr-viewer\"]",
-        "first_party_clients = [\"ferroehr-viewer\"]\ntoken_profile = \"jwt\"",
+        "audience = [\"ferroehr\"]",
+        "audience = [\"ferroehr\"]\ntoken_profile = \"jwt\"",
     ));
-    assert!(
-        text.contains("token_profile was replaced by profile"),
-        "{text}"
-    );
+    assert!(text.contains("unknown field `token_profile`"), "{text}");
 }
 
+/// The system clients are policy parties in the CDR (#5436): the table that
+/// declared them is an unknown key, with each of its former keys.
 #[test]
-fn a_device_client_without_identifier_issuers_is_refused() {
-    let text = refusal(&with(
-        "origins = [\"relay\"]",
+fn a_system_client_table_is_refused_as_unknown() {
+    for table in [
+        "issuer = \"https://idp.example/realms/machines\"\nclient_id = \"ferrobridge\"",
+        "provider = { issuer = \"urn:oid:2.16.528.1.1007.3.3\", id = \"12345678\" }",
+        "facilities = [{ issuer = \"urn:example:facility\", id_prefix = \"ward-\" }]",
+        "writes = [\"Vital signs.v1\"]",
         "origins = [\"relay\", \"device\"]",
-    ));
-    assert!(
-        text.contains("has origins containing device and needs device_identifier_issuers"),
-        "{text}"
-    );
+        "device_identifier_issuers = [\"urn:oid:2.999.9\"]",
+    ] {
+        let text = refusal(&format!("{}\n[[authz.system_client]]\n{table}\n", full()));
+        assert!(
+            text.contains("unknown field `system_client`"),
+            "{table}: {text}"
+        );
+    }
 }
 
+/// The client lists the policy grants answer (#5437) and a Basic user's
+/// roles and scopes, which its PERSON's grants carry (#5438), are unknown
+/// keys, refused like any other.
 #[test]
-fn every_organisation_agreement_refusal_is_named() {
-    let organisation = "accessor = \"organisation\"";
-    for (old, new, expected) in [
-        ("name = \"Summary exchange\"\n", "", "needs name"),
-        ("version = \"1.0\"\n", "", "needs version"),
+fn the_client_lists_and_basic_roles_are_refused_as_unknown() {
+    for (old, key, name) in [
         (
-            "legal_ground = { gdpr_6_1 = \"e\", gdpr_9_2 = \"h\", national = \"a national provision\" }\n",
-            "",
-            "needs legal_ground",
-        ),
-        ("access_class = \"automated\"", "", "needs access_class"),
-        (
-            "access_class = \"automated\"",
-            "access_class = \"automated\"\nwrites = [\"Vital signs.v1\"]",
-            "an organisation access is read-only",
+            "audience = [\"ferroehr\"]",
+            "first_party_clients = [\"ferroehr-viewer\"]",
+            "first_party_clients",
         ),
         (
-            "access_class = \"automated\"",
-            "access_class = \"automated\"\nopt_out_override = true",
-            "sets opt_out_override",
-        ),
-        (
-            "access_class = \"automated\"",
-            "access_class = \"automated\"\nconsent = \"mitz\"",
-            "takes consent from mitz",
-        ),
-        (
-            "access_class = \"automated\"",
-            "access_class = \"chained\"",
-            "is chained and needs chained_log_retention",
+            "audience = [\"ferroehr\"]",
+            "delegates = [{ client = \"ferrobridge\" }]",
+            "delegates",
         ),
     ] {
-        let base = full();
-        let start = base.find(organisation).expect("the organisation agreement");
-        let (head, tail) = base.split_at(start);
-        assert!(tail.contains(old), "{old:?}");
-        let text = refusal(&format!("{head}{}", tail.replacen(old, new, 1)));
-        assert!(text.contains(expected), "{expected}: {text}");
+        let text = refusal(&with(old, &format!("{old}\n{key}")));
+        assert!(
+            text.contains(&format!("unknown field `{name}`")),
+            "{key}: {text}"
+        );
     }
-    let chained = with(
-        "access_class = \"automated\"",
-        "access_class = \"chained\"\nchained_log_retention = \"P2Y\"\n\n[audit.store]\nretention = \"P5Y\"",
-    );
-    assert!(
-        refusal(&chained).contains("keeps the requester's log for \"P2Y\", shorter than"),
-        "{chained}"
-    );
-    let contact = full()
-        .replacen(
-            "mapping = \"iua\"\ncontact_point = false",
-            "mapping = \"ehdsi\"\ncontact_point = true",
-            1,
-        )
-        .replacen(
-            "provider_identifier_prefixes = [\"urn:example:de:\"]\n",
-            "",
-            1,
-        )
-        .replacen(
-            "audience = [\"ferroehr-federation\"]",
-            "audience = [\"ferroehr-federation\"]\nsender_constraint = \"required\"",
-            1,
-        )
-        .replacen(
-            "[authz.import]",
-            "[auth.dpop]\nexternal_url = \"https://ehr.example\"\n\n[authz.import]",
-            1,
-        );
-    let text = refusal(&contact);
-    assert!(text.contains("names a contact_point issuer"), "{text}");
-}
-
-/// A contact point's person agreement names the MyHealth@EU service its
-/// refusals answer for, and no other issuer's agreement does (#5102).
-#[test]
-fn a_contact_points_person_agreement_names_its_ehdsi_service() {
-    let contact = full()
-        .replacen(
-            "mapping = \"iua\"\ncontact_point = false",
-            "mapping = \"ehdsi\"\ncontact_point = true",
-            1,
-        )
-        .replacen(
-            "provider_identifier_prefixes = [\"urn:example:de:\"]\n",
-            "",
-            1,
-        )
-        .replacen(
-            "audience = [\"ferroehr-federation\"]",
-            "audience = [\"ferroehr-federation\"]\nsender_constraint = \"required\"",
-            1,
-        )
-        .replacen(
-            "[authz.import]",
-            "[auth.dpop]\nexternal_url = \"https://ehr.example\"\n\n[authz.import]",
-            1,
-        );
-    let start = contact
-        .find("\n[[authz.federation.agreement]]\nissuer = \"https://federation.example\"\naccessor = \"organisation\"")
-        .expect("the organisation agreement");
-    let persons = contact.split_at(start).0.to_owned();
-    let text = refusal(&persons);
-    assert!(
-        text.contains("contact point's and needs ehdsi_service"),
-        "{text}"
-    );
-    let served = persons.replacen(
-        "accessor = \"person\"",
-        "accessor = \"person\"\nehdsi_service = \"eprescription\"",
-        1,
-    );
-    assemble(&bound(&served))
-        .expect("assembles")
-        .validate()
-        .expect("a contact point's person agreement naming its service loads");
-    let domestic = with(
-        "accessor = \"person\"",
-        "accessor = \"person\"\nehdsi_service = \"patient_summary\"",
-    );
-    let text = refusal(&domestic);
-    assert!(
-        text.contains("sets ehdsi_service, which only a contact_point issuer's agreement may"),
-        "{text}"
-    );
-}
-
-/// A `chained` agreement's issuer reads the correlation id from its token,
-/// never from a constant (#5120).
-#[test]
-fn a_chained_agreement_needs_its_issuer_to_map_the_correlation_id() {
-    let chained = with(
-        "access_class = \"automated\"",
-        "access_class = \"chained\"\nchained_log_retention = \"P30Y\"\n\n[audit.store]\nretention = \"P5Y\"",
-    );
-    let text = refusal(&chained);
-    assert!(
-        text.contains(
-            "is chained and its issuer's [[auth.federation]] table maps no correlation_id"
-        ),
-        "{text}"
-    );
-    let fields = "\"professional.issuing_authority_name\" = [{ constant = \"BAEK\" }]";
-    let constant = chained.replacen(
-        fields,
-        &format!("{fields}\n\"correlation_id\" = [{{ constant = \"c-1\" }}]"),
-        1,
-    );
-    let text = refusal(&constant);
-    assert!(
-        text.contains("maps correlation_id from a constant"),
-        "{text}"
-    );
-    let claim = chained.replacen(
-        fields,
-        &format!("{fields}\n\"correlation_id\" = [{{ claim = \"correlation_id\" }}]"),
-        1,
-    );
-    assemble(&bound(&claim))
-        .expect("assembles")
-        .validate()
-        .expect("a chained agreement whose issuer maps the id from a claim loads");
-}
-
-#[test]
-fn every_agreement_needs_a_caller_rate_and_patient_reads() {
     let text = refusal(&with(
-        "reads = [\"patient/composition-*.r\"]\ncaller_rate = { requests_per_second = 5, burst = 10 }\n\n[[authz.federation.agreement]]",
-        "reads = [\"user/composition-*.r\"]\n\n[[authz.federation.agreement]]",
+        "[[auth.issuer]]\n",
+        "[auth]\nscopeless_subjects = []\n\n[[auth.issuer]]\n",
     ));
-    assert!(text.contains("needs caller_rate"), "{text}");
     assert!(
-        text.contains("an agreement reads patient/ scopes only"),
+        text.contains("unknown field `scopeless_subjects`"),
         "{text}"
     );
-    let nl = with("jurisdiction = \"DE\"", "jurisdiction = \"NL\"");
-    assert!(
-        refusal(&nl).contains("is an NL agreement with reads and needs consent"),
-        "{nl}"
-    );
-}
-
-/// An NL agreement declares its purpose, and boot refuses one for a keuring,
-/// whose keurend arts has no access to an exchange system (Wabvpz
-/// Art. 15f(2), #5107).
-#[test]
-fn an_nl_agreement_for_a_keuring_or_without_a_purpose_is_refused() {
-    let nl = |purpose: &str| {
-        with(
-            "jurisdiction = \"DE\"",
-            &format!("jurisdiction = \"NL\"\nconsent = \"local\"\n{purpose}"),
-        )
-    };
-    let text = refusal(&nl(""));
-    assert!(
-        text.contains("is an NL agreement and needs purpose"),
-        "{text}"
-    );
-    let text = refusal(&nl("purpose = \"keuring\""));
-    assert!(text.contains("is an NL agreement for a keuring"), "{text}");
-    assemble(&bound(&nl("purpose = \"care\"")))
-        .expect("assembles")
-        .validate()
-        .expect("an NL agreement for care loads");
+    for key in ["roles = [\"USER\"]", "scopes = [\"user/aql-*.cruds\"]"] {
+        let text = refusal(&with(
+            "[[auth.basic.users]]\n",
+            &format!("[[auth.basic.users]]\n{key}\n"),
+        ));
+        assert!(text.contains("unknown field"), "{key}: {text}");
+    }
 }
 
 #[test]
@@ -617,40 +461,49 @@ fn a_namespace_outside_the_object_ref_pattern_is_refused() {
     assert!(text.contains("OBJECT_REF.namespace pattern"), "{text}");
 }
 
+/// The keys #5439 moved into the CDR are unknown keys, refused like any
+/// other: trusted import systems, registered origins, change-feed readers and
+/// SCIM clients are grants of the policy parties now.
 #[test]
-fn a_trusted_system_that_is_this_node_is_refused() {
-    let text = refusal(&with(
-        "trusted_systems = [\"legacy.example\"]",
-        "trusted_systems = [\"ferroehr.local\"]",
-    ));
-    assert!(text.contains("this node's own api.system_id"), "{text}");
+fn the_keys_the_cdr_now_holds_are_refused_as_unknown() {
+    for (removed, key) in [
+        (
+            "[authz.import]\ntrusted_systems = [\"legacy.example\"]\n",
+            "import",
+        ),
+        ("[[authz.origin]]\nid = \"lab.example\"\n", "origin"),
+        (
+            "[record.change_feed]\nreaders = [\"ferrobridge\"]\n",
+            "readers",
+        ),
+        (
+            "[auth.scim]\n[[auth.scim.client]]\nclient_id = \"entra\"\n",
+            "client",
+        ),
+    ] {
+        let text = refusal(&format!("{}\n{removed}", full()));
+        assert!(text.contains(key), "{key}: {text}");
+    }
 }
 
-#[tokio::test]
-async fn an_agreement_naming_a_template_the_store_does_not_hold_is_refused() {
-    let (_db, service) = crate::fixtures::service().await;
-    let config = assemble(&with(
-        "accessor = \"person\"",
-        "accessor = \"person\"\nwrites = [\"Not held.v1\"]",
-    ))
-    .expect("assembles");
-    let unheld = service
-        .unheld_written_templates(&config.authz)
-        .await
-        .expect("the store answers")
-        .expect_err("refused");
-    assert!(
-        unheld
-            .to_string()
-            .contains("writes the template \"Not held.v1\", which the store does not hold"),
-        "{unheld}"
-    );
-    let held = assemble(&full()).expect("assembles");
-    service
-        .unheld_written_templates(&held.authz)
-        .await
-        .expect("the store answers")
-        .expect("no template is named");
+/// The privileged role names #5521 moved into the CDR are unknown keys: the
+/// subject audit, the access service, the import and the identifier read are
+/// grants of the policy parties now.
+#[test]
+fn the_privileged_roles_the_cdr_now_grants_are_refused_as_unknown() {
+    let issuers = "role_issuers = [\"https://idp.example/realms/staff\"]\n";
+    for (key, value) in [
+        ("subject_audit_role", "\"PORTAL\""),
+        ("access_service_roles", "[\"EHDS-ACCESS-SERVICE\"]"),
+        ("import_role", "\"IMPORTER\""),
+        ("identifier_reader_role", "\"IDENTIFIER_READER\""),
+    ] {
+        let text = refusal(&with(issuers, &format!("{issuers}{key} = {value}\n")));
+        assert!(
+            text.contains(&format!("unknown field `{key}`")),
+            "{key}: {text}"
+        );
+    }
 }
 
 /// The shared party mapping of #5013: one person template with its three
@@ -681,10 +534,6 @@ display_name = "/identities[id4]/details[id5]/items[id6]"
 
 [authz.party_binding.membership]
 archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0"
-
-[authz.party_binding.representation]
-archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0"
-relationship_codes = { at0010 = "254", at0011 = "264" }
 "#;
 
 /// [`full`] with [`MAPPING`], `old` replaced by `new` in the mapping.
@@ -719,14 +568,25 @@ fn an_unknown_key_in_a_mapping_section_is_refused() {
             "template_id = \"FerroEHR professional role\"\nscope = \"x\"",
         ),
         (
-            "relationship_codes",
-            "archetype = \"x\"\nrelationship_codes",
+            "archetype_id = \"openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership",
+            "archetype = \"x\"\narchetype_id = \"openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership",
         ),
         ("type = \"guid\" }", "type = \"guid\", issuer = \"x\" }"),
     ] {
         let text = refusal(&mapped(old, new));
         assert!(text.contains("unknown field"), "{old}: {text}");
     }
+}
+
+/// A representation is recognised by its code, so the representation
+/// section is gone and refused as any unknown key is.
+#[test]
+fn the_representation_section_is_an_unknown_key() {
+    let text = refusal(&format!(
+        "{}{MAPPING}\n[authz.party_binding.representation]\narchetype_id = \"x\"\n",
+        full()
+    ));
+    assert!(text.contains("unknown field `representation`"), "{text}");
 }
 
 /// Asserts the mapping with `old` replaced by `new` is refused with a
@@ -815,66 +675,21 @@ fn a_key_fed_by_an_email_address_is_refused() {
     );
 }
 
+/// [`full`] serving SCIM; who provisions is a `scim_provision` grant in the
+/// CDR, so the table holds no client.
 #[test]
-fn a_relationship_code_outside_subject_relationship_is_refused() {
-    refused_with(
-        "at0011 = \"264\"",
-        "at0011 = \"9999\"",
-        "subject_relationship group",
-    );
-}
-
-/// [`full`] serving SCIM to one provisioning client of `issuer` binding
-/// `binding_issuer`, followed by `extra`.
-fn scim(issuer: &str, binding_issuer: &str, extra: &str) -> String {
-    format!(
-        "{}\n[auth.scim]\npublic_base_url = \"https://cdr.example.com\"\n\n\
-         [[auth.scim.client]]\nissuer = \"{issuer}\"\nclient_id = \"entra\"\nscope = \"ferroehr/scim\"\n\
-         binding_issuer = \"{binding_issuer}\"\n{extra}",
+fn a_scim_table_with_no_client_loads() {
+    let config = assemble(&bound(&format!(
+        "{}\n[server]\npublic_base_url = \"https://cdr.example.com\"\n\n[auth.scim]\n",
         full()
-    )
-}
-
-#[test]
-fn a_scim_client_of_the_machines_issuer_binding_a_party_issuer_loads() {
-    let config = assemble(&bound(&scim(
-        "https://idp.example/realms/machines",
-        "urn:example:staff-login",
-        "",
     )))
     .expect("assembles");
     config.validate().expect("validates");
-    assert_eq!(config.auth.scim.expect("the scim table").client.len(), 1);
+    assert!(config.auth.scim.is_some());
 }
 
 #[test]
-fn every_scim_client_refusal_is_named() {
-    let staff = refusal(&scim(
-        "https://idp.example/realms/staff",
-        "urn:example:staff-login",
-        "",
-    ));
-    assert!(
-        staff.contains("names a persons issuer: a SCIM client acts for nobody"),
-        "{staff}"
-    );
-    let unbound = refusal(&scim(
-        "https://idp.example/realms/machines",
-        "urn:example:other",
-        "",
-    ));
-    assert!(
-        unbound.contains("is the identifier_issuer of no [[auth.party]] table"),
-        "{unbound}"
-    );
-    let shared = refusal(&scim(
-        "https://idp.example/realms/machines",
-        "urn:example:staff-login",
-        "\n[[auth.scim.client]]\nissuer = \"https://idp.example/realms/machines\"\n\
-         client_id = \"okta\"\nscope = \"ferroehr/scim\"\n\
-         binding_issuer = \"urn:example:staff-login\"\n",
-    ));
-    assert!(shared.contains("shares binding_issuer"), "{shared}");
+fn an_unknown_scim_key_is_named() {
     let unknown = refusal(&format!("{}\n[auth.scim]\nmax_deactivation = 3\n", full()));
     assert!(unknown.contains("max_deactivation"), "{unknown}");
 }

@@ -1,0 +1,342 @@
+﻿archetype (adl_version=1.4; uid=8dee2afc-f2c9-48cc-92f6-3023a21705f6)
+	openEHR-EHR-CLUSTER.inspection-external_ear.v1
+specialise
+	openEHR-EHR-CLUSTER.inspection.v1
+
+concept
+	[at0000.1]	-- Inspection of External ear
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Ian McNicoll">
+		["organisation"] = <"Ocean Informatics">
+		["date"] = <"02/11/2007">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For recording the findings on inspection of the external ear">
+			use = <"For use with the exam clusters for recording findings on inspection">
+			keywords = <"inspect", "visual", "ear", "external">
+			misuse = <"Should only be used in the exam observation">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["references"] = <"">
+		["build_uid"] = <"389e9352-a760-481f-8e68-eda3b8cb08b6">
+		["original_publisher"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"7154439714E142D33698D3E9340D41E2">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	CLUSTER[at0000.1] matches {	-- Inspection of External ear
+		items cardinality matches {0..*; unordered} matches {
+			CLUSTER[at0001] occurrences matches {0..1} matches {	-- Normal statements
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0002] occurrences matches {0..1} matches {	-- Normal statement
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0.53, 	-- External ear normal
+									at0.56, 	-- Pinna normal
+									at0.57]	-- External Auditory Canal normal
+								}
+							}
+						}
+					}
+				}
+			}
+			ELEMENT[at0048] occurrences matches {0..1} matches {	-- Clinical Description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0006] occurrences matches {0..1} matches {	-- Findings
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0036] occurrences matches {0..1} matches {	-- Colour description
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					CLUSTER[at0005] occurrences matches {0..1} matches {	-- Location
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0.61] occurrences matches {0..1} matches {	-- Anatomical area
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+											[local::
+											at0.62, 	-- Pinna
+											at0.63]	-- External Auditory Canal
+										}
+									}
+								}
+							}
+							ELEMENT[at0022] occurrences matches {0..*} matches {	-- Description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+						}
+					}
+					CLUSTER[at0018] occurrences matches {0..1} matches {	-- Shape or distribution
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0019] occurrences matches {0..1} matches {	-- Description
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+											[local::
+											at0.58, 	-- Hypoplasia
+											at0.59, 	-- Atresia
+											at0.60]	-- Bat
+										}
+									}
+								}
+							}
+							ELEMENT[at0020] occurrences matches {0..1} matches {	-- Symmetrical
+								value matches {
+									DV_BOOLEAN matches {
+										value matches {True, False}
+									}
+								}
+							}
+						}
+					}
+					ELEMENT[at0051] occurrences matches {0..1} matches {	-- Contour
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0027] occurrences matches {0..1} matches {	-- Overlying skin or surface
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0024] occurrences matches {0..1} matches {	-- Surrounds
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					CLUSTER[at0028] occurrences matches {0..1} matches {	-- Edge
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0033] occurrences matches {0..1} matches {	-- Description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0029] occurrences matches {0..1} matches {	-- Definition
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+											[local::
+											at0030, 	-- Well defined
+											at0031, 	-- Moderately defined
+											at0032]	-- Poorly defined
+										}
+									}
+								}
+							}
+						}
+					}
+					ELEMENT[at0034] occurrences matches {0..1} matches {	-- Translucent
+						value matches {
+							DV_BOOLEAN matches {
+								value matches {True, False}
+							}
+						}
+					}
+					ELEMENT[at0.52] occurrences matches {0..1} matches {	-- Operative scars
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					CLUSTER[at0049] occurrences matches {0..1} matches {	-- Detail
+						items cardinality matches {0..*; unordered} matches {
+							allow_archetype CLUSTER[at0052] occurrences matches {0..1} matches {
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam\.v1/}
+							}
+						}
+					}
+				}
+			}
+			ELEMENT[at0050] occurrences matches {0..1} matches {	-- Drawing
+				value matches {
+					DV_MULTIMEDIA matches {
+						media_type matches {
+							[openEHR::
+							425, 
+							426, 
+							427, 
+							428, 
+							429]
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.52"] = <
+					text = <"Operative scars">
+					description = <"Any ear related operative scars">
+				>
+				["at0.53"] = <
+					text = <"External ear normal">
+					description = <"*">
+				>
+				["at0.54"] = <
+					text = <"Pinna">
+					description = <"*">
+				>
+				["at0.55"] = <
+					text = <"External audiroty Canal">
+					description = <"*">
+				>
+				["at0.56"] = <
+					text = <"Pinna normal">
+					description = <"*">
+				>
+				["at0.57"] = <
+					text = <"External Auditory Canal normal">
+					description = <"*">
+				>
+				["at0.58"] = <
+					text = <"Hypoplasia">
+					description = <"*">
+				>
+				["at0.59"] = <
+					text = <"Atresia">
+					description = <"*">
+				>
+				["at0.60"] = <
+					text = <"Bat">
+					description = <"*">
+				>
+				["at0.61"] = <
+					text = <"Anatomical area">
+					description = <"*">
+				>
+				["at0.62"] = <
+					text = <"Pinna">
+					description = <"*">
+				>
+				["at0.63"] = <
+					text = <"External Auditory Canal">
+					description = <"*">
+				>
+				["at0000"] = <
+					text = <"Inspection">
+					description = <"The findings on physical examination by inspection">
+				>
+				["at0000.1"] = <
+					text = <"Inspection of External ear">
+					description = <"The findings on physical examination by inspection of external ear">
+				>
+				["at0001"] = <
+					text = <"Normal statements">
+					description = <"An optional group of statements about the normality of the inspection">
+				>
+				["at0002"] = <
+					text = <"Normal statement">
+					description = <"A specific statement about the normality of inspection">
+				>
+				["at0005"] = <
+					text = <"Location">
+					description = <"The location of any findings">
+				>
+				["at0006"] = <
+					text = <"Findings">
+					description = <"Specific findings on inspection">
+				>
+				["at0018"] = <
+					text = <"Shape or distribution">
+					description = <"The shape or distribution of the object inspected">
+				>
+				["at0019"] = <
+					text = <"Description">
+					description = <"Description of the external ear">
+				>
+				["at0020"] = <
+					text = <"Symmetrical">
+					description = <"Whether the distribution is symmetrical">
+				>
+				["at0022"] = <
+					text = <"Description">
+					description = <"Description of the location of the findings">
+				>
+				["at0024"] = <
+					text = <"Surrounds">
+					description = <"Description of immediate surrounds to object">
+				>
+				["at0027"] = <
+					text = <"Overlying skin or surface">
+					description = <"A description of the surface">
+				>
+				["at0028"] = <
+					text = <"Edge">
+					description = <"Findings about the edge of the object under inspection">
+				>
+				["at0029"] = <
+					text = <"Definition">
+					description = <"The nature of the edge of the object of examination">
+				>
+				["at0030"] = <
+					text = <"Well defined">
+					description = <"The edge is clearly defined">
+				>
+				["at0031"] = <
+					text = <"Moderately defined">
+					description = <"The edge is defined but less clear in places">
+				>
+				["at0032"] = <
+					text = <"Poorly defined">
+					description = <"The edge is not defined clearly in many places">
+				>
+				["at0033"] = <
+					text = <"Description">
+					description = <"Description of the edge or border of the object of inspection">
+				>
+				["at0034"] = <
+					text = <"Translucent">
+					description = <"Is the object of inspection translucent?">
+				>
+				["at0036"] = <
+					text = <"Colour description">
+					description = <"The colour of the object under inspection">
+				>
+				["at0048"] = <
+					text = <"Clinical Description">
+					description = <"Clinical description of the findings on inspection">
+				>
+				["at0049"] = <
+					text = <"Detail">
+					description = <"Detailed examination of a finding on inspection">
+				>
+				["at0050"] = <
+					text = <"Drawing">
+					description = <"A drawing of the findings on inspection">
+				>
+				["at0051"] = <
+					text = <"Contour">
+					description = <"The contour of the object of inspection">
+				>
+				["at0052"] = <
+					text = <"Cluster: Exam">
+					description = <"Exam details">
+				>
+			>
+		>
+	>

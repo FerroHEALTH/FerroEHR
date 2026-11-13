@@ -13,10 +13,9 @@
 //! `OrganisatieTypeCodelijst` `ValueSet` in `docs/specs/nl-role-codes/`. The
 //! URA carries no organisation type and no published list types an insurer,
 //! so an organisation is admitted only when it asserts a care provider type
-//! of that list. The keurend arts of paragraph 2 has no role code, so boot
-//! refuses an NL agreement whose purpose is a keuring
-//! (`ferroehr::config::agreement`). Which codes the article covers is our own
-//! reading of it.
+//! of that list. The check runs under an agreement whose `jurisdiction` is
+//! `NL` (`ferroehr::party_binding::grants::agreement`). Which codes the
+//! article covers is our own reading of it.
 
 use ferrohealth_smart::federation::{Attribute, External, Field};
 

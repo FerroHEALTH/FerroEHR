@@ -30,19 +30,21 @@ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
 ## How the lanes use it
 
 `docker/ferroehr.dev.toml` trusts the issuer (audience `ferroehr-scim`) and
-declares the SCIM client `basic-users`, whose `binding_issuer` is
-`urn:ferroehr:basic-user`. An overlay that adds a `persons` issuer adds its
-own client, because no two clients share a `binding_issuer`:
+admits `scim_provision` under `[authz.grants] allowed`. A SCIM client is a
+`scim_provision` grant in the CDR, which `scripts/scim-provision.sh` writes
+first through `ferroehr party-binding grant` (with `SCIM_GRANT` naming how to
+run the server's binary), since no administrator can log in before the
+persons it provisions exist. Each persons issuer has its own client, because
+no two clients share a `binding_issuer`:
 
-| Client | `binding_issuer` | Declared in | Provisions |
+| Client | `binding_issuer` | Lane | Provisions |
 |---|---|---|---|
-| `basic-users` | `urn:ferroehr:basic-user` | `docker/ferroehr.dev.toml` | `ferroehr`, `ferroehr-admin`, `ferroehr-readonly` |
+| `basic-users` | `urn:ferroehr:basic-user` | every lane on `docker/ferroehr.dev.toml` | `ferroehr`, `ferroehr-admin`, `ferroehr-readonly` |
 | `cnf-smart` | `urn:ferroehr:cnf-smart-login` | `docker/sut-smart.yml` | `cnf-smart-app`, the subject the conformance runner mints |
 | `keycloak-dev` | `urn:ferroehr:keycloak-dev-login` | `docker/viewer/e2e-env.yml` | the dev realm's users, by their fixed ids |
 
-Each lane loads the professional templates (`ferroehr definitions load`),
-starts `serve`, then runs `scripts/scim-provision.sh` with its client and
-users.
+Each lane starts `serve`, then runs `scripts/scim-provision.sh` with its
+client, its binding issuer and its users.
 
 The conformance harness (`scripts/conformance.sh`) provisions the catalogue's
 logins with `--name Veredictum`. They are the instrument's own logins, and

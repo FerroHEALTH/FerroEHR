@@ -1,0 +1,354 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8e972e08-f819-4e06-b6dc-971386aff5c3; build_uid=f2cdc72a-136d-446d-a0a0-cf6a76f61137)
+    openEHR-EHR-CLUSTER.timing.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"openEHR Foundation">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2013-05-16">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sharmila Biswas, Dr Sharmila Biswas, Australia", "Stephen Chu, NEHTA, Australia (Editor)", "David Evans, Queensland Health, Australia", "Sam Heard, Ocean Informatics, Australia (Editor)", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Richard Townley-O'Neill, NEHTA, Australia (Editor)">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Timing, draft archetype, NEHTA Clinical Knowledge Manager [Internet]. : NEHTA. Authored: 21 Nov 2010. Available at: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.886_4 (accessed 15 May 2013).">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"ADE1865059959FD91ED092EB19D1AD64">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To provide structured information on timing that is suitable for computation and display for human interpretation.">
+            keywords = <"timing", "administration", "dosing", "frequency">
+            use = <"For use with medication orders and other instructions where timing is complex and needs to be computable.">
+            misuse = <"Not to be used for specific timing but for scheduling of tasks that need repeating.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"*To provide structured information on timing that is suitable for computation and display for human interpretation.(en)">
+            keywords = <"*timing(en)", "*administration(en)", "*dosing(en)", "*frequency(en)">
+            use = <"*For use with medication orders and other instructions where timing is complex and needs to be computable.(en)">
+            misuse = <"*Not to be used for specific timing but for scheduling of tasks that need repeating.(en)">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Timing
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Daily count
+                value matches {
+                    DV_COUNT[at9002]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Frequency
+                value matches {
+                    DV_QUANTITY[at9003] matches {
+                        property matches {[at9000]}    -- Frequency
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"/d"}],
+                            [{|>=0.0|}, {"/wk"}],
+                            [{|>=0.0|}, {"/mo"}],
+                            [{|>=0.0|}, {"/yr"}],
+                            [{|>=0.0|}, {"/min"}],
+                            [{|>=0.0|}, {"/s"}],
+                            [{|>=0.0|}, {"/h"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Interval
+                value matches {
+                    DV_DURATION[at9004]
+                }
+            }
+            CLUSTER[at0015] occurrences matches {0..1} matches {    -- Variable frequency
+                items cardinality matches {1..*; unordered} matches {
+                    CLUSTER[at0016] occurrences matches {0..1} matches {    -- Upper
+                        items cardinality matches {1..*; unordered} matches {
+                            use_node ELEMENT[at9005] occurrences matches {0..1} /items[at0003]
+                        }
+                    }
+                    CLUSTER[at0017] occurrences matches {0..1} matches {    -- Lower
+                        items cardinality matches {1..*; unordered} matches {
+                            use_node ELEMENT[at9006] occurrences matches {0..1} /items[at0003]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0019] occurrences matches {0..1} matches {    -- Variable interval
+                items cardinality matches {1..*; unordered} matches {
+                    CLUSTER[at0020] occurrences matches {0..1} matches {    -- Upper
+                        items cardinality matches {1..*; unordered} matches {
+                            use_node ELEMENT[at9007] occurrences matches {0..1} /items[at0014]
+                        }
+                    }
+                    CLUSTER[at0021] occurrences matches {0..1} matches {    -- Lower
+                        items cardinality matches {1..*; unordered} matches {
+                            use_node ELEMENT[at9008] occurrences matches {0..1} /items[at0014]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0004] matches {    -- Specific time
+                value matches {
+                    DV_TIME[at9009]
+                }
+            }
+            ELEMENT[at0006] matches {    -- Day of week
+                value matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[ac9001]}    -- Day of week (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0005] matches {    -- Day of month
+                value matches {
+                    DV_COUNT[at9011] matches {
+                        magnitude matches {|1..31|}
+                    }
+                }
+            }
+            ELEMENT[at0018] matches {    -- Specific date
+                value matches {
+                    DV_DATE[at9012]
+                }
+            }
+            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Parsable syntax
+                value matches {
+                    DV_PARSABLE[at9013] matches {
+                        formalism matches {"text/xml", "text/plain"}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Timing">
+                description = <"Structured information about the timing (intended or actual) of administration or use of a medicine, other therapeutic good or other intervention that is given on a scheduled basis.">
+            >
+            ["at0001"] = <
+                text = <"Daily count">
+                description = <"This is the actual or maximum number of doses or other interventions that are to be administered in a 24 hour period.">
+            >
+            ["at0003"] = <
+                text = <"Frequency">
+                description = <"The frequency as number of times per time period that the intervention is to take place.">
+            >
+            ["at0004"] = <
+                text = <"Specific time">
+                description = <"Specific time(s) during the day when the intervention should be applied.">
+            >
+            ["at0005"] = <
+                text = <"Day of month">
+                description = <"The specific and repeating day(s) of the month e.g. if it is required to give a dose on the 2nd day of each month then the value is 2.">
+            >
+            ["at0006"] = <
+                text = <"Day of week">
+                description = <"The specific and repeating day(s) of the week.">
+            >
+            ["at0007"] = <
+                text = <"Monday">
+                description = <"Monday.">
+            >
+            ["at0008"] = <
+                text = <"Tuesday">
+                description = <"Tuesday.">
+            >
+            ["at0009"] = <
+                text = <"Wednesday">
+                description = <"Wednesday.">
+            >
+            ["at0010"] = <
+                text = <"Thursday">
+                description = <"Thursday.">
+            >
+            ["at0011"] = <
+                text = <"Friday">
+                description = <"Friday.">
+            >
+            ["at0012"] = <
+                text = <"Saturday">
+                description = <"Saturday.">
+            >
+            ["at0013"] = <
+                text = <"Sunday">
+                description = <"Sunday.">
+            >
+            ["at0014"] = <
+                text = <"Interval">
+                description = <"The length of time between doses or interventions. 8 Hourly is PT8H, monthly is P1M, every hour and a half is PT1H30M.">
+            >
+            ["at0015"] = <
+                text = <"Variable frequency">
+                description = <"Details of variable upper and lower frequency e.g. 3-4 times a day.">
+            >
+            ["at0016"] = <
+                text = <"Upper">
+                description = <"The upper value of frequency.">
+            >
+            ["at0017"] = <
+                text = <"Lower">
+                description = <"The lower value of frequency.">
+            >
+            ["at0018"] = <
+                text = <"Specific date">
+                description = <"A specific date when the intervention is to take place.">
+            >
+            ["at0019"] = <
+                text = <"Variable interval">
+                description = <"Details of variable upper and lower intervals e.g. every 2-3 hours.">
+            >
+            ["at0020"] = <
+                text = <"Upper">
+                description = <"The upper value of the interval.">
+            >
+            ["at0021"] = <
+                text = <"Lower">
+                description = <"The lower value of the interval.">
+            >
+            ["at0022"] = <
+                text = <"Parsable syntax">
+                description = <"Complex intervention timing recorded as a parsable syntax.">
+            >
+            ["at9000"] = <
+                text = <"Frequency">
+                description = <"Frequency">
+            >
+            ["ac9001"] = <
+                text = <"Day of week (synthesised)">
+                description = <"The specific and repeating day(s) of the week. (synthesised)">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"Podrobn časovna opredelitev">
+                description = <"Strukturirana informacija o časovni opredelitvi (planirani ali dejanski) nameravane ali izvedene aktivnosti (intervencije) ki je bila planirana za izvedbo (npr. administracija ali dodelitev terapije; neka druga klinična aktivnost...)">
+            >
+            ["at0001"] = <
+                text = <"Dnevni odmerek">
+                description = <"*This is the actual or maximum number of doses or other interventions that are to be administered in a 24 hour period.(en)">
+            >
+            ["at0003"] = <
+                text = <"Pogostost">
+                description = <"*The frequency as number of times per time period that the intervention is to take place.(en)">
+            >
+            ["at0004"] = <
+                text = <"Čas">
+                description = <"*Specific time(s) during the day when the intervention should be applied.(en)">
+            >
+            ["at0005"] = <
+                text = <"Dan v mesecu">
+                description = <"*The specific and repeating day(s) of the month e.g. if it is required to give a dose on the 2nd day of each month then the value is 2.(en)">
+            >
+            ["at0006"] = <
+                text = <"Dan v tednu">
+                description = <"*The specific and repeating day(s) of the week.(en)">
+            >
+            ["at0007"] = <
+                text = <"Ponedeljek">
+                description = <"*Monday.(en)">
+            >
+            ["at0008"] = <
+                text = <"Torek">
+                description = <"*Tuesday.(en)">
+            >
+            ["at0009"] = <
+                text = <"Sreda">
+                description = <"*Wednesday.(en)">
+            >
+            ["at0010"] = <
+                text = <"Četrtek">
+                description = <"*Thursday.(en)">
+            >
+            ["at0011"] = <
+                text = <"Petek">
+                description = <"*Friday.(en)">
+            >
+            ["at0012"] = <
+                text = <"Sobota">
+                description = <"*Saturday.(en)">
+            >
+            ["at0013"] = <
+                text = <"Nedelja">
+                description = <"*Sunday.(en)">
+            >
+            ["at0014"] = <
+                text = <"Interval">
+                description = <"*The length of time between doses or interventions. 8 Hourly is PT8H, monthly is P1M, every hour and a half is PT1H30M.(en)">
+            >
+            ["at0015"] = <
+                text = <"Spremenljiva pogostost">
+                description = <"*Details of variable upper and lower frequency e.g. 3-4 times a day.(en)">
+            >
+            ["at0016"] = <
+                text = <"Višja">
+                description = <"*The upper value of frequency.(en)">
+            >
+            ["at0017"] = <
+                text = <"Nižja">
+                description = <"*The lower value of frequency.(en)">
+            >
+            ["at0018"] = <
+                text = <"Datum">
+                description = <"*A specific date when the intervention is to take place.(en)">
+            >
+            ["at0019"] = <
+                text = <"Spremenljiv interval">
+                description = <"*Details of variable upper and lower intervals e.g. every 2-3 hours.(en)">
+            >
+            ["at0020"] = <
+                text = <"Višji">
+                description = <"*The upper value of the interval.(en)">
+            >
+            ["at0021"] = <
+                text = <"Nižji">
+                description = <"*The lower value of the interval.(en)">
+            >
+            ["at0022"] = <
+                text = <"*Parsable syntax(en)">
+                description = <"*Complex intervention timing recorded as a parsable syntax.(en)">
+            >
+            ["at9000"] = <
+                text = <"* Frequency (en)">
+                description = <"* Frequency (en)">
+            >
+            ["ac9001"] = <
+                text = <"Dan v tednu (synthesised)">
+                description = <"*The specific and repeating day(s) of the week.(en) (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/382>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0007", "at0008", "at0009", "at0010", "at0011", "at0012", "at0013">
+        >
+    >

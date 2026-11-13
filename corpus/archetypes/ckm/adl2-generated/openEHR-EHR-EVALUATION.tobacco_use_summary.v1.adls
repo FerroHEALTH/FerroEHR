@@ -1,0 +1,507 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=828a61c8-9d5c-4a2e-ad6f-f291a37c0548; build_uid=b5cdb344-09d4-4c0a-a578-44440beb124a)
+    openEHR-EHR-EVALUATION.tobacco_use_summary.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2009-06-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rita Apelt, Department of Health,NT, Australia", "Stephen Chu, NEHTA, Australia (Editor)", "Sam Heard, Ocean Informatics, Australia", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Ian McNicoll, Ocean Informatics UK, United Kingdom", "Jeremy Oats, NT Health, Australia", "Rosalie Schultz, Anyinginyi Health Aboriginal Corporation, Australia", "John Tore Valand, Helse Bergen HF, Norway", "Silje Ljosland Bakke, Nasjonal IKT, Norway">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Tobacco Use Summary draft archetype [Internet]. London: openEHR Clinical Knowledge Manager, openEHR Foundation; 21 Jun 2009 [cited 2011 Jul 15]. Available from: http://www.openehr.org/knowledge/OKM.html#showArchetype_1013.1.363_">
+        ["2"] = <"Tobacco Use Summary draft archetype [Internet]: NEHTA Clinical Knowledge Manager, NEHTA; 21 Jun 2009 [cited 2013 Oct 31]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1026_3.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"DF5FA957DE36DC970F42780C6999FFC5">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary information about the pattern of use of tobacco and tobacco-containing products.">
+            keywords = <"tobacco", "cigarette", "cigar", "pipe", "smoking">
+            use = <"Use to record summary information about the pattern of use of tobacco and tobacco-containing products.">
+            misuse = <"Not to be used to record event-or period-based information about tobacco use or consumption, such as actual daily use or the average use over a specified period of time - use the OBSERVATION.tobacco_use archetype.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Tobacco Use Summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Tobacco use status
+                        value matches {
+                            DV_CODED_TEXT[at9003] matches {
+                                defining_code matches {[ac9000]}    -- Tobacco use status (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9024]
+                        }
+                    }
+                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- Tobacco use start date
+                        value matches {
+                            DV_DATE_TIME[at9025]
+                        }
+                    }
+                    ELEMENT[at0045] occurrences matches {0..1} matches {    -- Tobacco use cease date
+                        value matches {
+                            DV_DATE_TIME[at9026]
+                        }
+                    }
+                    CLUSTER[at0029] occurrences matches {0..1} matches {    -- Tobacco smoking
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0046] occurrences matches {0..1} matches {    -- Smoking status
+                                value matches {
+                                    DV_CODED_TEXT[at9027] matches {
+                                        defining_code matches {[ac9019]}    -- Smoking status (synthesised)
+                                    }
+                                }
+                            }
+                            CLUSTER[at0051] matches {    -- Per form
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Form
+                                        value matches {
+                                            DV_CODED_TEXT[at9028] matches {
+                                                defining_code matches {[ac9020]}    -- Form (synthesised)
+                                            }
+                                            DV_TEXT[at9029]
+                                        }
+                                    }
+                                    ELEMENT[at0052] occurrences matches {0..1} matches {    -- Status
+                                        value matches {
+                                            DV_CODED_TEXT[at9030] matches {
+                                                defining_code matches {[ac9021]}    -- Status (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0053] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9031]
+                                        }
+                                    }
+                                    CLUSTER[at0064] occurrences matches {0..1} matches {    -- Typical consumption
+                                        items cardinality matches {1; unordered} matches {
+                                            ELEMENT[at0023] matches {    -- Typical consumption - units
+                                                value matches {
+                                                    DV_QUANTITY[at9032] matches {
+                                                        property matches {[at9001]}    -- Frequency
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"/d"}
+                                                        precision matches {0}
+                                                    }
+                                                    DV_INTERVAL<DV_QUANTITY>[at9033] matches {
+                                                        upper matches {
+                                                            DV_QUANTITY[at9034] matches {
+                                                                property matches {[at9001]}    -- Frequency
+                                                                magnitude matches {|>=0.0|}
+                                                                units matches {"/d"}
+                                                                precision matches {0}
+                                                            }
+                                                        }
+                                                        lower matches {
+                                                            DV_QUANTITY[at9035] matches {
+                                                                property matches {[at9001]}    -- Frequency
+                                                                magnitude matches {|>=0.0|}
+                                                                units matches {"/d"}
+                                                                precision matches {0}
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0065] matches {    -- Typical consumption - mass
+                                                value matches {
+                                                    DV_QUANTITY[at9036] matches {
+                                                        property matches {[at9022]}    -- Flow rate, mass
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"g/d"}
+                                                        precision matches {0}
+                                                    }
+                                                    DV_INTERVAL<DV_QUANTITY>[at9037] matches {
+                                                        upper matches {
+                                                            DV_QUANTITY[at9038] matches {
+                                                                property matches {[at9022]}    -- Flow rate, mass
+                                                                magnitude matches {|>=0.0|}
+                                                                units matches {"g/d"}
+                                                                precision matches {0}
+                                                            }
+                                                        }
+                                                        lower matches {
+                                                            DV_QUANTITY[at9039] matches {
+                                                                property matches {[at9022]}    -- Flow rate, mass
+                                                                magnitude matches {|>=0.0|}
+                                                                units matches {"g/d"}
+                                                                precision matches {0}
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Typical pattern
+                                        value matches {
+                                            DV_TEXT[at9040]
+                                        }
+                                    }
+                                    ELEMENT[at0066] matches {    -- Triggers
+                                        value matches {
+                                            DV_TEXT[at9041]
+                                        }
+                                    }
+                                    ELEMENT[at0067] matches {    -- Context of use
+                                        value matches {
+                                            DV_TEXT[at9042]
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Start date
+                                        value matches {
+                                            DV_DATE_TIME[at9043]
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Quit date
+                                        value matches {
+                                            DV_DATE_TIME[at9044]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0068] matches {    -- Details
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Pack Years
+                                        value matches {
+                                            DV_COUNT[at9045] matches {
+                                                magnitude matches {|>=0|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Number of Cessation Attempts
+                                        value matches {
+                                            DV_COUNT[at9046] matches {
+                                                magnitude matches {|>=0|}
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0026] matches {    -- Cessation Attempts
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.cessation_attempt(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0069] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9047]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0070] matches {    -- Other tobacco use
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9016]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0021] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0071] occurrences matches {0..1} matches {    -- Quitting period definition
+                        value matches {
+                            DV_DURATION[at9048] matches {
+                                value matches {|>=PT0S|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0072] matches {    -- Pack/Tin definition
+                        value matches {
+                            DV_COUNT[at9049] matches {
+                                magnitude matches {|>=0|}
+                            }
+                            DV_QUANTITY[at9050] matches {
+                                property matches {[at9023]}    -- Mass
+                                magnitude matches {|>=0.0|}
+                                units matches {"g"}
+                                precision matches {0}
+                            }
+                        }
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9017]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Tobacco Use Summary">
+                description = <"Summary or persisting information about tobacco use or consumption.">
+            >
+            ["at0002"] = <
+                text = <"Tobacco use status">
+                description = <"Statement about the individual's current tobacco use.">
+            >
+            ["at0003"] = <
+                text = <"Current user">
+                description = <"Individual is a current user of tobacco.">
+            >
+            ["at0005"] = <
+                text = <"Past user">
+                description = <"Individual is a former or ex-user of tobacco.">
+            >
+            ["at0006"] = <
+                text = <"Never used">
+                description = <"Individual has never used tobacco.">
+            >
+            ["at0015"] = <
+                text = <"Start date">
+                description = <"Date that smoking commenced.">
+                comment = <"Can be a partial date, for example, only a year.">
+            >
+            ["at0016"] = <
+                text = <"Quit date">
+                description = <"Date that smoking ceased.">
+                comment = <"Can be a partial date, for example, only a year. May also be known as the 'Quit Date'.">
+            >
+            ["at0017"] = <
+                text = <"Pack Years">
+                description = <"Estimate of the cumulative amount of cigarettes smoked, measured in pack years.">
+                comment = <"Commonly used in assessment of cigarette use. It is calculated by multiplying the number of packs of cigarettes smoked per day by the number of years the individual has smoked. One pack year equals 365 packs of cigarettes.">
+            >
+            ["at0019"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the toacco use not captured in other fields.">
+                comment = <"For example: stopped smoking or reduced amount on becoming pregnant.">
+            >
+            ["at0022"] = <
+                text = <"Last updated">
+                description = <"The date this tobacco use summary was last updated.">
+            >
+            ["at0023"] = <
+                text = <"Typical consumption - units">
+                description = <"Estimate of typical use of the specified form of smoked tobacco per day - as a whole number or a range of cigarettes per day.">
+            >
+            ["at0025"] = <
+                text = <"Number of Cessation Attempts">
+                description = <"Number of times the individual has attempted to stop smoking the specified form of tobacco.">
+            >
+            ["at0026"] = <
+                text = <"Cessation Attempts">
+                description = <"Details about each attempt to cease  smoking.">
+            >
+            ["at0027"] = <
+                text = <"Quitting">
+                description = <"Individual has ceased using tobacco within a defined time period.">
+            >
+            ["at0028"] = <
+                text = <"Form">
+                description = <"Identification of the form of tobacco smoked.">
+            >
+            ["at0029"] = <
+                text = <"Tobacco smoking">
+                description = <"Details about the pattern of smoking tobacco.">
+                comment = <"This cluster is explicitly modeled in the archetype because smoking is the single ubiquitous mode of tobacco use. All other modes should be detailed in CLUSTER archetypes specific to each type.">
+            >
+            ["at0030"] = <
+                text = <"Typical pattern">
+                description = <"The typical pattern of use of the form of smoked tobacco.">
+                comment = <"The typical pattern of use can be coded with a terminology or a local value set in a template.">
+            >
+            ["at0043"] = <
+                text = <"Description">
+                description = <"Narrative description of the individual's overall tobacco use.">
+            >
+            ["at0044"] = <
+                text = <"Tobacco use start date">
+                description = <"The date when the individual first started using tobacco.">
+            >
+            ["at0045"] = <
+                text = <"Tobacco use cease date">
+                description = <"The date when the individual last ceased using tobacco.">
+            >
+            ["at0046"] = <
+                text = <"Smoking status">
+                description = <"Statement about the individual's current tobacco smoking.">
+            >
+            ["at0047"] = <
+                text = <"Never smoked">
+                description = <"Individual has never smoked tobacco.">
+            >
+            ["at0048"] = <
+                text = <"Past smoker">
+                description = <"Individual is a former or ex-smoker of tobacco.">
+            >
+            ["at0049"] = <
+                text = <"Quitting">
+                description = <"Individual has ceased smoking tobacco within a defined time period.">
+            >
+            ["at0050"] = <
+                text = <"Current smoker">
+                description = <"Individual is a current smoker of tobacco.">
+            >
+            ["at0051"] = <
+                text = <"Per form">
+                description = <"Details about the pattern of smoking a specified form of tobacco.">
+            >
+            ["at0052"] = <
+                text = <"Status">
+                description = <"Statement about the individual's current smoking of the specified form of smoking tobacco.">
+            >
+            ["at0053"] = <
+                text = <"Description">
+                description = <"Narrative description of the individual's smoking of tobacco of the specified form.">
+            >
+            ["at0054"] = <
+                text = <"Cigarettes">
+                description = <"Manufactured cigarettes, containing processed tobacco and rolled into a cylinder.">
+            >
+            ["at0055"] = <
+                text = <"Roll your own">
+                description = <"Hand-filled cigarettes using loose tobacco rolled in a cigarette paper.">
+            >
+            ["at0056"] = <
+                text = <"Cigars">
+                description = <"Air-cured and fermented tobaccos with a tobacco-leaf wrapper.">
+            >
+            ["at0057"] = <
+                text = <"Pipe">
+                description = <"Tobacco placed in a bowl and smoke inhaled through a stem.">
+            >
+            ["at0058"] = <
+                text = <"Never smoked">
+                description = <"Individual has never smoked tobacco of the specified form.">
+            >
+            ["at0059"] = <
+                text = <"Past smoker">
+                description = <"Individual is a former or ex-smoker of tobacco of the specified form.">
+            >
+            ["at0060"] = <
+                text = <"Quitting">
+                description = <"Individual has ceased smoking tobacco of the specified form within a defined time period.">
+            >
+            ["at0061"] = <
+                text = <"Current smoker">
+                description = <"Individual is a current smoker of tobacco of the specified form.">
+            >
+            ["at0062"] = <
+                text = <"Waterpipe">
+                description = <"Tobacco, often flavoured, is burned then cooled through a basin of water eand consumed through a hose and mouthpiece.">
+            >
+            ["at0064"] = <
+                text = <"Typical consumption">
+                description = <"Estimate of typical use of the specified form of smoked tobacco per day.">
+                comment = <"Cardinality is set to 1..1 to allow only one of the two elements to be present at any time. Please note: The period of time to which this data element is not specified. If exact consumption at specific points in time or averages/maximums over specified intervals of time are required, use the OBSERVATION.tobacco_use archetype.">
+            >
+            ["at0065"] = <
+                text = <"Typical consumption - mass">
+                description = <"Estimate of typical use of the specified form of smoked tobacco per day - as a number of grams per day.">
+            >
+            ["at0066"] = <
+                text = <"Triggers">
+                description = <"Identified triggers which stimulate or cause smoking of this form of tobacco.">
+            >
+            ["at0067"] = <
+                text = <"Context of use">
+                description = <"The context in which the individual uses tobacco.">
+            >
+            ["at0068"] = <
+                text = <"Details">
+                description = <"Details regarding the individual's smoking of the specified form of tobacco.">
+            >
+            ["at0069"] = <
+                text = <"Comment">
+                description = <"Additional narrative about smoking of the specified form of tobacco, not captured in other fields.">
+            >
+            ["at0070"] = <
+                text = <"Other tobacco use">
+                description = <"Details about the use of other, non-smoked forms of tobacco.">
+            >
+            ["at0071"] = <
+                text = <"Quitting period definition">
+                description = <"The definition of the time period used in the Status value \"Quitting\".">
+            >
+            ["at0072"] = <
+                text = <"Pack/Tin definition">
+                description = <"The definition of the size of pack or tin used in the Pack years/Tin years elements in this archetype and in clusters.">
+            >
+            ["at9023"] = <
+                text = <"Mass">
+                description = <"Mass">
+            >
+            ["at9022"] = <
+                text = <"Flow rate, mass">
+                description = <"Flow rate, mass">
+            >
+            ["at9001"] = <
+                text = <"Frequency">
+                description = <"Frequency">
+            >
+            ["ac9000"] = <
+                text = <"Tobacco use status (synthesised)">
+                description = <"Statement about the individual's current tobacco use. (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Smoking status (synthesised)">
+                description = <"Statement about the individual's current tobacco smoking. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Form (synthesised)">
+                description = <"Identification of the form of tobacco smoked. (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Status (synthesised)">
+                description = <"Statement about the individual's current smoking of the specified form of smoking tobacco. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9023"] = <http://openehr.org/id/124>
+            ["at9022"] = <http://openehr.org/id/347>
+            ["at9001"] = <http://openehr.org/id/382>
+        >
+    >
+    value_sets = <
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0054", "at0055", "at0056", "at0057", "at0062">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0003", "at0027", "at0005", "at0006">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0058", "at0059", "at0060", "at0061">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0047", "at0048", "at0049", "at0050">
+        >
+    >

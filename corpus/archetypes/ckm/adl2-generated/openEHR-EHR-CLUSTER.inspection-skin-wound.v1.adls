@@ -1,0 +1,721 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b00b5313-19b4-4954-bbff-22ae84634366; build_uid=bb6e1ace-0859-4565-a745-74ff88ae3cc3)
+    openEHR-EHR-CLUSTER.inspection-skin-wound.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.inspection-skin.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"10/04/2007">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B8B0DD3DDCA6C32B0573B27C66D5E0F6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording the findings on inspection of a wound">
+            keywords = <"inspect", "visual", "skin", "wound">
+            use = <"For use with the exam clusters for recording findings on inspection">
+            misuse = <"Should only be used in the exam observation">
+            copyright = <"copyright (c) 2009 openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1.1] matches {    -- Inspection of open wound
+        /items[at0006]/items matches {
+            CLUSTER[at0028] matches {
+                items matches {
+                    ELEMENT[at0.0.126] occurrences matches {0..1} matches {    -- Slope
+                        value matches {
+                            DV_CODED_TEXT[at0.0.9047] matches {
+                                defining_code matches {[ac0.0.9005]}    -- Slope (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            before [at0005]
+            ELEMENT[at0.0.70] occurrences matches {0..1} matches {    -- Type
+                value matches {
+                    DV_CODED_TEXT[at0.0.9006] matches {
+                        defining_code matches {[ac0.0.9000]}    -- Type (synthesised)
+                    }
+                }
+            }
+            after [at0005]
+            CLUSTER[at0.0.79] occurrences matches {0..1} matches {    -- Extent
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0.0.80] occurrences matches {0..1} matches {    -- Starting point
+                        value matches {
+                            DV_TEXT[at0.0.9007]
+                        }
+                    }
+                    ELEMENT[at0.0.81] occurrences matches {0..1} matches {    -- End point
+                        value matches {
+                            DV_TEXT[at0.0.9008]
+                        }
+                    }
+                    ELEMENT[at0.0.82] occurrences matches {0..1} matches {    -- Course
+                        value matches {
+                            DV_TEXT[at0.0.9009]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0036]
+            CLUSTER[at0.0.83] occurrences matches {0..1} matches {    -- Depth
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0.0.84] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at0.0.9010]
+                        }
+                    }
+                    CLUSTER[at0.0.85] occurrences matches {0..1} matches {    -- Tissue involvement
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0.0.86] occurrences matches {0..1} matches {    -- Ligament
+                                value matches {
+                                    DV_BOOLEAN[at0.0.9011] matches {
+                                        value matches {True, False}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.0.87] occurrences matches {0..1} matches {    -- Muscle
+                                value matches {
+                                    DV_BOOLEAN[at0.0.9012] matches {
+                                        value matches {True, False}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.0.88] occurrences matches {0..1} matches {    -- Bone
+                                value matches {
+                                    DV_BOOLEAN[at0.0.9013] matches {
+                                        value matches {True, False}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.0.89] occurrences matches {0..1} matches {    -- Joint
+                                value matches {
+                                    DV_BOOLEAN[at0.0.9014] matches {
+                                        value matches {True, False}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.0.90] occurrences matches {0..1} matches {    -- Subcutaneous fat
+                                value matches {
+                                    DV_BOOLEAN[at0.0.9015] matches {
+                                        value matches {True, False}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.0.91] occurrences matches {0..1} matches {    -- Skin only
+                                value matches {
+                                    DV_BOOLEAN[at0.0.9016] matches {
+                                        value matches {True, False}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            after [at0018]
+            ELEMENT[at0.0.62] occurrences matches {0..1} matches {    -- Age
+                value matches {
+                    DV_CODED_TEXT[at0.0.9017] matches {
+                        defining_code matches {[ac0.0.9001]}    -- Age (synthesised)
+                    }
+                }
+            }
+            CLUSTER[at0.0.65] occurrences matches {0..1} matches {    -- Signs of infection
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype CLUSTER[at0.0.130] occurrences matches {0..1} matches {    -- Cluster: Signs of infection
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.signs_of_infection\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+            CLUSTER[at0.0.61] occurrences matches {0..1} matches {    -- Size
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype CLUSTER[at0.0.131] occurrences matches {0..1} matches {    -- Cluster: Dimensions
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.size\.v1\..*|openEHR-EHR-CLUSTER\.dimensions\.v1\..*|openEHR-EHR-CLUSTER\.dimensions-circumference\.v1\..*/}
+                    }
+                }
+            }
+            after [at0051]
+            CLUSTER[at0.0.92] occurrences matches {0..1} matches {    -- Wound bed
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0027] occurrences matches {0..1} matches {
+                        value matches {
+                            DV_TEXT[at0.0.9020]
+                        }
+                    }
+                    ELEMENT[at0.0.93] occurrences matches {0..1} matches {    -- Eschar present
+                        value matches {
+                            DV_BOOLEAN[at0.0.9021] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0.0.94] occurrences matches {0..1} matches {    -- Necrotic tissue
+                        value matches {
+                            DV_ORDINAL[at0.0.9022] matches {
+                                [value, symbol] matches {
+                                    [{0}, {[at0.0.100]}],    -- -
+                                    [{1}, {[at0.0.101]}],    -- +
+                                    [{2}, {[at0.0.102]}],    -- ++
+                                    [{3}, {[at0.0.103]}]    -- +++
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0.0.95] occurrences matches {0..1} matches {    -- Slough
+                        value matches {
+                            DV_ORDINAL[at0.0.9023] matches {
+                                [value, symbol] matches {
+                                    [{0}, {[at0.0.96]}],    -- -
+                                    [{1}, {[at0.0.97]}],    -- +
+                                    [{2}, {[at0.0.98]}],    -- ++
+                                    [{3}, {[at0.0.99]}]    -- +++
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0.0.104] occurrences matches {0..1} matches {    -- Granulation tissue
+                        value matches {
+                            DV_TEXT[at0.0.9024]
+                        }
+                    }
+                    ELEMENT[at0.0.105] occurrences matches {0..1} matches {    -- Overgranulation
+                        value matches {
+                            DV_BOOLEAN[at0.0.9025] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0.0.106] occurrences matches {0..1} matches {    -- Epithelialisation
+                        value matches {
+                            DV_BOOLEAN[at0.0.9026] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                }
+            }
+            after [at0.56]
+            CLUSTER[at0.0.107] occurrences matches {0..1} matches {    -- Surrounds
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0.0.108] occurrences matches {0..1} matches {    -- Normal/Healthy
+                        value matches {
+                            DV_BOOLEAN[at0.0.9027] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0024] occurrences matches {0..1} matches {
+                        value matches {
+                            DV_TEXT[at0.0.9028]
+                        }
+                    }
+                    CLUSTER[at0.0.109] occurrences matches {0..1} matches {    -- Induration
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0.0.110] occurrences matches {0..1} matches {    -- Present
+                                value matches {
+                                    DV_BOOLEAN[at0.0.9029] matches {
+                                        value matches {True, False}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.0.111] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_CODED_TEXT[at0.0.9030] matches {
+                                        defining_code
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0.0.112] occurrences matches {0..1} matches {    -- Callus present
+                        value matches {
+                            DV_BOOLEAN[at0.0.9031] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0.0.113] occurrences matches {0..1} matches {    -- Maceration present
+                        value matches {
+                            DV_BOOLEAN[at0.0.9032] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0.0.114] occurrences matches {0..1} matches {    -- Eczema present
+                        value matches {
+                            DV_BOOLEAN[at0.0.9033] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    CLUSTER[at0.0.115] occurrences matches {0..1} matches {    -- Blisters
+                        items cardinality matches {1..*; unordered} matches {
+                            use_node ELEMENT[at0.0.9034] occurrences matches {1} /items[at0006]/items[at0.0.107]/items[at0.0.109]/items[at0.0.110]
+                            use_node ELEMENT[at0.0.9048] occurrences matches {1} /items[at0006]/items[at0.0.107]/items[at0.0.109]/items[at0.0.111]    -- Blisters (synthesised)
+                        }
+                    }
+                    ELEMENT[at0.0.117] occurrences matches {0..1} matches {    -- Fragile skin present
+                        value matches {
+                            DV_BOOLEAN[at0.0.9036] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0.0.116] occurrences matches {0..1} matches {    -- Dry skin present
+                        value matches {
+                            DV_BOOLEAN[at0.0.9037] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0.0.118] occurrences matches {0..1} matches {    -- Erythema present
+                        value matches {
+                            DV_BOOLEAN[at0.0.9038] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0.0.119] occurrences matches {0..1} matches {    -- Cellulitis present
+                        value matches {
+                            DV_BOOLEAN[at0.0.9039] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0.0.120] occurrences matches {0..1} matches {    -- Oedema present
+                        value matches {
+                            DV_BOOLEAN[at0.0.9040] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0.0.121] occurrences matches {0..1} matches {    -- Fistula or sinus present
+                        value matches {
+                            DV_BOOLEAN[at0.0.9041] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                }
+            }
+            after [at0.60]
+            ELEMENT[at0.0.69] occurrences matches {0..1} matches {    -- Contamination
+                value matches {
+                    DV_CODED_TEXT[at0.0.9042] matches {
+                        defining_code
+                    }
+                }
+            }
+            ELEMENT[at0.0.122] occurrences matches {0..1} matches {    -- Odour
+                value matches {
+                    DV_CODED_TEXT[at0.0.9043] matches {
+                        defining_code matches {[ac0.0.9004]}    -- Odour (synthesised)
+                    }
+                }
+            }
+            CLUSTER[at0.0.66] occurrences matches {0..1} matches {    -- Foreign body
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0.0.67] occurrences matches {0..1} matches {    -- Present
+                        value matches {
+                            DV_BOOLEAN[at0.0.9044] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0.0.68] occurrences matches {0..1} matches {    -- Details
+                        value matches {
+                            DV_TEXT[at0.0.9045]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0.0.125] occurrences matches {0..1} matches {    -- Discharge
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype CLUSTER[at0.0.132] occurrences matches {0..1} matches {    -- Cluster: Fluids
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.fluid\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+            after [at0049]
+            ELEMENT[at0.52]
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.0.100"] = <
+                text = <"-">
+                description = <"Absent">
+            >
+            ["at0.0.101"] = <
+                text = <"+">
+                description = <"Minimal">
+            >
+            ["at0.0.102"] = <
+                text = <"++">
+                description = <"Moderate">
+            >
+            ["at0.0.103"] = <
+                text = <"+++">
+                description = <"Excessive">
+            >
+            ["at0.0.104"] = <
+                text = <"Granulation tissue">
+                description = <"*">
+            >
+            ["at0.0.105"] = <
+                text = <"Overgranulation">
+                description = <"*">
+            >
+            ["at0.0.106"] = <
+                text = <"Epithelialisation">
+                description = <"*">
+            >
+            ["at0.0.107"] = <
+                text = <"Surrounds">
+                description = <"*">
+            >
+            ["at0.0.108"] = <
+                text = <"Normal/Healthy">
+                description = <"*">
+            >
+            ["at0.0.109"] = <
+                text = <"Induration">
+                description = <"*">
+            >
+            ["at0.0.110"] = <
+                text = <"Present">
+                description = <"*">
+            >
+            ["at0.0.111"] = <
+                text = <"Description">
+                description = <"*">
+            >
+            ["at0.0.112"] = <
+                text = <"Callus present">
+                description = <"*">
+            >
+            ["at0.0.113"] = <
+                text = <"Maceration present">
+                description = <"*">
+            >
+            ["at0.0.114"] = <
+                text = <"Eczema present">
+                description = <"*">
+            >
+            ["at0.0.115"] = <
+                text = <"Blisters">
+                description = <"*">
+            >
+            ["at0.0.116"] = <
+                text = <"Dry skin present">
+                description = <"*">
+            >
+            ["at0.0.117"] = <
+                text = <"Fragile skin present">
+                description = <"*">
+            >
+            ["at0.0.118"] = <
+                text = <"Erythema present">
+                description = <"*">
+            >
+            ["at0.0.119"] = <
+                text = <"Cellulitis present">
+                description = <"*">
+            >
+            ["at0.0.120"] = <
+                text = <"Oedema present">
+                description = <"*">
+            >
+            ["at0.0.121"] = <
+                text = <"Fistula or sinus present">
+                description = <"*">
+            >
+            ["at0.0.122"] = <
+                text = <"Odour">
+                description = <"*">
+            >
+            ["at0.0.123"] = <
+                text = <"None">
+                description = <"*">
+            >
+            ["at0.0.124"] = <
+                text = <"Malodourous">
+                description = <"*">
+            >
+            ["at0.0.125"] = <
+                text = <"Discharge">
+                description = <"*">
+            >
+            ["at0.0.126"] = <
+                text = <"Slope">
+                description = <"*">
+            >
+            ["at0.0.127"] = <
+                text = <"Punched out">
+                description = <"Vertical edge">
+            >
+            ["at0.0.128"] = <
+                text = <"Undermined">
+                description = <"Slope inwards">
+            >
+            ["at0.0.129"] = <
+                text = <"Everted">
+                description = <"Slope outwards">
+            >
+            ["at0.0.130"] = <
+                text = <"Cluster: Signs of infection">
+                description = <"*">
+            >
+            ["at0.0.131"] = <
+                text = <"Cluster: Dimensions">
+                description = <"*">
+            >
+            ["at0.0.132"] = <
+                text = <"Cluster: Fluids">
+                description = <"*">
+            >
+            ["at0.0.61"] = <
+                text = <"Size">
+                description = <"*">
+            >
+            ["at0.0.62"] = <
+                text = <"Age">
+                description = <"*">
+            >
+            ["at0.0.63"] = <
+                text = <"Acute">
+                description = <"*">
+            >
+            ["at0.0.64"] = <
+                text = <"Chronic">
+                description = <"*">
+            >
+            ["at0.0.65"] = <
+                text = <"Signs of infection">
+                description = <"Presence of signs of infection">
+            >
+            ["at0.0.66"] = <
+                text = <"Foreign body">
+                description = <"*">
+            >
+            ["at0.0.67"] = <
+                text = <"Present">
+                description = <"*">
+            >
+            ["at0.0.68"] = <
+                text = <"Details">
+                description = <"*">
+            >
+            ["at0.0.69"] = <
+                text = <"Contamination">
+                description = <"Description about contamination of the wound">
+            >
+            ["at0.0.70"] = <
+                text = <"Type">
+                description = <"Type of wound">
+            >
+            ["at0.0.71"] = <
+                text = <"Abrasion (graze)">
+                description = <"*">
+            >
+            ["at0.0.72"] = <
+                text = <"Laceration">
+                description = <"*">
+            >
+            ["at0.0.73"] = <
+                text = <"Incision">
+                description = <"*">
+            >
+            ["at0.0.74"] = <
+                text = <"Puncture wound">
+                description = <"*">
+            >
+            ["at0.0.75"] = <
+                text = <"Penetration wound">
+                description = <"*">
+            >
+            ["at0.0.76"] = <
+                text = <"Gunshot wound">
+                description = <"*">
+            >
+            ["at0.0.77"] = <
+                text = <"Contusion">
+                description = <"(closed wound)">
+            >
+            ["at0.0.78"] = <
+                text = <"Haematoma">
+                description = <"(closed wound)">
+            >
+            ["at0.0.79"] = <
+                text = <"Extent">
+                description = <"*">
+            >
+            ["at0.0.80"] = <
+                text = <"Starting point">
+                description = <"*">
+            >
+            ["at0.0.81"] = <
+                text = <"End point">
+                description = <"*">
+            >
+            ["at0.0.82"] = <
+                text = <"Course">
+                description = <"*">
+            >
+            ["at0.0.83"] = <
+                text = <"Depth">
+                description = <"*">
+            >
+            ["at0.0.84"] = <
+                text = <"Description">
+                description = <"*">
+            >
+            ["at0.0.85"] = <
+                text = <"Tissue involvement">
+                description = <"*">
+            >
+            ["at0.0.86"] = <
+                text = <"Ligament">
+                description = <"*">
+            >
+            ["at0.0.87"] = <
+                text = <"Muscle">
+                description = <"*">
+            >
+            ["at0.0.88"] = <
+                text = <"Bone">
+                description = <"*">
+            >
+            ["at0.0.89"] = <
+                text = <"Joint">
+                description = <"*">
+            >
+            ["at0.0.90"] = <
+                text = <"Subcutaneous fat">
+                description = <"*">
+            >
+            ["at0.0.91"] = <
+                text = <"Skin only">
+                description = <"*">
+            >
+            ["at0.0.92"] = <
+                text = <"Wound bed">
+                description = <"*">
+            >
+            ["at0.0.93"] = <
+                text = <"Eschar present">
+                description = <"*">
+            >
+            ["at0.0.94"] = <
+                text = <"Necrotic tissue">
+                description = <"*">
+            >
+            ["at0.0.95"] = <
+                text = <"Slough">
+                description = <"*">
+            >
+            ["at0.0.96"] = <
+                text = <"-">
+                description = <"Absent">
+            >
+            ["at0.0.97"] = <
+                text = <"+">
+                description = <"Minimal">
+            >
+            ["at0.0.98"] = <
+                text = <"++">
+                description = <"Moderate">
+            >
+            ["at0.0.99"] = <
+                text = <"+++">
+                description = <"Excessive">
+            >
+            ["at0000.1.1"] = <
+                text = <"Inspection of open wound">
+                description = <"The findings on inspection of a wound">
+            >
+            ["ac0.0.9000"] = <
+                text = <"Type (synthesised)">
+                description = <"Type of wound (synthesised)">
+            >
+            ["ac0.0.9001"] = <
+                text = <"Age (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac0.0.9002"] = <
+                text = <"Necrotic tissue (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac0.0.9003"] = <
+                text = <"Slough (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac0.0.9004"] = <
+                text = <"Odour (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac0.0.9005"] = <
+                text = <"Slope (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["at0.0.9048"] = <
+                text = <"Blisters (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.0.9004"] = <
+            id = <"ac0.0.9004">
+            members = <"at0.0.123", "at0.0.124">
+        >
+        ["ac0.0.9003"] = <
+            id = <"ac0.0.9003">
+            members = <"at0.0.96", "at0.0.97", "at0.0.98", "at0.0.99">
+        >
+        ["ac0.0.9005"] = <
+            id = <"ac0.0.9005">
+            members = <"at0.0.127", "at0.0.128", "at0.0.129">
+        >
+        ["ac0.0.9000"] = <
+            id = <"ac0.0.9000">
+            members = <"at0.0.71", "at0.0.72", "at0.0.73", "at0.0.74", "at0.0.75", "at0.0.76">
+        >
+        ["ac0.0.9002"] = <
+            id = <"ac0.0.9002">
+            members = <"at0.0.100", "at0.0.101", "at0.0.102", "at0.0.103">
+        >
+        ["ac0.0.9001"] = <
+            id = <"ac0.0.9001">
+            members = <"at0.0.63", "at0.0.64">
+        >
+    >

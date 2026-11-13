@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -56,9 +56,7 @@
         </terminology_id>
         <code_string>de</code_string>
       </language>
-      <purpose>Zur Darstellung einer narrative Beschreibung und klinische Interpretation der Befunde, die bei der körperlichen Untersuchung einer einzelnen Brust beobachtet wurden.&#xD;
-&#xD;
-</purpose>
+      <purpose>Zur Darstellung einer narrative Beschreibung und klinische Interpretation der Befunde, die bei der körperlichen Untersuchung einer einzelnen Brust beobachtet wurden.</purpose>
       <use>Zur Erfassung einer narrativen Beschreibung und klinischen Interpretation der Befunde aus der körperlichen Untersuchung einer einzelnen Brust.&#xD;
 &#xD;
 Dieser Archetyp wurde speziell für den SLOT „Untersuchungsdetails“ innerhalb des Archetyps „OBSERVATION.exam“ oder „ACTION.procedure“ entwickelt, kann aber auch in anderen ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern klinisch sinnvoll.&#xD;
@@ -717,11 +715,8 @@ Use to incorporate the narrative descriptions of clinical findings within existi
       </items>
       <items code="at0012">
         <items id="text">Anatomisk plats</items>
-        <items id="description">Identifiering av den anatomiska plats som undersökts.&#xD;
-</items>
-        <items id="comment">Om den anatomiska platsen har identifierats fullt ut i "System eller struktur som undersökts" så blir detta element redundant.&#xD;
-&#xD;
-</items>
+        <items id="description">Identifiering av den anatomiska plats som undersökts.</items>
+        <items id="comment">Om den anatomiska platsen har identifierats fullt ut i "System eller struktur som undersökts" så blir detta element redundant.</items>
       </items>
       <items code="at0000">
         <items id="text">Fynd vid undersökning</items>
@@ -734,7 +729,7 @@ Use to incorporate the narrative descriptions of clinical findings within existi
       </items>
       <items code="at0003">
         <items id="text">Klinisk beskrivning</items>
-        <items id="description">En övergripande beskrivning av fynden från den fysiska undersökningen. </items>
+        <items id="description">En övergripande beskrivning av fynden från den fysiska undersökningen.</items>
       </items>
       <items code="at0004">
         <items id="text">Fynd vid undersökning</items>
@@ -880,8 +875,7 @@ Use to incorporate the narrative descriptions of clinical findings within existi
       </items>
       <items code="at0011">
         <items id="text">Strukturierte Körperstelle</items>
-        <items id="description">Eine strukturierte Beschreibung des zu untersuchenden Körperbereichs.&#xD;
-</items>
+        <items id="description">Eine strukturierte Beschreibung des zu untersuchenden Körperbereichs.</items>
         <items id="comment">Wenn die Körperstelle im Datenelement "Untersuchtes System oder untersuchte Struktur" oder im Datenelement "Körperstelle" vollständig identifiziert wurde, wird die Verwendung dieses SLOT überflüssig.</items>
       </items>
       <items code="at0012">
@@ -918,4 +912,3 @@ Use to incorporate the narrative descriptions of clinical findings within existi
     </term_bindings>
   </ontology>
 </archetype>
-

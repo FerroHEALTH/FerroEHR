@@ -14,18 +14,28 @@ map of which page documents which section.
 Copy the shipped template, edit it, and run:
 
 ```bash
-# Every key under its description, each at its default, generated from the
-# configuration types.
+# Every key under its description with its default, generated from the
+# configuration types; only the keys you must set are live lines.
 curl -fsSLo ferroehr.toml \
   https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/main/app/ferroehr/assets/ferroehr.default.toml
 
-# Edit it — at minimum set database.url and an auth mechanism.
+# Edit it: set the keys its "What you must set" block lists.
 $EDITOR ferroehr.toml
 
 # Validate without touching the database, then run.
 ferroehr config check --config ferroehr.toml
 ferroehr --config ferroehr.toml
 ```
+
+The template opens with a **What you must set** block: the keys a deployment
+that holds real data sets (the posture, the database, the system identifier,
+the patient identity source and pseudonym namespace, the provider and at
+least one token issuer), and they are its only live lines. Every other key is
+optional: its `#?` line shows the built-in default it runs on. Each key's note ends with why it is in the file:
+infrastructure (what the server needs before it reaches its store), trust
+(what it trusts, its floors and its secrets), or nothing more for a tuning
+key. A key the configuration types leave unclassified fails the build, so the
+file cannot gain a key nobody justified.
 
 A server started with **no file and no environment** still boots, with one
 exception you will hit immediately: authentication is on by default and a
@@ -131,20 +141,11 @@ until the family releases move them.
 
 ### Keys a release before v5.7.0 read
 
-v5.7.0 moved the configuration tree to one table per concern. Every key an
-earlier release read is refused at load with the key that replaced it, all of
-them in one pass, so `ferroehr config check --config <old file>` prints the
-whole move list for an old file:
-
-```text
-db was replaced by [database]: db.acquire_timeout_secs is database.acquire_timeout ...
-rest was replaced by [api]: rest.swagger_ui is api.openapi_ui ...
-audit.store.retention_days was replaced by audit.store.retention, a calendar period ...
-```
-
-No key is read under two names. These refusals ship in v5.7.0 only; the next
-release removes them, and an old key is then an unknown key. The full map is
-in the v5.7.0 changelog.
+v5.7.0 moved the configuration tree to one table per concern. A key an
+earlier release read is an unknown key like any other: the start is refused
+naming it, with the keys its table does read, so
+`ferroehr config check --config <old file>` lists every key an old file still
+sets. The v5.7.0 changelog maps each old key to its replacement.
 
 ## `deployment.spec_profile`
 
@@ -290,7 +291,7 @@ ticked by being present:
 | `open_subject_namespace` | `[privacy] subject_namespaces` declared, so an `EHR_STATUS` subject is an opaque pseudonym |
 | `audit_off` | `[audit]` enabled with a durable sink (the local store, syslog or the FHIR feed) |
 | `audit_fails_open` | `[audit] fail_mode = "closed"`, so an operation whose access record cannot be taken is refused instead of succeeding unlogged |
-| `no_category_map` | A category map applies while auditing is on: the one FerroEHR ships (the default) or `[audit.categories]` templates and archetypes of your own, so every access record names the categories of the data it reached (EHDS Annex II 3.2(c)). The gap opens only with `[audit.categories] shipped_map = false` and nothing declared |
+| `no_category_map` | A category map applies while auditing is on: the one FerroEHR ships (the default) or templates and archetypes of your own in the [audit category register](config-audit.md#the-audit-category-register), which refuses a write that opens this gap, so every access record names the categories of the data it reached (EHDS Annex II 3.2(c)). The gap opens only with `[audit.categories] shipped_map = false` and nothing declared |
 | `open_ehr_access_default` | `[authz.rbac] ehr_access_default = "restricted"`, so an EHR carrying no `ACCESS_CONTROL_SETTINGS` is reachable only by an admin. The shipped default is `open`. The setting is enforced with `[authz.rbac] enabled` on or off |
 | `migrate_on_runtime_credential` | `[database] migrate_url` set, or `migrations = "verify"`, so no credential that serves requests can alter the schema. Evaluated per domain database: a domain relocated to a database of its own is prepared on `[database.<domain>] migrate_url` when that is set, and on that domain's runtime DSN, which opens the gap, when it is not |
 | `auth_off` | `[auth] enabled = true`, so no request is served unauthenticated (CRA Annex I Part I(2)(d)) |
@@ -329,15 +330,13 @@ rather than inherit from a quickstart. See
 | `[auth]`, `[authz]` | Authentication (Basic, OAuth2/OIDC) and RBAC/ABAC | [Authentication & access](config-auth.md) |
 | `[management]` | The ops-introspection surface | [Authentication & access](config-auth.md) |
 | `[auth.smart]` | SMART App Launch discovery and scope enforcement | [Authentication & access](config-auth.md) |
-| `[privacy.access_delay]` | The EHDS Art. 3(3) delay of the person's own access to new data, off by default | [Authentication & access](config-auth.md#privacyaccess_delay) |
 | `[record.signing]` | VERSION signing and read-time verification | [Authentication & access](config-auth.md) |
 | `[record.versioning]` | The opt-in answer to an update whose content equals the current version's, off by default | [Authentication & access](config-auth.md#recordversioning) |
 | `[record.query]` | AQL execution budgets and result ceilings | [Integrations](config-integrations.md) |
 | `record.subject_index`, `[pixm]`, `[pixm.endpoint]` | Who holds the patient-to-EHR cross-reference: an IHE patient identity source over PIXm or the in-instance map | [Integrations](config-integrations.md#pixm) |
-| `[record.change_feed]` | The commit-event outbox and the readers of its feed | [Integrations](config-integrations.md#recordchange_feed) |
+| `[record.change_feed]` | The commit-event outbox retention; its readers are grants in the CDR | [Integrations](config-integrations.md#recordchange_feed) |
 | `[terminology]`, `[record.multimedia]` | The terminology server, multimedia externalization | [Integrations](config-integrations.md) |
 | `[audit]`, `[audit.store]`, `[audit.syslog]`, `[audit.fhir_feed]` | The IHE ATNA audit trail and its sinks | [Audit](config-audit.md) |
-| `[[authz.origin]]` | The origins of data the deployment recognises, which a retention period and an ABAC rule may name (EHDS Annex II 3.4) | [Audit](config-audit.md#authzorigin-the-origins-a-deployment-recognises) |
 | `[privacy]`, `[privacy.identifier_scan]` | What the clinical side refuses to hold: the subject reference, identified parties, the identifier scanner | [Privacy & data minimisation](config-privacy.md) |
 | `[privacy.cohort]`, `[privacy.cohort.predicates]` | Cross-domain cohort queries: the demographic predicate allow-list, the small-cell floor, the cohort ceiling | [Privacy & data minimisation](config-privacy.md) |
 | `[privacy.identifier_protection]` | Sealing national identifiers in the demographic domain, and the key that opens them | [Privacy & data minimisation](config-privacy.md) |

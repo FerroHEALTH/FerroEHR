@@ -1,0 +1,154 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-DEMOGRAPHIC-CLUSTER.person_details_iso.v1.0.0
+
+language
+    original_language = <[ISO_639-1::pt-br]>
+    translations = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"22/05/2009">
+    >
+    lifecycle_state = <"Authordraft">
+    references = <
+        ["1"] = <"ISO/TS 22220:2008(E) - Identification of Subject of Care - Technical Specification - International Organization for Standardization">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of a person's demographic data">
+            keywords = <"demographic service", "person's demographic data">
+            use = <"Used in demographic service to collect a person's demographic data">
+            misuse = <"">
+            copyright = <"copyright (c) 2009 openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação dos dados demográficos de uma pessoa">
+            keywords = <"serviço demográfico", "dados demográficos de uma pessoa">
+            use = <"Usado em serviço demográficos para coletar os dados demográficos de uma pessoa">
+            misuse = <"">
+            copyright = <"copyright (c) 2009 openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] occurrences matches {0..1} matches {    -- dados demográficos da pessoa
+        items matches {
+            ELEMENT[at0001] matches {    -- sexo
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac9000]}    -- sexo (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0002] matches {    -- Sobrenome da Mãe
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0003] matches {    -- Comentários de identificação
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"dados demográficos da pessoa">
+                description = <"dados da pessoa">
+            >
+            ["at0001"] = <
+                text = <"sexo">
+                description = <"sexo da pessoa">
+            >
+            ["at0002"] = <
+                text = <"Sobrenome da Mãe">
+                description = <"Sobrenome da mãe">
+            >
+            ["at0003"] = <
+                text = <"Comentários de identificação">
+                description = <"Comentários registrados para uma pessoa para distinguir entre duas ou mais pessoas com a mesma informação demográfica ou similar.">
+            >
+            ["at0010"] = <
+                text = <"Masculino">
+                description = <"Sexo masculino">
+            >
+            ["at0011"] = <
+                text = <"Feminino">
+                description = <"Sexo feminino">
+            >
+            ["at0012"] = <
+                text = <"Intersexo ou indeterminado">
+                description = <"Usado normalmente para bebês para os quais o sexo não foi determinado por qualquer razão. Não deve ser usado em formulários de coleta de dados completados pelo respondente e deve ser usado somente se a pessoa ou respondente voluntariamente afirma que a pessoa é intersexo ou onde fica claro durante o processo de coleta que o indivíduo não é nem do sexo masculino nem feminino">
+            >
+            ["at0013"] = <
+                text = <"Não declarado/inadequadamente descrito">
+                description = <"Não é para ser usado em formulários de coleta primária. É primariamente usado em coleções administrativas, ao transferir conjuntos de dados onde o item não foi coletado">
+            >
+            ["ac9000"] = <
+                text = <"sexo (synthesised)">
+                description = <"sexo da pessoa (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Person´s data">
+                description = <"A person's data">
+            >
+            ["at0001"] = <
+                text = <"Sex">
+                description = <"The sex of the subject">
+            >
+            ["at0002"] = <
+                text = <"Mother's family name">
+                description = <"Mother's original family name">
+            >
+            ["at0003"] = <
+                text = <"Identification comment">
+                description = <"Comments recorded for a person registration to distinguish between two or more persons with the same or similar demographic information">
+            >
+            ["at0010"] = <
+                text = <"Male">
+                description = <"Male">
+            >
+            ["at0011"] = <
+                text = <"Female">
+                description = <"Female">
+            >
+            ["at0012"] = <
+                text = <"Intersex or indeterminate">
+                description = <"is normally used for babies for whom sex has not been determined for whatever reason, should not generally be used on data collection forms completed by the respondent and should only be used if the person or respondent volunteers that the person is intersex or where it otherwise becomes clear during the collection process that the individual is neither male nor female">
+            >
+            ["at0013"] = <
+                text = <"Not declared/inadequately described">
+                description = <"is not to be used on primary collection forms. It is primarily for use in administrative collections when transferring data from data sets where the item has not been collected.">
+            >
+            ["ac9000"] = <
+                text = <"Sex (synthesised)">
+                description = <"The sex of the subject (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0010", "at0011", "at0012", "at0013">
+        >
+    >

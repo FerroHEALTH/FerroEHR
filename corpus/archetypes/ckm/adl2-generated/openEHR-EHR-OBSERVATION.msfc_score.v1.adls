@@ -1,0 +1,193 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4b519390-aee5-4630-bbd8-2fadbf3110e7; build_uid=82d40934-f45b-4a24-88b1-838aadac231e)
+    openEHR-EHR-OBSERVATION.msfc_score.v1.0.1
+
+language
+    original_language = <[ISO_639-1::de]>
+    translations = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            author = <
+                ["name"] = <"Michael Braun">
+                ["organisation"] = <"University Medical Center Freiburg, Germany">
+                ["email"] = <"braun@imbi.uni-freiburg.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Michael Braun">
+        ["organisation"] = <"University Medical Center Freiburg, Germany">
+        ["email"] = <"braun@imbi.uni-freiburg.de">
+        ["date"] = <"2012-12-05">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sebastian Bischoff, gfnmediber GmbH, Germany", "Martin Boeker, University Medical Center Freiburg, Germany", "Michael Braun, University Medical Center Freiburg, Germany (Editor)", "Heather Leslie, Ocean Informatics, Australia", "Sebastian Mansow-Model, gfnmediber GmbH, Germany", "Catalina Martínez-Costa, Medical University of Graz, Austria", "Ian McNicoll, Ocean Informatics, United Kingdom (Editor)", "Alexander U. Brandt, gfnmediber GmbH, Germany">
+    lifecycle_state = <"deprecated">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Fischer JS, Jak AJ, Kniker JE, Rudick RA, Cutter G. Multiple Sclerosis Functional Composite (MSFC), Administration and Scoring Manual: National Multiple Sclerosis Society; 2001.">
+    >
+    other_details = <
+        ["current_contact"] = <"Michael Braun, University Medical Center Freiburg, Germany, braun@imbi.uni-freiburg.de">
+        ["MD5-CAM-1.0.1"] = <"C2E3543CEF6E93E0C929C718B2308564">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Aufzeichnung des MSFC-Werts einer Person bezüglich einer Referenzpopulation. Das MSFC wurde von der Clinical Outcomes Assessment Task Force der National Multiple Sclerosis Society entwickelt. Der MSFC-Wert bildet eine Gesamtgröße, die mit der Schwere der Erkrankung bezüglich einer Referenzpopulation korreliert. Dabei werden in drei einzelnen Tests (Timed 25-Foot Walk, Nine Hole Peg Test und Paced Auditory Serial Addition Test) verschiedene Aspekte höherer Gehirnfunktionen gemessen. Die Ergebnisse dieser drei Test werden in Z-Werten normiert und im MSFC-Wert zusammengeführt.">
+            keywords = <"Multiple Sclerosis Functional Composite", "MSFC", "Multiple Sklerose", "MS", "Neurologie">
+            use = <"Verwendung zur Aufzeichnung des MSFC-Werts und der Datenbasis, sowie von Links zu den gemessenen Ergebnissen der drei einzelnen Tests (Timed 25-Foot Walk, Nine Hole Peg Test und Paced Auditory Serial Addition Test).
+
+Der MSFC-Wert ist eine aus den gemittelten Ergebnissen der einzelnen Tests berechnete Größe, adjustiert bezüglich einer Referenzpopulation. D.h. MSFC-Wert = 1/3 * (Z_arm,avg. + Z_leg,avg. + Z_cognitive), mit Z_x = Z-Wert aus jedem Ergebnis eines Tests. Dieser Wert muss extern berechnet werden, nur das Ergebnis wird hier aufgezeichnet.
+
+Siehe MSFC-Handbuch für weitere Auswertungsanweisungen, Formeln und Hintergrundinformationen.">
+            misuse = <"Nicht verwenden zur Aufzeichnung der Messergebnisse der drei einzelnen Tests des MSFC. Jeder Test sollte den speziell zutreffenden Archetyp verwenden: openEHR-EHR-OBSERVATION.timed_25_foot_walk.v1.adl, openEHR-EHR-OBSERVATION.nine_hole_peg_test.v1.adl und openEHR-EHR-OBSERVATION.paced_auditory_serial_addition_test.v1.adl.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the MSFC Score for an individual with respect to a reference population. The MSFC was developed by the National Multiple Sclerosis Society’s Clinical Outcomes Assessment Task Force. The MSFC Score forms a total value that correlates with the severity of the disease with respect to a reference population. In three separate tests (Timed 25-Foot Walk, Nine Hole Peg Test and Paced Auditory Serial Addition Test) various aspects of higher brain functions are measured. The results of these three tests are standardized into Z-scores ​​and merged into the MSFC Score.">
+            keywords = <"Multiple Sclerosis Functional Composite", "MSFC", "Multiple Sclerosis", "MS", "Neurology">
+            use = <"Use to record the MSFC Score and the reference data set, as well as links to the measured results of the three individual tests (Timed 25-Foot Walk, Nine Hole Peg Test and Paced Auditory Serial Addition Test).
+
+The MSFC Score is a computed value based on the average of each test result, adjusted to the reference population. I.e. MSFC Score = 1/3 * (Z_arm,avg. + Z_leg,avg. + Z_cognitive), where Z_x = Z-score of each test result. This score has to be computed externally, only the resulting value is to be recorded here.
+
+Use the MSFC Manual for further scoring instructions, formulas and background information.">
+            misuse = <"Not to be used to record the result of the three individual tests of the MSFC. Each test should use the correct specific archetype: openEHR-EHR-OBSERVATION.timed_25_foot_walk.v1.adl, openEHR-EHR-OBSERVATION.nine_hole_peg_test.v1.adl, and openEHR-EHR-OBSERVATION.paced_auditory_serial_addition_test.v1.adl.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- MSFC-Wert
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0010] matches {    -- Jedes Ereignis
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- MSFC-Wert
+                                        value matches {
+                                            DV_QUANTITY[at9001] matches {
+                                                property matches {[at9000]}    -- * Qualified real (en)
+                                                magnitude matches {|-100.0..100.0|}
+                                                units matches {" "}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0005] matches {
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0006] occurrences matches {1} matches {    -- Referenzpopulation
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Aufzeichnung des Timed 25-Foot Walk
+                        value matches {
+                            DV_EHR_URI[at9003]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Aufzeichnung des Nine Hole Peg Test
+                        value matches {
+                            DV_EHR_URI[at9004]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Aufzeichnung des Paced Auditory Serial Addition Test
+                        value matches {
+                            DV_EHR_URI[at9005]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"MSFC-Wert">
+                description = <"Das Multiple Sclerosis Functional Composite (MSFC) ist ein dreiteiliges, quantitatives und standardisiertes Beurteilungsinstrument für klinische Untersuchungen und Studien zur Multiplen Sklerose.">
+            >
+            ["at0004"] = <
+                text = <"MSFC-Wert">
+                description = <"Angabe des MSFC-Werts.">
+            >
+            ["at0006"] = <
+                text = <"Referenzpopulation">
+                description = <"Angabe der zugrundeliegenden Referenzpopulation.">
+            >
+            ["at0007"] = <
+                text = <"Aufzeichnung des Timed 25-Foot Walk">
+                description = <"Link zur detaillierten Originalaufzeichnung des Timed 25-Foot Walk.">
+            >
+            ["at0008"] = <
+                text = <"Aufzeichnung des Nine Hole Peg Test">
+                description = <"Link zur detaillierten Originalaufzeichnung des Nine Hole Peg Test.">
+            >
+            ["at0009"] = <
+                text = <"Aufzeichnung des Paced Auditory Serial Addition Test">
+                description = <"Link zur detaillierten Originalaufzeichnung des Paced Auditory Serial Addition Test.">
+            >
+            ["at0010"] = <
+                text = <"Jedes Ereignis">
+                description = <"Jedes unspezifizierte Ereignis.">
+            >
+            ["at9000"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"MSFC score">
+                description = <"The Multiple Sclerosis Functional Composite (MSFC) is a three-part, quantitative, and standardised assessment instrument for use in clinical studies and trials of Multiple Sclerosis.">
+            >
+            ["at0004"] = <
+                text = <"MSFC score">
+                description = <"Record of the MSFC Score.">
+            >
+            ["at0006"] = <
+                text = <"Reference Population">
+                description = <"Specification of the underlying reference population.">
+            >
+            ["at0007"] = <
+                text = <"Timed 25-Foot Walk Record">
+                description = <"Link to the detailed original record of the Timed 25-Foot Walk.">
+            >
+            ["at0008"] = <
+                text = <"Nine Hole Peg Test Record">
+                description = <"Link to the detailed original record of the Nine Hole Peg Test.">
+            >
+            ["at0009"] = <
+                text = <"Paced Auditory Serial Addition Test Record">
+                description = <"Link to the detailed original record of the Paced Auditory Serial Addition Test.">
+            >
+            ["at0010"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at9000"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/380>
+        >
+    >

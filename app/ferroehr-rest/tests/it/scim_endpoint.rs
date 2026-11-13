@@ -3,16 +3,17 @@
 
 //! The SCIM endpoint at `/scim/v2/` (#5014), driven through the assembled
 //! router: `/ServiceProviderConfig` without a token, the other discovery
-//! documents only for a declared provisioning client holding its scope
-//! (RFC 7644 §4, RFC 6750 §3), and every refusal as an RFC 7644 §3.12
-//! `Error` message. Who may provision is our own design.
+//! documents only for a client whose `scim_provision` grant in the CDR is in
+//! force, holding the grant's `token_scope` (RFC 7644 §4, RFC 6750 §3), and
+//! every refusal as an RFC 7644 §3.12 `Error` message (#5439). Who may
+//! provision is our own design.
 
 use std::num::NonZeroU32;
 
 use axum::Router;
 use ferroehr::config::binding::PartyBindingConfig;
 use ferroehr::config::binding::person::{PersonSection, PersonTemplate, RoleSection, Selector};
-use ferroehr::config::scim::{ScimClient, ScimConfig};
+use ferroehr::config::scim::ScimConfig;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_server::section::CallerRate;
 use ferrohealth_smart::config::{AuthSection, IssuerEntry};
@@ -23,6 +24,7 @@ use http::{StatusCode, header};
 use serde_json::{Value, json};
 
 use crate::common;
+use crate::policy_fixture::{capability, grant, scope};
 
 /// The deployment's own authorization server, which issues the client's tokens.
 const MACHINES: &str = "https://as.example";
@@ -44,7 +46,7 @@ fn binding() -> PartyBindingConfig {
         identifier_type: kind.to_owned(),
     };
     PartyBindingConfig {
-        person: PersonSection {
+        person: Some(PersonSection {
             template: vec![PersonTemplate {
                 template_id: "FerroEHR professional".to_owned(),
                 key: selector("guid"),
@@ -53,7 +55,7 @@ fn binding() -> PartyBindingConfig {
                 ..PersonTemplate::default()
             }],
             ..PersonSection::default()
-        },
+        }),
         professional_role: Some(RoleSection {
             template_id: "FerroEHR professional role".to_owned(),
         }),
@@ -79,7 +81,7 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
     let mut auth = common::auth(AuthSection {
         issuer: vec![machines, persons],
         party: vec![PartySection {
-            issuer: PERSONS.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(PERSONS),
             identifier_issuer: LOGIN.to_owned(),
             identifier_type: "guid".to_owned(),
             ..PartySection::default()
@@ -96,31 +98,39 @@ fn config(rate: Option<CallerRate>) -> AppConfig {
             party_binding: binding(),
             ..AppConfig::default()
         };
-        c.auth.scim = Some(ScimConfig {
-            public_base_url: Some(ferrohealth_secret::secret_url::SecretUrl::new(
-                "https://cdr.example.com",
-            )),
-            client: vec![ScimClient {
-                issuer: MACHINES.to_owned(),
-                client_id: CLIENT.to_owned(),
-                scope: SCOPE.to_owned(),
-                binding_issuer: LOGIN.to_owned(),
-            }],
-            ..ScimConfig::default()
-        });
+        c.public_root = Some(
+            ferroehr::config::server::PublicRoot::new("https://cdr.example.com", "")
+                .expect("a public root"),
+        );
+        c.auth.scim = Some(ScimConfig::default());
         c
     }
 }
 
+/// The `scim_provision` grant of a client owning the Users of
+/// `binding_issuer`, its token holding [`SCOPE`].
+fn provisioning(binding_issuer: &str) -> Value {
+    capability(
+        "scim_provision",
+        &[
+            scope("binding_issuer", binding_issuer),
+            scope("token_scope", SCOPE),
+        ],
+    )
+}
+
+/// The app over a store in which [`CLIENT`]'s `AGENT` holds the
+/// `scim_provision` grant of [`LOGIN`].
 async fn app(rate: Option<CallerRate>) -> (testkit::TestDb, Router) {
-    let (db, service) = common::test_service().await;
+    let (db, service) = crate::policy_fixture::granting_service().await;
+    grant(&service, MACHINES, CLIENT, &[provisioning(LOGIN)]).await;
     let config = config(rate);
     assert!(
         config
             .auth
             .scim
             .as_ref()
-            .is_some_and(|scim| scim.errors(None).is_empty()),
+            .is_some_and(|scim| scim.errors().is_empty()),
         "the test configuration is valid"
     );
     (db, common::router_with(config, service).await)
@@ -193,6 +203,34 @@ async fn the_service_provider_config_is_readable_without_a_token() {
     );
 }
 
+/// Every `meta.location` hangs off the one public URL of `[server]`, after the
+/// mount path the server serves every route under (#5465).
+#[tokio::test]
+async fn the_locations_hang_off_the_server_s_public_url_and_mount_path() {
+    let (_db, service) = common::test_service().await;
+    let mut config = config(None);
+    let server = ferroehr::config::server::ServerConfig {
+        shared: ferrohealth_server::section::ServerSection {
+            base_path: ferrohealth_server::section::BasePath::new("/ehr").expect("a mount path"),
+            ..config.server.clone()
+        },
+        public_base_url: Some(ferrohealth_secret::secret_url::SecretUrl::new(
+            "https://gw.example/cdr",
+        )),
+    };
+    config.public_root = server.public_root();
+    config.server = server.shared;
+    let app = common::router_with(config, service).await;
+    let request = common::req("GET", "/ehr/scim/v2/ServiceProviderConfig").build();
+    let (status, _headers, body) = common::send(&app, request).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let body: Value = serde_json::from_str(&body).expect("a JSON body");
+    assert_eq!(
+        body["meta"]["location"],
+        "https://gw.example/cdr/ehr/scim/v2/ServiceProviderConfig"
+    );
+}
+
 #[tokio::test]
 async fn a_declared_client_holding_its_scope_reads_the_discovery_documents() {
     let (_db, app) = app(None).await;
@@ -214,8 +252,10 @@ async fn a_declared_client_holding_its_scope_reads_the_discovery_documents() {
         ids,
         [
             "urn:ietf:params:scim:schemas:core:2.0:User",
-            "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User"
-        ]
+            "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User",
+            "urn:ietf:params:scim:schemas:core:2.0:Group"
+        ],
+        "the group and membership sections the mapping leaves unset default to the shipped ones"
     );
     let (status, _, body) = get(
         &app,
@@ -263,6 +303,64 @@ async fn a_missing_scope_an_undeclared_client_and_a_person_are_refused() {
     assert_error(status, &headers, &body, StatusCode::FORBIDDEN);
 }
 
+/// A grant naming a `binding_issuer` no `[[auth.party]]` table issues, one
+/// another client's grant names too, two of them, or no grant at all admits
+/// nothing.
+#[tokio::test]
+async fn a_grant_that_cannot_own_its_users_is_refused() {
+    let (_db, service) = crate::policy_fixture::granting_service().await;
+    grant(
+        &service,
+        MACHINES,
+        "unbound",
+        &[provisioning("urn:example:other")],
+    )
+    .await;
+    grant(&service, MACHINES, CLIENT, &[provisioning(LOGIN)]).await;
+    grant(&service, MACHINES, "second", &[provisioning(LOGIN)]).await;
+    grant(
+        &service,
+        MACHINES,
+        "split",
+        &[provisioning(LOGIN), provisioning("urn:example:other")],
+    )
+    .await;
+    let app = common::router_with(config(None), service).await;
+    for (client, refusal) in [
+        ("unbound", "identifier_issuer of no [[auth.party]] table"),
+        (CLIENT, "another client's scim_provision grant"),
+        ("second", "another client's scim_provision grant"),
+        ("split", "name 2 binding issuers"),
+        ("stranger", "holds no scim_provision grant"),
+    ] {
+        let (status, headers, body) =
+            get(&app, "/Schemas", Some(&client_token(client, SCOPE))).await;
+        assert_error(status, &headers, &body, StatusCode::FORBIDDEN);
+        assert!(
+            body["detail"].as_str().is_some_and(|d| d.contains(refusal)),
+            "{client}: {body}"
+        );
+    }
+}
+
+/// A grant committed to the CDR admits its client on the next request, with
+/// no restart.
+#[tokio::test]
+async fn a_grant_committed_later_admits_the_next_request() {
+    let (_db, service) = crate::policy_fixture::granting_service().await;
+    let app = common::router_with(config(None), std::sync::Arc::clone(&service)).await;
+    let token = client_token(CLIENT, SCOPE);
+    let (status, headers, body) = get(&app, "/Schemas", Some(&token)).await;
+    assert_error(status, &headers, &body, StatusCode::FORBIDDEN);
+    grant(&service, MACHINES, CLIENT, &[provisioning(LOGIN)]).await;
+    let (status, _, body) = get(&app, "/Schemas", Some(&token)).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "the grant admits the next request: {body}"
+    );
+}
+
 #[tokio::test]
 async fn past_its_rate_a_client_is_429() {
     let rate = CallerRate {
@@ -287,6 +385,7 @@ async fn off_by_default_nothing_is_served() {
     let config = {
         let mut c = AppConfig { ..config(None) };
         c.auth.scim = Some(ScimConfig::default());
+        c.public_root = None;
         c
     };
     let app = common::router_with(config, service).await;

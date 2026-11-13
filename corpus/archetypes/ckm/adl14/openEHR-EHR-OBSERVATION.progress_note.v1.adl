@@ -31,6 +31,14 @@ language
 			>
 			accreditation = <"MD">
 		>
+		["sl"] = <
+			language = <[ISO_639-1::sl]>
+			author = <
+				["name"] = <"Vanja Maravić, Ana Milošev, Anđela Marjanović, Vuk Radnić">
+				["organisation"] = <"Better Deutschland GmbH, Better d.o.o.">
+				["email"] = <"vanja.maravic@better.care, ana.milosev@better.care, andjela.marjanovic@better.care, vuk.radnic@better.care">
+			>
+		>
 		["nl"] = <
 			language = <[ISO_639-1::nl]>
 			author = <
@@ -100,6 +108,19 @@ This archetype may also be used if there are no structured archetypes available,
 Not to be used to record a narrative, summary view of the patient's health, for example to communicate a succinct summary of the patient's hospital admission as one component of a comprehensive and structured Discharge Summary document. Use the EVALUATION.clinical_synopsis archetype for this purpose.">
 			copyright = <"© openEHR Foundation">
 		>
+		["sl"] = <
+			language = <[ISO_639-1::sl]>
+			purpose = <"Za ročno sestavljanje in beleženje pripovednega opisa o z zdravjem povezanih dogodkih, ki so aktualni v času beleženja, iz perspektive izvajalca zdravstvene oskrbe.">
+			use = <"Uporabiti za ročno sestavljanje in beleženje pripovednega opisa o aktualnih z zdravjem povezanih dogodkih in dejavnostih iz perspektive izvajalca zdravstvene oskrbe.
+
+Ta nestrukturiran opis lahko vključuje zdravstveno stanje in ugotovitve o posamezniku, ki so aktualni v času beleženja. Najpogosteje je ta opis povezan z negovalnimi zapiski ob koncu izmene ali dnevnimi zapiski izvajalca zdravstvenih storitev, kot je zdravnik ali fizioterapevt. V praksi je Poročilo o poteku meta opazovanje, ki bo dopolnilo obstoječi strukturirani klinični zapis, kar omogoča izražanje subtilnih, subjektivnih ali interpretativnih informacij o pacientu, ki sicer morda ne bi bile očitne samo s strukturiranimi podatki, kar zagotavlja ravnovesje in kontekst zapisa EHR. V številnih situacijah bo ta arhetip kombiniran skupaj z drugimi bolj strukturiranimi arhetipi znotraj enega samega COMPOSITION arhetipa.
+
+Ta arhetip se lahko uporablja tudi, če ni na voljo strukturiranih arhetipov, ali za beleženje zapisov o poteku, uvoženih iz zastarelih sistemov.">
+			keywords = <"komentar", "zapis", "opomba", "napredek", "beležka">
+			misuse = <"Ne uporabljati za beleženje specifičnih strukturiranih ali delno strukturiranih zdravstvenih informacij. Na primer, podrobne informacije o problemih/diagnozah, rezultatih preiskav in vitalnih znakih, ugotovitvah pregleda in zgodbi/anamnezi pacienta je treba beležiti z uporabo specifičnih ustreznih EVALUATION ali OBSERVATION arhetipov.
+
+Ne uporabljati za beleženje pripovednega, povzetega prikaza zdravja pacienta, na primer za sporočanje jedrnatega povzetka bolnišničnega sprejema pacienta kot ene komponente celovitega in strukturiranega dokumenta odpustnega pisma. Za ta namen uporabiti arhetip EVALUATION.clinical_synopsis.">
+		>
 		["nl"] = <
 			language = <[ISO_639-1::nl]>
 			purpose = <"*To manually synthesise and record a narrative description about health related events that are current at the time of recording, from the perspective of a healthcare provider.(en)">
@@ -124,9 +145,9 @@ Not to be used to record a narrative, summary view of the patient's health, for 
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"0DC26E43DE454A2B3FE00A7AEA553E2A">
-		["build_uid"] = <"715f68b3-8720-4824-aca9-b437ebf5dbba">
-		["revision"] = <"1.1.1">
+		["MD5-CAM-1.0.1"] = <"6F49066691A20F329594AD526BD2BF16">
+		["build_uid"] = <"f47ae5f3-f0c8-4571-842d-b21f43476d28">
+		["revision"] = <"1.1.2">
 	>
 
 definition
@@ -161,7 +182,6 @@ definition
 			}
 		}
 	}
-
 
 ontology
 	term_definitions = <
@@ -327,6 +347,39 @@ ontology
 					text = <"Erweiterung">
 					description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
 					comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+				>
+			>
+		>
+		["sl"] = <
+			items = <
+				["at0000"] = <
+					text = <"Poročilo o poteku">
+					description = <"Pripovedni opis z zdravjem povezanih dogodkov v določeni časovni točki o posamezniku, posebej iz perspektive izvajalca zdravstvene oskrbe.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Katerikoli dogodek">
+					description = <"Privzeta, nespecificirana časovna točka ali intervalni dogodek, ki je lahko eksplicitno določen v predlogi ali med izvajanjem.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Poročilo o poteku">
+					description = <"Pripovedni opis z zdravjem povezanih dogodkov, zdravstvenega stanja, ugotovitev, mnenj v določeni časovni točki.">
+				>
+				["at0005"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0006"] = <
+					text = <"Razširitev">
+					description = <"Dodatne informacije, potrebne za zajemanje lokalnega konteksta ali za uskladitev z drugimi referenčnimi modeli/formalizmi.">
+					comment = <"Na primer: informacije lokalnega bolnišničnega oddelka ali dodatni metapodatki za uskladitev z ekvivalenti FHIR.">
 				>
 			>
 		>

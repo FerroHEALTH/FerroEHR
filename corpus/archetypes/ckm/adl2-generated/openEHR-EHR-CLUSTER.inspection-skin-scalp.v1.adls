@@ -1,0 +1,100 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=34c68846-48b7-45a9-8c4b-8420f81a0a58; build_uid=7f385e2e-f535-4c0c-b1ea-80a6bbbf47a9)
+    openEHR-EHR-CLUSTER.inspection-skin-scalp.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.inspection-skin.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"10/04/2007">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"04DC5AC9C6FCB6ED6DBD60B2B01E31FA">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording the findings on inspection of the skin">
+            keywords = <"inspect", "visual", "skin">
+            use = <"For use with the exam clusters for recording findings on inspection">
+            misuse = <"Should only be used in the exam observation">
+            copyright = <"copyright (c) 2009 openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1.1] matches {    -- Inspection of scalp
+        items matches {
+            after [at0006]
+            CLUSTER[at0.0.62] occurrences matches {0..1} matches {    -- Hair
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0.0.64] occurrences matches {0..1} matches {    -- Clinical Description
+                        value matches {
+                            DV_CODED_TEXT[at0.0.9000] matches {
+                                defining_code
+                            }
+                        }
+                    }
+                    ELEMENT[at0.0.65] occurrences matches {0..1} matches {    -- Colour
+                        value matches {
+                            DV_TEXT[at0.0.9001]
+                        }
+                    }
+                    ELEMENT[at0.0.61] occurrences matches {0..1} matches {    -- Distribution of hair
+                        value matches {
+                            DV_TEXT[at0.0.9002]
+                        }
+                    }
+                    ELEMENT[at0.0.63] occurrences matches {0..1} matches {    -- Thickness of hair
+                        value matches {
+                            DV_CODED_TEXT[at0.0.9003] matches {
+                                defining_code
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.0.61"] = <
+                text = <"Distribution of hair">
+                description = <"Pattern or distribution of hair">
+            >
+            ["at0.0.62"] = <
+                text = <"Hair">
+                description = <"*">
+            >
+            ["at0.0.63"] = <
+                text = <"Thickness of hair">
+                description = <"*">
+            >
+            ["at0.0.64"] = <
+                text = <"Clinical Description">
+                description = <"*">
+            >
+            ["at0.0.65"] = <
+                text = <"Colour">
+                description = <"Natural colour of hair">
+            >
+            ["at0000.1.1"] = <
+                text = <"Inspection of scalp">
+                description = <"The findings on inspection of the scalp">
+            >
+        >
+    >
