@@ -394,7 +394,8 @@ pub struct Authenticator {
     /// The party binding every admitted caller is looked up in, when an
     /// `[[auth.party]]` table binds an issuer.
     party: Option<Arc<party::Binding>>,
-    /// The system clients and the federation agreements.
+    /// The system clients and the caller limits of the federation
+    /// agreements.
     declared: declared::Declared,
 }
 
@@ -476,7 +477,6 @@ impl Authenticator {
         if let Some(refusal) = access.caller().and_then(party::kind_refusal) {
             return Err(refusal);
         }
-        let access = self.declared.admit(access)?;
         let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
         let roles = self.role_issuers.roles(caller);
         let honoured = self.gate.honoured(&access);
@@ -567,6 +567,10 @@ pub(crate) async fn middleware(
             mut principal,
             fresh,
         }) => {
+            let granted = match grants::admit(&layer, &mut principal, req.headers()).await {
+                Ok(granted) => granted,
+                Err(refusal) => return *refusal,
+            };
             if let Some(refusal) = purpose::mismatch(&layer, &principal, &req) {
                 return refusal;
             }
@@ -619,10 +623,6 @@ pub(crate) async fn middleware(
                     Err(e) => return refusal::response(auth, req.headers(), &e),
                 }
             }
-            let granted = match grants::resolve(&layer, &for_audit).await {
-                Ok(granted) => granted,
-                Err(e) => return refusal::response(auth, req.headers(), &e),
-            };
             // The roles ride beside the committer identity for the request
             // scope, so a record the service layer emits by itself carries
             // them too (#3239).

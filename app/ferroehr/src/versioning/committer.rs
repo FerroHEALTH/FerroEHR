@@ -95,18 +95,18 @@ pub struct CommitterIdentity {
     pub external: Option<ExternalCaller>,
 }
 
-/// What a verified external caller may commit under its
-/// `[[authz.federation.agreement]]`.
+/// What a verified external caller may commit under its federation
+/// agreement ([`crate::party_binding::grants::agreement::Agreement`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExternalCaller {
     /// A verified external person, who commits a COMPOSITION only of a
-    /// template the agreement's `writes` lists.
+    /// template the agreement lists.
     Person {
-        /// The agreement's `writes`.
+        /// The templates the agreement lists.
         writes: Vec<String>,
         /// What the token asserts about the professional and the provider.
         professional: Box<external::ExternalProfessional>,
-        /// The agreement's `discard_window_hours` where it sets `discard`:
+        /// The agreement's discard window in whole hours, where it holds one:
         /// the person may then discard a dispensation of its point of care.
         discard_window_hours: Option<u32>,
     },

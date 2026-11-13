@@ -211,8 +211,11 @@ in the element's `name`:
 | `subject_namespace` | The `EHR_STATUS.subject.external_ref.namespace` of the EHRs it touches |
 | `acts_for` | On a `PARTY_RELATIONSHIP`: the source acts for the target |
 
-A code of another terminology grants nothing, and a code of
-`ferroehr-operations` that the table does not define is refused at commit.
+The terms of a federation agreement are named by codes of the same
+terminology ([Federation agreements](#federation-agreements)), and the value of
+an element any of these codes names is that element's value, never an
+operation. A code of another terminology grants nothing, and a code of
+`ferroehr-operations` that no table defines is refused at commit.
 A capability that codes several operations grants each of them.
 
 **Who acts.** A client is any `ACTOR` (`AGENT`, `PERSON`, `ORGANISATION` or
@@ -223,8 +226,9 @@ a second party carrying the same issuer and `client_id` is refused with
 `409`.
 
 **Whose grants.** Every authenticated request resolves its caller's grants
-once: a system client, a token of a `machines` issuer, by its issuer and
-`client_id`; a person the login binding bound to a `PERSON`, by that party;
+once: a system client, a token of a `machines` issuer, and a verified
+external caller of a `federation` issuer, by its issuer and `client_id`; a
+person the login binding bound to a `PERSON`, by that party;
 anyone else to no grants. Its grants are the operations the capabilities of
 the `ROLE`s whose `performer` names that party grant, when:
 
@@ -272,6 +276,72 @@ key, for example `the ROLE grants the operation import_ehr, which
 already stored, for example before you narrowed the ceiling, is never
 honoured, and the server logs the operations it skips when it reads the
 grants.
+
+### Federation agreements
+
+A federation agreement says what a partner's verified external persons, or
+the partner organisation itself, may do here and on which legal ground. It is
+a grant on the partner: the partner's `ACTOR` (usually an `ORGANISATION`)
+carries a `client_id` identifier for each client its `federation` issuer
+issues tokens to, and a `ROLE` it performs holds one capability per accessor.
+A capability coding `federated_person_access` admits the partner's named
+persons; one coding `federated_organisation_access` admits the organisation
+itself, with no named person. The agreement holds while the grant does: its
+`time_validity` and its `not_before` and `not_after` elements. An external
+caller is admitted only under the agreement of its accessor kind that its
+partner holds on the request, read from the CDR, so a new, changed or ended
+agreement takes effect on the next request.
+
+The agreement's terms are elements of the capability's `credentials`, each
+named by its `ferroehr-operations` code:
+
+| Code | Element |
+|---|---|
+| `agreement_name`, `agreement_version` | `DV_TEXT`: the agreement's name and version |
+| `jurisdiction` | `DV_TEXT` or `DV_CODED_TEXT`: the ISO 3166-1 alpha-2 code of the jurisdiction |
+| `exchange` | `DV_TEXT`: the kind of exchange |
+| `purpose` | `DV_CODED_TEXT` or `DV_TEXT`: what the exchange is for |
+| `gdpr_art_6_1`, `gdpr_art_9_2` | `DV_TEXT` or `DV_CODED_TEXT`: the point of GDPR Art. 6(1), `a` to `f`, and of Art. 9(2), `a` to `j` |
+| `national_provision` | `DV_TEXT`: the provision of the law that applies |
+| `consent` | `registry` (an external consent registry, whose question names the responsible professional) or `local`: the source of the consent a read is conditioned on; a read must then carry its consent decision reference |
+| `read_scope` | `DV_TEXT`, one per scope: a `patient/` scope the callers may read |
+| `template` | `DV_TEXT`, one per template: a template an external person may commit |
+| `discard_window` | `DV_DURATION` of whole hours, such as `PT24H`: an external person may discard a dispensation of its own point of care within it |
+| `ehdsi_service` | `patient_summary`, `eprescription` or `orcd`: the MyHealth@EU service a contact point's person agreement serves |
+| `requests_per_second`, `burst` | `DV_COUNT`: the admission rate per caller |
+| `opt_out_override` | `DV_BOOLEAN`: a professional may read an opted-out EHR under an emergency purpose |
+| `access_class` | `automated` or `chained`: how an organisation's access is attributed |
+| `requester_log_retention` | `DV_DURATION` of whole years or days, such as `P5Y`: how long a `chained` requester keeps its log |
+
+A coded value is read by its `code_string` in any terminology, a text by its
+`value`. A `ROLE` whose agreement breaks one of these rules is refused at its
+commit with `422`, and the problem names every rule it breaks:
+
+- the partner carries a `client_id` identifier, and each identifier's issuer
+  is an `[[auth.issuer]]` of kind `federation`;
+- a partner holds one agreement per accessor: a second capability for the same
+  accessor, in this `ROLE` or another, is refused;
+- every element holds a value of its kind;
+- every agreement sets `requests_per_second` and `burst`, reads only
+  `patient/` scopes, and codes its GDPR points within their articles;
+- a contact point's person agreement names its `ehdsi_service`, and no other
+  agreement does;
+- an organisation agreement names its `agreement_name`, `agreement_version`,
+  GDPR points and `access_class`, writes no template (EHDS Art. 13(4)), sets
+  no `opt_out_override`, takes no consent from a `registry`, and its partner
+  is no contact point;
+- a `chained` organisation agreement sets a `requester_log_retention` at
+  least as long as `[audit.store] retention`, and its issuer's
+  `[[auth.federation]]` table maps `correlation_id` from the token, never from
+  a constant.
+
+The partner's client identifiers are read when the `ROLE` commits, so commit
+the partner first; a contribution lists it before the `ROLE`. An agreement
+that no longer keeps the rules, for example after its partner gained an
+identifier of a contact point, admits no caller, and the server logs why.
+`/management/info` lists every agreement in force under `binding.agreements`,
+with its partner's issuer and client, its accessor, name and legal ground, and
+the boot line names each one.
 
 ### For a check that reads a grant
 
@@ -349,16 +419,16 @@ credentials at `/capabilities[id6]/credentials[id8]`, and its `time_validity` th
 | `ROLE.data_migration` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id15]`, `[id16]`, `[id17]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
 | `ROLE.federation_partner` | Kind (accessor) | `at10` person, `at11` organisation | |
 | `ROLE.federation_partner` | Agreement name, version, jurisdiction, exchange | `/capabilities[id6]/credentials[id8]/items[id9]`, `[id10]`, `[id11]`, `[id12]` | `DV_TEXT` |
-| `ROLE.federation_partner` | Purpose | `/capabilities[id6]/credentials[id8]/items[id13]`: `at20` care, `at21` keuring | `DV_CODED_TEXT` |
-| `ROLE.federation_partner` | Legal ground: GDPR Art. 6(1), Art. 9(2), national provision | `/capabilities[id6]/credentials[id8]/items[id14]/items[id15]`, `[id16]`, `[id17]` | `DV_TEXT` |
-| `ROLE.federation_partner` | Consent source | `/capabilities[id6]/credentials[id8]/items[id18]`: `at30` Mitz, `at31` local | `DV_CODED_TEXT` |
+| `ROLE.federation_partner` | Purpose | `/capabilities[id6]/credentials[id8]/items[id13]` | `DV_CODED_TEXT` |
+| `ROLE.federation_partner` | Legal ground: GDPR Art. 6(1), Art. 9(2), the provision of the law that applies | `/capabilities[id6]/credentials[id8]/items[id14]/items[id15]`, `[id16]`, `[id17]` | `DV_TEXT` |
+| `ROLE.federation_partner` | Consent source: `registry` or `local` | `/capabilities[id6]/credentials[id8]/items[id18]` | `DV_CODED_TEXT` |
 | `ROLE.federation_partner` | Read scope, template written | `/capabilities[id6]/credentials[id8]/items[id19]`, `[id20]` | `DV_TEXT` |
-| `ROLE.federation_partner` | Discard, discard window | `/capabilities[id6]/credentials[id8]/items[id21]`, `[id22]` | `DV_BOOLEAN`, `DV_DURATION` |
-| `ROLE.federation_partner` | MyHealth@EU service | `/capabilities[id6]/credentials[id8]/items[id23]`: `at40` Patient Summary, `at41` ePrescription, `at42` original clinical document | `DV_CODED_TEXT` |
+| `ROLE.federation_partner` | Discard window | `/capabilities[id6]/credentials[id8]/items[id22]` | `DV_DURATION` |
+| `ROLE.federation_partner` | MyHealth@EU service: `patient_summary`, `eprescription` or `orcd` | `/capabilities[id6]/credentials[id8]/items[id23]` | `DV_CODED_TEXT` |
 | `ROLE.federation_partner` | Caller rate: requests per second, burst | `/capabilities[id6]/credentials[id8]/items[id24]/items[id25]`, `[id26]` | `DV_COUNT` |
 | `ROLE.federation_partner` | Opt-out override | `/capabilities[id6]/credentials[id8]/items[id27]` | `DV_BOOLEAN` |
-| `ROLE.federation_partner` | Access class | `/capabilities[id6]/credentials[id8]/items[id28]`: `at50` automated, `at51` chained | `DV_CODED_TEXT` |
-| `ROLE.federation_partner` | Chained log retention | `/capabilities[id6]/credentials[id8]/items[id29]` | `DV_DURATION` |
+| `ROLE.federation_partner` | Access class: `automated` or `chained` | `/capabilities[id6]/credentials[id8]/items[id28]` | `DV_CODED_TEXT` |
+| `ROLE.federation_partner` | Requester log retention | `/capabilities[id6]/credentials[id8]/items[id29]` | `DV_DURATION` |
 | `ROLE.federation_partner` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id30]`, `[id31]`, `[id32]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
 | `ROLE.privileged` | Kind (privilege) | `at10` subject audit, `at11` access service, `at12` identifier reader, `at13` import | |
 | `ROLE.privileged` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id9]`, `[id10]`, `[id11]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
@@ -689,9 +759,16 @@ data migration template, `POST /demographic/role`. The capability's
 #### A federation partner
 
 A partner organisation's professionals read patient summaries under a
-data-sharing agreement. The grant is a `ROLE` of the federation partner
-template performed by the partner's `ORGANISATION`, with one capability per
-accessor, here `person`.
+data-sharing agreement. The partner is an `ORGANISATION` that carries a
+`client_id` identifier for each client its `federation` issuer issues tokens
+to, for example `{ "_type": "DV_IDENTIFIER", "issuer":
+"https://federation.example", "id": "remote-portal", "type": "client_id" }`
+in its `details`; committing it is an administrator's write, because the
+identifier makes it a policy party. The agreement is a `ROLE` of the
+federation partner template the partner performs, with one capability per
+accessor, here `person`. Each term is an element whose `name` is its
+`ferroehr-operations` code, which is how FerroEHR reads it in any archetype
+(see [Federation agreements](#federation-agreements)).
 
 <!-- policy-example: federation-partner-role -->
 ```json
@@ -721,8 +798,8 @@ accessor, here `person`.
   },
   "time_validity": {
     "_type": "DV_INTERVAL",
-    "lower": { "_type": "DV_DATE", "value": "2027-01-01" },
-    "upper": { "_type": "DV_DATE", "value": "2027-12-31" },
+    "lower": { "_type": "DV_DATE", "value": "2026-01-01" },
+    "upper": { "_type": "DV_DATE", "value": "2036-12-31" },
     "lower_unbounded": false, "upper_unbounded": false,
     "lower_included": true, "upper_included": true
   },
@@ -737,71 +814,74 @@ accessor, here `person`.
       "items": [
         {
           "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
-          "value": {
-            "_type": "DV_CODED_TEXT", "value": "Federated person access",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "federated_person_access" }
-          }
+          "value": { "_type": "DV_CODED_TEXT", "value": "Federated person access", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "federated_person_access" } }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id9", "name": { "_type": "DV_TEXT", "value": "Agreement name" },
+          "_type": "ELEMENT", "archetype_node_id": "id9",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Agreement name", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "agreement_name" } },
           "value": { "_type": "DV_TEXT", "value": "Regional care network exchange" }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id10", "name": { "_type": "DV_TEXT", "value": "Agreement version" },
+          "_type": "ELEMENT", "archetype_node_id": "id10",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Agreement version", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "agreement_version" } },
           "value": { "_type": "DV_TEXT", "value": "2.1" }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id11", "name": { "_type": "DV_TEXT", "value": "Jurisdiction" },
-          "value": { "_type": "DV_TEXT", "value": "NL" }
+          "_type": "ELEMENT", "archetype_node_id": "id11",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Jurisdiction", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "jurisdiction" } },
+          "value": { "_type": "DV_TEXT", "value": "DE" }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id12", "name": { "_type": "DV_TEXT", "value": "Exchange" },
+          "_type": "ELEMENT", "archetype_node_id": "id12",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Exchange", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "exchange" } },
           "value": { "_type": "DV_TEXT", "value": "patient summary" }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id13", "name": { "_type": "DV_TEXT", "value": "Purpose" },
-          "value": {
-            "_type": "DV_CODED_TEXT", "value": "Care",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" }, "code_string": "at20" }
-          }
+          "_type": "ELEMENT", "archetype_node_id": "id13",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Purpose", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "purpose" } },
+          "value": { "_type": "DV_CODED_TEXT", "value": "treatment", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_PurposeOfUse" }, "code_string": "TREAT" } }
         },
         {
           "_type": "CLUSTER", "archetype_node_id": "id14", "name": { "_type": "DV_TEXT", "value": "Legal ground" },
           "items": [
             {
-              "_type": "ELEMENT", "archetype_node_id": "id15", "name": { "_type": "DV_TEXT", "value": "GDPR Article 6(1) point" },
-              "value": { "_type": "DV_TEXT", "value": "c" }
+              "_type": "ELEMENT", "archetype_node_id": "id15",
+              "name": { "_type": "DV_CODED_TEXT", "value": "GDPR Article 6(1) point", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "gdpr_art_6_1" } },
+              "value": { "_type": "DV_TEXT", "value": "e" }
             },
             {
-              "_type": "ELEMENT", "archetype_node_id": "id16", "name": { "_type": "DV_TEXT", "value": "GDPR Article 9(2) point" },
+              "_type": "ELEMENT", "archetype_node_id": "id16",
+              "name": { "_type": "DV_CODED_TEXT", "value": "GDPR Article 9(2) point", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "gdpr_art_9_2" } },
               "value": { "_type": "DV_TEXT", "value": "h" }
             },
             {
-              "_type": "ELEMENT", "archetype_node_id": "id17", "name": { "_type": "DV_TEXT", "value": "National provision" },
-              "value": { "_type": "DV_TEXT", "value": "UAVG Art. 30(3)(a)" }
+              "_type": "ELEMENT", "archetype_node_id": "id17",
+              "name": { "_type": "DV_CODED_TEXT", "value": "National provision", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "national_provision" } },
+              "value": { "_type": "DV_TEXT", "value": "the provision the agreement names" }
             }
           ]
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id18", "name": { "_type": "DV_TEXT", "value": "Consent source" },
-          "value": {
-            "_type": "DV_CODED_TEXT", "value": "Mitz",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" }, "code_string": "at30" }
-          }
+          "_type": "ELEMENT", "archetype_node_id": "id18",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Consent source", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "consent" } },
+          "value": { "_type": "DV_CODED_TEXT", "value": "Local", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "local" } }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id19", "name": { "_type": "DV_TEXT", "value": "Read scope" },
+          "_type": "ELEMENT", "archetype_node_id": "id19",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Read scope", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "read_scope" } },
           "value": { "_type": "DV_TEXT", "value": "patient/composition-openEHR-EHR-COMPOSITION.patient_summary.v1.r" }
         },
         {
           "_type": "CLUSTER", "archetype_node_id": "id24", "name": { "_type": "DV_TEXT", "value": "Caller rate" },
           "items": [
             {
-              "_type": "ELEMENT", "archetype_node_id": "id25", "name": { "_type": "DV_TEXT", "value": "Requests per second" },
+              "_type": "ELEMENT", "archetype_node_id": "id25",
+              "name": { "_type": "DV_CODED_TEXT", "value": "Requests per second", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "requests_per_second" } },
               "value": { "_type": "DV_COUNT", "magnitude": 5 }
             },
             {
-              "_type": "ELEMENT", "archetype_node_id": "id26", "name": { "_type": "DV_TEXT", "value": "Burst" },
+              "_type": "ELEMENT", "archetype_node_id": "id26",
+              "name": { "_type": "DV_CODED_TEXT", "value": "Burst", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "burst" } },
               "value": { "_type": "DV_COUNT", "magnitude": 20 }
             }
           ]
@@ -914,6 +994,8 @@ design:
   `roles` list need not name the `ROLE`.
 - **Break-glass stays in the configuration**, so emergency access works when
   the party store does not answer.
+- **A federation agreement is a grant on the partner**, keyed by its client
+  identifiers, and its rules are judged when it is written.
 
 ## The admin registers
 

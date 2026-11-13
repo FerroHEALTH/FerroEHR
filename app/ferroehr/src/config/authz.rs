@@ -370,8 +370,6 @@ pub struct AuthzConfig {
     pub import: crate::config::clients::ImportConfig,
     /// The system clients that commit (`[[authz.system_client]]`).
     pub system_client: Vec<crate::config::clients::SystemClient>,
-    /// The federation agreements (`[authz.federation]`).
-    pub federation: crate::config::agreement::FederationConfig,
     /// The origins of data this deployment recognises, which a retention
     /// period and an access rule may name (`[[authz.origin]]`, EHDS Annex II
     /// 3.4).

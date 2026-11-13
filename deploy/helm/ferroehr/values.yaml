@@ -725,13 +725,8 @@ config:
     #     writes: []
     #     origins: [relay]
     system_client: []
-    # What a federation issuer's external persons or organisation may do here,
-    # one agreement per issuer and accessor (person | organisation), with its
-    # legal ground, consent source, patient/ reads, caller_rate and, for an
-    # organisation, its access_class (automated | chained). See the
-    # configuration reference for every key.
-    federation:
-      agreement: []
+    # The federation agreements are CDR data, written through the Demographic
+    # API (Operational policy in the book), and no configuration key.
 
   # [auth.scim] — the SCIM 2.0 service provider at /scim/v2 (RFC 7644),
   # through which an identity provider such as Microsoft Entra ID provisions

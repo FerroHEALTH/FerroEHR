@@ -42,7 +42,30 @@ pub const NOT_AFTER: &str = "not_after";
 /// template written, a facility, a subject namespace.
 pub const SCOPES: [&str; 3] = ["template", "facility", "subject_namespace"];
 
-/// The codes of the terminology that name no operation.
+/// The codes naming the elements of a federation agreement's credentials,
+/// which [`crate::party_binding::grants::agreement::Agreement`] reads.
+pub const AGREEMENT: [&str; 17] = [
+    "agreement_name",
+    "agreement_version",
+    "jurisdiction",
+    "exchange",
+    "purpose",
+    "gdpr_art_6_1",
+    "gdpr_art_9_2",
+    "national_provision",
+    "consent",
+    "read_scope",
+    "discard_window",
+    "ehdsi_service",
+    "requests_per_second",
+    "burst",
+    "opt_out_override",
+    "access_class",
+    "requester_log_retention",
+];
+
+/// The codes of the terminology that name no operation, beside the
+/// agreement elements.
 const QUALIFIERS: [&str; 6] = [
     ACTS_FOR, NOT_BEFORE, NOT_AFTER, SCOPES[0], SCOPES[1], SCOPES[2],
 ];
@@ -122,10 +145,11 @@ impl fmt::Display for Operation {
 }
 
 /// Whether `code` of [`crate::party_binding::policy_mark::TERMINOLOGY`] is a qualifier rather than an
-/// operation: the acts-for code, a bound or a scope.
+/// operation: the acts-for code, a bound, a scope or an agreement element.
 #[must_use]
 pub(crate) fn is_qualifier(code: &str) -> bool {
-    QUALIFIERS.contains(&code.trim())
+    let code = code.trim();
+    QUALIFIERS.contains(&code) || AGREEMENT.contains(&code)
 }
 
 /// The operations the CDR may grant: `[authz.grants] allowed`.
@@ -182,6 +206,7 @@ mod tests {
         }
         assert_eq!(Operation::of("import_everything"), None);
         assert!(is_qualifier(ACTS_FOR) && is_qualifier("template"));
+        assert!(AGREEMENT.iter().all(|code| is_qualifier(code)));
     }
 
     #[test]

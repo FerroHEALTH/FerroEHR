@@ -390,6 +390,7 @@ impl FerroEhrService {
     pub fn with_demographic_pool(mut self, pool: PgPool) -> Self {
         let grants = crate::party_binding::grants::live::LiveGrants::new(pool.clone());
         grants.set_ceiling((*self.grants.ceiling()).clone());
+        grants.set_federation((*self.grants.federation()).clone());
         self.grants = Arc::new(grants);
         self.demographic_pool = pool;
         self

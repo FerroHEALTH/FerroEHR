@@ -187,6 +187,21 @@ impl<'a> Credentials<'a> {
             .collect()
     }
 
+    /// The word of each element `code` names: the `code_string` of a
+    /// `DV_CODED_TEXT` in any terminology, the `value` of a `DV_TEXT`.
+    #[must_use]
+    pub fn words(self, code: &str) -> Vec<&'a str> {
+        self.values(code)
+            .filter_map(|value| {
+                value
+                    .get("defining_code")
+                    .and_then(|code| code.get("code_string"))
+                    .or_else(|| value.get("value"))
+                    .and_then(Value::as_str)
+            })
+            .collect()
+    }
+
     /// The magnitude of the first `DV_COUNT` element `code` names.
     #[must_use]
     pub fn count(self, code: &str) -> Option<i64> {

@@ -5,16 +5,17 @@
 //! capabilities resolved from this replica's copy of the grant rows, and the
 //! request run inside them.
 //!
-//! A system client is resolved by the issuer of its token and its
-//! `client_id` to the `ACTOR` carrying that client identifier, and a
+//! A system client, and a verified external caller of a federation partner,
+//! is resolved by the issuer of its token and its `client_id` to the `ACTOR`
+//! carrying that client identifier, and a
 //! caller the login binding bound to a party by that party; every other
 //! caller has none and reads nothing. The copy is read only when a
 //! notification or a lost listener asks for it, so a request adds no
 //! transaction; a store that cannot answer is the server's failure and
 //! answers `503`. A request whose own commit changed a grant reads the copy
 //! again before it answers, so the caller's next request runs under the
-//! change. Nothing reads the capabilities to decide a request yet; a check
-//! reads them through [`Capabilities::current`]. No openEHR spec gives a
+//! change. A check reads them through [`Capabilities::current`], and the
+//! admission of an external caller reads its federation agreement from them. No openEHR spec gives a
 //! capability an authorization meaning: our own design.
 
 use std::future::Future;
@@ -48,9 +49,14 @@ pub(super) async fn resolve(
         .and_then(Outcome::bound)
         .and_then(|bound| bound.party.id().parse::<uuid::Uuid>().ok());
     let actor = match (caller.kind(), caller.issuer(), caller.client_id(), bound) {
-        (CallerKind::System, Some(issuer), Some(client_id), _) => {
-            Actor::Client { issuer, client_id }
-        }
+        (
+            CallerKind::System
+            | CallerKind::ExternalPerson(_)
+            | CallerKind::ExternalOrganisation(_),
+            Some(issuer),
+            Some(client_id),
+            _,
+        ) => Actor::Client { issuer, client_id },
         (_, _, _, Some(party)) => Actor::Party(party),
         _ => return Ok(Arc::default()),
     };
@@ -63,6 +69,47 @@ pub(super) async fn resolve(
         return Err(AuthError::PartyUnavailable { retry_after: None });
     }
     Ok(Arc::new(grants.capabilities(actor, jiff::Timestamp::now())))
+}
+
+/// Resolves the capabilities of the caller of `principal` ([`resolve`]) and
+/// admits it under them ([`super::declared::Declared::admit`]), so
+/// `principal` carries the agreement an external caller was admitted under;
+/// returns the capabilities.
+///
+/// # Errors
+/// The response refusing a caller whose capabilities cannot be read, or an
+/// external caller outside its agreement, recorded as its failed
+/// authentication.
+pub(super) async fn admit(
+    layer: &AuthLayer,
+    principal: &mut Principal,
+    headers: &http::HeaderMap,
+) -> Result<Arc<Capabilities>, Box<Response>> {
+    let auth = &layer.authenticator;
+    let granted = resolve(layer, principal)
+        .await
+        .map_err(|e| Box::new(super::refusal::response(auth, headers, &e)))?;
+    let trust = layer.service.grants().federation();
+    match auth
+        .declared
+        .admit(principal.access.clone(), &granted, &trust)
+    {
+        Ok(admitted) => {
+            principal.access = admitted;
+            Ok(granted)
+        }
+        Err(AuthError::KindRefused { code, message, .. }) => {
+            let refused = AuthError::KindRefused {
+                code,
+                message,
+                principal: Some(Box::new(principal.clone())),
+            };
+            Err(Box::new(super::refusal::refusal_of(
+                auth, headers, &refused,
+            )))
+        }
+        Err(e) => Err(Box::new(super::refusal::refusal_of(auth, headers, &e))),
+    }
 }
 
 /// Runs `request` inside the caller's capabilities `granted`, reads the grant

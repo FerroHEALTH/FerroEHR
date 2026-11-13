@@ -580,35 +580,18 @@ an EHR (`403`); a declared one commits a COMPOSITION only of a template its
 | `origins` | list of `relay`, `device` | required | `relay`: it relays another system's record of a human act, such as HL7 v2. `device`: a device registers with no human acting, which needs `device_identifier_issuers`. |
 | `device_identifier_issuers` | list of string | `[]` | The issuers of the device identifiers a `device` client names. |
 
-### `[[authz.federation.agreement]]`
+### Federation agreements
 
-What a `federation` issuer's verified external persons, or its organisation,
-may do here. Each table is keyed by `issuer` and `accessor` and admits only its
-own accessor kind; every agreement is listed on the boot line and in
-`GET /management/info`, and one that runs without a named person is logged at
-`warn` on every boot.
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `issuer` | string | required | The `federation` issuer. |
-| `accessor` | `person` or `organisation` | required | Named persons, or the organisation without a named person. A duplicate (issuer, accessor) pair refuses the start. |
-| `name`, `version` | string | `""` | The agreement; required for an organisation. |
-| `jurisdiction` | ISO 3166-1 alpha-2 | `""` | An issuer with `profile = "nl"` implies `NL`. |
-| `exchange` | string | `""` | The kind of exchange the agreement covers. |
-| `purpose` | `care` or `keuring` | unset | What the exchange is for. Required for every NL agreement, and an NL agreement for a `keuring` (a medical examination for employment, insurance or a licence) refuses the start, since a keurend arts has no access to an exchange system (Wabvpz Art. 15f(2)). |
-| `legal_ground` | `{ gdpr_6_1, gdpr_9_2, national }` | unset | The GDPR Art. 6(1) point (`a` to `f`), the Art. 9(2) point (`a` to `j`) and the national provision; in the Netherlands Art. 9(2)(h) with UAVG Art. 30(3)(a). Required for an organisation. |
-| `consent` | `mitz` or `local` | unset | The source of the consent the exchange is conditioned on, never its legal ground. A read under it needs the consent decision reference the token carries in the field its `[[auth.federation]]` table maps to `consent.reference`, and is refused with `403` without it. Required for every NL agreement with `reads` (Wabvpz Art. 15a(1)); an organisation may not take it from Mitz, whose closed question needs a responsible professional. |
-| `reads` | list of `patient/` scopes | `[]` | The most an external caller may read; a `user/` or `system/` scope refuses the start. |
-| `writes` | list of template ids | `[]` | The templates an external person may commit; an organisation agreement takes none (EHDS Art. 13(4)), and a template the store does not hold refuses the start. |
-| `discard`, `discard_window` | bool, duration | `false`, `"1d"` | Whether an external person may discard a dispensation of the same point of care within the window (MyHealth@EU Requirements Catalogue 10.0.0, requirement 07.04). With `discard` set, a window that is not a whole number of hours greater than zero, such as `"90min"`, refuses the start. |
-| `ehdsi_service` | `patient_summary`, `eprescription` or `orcd` | unset | The MyHealth@EU service a `contact_point` issuer's person agreement serves, whose `*_NOT_FOUND` code a request outside the patient of the treatment relationship confirmation answers ([the contact-point route](../identity-providers.md#the-myhealtheu-contact-point-route)). Required on a contact point's person agreement; on any other agreement it refuses the start. |
-| `caller_rate` | `{ requests_per_second, burst }` | **required** | The admission rate per caller, keyed on the token's subject and kept per replica: each caller gets `burst` requests at once and `requests_per_second` after that, and a request above it is answered `429` with `Retry-After` before any patient lookup, a contact point's included, and counted into the caller's [summary record](../audit.md#refusal-records-and-their-budgets). |
-| `opt_out_override` | bool | `false` | Whether a professional may read an opted-out EHR under national vital-interest access (EHDS Art. 10(2)); never on an organisation agreement. |
-| `access_class` | `automated` or `chained` | unset | For an organisation, required: no natural person views the data, or the requester logs the person and every request carries its correlation id as an attested claim. A `chained` agreement needs its issuer's `[[auth.federation]]` table to map `correlation_id` from a claim or an attested `authorization_details` member (a constant refuses the start); a request without the id is refused with `403` and recorded as `refused-correlation-missing`, a request header never stands in for it, and the access record carries the id with its source. |
-| `chained_log_retention` | calendar period | unset | For `chained`, required: how long the requester keeps its log (`"P5Y"`), at least `[audit.store]`'s retention. |
-
-An organisation agreement on a MyHealth@EU `contact_point` issuer refuses the
-start.
+A federation agreement is CDR data, not a configuration key: a grant of
+`federated_person_access` or `federated_organisation_access` on the partner's
+party, read on every request and judged when it is written. The configuration
+keeps what the agreements are judged against: the `federation` issuers, their
+`[[auth.federation]]` tables, `[authz.grants] allowed` (which must name both
+codes before an agreement can be written) and `[audit.store] retention`. The
+model, the codes and the rules are on
+[Operational policy](../operational-policy.md#federation-agreements). The
+`[[authz.federation.agreement]]` table is removed, and a configuration that
+still holds it is refused at boot as an unknown key.
 
 ### `[authz.grants]`
 
