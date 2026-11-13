@@ -13,8 +13,8 @@
 
 use serde_json::{Value, json};
 
-use crate::fixtures::{composition, create_ehr_subject};
-use crate::system_grants::{System, capability, named, run, system, system_client, text};
+use crate::fixtures::{composition, create_ehr, create_ehr_subject};
+use crate::system_grants::{System, capability, coded, named, run, system, system_client, text};
 use ferroehr::error::ServiceError;
 use ferroehr::ids::EhrId;
 use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
@@ -209,6 +209,110 @@ async fn a_migration_agent_imports_and_exports_only_its_granted_namespaces() {
     run(None, target.extract_ehrs(into))
         .await
         .expect("an export by no system caller is not a grant's to decide");
+}
+
+/// A capability granting `operation` over the EHRs whose subject names no
+/// namespace, by the coded `no_subject_namespace` (#5530).
+fn unnamed(operation: &str) -> Value {
+    capability(
+        operation,
+        &[named("subject_namespace", &coded("no_subject_namespace"))],
+    )
+}
+
+/// An EHR whose `EHR_STATUS.subject` has no `external_ref`, which RM EHR IM
+/// allows for an anonymous record, is imported, extended and exported under
+/// a grant holding the coded `no_subject_namespace`, and only under one: a
+/// grant naming real namespaces does not reach it, and the code reaches no
+/// EHR whose subject names a namespace (#5530).
+#[tokio::test]
+async fn the_no_subject_namespace_code_alone_reaches_an_ehr_with_no_subject_namespace() {
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (_target_db, target) = crate::fixtures::service().await;
+    let target = target
+        .with_import_policy(ImportPolicy::new(Vec::new()))
+        .with_grant_ceiling(GrantCeiling::new(Operation::ALL));
+
+    let anonymous = create_ehr(&source).await;
+    commit(&source, anonymous, "before the cut").await;
+    let whole: Extract = openehr_its::json::from_canonical_value(
+        &source.extract_ehrs(anonymous).await.expect("the export")[0],
+    )
+    .expect("an EXTRACT");
+    let later = commit(&source, anonymous, "after the cut").await;
+    let appended = composition_extract(&source, anonymous, &later).await;
+
+    let operations = ["import_ehr", "import_ehr_extract", "export_ehr_extract"];
+    let named_only = granted(
+        &target,
+        "named-only",
+        &operations.map(|operation| grant(operation, LEGACY)),
+    )
+    .await;
+    let anonymous_only = granted(&target, "anonymous", &operations.map(unnamed)).await;
+
+    // A grant naming real namespaces reaches none of the three operations.
+    forbidden(run(Some(&named_only), target.import_ehr(None, whole.clone())).await);
+    let into = create_ehr(&target).await;
+    forbidden(
+        run(
+            Some(&named_only),
+            target.import_ehr_extract(into, appended.clone()),
+        )
+        .await,
+    );
+    forbidden(run(Some(&named_only), target.extract_ehrs(into)).await);
+
+    // The coded no_subject_namespace reaches each of them.
+    run(Some(&anonymous_only), target.import_ehr(None, whole))
+        .await
+        .expect("the import of an EHR with no subject namespace");
+    run(
+        Some(&anonymous_only),
+        target.import_ehr_extract(into, appended),
+    )
+    .await
+    .expect("the extract import into an EHR with no subject namespace");
+    run(Some(&anonymous_only), target.extract_ehrs(into))
+        .await
+        .expect("the export of an EHR with no subject namespace");
+
+    // And no EHR whose subject names a namespace.
+    let legacy = create_ehr_subject(&target, &subject("pt-3")).await;
+    forbidden(run(Some(&anonymous_only), target.extract_ehrs(legacy)).await);
+    run(Some(&named_only), target.extract_ehrs(legacy))
+        .await
+        .expect("the named grant exports its namespace");
+}
+
+/// A capability whose `subject_namespace` holds a code of another
+/// terminology, or a text that reads `no_subject_namespace`, is a namespace
+/// by that text and reaches no EHR with no subject namespace (#5530).
+#[tokio::test]
+async fn only_the_coded_value_of_the_operation_terminology_reaches_an_unnamed_subject() {
+    let (_db, target) = crate::fixtures::service().await;
+    let target = target
+        .with_import_policy(ImportPolicy::new(Vec::new()))
+        .with_grant_ceiling(GrantCeiling::new(Operation::ALL));
+    let mut foreign = coded("no_subject_namespace");
+    foreign["defining_code"]["terminology_id"]["value"] = json!("local");
+    let lookalike = granted(
+        &target,
+        "lookalike",
+        &[
+            capability(
+                "export_ehr_extract",
+                &[named("subject_namespace", &text("no_subject_namespace"))],
+            ),
+            capability(
+                "export_ehr_extract",
+                &[named("subject_namespace", &foreign)],
+            ),
+        ],
+    )
+    .await;
+    let into = create_ehr(&target).await;
+    forbidden(run(Some(&lookalike), target.extract_ehrs(into)).await);
 }
 
 /// A role is no grant: a caller whose token names an importer role, with no

@@ -230,7 +230,8 @@ in the element's `name`:
 | `relay` | As an `origin`: the grant commits relayed records of a person's act, such as HL7 v2 |
 | `device` | As an `origin`: the grant commits a device's registrations, which no person made |
 | `device_identifier_issuer` | The issuer of a device identifier a `device` grant may name as its composer |
-| `subject_namespace` | The `EHR_STATUS.subject.external_ref.namespace` of the EHRs it touches |
+| `subject_namespace` | The `EHR_STATUS.subject.external_ref.namespace` of the EHRs it touches, as a `DV_TEXT`; or the `DV_CODED_TEXT` `no_subject_namespace` of this terminology for the EHRs whose subject has no `external_ref` |
+| `no_subject_namespace` | As a `subject_namespace` value: the EHRs whose `EHR_STATUS.subject` carries no `external_ref` namespace, such as an anonymous record's `PARTY_SELF`, and no other EHR |
 | `creating_system` | On an import grant: a `creating_system_id` whose wrapped committers the import may carry |
 | `origin` | On `data_origin`: the origin id, exactly one |
 | `reader` | On `read_change_feed`: the reader's name, exactly one, matching `^[a-z][a-z0-9-]{0,62}$` |
@@ -600,9 +601,31 @@ A deletion is held to the templates the same way. A composer that names an
 `message_import_ehr_extract` an `import_ehr_extract` grant, either of which
 names in `subject_namespace` the subject namespace of the EHR: of each
 `EHR_STATUS` the extract carries and, for an extract into an existing EHR,
-of that EHR. Any other import is `403`, whatever roles the caller holds. The versions inside an extract keep their
-original committers only when a `creating_system` element of the grant names
-their `creating_system_id`.
+of that EHR. Any other import is `403`, whatever roles the caller holds. The
+versions inside an extract keep their original committers only when a
+`creating_system` element of the grant names their `creating_system_id`.
+
+**An EHR whose subject names no namespace.** The RM lets
+`EHR_STATUS.subject` be a `PARTY_SELF` with no `external_ref`, for an
+anonymous record, and a legacy system often holds such EHRs. A grant
+reaches them only through a `subject_namespace` element whose value is the
+`DV_CODED_TEXT` `no_subject_namespace` of `ferroehr-operations`, for the
+import, the extract import and the export alike. That value covers exactly
+those EHRs: a grant naming real namespaces does not reach them, and the
+code reaches no EHR whose subject names a namespace. A grant that names no
+`subject_namespace` at all is still refused at its commit with `422`.
+
+```json
+{ "_type": "ELEMENT", "archetype_node_id": "at0023",
+  "name": { "_type": "DV_CODED_TEXT", "value": "Subject namespace",
+    "defining_code": { "_type": "CODE_PHRASE",
+      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+      "code_string": "subject_namespace" } },
+  "value": { "_type": "DV_CODED_TEXT", "value": "No subject namespace",
+    "defining_code": { "_type": "CODE_PHRASE",
+      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+      "code_string": "no_subject_namespace" } } }
+```
 
 **Export.** A system client exports an EHR with `message_export_ehrs` or
 `message_export_ehr_extracts` only under an `export_ehr_extract` grant whose
