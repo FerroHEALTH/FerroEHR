@@ -88,7 +88,6 @@ async fn the_access_log_routes_answer_without_a_signing_key() {
         "cdr.example.org".to_owned(),
         Arc::new(Signer::digest_default()),
         Arc::new(TrustedCertificates::default()),
-        false,
     );
     let service = Arc::new(
         Arc::try_unwrap(service)

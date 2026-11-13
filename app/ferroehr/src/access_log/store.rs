@@ -28,9 +28,6 @@
               value, with its link left out or joined (#1694 boundary class: canonical form)"
 )]
 
-use std::collections::BTreeMap;
-use std::sync::Arc;
-
 use openehr_base::containers::NonEmptyVec;
 use openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_object;
 use openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
@@ -38,9 +35,10 @@ use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use serde_json::Value;
 use sqlx::postgres::PgRow;
 use sqlx::{Connection, PgConnection, PgPool, Row};
+use std::collections::BTreeMap;
 
 use crate::db::acquire::{AcquireError, acquire};
-use crate::versioning::signature::signer::{AttestError, Signer};
+use crate::versioning::signature::signer::AttestError;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
@@ -145,30 +143,20 @@ pub fn canonical_form(record: &impl serde::Serialize) -> Result<String, AccessLo
 }
 
 /// The access-log records in the `audit` schema.
+///
+/// A link is never signed on its own: the checkpoints seal the chain, so the
+/// optional `ACCESS_LOG_LINK.signature` of a local record stays unset
+/// (#5562).
 #[derive(Debug, Clone)]
 pub struct AccessLogStore {
     pool: PgPool,
-    /// The keyring that signs each new link's digest, when the deployment
-    /// asks for it (`[audit.access_log] sign_links`).
-    link_signer: Option<Arc<Signer>>,
 }
 
 impl AccessLogStore {
     /// A store over the audit pool.
     #[must_use]
     pub fn new(pool: PgPool) -> Self {
-        Self {
-            pool,
-            link_signer: None,
-        }
-    }
-
-    /// The store that signs the digest of each link it appends with
-    /// `signer`'s key, the optional `ACCESS_LOG_LINK.signature`.
-    #[must_use]
-    pub fn with_link_signer(mut self, signer: Arc<Signer>) -> Self {
-        self.link_signer = Some(signer);
-        self
+        Self { pool }
     }
 
     /// Append `entries` to the chain in their order, in one transaction, and
@@ -201,8 +189,7 @@ impl AccessLogStore {
     /// entries commit with what the caller writes beside them.
     ///
     /// # Errors
-    /// As [`Self::append`], and [`AccessLogError::Sign`] when a link is to be
-    /// signed and the keyring cannot sign it.
+    /// As [`Self::append`].
     pub async fn append_in(
         &self,
         conn: &mut PgConnection,
@@ -216,7 +203,7 @@ impl AccessLogStore {
         let rows = sqlx::query(
             "INSERT INTO audit.access_log_record (content) \
              SELECT t.content FROM unnest($1::text[]) WITH ORDINALITY AS t(content, n) ORDER BY t.n \
-             RETURNING uid, chain_seq, algorithm, previous_digest, content_digest, digest, signature",
+             RETURNING uid, chain_seq, algorithm, previous_digest, content_digest, digest",
         )
         .bind(&contents)
         .fetch_all(&mut *conn)
@@ -232,18 +219,6 @@ impl AccessLogStore {
                     .ok_or_else(|| AccessLogError::Unlinked {
                         uid: entry.uid.value().to_owned(),
                     })?;
-            if let Some(signer) = &self.link_signer {
-                let signature = signer.attest(entry.link.digest.as_bytes())?;
-                // NOTE: the trigger computes the digest a signature signs, so the link is signed once it exists.
-                sqlx::query(
-                    "UPDATE audit.access_log_record SET signature = $2 WHERE chain_seq = $1",
-                )
-                .bind(entry.link.sequence)
-                .bind(&signature)
-                .execute(&mut *conn)
-                .await?;
-                entry.link.signature = Some(signature);
-            }
         }
         for entry in &entries {
             check_entry(entry)?;
@@ -259,8 +234,8 @@ impl AccessLogStore {
     /// [`AccessLogError::Unreadable`] when a stored record does not read.
     pub async fn of_ehr(&self, ehr_id: &str) -> Result<Vec<AccessLogRecord>, AccessLogError> {
         let rows = sqlx::query(
-            "SELECT chain_seq, content, algorithm, previous_digest, content_digest, digest, \
-             signature FROM audit.access_log_record WHERE ehr_id = $1 ORDER BY chain_seq",
+            "SELECT chain_seq, content, algorithm, previous_digest, content_digest, digest \
+             FROM audit.access_log_record WHERE ehr_id = $1 ORDER BY chain_seq",
         )
         .bind(ehr_id)
         .fetch_all(&mut *acquire(&self.pool).await?)
@@ -276,7 +251,7 @@ impl AccessLogStore {
     /// access-log record, and the store errors when the statement fails.
     pub async fn links(&self, from: i64, to: i64) -> Result<Vec<AccessLogLink>, AccessLogError> {
         let rows = sqlx::query(
-            "SELECT chain_seq, algorithm, previous_digest, content_digest, digest, signature \
+            "SELECT chain_seq, algorithm, previous_digest, content_digest, digest \
              FROM audit.access_log_record WHERE chain_seq BETWEEN $1 AND $2 ORDER BY chain_seq",
         )
         .bind(from)
@@ -298,8 +273,8 @@ impl AccessLogStore {
     /// [`AccessLogError::Unreadable`] when the stored record does not read.
     pub async fn read(&self, uid: &str) -> Result<Option<AccessLogRecord>, AccessLogError> {
         let row = sqlx::query(
-            "SELECT chain_seq, content, algorithm, previous_digest, content_digest, digest, \
-             signature FROM audit.access_log_record WHERE uid = $1",
+            "SELECT chain_seq, content, algorithm, previous_digest, content_digest, digest \
+             FROM audit.access_log_record WHERE uid = $1",
         )
         .bind(uid)
         .fetch_optional(&mut *acquire(&self.pool).await?)
@@ -332,8 +307,8 @@ impl AccessLogStore {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         let row = sqlx::query(
-            "SELECT chain_seq, content, algorithm, previous_digest, content_digest, digest, \
-             signature FROM audit.access_log_record \
+            "SELECT chain_seq, content, algorithm, previous_digest, content_digest, digest \
+             FROM audit.access_log_record \
              WHERE uid = $1 AND record_type = 'ACCESS_LOG_ENTRY' FOR UPDATE",
         )
         .bind(uid)
@@ -375,8 +350,8 @@ impl AccessLogStore {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         let rows = sqlx::query(
-            "SELECT chain_seq, content, algorithm, previous_digest, content_digest, digest, \
-             signature FROM audit.access_log_record \
+            "SELECT chain_seq, content, algorithm, previous_digest, content_digest, digest \
+             FROM audit.access_log_record \
              WHERE record_type = 'ACCESS_LOG_ENTRY' AND retain_until < $1::text::date \
              ORDER BY retain_until, chain_seq LIMIT $2 FOR UPDATE SKIP LOCKED",
         )
@@ -463,7 +438,7 @@ fn link(row: &PgRow) -> Result<AccessLogLink, sqlx::Error> {
         previous_digest: row.try_get("previous_digest")?,
         content_digest: row.try_get("content_digest")?,
         digest: row.try_get("digest")?,
-        signature: row.try_get("signature")?,
+        signature: None,
     })
 }
 

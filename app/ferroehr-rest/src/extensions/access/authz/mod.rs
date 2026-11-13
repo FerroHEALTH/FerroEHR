@@ -325,7 +325,7 @@ pub(crate) struct RbacGate {
 ///   than the admin read routes already expose. A read-only integrity
 ///   auditor is exactly who runs it (adjudicated on #2692).
 /// - `POST /admin/access-log/verify` — the access log's verification against
-///   its checkpoint (#5129): it recomputes the chain and checks signatures,
+///   its checkpoint (#5129): it recomputes the chain and checks the proof,
 ///   answers findings only, and moves no record; the verification cursor it
 ///   advances is the one the scheduled chain check moves.
 /// - `POST /query/cohort` — the cohort query: AQL execution over a population

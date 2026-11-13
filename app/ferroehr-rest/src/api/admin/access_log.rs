@@ -75,15 +75,15 @@ guarded_handler! {
     /// (`POST /admin/access-log/verify`). **Our own extension.**
     ///
     /// The whole chain is recomputed, tombstones taken as recorded; the
-    /// checkpoint's proof, the link it seals and every signed link are
-    /// checked. A finding is not a request failure.
+    /// checkpoint's proof and the link it seals are checked. A finding is
+    /// not a request failure.
     #[utoipa::path(
         post, path = "/admin/access-log/verify", tag = "admin-access-log",
         responses(
             (status = 200, description = "The verification ran. `intact` is true when a \
                                           checkpoint was there to verify against and nothing \
                                           failed; `findings` names each failure of the \
-                                          checkpoint and the signed links, `chain` each \
+                                          checkpoint, `chain` each \
                                           damaged record or boundary of the chain.",
              body = serde_json::Value, example = json!({
                  "intact": false,

@@ -5,9 +5,10 @@
 //! (#5129): built at boot from `[audit.access_log]` and the keyring, the
 //! scheduled checkpoint, and `ferroehr access-log …`.
 //!
-//! The keyring is the one `[record.signing]` configures, so checkpoints and
-//! signed links need it in `pgp` mode; a server asked for either without it
-//! refuses to start. No openEHR spec governs log signing: our own design.
+//! The keyring is the one `[record.signing]` configures: with an `OpenPGP`
+//! key in it the server seals the chain on the built-in schedule, and
+//! without one it seals nothing (#5562). No openEHR spec governs log
+//! signing: our own design.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -61,19 +62,13 @@ pub enum AccessLogCmd {
 /// configured certificates.
 ///
 /// # Errors
-/// Checkpoints or signed links asked for without an `OpenPGP` key in the
-/// keyring, or a trusted certificate that does not read.
+/// A trusted certificate that does not read.
 pub fn build(
     config: &FerroEhrConfig,
     pool: PgPool,
     signer: Arc<Signer>,
 ) -> anyhow::Result<Checkpoints> {
     let section = &config.audit.access_log;
-    anyhow::ensure!(
-        !section.needs_key() || signer.holds_key(),
-        "[audit.access_log] checkpoints and sign_links sign with the keyring's OpenPGP key: set \
-         record.signing.mode = \"pgp\" and record.signing.key_file"
-    );
     let trusted = TrustedCertificates::load(&section.trusted_key_files)
         .context("reading [audit.access_log] trusted_key_files")?;
     Ok(Checkpoints::new(
@@ -81,21 +76,21 @@ pub fn build(
         config.api.system_id.clone(),
         signer,
         Arc::new(trusted),
-        section.sign_links,
     ))
 }
 
-/// Start the scheduled checkpoint when `[audit.access_log]` asks for one.
-pub fn spawn_schedule(config: &FerroEhrConfig, checkpoints: &Checkpoints) {
-    let section = &config.audit.access_log;
-    let interval = section.checkpoint_interval.get();
-    if section.checkpoints && !interval.is_zero() {
-        tracing::info!(?interval, "access-log checkpoints scheduled");
-        drop(tokio::spawn(ferroehr::access_log::schedule::scheduled(
-            checkpoints.clone(),
-            interval,
-        )));
+/// Start the scheduled checkpoint when the keyring holds an `OpenPGP` key.
+pub fn spawn_schedule(checkpoints: &Checkpoints) {
+    if !checkpoints.seals() {
+        tracing::info!("no OpenPGP key in the keyring: the access log is not sealed");
+        return;
     }
+    let interval = ferroehr::access_log::schedule::INTERVAL;
+    tracing::info!(?interval, "access-log checkpoints scheduled");
+    drop(tokio::spawn(ferroehr::access_log::schedule::scheduled(
+        checkpoints.clone(),
+        interval,
+    )));
 }
 
 /// Run one `ferroehr access-log …` subcommand.
@@ -208,21 +203,14 @@ async fn verify(checkpoints: &Checkpoints, file: Option<&Path>) -> anyhow::Resul
 mod tests {
     use super::*;
 
-    /// Checkpoints and signed links sign with the keyring's key, so a server
-    /// asked for either with a `digest` keyring refuses to start.
+    /// A `digest` keyring holds no `OpenPGP` key, so the server boots and
+    /// seals nothing (#5562).
     #[tokio::test]
-    async fn signing_the_log_without_a_key_refuses_to_start() {
-        for (checkpoints, sign_links) in [(true, false), (false, true)] {
-            let mut config = FerroEhrConfig::default();
-            config.audit.access_log.checkpoints = checkpoints;
-            config.audit.access_log.sign_links = sign_links;
-            let pool = PgPool::connect_lazy("postgres://localhost/unused").expect("a lazy pool");
-            let refused = build(&config, pool, Arc::new(Signer::digest_default()))
-                .expect_err("no OpenPGP key in the keyring");
-            assert!(
-                refused.to_string().contains("record.signing.mode"),
-                "{refused}"
-            );
-        }
+    async fn a_keyring_without_a_key_boots_and_seals_nothing() {
+        let config = FerroEhrConfig::default();
+        let pool = PgPool::connect_lazy("postgres://localhost/unused").expect("a lazy pool");
+        let checkpoints =
+            build(&config, pool, Arc::new(Signer::digest_default())).expect("no key is no refusal");
+        assert!(!checkpoints.seals());
     }
 }

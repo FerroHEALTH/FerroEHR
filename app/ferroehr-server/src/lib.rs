@@ -949,8 +949,8 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         "version signing configured"
     );
     let access_log = access_log::build(&config, pools.audit.clone(), Arc::clone(&signer))?;
-    // NOTE: our own design, the drain appends every access's entry through the store that signs
-    // links as `[audit.access_log] sign_links` asks; no request has run before this.
+    // NOTE: our own design, the drain appends every access's entry through the checkpoints'
+    // store; no request has run before this.
     if let Some(sender) = &audit_sender {
         let installed = sender.use_access_log(access_log.store().clone());
         tracing::debug!(
@@ -980,7 +980,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         assemble_service(&config, &pools, audit_sender, signer, deployment, ehr_index)?
             .with_access_log(access_log.clone()),
     );
-    access_log::spawn_schedule(&config, &access_log);
+    access_log::spawn_schedule(&access_log);
 
     // The schemas are prepared by now, so a configured identifier scheme the
     // registry does not hold is refused here, not at its first party commit.

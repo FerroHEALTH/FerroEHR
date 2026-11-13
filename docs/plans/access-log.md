@@ -144,8 +144,9 @@ offered to that work (§Proposal path).
    element for either. A DICOM projection loses them.
 6. **Integrity.** eHDSI §2.2 asks for a signature on each event; FHIR asks
    only that servers refuse update and delete; DICOM and BALP say nothing.
-   The design chains every entry and signs checkpoints, with an optional
-   signature per entry for a jurisdiction that asks for one.
+   The design chains every entry and signs checkpoints; FerroEHR signs no
+   entry on its own (#5562), and verifies a signed link another system
+   exports.
 7. **The patient identifier.** BALP and FHIR R5 name the patient as a
    `Patient` resource; DICOM names a patient id. openEHR keeps the EHR apart
    from identifying data (BASE §Security Policy, "Anonymity") and identifies
@@ -549,8 +550,8 @@ sequenceDiagram
 
 ## Integrity
 
-**Decision: a hash chain over every record, with signed checkpoints, and an
-optional signature per entry.**
+**Decision: a hash chain over every record, with signed checkpoints; no
+signature per entry is written.**
 
 - **The chain.** Each record carries an `ACCESS_LOG_LINK`. `content_digest`
   is the digest of the record serialised without its link: the canonical
@@ -575,11 +576,16 @@ optional signature per entry.**
   `ATTESTATION._proof_` uses. Publishing checkpoints outside the system
   (to FerroSYS, to a timestamping service, to the data protection officer)
   is a deployment choice (our own design).
-- **A signature per entry** is optional (`ACCESS_LOG_LINK.signature`). The
-  eHDSI Audit Trail Profile §2.2 asks for one on each NCP event; a CDR
-  behind a national contact point may be asked to do the same by its
-  national implementation. Signing every entry costs one signature per
-  access, which the performance gate would have to measure.
+- **No signature per entry is written** (#5562). The model keeps the
+  optional `ACCESS_LOG_LINK.signature`, and the eHDSI Audit Trail Profile
+  §2.2 asks for one on each NCP event. Measured with the keyring's rPGP
+  signing, a signature per entry costs 13 µs with an Ed25519 key and 1.0 to
+  5.5 ms with an RSA key of 2048 to 4096 bits, plus one more statement per
+  entry in the drain's transaction, and an AQL query writes one entry per
+  EHR it serves.
+  The checkpoints, sealed every five minutes whenever the keyring holds an
+  OpenPGP key, cover each record within that interval. A signed link in
+  another system's export is still verified on import.
 - **One chain per system.** `sequence` has no gaps within a `system_id`.
   Several writers of one system serialise on the head, as FerroEHR's chain
   cursor does today (`app/ferroehr/migrations/audit/0011_chain_digest_v2.sql`).
@@ -765,7 +771,7 @@ model meets only in part says what is left and who carries it.
 | Member State restrictions | EHDS Art 9(3) | A deployment's restriction applied to the subject view; the entry is unchanged |
 | Emergency access to restricted data logged, clear, easily accessible | EHDS Art 11(5) | `is_emergency` with an `emergency` authorisation; shown in the subject view |
 | Exchanges logged with the identity of actors, the categories and the purposes | Implementing Regulation (EU) 2026/2083 Art 15(1)(f)(ii) (binds the national contact points) | `accessor`, `items.categories`, `purposes`; applied at the data holder behind a contact point as the deployment's national implementation |
-| A payload signature on each auditable event | eHDSI Audit Trail Profile 10.1.0 §2.2 (binds the national contact points) | `ACCESS_LOG_LINK.signature`, optional, switched on where a national implementation asks for it |
+| A payload signature on each auditable event | eHDSI Audit Trail Profile 10.1.0 §2.2 (binds the national contact points) | not written by FerroEHR (#5562): the signed checkpoint covers each entry within five minutes; `ACCESS_LOG_LINK.signature` of an imported link is verified |
 | Data minimisation | GDPR Art 5(1)(c) | §Data minimisation: no clinical content, no patient identifier, references over copies, query digest, no credential |
 | Storage limitation | GDPR Art 5(1)(e) | `retention.retain_until`, tombstones |
 | The data subject's right of access | GDPR Art 15 | The subject view; Art 15(1)(c) recipients are the accessors it lists |
