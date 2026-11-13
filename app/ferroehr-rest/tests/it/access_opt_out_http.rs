@@ -23,6 +23,7 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
+use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::AuditStore;
@@ -40,7 +41,8 @@ use crate::common::EXT;
 const PURPOSE: &str = "x-purpose-of-use";
 /// An EHR id no EHR holds.
 const UNKNOWN_EHR: &str = "66666666-7777-4888-9999-000000000000";
-/// The role this deployment declares for its access services.
+/// A role an access service's own credential may name, which grants nothing:
+/// an access service is an `access_service` grant in the CDR (#5521).
 const ACCESS_SERVICE: &str = "EHDS-ACCESS-SERVICE";
 
 fn basic(name: &str) -> String {
@@ -52,9 +54,10 @@ fn basic(name: &str) -> String {
 }
 
 /// An audited app with `ETREAT` agreed as an emergency purpose, Basic users
-/// for an administrator, a clinician of the provider's own care and an
-/// access service, and the IPS template uploaded; `declared` decides whether
-/// the deployment declares [`ACCESS_SERVICE`] an access-service role.
+/// for an administrator, a clinician of the provider's own care, an access
+/// service and a caller naming [`ACCESS_SERVICE`] with no grant, and the IPS
+/// template uploaded; `declared` decides whether `[authz.grants] allowed`
+/// allows `access_service` and the CDR grants it to the access service.
 async fn app(declared: bool) -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
     let audit = AuditConfig {
@@ -65,10 +68,17 @@ async fn app(declared: bool) -> (testkit::TestDb, PgPool, Router) {
     let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
         .await
         .expect("the audit sender");
+    let allowed = if declared {
+        vec![Operation::AccessService]
+    } else {
+        Vec::new()
+    };
     let svc = Arc::new(
         common::binding_service(&pool)
             .with_audit(sender)
-            .with_audit_store(AuditStore::new(pool.clone())),
+            .with_audit_store(AuditStore::new(pool.clone()))
+            .with_binding_mapping(crate::party_binding_http::mapping())
+            .with_grant_ceiling(GrantCeiling::new(allowed)),
     );
     let mut config = common::api_config(true);
     common::with_basic_users(
@@ -78,12 +88,13 @@ async fn app(declared: bool) -> (testkit::TestDb, PgPool, Router) {
         &[
             ("root", &["ADMIN"]),
             ("clinician", &["USER"]),
-            ("service", &["USER", ACCESS_SERVICE]),
+            ("service", &["USER"]),
+            ("named", &["USER", ACCESS_SERVICE]),
         ],
     )
     .await;
     if declared {
-        config.rbac.access_service_roles = vec![ACCESS_SERVICE.to_owned()];
+        common::grant_to(&svc, &pool, "service", Operation::AccessService).await;
     }
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
@@ -249,7 +260,8 @@ async fn trail(pool: &PgPool, resource: &str, expected: usize) -> Vec<(String, S
 
 /// While the opt-out stands, the access service reads the EHR as absent at
 /// every route, query and export, a write included, and the provider's own
-/// clinician reads it as before; the reversal brings it back.
+/// clinician and a caller naming an access-service role with no grant read it
+/// as before; the reversal brings it back.
 #[tokio::test]
 async fn an_opted_out_ehr_reads_as_absent_to_the_access_services_until_reversed() {
     let (_db, _pool, app) = Box::pin(app(true)).await;
@@ -287,6 +299,12 @@ async fn an_opted_out_ehr_reads_as_absent_to_the_access_services_until_reversed(
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
     assert_eq!(status, unknown_status);
     assert_eq!(error_kind(&body), error_kind(&unknown_body));
+    // A caller naming an access-service role holds no grant, so the opt-out
+    // does not bear on it.
+    assert_eq!(
+        send(&app, "GET", &composition, "named", None, None).await.0,
+        StatusCode::OK
+    );
     for path in [
         composition.clone(),
         format!("{BASE}/ehr/{ehr}/ehr_status"),
@@ -426,15 +444,19 @@ async fn the_vital_interest_override_reads_the_ehr_and_is_recorded() {
     }
 }
 
-/// With no access-service role declared, the opt-out is off: recording one is
-/// refused and nothing is written, while reversing and reading stay open.
+/// While `[authz.grants] allowed` does not allow `access_service`, the opt-out
+/// is off: recording one is refused and nothing is written, while reversing
+/// and reading stay open.
 #[tokio::test]
 async fn recording_is_refused_while_no_access_service_is_declared() {
     let (_db, _pool, app) = Box::pin(app(false)).await;
     let (ehr, vo) = ehr_with_composition(&app).await;
     let (status, body) = opt_out(&app, &ehr, false).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
-    assert!(body.contains("access_service_roles"), "{body}");
+    assert!(
+        body.contains("access_service") && body.contains("[authz.grants] allowed"),
+        "{body}"
+    );
     assert_eq!(opt_out(&app, &ehr, true).await.0, StatusCode::NO_CONTENT);
     let (status, body) = send(
         &app,

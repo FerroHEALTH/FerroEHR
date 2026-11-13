@@ -110,14 +110,7 @@ pub async fn build_with(
     config: AppConfig,
     backend: Arc<FerroEhrService>,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = build_authenticator(
-        &config,
-        None,
-        Some(party_source(&config, &backend)),
-        Arc::new(PgReplayStore::of(&backend)),
-        grant_standing(&backend),
-    )
-    .await?;
+    let authenticator = authenticator_over(&config, None, &backend).await?;
     let state = AppState::with_backend(config, backend);
     state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
@@ -138,14 +131,7 @@ pub async fn build_full(
     authz: Option<Arc<AuthzHandle>>,
     observability: Observability,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = build_authenticator(
-        &config,
-        authz.as_deref(),
-        Some(party_source(&config, &backend)),
-        Arc::new(PgReplayStore::of(&backend)),
-        grant_standing(&backend),
-    )
-    .await?;
+    let authenticator = authenticator_over(&config, authz.as_deref(), &backend).await?;
     let state = AppState::with_parts(config, backend, authz, observability);
     state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
@@ -193,10 +179,26 @@ async fn build_authenticator(
     Ok(authenticator)
 }
 
-/// The standing of a client, a delegate actor and a scopeless subject, read
-/// from `backend`'s policy grants.
-fn grant_standing(backend: &FerroEhrService) -> Arc<dyn Standing> {
-    Arc::new(GrantStanding::new(Arc::clone(backend.grants())))
+/// Builds the [`Authenticator`] of `config` over `backend`: every caller
+/// looked up in its party source, its accepted `DPoP` proofs recorded in its
+/// store, and the standing of a client, a delegate actor and a scopeless
+/// subject read from its policy grants.
+///
+/// # Errors
+/// As [`build_authenticator`].
+async fn authenticator_over(
+    config: &AppConfig,
+    authz: Option<&AuthzHandle>,
+    backend: &Arc<FerroEhrService>,
+) -> Result<Arc<Authenticator>, ServeError> {
+    build_authenticator(
+        config,
+        authz,
+        Some(party_source(config, backend)),
+        Arc::new(PgReplayStore::of(backend)),
+        Arc::new(GrantStanding::new(Arc::clone(backend.grants()))),
+    )
+    .await
 }
 
 /// The local party source over `backend`'s party pool, naming each party
@@ -271,14 +273,7 @@ pub async fn serve_on<F>(
 where
     F: Future<Output = ()> + Send + 'static,
 {
-    let authenticator = build_authenticator(
-        &config,
-        authz.as_deref(),
-        Some(party_source(&config, &backend)),
-        Arc::new(PgReplayStore::of(&backend)),
-        grant_standing(&backend),
-    )
-    .await?;
+    let authenticator = authenticator_over(&config, authz.as_deref(), &backend).await?;
     let section = config.server.clone();
     let state = AppState::with_parts(config, backend, authz, observability);
     let lifecycle = state.observability().lifecycle.clone();

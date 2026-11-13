@@ -63,7 +63,11 @@ store, or before it can trust anything:
   more than the operator allows ([The grant ceiling](#the-grant-ceiling)).
 
 Everything else is CDR data: who may do what is party data (below), and the
-policy with no demographic home is an admin register.
+policy with no demographic home is an admin register. The privileges beyond
+clinical access have no configuration key: reading one subject's access log,
+acting as an EHDS Art. 10 access service, importing, and reading protected
+national identifiers are each a grant of its own operation
+([What the grants decide](#what-the-grants-decide)).
 
 ## The policy parties
 
@@ -363,9 +367,8 @@ meets every SMART on openEHR requirement when its `ACTOR` is granted
 it adds no transaction, and a party store that cannot answer refuses the
 token with `503`.
 
-**Importing.** `message_import_ehr` admits a caller holding
-`[authz.rbac] import_role`, or one with an `import_ehr` grant whose
-`subject_namespace` names the EHR's subject namespace;
+**Importing.** `message_import_ehr` admits a caller with an `import_ehr`
+grant whose `subject_namespace` names the EHR's subject namespace;
 `message_import_ehr_extract` the same with an `import_ehr_extract` grant
 ([What a system client may do](#what-a-system-client-may-do)).
 
@@ -375,18 +378,30 @@ under its `commit_composition` grants and exports under its
 ([What a system client may do](#what-a-system-client-may-do)).
 
 **Reading protected identifiers.** `GET /admin/party/identifiers` admits an
-administrator who holds `[authz.rbac] identifier_reader_role` or a
-`read_identifiers` grant.
+administrator who holds a `read_identifiers` grant. The administrator role
+alone reveals no national identifier.
 
-A grant is the second source of a privileged permission, beside the token
-issuers `[authz.rbac] role_issuers` lists. The privileged roles,
-`admin_role`, `emergency_access_role`, `import_role` and
-`identifier_reader_role`, never come from a `hold_roles` grant: a `ROLE`
-whose `hold_roles` grant names one is refused at commit with `403`, and one
-stored before the role was configured is never honoured. The administrator
-role and emergency access come from the configuration and the identity
-provider alone; the import and identifier permissions come from their own
-operations, under the grant ceiling.
+**Reading one subject's access log.** `GET /fhir/r4/AuditEvent` admits a
+caller outside the administrator role that holds a `read_subject_audit`
+grant, for one subject at a time: the `patient` parameter names exactly one
+subject, and without it the call is `403`
+([Audit trail](audit.md#retrieving-audit-records-iti-81)).
+
+**Acting as an access service.** A caller with an `access_service` grant is
+an EHDS Art. 10 access service: an EHR whose person opted out reads as
+absent to it at every route, query and export, unless it declares one of
+`[audit] emergency_purpose_codes` and acts for no person (Art. 10(2)).
+While `[authz.grants] allowed` does not allow `access_service`, recording an
+opt-out is refused with `400`, since it would hold for nobody
+([Opt-out from the access services](security.md#opt-out-from-the-access-services-ehds-art-10)).
+
+A role a token names never grants any of these four: each comes from its
+grant alone, under the grant ceiling. The privileged roles of
+`[authz.rbac]`, `admin_role` and `emergency_access_role`, come from the
+configuration and the token issuers `role_issuers` lists, and never from a
+`hold_roles` grant: a `ROLE` whose `hold_roles` grant names one is refused at
+commit with `403`, and one stored before the role was configured is never
+honoured.
 
 For example, a ward clerk who signs in with Basic holds the clerk role
 through this capability of a `ROLE` the clerk's `PERSON` performs:
@@ -618,8 +633,7 @@ A deletion is held to the templates the same way. A composer that names an
 `message_import_ehr_extract` an `import_ehr_extract` grant, either of which
 names in `subject_namespace` the subject namespace of the EHR: of each
 `EHR_STATUS` the extract carries and, for an extract into an existing EHR,
-of that EHR. A caller holding `[authz.rbac] import_role` imports as before.
-Any other import is `403`. The versions inside an extract keep their
+of that EHR. Any other import is `403`, whatever roles the caller holds. The versions inside an extract keep their
 original committers only when a `creating_system` element of the grant names
 their `creating_system_id`.
 

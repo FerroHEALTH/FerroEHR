@@ -68,7 +68,6 @@ password_hash = "{HASH}"
 
 [authz.rbac]
 role_issuers = ["https://idp.example/realms/staff"]
-import_role = "IMPORTER"
 
 [authz.party_binding]
 provider = {{ issuer = "urn:oid:2.16.528.1.1007.3.3", id = "12345678" }}
@@ -485,6 +484,26 @@ fn the_keys_the_cdr_now_holds_are_refused_as_unknown() {
     ] {
         let text = refusal(&format!("{}\n{removed}", full()));
         assert!(text.contains(key), "{key}: {text}");
+    }
+}
+
+/// The privileged role names #5521 moved into the CDR are unknown keys: the
+/// subject audit, the access service, the import and the identifier read are
+/// grants of the policy parties now.
+#[test]
+fn the_privileged_roles_the_cdr_now_grants_are_refused_as_unknown() {
+    let issuers = "role_issuers = [\"https://idp.example/realms/staff\"]\n";
+    for (key, value) in [
+        ("subject_audit_role", "\"PORTAL\""),
+        ("access_service_roles", "[\"EHDS-ACCESS-SERVICE\"]"),
+        ("import_role", "\"IMPORTER\""),
+        ("identifier_reader_role", "\"IDENTIFIER_READER\""),
+    ] {
+        let text = refusal(&with(issuers, &format!("{issuers}{key} = {value}\n")));
+        assert!(
+            text.contains(&format!("unknown field `{key}`")),
+            "{key}: {text}"
+        );
     }
 }
 

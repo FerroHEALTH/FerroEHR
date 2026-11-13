@@ -155,15 +155,26 @@ pub(crate) async fn system_client(
         .expect("the AGENT acts for the provider");
     }
     if !capabilities.is_empty() {
-        let archetype = "openEHR-DEMOGRAPHIC-ROLE.integration.v1";
-        let role = json!({
-            "_type": "ROLE", "archetype_node_id": archetype,
-            "archetype_details": archetyped(archetype), "name": text("Integration"),
-            "identities": identities("integration"),
-            "performer": reference("AGENT", vo),
-            "capabilities": capabilities
-        });
-        create(svc, PartyKind::Role, &role).await;
+        performs(svc, ("AGENT", vo), capabilities).await;
     }
     vo
+}
+
+/// Commits, as the server, a `ROLE` of a deployment's own archetype the
+/// party `performer` (its RM type and container) performs, holding
+/// `capabilities`.
+pub(crate) async fn performs(
+    svc: &FerroEhrService,
+    performer: (&str, VoId),
+    capabilities: &[Value],
+) {
+    let archetype = "openEHR-DEMOGRAPHIC-ROLE.integration.v1";
+    let role = json!({
+        "_type": "ROLE", "archetype_node_id": archetype,
+        "archetype_details": archetyped(archetype), "name": text("Integration"),
+        "identities": identities("integration"),
+        "performer": reference(performer.0, performer.1),
+        "capabilities": capabilities
+    });
+    create(svc, PartyKind::Role, &role).await;
 }

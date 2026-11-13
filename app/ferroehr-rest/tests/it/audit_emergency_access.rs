@@ -24,6 +24,7 @@ use axum::Router;
 use axum::body::Body;
 use ehds_logging::balp::{EMERGENCY_DESCRIPTION, EMERGENCY_ENTITY};
 use ferroehr::config::authz::AuthzConfig;
+use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::sender::{
     AuditHandle, ResolvedSubject, SubjectLookup, SubjectResolver, start,
@@ -55,7 +56,8 @@ fn basic(name: &str) -> String {
 
 /// An audited app with the local store on, `ETREAT` agreed as an emergency
 /// purpose, Basic users for a clinician, an administrator and a patient portal
-/// holding the subject-scoped audit role, and one EHR; returns the EHR id.
+/// holding a `read_subject_audit` grant in the CDR, and one EHR; returns the
+/// EHR id.
 async fn app() -> (testkit::TestDb, PgPool, Router, String) {
     let (db, pool) = common::migrated_pool().await;
     let audit = AuditConfig {
@@ -77,7 +79,9 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
     let svc = Arc::new(
         common::binding_service(&pool)
             .with_audit(sender)
-            .with_audit_store(AuditStore::new(pool.clone())),
+            .with_audit_store(AuditStore::new(pool.clone()))
+            .with_binding_mapping(crate::party_binding_http::mapping())
+            .with_grant_ceiling(GrantCeiling::new([Operation::ReadSubjectAudit])),
     );
     let mut config = common::api_config(true);
     common::with_basic_users(
@@ -91,9 +95,9 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
         ],
     )
     .await;
+    common::grant_to(&svc, &pool, "portal", Operation::ReadSubjectAudit).await;
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
-    authz.rbac.subject_audit_role = Some("PORTAL".to_owned());
     let authz = AuthzHandle::build(
         &authz,
         &config.api.base_path,

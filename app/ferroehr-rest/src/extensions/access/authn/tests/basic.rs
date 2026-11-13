@@ -32,6 +32,18 @@ async fn valid_basic() {
     );
 }
 
+/// The roles `alice` holds under `config`.
+async fn roles_of_alice(config: &AppConfig) -> Vec<String> {
+    Authenticator::new(config, None, None, memory(), test_support::standing())
+        .await
+        .expect("a Basic-only authenticator")
+        .authenticate(&headers("Basic YWxpY2U6cHc="))
+        .await
+        .expect("ok")
+        .principal
+        .roles
+}
+
 /// `[authz.rbac] first_admin` is the one Basic user that holds
 /// `admin_role` from the configuration, upper-cased; another Basic user
 /// holds no role of its own.
@@ -40,21 +52,8 @@ async fn the_first_admin_holds_the_admin_role_upper_cased() {
     let mut config = basic_config(60);
     config.rbac.admin_role = "admin".to_owned();
     config.rbac.first_admin = Some("alice".to_owned());
-    let auth = Authenticator::new(&config, None, None, memory(), test_support::standing())
-        .await
-        .expect("a Basic-only authenticator");
-    let p = auth
-        .authenticate(&headers("Basic YWxpY2U6cHc="))
-        .await
-        .expect("ok");
-    assert_eq!(p.principal.roles, vec!["ADMIN".to_owned()]);
+    assert_eq!(roles_of_alice(&config).await, vec!["ADMIN".to_owned()]);
     config.rbac.first_admin = Some("bob".to_owned());
-    let auth = Authenticator::new(&config, None, None, memory(), test_support::standing())
-        .await
-        .expect("a Basic-only authenticator");
-    let p = auth
-        .authenticate(&headers("Basic YWxpY2U6cHc="))
-        .await
-        .expect("ok");
-    assert!(p.principal.roles.is_empty(), "{:?}", p.principal.roles);
+    let roles = roles_of_alice(&config).await;
+    assert!(roles.is_empty(), "{roles:?}");
 }

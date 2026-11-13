@@ -172,10 +172,7 @@ pub fn install(
         .map(|settings| settings.issuer.clone())
         .chain(key_issuers.iter().cloned());
     let service = service
-        .with_import_policy(ImportPolicy::new(
-            config.authz.rbac.import_role.clone(),
-            logins,
-        ))
+        .with_import_policy(ImportPolicy::new(logins))
         .with_grant_ceiling(config.authz.grants.ceiling(&config.authz.rbac))
         .with_federation_trust(ferroehr::config::federation::trust(
             &config.auth.shared,
@@ -398,11 +395,7 @@ pub async fn adopt(args: &AdoptArgs, config: &FerroEhrConfig) -> anyhow::Result<
     };
     let pools = crate::connect_pool(config).await?;
     input.check.scim_clients = scim_clients(&pools).await?;
-    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await;
-    let mut service = judged(&pools, config).await?;
-    if let Some(sender) = sender {
-        service = service.with_audit(sender);
-    }
+    let (service, handle) = audited(&pools, config).await?;
     let adopted = service
         .adopt_persons(&input)
         .await
@@ -439,11 +432,7 @@ pub async fn grant(args: &GrantArgs, config: &FerroEhrConfig) -> anyhow::Result<
         })
         .collect::<anyhow::Result<Vec<_>>>()?;
     let pools = crate::connect_pool(config).await?;
-    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await;
-    let mut service = judged(&pools, config).await?;
-    if let Some(sender) = sender {
-        service = service.with_audit(sender);
-    }
+    let (service, handle) = audited(&pools, config).await?;
     let granted = match (&args.basic_user, &args.issuer, &args.client_id) {
         (Some(user), _, _) => match basic_user_person(user, config, &pools).await {
             Ok(person) => service
@@ -610,6 +599,26 @@ fn provenance_input(args: &ProvenanceArgs, config: &FerroEhrConfig) -> anyhow::R
 /// # Errors
 /// A selector path that does not compile, a template the mapping cannot
 /// use, or a definition store failure.
+/// The service [`judged`] over `pools`, its commits recorded by the
+/// configured audit trail, and the handle that drains the trail.
+///
+/// # Errors
+/// As [`judged`].
+async fn audited(
+    pools: &DomainPools,
+    config: &FerroEhrConfig,
+) -> anyhow::Result<(
+    FerroEhrService,
+    Option<ferroehr::system_log::sender::AuditHandle>,
+)> {
+    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await;
+    let mut service = judged(pools, config).await?;
+    if let Some(sender) = sender {
+        service = service.with_audit(sender);
+    }
+    Ok((service, handle))
+}
+
 async fn judged(pools: &DomainPools, config: &FerroEhrConfig) -> anyhow::Result<FerroEhrService> {
     let service = install(FerroEhrService::new(pools), config)?;
     let errors = service

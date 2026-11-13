@@ -703,12 +703,15 @@ table, the roles and SMART scopes its `hold_roles` and `hold_scopes` grants
 name (`ferroehr-rest` `authn::grants::basic`), which every gate then reads.
 A token's roles and scopes stay the token's: its issuer is their authority,
 and a SMART scope is what the user consented to (SMART App Launch 2.2.0,
-Scopes and Launch Context). A policy grant is the second source of the
-privileged permissions beside `role_issuers`: `import_ehr` and
-`import_ehr_extract` admit the matching import, `read_identifiers` the
-protected-identifier read. The privileged roles of `[authz.rbac]`
-(`admin_role`, `emergency_access_role`, `import_role`,
-`identifier_reader_role`) are reserved: a `hold_roles` grant naming one is
+Scopes and Launch Context). The privileges beyond clinical access are
+grants and nothing else (#5521): `import_ehr` and `import_ehr_extract` admit
+the matching import, `read_identifiers` the protected-identifier read,
+`read_subject_audit` the ITI-81 read of one subject's access log and
+`access_service` an EHDS Art. 10 access service, each read from the
+request's `Capabilities` with no transaction added; `[authz.rbac]` names no
+role for any of them, and the four keys that did are unknown keys. The
+privileged roles of `[authz.rbac]` (`admin_role`, `emergency_access_role`)
+are reserved: a `hold_roles` grant naming one is
 `403` at commit (`GrantCeiling::with_reserved_roles`) and never honoured, so
 the administrator authority and break-glass never come from the party
 store. The keys `[[auth.basic.users]] roles` and `scopes` belong to
@@ -770,8 +773,7 @@ composer identifier of a `device_identifier_issuer` equal to
 Art. 13(4)). A `ROLE` whose grant lacks the terms its operation is checked by
 is `422` at its commit (`party_binding::grants::check_role`), the boot
 refusals the table had. The import grant of #5438 is held to its scope:
-`message_import_ehr` needs `[authz.rbac] import_role` or an `import_ehr`
-grant whose `subject_namespace` names the subject namespace of the
+`message_import_ehr` needs an `import_ehr` grant whose `subject_namespace` names the subject namespace of the
 `EHR_STATUS` the extract carries, and `message_import_ehr_extract` one of
 `import_ehr_extract` naming that of the target EHR and of any `EHR_STATUS`
 the extract carries; a system caller no longer imports without a grant; a system caller's

@@ -794,8 +794,38 @@ pub(crate) async fn bind_subjects(pool: &PgPool, bound: &[(&str, &str)]) {
     }
 }
 
+/// Grants the `PERSON` of the Basic user `user` of [`with_basic_users`]
+/// `operation` in `pool`, and lets `service` honour it: an operation such as
+/// `read_subject_audit` or `access_service` a deployment grants a person.
+pub(crate) async fn grant_to(
+    service: &FerroEhrService,
+    pool: &PgPool,
+    user: &str,
+    operation: Operation,
+) {
+    allowing(service, &[operation]);
+    let committer = binding_service(pool);
+    allowing(&committer, &[operation]);
+    let person = bound_person(pool, BASIC_LOGIN, user)
+        .await
+        .expect("the Basic user's PERSON is committed");
+    committer
+        .grant_person(&PersonGrant {
+            person,
+            operation,
+            elements: Vec::new(),
+        })
+        .await
+        .expect("the PERSON is granted");
+}
+
 /// Whether a live `PERSON` in `pool` carries the key `key` under `issuer`.
 async fn bound_already(pool: &PgPool, issuer: &str, key: &str) -> bool {
+    bound_person(pool, issuer, key).await.is_some()
+}
+
+/// The live `PERSON` in `pool` carrying the key `key` under `issuer`.
+async fn bound_person(pool: &PgPool, issuer: &str, key: &str) -> Option<uuid::Uuid> {
     let party = ferroehr::db::domain_pool_from(pool, ferroehr::db::domain::Domain::Party);
     let today = jiff::Zoned::now()
         .with_time_zone(jiff::tz::TimeZone::UTC)
@@ -806,7 +836,8 @@ async fn bound_already(pool: &PgPool, issuer: &str, key: &str) -> bool {
         .await
         .expect("the binding key reads")
         .iter()
-        .any(|row| row.live)
+        .find(|row| row.live)
+        .map(|row| row.party_id)
 }
 
 /// Drive one request through `app` and return its status, headers and body.

@@ -575,8 +575,10 @@ Two routes, and they answer different questions.
 
 There is no patient-facing route in the product: a portal that shows a person
 who accessed their record builds on ITI-81 and authenticates the person itself.
-What the product gives that portal is a grant of its own size:
-`authz.rbac.subject_audit_role` reads the log for one subject at a time, with
+What the product gives that portal is a grant of its own size: a
+`read_subject_audit` grant in the CDR
+([Operational policy](operational-policy.md#what-the-grants-decide)) reads
+the log for one subject at a time, with
 the `patient` parameter required, so the portal never holds an admin credential
 over every patient's log ([GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj)
 Art. 15 with Recital 63, under which the controller "should be able to provide
@@ -793,8 +795,8 @@ A malformed value is a `400` carrying a FHIR `OperationOutcome` with
 not ask for, is a `400` with `not-supported`; a parameter the crate does not
 know is ignored
 (§3.81.4.1.3). Under RBAC the
-unscoped retrieval is **admin-only**; a caller holding the configured
-`authz.rbac.subject_audit_role` reads it **scoped to one subject**: one
+unscoped retrieval is **admin-only**; a caller holding a
+`read_subject_audit` grant reads it **scoped to one subject**: one
 `patient` or `patient.identifier` with one value is required, and the caller
 is refused with a `403` that names the parameter when it omits
 it. Reading a subject's log is itself recorded as an access naming that

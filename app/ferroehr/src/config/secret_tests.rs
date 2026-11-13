@@ -516,6 +516,40 @@ fn a_removed_system_client_table_is_refused_without_its_userinfo() {
     assert!(!refused.contains("SYSTEM_PW_SENTINEL"), "{refused}");
 }
 
+/// The refusal of the removed `[authz.rbac]` key `key` (#5521).
+fn removed_rbac_key(key: &str, value: &str) {
+    let refused = tests::file_refusal(&format!("[authz.rbac]\n{key} = {value}\n"));
+    assert!(refused.contains(key), "{refused}");
+}
+
+/// `[authz.rbac] subject_audit_role` is removed: reading one subject's access
+/// log is a `read_subject_audit` grant in the CDR (#5521).
+#[test]
+fn the_removed_subject_audit_role_is_refused() {
+    removed_rbac_key("subject_audit_role", "\"PORTAL\"");
+}
+
+/// `[authz.rbac] access_service_roles` is removed: an EHDS Art. 10 access
+/// service is an `access_service` grant in the CDR (#5521).
+#[test]
+fn the_removed_access_service_roles_are_refused() {
+    removed_rbac_key("access_service_roles", "[\"EHDS-ACCESS-SERVICE\"]");
+}
+
+/// `[authz.rbac] import_role` is removed: importing is an `import_ehr` or
+/// `import_ehr_extract` grant in the CDR (#5521).
+#[test]
+fn the_removed_import_role_is_refused() {
+    removed_rbac_key("import_role", "\"IMPORTER\"");
+}
+
+/// `[authz.rbac] identifier_reader_role` is removed: reading protected
+/// national identifiers is a `read_identifiers` grant in the CDR (#5521).
+#[test]
+fn the_removed_identifier_reader_role_is_refused() {
+    removed_rbac_key("identifier_reader_role", "\"IDENTIFIER_READER\"");
+}
+
 /// An `authz.rbac.role_issuers` issuer renders and refuses with its userinfo
 /// masked.
 #[test]
