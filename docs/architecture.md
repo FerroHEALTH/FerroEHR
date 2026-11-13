@@ -443,7 +443,10 @@ which is what makes an optional stage safe to disable:
    access control package, refused whole with `400` at every write unless the
    draft BMM's invariants and the terminology groups hold (RM EHR IM
    §`ACCESS_CONTROL_SETTINGS` leaves the class "Currently implementation
-   dependent": the scheme is our own design). A new version is committed by a
+   dependent": the scheme is our own design). The default archetype
+   `access_directives.v1.1.0` constrains the settings to that class, which the
+   ADL 2 validator reads from the draft class tables beside RM 1.2.0
+   (`draft_model`, AOM2 master11 RM adaptation). A new version is committed by a
    gate-keeper the current settings name or by `admin_role` on the subject's
    instruction (BASE Architecture Overview §Security Policy, "Access control of
    access settings"); the settings are read only by those callers and the
