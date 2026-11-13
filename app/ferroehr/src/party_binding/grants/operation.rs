@@ -49,6 +49,14 @@ pub const FACILITY: &str = "facility";
 /// The code naming a grant's scope element that names a subject namespace.
 pub const SUBJECT_NAMESPACE: &str = "subject_namespace";
 
+/// The coded value of a [`SUBJECT_NAMESPACE`] element for an unnamed subject.
+///
+/// As a `DV_CODED_TEXT` of [`crate::party_binding::policy_mark::TERMINOLOGY`]
+/// it covers the EHRs whose `EHR_STATUS.subject` carries no `external_ref`
+/// namespace, such as an anonymous record's `PARTY_SELF` (RM EHR IM,
+/// `EHR_STATUS.subject`), and no other EHR.
+pub const NO_SUBJECT_NAMESPACE: &str = "no_subject_namespace";
+
 /// The code naming an import grant's scope element that names a
 /// `creating_system_id` whose wrapped committers the import may carry.
 pub const CREATING_SYSTEM: &str = "creating_system";
@@ -150,6 +158,7 @@ fn names_no_operation(code: &str) -> bool {
         RELAY,
         DEVICE,
         DEVICE_IDENTIFIER_ISSUER,
+        NO_SUBJECT_NAMESPACE,
     ]
     .contains(&code)
         || SCOPES.contains(&code)
@@ -359,6 +368,7 @@ mod tests {
         assert!(AGREEMENT.iter().all(|code| is_qualifier(code)));
         assert!(is_qualifier(RELAY) && is_qualifier(DEVICE) && is_qualifier("identifier_prefix"));
         assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_GUESTS));
+        assert!(is_qualifier(NO_SUBJECT_NAMESPACE));
     }
 
     #[test]

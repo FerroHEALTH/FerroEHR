@@ -767,7 +767,11 @@ refusals the table had. The import grant of #5438 is held to its scope:
 the extract carries; a system caller no longer imports without a grant; a system caller's
 export needs an `export_ehr_extract` grant covering the EHR the same way
 (`service::message::import_policy`). A grant names its namespaces, so there
-is no grant of every EHR. FerroEHR's own extracts rewrite every reference
+is no grant of every EHR. An EHR whose `EHR_STATUS.subject` has no
+`external_ref`, which RM EHR IM allows for an anonymous record, is reached
+only by a `subject_namespace` element holding the coded
+`ferroehr-operations::no_subject_namespace`, which covers those EHRs and no
+other (`Capabilities::covers`, #5530). FerroEHR's own extracts rewrite every reference
 namespace to `local` (RM `ehr_extract` `master09-semantics.adoc` §Creation
 Semantics), so a grant over them names `local`. The commit of a system
 caller is attributed to its `ACTOR`: the committer's `external_ref` is a

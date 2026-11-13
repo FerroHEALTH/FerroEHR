@@ -25,7 +25,7 @@ use serde_json::Value;
 use uuid::Uuid;
 
 use crate::party_binding::grants::derive::walk;
-use crate::party_binding::grants::operation::{Operation, SCOPES};
+use crate::party_binding::grants::operation::{NO_SUBJECT_NAMESPACE, Operation, SCOPES};
 use crate::party_binding::policy_mark::coded;
 
 tokio::task_local! {
@@ -313,16 +313,50 @@ impl Capabilities {
         self.of(operation).next().is_some()
     }
 
-    /// Whether one grant of `operation` in force names every subject
-    /// namespace of `namespaces` in its `subject_namespace` elements; never
-    /// for no namespace, so a grant reaches only EHRs whose subject it names.
+    /// Whether one grant of `operation` in force covers every EHR subject of
+    /// `subjects`, each the namespace of `EHR_STATUS.subject.external_ref` or
+    /// `None` for a subject with none: a namespace by a `subject_namespace`
+    /// element naming it, `None` by one holding [`NO_SUBJECT_NAMESPACE`].
+    /// Never for no subject, so a grant reaches only the EHRs it names.
     #[must_use]
-    pub fn covers(&self, operation: Operation, namespaces: &[&str]) -> bool {
-        !namespaces.is_empty()
+    pub fn covers(&self, operation: Operation, subjects: &[Option<&str>]) -> bool {
+        !subjects.is_empty()
             && self.of(operation).any(|grant| {
-                let named = grant.credentials().texts(SCOPES[2]);
-                namespaces.iter().all(|namespace| named.contains(namespace))
+                let scope = SubjectScope::of(grant.credentials());
+                subjects.iter().all(|subject| scope.covers(*subject))
             })
+    }
+}
+
+/// The EHR subjects one grant's `subject_namespace` elements cover.
+struct SubjectScope<'a> {
+    /// The namespaces its text elements name.
+    named: Vec<&'a str>,
+    /// Whether an element holds [`NO_SUBJECT_NAMESPACE`].
+    unnamed: bool,
+}
+
+impl<'a> SubjectScope<'a> {
+    /// The scope of `credentials`: an element whose value is the coded
+    /// [`NO_SUBJECT_NAMESPACE`] names no namespace by its text.
+    fn of(credentials: Credentials<'a>) -> Self {
+        let mut scope = Self {
+            named: Vec::new(),
+            unnamed: false,
+        };
+        for value in credentials.values(SCOPES[2]) {
+            if coded(value) == Some(NO_SUBJECT_NAMESPACE) {
+                scope.unnamed = true;
+            } else if let Some(text) = value.get("value").and_then(Value::as_str) {
+                scope.named.push(text);
+            }
+        }
+        scope
+    }
+
+    /// Whether it covers an EHR whose subject namespace is `subject`.
+    fn covers(&self, subject: Option<&str>) -> bool {
+        subject.map_or(self.unnamed, |namespace| self.named.contains(&namespace))
     }
 }
 
