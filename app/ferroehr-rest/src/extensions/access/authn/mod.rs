@@ -563,14 +563,17 @@ pub(crate) async fn middleware(
     let outcome = auth.authenticate(&parts).await;
     let mut req = Request::from_parts(parts, body);
     match outcome {
-        Ok(Authenticated {
-            mut principal,
-            fresh,
-        }) => {
-            let granted = match grants::admit(&layer, &mut principal, req.headers()).await {
+        Ok(Authenticated { principal, fresh }) => {
+            let granted = match grants::resolve(&layer, &principal).await {
                 Ok(granted) => granted,
-                Err(refusal) => return *refusal,
+                Err(e) => return refusal::response(auth, req.headers(), &e),
             };
+            let mut principal = grants::basic(principal, &granted, |role| {
+                auth.role_issuers.is_privileged(role)
+            });
+            if let Err(refusal) = grants::admit(&layer, &mut principal, &granted, req.headers()) {
+                return *refusal;
+            }
             if let Some(refusal) = purpose::mismatch(&layer, &principal, &req) {
                 return refusal;
             }

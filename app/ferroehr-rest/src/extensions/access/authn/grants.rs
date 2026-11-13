@@ -14,9 +14,12 @@
 //! transaction; a store that cannot answer is the server's failure and
 //! answers `503`. A request whose own commit changed a grant reads the copy
 //! again before it answers, so the caller's next request runs under the
-//! change. A check reads them through [`Capabilities::current`], and the
-//! admission of an external caller reads its federation agreement from them. No openEHR spec gives a
-//! capability an authorization meaning: our own design.
+//! change. A Basic user holds the roles and scopes its `hold_roles` and
+//! `hold_scopes` grants name ([`basic`]), resolved before any gate reads
+//! them, the admission of an external caller reads its federation agreement
+//! from them ([`admit`]), and a check reads the rest through
+//! [`Capabilities::current`]. No openEHR spec gives a capability an
+//! authorization meaning: our own design.
 
 use std::future::Future;
 use std::sync::Arc;
@@ -24,10 +27,12 @@ use std::sync::Arc;
 use axum::response::Response;
 use ferroehr::party_binding::grants::capabilities::{Actor, Capabilities, with_capabilities};
 use ferroehr::party_binding::grants::live::tracking;
+use ferroehr::party_binding::grants::operation::{Operation, ROLE, SCOPE};
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::Outcome;
+use ferrohealth_smart::resource::{Access, Caller, Via};
 
-use super::{AuthError, AuthLayer, Principal};
+use super::{AuthError, AuthLayer, Principal, upper_cased};
 
 /// The capabilities of the caller of `principal`, after reading the grant
 /// rows when this replica's copy is stale.
@@ -71,32 +76,28 @@ pub(super) async fn resolve(
     Ok(Arc::new(grants.capabilities(actor, jiff::Timestamp::now())))
 }
 
-/// Resolves the capabilities of the caller of `principal` ([`resolve`]) and
-/// admits it under them ([`super::declared::Declared::admit`]), so
-/// `principal` carries the agreement an external caller was admitted under;
-/// returns the capabilities.
+/// Admits the caller of `principal` under its capabilities `granted`
+/// ([`super::declared::Declared::admit`]), so `principal` carries the
+/// agreement an external caller was admitted under.
 ///
 /// # Errors
-/// The response refusing a caller whose capabilities cannot be read, or an
-/// external caller outside its agreement, recorded as its failed
-/// authentication.
-pub(super) async fn admit(
+/// The response refusing an external caller outside its agreement, recorded
+/// as its failed authentication.
+pub(super) fn admit(
     layer: &AuthLayer,
     principal: &mut Principal,
+    granted: &Capabilities,
     headers: &http::HeaderMap,
-) -> Result<Arc<Capabilities>, Box<Response>> {
+) -> Result<(), Box<Response>> {
     let auth = &layer.authenticator;
-    let granted = resolve(layer, principal)
-        .await
-        .map_err(|e| Box::new(super::refusal::response(auth, headers, &e)))?;
     let trust = layer.service.grants().federation();
     match auth
         .declared
-        .admit(principal.access.clone(), &granted, &trust)
+        .admit(principal.access.clone(), granted, &trust)
     {
         Ok(admitted) => {
             principal.access = admitted;
-            Ok(granted)
+            Ok(())
         }
         Err(AuthError::KindRefused { code, message, .. }) => {
             let refused = AuthError::KindRefused {
@@ -132,4 +133,54 @@ pub(super) async fn scoped<F: Future<Output = Response>>(
     }
     resp.extensions_mut().insert(granted);
     resp
+}
+
+/// The principal of the Basic user `principal` holding, beside its own, the
+/// roles and scopes its `hold_roles` and `hold_scopes` grants in `granted`
+/// name; any other principal unchanged.
+///
+/// A role `is_privileged` names is never held this way: a privileged role
+/// comes from the configuration, a `role_issuers` token or an operation of
+/// its own, under the grant ceiling.
+pub(super) fn basic(
+    principal: Principal,
+    granted: &Capabilities,
+    is_privileged: impl Fn(&str) -> bool,
+) -> Principal {
+    let texts = |operation: Operation, code: &str| -> Vec<String> {
+        granted
+            .of(operation)
+            .flat_map(|grant| grant.credentials().texts(code))
+            .map(|text| text.trim().to_owned())
+            .filter(|text| !text.is_empty())
+            .collect()
+    };
+    let Some(caller) = principal.access.caller().filter(|c| c.via() == Via::Basic) else {
+        return principal;
+    };
+    let roles: Vec<String> = upper_cased(&texts(Operation::HoldRoles, ROLE))
+        .into_iter()
+        .filter(|role| !is_privileged(role))
+        .collect();
+    let scopes = texts(Operation::HoldScopes, SCOPE);
+    if roles.is_empty() && scopes.is_empty() {
+        return principal;
+    }
+    let mut scope = caller.scope().to_vec();
+    scope.extend(scopes.into_iter().filter(|s| !caller.scope().contains(s)));
+    let mut held = principal.roles.clone();
+    held.extend(
+        roles
+            .into_iter()
+            .filter(|role| !principal.roles.contains(role)),
+    );
+    // NOTE: ferrohealth-smart Caller::basic, the Basic caller is rebuilt with
+    // the granted scope so every gate reads one caller; it carries no other value.
+    let mut rebuilt = Caller::basic(caller.subject().to_owned(), &scope.join(" "))
+        .with_roles(held.clone())
+        .with_cached(caller.cached());
+    if let Some(outcome) = caller.party() {
+        rebuilt = rebuilt.with_party(outcome.clone());
+    }
+    Principal::new(Access::Caller(Arc::new(rebuilt)), held, principal.honoured)
 }

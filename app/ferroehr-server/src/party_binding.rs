@@ -130,7 +130,7 @@ pub fn install(
             config.authz.import.trusted_systems.clone(),
             logins,
         ))
-        .with_grant_ceiling(config.authz.grants.ceiling())
+        .with_grant_ceiling(config.authz.grants.ceiling(&config.authz.rbac))
         .with_federation_trust(ferroehr::config::federation::trust(
             &config.auth.shared,
             config.audit.store.horizon(),
