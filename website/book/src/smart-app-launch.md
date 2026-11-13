@@ -138,8 +138,9 @@ export FERROEHR__AUTH__ISSUER__0__KIND=persons
 export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
 export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=my-smart-app
 export FERROEHR__AUTH__SMART__DISCOVERY=true
-# The external origin absolute service URLs are built from; required.
-export FERROEHR__AUTH__SMART__PUBLIC_BASE_URL=https://cdr.example.com
+# The URL clients reach the server at, which the absolute service URLs hang
+# off; required.
+export FERROEHR__SERVER__PUBLIC_BASE_URL=https://cdr.example.com
 ```
 
 A document looks like:
@@ -205,7 +206,7 @@ The keys live in `[auth]` and `[auth.smart]`; see the
 | Key | Default | Meaning |
 |---|---|---|
 | `FERROEHR__AUTH__SMART__DISCOVERY` | `false` | Serve the discovery document. |
-| `FERROEHR__AUTH__SMART__PUBLIC_BASE_URL` | unset (**required when enabled**) | The external origin absolute `services.*.baseUrl` values are built from, e.g. `https://cdr.example.com`. |
+| `FERROEHR__SERVER__PUBLIC_BASE_URL` | unset (**required when enabled**) | The URL clients reach the server at, e.g. `https://cdr.example.com`: the absolute `services.*.baseUrl` values are it, `server.base_path` and `api.base_path`. |
 | `FERROEHR__AUTH__SMART__PLATFORM_BASE_URL` | unset | Base the discovery document hangs off. Unset = the REST root (`/ferroehr/rest`). A leading path is honoured (`/gateway/v1` → `/gateway/v1/.well-known/smart-configuration`). |
 | `FERROEHR__AUTH__SMART__BACKEND_CLIENTS` | `[]` | The `client_id`s a `system/aql-*` grant counts for. |
 | `FERROEHR__AUTH__SMART__PATIENT_ISSUERS` | `[]` | The issuers whose `patient/` grants count. |

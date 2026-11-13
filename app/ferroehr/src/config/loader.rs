@@ -376,6 +376,32 @@ mod tests {
         assert_eq!(config.server.shared.body_limit_bytes(), 1_048_576);
     }
 
+    /// `[server] public_base_url` is read from the environment beside the
+    /// family section's keys, and the public root keeps the mount path.
+    #[test]
+    fn the_public_base_url_maps_from_the_environment() {
+        let (_, config) = assemble_from(
+            None,
+            &env(&[
+                (
+                    "FERROEHR__SERVER__PUBLIC_BASE_URL",
+                    "https://gw.example/cdr",
+                ),
+                ("FERROEHR__SERVER__BASE_PATH", "/ehr"),
+            ]),
+            &[],
+        )
+        .expect("the public URL loads");
+        assert_eq!(
+            config
+                .server
+                .public_root()
+                .map(|root| root.to_string())
+                .as_deref(),
+            Some("https://gw.example/cdr/ehr")
+        );
+    }
+
     /// An unknown key set from the environment names its full dotted path and
     /// the variable that set it.
     #[test]
