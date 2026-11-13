@@ -151,17 +151,6 @@ pub enum AqlFeatureError {
     )]
     UnsupportedVersionedObjectPath(String),
 
-    /// A demographic FROM class outside the served subset of the demographic
-    /// extension: `GROUP`, `AGENT`, `PARTY_RELATIONSHIP`, or an abstract class
-    /// whose concrete descendants include one of them (`PARTY`, `ACTOR`).
-    /// QUERY master03 §FROM gives semantics to the clinical repository only;
-    /// the served demographic roots are our own design.
-    #[error(
-        "FROM class `{0}` is a demographic class this server does not query; a demographic \
-         root is PERSON, ORGANISATION or ROLE (experimental demographic extension; QUERY §FROM)"
-    )]
-    UnsupportedDemographicClass(String),
-
     /// A demographic root that is not the outermost FROM class: one nested
     /// under another class, a second demographic root, or one beside other
     /// classes in a top-level `AND`/`OR`. Our own design (QUERY master03

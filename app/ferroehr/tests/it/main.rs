@@ -93,6 +93,7 @@ mod party_binding_config;
 mod party_binding_source;
 mod party_mapping;
 mod party_mapping_templates;
+mod party_reverse_paths;
 mod persistence;
 mod policy_grants;
 mod policy_parties;
