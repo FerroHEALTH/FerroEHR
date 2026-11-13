@@ -34,6 +34,13 @@ under its ids.
 Each file is in the repository under `deploy/definitions/` and is attached to
 every release as an asset of its own, with a `.sha256sum` file beside it.
 
+A shipped definition never changes under its id. Boot stores a definition
+only when its id is absent, so a change takes a new version, such as the
+patient's `v1.1.0` beside `v1.0.0`, and a deployment receives it at its next
+boot. `deploy/definitions/published.sha256` records the content of every
+definition the binary carries, and a test refuses a change under a recorded
+id.
+
 | File | What it is for | The key that names it |
 |---|---|---|
 | [`openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls) | A professional's `PERSON`: the binding key, `userName` and `externalId` as identifiers in `details` (`/details[id2]/items[id3]`), the full, given and family name in `identities` (`/identities[id4]/details[id5]/items[id6]`, `id7`, `id8`), and a work email in `contacts` (`/contacts[id9]/addresses[id10]/details[id11]/items[id12]`). | `[[authz.party_binding.person.template]] template_id` and the `path` keys of `[[authz.party_binding.person.attribute]]` |
@@ -43,7 +50,8 @@ every release as an asset of its own, with a `.sha256sum` file beside it.
 | [`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.0.adls) | An example care-team membership from a professional's `PERSON` to the team's `GROUP`, held in the professional's `relationships`, whose details carry `ferroehr-operations::member_of` and an optional role in the team. FerroEHR recognises it by that code in any archetype. | none |
 | [`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1.0.0.adls) | An example care relationship from a patient's `PERSON` to the team's `GROUP` or the unit, held in the patient's `relationships`, with the admission as its `time_validity`, whose details carry `ferroehr-operations::under_care_of` and an optional discharge time. FerroEHR recognises it by that code in any archetype. | none |
 | [`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls) | An example representation from a representative's `PERSON` to the subject's, whose coded name is its type, `at10` (parent), `at11` (guardian) or `at12` (authorised proxy), and whose details carry `ferroehr-operations::represents` and the openEHR `subject_relationship` code. FerroEHR recognises a representation by that code in any archetype. | none |
-| [`openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls) | A patient's `PERSON`: its patient identifiers (`/details[id2]/items[id3]`), date of birth (`id4`) and sex (`id5`) in `details`, its names in `identities`, each named by its usage (`/identities[id6]/details[id7]/items[id8]`, `id9`, `id10`), a postal and an electronic address, its relationships to personal contacts, third-party payers and providers, each payer and provider with the patient identifiers it issues, and its care relationships (`id32`) to the teams and units it is under the care of, carrying `ferroehr-operations::under_care_of`. | `[authz.party_binding.patient] template_id`, with its `identifier` and `name` paths |
+| [`openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0.adls) | A patient's `PERSON`: its patient identifiers (`/details[id2]/items[id3]`), date of birth (`id4`) and sex (`id5`) in `details`, its names in `identities`, each named by its usage (`/identities[id6]/details[id7]/items[id8]`, `id9`, `id10`), a postal and an electronic address, its relationships to personal contacts, third-party payers and providers, each payer and provider with the patient identifiers it issues, and its care relationships (`id32`) to the teams and units it is under the care of, carrying `ferroehr-operations::under_care_of`. | `[authz.party_binding.patient] template_id`, with its `identifier` and `name` paths |
+| [`openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls) | The patient's `PERSON` as v5.7.1-rc1 published it: version 1.1.0 without the care relationship (`id32`). It stays byte for byte under its id, and a deployment that stored it receives 1.1.0 beside it. | none |
 | [`openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls`](https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls) | A healthcare provider's `ORGANISATION`: its provider identifiers in `details` (`/details[id2]/items[id3]`, such as the Dutch URA, mandatory), its names named by their usage, and a postal and an electronic address. The acts-for relationship targets it, and a federation partner is one. | none |
 
 The links above fetch the newest release's copy. To fetch the copy of a
@@ -60,6 +68,7 @@ for file in \
   openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1.0.0.adls \
   openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls \
   openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls \
+  openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0.adls \
   openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls; do
   curl -fsSLO "$base/$file"
   curl -fsSLO "$base/$file.sha256sum"
