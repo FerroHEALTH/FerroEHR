@@ -523,7 +523,9 @@ recognition runs with or without a party mapping and enters no mapping
 digest: the grant rows it derives do not depend on the mapping. **Our own
 design.**
 
-**The access control terminology** (`ferroehr::access_terminology`, #5507)
+**The access control terminology**
+(`openehr_rm::draft::access_control::terminology`, #5507, beside the draft
+it codes since #5540)
 adds the groups the ABAC design of #5487 reads to `ferroehr-operations`:
 `access default`, `access directive kind`, `access effect`, `access
 relationship`, `access caller kind`, `access operation`, `access
