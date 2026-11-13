@@ -144,6 +144,9 @@ pub enum AuditError {
     /// `ehds-logging` refused a retention or label policy of the access record.
     #[error("the access record policy is invalid")]
     Policy(#[source] Box<dyn std::error::Error + Send + Sync>),
+    /// The access-log entries of a batch could not be appended.
+    #[error("the access-log entries could not be written")]
+    AccessLog(#[from] crate::access_log::store::AccessLogError),
     /// A batch named a retention end count other than its record count.
     #[error("{ends} retention ends for {records} audit records")]
     RetentionEnds {
@@ -238,11 +241,19 @@ impl FerroEhrService {
     /// # Errors
     /// As [`Self::record_access`].
     pub fn record_one_access(&self, mut event: AuditEvent) -> Result<(), ServiceError> {
+        self.stamp_one_access(&mut event);
+        self.record_access(event)
+    }
+
+    /// Stamp `event` as one act on one object of the current request: one
+    /// result, the request's purpose and permit, the deployment's legal basis,
+    /// and the caller ([`stamp_caller`]).
+    pub(crate) fn stamp_one_access(&self, event: &mut AuditEvent) {
         event.result_count = Some(1);
         event.purpose = access_context::current_purpose();
         event.permit = access_context::current_permit();
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event)
+        stamp_caller(event);
     }
 
     /// Record an access event and honour the configured fail mode.
@@ -257,19 +268,7 @@ impl FerroEhrService {
     /// [`ServiceError::Unrecorded`] (the wire's `503`) when the sender
     /// rejected the record.
     pub fn record_access(&self, mut event: AuditEvent) -> Result<(), ServiceError> {
-        // A service-layer record is built where the request's principal is
-        // gone; the roles the authentication layer published for the scope
-        // are stamped here so every emitter carries them (#3239).
-        if event.roles.is_empty() {
-            event.roles = access_context::current_roles();
-        }
-        // NOTE: EHDS Art. 9(2)(a) (`docs/law/eu/ehds/text.html`), the record names
-        // who accessed the data, and the request's authenticated committer is that.
-        if event.user_id.is_empty()
-            && let Some(committer) = crate::versioning::committer::current_committer()
-        {
-            event.user_id = committer.subject;
-        }
+        stamp_caller(&mut event);
         match self.emit(event) {
             EmitOutcome::Enqueued | EmitOutcome::Dropped => Ok(()),
             EmitOutcome::Rejected => Err(ServiceError::Unrecorded(Refusal::new(
@@ -432,6 +431,22 @@ impl FerroEhrService {
             .search(filter)
             .await
             .map_err(|e| ServiceError::internal("search the audit record repository", e))
+    }
+}
+
+/// Stamp the caller of the current request onto a record the service layer
+/// built, where the request's principal is gone: the roles the
+/// authentication layer published for the scope (#3239) and the committer.
+fn stamp_caller(event: &mut AuditEvent) {
+    if event.roles.is_empty() {
+        event.roles = access_context::current_roles();
+    }
+    // NOTE: EHDS Art. 9(2)(a) (`docs/law/eu/ehds/text.html`), the record names
+    // who accessed the data, and the request's authenticated committer is that.
+    if event.user_id.is_empty()
+        && let Some(committer) = crate::versioning::committer::current_committer()
+    {
+        event.user_id = committer.subject;
     }
 }
 

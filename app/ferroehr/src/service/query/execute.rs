@@ -127,7 +127,9 @@ impl FerroEhrService {
             Err(failure) => failure.outcome,
         };
         count_query(label);
-        outcome.map_err(|failure| *failure.error)
+        outcome
+            .map(|outcome| outcome.naming(aql, name))
+            .map_err(|failure| *failure.error)
     }
 
     /// Execute a planned single-domain query and assemble its `RESULT_SET`,

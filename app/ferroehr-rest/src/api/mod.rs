@@ -273,6 +273,7 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
         .merge(admin::report::report_routes())
         .merge(admin::dump_load::dump_load_routes())
         .merge(admin::integrity::integrity_routes())
+        .merge(admin::access_log::access_log_routes())
         .merge(admin::marks::marks_routes())
         .merge(admin::access_delay::access_delay_routes())
         .merge(admin::access_restriction::access_restriction_routes())
@@ -283,6 +284,7 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
         .merge(admin::binding_key::binding_key_routes())
         .merge(admin::outbox::outbox_routes())
         .merge(admin::registers::register_routes())
+        .merge(admin::access_policy::access_policy_routes())
         .merge(message::extract::extract_routes())
         .merge(terminology::routes())
 }
@@ -345,10 +347,9 @@ where
     F: Future<Output = Result<Response, RestError>> + Send,
 {
     // NOTE: no specification governs operational policy: our own design; the request reads
-    // the newest version of every policy register first, so a change decides this request.
-    if reads_registers(&state, op)
-        && let Err(error) = state.backend().refresh_policy_registers().await
-    {
+    // the newest version of every policy register and the access policy first, so a change
+    // decides this request.
+    if let Err(error) = refresh_policy(&state, op).await {
         let mut resp = RestError::from(error).into_response();
         resp.extensions_mut()
             .insert(crate::system_log::middleware::AuditOpId(op));
@@ -424,6 +425,19 @@ const ADMIN_REGISTER_READERS: [&str; 4] = [
     "admin_load",
     "admin_put_retention_policy",
 ];
+
+/// Bring the policy `op` reads up to date before it runs: the policy
+/// registers ([`reads_registers`]) and, for every operation outside the admin
+/// group, the controller's access policy.
+async fn refresh_policy(state: &AppState, op: &str) -> Result<(), ferroehr::error::ServiceError> {
+    if reads_registers(state, op) {
+        state.backend().refresh_policy_registers().await?;
+    }
+    if !op.starts_with("admin_") {
+        state.backend().refresh_access_policy().await?;
+    }
+    Ok(())
+}
 
 /// Whether `op` reads the policy registers before it runs: every operation but
 /// those of the admin group that consult none, and none while the admin group

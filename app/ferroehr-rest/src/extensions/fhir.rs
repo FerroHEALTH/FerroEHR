@@ -182,16 +182,22 @@ async fn audit_search(state: &AppState, parts: &RequestParts) -> Response {
             let mut resp = fhir_json(StatusCode::OK, &bundle);
             // Reading a person's access log is itself an access about that
             // person: the record of this call names whose log was read and how
-            // many records it served.
+            // many records it served, and it writes an access-log entry naming
+            // the read of the log by its search (DICOM PS3.15 A.5.3.2 "Audit
+            // Log Used", `docs/specs/dicom-ps3-15/`).
             resp.extensions_mut()
                 .insert(crate::system_log::middleware::AuditObject {
                     ehr_id: None,
                     uid: filter.patient.as_ref().map(|p| format!("audit-log:{p}")),
                     result_count: u64::try_from(total).ok(),
                     domain: Some(ferroehr::system_log::event::AccessDomain::System),
-                    origins: Vec::new(),
-                    origin_count: None,
-                    content: None,
+                    query: Some(ferroehr::system_log::event::QueryNaming::of(
+                        ferroehr::access_log::entry::LOG_SEARCH,
+                        query,
+                        None,
+                    )),
+                    entry: ferroehr::system_log::event::EntryScope::LogRead,
+                    ..crate::system_log::middleware::AuditObject::default()
                 });
             resp
         }

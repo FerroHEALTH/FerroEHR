@@ -23,11 +23,18 @@ use std::net::IpAddr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, PoisonError};
 
+use axum::response::Response;
 use ferroehr::system_log::binding::{BindingRecord, Summary};
-use ferroehr::system_log::event::{AuditEvent, EmitOutcome};
+use ferroehr::system_log::event::{
+    AccessDecision, AuditEvent, EmitOutcome, EntryScope, EventActionCode, EventType, ObjectClass,
+};
+use http::StatusCode;
 use tokio::time::{Duration, Instant};
 
 use crate::state::AppState;
+use crate::system_log::middleware::{
+    AccessContext, Caller, fill_access, fill_common, outcome_from_status,
+};
 
 /// The most EHR ids one summary record names; the count stays exact.
 const SUMMARY_EHR_IDS: usize = 64;
@@ -393,6 +400,92 @@ fn write(state: &AppState, event: AuditEvent, kind: &'static str) -> EmitOutcome
         tracing::error!(kind, "the system log could not take a refusal record");
     }
     outcome
+}
+
+/// Whether `resp` refused the request: a `401`, a `403`, a caller above its
+/// agreement's `caller_rate` ([`OverRate`]), or a security event such as a TRC
+/// patient mismatch, whatever its status.
+pub(super) fn is_refusal(resp: &Response) -> bool {
+    let status = resp.status();
+    status == StatusCode::UNAUTHORIZED
+        || status == StatusCode::FORBIDDEN
+        || resp.extensions().get::<OverRate>().is_some()
+        || resp
+            .extensions()
+            .get::<BindingRecord>()
+            .is_some_and(|binding| binding.code.is_security_event())
+}
+
+/// Records the refusal `resp` answered as a failed user authentication
+/// (DICOM PS3.15 §A.5.1 `EventID` 110114, `EventTypeCode` 110122), charged
+/// to the verified caller when there is one and to the client's network
+/// otherwise, and counted into the caller's summary when it is [`OverRate`];
+/// whether its record was rejected under `fail_mode = "closed"`. A refusal no
+/// operation record of the request covers (`op_recorded` false) is the
+/// access-log entry of the refused access.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the request facts the middleware read once, handed to the one refusal recorder"
+)]
+pub(super) fn refused(
+    state: &AppState,
+    resp: &Response,
+    caller: Caller<'_>,
+    client_ip: Option<String>,
+    timestamp: jiff::Timestamp,
+    access: &AccessContext,
+    ehr_id: Option<String>,
+    op_recorded: bool,
+) -> bool {
+    let mut event = AuditEvent::new(
+        EventActionCode::Execute,
+        ObjectClass::Authentication,
+        outcome_from_status(resp.status()),
+    );
+    event.event_type = Some(EventType::Login);
+    event.decision = AccessDecision::Refused;
+    if !op_recorded {
+        event.entry = EntryScope::Refusal;
+    }
+    // NOTE: no specification governs this: our own design; the address was
+    // rendered from an `IpAddr`, so only its absence leaves it unparsed.
+    let address = client_ip.as_deref().and_then(|ip| ip.parse().ok());
+    // A refused credential has no principal, so the caller is `UNKNOWN`; a
+    // 403 and a patient-data step-up 401 carry one.
+    fill_common(&mut event, caller, client_ip, timestamp);
+    fill_access(&mut event, access, state);
+    event.ehr_id = ehr_id;
+    let charged = caller.principal.map_or_else(
+        || Charged::network(address),
+        |principal| Charged::Caller {
+            issuer: event.issuer.clone().unwrap_or_default(),
+            subject: principal.subject.clone(),
+        },
+    );
+    let summarised = resp.extensions().get::<OverRate>().is_some();
+    let outcome = if summarised {
+        "caller-rate".to_owned()
+    } else {
+        caller.binding.map_or_else(
+            || {
+                resp.extensions().get::<Reason>().map_or_else(
+                    || resp.status().as_str().to_owned(),
+                    |Reason(r)| (*r).to_owned(),
+                )
+            },
+            |binding| binding.code.as_str().to_owned(),
+        )
+    };
+    record(
+        state,
+        &Refusal {
+            charged,
+            outcome: &outcome,
+            ehr_id: event.ehr_id.as_deref(),
+            event: &event,
+            summarised,
+        },
+    )
 }
 
 #[cfg(test)]

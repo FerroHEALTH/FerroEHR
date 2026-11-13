@@ -36,9 +36,12 @@ use sqlx::postgres::{PgConnection, PgRow};
 use sqlx::{Connection, PgPool, Row};
 use uuid::Uuid;
 
+mod access_log;
 mod batch;
+pub(crate) mod lax;
 mod writers;
 
+use crate::access_log::store::AccessLogStore;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 #[cfg(feature = "fhir")]
@@ -50,6 +53,7 @@ use crate::system_log::render::RenderPolicy;
 #[cfg(feature = "fhir")]
 use crate::system_log::render::{CompiledPolicy, StoredRecord};
 use batch::BatchColumns;
+use lax::{any_equals, any_is, lax_path};
 use writers::{WritePolicy, Writers};
 
 use ferrohealth_smart::assurance::AssuranceLevel;
@@ -168,14 +172,20 @@ pub enum RecordEnd {
     Never,
 }
 
-/// One record as the store writes it: the resolved event and the patient its
-/// subject resolver found behind the event's EHR.
+/// One record as the store writes it: the resolved event, the patient its
+/// subject resolver found behind the event's EHR, and the openEHR access-log
+/// entry the access writes beside it.
 #[derive(Debug, Clone)]
 pub struct AuditRecord {
     /// The resolved event.
     pub event: AuditEvent,
     /// The patient (EHR subject) id, when the resolver found one.
     pub subject: Option<String>,
+    /// The access-log entry of the access (`crate::access_log::entry`),
+    /// written in the transaction that writes the record; `None` for a
+    /// record of no access to EHR data.
+    pub entry:
+        Option<Box<openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry>>,
 }
 
 /// [`INSERT_ONE`] that also enters the record in the FHIR Feed's outbox, in
@@ -223,6 +233,10 @@ pub struct AuditStore {
     /// The search tokens and sets this store has written.
     #[cfg(feature = "fhir")]
     tokens: Arc<crate::system_log::search::TokenRegistry>,
+    /// The access-log store the records' entries are appended through, which
+    /// signs their links as `[audit.access_log]` asks once the server installs
+    /// it ([`Self::use_access_log`]); an unsigning one until then.
+    access_log: Arc<std::sync::OnceLock<AccessLogStore>>,
 }
 
 impl AuditStore {
@@ -240,6 +254,7 @@ impl AuditStore {
             policies: Arc::new(Mutex::new(BTreeMap::new())),
             #[cfg(feature = "fhir")]
             tokens: Arc::new(crate::system_log::search::TokenRegistry::default()),
+            access_log: Arc::default(),
         }
     }
 
@@ -474,10 +489,15 @@ impl AuditStore {
     /// per record), which the reaper honours ([`Self::reap_due`]). With `ends`
     /// empty no record states an end, and each keeps the store horizon.
     ///
+    /// The access-log entries the records carry are appended in the same
+    /// transaction, after the records, so a batch of accesses costs one commit
+    /// whatever it writes and no access is stored without its entry.
+    ///
     /// # Errors
     /// [`AuditError::Store`] when the INSERT fails (the whole batch fails
-    /// together; the caller retries), and [`AuditError::RetentionEnds`] when
-    /// `ends` is neither empty nor one end per record.
+    /// together; the caller retries), [`AuditError::AccessLog`] when an entry
+    /// cannot be appended, and [`AuditError::RetentionEnds`] when `ends` is
+    /// neither empty nor one end per record.
     pub async fn insert_batch(
         &self,
         records: &[AuditRecord],
@@ -508,6 +528,16 @@ impl AuditStore {
             self.insert_rows(&mut tx, run, run_ends, policy, tokens)
                 .await?;
             learned_all.push(learned);
+        }
+        let entries: Vec<_> = records
+            .iter()
+            .filter_map(|record| record.entry.as_deref().cloned())
+            .collect();
+        if !entries.is_empty() {
+            let access_log = self
+                .access_log()
+                .unwrap_or_else(|| AccessLogStore::new(self.pool.clone()));
+            access_log.append_in(&mut tx, entries).await?;
         }
         tx.commit().await?;
         for learned in learned_all {
@@ -1116,46 +1146,6 @@ impl AuditToken {
             AuditTokenSystem::Named(system) => any_equals(node, &["system"], system),
         }
     }
-}
-
-/// The items `steps` reaches from `from`, read as an SQL/JSON path in lax mode
-/// reads them: an array is unwrapped before each member step and once at the
-/// end, and a missing member yields nothing (ISO/IEC 9075-2 SQL/JSON path, as
-/// PostgreSQL 18 documents it in "The SQL/JSON Path Language",
-/// <https://www.postgresql.org/docs/18/functions-json.html#FUNCTIONS-SQLJSON-PATH>).
-pub(crate) fn lax_path<'a>(
-    from: &'a serde_json::Value,
-    steps: &[&str],
-) -> Vec<&'a serde_json::Value> {
-    let unwrap = |items: Vec<&'a serde_json::Value>| -> Vec<&'a serde_json::Value> {
-        items
-            .into_iter()
-            .flat_map(|item| match item {
-                serde_json::Value::Array(elements) => elements.iter().collect::<Vec<_>>(),
-                other => vec![other],
-            })
-            .collect()
-    };
-    let mut items = vec![from];
-    for step in steps {
-        items = unwrap(items)
-            .into_iter()
-            .filter_map(|item| item.get(*step))
-            .collect();
-    }
-    unwrap(items)
-}
-
-/// Whether any item `steps` reaches from `from` is `value`.
-fn any_is(from: &serde_json::Value, steps: &[&str], value: &serde_json::Value) -> bool {
-    lax_path(from, steps).into_iter().any(|item| item == value)
-}
-
-/// Whether any item `steps` reaches from `from` is the string `text`.
-fn any_equals(from: &serde_json::Value, steps: &[&str], text: &str) -> bool {
-    lax_path(from, steps)
-        .into_iter()
-        .any(|item| item.as_str() == Some(text))
 }
 
 /// A token value (FHIR R4 Search §3.1.1.4.10).

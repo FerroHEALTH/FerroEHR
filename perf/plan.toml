@@ -70,6 +70,17 @@ status = 200
 body = '''@AQL_UNORDERED@'''
 headers = { authorization = "@AUTH@", content-type = "application/json", accept = "application/json" }
 
+# A population query: it names no EHR, so the access log writes one entry
+# for each EHR it serves (up to its LIMIT), the cost the gate holds against
+# the base (#5126).
+[[requests]]
+group = "aql_population"
+method = "POST"
+path = "/ferroehr/rest/openehr/v1/query/aql"
+status = 200
+body = '''{"q":"SELECT e/ehr_id/value FROM EHR e LIMIT 20"}'''
+headers = { authorization = "@AUTH@", content-type = "application/json", accept = "application/json" }
+
 [[requests]]
 group = "template_upload"
 method = "POST"

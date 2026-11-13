@@ -457,6 +457,7 @@ async fn the_batched_write_path_is_chained_too() {
         batch.push(AuditRecord {
             event,
             subject: None,
+            entry: None,
         });
     }
     store.insert_batch(&batch, &[]).await.expect("batch insert");

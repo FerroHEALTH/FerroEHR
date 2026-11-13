@@ -2160,6 +2160,12 @@ jobs:
           SCCACHE_GHA_RW_MODE: READ_ONLY
           RUSTC_WRAPPER: sccache
           CARGO_INCREMENTAL: "0"
+          # A throttled cache backend (Azure 503 ServerBusy) failed sccache's
+          # startup probe and with it the build (#5556); skip the probe and use
+          # the configured mode, so a busy cache only costs misses
+          # (github.com/mozilla/sccache, docs/Configuration.md,
+          # SCCACHE_SKIP_CACHE_CHECK).
+          SCCACHE_SKIP_CACHE_CHECK: "true"
         shell: bash
         run: |
           set -euo pipefail
@@ -2259,6 +2265,12 @@ jobs:
           # "Incrementally compiled crates cannot be cached"
           # (github.com/mozilla/sccache#known-caveats).
           CARGO_INCREMENTAL: "0"
+          # A throttled cache backend (Azure 503 ServerBusy) failed sccache's
+          # startup probe and with it the build (#5556); skip the probe and use
+          # the configured mode, so a busy cache only costs misses
+          # (github.com/mozilla/sccache, docs/Configuration.md,
+          # SCCACHE_SKIP_CACHE_CHECK).
+          SCCACHE_SKIP_CACHE_CHECK: "true"
         shell: bash
         run: |
           set -euo pipefail
@@ -2343,6 +2355,12 @@ jobs:
           # "Incrementally compiled crates cannot be cached"
           # (github.com/mozilla/sccache#known-caveats).
           CARGO_INCREMENTAL: "0"
+          # A throttled cache backend (Azure 503 ServerBusy) failed sccache's
+          # startup probe and with it the build (#5556); skip the probe and use
+          # the configured mode, so a busy cache only costs misses
+          # (github.com/mozilla/sccache, docs/Configuration.md,
+          # SCCACHE_SKIP_CACHE_CHECK).
+          SCCACHE_SKIP_CACHE_CHECK: "true"
         run: |
           set -euo pipefail
           cargo nextest archive -p ferroehr-viewer \

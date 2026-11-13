@@ -20,9 +20,9 @@ impl FerroEhrService {
     /// object under an EHDS Art. 8 restriction, or withheld from the person
     /// under Art. 3(3), is absent while the request enforces it
     /// (`docs/law/eu/ehds/text.html`). No openEHR spec governs either: our own
-    /// design/extension. The `EHR_ACCESS` is absent for a caller who may not
-    /// read its settings ([`FerroEhrService::may_read_ehr_access`]), as EHDS
-    /// Art. 8 keeps a restriction invisible to a provider.
+    /// design/extension. The `EHR_ACCESS` is absent unless the extract may
+    /// carry it ([`Self::carries_ehr_access`]), as EHDS Art. 8 keeps a
+    /// restriction invisible to a provider.
     pub(super) async fn ehr_versioned_objects(
         &self,
         ehr_id: EhrId,
@@ -32,8 +32,8 @@ impl FerroEhrService {
     }
 
     /// The kind of a version container of `ehr_id` (an
-    /// `EXTRACT_ENTITY_MANIFEST.item_list` entry); `None` for the `EHR_ACCESS`
-    /// of a caller who may not read its settings, as for an unknown object.
+    /// `EXTRACT_ENTITY_MANIFEST.item_list` entry); `None` for an `EHR_ACCESS`
+    /// the extract may not carry, as for an unknown object.
     pub(super) async fn ehr_vo_kind(
         &self,
         ehr_id: EhrId,
@@ -43,8 +43,21 @@ impl FerroEhrService {
         self.readable_kind(ehr_id, kind.await?).await
     }
 
-    /// `objects` without the `EHR_ACCESS` when the caller may not read the
-    /// settings of `ehr_id`.
+    /// Whether an extract for the request's caller carries the `EHR_ACCESS` of
+    /// `ehr_id`: for a caller who reads its settings
+    /// ([`FerroEhrService::may_read_ehr_access`]), and for the holder of an
+    /// `export_ehr_extract` grant covering the EHR, whose extract transfers
+    /// the whole EHR (RM EHR Extract IM, `X_VERSIONED_EHR_ACCESS`); our own
+    /// design (#5559).
+    async fn carries_ehr_access(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
+        Ok(
+            Box::pin(self.may_read_ehr_access(ehr_id)).await?
+                || self.export_granted(ehr_id).await?,
+        )
+    }
+
+    /// `objects` without the `EHR_ACCESS` when the extract may not carry it
+    /// ([`Self::carries_ehr_access`]).
     async fn readable_objects(
         &self,
         ehr_id: EhrId,
@@ -52,22 +65,22 @@ impl FerroEhrService {
     ) -> Result<Vec<(VoId, String)>, ServiceError> {
         let access = Kind::EhrAccess.as_str();
         if objects.iter().any(|(_, kind)| kind == access)
-            && !Box::pin(self.may_read_ehr_access(ehr_id)).await?
+            && !self.carries_ehr_access(ehr_id).await?
         {
             objects.retain(|(_, kind)| kind != access);
         }
         Ok(objects)
     }
 
-    /// `kind`, or `None` for the `EHR_ACCESS` when the caller may not read
-    /// the settings of `ehr_id`.
+    /// `kind`, or `None` for the `EHR_ACCESS` when the extract may not carry
+    /// it ([`Self::carries_ehr_access`]).
     async fn readable_kind(
         &self,
         ehr_id: EhrId,
         kind: Option<String>,
     ) -> Result<Option<String>, ServiceError> {
         if kind.as_deref() == Some(Kind::EhrAccess.as_str())
-            && !Box::pin(self.may_read_ehr_access(ehr_id)).await?
+            && !self.carries_ehr_access(ehr_id).await?
         {
             return Ok(None);
         }

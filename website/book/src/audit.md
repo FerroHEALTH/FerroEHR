@@ -94,6 +94,35 @@ ever names an identity that did not authenticate.
 > identity provider, so neither mints a per-request login record. Rejections
 > are recorded regardless of this switch.
 
+## The openEHR access-log entry
+
+Beside each record, every access to EHR data also writes an openEHR
+access-log entry: an `ACCESS_LOG_ENTRY` of the draft
+`org.openehr.rm.access_log` 0.1.0 model, FerroEHR's proposal to openEHR,
+which no openEHR release defines yet. Reads, writes, AQL queries, exports,
+refusals and reads of the access log itself each write one. An access that
+reaches several EHRs writes one entry per EHR, and the entries of one request
+share its request id, so a population query writes one entry for each EHR
+that contributed a row.
+
+The entry names who accessed (the bound party, the groups, the provider, the
+binding outcome and the credential by its issuer, subject, client and token
+id), what (the EHR, the version or object, its categories and origins), why
+(the declared purposes), under which authorisation (the agreement, the
+representation, a data permit, the emergency mark), the outcome (`granted`,
+`refused` or `failed`) and the request. It carries no data value of the EHR:
+a query is named by its stored name or the SHA-256 of its text, never the
+text, and a read of the access log through ITI-81 is named by the digest of
+its search.
+
+The entry is written in the same database transaction as the record it
+accompanies, so the store holds both or neither, and an access whose record
+the store cannot take is refused under `fail_mode = "closed"` exactly as
+before. Entries are kept in `audit.access_log_record`, chained with the
+records under one hash chain (see [Tamper evidence](#tamper-evidence)), and
+each states the date it is kept until and why. The store requires
+`[audit.store]`; with the store off no entry is written.
+
 ## Reads are logged too, per record
 
 A write leaves its own trail in openEHR's contribution and audit chain. A read
@@ -756,6 +785,54 @@ Four controls sit on top of it, and they are separate on purpose:
 > somewhere that party does not control. Enable
 > `[audit.syslog]` or `[audit.fhir_feed]` so records leave the box as they are
 > written, and give the server an app-role-only DSN so it is not that party.
+
+## Checkpoints and the transfer of a log
+
+The records of the openEHR access log (`audit.access_log_record`) are chained
+with the `audit_event` records above. A chain proves order and completeness
+against someone who cannot rewrite its whole tail. A **checkpoint** closes
+that case: an `ACCESS_LOG_CHECKPOINT` names the position and digest of the
+head of the chain and is signed with the deployment's OpenPGP key, in the
+form an openEHR `ATTESTATION` carries its proof (RM common, Generic Package
+§Attestation). A verifier that holds a checkpoint detects any later rewrite
+of the records it covers. No openEHR specification governs log signing; this
+is our own design.
+
+- **The key** is the keyring of [version signing](signing/pgp.md):
+  `[record.signing]` in `pgp` mode, with its `retired_key_files` still
+  verifying what an earlier key signed. `[audit.access_log] checkpoints` or
+  `sign_links` without it is a configuration error.
+- **The schedule.** With `checkpoints = true` the server seals the head every
+  `checkpoint_interval` (one hour by default) when the chain grew since the
+  last checkpoint. `ferroehr access-log checkpoint` and
+  `POST /admin/access-log/checkpoint` seal one on demand. Keep a copy of a
+  checkpoint somewhere the database owner does not control (a ticket, a
+  timestamping service, the data protection officer's mailbox): that copy is
+  what makes a rewrite of the whole tail detectable.
+- **Verification.** `ferroehr access-log verify` and
+  `POST /admin/access-log/verify` recompute the whole chain (an entry
+  replaced by its tombstone verifies through the content digest the
+  tombstone keeps), check the checkpoint's signature and that the link at its
+  position is the one it sealed, and check the signature of every signed
+  link. Each finding is reported; the command exits 1 when the log does not
+  verify, and the route answers `200` with `intact: false`.
+- **Signed links.** `sign_links = true` signs the digest of each new link, as
+  the eHDSI Audit Trail Profile §2.2 asks of a national contact point. It
+  costs one signature per record.
+- **Moving the log with the EHR.** EHDS Annex II 2.6 and Art 9(2) keep the
+  access information available when an EHR moves to another system.
+  `ferroehr access-log export --ehr-id <id>` and
+  `GET /admin/access-log/export?ehr_id=` write the EHR's records with their
+  links, every link from the first of them to the checkpoint they verify
+  against, and that checkpoint, sealing one when none covers them. The
+  receiving system runs `ferroehr access-log import --input <file>`: it
+  verifies the export against its checkpoint and the certificates in
+  `[audit.access_log] trusted_key_files`, keeps the records with their
+  `system_id`, links and `retain_until` apart from its own chain, and records
+  the import as an `import` entry of its own log. An import repeated stores
+  nothing twice. An export whose span holds `audit_event` records is refused,
+  since only the database that wrote those records can recompute their
+  links.
 
 ## Retrieving audit records (ITI-81)
 

@@ -60,6 +60,20 @@ pub enum SignError {
     Pgp(#[from] PgpSignError),
 }
 
+/// A failure signing a statement of the system with the keyring's key.
+#[derive(Debug, thiserror::Error)]
+pub enum AttestError {
+    /// The keyring holds no `OpenPGP` key: `record.signing.mode` is `digest`.
+    #[error(
+        "no OpenPGP signing key is configured: set record.signing.mode = \"pgp\" and \
+         record.signing.key_file"
+    )]
+    NoKey,
+    /// An `OpenPGP` signing failure.
+    #[error(transparent)]
+    Pgp(#[from] PgpSignError),
+}
+
 /// The resolved signing mode, holding the loaded key for `pgp`.
 pub(crate) enum SignerMode {
     /// SHA-256 digest, radix-64 encoded.
@@ -163,6 +177,38 @@ impl Signer {
         match &self.mode {
             SignerMode::Digest => Ok(digest_signature(canonical)),
             SignerMode::Pgp(key) => Ok(key.sign(canonical.as_bytes())?),
+        }
+    }
+
+    /// Whether the keyring holds an `OpenPGP` key that can sign statements of
+    /// the system ([`Self::attest`]).
+    #[must_use]
+    pub fn holds_key(&self) -> bool {
+        matches!(self.mode, SignerMode::Pgp(_))
+    }
+
+    /// Sign `data`, a statement of the system other than a version, with the
+    /// keyring's `OpenPGP` key: an armored RFC 4880 detached signature, the
+    /// form `ATTESTATION._proof_` takes (RM common
+    /// `master04-generic_package.adoc` §Attestation).
+    ///
+    /// # Errors
+    /// [`AttestError::NoKey`] in `digest` mode, and [`AttestError::Pgp`] when
+    /// signing fails.
+    pub fn attest(&self, data: &[u8]) -> Result<String, AttestError> {
+        match &self.mode {
+            SignerMode::Pgp(key) => Ok(key.sign(data)?),
+            SignerMode::Digest => Err(AttestError::NoKey),
+        }
+    }
+
+    /// Whether `armored` is a detached signature over `data` by the keyring's
+    /// key or a certificate retired from it; `false` in `digest` mode.
+    #[must_use]
+    pub fn attests(&self, data: &[u8], armored: &str) -> bool {
+        match &self.mode {
+            SignerMode::Pgp(key) => key.verify(data, armored) == super::key::PgpVerdict::Valid,
+            SignerMode::Digest => false,
         }
     }
 

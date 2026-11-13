@@ -59,6 +59,7 @@ fn record(event: &AuditEvent, subject: Option<&str>) -> AuditRecord {
     AuditRecord {
         event: event.clone(),
         subject: subject.map(str::to_owned),
+        entry: None,
     }
 }
 

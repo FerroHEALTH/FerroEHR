@@ -5,6 +5,8 @@
 //! which `[audit.store] retention` is checked against at boot.
 
 use crate::system_log::config::Retention;
+use crate::system_log::message::AuditContext;
+use crate::system_log::store::{AuditRecord, RecordEnd};
 
 /// A bound a jurisdiction sets on how long an access-log record is kept,
 /// written in calendar years as the law writes it, with the provision it rests
@@ -155,6 +157,21 @@ pub fn retention_ceiling(jurisdiction: &str, sgb_v_309_controller: bool) -> Opti
         }),
         _ => None,
     }
+}
+
+/// The first date each record may be deleted on ([`crate::system_log::fhir::record_end`]).
+#[cfg(feature = "fhir")]
+pub(crate) fn record_ends(records: &[AuditRecord], ctx: &AuditContext) -> Vec<RecordEnd> {
+    records
+        .iter()
+        .map(|record| crate::system_log::fhir::record_end(&record.event, ctx))
+        .collect()
+}
+
+/// A slim build has no store sink ([`crate::system_log::sender::start`] refuses one), so no record has an end.
+#[cfg(not(feature = "fhir"))]
+pub(crate) fn record_ends(_records: &[AuditRecord], _ctx: &AuditContext) -> Vec<RecordEnd> {
+    Vec::new()
 }
 
 #[cfg(test)]

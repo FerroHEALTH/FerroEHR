@@ -617,7 +617,7 @@ fn warn_rsa_signing_key(algorithm: PublicKeyAlgorithm) {
 /// the primary key's accumulated trust. `rpgp`'s `VerifyingKey for
 /// SignedPublicKey` consults the primary key alone, so a signature made by any
 /// subkey would be rejected by a certificate that legitimately contains it.
-fn verify_against_certificate(
+pub(crate) fn verify_against_certificate(
     sig: &DetachedSignature,
     certificate: &SignedPublicKey,
     data: &[u8],

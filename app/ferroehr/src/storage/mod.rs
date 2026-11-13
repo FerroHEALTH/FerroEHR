@@ -51,6 +51,8 @@
 //!   services and its mark on `ehr`.
 //! - [`policy_register`] — the versions of the operational-policy admin
 //!   registers.
+//! - [`access_policy`] — the versions of the controller's
+//!   `VERSIONED_ACCESS_POLICY`.
 //! - [`statistics`] — the counts and listings behind the admin statistics.
 //! - [`integrity`] — the reads of the storage-integrity sweep and the node rebuild.
 //! - [`template_repo`] — the OPT 1.4 `template_store` and the `template_ref`
@@ -71,6 +73,7 @@
 //! consuming [`version_repo::read::StoredVersion`] on read.
 
 pub mod access_delay;
+pub mod access_policy;
 pub mod access_projection;
 pub mod adl2_repo;
 pub mod archetype_repo;
