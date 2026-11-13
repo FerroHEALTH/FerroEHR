@@ -45,14 +45,24 @@ pub const NOT_AFTER: &str = "not_after";
 /// template written, a facility, a subject namespace.
 pub const SCOPES: [&str; 3] = ["template", "facility", "subject_namespace"];
 
+/// The code naming the credentials element whose text is a role a
+/// [`Operation::HoldRoles`] grant gives a Basic user.
+pub const ROLE: &str = "role";
+
+/// The code naming the credentials element whose text is a SMART scope a
+/// [`Operation::HoldScopes`] grant gives a Basic user.
+pub const SCOPE: &str = "scope";
+
 /// The codes of the terminology that name no operation.
-const QUALIFIERS: [&str; 12] = [
+const QUALIFIERS: [&str; 14] = [
     ACTS_FOR,
     NOT_BEFORE,
     NOT_AFTER,
     SCOPES[0],
     SCOPES[1],
     SCOPES[2],
+    ROLE,
+    SCOPE,
     LOGIN_ISSUER,
     ADMIT_IDP,
     ADMIT_GROUP,
@@ -87,6 +97,11 @@ pub enum Operation {
     AccessService,
     /// Read a party's protected national identifiers.
     ReadIdentifiers,
+    /// Hold, as a Basic user, the roles the grant's [`ROLE`] elements name.
+    HoldRoles,
+    /// Hold, as a Basic user, the SMART scopes the grant's [`SCOPE`] elements
+    /// name.
+    HoldScopes,
     /// Create a provisional `PERSON` at the first login of a person no party
     /// carries, under the admission conditions the grant's credentials name
     /// ([`crate::party_binding::grants::admission`]).
@@ -95,7 +110,7 @@ pub enum Operation {
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 12] = [
         Self::CommitComposition,
         Self::ImportEhr,
         Self::ImportEhrExtract,
@@ -105,6 +120,8 @@ impl Operation {
         Self::ReadSubjectAudit,
         Self::AccessService,
         Self::ReadIdentifiers,
+        Self::HoldRoles,
+        Self::HoldScopes,
         Self::CreateAtLogin,
     ];
 
@@ -121,6 +138,8 @@ impl Operation {
             Self::ReadSubjectAudit => "read_subject_audit",
             Self::AccessService => "access_service",
             Self::ReadIdentifiers => "read_identifiers",
+            Self::HoldRoles => "hold_roles",
+            Self::HoldScopes => "hold_scopes",
             Self::CreateAtLogin => "create_at_login",
         }
     }
@@ -148,20 +167,42 @@ pub(crate) fn is_qualifier(code: &str) -> bool {
     QUALIFIERS.contains(&code.trim())
 }
 
-/// The operations the CDR may grant: `[authz.grants] allowed`.
+/// The operations the CDR may grant (`[authz.grants] allowed`), and the
+/// roles a [`Operation::HoldRoles`] grant may never name.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GrantCeiling {
     /// The operations allowed.
     allowed: BTreeSet<Operation>,
+    /// The privileged roles of `[authz.rbac]`, upper-cased: each comes from
+    /// the configuration, a `role_issuers` token or an operation of its own.
+    reserved: BTreeSet<String>,
 }
 
 impl GrantCeiling {
-    /// The ceiling allowing `allowed`.
+    /// The ceiling allowing `allowed`, reserving no role.
     #[must_use]
     pub fn new(allowed: impl IntoIterator<Item = Operation>) -> Self {
         Self {
             allowed: allowed.into_iter().collect(),
+            reserved: BTreeSet::new(),
         }
+    }
+
+    /// This ceiling with `roles` reserved: a [`Operation::HoldRoles`] grant
+    /// naming one is refused at commit and never honoured.
+    #[must_use]
+    pub fn with_reserved_roles(mut self, roles: impl IntoIterator<Item = String>) -> Self {
+        self.reserved = roles
+            .into_iter()
+            .map(|role| role.trim().to_ascii_uppercase())
+            .collect();
+        self
+    }
+
+    /// Whether `role` is reserved, compared without regard to ASCII case.
+    #[must_use]
+    pub fn reserves(&self, role: &str) -> bool {
+        self.reserved.contains(&role.trim().to_ascii_uppercase())
     }
 
     /// Whether the ceiling allows `operation`.
@@ -203,6 +244,16 @@ mod tests {
         assert_eq!(Operation::of("import_everything"), None);
         assert!(is_qualifier(ACTS_FOR) && is_qualifier("template"));
         assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_GUESTS));
+    }
+
+    #[test]
+    fn a_reserved_role_is_reserved_in_any_case() {
+        let ceiling = GrantCeiling::new([Operation::HoldRoles])
+            .with_reserved_roles(["Admin".to_owned(), " importer ".to_owned()]);
+        assert!(ceiling.reserves("ADMIN") && ceiling.reserves("admin"));
+        assert!(ceiling.reserves("IMPORTER"));
+        assert!(!ceiling.reserves("CLINICIAN"));
+        assert!(!GrantCeiling::new([]).reserves("ADMIN"));
     }
 
     #[test]

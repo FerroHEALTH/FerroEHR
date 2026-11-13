@@ -33,16 +33,32 @@ pub mod store;
 
 use crate::error::ServiceError;
 use crate::party_binding::derive::Facts;
-use crate::party_binding::grants::operation::GrantCeiling;
+use crate::party_binding::grants::capabilities::Credentials;
+use crate::party_binding::grants::operation::{GrantCeiling, Operation, ROLE};
 
 /// Refuses the committed body `facts` of a `ROLE` when it grants an
-/// operation `ceiling` does not admit, or holds a `create_at_login` grant
-/// that admits nothing ([`admission::check`]).
+/// operation `ceiling` does not admit, a `hold_roles` grant names a role
+/// the ceiling reserves, or a `create_at_login` grant admits nothing
+/// ([`admission::check`]).
 ///
 /// # Errors
-/// [`ServiceError::Forbidden`] (`403`) naming the first capability above the
-/// ceiling and the configuration key, and the `422` of [`admission::check`].
+/// [`ServiceError::Forbidden`] (`403`) naming the first such capability and
+/// the configuration key, and the `422` of [`admission::check`].
 pub(crate) fn check_role(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
+    let reserved = facts
+        .grants
+        .capabilities
+        .iter()
+        .filter(|capability| Operation::of(&capability.code) == Some(Operation::HoldRoles))
+        .flat_map(|capability| Credentials::of(capability.credentials.as_ref()).texts(ROLE))
+        .find(|role| ceiling.reserves(role));
+    if let Some(role) = reserved {
+        return Err(ServiceError::not_permitted(format!(
+            "the ROLE grants the privileged role {role} through hold_roles; a privileged role \
+             of [authz.rbac] comes only from the configuration, a role_issuers token or an \
+             operation of its own"
+        )));
+    }
     let Some(above) = facts
         .grants
         .capabilities
@@ -51,7 +67,7 @@ pub(crate) fn check_role(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), Se
     else {
         return admission::check(facts);
     };
-    let allowed: Vec<&str> = ceiling.allowed().map(operation::Operation::code).collect();
+    let allowed: Vec<&str> = ceiling.allowed().map(Operation::code).collect();
     Err(ServiceError::not_permitted(format!(
         "the ROLE grants the operation {}, which [authz.grants] allowed does not admit, so \
          this CDR may not grant it (allowed: {})",
