@@ -41,18 +41,29 @@ pub const SETTINGS_TYPE: &str = "ACCESS_DIRECTIVE_SETTINGS";
 /// [`SETTINGS_TYPE`] (`Scheme_valid`, RM `org.openehr.rm.ehr.ehr_access.adoc`).
 pub const SCHEME: &str = "access_directives";
 
-/// The default definition of the scheme's settings, as its file name and ADL 2
-/// text.
+/// The default definitions of the scheme's settings, each as its file name and
+/// ADL 2 text, oldest version first.
 ///
-/// Every boot stores it when no definition of its id is stored
-/// ([`crate::service::FerroEhrService::seed_default_definitions`]). FerroEHR
-/// reads the settings by their codes, never by this archetype's id.
-pub const DEFINITIONS: [(&str, &str); 1] = [(
-    "openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0.adls",
-    include_str!(
-        "../../../assets/definitions/access/openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0.adls"
+/// Every boot stores each one when no definition of its id is stored
+/// ([`crate::service::FerroEhrService::seed_default_definitions`]). `v1.1.0`
+/// constrains the settings to [`SETTINGS_TYPE`], which the definition path
+/// validates against the RM with the draft packages
+/// ([`crate::draft_model::RM_WITH_DRAFTS`]); `v1.0.0` stays as published.
+/// FerroEHR reads the settings by their codes, never by an archetype's id.
+pub const DEFINITIONS: [(&str, &str); 2] = [
+    (
+        "openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0.adls",
+        include_str!(
+            "../../../assets/definitions/access/openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0.adls"
+        ),
     ),
-)];
+    (
+        "openEHR-EHR-EHR_ACCESS.access_directives.v1.1.0.adls",
+        include_str!(
+            "../../../assets/definitions/access/openEHR-EHR-EHR_ACCESS.access_directives.v1.1.0.adls"
+        ),
+    ),
+];
 
 /// The EHRs whose current `EHR_ACCESS` carries settings, with those settings,
 /// shared from the service's copy
