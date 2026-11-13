@@ -37,6 +37,7 @@ use openehr_rm::v1_2::data_types::quantity::date_time::dv_date::DvDate;
 use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
+use crate::access_log::search::LOG_RECORD;
 use crate::system_log::binding::{BindingCode, BindingRecord, Identified};
 use crate::system_log::event::{
     AccessDecision, AccessDomain, ActingMode, AuditEvent, EntryScope, EventActionCode,
@@ -72,6 +73,9 @@ const LOCAL: &str = "local";
 /// The class an entry that changes the access log names the entry it changed
 /// by.
 const LOG_ENTRY: &str = "ACCESS_LOG_ENTRY";
+/// The type an entry that reads an EHR's whole access log names the log by:
+/// our own design, since the draft names no class for the log itself.
+const LOG: &str = "ACCESS_LOG";
 /// The `ACCESS_QUERY.language` of a read of the access log through ITI-81.
 pub const LOG_SEARCH: &str = "FHIR search";
 
@@ -198,9 +202,6 @@ fn nonempty<T>(values: Vec<T>) -> Option<Vec<T>> {
 /// The EHR the access addressed. A route segment that is no object id names
 /// no EHR, so the entry names none.
 fn ehr_id(event: &AuditEvent) -> Option<HierObjectId> {
-    if event.entry == EntryScope::LogRead {
-        return None;
-    }
     // NOTE: BASE `HIER_OBJECT_ID`, a route segment outside its form addresses
     // no EHR, which is legitimately absent.
     event
@@ -452,21 +453,21 @@ fn credential(event: &AuditEvent) -> Option<AccessCredential> {
 /// The object the access addressed in its EHR, with its categories and
 /// origins; `None` when the record names nothing the draft can name.
 fn item(event: &AuditEvent) -> Option<AccessedItem> {
-    let rm_type = if event.entry == EntryScope::LogChange {
-        Some(LOG_ENTRY)
-    } else {
-        rm_type(event.object)
+    let rm_type = match event.entry {
+        EntryScope::LogChange => Some(LOG_ENTRY),
+        EntryScope::LogRead => Some(LOG_RECORD),
+        _ => rm_type(event.object),
     };
     let addressed = event.object_id.as_deref();
     // NOTE: BASE `OBJECT_VERSION_ID`, an id outside its form names a versioned
     // object, which is legitimately no version.
     let version_id = addressed.and_then(|id| ObjectVersionId::new(id).ok());
     let object = match (&version_id, addressed, rm_type) {
-        (None, Some(id), Some(rm_type)) => Some(ObjectRef::ObjectRef(ObjectRefData {
-            namespace: LOCAL.to_owned(),
-            r#type: rm_type.to_owned(),
-            id: object_id(id),
-        })),
+        (None, Some(id), Some(rm_type)) => Some(local_ref(rm_type, id)),
+        // NOTE: our own design, a read of an EHR's whole log names the log of that EHR.
+        (None, None, _) if event.entry == EntryScope::LogRead => {
+            event.ehr_id.as_deref().map(|ehr| local_ref(LOG, ehr))
+        }
         _ => None,
     };
     let categories = event
@@ -509,6 +510,15 @@ fn item(event: &AuditEvent) -> Option<AccessedItem> {
                 event.action,
                 EventActionCode::Read | EventActionCode::Execute
             ),
+    })
+}
+
+/// A local `OBJECT_REF` to the object `id` of class `class`.
+fn local_ref(class: &str, id: &str) -> ObjectRef {
+    ObjectRef::ObjectRef(ObjectRefData {
+        namespace: LOCAL.to_owned(),
+        r#type: class.to_owned(),
+        id: object_id(id),
     })
 }
 

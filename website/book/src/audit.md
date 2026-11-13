@@ -614,225 +614,77 @@ grows ([Storage sizing](operations.md#audit-retention)).
 
 ### Getting the log out
 
-Two routes, and they answer different questions.
+Three routes, and they answer different questions.
 
-- **ITI-81 retrieval** — the [audit search](#retrieving-audit-records-iti-81)
+- **The access log over ITS-REST:** the [access-log
+  resources](#reading-the-access-log-over-its-rest) serve the openEHR
+  access-log entries: one EHR's log to the person it is about and their
+  representative, and the full log to a reviewer. This is the person's own
+  route (EHDS Art. 9(2)).
+- **ITI-81 retrieval:** the [audit search](#retrieving-audit-records-iti-81)
   serves the records back as FHIR `AuditEvent` resources, filtered by patient,
-  agent, date and outcome. This is the operator's route and the one a patient
-  portal would build on: everything Annex II 3.2 records is reachable through
+  agent, date and outcome. This is the operator's route and the one an IHE
+  Audit Consumer uses: everything Annex II 3.2 records is reachable through
   it, including the purpose and the organisation, which the syslog feed's
   DICOM form cannot carry.
-- **The BALP feed** — records fan out to syslog and to a FHIR feed as they are
+- **The BALP feed:** records fan out to syslog and to a FHIR feed as they are
   written, for a SIEM or a central Audit Record Repository.
 
-There is no patient-facing route in the product: a portal that shows a person
-who accessed their record builds on ITI-81 and authenticates the person itself.
-What the product gives that portal is a grant of its own size: a
-`read_subject_audit` grant in the CDR
-([Operational policy](operational-policy.md#what-the-grants-decide)) reads
-the log for one subject at a time, with
-the `patient` parameter required, so the portal never holds an admin credential
-over every patient's log ([GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj)
-Art. 15 with Recital 63, under which the controller "should be able to provide
-remote access to a secure system" where possible; EHDS Art. 9; for Dutch
-deployments Wabvpz Art. 15e). The portal's build is the deployment's, and the
-[shared-responsibility page](compliance/shared-responsibility.md) says so.
+## Reading the access log over ITS-REST
 
-## Sinks
+The openEHR access-log entries are served under the extensions root,
+`/ferroehr/rest/extensions/v1`. No openEHR ITS-REST release defines these
+resources: they are part of FerroEHR's access-log proposal to openEHR, and they
+follow the ITS-REST 1.1.0 conventions, `offset` and `fetch` paging as the Query
+API's and ISO 8601 date-times.
 
-Records fan out to independently configured sinks (`[audit]` in
-`ferroehr.toml`; see the
-[configuration reference](installation/config-audit.md#audit)):
-
-| Sink | Default | What it does |
+| Method and path | Who | What |
 |---|---|---|
-| `[audit.store]` | **on** | The local **Audit Record Repository**: records persist in the dedicated `audit` PostgreSQL schema (append-only and tamper-evident, strictly outside the EHR content), served back via the ITI-81 search below. `retention` prunes old records hourly (`0` = keep forever). |
-| `[audit.syslog]` | off | The classic ATNA feed: DICOM PS3.15 XML as RFC 5424 syslog over RFC 5425 TLS to an external ARR, per IHE ITI-20. |
-| `[audit.fhir_feed]` | off | The RESTful-ATNA feed (ITI-20 **ATX: FHIR Feed**): each FHIR `AuditEvent` is `POST`ed to an external FHIR ARR. With the local store on, delivery is **outbox-driven**: an ARR outage loses nothing, pending records ship on recovery. The outbox holds the records written while the feed is configured; with the feed off, no record is owed. Records stored before FerroEHR kept an outbox and never delivered ship once a feed runs. |
+| `GET /ehr/{ehr_id}/access_log` | the subject of care, their representative, a reviewer | The entries of one EHR, newest first. Filters: `from`, `to`, `action`, `outcome`, `accessor_kind`, `emergency`, `include_self`; `offset`, `fetch` (1 to 1000, default 100). |
+| `GET /ehr/{ehr_id}/access_log/{uid}` | as above | One entry. |
+| `GET /admin/access-log` | a reviewer | Records across EHRs, entries and tombstones. Filters: `ehr_id`, `party_namespace`, `party_type`, `party_id`, `issuer`, `subject`, `request_id`, `from`, `to`, `outcome`, `emergency`; `offset`, `fetch`. |
+| `GET /admin/access-log/chain` | a reviewer | The `uid` and `link` of each record from `from_sequence` to `to_sequence` (at most 10000), without content, for verification. |
+| `GET /admin/access-log/checkpoint` | a reviewer | The newest stored checkpoint, or the one at `sequence`. |
 
-Emission never blocks the request path: a record is handed to a bounded queue
-(`queue_capacity`) and written by a background drain.
+A list answers `offset`, `fetch` and `entries`, and no total count, since a
+count over a large log costs a scan. A parameter a resource does not take, or a
+value outside its form, is a `400`.
 
-### While a composition is held from the person
+**The caller's authorisation selects the view, and no parameter widens it.**
 
-With [the access-delay register](security.md#delayed-access-by-the-person-ehds-art-33)
-on, a new composition can be held from the person under
-[EHDS](https://eur-lex.europa.eu/eli/reg/2025/327/oj) Art. 3(3) until a
-professional releases it or its period passes. Only one route honours the
-hold: the subject-scoped [ITI-81 read](#retrieving-audit-records-iti-81), the
-one a patient portal serves the person's own trail from, leaves out every
-record that names a held composition. Every other sink and stream is a feed to
-the controller's own systems and carries those records and events while the
-hold is in force:
+- The **subject view** goes to the person the EHR is about and to their
+  representative, bound through the party binding: a patient-portal token
+  reads the EHR of its launch context, and a representative, through a
+  `persons` issuer or as the actor of the patient's token, reads the EHR of
+  the subject the representation names
+  ([Operational policy](operational-policy.md)). It shows who accessed (the
+  provider and the party), when, the action and outcome, the items and their
+  categories, the purposes and the emergency mark, and leaves out the
+  credential, the delegation chain, the binding outcome, the channel, the
+  query text and its digest, the security labels, `other_details` and the
+  link. An entry about a composition held from the person under EHDS Art.
+  3(3) is left out until the hold ends, as in the [subject-scoped ITI-81
+  read](#while-a-composition-is-held-from-the-person). Any other EHR answers
+  `404`, the same as an unknown one, so its existence is not disclosed.
+- The **full view**, each record in its ITS-JSON form with its link, goes to
+  a reviewer: a caller the admin class admits (`admin_role` under RBAC), the
+  same caller `GET /admin/access-log` admits.
+- Every other caller is refused with `403`. The log has its own access
+  control: a clinical grant such as `patient/composition-*.r` or
+  `user/composition-*.r` reaches none of it.
 
-| Sink or stream | What it carries during a hold | Why it is not filtered |
-|---|---|---|
-| `[audit.store]`, read without the `patient` scope | every record, the hold's own included | The unscoped ITI-81 read is the controller's, under the admin role |
-| `[audit.syslog]` | every record, sent as it is written: the commit, each read and the hold's own record name the composition, the last as `access-delay:<vo>` beside the patient | An ITI-20 feed goes to an Audit Record Repository, which "receives event audit reports and stores them" ([IHE ITI TF-1 §9.1.1.3](https://profiles.ihe.net/ITI/TF/Volume1/ch-9.html)) |
-| `[audit.fhir_feed]` | the same records as FHIR `AuditEvent` resources, `POST`ed as they are written, the hold's own record naming the same `access-delay:<vo>` | The same ITI-20 repository, over ATX: FHIR Feed; the reader of a BALP `AuditEvent` is an Audit Consumer ([BALP §1:52.1](https://profiles.ihe.net/ITI/BALP/volume-1.html)) |
-| [Change events](beyond-core/outbox-feed.md) (`[record.change_feed]`) | the commit of the held composition: its `vo_id`, kind, change type and template | The feed serves the deployment's own readers; it withholds what binds them, a restriction or objection (GDPR Art. 18 and 21, EHDS Art. 8), and the Art. 3(3) hold binds only the person's access |
+The person's own reads of their log are recorded like every other read and
+are left out of their default view; `include_self=true` adds them. Every read
+of these resources, refused and failed ones included, writes an access-log
+entry whose item names the log it read (`ACCESS_LOG_RECORD` for an entry,
+`ACCESS_LOG` for an EHR's whole log), with the filter named by its digest. A
+tombstone keeps no EHR, so a removed entry is read through the review.
 
-EHDS Art. 9(2) gives the person the access information "through electronic
-health data access services", which are yours to run. A repository, a feed
-reader or anything built on them never reaches the person from FerroEHR, so none of
-them filters the hold: a filter there would also hide the record from the
-controller who answers for it. What you must not do, while a hold is in force:
-
-- Serve the person's trail from the external Audit Record Repository the
-  syslog or FHIR feed writes to, for example through that repository's own
-  ITI-81 query. Serve it from FerroEHR's subject-scoped read instead.
-- Send the person a notification, under Art. 9(1) or otherwise, from a record
-  on either feed or from a change event that names a held composition. Ask
-  the hold first: a request in the person's context reads the composition as
-  absent (**404**) until the hold ends.
-
-The [shared-responsibility page](compliance/shared-responsibility.md#the-delay-of-the-persons-access-ehds-art-33)
-puts the same duty on the deployment's side.
-
-The local store is the durability anchor. Under `fail_mode = "closed"`, an
-operation whose audit record cannot be recorded answers
-`503 Service Unavailable`: the deployment demanded an audit trail it cannot
-currently deliver, so no un-audited PHI access happens, and the same holds for
-the domain-level records the subject resolutions and the EHR-Extract
-transfers write. `open`, the default, drops-and-meters instead,
-and every loss path is metered (the `atna_audit_*` counters in
-[Operations](operations.md)); the server announces that default at boot and on
-the readiness indicator as a stated caution, because a metered loss is still a
-loss. Login and rejection records never gate a response in either mode.
-
-## Tamper evidence
-
-An audit trail that anything with the application's database password can
-quietly rewrite is a log, not an accountability record. The local store is
-therefore tamper-**evident**: every record is linked into a SHA-256 hash chain
-maintained inside PostgreSQL, so each record commits to its predecessor and to
-its own content. The chain is built by the database itself, not by the server,
-which means it covers every writer: the per-event insert, the batched drain,
-and any statement typed by hand.
-
-Each record's digest covers every column of the record except the digest
-itself (`row_hash`) and the two per-sink forwarding stamps
-(`delivered_syslog_at`, `delivered_fhir_feed_at`). A column added by a later
-release joins the digest in the same release.
-
-The store keeps a record's facts in columns and renders its FHIR `AuditEvent`
-from them when the record is read (ITI-81) or delivered (the FHIR feed). What
-the rendering takes from the configuration (`source_id`, `enterprise_site_id`,
-`server_host`, `value_if_missing`, the store horizon, the audit category register and
-`emergency_purpose_codes`) is kept once per distinct configuration in
-`audit.audit_render_policy`, keyed by the SHA-256 of its text, and every record
-names the policy it was written under. A record therefore renders the same
-document after the configuration changes, and the verification below reports a
-policy whose text no longer matches its digest, as it reports a changed record.
-Release 5.6.0 starts on an empty audit store: its migration refuses a store
-that holds records written by an earlier release, and names the remedy.
-
-Four controls sit on top of it, and they are separate on purpose:
-
-- **The table refuses the ordinary rewrite paths outright.** The only permitted
-  change to a stored record is the per-sink forwarding stamp; an `UPDATE` of any
-  other column, a `DELETE`, and a `TRUNCATE` are refused by the database.
-  Retention pruning goes through the one sanctioned deletion path, which records
-  *which* records it removed and what the surviving chain must link back to, so
-  reaping does not look like tampering, and tampering does not look like
-  reaping.
-- **The privileges are narrow.** The runtime role may record an event, stamp it
-  forwarded, and read the trail back. It holds nothing that can rewrite a
-  record, remove one, or alter the chain's own bookkeeping. That posture is only
-  fully in force with `database.migrations = "verify"`; see
-  [Operations](operations.md#database-roles-and-least-privilege), because a
-  self-migrating server owns the schema and can therefore turn the enforcement
-  off.
-- **Verification is a query you can run yourself.** It recomputes every digest,
-  re-walks every link, and checks both ends of the chain:
-
-  ```sql
-  SELECT * FROM audit.verify_audit_chain();
-  ```
-
-  An empty result means the trail is intact. Any row names one record (its
-  chain position, its id, when it was recorded) and what is wrong with it:
-  content modified after it was written, a render policy changed or missing,
-  records deleted with no retention record for the removal,
-  or records removed from the end of the chain where no successor would have
-  noticed.
-- **The server runs the check itself, on a schedule.** With the local store on,
-  the check runs one minute after boot and then every
-  `[audit.store] verify_interval` (default `3600`, one hour; `0` turns
-  it off). Each run verifies the records written since the newest link an
-  earlier run found intact, and the chain head, so its cost follows the
-  records written since rather than the size of the trail
-  (`audit.verify_audit_chain_incremental()`). A full pass
-  runs every `[audit.store] full_verify_interval` (default `604800`,
-  one week; `0` leaves it to the query above) and after every run that found
-  damage, so damage to an older record stays reported. A run that finds damage logs at `ERROR`, one summary line with the
-  finding count and one line per finding (the first 20), and adds the count to
-  the `atna_audit_chain_findings` counter with `kind = "damage"`. A run that
-  cannot verify at all counts as `kind = "unverifiable"`, because a trail that
-  cannot be checked is never a pass. The latest result is the `audit_chain`
-  indicator on `GET /health/readiness`: `UP` while intact and `DEGRADED`
-  when damaged or unverifiable; its detail on `GET /management/health` names
-  the first finding. It never flips
-  readiness, because the trail keeps recording while the damage is
-  investigated. Alert on the counter or on that component, and use the query
-  above to see every finding. Each replica runs its own check.
-
-> [!IMPORTANT]
-> This is **detection, not prevention**, and the boundary is worth stating
-> plainly. The chain is unkeyed, so a party with unrestricted write access to
-> the `audit` schema (the database owner, or a superuser) can delete a record
-> and recompute every hash after it. What closes that case is keeping the trail
-> somewhere that party does not control. Enable
-> `[audit.syslog]` or `[audit.fhir_feed]` so records leave the box as they are
-> written, and give the server an app-role-only DSN so it is not that party.
-
-## Checkpoints and the transfer of a log
-
-The records of the openEHR access log (`audit.access_log_record`) are chained
-with the `audit_event` records above. A chain proves order and completeness
-against someone who cannot rewrite its whole tail. A **checkpoint** closes
-that case: an `ACCESS_LOG_CHECKPOINT` names the position and digest of the
-head of the chain and is signed with the deployment's OpenPGP key, in the
-form an openEHR `ATTESTATION` carries its proof (RM common, Generic Package
-§Attestation). A verifier that holds a checkpoint detects any later rewrite
-of the records it covers. No openEHR specification governs log signing; this
-is our own design.
-
-- **The key** is the keyring of [version signing](signing/pgp.md):
-  `[record.signing]` in `pgp` mode, with its `retired_key_files` still
-  verifying what an earlier key signed. `[audit.access_log] checkpoints` or
-  `sign_links` without it is a configuration error.
-- **The schedule.** With `checkpoints = true` the server seals the head every
-  `checkpoint_interval` (one hour by default) when the chain grew since the
-  last checkpoint. `ferroehr access-log checkpoint` and
-  `POST /admin/access-log/checkpoint` seal one on demand. Keep a copy of a
-  checkpoint somewhere the database owner does not control (a ticket, a
-  timestamping service, the data protection officer's mailbox): that copy is
-  what makes a rewrite of the whole tail detectable.
-- **Verification.** `ferroehr access-log verify` and
-  `POST /admin/access-log/verify` recompute the whole chain (an entry
-  replaced by its tombstone verifies through the content digest the
-  tombstone keeps), check the checkpoint's signature and that the link at its
-  position is the one it sealed, and check the signature of every signed
-  link. Each finding is reported; the command exits 1 when the log does not
-  verify, and the route answers `200` with `intact: false`.
-- **Signed links.** `sign_links = true` signs the digest of each new link, as
-  the eHDSI Audit Trail Profile §2.2 asks of a national contact point. It
-  costs one signature per record.
-- **Moving the log with the EHR.** EHDS Annex II 2.6 and Art 9(2) keep the
-  access information available when an EHR moves to another system.
-  `ferroehr access-log export --ehr-id <id>` and
-  `GET /admin/access-log/export?ehr_id=` write the EHR's records with their
-  links, every link from the first of them to the checkpoint they verify
-  against, and that checkpoint, sealing one when none covers them. The
-  receiving system runs `ferroehr access-log import --input <file>`: it
-  verifies the export against its checkpoint and the certificates in
-  `[audit.access_log] trusted_key_files`, keeps the records with their
-  `system_id`, links and `retain_until` apart from its own chain, and records
-  the import as an `import` entry of its own log. An import repeated stores
-  nothing twice. An export whose span holds `audit_event` records is refused,
-  since only the database that wrote those records can recompute their
-  links.
+```bash
+# Who accessed my record this month? (the patient portal's token)
+curl -H "Authorization: Bearer $PATIENT_TOKEN" \
+  "https://cdr.example.org/ferroehr/rest/extensions/v1/ehr/$EHR_ID/access_log?from=2026-11-01T00:00:00Z"
+```
 
 ## Retrieving audit records (ITI-81)
 
@@ -896,7 +748,8 @@ not ask for, is a `400` with `not-supported`; a parameter the crate does not
 know is ignored
 (§3.81.4.1.3). Under RBAC the
 unscoped retrieval is **admin-only**; a caller holding a
-`read_subject_audit` grant reads it **scoped to one subject**: one
+`read_subject_audit` grant, a patient portal acting for the people it
+serves, reads it **scoped to one subject**: one
 `patient` or `patient.identifier` with one value is required, and the caller
 is refused with a `403` that names the parameter when it omits
 it. Reading a subject's log is itself recorded as an access naming that
@@ -904,6 +757,13 @@ subject and the record count served. An
 [emergency access](#emergency-access-ehds-art-115) in the subject's log
 carries its mark as the `ehds-emergency-access` entity. The surface answers `404` when the local
 store is disabled.
+
+The subject-scoped ITI-81 read stays beside the [access-log
+resources](#reading-the-access-log-over-its-rest). It serves the ATNA records
+as FHIR `AuditEvent`s to a portal that holds a `read_subject_audit` grant and
+names the subject itself; `GET /ehr/{ehr_id}/access_log` serves the openEHR
+access-log entries of the same accesses to the person, or their
+representative, under the person's own credential.
 
 ```bash
 # Who accessed patient-42's data this month?

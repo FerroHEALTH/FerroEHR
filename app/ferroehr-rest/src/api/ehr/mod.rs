@@ -29,6 +29,7 @@
 )]
 
 pub mod access_delay;
+pub mod access_log;
 pub mod composition;
 pub mod contribution;
 pub mod directory;

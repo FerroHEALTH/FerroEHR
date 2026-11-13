@@ -275,6 +275,9 @@ anything.
 | `GET {ext}/admin/access-opt-out` | `?ehr_id=…` | **200**: the opt-out register, newest first, reversals included |
 | `POST {ext}/admin/access-opt-out/reverse` | `{"ehr_id": "…"}` | **204**: every opt-out of the EHR that stands is reversed, and the access services read it again |
 | `POST {ext}/admin/access-log/erase` | `{"uid": "…", "grounds": [DV_CODED_TEXT, …]}` | **200**: the `ACCESS_LOG_TOMBSTONE` that replaced the access-log entry, for an erasure a law orders before the entry's retention ends; it keeps the entry's uid, `system_id`, `time_recorded` and chain link and names these grounds ([Retention, and who chooses it](audit.md#retention-and-who-chooses-it)); **409** for a tombstone or while the local audit store is off |
+| `GET {ext}/admin/access-log` | `?ehr_id=…&from=…&to=…&outcome=…&offset=…&fetch=…` and the other filters | **200**: the access log's records across EHRs, newest first, in the full view ([Reading the access log over ITS-REST](audit.md#reading-the-access-log-over-its-rest)); the read writes its own access-log entry |
+| `GET {ext}/admin/access-log/chain` | `?from_sequence=…&to_sequence=…` | **200**: the `uid` and `link` of each record of the span, at most 10000; **400** for a span holding `audit_event` records |
+| `GET {ext}/admin/access-log/checkpoint` | `?sequence=…`? | **200**: the newest stored `ACCESS_LOG_CHECKPOINT`, or the one at `sequence`; **404** when none is stored there |
 | `POST {ext}/admin/ehr-access/repair` | `{"ehr_id": "…", "settings": {…}}` | **200** `{"ehr_id", "version_uid"}`: the `EHR_ACCESS` of an EHR held closed by settings that do not parse is committed again with these settings, which must parse; **409** for an EHR that is not held |
 
 A body of the wrong shape or a malformed id is **400**, an id that names nothing
