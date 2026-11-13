@@ -1,10 +1,21 @@
 # Patient PERSON definition: provenance
 
-One ADL 2 archetype of FerroEHR's default demographic definitions, which the
-binary carries and stores at boot when absent, named by the default of
-`[authz.party_binding.patient]`:
+Two versions of one ADL 2 archetype of FerroEHR's default demographic
+definitions, which the binary carries and stores at boot when absent:
 
-- `openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls`: a patient's `PERSON`,
+- `openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0.adls`, named by the default of
+  `[authz.party_binding.patient]`: version 1.0.0 with the optional care
+  relationship (`id32`) added. Adding an optional node is a
+  backward-compatible change, so it takes a new minor version (AM
+  `ARCHETYPE_HRID`: `minor_version` of the `release_version`); its
+  `other_details["revision_history"]` records the change, since the BASE
+  resource model carries no revision history of its own.
+- `openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls`: the version FerroEHR
+  v5.7.1-rc1 published, kept byte for byte, since a published id never
+  changes its content. A deployment that stored it keeps it and receives
+  1.1.0 beside it.
+
+Version 1.1.0, like 1.0.0 before it, is a patient's `PERSON`,
   the subject of an EHR and the target of a representation relationship. In
   `details`: its patient identifiers at `/details[id2]/items[id3]`, its date
   of birth at `/details[id2]/items[id4]` and its sex at
