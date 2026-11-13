@@ -1339,8 +1339,45 @@ async fn a_standalone_representation_holds_a_row_of_its_own() {
     ))
     .await
     .expect("the representation deletes");
-    assert_eq!(lookup(&svc, value).await, Lookup::Parties(Vec::new()));
     assert_eq!(representation_rows(&pool).await, Vec::<String>::new());
+    // NOTE: #5532, a former representative keeps a representative's key row with no
+    // live subject, so the patient portal never takes their login for the patient's.
+    let former = |found: Lookup| match found {
+        Lookup::Parties(records) => records
+            .iter()
+            .map(|r| (r.markers(), r.represents().len()))
+            .collect::<Vec<_>>(),
+        other => panic!("expected one party, got {other:?}"),
+    };
+    assert_eq!(
+        former(lookup(&svc, value).await),
+        [(Markers::REPRESENTATIVE, 0)]
+    );
+    let today = jiff::Timestamp::now()
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .date()
+        .to_string();
+    let representing = || async {
+        let mut conn = pool.acquire().await.expect("a connection");
+        sqlx::query("SET search_path = party, ext, public")
+            .execute(&mut *conn)
+            .await
+            .expect("the party schema");
+        ferroehr::party_binding::lookup::representation_of(&mut conn, proxy.0, subject.0, &today)
+            .await
+            .expect("reads")
+    };
+    assert_eq!(representing().await, Some((false, Some("253".to_owned()))));
+    svc.refill_binding_table().await.expect("the refill runs");
+    assert_eq!(
+        former(lookup(&svc, value).await),
+        [(Markers::REPRESENTATIVE, 0)]
+    );
+    assert_eq!(
+        representing().await,
+        Some((false, Some("253".to_owned()))),
+        "the refill keeps who once represented whom"
+    );
 }
 
 /// The live representation rows, as `(representative, subject, relationship,

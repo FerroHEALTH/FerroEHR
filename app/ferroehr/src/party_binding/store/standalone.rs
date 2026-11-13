@@ -84,6 +84,7 @@ pub(super) async fn reindex(
 /// Writes the row of every standalone representation container that is not
 /// deleted, on `tx`, before the `PERSON` rows that count them.
 pub(super) async fn refill(tx: &mut PgConnection) -> Result<(), StorageError> {
+    history(tx).await?;
     let mut after = None;
     loop {
         let page = stored_heads(
@@ -106,4 +107,59 @@ pub(super) async fn refill(tx: &mut PgConnection) -> Result<(), StorageError> {
         }
     }
     Ok(())
+}
+
+/// The versions [`history`] reads per page.
+const HISTORY_PAGE: i64 = 500;
+
+/// Writes a retired row for every representation any version of a `PERSON`
+/// or a standalone `PARTY_RELATIONSHIP` ever held, on `tx`, so a refill keeps
+/// who once represented whom: a former representative is judged as one and
+/// never as the patient (#5532). The live rows follow from the heads.
+async fn history(tx: &mut PgConnection) -> Result<(), StorageError> {
+    let mut after: (Uuid, i32) = (Uuid::nil(), -1);
+    loop {
+        let page: Vec<(Uuid, i32, String, String)> = sqlx::query_as(
+            "SELECT v.vo_id, v.sys_version, h.kind, v.body FROM version v \
+             JOIN vo_head h ON h.tier = v.tier AND h.vo_id = v.vo_id \
+             WHERE h.kind IN ('PERSON', 'PARTY_RELATIONSHIP') AND v.body IS NOT NULL \
+               AND (v.vo_id, v.sys_version) > ($1, $2) \
+               AND jsonb_path_exists(v.body::jsonb, \
+                   '$.**?(@.code_string == \"represents\")') \
+             ORDER BY v.vo_id, v.sys_version LIMIT $3",
+        )
+        .bind(after.0)
+        .bind(after.1)
+        .bind(HISTORY_PAGE)
+        .fetch_all(&mut *tx)
+        .await?;
+        let Some((vo_id, sys_version, ..)) = page.last() else {
+            return Ok(());
+        };
+        after = (*vo_id, *sys_version);
+        let mut held: Vec<(RepresentationRow, Option<Uuid>)> = Vec::new();
+        for (vo_id, _, kind, body) in &page {
+            let Some(kind) = Kind::from_type(kind) else {
+                continue;
+            };
+            let facts = super::parsed(kind, body, &BindingMapping::default())?;
+            let (representative, container) = match kind {
+                Kind::PartyRelationship => (facts.representative, Some(*vo_id)),
+                _ => (Some(*vo_id), None),
+            };
+            let Some(representative) = representative else {
+                continue;
+            };
+            held.extend(facts.representations.iter().map(|r| {
+                let row = RepresentationRow {
+                    representative,
+                    subject: r.subject,
+                    code: r.code.clone(),
+                    validity: r.validity.clone(),
+                };
+                (row, container)
+            }));
+        }
+        rows::write_history(tx, &held).await?;
+    }
 }
