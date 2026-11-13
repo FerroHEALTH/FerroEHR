@@ -147,9 +147,11 @@ an administrator turns into an ordinary one stays an administrator's to
 read, every version of it. Every other party stays readable as before.
 
 AQL over the demographic store applies the same rule. For a caller without
-`admin_role`, a query rooted at `PERSON`, `ORGANISATION` or `ROLE`, alone or
-under `VERSION`, leaves out every version of a party that carries the mark. The query answers as if those
-parties were not stored, and it is not refused:
+`admin_role`, a query rooted at any demographic class (`PERSON`,
+`ORGANISATION`, `GROUP`, `AGENT`, `ROLE`, the abstract `PARTY` and `ACTOR`,
+or `PARTY_RELATIONSHIP`), alone or under `VERSION`, leaves out every version
+of a party or relationship that carries the mark. The query answers as if
+those parties were not stored, and it is not refused:
 
 - The rule is a condition of the one SQL statement the query runs, so
   `COUNT` and the other aggregates, `LIMIT`, `OFFSET` and the REST `fetch`
@@ -167,10 +169,9 @@ parties were not stored, and it is not refused:
   same mark.
 - An administrator's query returns the policy parties.
 
-`AGENT`, `GROUP`, `PARTY_RELATIONSHIP` and the abstract `PARTY` and `ACTOR`
-are no demographic AQL root: a query from them is refused for every caller,
-so AQL never returns a system's `AGENT` or an acts-for relationship written
-as a `PARTY_RELATIONSHIP` of its own.
+So `FROM AGENT` and `FROM PARTY` never return a system's `AGENT` to such a
+caller, and `FROM PARTY_RELATIONSHIP` never returns an acts-for relationship
+written as a `PARTY_RELATIONSHIP` of its own.
 
 Every write and every read is an access record of the Demographic API, with
 its committer, as any demographic access is.

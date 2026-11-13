@@ -202,7 +202,6 @@ data:
         identifier_type = "login"
         issuer = "https://basic-users.ferroehr.invalid"
       [auth.scim]
-        public_base_url = "http://127.0.0.1:18081"
     
         [[auth.scim.client]]
           binding_issuer = "urn:ferroehr:basic-user"
@@ -238,6 +237,7 @@ data:
     
     [server]
       max_concurrent_requests = 256
+      public_base_url = "http://127.0.0.1:18081"
       [server.caller_rate]
         burst = 2048
         requests_per_second = 1024
@@ -312,7 +312,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: dc4d74f693f70cc3a7a5cb29c9b9bb2fb4ae48ead0f5133be9050ab25a8261c4
+        checksum/config: a805aed4766f1af288a3ea9789e41b156cbdffcb97dfeb545b5fcd9326e977b6
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

@@ -59,14 +59,14 @@ impl FerroEhrConfig {
         );
         // management.listen must not be the server.listen address.
         if let Some(listen) = self.management.listen
-            && self.server.listen.port() == listen.port()
-            && (self.server.listen.ip() == listen.ip()
-                || self.server.listen.ip().is_unspecified()
+            && self.server.shared.listen.port() == listen.port()
+            && (self.server.shared.listen.ip() == listen.ip()
+                || self.server.shared.listen.ip().is_unspecified()
                 || listen.ip().is_unspecified())
         {
             errors.push(ConfigError::semantic(format!(
                 "management.listen ({listen}) must differ from server.listen ({})",
-                self.server.listen
+                self.server.shared.listen
             )));
         }
         self.validate_body_tier(&mut errors);
@@ -377,13 +377,13 @@ impl FerroEhrConfig {
     fn validate_body_tier(&self, errors: &mut Vec<ConfigError>) {
         if let Some(tier) = self.api.body_limit
             && usize::try_from(tier.bytes())
-                .is_ok_and(|tier| tier >= self.server.body_limit_bytes())
+                .is_ok_and(|tier| tier >= self.server.shared.body_limit_bytes())
                 | usize::try_from(tier.bytes()).is_err()
         {
             errors.push(ConfigError::semantic(format!(
                 "api.body_limit (\"{tier}\") must be below server.body_limit (\"{}\"), \
                  the limit of the bulk routes and the ceiling of every route",
-                self.server.body_limit
+                self.server.shared.body_limit
             )));
         }
     }
@@ -502,6 +502,11 @@ impl FerroEhrConfig {
         if let Err(e) = self.auth.smart.validate() {
             errors.push(ConfigError::semantic(format!("auth.smart: {e}")));
         }
+        errors.extend(
+            self.public_url_errors()
+                .into_iter()
+                .map(ConfigError::semantic),
+        );
         let resolved = auth::resolve(&self.auth.shared).ok();
         errors.extend(
             self.auth
@@ -524,6 +529,40 @@ impl FerroEhrConfig {
                     .to_owned(),
             ));
         }
+    }
+
+    /// `[server] public_base_url` holds its rule when set, and is set when a
+    /// consumer of the public URL is on: the SMART discovery document (master04
+    /// §Services makes every `services.*.baseUrl` an absolute URL), the SCIM
+    /// service provider (RFC 7643 §3.1: `location` is "The URI of the
+    /// resource being returned") and the `DPoP` proof check of an enabled
+    /// `[auth]` (RFC 9449 §4.3, check 9: `htu` is the URI the client
+    /// addressed).
+    fn public_url_errors(&self) -> Vec<String> {
+        if let Some(error) = self.server.public_base_url_error() {
+            return vec![error];
+        }
+        if self.server.public_base_url.is_some() {
+            return Vec::new();
+        }
+        let consumers = [
+            (self.auth.smart.discovery, "auth.smart.discovery = true"),
+            (self.auth.scim.is_some(), "[auth.scim]"),
+            (
+                self.auth.shared.enabled && self.auth.shared.dpop.is_some(),
+                "[auth.dpop]",
+            ),
+        ];
+        consumers
+            .into_iter()
+            .filter(|(on, _)| *on)
+            .map(|(_, consumer)| {
+                format!(
+                    "{consumer} requires server.public_base_url, the URL clients reach this \
+                     server at, e.g. 'https://cdr.example.com'"
+                )
+            })
+            .collect()
     }
 
     /// The signing section's own rules: a PGP mode needs a key, and a

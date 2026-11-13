@@ -660,7 +660,6 @@ data:
         identifier_type = "uuid"
         issuer = "https://keycloak.example.com/realms/ferroehr"
       [auth.scim]
-        public_base_url = "https://ferroehr.example.com"
     
         [[auth.scim.client]]
           binding_issuer = "urn:example:ferroehr-login"
@@ -671,7 +670,6 @@ data:
         demographic_clients = ["ferroehr-mpi"]
         discovery = true
         patient_issuers = ["https://keycloak.example.com/realms/ferroehr"]
-        public_base_url = "https://ferroehr.example.com"
     
     [authz]
       [authz.abac]
@@ -770,6 +768,7 @@ data:
     
     [server]
       max_concurrent_requests = 256
+      public_base_url = "https://ferroehr.example.com"
       [server.caller_rate]
         burst = 2048
         requests_per_second = 1024
@@ -1593,7 +1592,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: e1b3ee7cc26626d37f822ab6766f091e5adcb5597042e4f28e5f5e3eb47e5c51
+        checksum/config: e6654a9abac812b9a3ebb487ba5c2ab0991e1e3bd422c48bea6c53d70bf06a3a
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
         prometheus.io/path: "/management/prometheus"

@@ -83,7 +83,9 @@ fn organisation(name: &str) -> Value {
     })
 }
 
-fn role(name: &str) -> Value {
+/// A ROLE whose performer is the PERSON container `performer` (RM demographic
+/// `role.adoc` `performer`: the version container of an Actor).
+fn role(name: &str, performer: &str) -> Value {
     json!({
         "_type": "ROLE",
         "archetype_node_id": "openEHR-DEMOGRAPHIC-ROLE.role.v1",
@@ -106,7 +108,7 @@ fn role(name: &str) -> Value {
             "_type": "PARTY_REF",
             "namespace": "demographic",
             "type": "PERSON",
-            "id": { "_type": "HIER_OBJECT_ID", "value": "cccccccc-cccc-4ccc-8ccc-cccccccccccc" }
+            "id": { "_type": "HIER_OBJECT_ID", "value": performer }
         }
         // No `capabilities`: a PRESENT list must be non-empty
         // (ROLE.Capabilities_valid, role.adoc) — absence is the valid way to
@@ -818,11 +820,18 @@ async fn contribution_refuses_a_relationship_sourced_at_another_party() {
 #[tokio::test]
 async fn role_create_and_get() {
     let (_db, svc) = crate::fixtures::service().await;
+    let performer = svc
+        .party_create(
+            PartyKind::Person,
+            WriteRequest::new(typed(&person("Performer"))),
+        )
+        .await
+        .expect("create the performer");
 
     let created = svc
         .party_create(
             PartyKind::Role,
-            WriteRequest::new(typed(&role("Clinician"))),
+            WriteRequest::new(typed(&role("Clinician", &vo_uuid(&performer.body)))),
         )
         .await
         .expect("create role");
@@ -887,6 +896,14 @@ async fn demographic_contribution_member_without_committer_is_refused() {
 #[tokio::test]
 async fn demographic_contribution_multi_version() {
     let (_db, svc) = crate::fixtures::service().await;
+    let performer = svc
+        .party_create(
+            PartyKind::Person,
+            WriteRequest::new(typed(&person("Performer"))),
+        )
+        .await
+        .expect("create the performer");
+    let performer = vo_uuid(&performer.body);
 
     let body = json!({
         "_type": "CONTRIBUTION",
@@ -923,7 +940,7 @@ async fn demographic_contribution_multi_version() {
                     },
                     "committer": committer("tester")
                 },
-                "data": role("Nurse")
+                "data": role("Nurse", &performer)
             }
         ],
         "audit": { "change_type": change_type("251", "modification"),

@@ -540,6 +540,7 @@ fn app_config() -> AppConfig {
     {
         let mut c = AppConfig {
             server: ferrohealth_server::section::ServerSection::default(),
+            public_root: None,
             api: ApiConfig {
                 openapi_ui: AccessLevel::Public,
                 ..Default::default()

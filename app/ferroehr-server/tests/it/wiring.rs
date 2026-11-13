@@ -405,7 +405,7 @@ issuer = "https://u7:URL_PW_SENTINEL_7@idp.example/realms/r"
 kind = "machines"
 audience = ["ferroehr"]
 
-[auth.smart]
+[server]
 public_base_url = "https://u9:URL_PW_SENTINEL_9@cdr.example"
 
 [terminology.endpoint]
@@ -425,7 +425,7 @@ client_secret = "CLIENT_SECRET_SENTINEL"
         "{text}"
     );
     assert!(text.contains("auth.issuer"), "{text}");
-    assert!(text.contains("auth.smart.public_base_url"), "{text}");
+    assert!(text.contains("server.public_base_url"), "{text}");
 
     // The usage report endpoint is refused when the configuration is read.
     let (ok, text) = config_check(
@@ -545,8 +545,10 @@ provider = { issuer = "urn:oid:2.999.1", id = "1" }
 [record]
 subject_index = "local"
 
-[auth.scim]
+[server]
 public_base_url = "https://cdr.example.com"
+
+[auth.scim]
 
 [[auth.scim.client]]
 issuer = "https://as.example"

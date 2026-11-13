@@ -52,10 +52,12 @@ user = "ferroehr"
 key_issuer = "urn:ferroehr:basic-user"
 key = "ferroehr"
 
-# The SCIM endpoint the gate provisions the Basic user through.
-[auth.scim]
+# The URL clients reach the server at, which every SCIM location names.
+[server]
 public_base_url = "http://127.0.0.1:58080"
 
+# The SCIM endpoint the gate provisions the Basic user through.
+[auth.scim]
 [[auth.scim.client]]
 issuer = "https://scim.ferroehr.invalid"
 client_id = "basic-users"

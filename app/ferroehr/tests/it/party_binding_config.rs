@@ -647,7 +647,7 @@ fn a_relationship_code_outside_subject_relationship_is_refused() {
 /// `binding_issuer`, followed by `extra`.
 fn scim(issuer: &str, binding_issuer: &str, extra: &str) -> String {
     format!(
-        "{}\n[auth.scim]\npublic_base_url = \"https://cdr.example.com\"\n\n\
+        "{}\n[server]\npublic_base_url = \"https://cdr.example.com\"\n\n[auth.scim]\n\
          [[auth.scim.client]]\nissuer = \"{issuer}\"\nclient_id = \"entra\"\nscope = \"ferroehr/scim\"\n\
          binding_issuer = \"{binding_issuer}\"\n{extra}",
         full()
