@@ -607,11 +607,8 @@ services:
   # FerroEHR's SCIM endpoint (RFC 7644 §3.3), so the Basic login is bound to
   # a demographic party: the development issuer signs the `quickstart-scim`
   # client a token for the scope ferroehr/scim, and the User is created with
-  # the binding key `ferroehr`. A User that exists already (409) is kept. It
-  # then waits until the login reads a template, which it does once
-  # ferroehr-hold has granted its scopes, and stays up and reports healthy,
-  # so `up --wait` returns once the login is bound and granted.
-  ferroehr-provision:
+  # the binding key `ferroehr`. A User that exists already (409) is kept.
+  ferroehr-provision-user:
     image: ${FERROEHR_CURL_IMAGE:-curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777}
     network_mode: service:identity-issuer
     depends_on:
@@ -619,10 +616,6 @@ services:
         condition: service_healthy
       ferroehr-grant:
         condition: service_completed_successfully
-      # Started beside it, so the scopes the login waits for are granted
-      # whichever services a caller names.
-      ferroehr-hold:
-        condition: service_started
     entrypoint:
       - sh
       - -c
@@ -636,16 +629,7 @@ services:
         --data '{"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User"],"userName":"ferroehr","urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User":{"loginIdentifier":"ferroehr"}}'
         http://localhost:8080/scim/v2/Users);
         case $$status in 201|409) ;; *) echo "provisioning ferroehr answered $$status" >&2; cat /tmp/answer >&2; exit 1;; esac;
-        tries=0;
-        until curl -fsS -o /dev/null -u ferroehr:ferroehr
-        http://localhost:8080/ferroehr/rest/openehr/v1/definition/template/adl1.4; do
-        tries=$$((tries + 1)); if [ $$tries -ge 60 ]; then echo 'ferroehr holds no scopes' >&2; exit 1; fi; sleep 2; done;
-        touch /tmp/provisioned; echo 'ferroehr is provisioned and granted'; exec sleep infinity
-    healthcheck:
-      test: ["CMD", "test", "-f", "/tmp/provisioned"]
-      interval: 2s
-      timeout: 2s
-      retries: 90
+        echo 'ferroehr is provisioned'
     read_only: true
     tmpfs:
       - /tmp
@@ -658,14 +642,13 @@ services:
   # scopes of every resource family in the CDR (hold_scopes), on the
   # operator's authority (`ferroehr party-binding grant --basic-user`): a
   # Basic user is a credential alone, and what it may do is a grant on its
-  # PERSON. It fails until ferroehr-provision has created that PERSON and
-  # runs again until it has, and a PERSON that holds the grant already gets
-  # nothing, so it runs again on a kept volume.
+  # PERSON. A PERSON that holds the grant already gets nothing, so it runs
+  # again on a kept volume.
   ferroehr-hold:
     image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:main}
     network_mode: service:identity-issuer
     depends_on:
-      ferroehr-grant:
+      ferroehr-provision-user:
         condition: service_completed_successfully
     environment:
       FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
@@ -692,7 +675,38 @@ services:
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true
-    restart: on-failure
+    restart: "no"
+
+  # Reports healthy once the quickstart login `ferroehr` is bound and holds
+  # its scopes: it waits until the login reads a template and then stays up,
+  # so `up --wait` returns once the login works.
+  ferroehr-provision:
+    image: ${FERROEHR_CURL_IMAGE:-curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777}
+    network_mode: service:identity-issuer
+    depends_on:
+      ferroehr-hold:
+        condition: service_completed_successfully
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        tries=0;
+        until curl -fsS -o /dev/null -u ferroehr:ferroehr
+        http://localhost:8080/ferroehr/rest/openehr/v1/definition/template/adl1.4; do
+        tries=$$((tries + 1)); if [ $$tries -ge 60 ]; then echo 'ferroehr holds no scopes' >&2; exit 1; fi; sleep 2; done;
+        touch /tmp/provisioned; echo 'ferroehr is provisioned and granted'; exec sleep infinity
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/provisioned"]
+      interval: 2s
+      timeout: 2s
+      retries: 90
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
 
   # The viewer (ferroehr-viewer): a standalone server-rendered web app +
   # BFF that consumes the CDR strictly over ITS-REST — never the database.
