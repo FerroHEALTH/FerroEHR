@@ -635,8 +635,8 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
             ..ferroehr::service::terminology::config::TerminologyServerConfig::default()
         },
     );
-    // URL 4 was the usage report endpoint, whose type now refuses userinfo.
-    cfg.authz.abac.remote.endpoint.url = leaky(5);
+    // URL 4 was the usage report endpoint, whose type now refuses userinfo;
+    // URL 5 was the removed remote policy decision point.
     cfg.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
         endpoint: leaky(6),
         ..ferrohealth_telemetry::section::OtlpSection::default()
@@ -686,7 +686,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
             "URL userinfo leaked from {uri}: {body}"
         );
         // URL 11 was `[auth.scim] public_base_url`, which URL 10 replaces.
-        for n in (1..=13).filter(|n| ![4, 11].contains(n)) {
+        for n in (1..=13).filter(|n| ![4, 5, 11].contains(n)) {
             assert!(
                 body.contains(&format!("https://***@h{n}/p")),
                 "URL {n} lost its host and path in {uri}: {body}"

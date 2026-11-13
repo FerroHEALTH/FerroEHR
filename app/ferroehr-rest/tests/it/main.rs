@@ -56,7 +56,6 @@ mod audit_emergency_access;
 mod audit_iti81;
 mod audit_route_coverage;
 mod authz_cedar_engine;
-mod authz_remote_pdp;
 mod authz_route_matrix;
 mod base_path_http;
 mod basic_binding_http;

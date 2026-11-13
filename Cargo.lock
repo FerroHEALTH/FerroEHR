@@ -2496,13 +2496,9 @@ dependencies = [
  "async-trait",
  "cedar-policy",
  "ferrohealth-smart",
- "http",
- "reqwest",
- "serde_json",
  "thiserror",
  "tokio",
  "tracing",
- "url",
 ]
 
 [[package]]
