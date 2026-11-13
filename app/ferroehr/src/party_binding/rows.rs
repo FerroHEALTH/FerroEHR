@@ -424,12 +424,14 @@ async fn write(
     Ok(())
 }
 
-/// The representatives among `parties` that are the source of a live
-/// standalone representation container.
+/// The representatives among `parties` that are, or ever were, the source of
+/// a representation: a live standalone container, or any relationship whose
+/// row was retired. A former representative keeps a representative's key
+/// row, so their login is never taken for the patient's (#5532).
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
-pub(crate) async fn standalone_representatives(
+pub(crate) async fn representatives(
     tx: &mut PgConnection,
     parties: &[Uuid],
 ) -> Result<Vec<Uuid>, StorageError> {
@@ -438,12 +440,47 @@ pub(crate) async fn standalone_representatives(
     }
     Ok(sqlx::query_scalar(
         "SELECT DISTINCT representative_id FROM binding_representation \
-         WHERE representative_id = ANY($1) AND retired_at IS NULL \
-           AND relationship_id IS NOT NULL",
+         WHERE representative_id = ANY($1)",
     )
     .bind(parties)
     .fetch_all(&mut *tx)
     .await?)
+}
+
+/// Inserts each of `held`, a representation with its standalone container
+/// (`None` for an inline one), as a retired row: what the representatives
+/// once held, which a refill keeps.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub(crate) async fn write_history(
+    tx: &mut PgConnection,
+    held: &[(RepresentationRow, Option<Uuid>)],
+) -> Result<(), StorageError> {
+    if held.is_empty() {
+        return Ok(());
+    }
+    let representative: Vec<Uuid> = held.iter().map(|(r, _)| r.representative).collect();
+    let subject: Vec<Uuid> = held.iter().map(|(r, _)| r.subject).collect();
+    let code: Vec<Option<&str>> = held.iter().map(|(r, _)| r.code.as_deref()).collect();
+    let validity: Vec<Option<&Value>> = held.iter().map(|(r, _)| r.validity.as_ref()).collect();
+    let container: Vec<Option<Uuid>> = held.iter().map(|(_, c)| *c).collect();
+    sqlx::query(
+        "INSERT INTO binding_representation \
+             (representative_id, subject_id, relationship, validity, relationship_id, retired_at) \
+         SELECT r.representative, r.subject, r.code, datemultirange(party.binding_validity(r.validity)), \
+                r.container, now() \
+         FROM unnest($1::uuid[], $2::uuid[], $3::text[], $4::jsonb[], $5::uuid[]) \
+              AS r(representative, subject, code, validity, container)",
+    )
+    .bind(&representative)
+    .bind(&subject)
+    .bind(&code)
+    .bind(&validity)
+    .bind(&container)
+    .execute(&mut *tx)
+    .await?;
+    Ok(())
 }
 
 /// The representative the live row of the standalone container `container`

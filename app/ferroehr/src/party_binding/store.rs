@@ -489,7 +489,7 @@ async fn write_persons(
     let mut representations = Vec::new();
     let mut memberships = Vec::new();
     let mut listed = Vec::new();
-    let standalone = rows::standalone_representatives(tx, &parties).await?;
+    let standalone = rows::representatives(tx, &parties).await?;
     for head in heads {
         if mapping.membership.is_some()
             && head.lifecycle_state != DELETED

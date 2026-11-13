@@ -11,7 +11,9 @@
 //! and admits them only while that `PERSON` holds a live representation of
 //! the EHR's subject: a `PARTY_RELATIONSHIP` carrying the representation code
 //! ([`crate::party_binding::policy_mark::REPRESENTS`]) whose `time_validity`
-//! covers today. Who may represent whom, and until when, is the deployment's
+//! covers today. A login whose `PERSON` has ever represented the subject is
+//! judged only as a representative, so ending or deleting the representation
+//! never leaves the login admitted as the patient (#5532). Who may represent whom, and until when, is the deployment's
 //! data, so the national rules on age and legal capacity reach FerroEHR as
 //! the relationships and the validity the deployment records. No openEHR spec
 //! governs resolving a login to a party: our own design.
@@ -32,7 +34,8 @@ const ACTIVE: [&str; 2] = ["532", "553"];
 /// the EHR it names.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PortalLogin {
-    /// No representative's `PERSON` carries the login.
+    /// No representative's `PERSON` carries the login, or the one that does
+    /// has never represented the EHR's subject: the login is the patient's.
     Unbound,
     /// The `PERSON` carrying the login is the EHR's subject itself.
     Subject,
@@ -47,9 +50,10 @@ pub enum PortalLogin {
         /// The openEHR `subject_relationship` code.
         relationship: Option<String>,
     },
-    /// The `PERSON` `person` carries the login and holds no live
-    /// representation of the subject, or the EHR names no subject of this
-    /// store.
+    /// The `PERSON` `person` carries the login and has represented the
+    /// subject, but holds no live representation of them now, or the EHR
+    /// names no subject of this store. A former representative is never the
+    /// patient.
     Unrecorded {
         /// The representative's `PERSON` container.
         person: Uuid,
@@ -85,9 +89,6 @@ impl FerroEhrService {
             },
             _ => return Ok(PortalLogin::Ambiguous),
         };
-        if !ACTIVE.contains(&state.as_str()) {
-            return Ok(PortalLogin::Inactive { person });
-        }
         let Some(subject) = self.ehr_subject_person(ehr_id).await? else {
             return Ok(PortalLogin::Unrecorded { person });
         };
@@ -95,17 +96,22 @@ impl FerroEhrService {
             return Ok(PortalLogin::Subject);
         }
         let today = crate::party_binding::source::today();
-        let rows = lookup::representations(&mut conn, &[person], &today).await?;
-        Ok(rows
-            .into_iter()
-            .find(|row| row.subject_id == subject)
-            .map_or(PortalLogin::Unrecorded { person }, |row| {
-                PortalLogin::Represents {
-                    person,
-                    subject,
-                    relationship: row.relationship,
-                }
-            }))
+        let Some((live, relationship)) =
+            lookup::representation_of(&mut conn, person, subject, &today).await?
+        else {
+            return Ok(PortalLogin::Unbound);
+        };
+        Ok(if !ACTIVE.contains(&state.as_str()) {
+            PortalLogin::Inactive { person }
+        } else if live {
+            PortalLogin::Represents {
+                person,
+                subject,
+                relationship,
+            }
+        } else {
+            PortalLogin::Unrecorded { person }
+        })
     }
 
     /// Returns the `PERSON` container the `EHR_STATUS` of the EHR `ehr_id`

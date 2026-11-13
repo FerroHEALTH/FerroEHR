@@ -1577,9 +1577,14 @@ context (`ehrId`). A representative signs in one of two ways:
 Either way FerroEHR binds the login, under the token's issuer, to the
 `PERSON` whose binding key it is, and admits the request while that `PERSON`
 holds a live representation of the subject of the EHR's `EHR_STATUS`. The
-request is confined to that EHR. A login no representative's `PERSON` carries
-is the patient themself on the second path, and refused on the first. A
-representation that is not recorded or has ended is refused with `403`
+request is confined to that EHR. A login whose `PERSON` holds, or has ever
+held, a representation of the EHR's subject is judged only as a
+representative: it is admitted while a representation is live, and refused
+once none is, whether the representation ended or was deleted, so a former
+representative never becomes the patient. On the second path a login no
+representative's `PERSON` has ever carried for that subject is the patient
+themself; on the first path such an actor is refused. A representation that
+is not recorded, has ended or was deleted is refused with `403`
 (`refused-representation-unrecorded`); a representative's `PERSON` that is
 `inactive` or `abandoned` with `refused-inactive`, and a login two `PERSON`s
 carry with `refused-ambiguous`. FerroEHR trusts a `patients` issuer for the
