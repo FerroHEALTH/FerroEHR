@@ -27,6 +27,9 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::party_binding::grants::admission::{
+    ADMIT_ASSURANCE, ADMIT_GROUP, ADMIT_GUESTS, ADMIT_IDP, ADMIT_ROLE, LOGIN_ISSUER,
+};
 use crate::party_binding::policy_mark::ACTS_FOR;
 
 /// The code naming the credentials element whose `DV_DATE_TIME` is the
@@ -90,7 +93,21 @@ pub const SCOPES: [&str; 8] = [
 /// Whether `code` names a grant's bound or scope element, or the acts-for
 /// relationship.
 fn names_no_operation(code: &str) -> bool {
-    [ACTS_FOR, NOT_BEFORE, NOT_AFTER, ROLE, SCOPE].contains(&code) || SCOPES.contains(&code)
+    [
+        ACTS_FOR,
+        NOT_BEFORE,
+        NOT_AFTER,
+        ROLE,
+        SCOPE,
+        LOGIN_ISSUER,
+        ADMIT_IDP,
+        ADMIT_GROUP,
+        ADMIT_ROLE,
+        ADMIT_ASSURANCE,
+        ADMIT_GUESTS,
+    ]
+    .contains(&code)
+        || SCOPES.contains(&code)
 }
 
 /// One operation a capability may grant.
@@ -135,11 +152,15 @@ pub enum Operation {
     /// Hold, as a Basic user, the SMART scopes the grant's [`SCOPE`] elements
     /// name.
     HoldScopes,
+    /// Create a provisional `PERSON` at the first login of a person no party
+    /// carries, under the admission conditions the grant's credentials name
+    /// ([`crate::party_binding::grants::admission`]).
+    CreateAtLogin,
 }
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 14] = [
+    pub const ALL: [Self; 15] = [
         Self::CommitComposition,
         Self::ImportEhr,
         Self::ImportEhrExtract,
@@ -154,6 +175,7 @@ impl Operation {
         Self::ScimProvision,
         Self::HoldRoles,
         Self::HoldScopes,
+        Self::CreateAtLogin,
     ];
 
     /// The operation's code in [`crate::party_binding::policy_mark::TERMINOLOGY`].
@@ -174,6 +196,7 @@ impl Operation {
             Self::ScimProvision => "scim_provision",
             Self::HoldRoles => "hold_roles",
             Self::HoldScopes => "hold_scopes",
+            Self::CreateAtLogin => "create_at_login",
         }
     }
 
@@ -276,6 +299,7 @@ mod tests {
         }
         assert_eq!(Operation::of("import_everything"), None);
         assert!(is_qualifier(ACTS_FOR) && is_qualifier("template"));
+        assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_GUESTS));
     }
 
     #[test]

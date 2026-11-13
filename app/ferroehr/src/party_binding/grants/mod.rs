@@ -24,6 +24,7 @@
 //! No openEHR spec gives a capability an authorization meaning, or governs
 //! the side table: our own design.
 
+pub mod admission;
 pub mod bootstrap;
 pub mod capabilities;
 pub(crate) mod derive;
@@ -39,26 +40,17 @@ use crate::party_binding::grants::operation::{
     BINDING_ISSUER, GrantCeiling, ORIGIN, Operation, READER, ROLE, TOKEN_SCOPE,
 };
 
-/// Refuses the committed body `facts` of a `ROLE` that grants above
-/// `ceiling` ([`check_ceiling`]) or breaks the element rules
-/// ([`check_elements`]).
-///
-/// # Errors
-/// [`ServiceError::Forbidden`] (`403`) or [`ServiceError::BadRequest`]
-/// (`400`), as those checks name them.
-pub(crate) fn check_role(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
-    check_ceiling(facts, ceiling)?;
-    check_elements(facts)
-}
-
 /// Refuses the committed body `facts` of a `ROLE` when it grants an
-/// operation `ceiling` does not admit, or a `hold_roles` grant names a role
-/// the ceiling reserves.
+/// operation `ceiling` does not admit, a `hold_roles` grant names a role
+/// the ceiling reserves, a capability breaks the element rules
+/// ([`check_elements`]), or a `create_at_login` grant admits nothing
+/// ([`admission::check`]).
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) naming the first such capability and
-/// the configuration key.
-fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
+/// the configuration key, the `400` of [`check_elements`], and the `422` of
+/// [`admission::check`].
+pub(crate) fn check_role(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
     let reserved = facts
         .grants
         .capabilities
@@ -79,7 +71,8 @@ fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceErr
         .iter()
         .find(|capability| !ceiling.allows_code(&capability.code))
     else {
-        return Ok(());
+        check_elements(facts)?;
+        return admission::check(facts);
     };
     let allowed: Vec<&str> = ceiling.allowed().map(Operation::code).collect();
     Err(ServiceError::not_permitted(format!(

@@ -557,12 +557,12 @@ its `credentials` hold, at any depth, an element whose value is a
 `export_ehr_extract`, `federated_person_access`,
 `federated_organisation_access`, `read_subject_audit`, `access_service`,
 `read_identifiers`, `data_origin`, `read_change_feed`, `scim_provision`,
-`hold_roles`, `hold_scopes`); elements named by the qualifier codes
-`not_before` and `not_after` bound it finer than a day, `template`,
-`facility`, `subject_namespace`, `creating_system`, `origin`, `reader`,
-`binding_issuer` and `token_scope` scope it, and `role` and `scope` name what
-a `hold_roles` or `hold_scopes` grant gives; `acts_for` codes the acts-for
-relationship.
+`hold_roles`, `hold_scopes`, `create_at_login`); elements named by the
+qualifier codes `not_before` and `not_after` bound it finer than a day,
+`template`, `facility`, `subject_namespace`, `creating_system`, `origin`,
+`reader`, `binding_issuer` and `token_scope` scope it, and `role` and `scope`
+name what a `hold_roles` or `hold_scopes` grant gives; `acts_for` codes the
+acts-for relationship.
 That is the RM's `ITEM_STRUCTURE` with a terminology binding, which any
 modeller produces (RM `data_types` `DV_CODED_TEXT`, `CODE_PHRASE`). A client
 is any `ACTOR` carrying a `DV_IDENTIFIER` of type `client_id` in its
@@ -679,6 +679,25 @@ the administrator authority and break-glass never come from the party
 store. The keys `[[auth.basic.users]] roles` and `scopes` belong to
 `ferrohealth-smart`, so they leave the schema with that crate. **Our own
 design.**
+
+**Just-in-time admission** (`party_binding::grants::admission`, #5441). Which
+first logins of a `persons` issuer create a provisional `PERSON` is policy,
+so it is CDR data: a `CAPABILITY` coding `create_at_login` admits the
+logins of each issuer its `login_issuer` elements name that meet every
+condition it declares (`admit_idp`, `admit_group`, `admit_role`,
+`admit_assurance`, and `admit_guests` for a guest), and any grant in force
+admits a login. The grant is read by its credentials, whoever performs its
+`ROLE`, from the same `LiveGrants` copy (`LiveGrants::admissions`), which
+the login binding consults only for an unbound person or delegated caller,
+so the request path adds no transaction. A grant that names no issuer or
+declares no condition is refused at commit with `422`
+(`admission::check`) and a stored one is never honoured, so no grant admits
+every login of an issuer; `create_at_login` is above the default ceiling.
+The `[[authz.party_binding.issuer]]` table keeps only how the tokens are
+read (`user_name_claim`, `idp_claim`), and the six admission keys it held
+are gone. **Our own design:** the RM (Incomplete Content) allows an
+incomplete demographic version, and no specification governs when a login
+creates one.
 
 **Break-glass stays in the configuration.** Emergency access (EHDS Art.
 11(5)) must work when the party store does not answer, so

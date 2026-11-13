@@ -149,8 +149,9 @@ impl Grant {
 pub struct Credentials<'a>(Option<&'a Value>);
 
 impl<'a> Credentials<'a> {
-    /// The credentials `tree`, an `ITEM_STRUCTURE` as the capability holds it.
-    pub(crate) fn of(tree: Option<&'a Value>) -> Self {
+    /// The credentials tree `tree`, `None` for a capability without one.
+    #[must_use]
+    pub fn of(tree: Option<&'a Value>) -> Self {
         Self(tree)
     }
 

@@ -146,7 +146,7 @@ For each key it reports the committer of the version that introduced the
 key, and fails unless that committer was a SCIM client (one whose `ACTOR`
 holds or held a `scim_provision` grant), an
 administrator you name, a migration you declare, or just-in-time creation
-on an issuer with `jit = true`. A stored version records no role its
+on a `persons` issuer an `[[auth.party]]` table binds. A stored version records no role its
 committer held, so you name the administrators (`--admin`, `--admin-key`),
 and the report repeats them.
 
