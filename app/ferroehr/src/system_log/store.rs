@@ -182,7 +182,8 @@ pub struct AuditRecord {
     /// The access-log entry of the access (`crate::access_log::entry`),
     /// written in the transaction that writes the record; `None` for a
     /// record of no access to EHR data.
-    pub entry: Option<Box<crate::access_log_draft::access_log::access_log_entry::AccessLogEntry>>,
+    pub entry:
+        Option<Box<openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry>>,
 }
 
 /// [`INSERT_ONE`] that also enters the record in the FHIR Feed's outbox, in

@@ -37,17 +37,6 @@ use openehr_rm::v1_2::data_types::quantity::date_time::dv_date::DvDate;
 use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
-use crate::access_log_draft::access_log::access_authorisation::AccessAuthorisation;
-use crate::access_log_draft::access_log::access_channel::AccessChannel;
-use crate::access_log_draft::access_log::access_credential::AccessCredential;
-use crate::access_log_draft::access_log::access_log_entry::AccessLogEntry;
-use crate::access_log_draft::access_log::access_log_link::AccessLogLink;
-use crate::access_log_draft::access_log::access_origin::AccessOrigin;
-use crate::access_log_draft::access_log::access_outcome::AccessOutcome;
-use crate::access_log_draft::access_log::access_query::AccessQuery;
-use crate::access_log_draft::access_log::access_retention::AccessRetention;
-use crate::access_log_draft::access_log::accessed_item::AccessedItem;
-use crate::access_log_draft::access_log::accessor::Accessor;
 use crate::system_log::binding::{BindingCode, BindingRecord, Identified};
 use crate::system_log::event::{
     AccessDecision, AccessDomain, ActingMode, AuditEvent, EntryScope, EventActionCode,
@@ -57,11 +46,22 @@ use crate::system_log::fhir::OPERATION_SYSTEM;
 use crate::system_log::message::AuditContext;
 use crate::system_log::store::RecordEnd;
 use crate::versioning::audit::dv_date_time;
+use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
+use openehr_rm::draft::access_log::access_log::access_channel::AccessChannel;
+use openehr_rm::draft::access_log::access_log::access_credential::AccessCredential;
+use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
+use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
+use openehr_rm::draft::access_log::access_log::access_origin::AccessOrigin;
+use openehr_rm::draft::access_log::access_log::access_outcome::AccessOutcome;
+use openehr_rm::draft::access_log::access_log::access_query::AccessQuery;
+use openehr_rm::draft::access_log::access_log::access_retention::AccessRetention;
+use openehr_rm::draft::access_log::access_log::accessed_item::AccessedItem;
+use openehr_rm::draft::access_log::access_log::accessor::Accessor;
 
 /// The terminology of the draft's own groups (`access action`, `access
 /// outcome`, `accessor kind`, `access authorisation`), whose terms carry
 /// their rubric as the code until the openEHR terminology editors assign one
-/// (`crate::access_log_invariants`).
+/// (`openehr_rm::draft::access_log::invariants`).
 const OPENEHR: &str = "openehr";
 /// FerroEHR's terminology of the party binding outcomes (#5007).
 pub const BINDING_TERMINOLOGY: &str = "ferroehr-party-binding";

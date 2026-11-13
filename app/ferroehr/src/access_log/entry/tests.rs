@@ -6,14 +6,14 @@ use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVer
 
 use super::{Retention, RetentionGround, entry_of, writes_entry};
 use crate::access_log::store::canonical_form;
-use crate::access_log_draft::access_log::access_log_entry::AccessLogEntry;
-use crate::access_log_draft::access_log::access_log_link::AccessLogLink;
-use crate::access_log_invariants::check_entry;
 use crate::system_log::binding::{BindingRecord, Identified, PartyTriple};
 use crate::system_log::event::{
     AccessDecision, AccessDomain, AuditEvent, EntryScope, EventActionCode, EventOutcome, EventType,
     ObjectClass, QueryNaming,
 };
+use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
+use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
+use openehr_rm::draft::access_log::invariants::check_entry;
 
 const EHR: &str = "7d44b88c-4199-4bad-97dc-d78268e01398";
 const VERSION: &str = "8849182c-82ad-4088-a07f-48ead4180515::cdr.example.org::1";

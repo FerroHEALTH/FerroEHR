@@ -240,7 +240,7 @@ pub struct AuditEvent {
     /// The grounds the access decision rested on, carried into the entry's
     /// `authorisations` (#5514 fills them).
     pub grounds:
-        Vec<crate::access_log_draft::access_log::access_authorisation::AccessAuthorisation>,
+        Vec<openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation>,
     /// The event time.
     pub timestamp: Timestamp,
 }
