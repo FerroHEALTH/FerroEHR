@@ -15,7 +15,17 @@ the package version is the crate's own SemVer line
 - **NEVER hand-edit a file with a `// @generated … DO NOT EDIT` header.**
   Change the emitter (`tools/openehr-codegen/src/render/emit.rs`) and regenerate
   (`/regen-codegen`); the `codegen-drift` CI job guards this.
-- Hand-written invariants / spec functions live ONLY in `*_impl.rs`
+- **`src/draft/` is the FerroEHR-local draft packages** (`access_log`,
+  `access_control`), compiled only with the `draft` feature (never a default):
+  `openehr-codegen emit-drafts` generates them from
+  `tools/openehr-codegen/draft/bmm/`, `emit` never touches the subtree, and
+  their BMM class invariants are hand-written in `draft/invariants.rs` (the
+  shared `Violation` report) and `draft/<package>/invariants.rs`, with the
+  access control terminology groups in `draft/access_control/terminology.rs`. Their tests
+  are `tests/it/draft/`, run with `--features draft` (CI's
+  `--all-features`). If openEHR adopts a package it becomes an RM generation
+  and leaves `draft`.
+- Outside `draft`, hand-written invariants / spec functions live ONLY in `*_impl.rs`
   siblings, each citing its RM spec section
   (`docs/specs/openehr/RM/docs/`). Behavioural back-references
   (`PATHABLE.parent()`) use `Weak`/index, never an owning reference.

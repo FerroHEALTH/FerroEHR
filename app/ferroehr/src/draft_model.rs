@@ -23,6 +23,6 @@ pub static RM_WITH_DRAFTS: ExtendedRmModel = ExtendedRmModel::new(
 
 /// The class tables of the draft packages.
 static DRAFT_CLASSES: [&[RmClass]; 2] = [
-    crate::access_control_draft::model::CLASSES,
-    crate::access_log_draft::model::CLASSES,
+    openehr_rm::draft::access_control::model::CLASSES,
+    openehr_rm::draft::access_log::model::CLASSES,
 ];

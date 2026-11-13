@@ -523,7 +523,9 @@ recognition runs with or without a party mapping and enters no mapping
 digest: the grant rows it derives do not depend on the mapping. **Our own
 design.**
 
-**The access control terminology** (`ferroehr::access_terminology`, #5507)
+**The access control terminology**
+(`openehr_rm::draft::access_control::terminology`, #5507, beside the draft
+it codes since #5540)
 adds the groups the ABAC design of #5487 reads to `ferroehr-operations`:
 `access default`, `access directive kind`, `access effect`, `access
 relationship`, `access caller kind`, `access operation`, `access
@@ -999,7 +1001,7 @@ policy can only tighten them.
   extract or EHR-scoped contribution read reaches them.
 - **Strict on write.** A body is read by the strict canonical-JSON reader of
   the generated draft type, then checked against the invariants of the draft
-  BMM (`access_control_invariants::check_policy`), the root `LOCATABLE` rules
+  BMM (`openehr_rm::draft::access_control::invariants::check_policy`), the root `LOCATABLE` rules
   (the root `archetype_node_id` is the archetype id `archetype_details` names,
   of an `ACCESS_POLICY` archetype) and the controller's type (`ORGANISATION`).
   A body that does not hold is refused whole with `400`.
@@ -1012,7 +1014,7 @@ policy can only tighten them.
 - **Default archetype.** `openEHR-EHR-ACCESS_POLICY.controller.v1` is seeded
   at boot like the policy definitions. Archetypes are validated against the RM
   extended by the draft classes (`ferroehr::draft_model`, over the class
-  tables `emit-drafts` writes and `openehr_adl::validate::rm::ExtendedRmModel`,
+  tables `emit-drafts` writes into `openehr_rm::draft` and `openehr_adl::validate::rm_extended::ExtendedRmModel`,
   AOM2 master11 RM adaptation), so an archetype over a draft class passes
   VCORM. With no version committed nothing is tightened.
 - **In memory, invalidated by `LISTEN`/`NOTIFY`.** As the registers above:

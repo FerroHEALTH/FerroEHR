@@ -32,7 +32,6 @@ use sqlx::Connection as _;
 use uuid::Uuid;
 
 use crate::access_policy::check::checked;
-use crate::access_policy::draft::Policy;
 use crate::access_policy::{CHANNEL, LivePolicy};
 use crate::db::acquire::acquire;
 use crate::error::{ErrorChain, ServiceError};
@@ -43,6 +42,8 @@ use crate::versioning::audit::change_type;
 use crate::versioning::lifecycle::state::COMPLETE;
 use crate::versioning::object_version_id::{TreeId, object_version_id, parse_object_version_id};
 use crate::versioning::wire::{OriginalVersionParts, build_original_version, contribution_ref};
+use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
+use openehr_rm::draft::access_control::access_control::versioned_access_policy::VersionedAccessPolicy;
 
 /// The `AUDIT_DETAILS.description` of a policy version.
 const DESCRIPTION: &str = "access policy written through the access policy resource";
@@ -205,10 +206,10 @@ impl FerroEhrService {
         let Some(first) = store::at(pool, 1).await? else {
             return Ok(None);
         };
-        let owner = openehr_its::json::from_canonical_json::<Policy>(&first.data)
+        let owner = openehr_its::json::from_canonical_json::<AccessPolicy>(&first.data)
             .map_err(|error| ServiceError::internal("read the first access policy version", error))?
             .controller;
-        let versioned = crate::access_policy::draft::VersionedPolicy {
+        let versioned = VersionedAccessPolicy {
             uid: HierObjectId::from(first.vo_id),
             owner_id: ObjectRef::PartyRef(owner),
             time_created: crate::versioning::audit::dv_date_time(&first.time_committed),
@@ -262,9 +263,10 @@ impl FerroEhrService {
             }
             (PolicyPrecondition::Replace(uid), Some(row)) => {
                 replaces(uid, row)?;
-                let owner = openehr_its::json::from_canonical_json::<Policy>(&row.data).map_err(
-                    |error| ServiceError::internal("read the access policy in force", error),
-                )?;
+                let owner = openehr_its::json::from_canonical_json::<AccessPolicy>(&row.data)
+                    .map_err(|error| {
+                        ServiceError::internal("read the access policy in force", error)
+                    })?;
                 if owner.controller != policy.controller {
                     return Err(ServiceError::precondition(
                         "the access policy is refused: its controller is not the controller the \

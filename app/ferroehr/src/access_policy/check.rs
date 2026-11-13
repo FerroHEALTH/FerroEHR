@@ -6,10 +6,10 @@
 //! It runs the canonical-JSON reader of the generated draft type, which refuses an
 //! undeclared, missing or duplicate member and an empty optional list, then
 //! the class invariants of the draft BMM
-//! ([`crate::access_control_invariants::check_policy`]), the root rules of a
+//! ([`check_policy`]), the root rules of a
 //! `LOCATABLE` and of the `controller`, and that each sensitivity and
 //! category a classification names comes from the jurisdiction's terminology
-//! ([`crate::access_terminology::ForeignCode`]).
+//! ([`ForeignCode`]).
 //!
 //! The draft package is FerroEHR's change proposal and no openEHR release:
 //! our own design over our own model (#5512).
@@ -22,10 +22,10 @@
 
 use serde_json::Value;
 
-use crate::access_control_invariants::check_policy;
-use crate::access_policy::draft::Policy;
-use crate::access_terminology::{ForeignCode, ForeignKind, NotForeign};
-use crate::draft_invariants::Violations;
+use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
+use openehr_rm::draft::access_control::invariants::check_policy;
+use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind, NotForeign};
+use openehr_rm::draft::invariants::Violations;
 
 /// The RM class an access policy archetype constrains.
 const RM_CLASS: &str = "ACCESS_POLICY";
@@ -70,8 +70,8 @@ pub enum PolicyDefect {
 ///
 /// # Errors
 /// The first [`PolicyDefect`] of the body; invariants are reported together.
-pub fn checked(body: &Value) -> Result<Policy, PolicyDefect> {
-    let policy: Policy =
+pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
+    let policy: AccessPolicy =
         openehr_its::json::from_canonical_value(body).map_err(PolicyDefect::NotAPolicy)?;
     check_policy(&policy)?;
     if let Some(details) = &policy.archetype_details {

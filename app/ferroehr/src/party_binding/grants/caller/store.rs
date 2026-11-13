@@ -23,10 +23,10 @@ use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
 use super::{CallerFact, FactKind, FactValue};
-use crate::access_terminology::ForeignCode;
 use crate::party_binding::grants::derive::Bound;
 use crate::party_binding::grants::store::{CHANNEL, GrantHead, Term};
 use crate::storage::error::StorageError;
+use openehr_rm::draft::access_control::terminology::ForeignCode;
 
 /// Every fact of the parties stamped after the facts revision `$1`.
 ///

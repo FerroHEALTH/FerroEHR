@@ -28,6 +28,8 @@
 // A vendored BMM model is a deep, mutually-recursive type graph (the LANG // BMM-3 expression/statement families reach several hundred levels), so // auto-trait inference — `Send`/`Sync`/`RefUnwindSafe`, which rustdoc // evaluates for every item — overflows the default limit of 128. Raising // the limit is exactly what rustc prescribes for that overflow // (<https://doc.rust-lang.org/reference/attributes/limits.html>); it // changes no emitted type.
 #![recursion_limit = "512"]
 
+#[cfg(feature = "draft")]
+pub mod draft;
 pub mod prelude;
 pub mod v1_1;
 pub mod v1_2;

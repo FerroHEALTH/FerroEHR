@@ -21,17 +21,16 @@
 //! invalidation are our own design/extension.
 
 pub mod check;
-pub mod draft;
 
 use std::fmt;
 use std::sync::{Arc, PoisonError, RwLock};
 
 use sqlx::PgPool;
 
-use crate::access_policy::draft::Policy;
 use crate::policy_register::listen::Listened;
 use crate::storage::access_policy as store;
 use crate::storage::error::StorageError;
+use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 
 /// The archetype of the default access policy definition.
 pub const ARCHETYPE: &str = "openEHR-EHR-ACCESS_POLICY.controller.v1";
@@ -56,7 +55,7 @@ pub struct PolicyInForce {
     pub version: i32,
     /// The policy; `None` when no version is committed, which tightens
     /// nothing.
-    pub policy: Option<Arc<Policy>>,
+    pub policy: Option<Arc<AccessPolicy>>,
 }
 
 /// Why the policy could not be read.
@@ -153,7 +152,7 @@ impl LivePolicy {
         if row.version == self.in_force().version {
             return Ok(());
         }
-        let policy = match openehr_its::json::from_canonical_json::<Policy>(&row.data) {
+        let policy = match openehr_its::json::from_canonical_json::<AccessPolicy>(&row.data) {
             Ok(policy) => Some(Arc::new(policy)),
             Err(error) => {
                 tracing::error!(
