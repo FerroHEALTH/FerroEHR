@@ -66,6 +66,14 @@ pub const BINDING_ISSUER: &str = "binding_issuer";
 /// a scope the client's token must hold.
 pub const TOKEN_SCOPE: &str = "token_scope";
 
+/// The code naming the credentials element whose text is a role a
+/// [`Operation::HoldRoles`] grant gives a Basic user.
+pub const ROLE: &str = "role";
+
+/// The code naming the credentials element whose text is a SMART scope a
+/// [`Operation::HoldScopes`] grant gives a Basic user.
+pub const SCOPE: &str = "scope";
+
 /// The codes naming a grant's scope elements, which a check reads with
 /// [`crate::party_binding::grants::capabilities::Credentials::named`].
 pub const SCOPES: [&str; 8] = [
@@ -82,7 +90,7 @@ pub const SCOPES: [&str; 8] = [
 /// Whether `code` names a grant's bound or scope element, or the acts-for
 /// relationship.
 fn names_no_operation(code: &str) -> bool {
-    [ACTS_FOR, NOT_BEFORE, NOT_AFTER].contains(&code) || SCOPES.contains(&code)
+    [ACTS_FOR, NOT_BEFORE, NOT_AFTER, ROLE, SCOPE].contains(&code) || SCOPES.contains(&code)
 }
 
 /// One operation a capability may grant.
@@ -122,11 +130,16 @@ pub enum Operation {
     /// Provision Users and Groups over SCIM 2.0, owning the binding keys of
     /// the grant's `binding_issuer`.
     ScimProvision,
+    /// Hold, as a Basic user, the roles the grant's [`ROLE`] elements name.
+    HoldRoles,
+    /// Hold, as a Basic user, the SMART scopes the grant's [`SCOPE`] elements
+    /// name.
+    HoldScopes,
 }
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 14] = [
         Self::CommitComposition,
         Self::ImportEhr,
         Self::ImportEhrExtract,
@@ -139,6 +152,8 @@ impl Operation {
         Self::DataOrigin,
         Self::ReadChangeFeed,
         Self::ScimProvision,
+        Self::HoldRoles,
+        Self::HoldScopes,
     ];
 
     /// The operation's code in [`crate::party_binding::policy_mark::TERMINOLOGY`].
@@ -157,6 +172,8 @@ impl Operation {
             Self::DataOrigin => "data_origin",
             Self::ReadChangeFeed => "read_change_feed",
             Self::ScimProvision => "scim_provision",
+            Self::HoldRoles => "hold_roles",
+            Self::HoldScopes => "hold_scopes",
         }
     }
 
@@ -183,20 +200,42 @@ pub(crate) fn is_qualifier(code: &str) -> bool {
     names_no_operation(code.trim())
 }
 
-/// The operations the CDR may grant: `[authz.grants] allowed`.
+/// The operations the CDR may grant (`[authz.grants] allowed`), and the
+/// roles a [`Operation::HoldRoles`] grant may never name.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GrantCeiling {
     /// The operations allowed.
     allowed: BTreeSet<Operation>,
+    /// The privileged roles of `[authz.rbac]`, upper-cased: each comes from
+    /// the configuration, a `role_issuers` token or an operation of its own.
+    reserved: BTreeSet<String>,
 }
 
 impl GrantCeiling {
-    /// The ceiling allowing `allowed`.
+    /// The ceiling allowing `allowed`, reserving no role.
     #[must_use]
     pub fn new(allowed: impl IntoIterator<Item = Operation>) -> Self {
         Self {
             allowed: allowed.into_iter().collect(),
+            reserved: BTreeSet::new(),
         }
+    }
+
+    /// This ceiling with `roles` reserved: a [`Operation::HoldRoles`] grant
+    /// naming one is refused at commit and never honoured.
+    #[must_use]
+    pub fn with_reserved_roles(mut self, roles: impl IntoIterator<Item = String>) -> Self {
+        self.reserved = roles
+            .into_iter()
+            .map(|role| role.trim().to_ascii_uppercase())
+            .collect();
+        self
+    }
+
+    /// Whether `role` is reserved, compared without regard to ASCII case.
+    #[must_use]
+    pub fn reserves(&self, role: &str) -> bool {
+        self.reserved.contains(&role.trim().to_ascii_uppercase())
     }
 
     /// Whether the ceiling allows `operation`.
@@ -237,6 +276,16 @@ mod tests {
         }
         assert_eq!(Operation::of("import_everything"), None);
         assert!(is_qualifier(ACTS_FOR) && is_qualifier("template"));
+    }
+
+    #[test]
+    fn a_reserved_role_is_reserved_in_any_case() {
+        let ceiling = GrantCeiling::new([Operation::HoldRoles])
+            .with_reserved_roles(["Admin".to_owned(), " importer ".to_owned()]);
+        assert!(ceiling.reserves("ADMIN") && ceiling.reserves("admin"));
+        assert!(ceiling.reserves("IMPORTER"));
+        assert!(!ceiling.reserves("CLINICIAN"));
+        assert!(!GrantCeiling::new([]).reserves("ADMIN"));
     }
 
     #[test]

@@ -2195,7 +2195,7 @@
             }
           },
           "403": {
-            "description": "Not in the Admin class, or not holding `authz.rbac.identifier_reader_role` (unset: nobody holds it).",
+            "description": "Not in the Admin class, or holding neither `authz.rbac.identifier_reader_role` (unset: nobody holds it) nor a policy grant of `read_identifiers`.",
             "content": {
               "application/problem+json": {
                 "schema": {

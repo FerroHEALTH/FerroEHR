@@ -158,7 +158,7 @@ pub fn install(
             config.authz.rbac.import_role.clone(),
             logins,
         ))
-        .with_grant_ceiling(config.authz.grants.ceiling());
+        .with_grant_ceiling(config.authz.grants.ceiling(&config.authz.rbac));
     let sections = config.authz.party_binding.sections();
     let mapping = sections
         .binding_mapping(&key_issuers, &config.authz.rbac.admin_role)

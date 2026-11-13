@@ -387,7 +387,8 @@ These things about the payload are worth calling out:
   [Who is the committer](../security/committer.md) has the committer for
   every kind of caller.
 - **Importing needs the import role.** `POST /message/import…` needs the role
-  `[authz.rbac] import_role` names, or a `system/` caller. A wrapped
+  `[authz.rbac] import_role` names, an `import_ehr` or `import_ehr_extract`
+  policy grant, or a `system/` caller. A wrapped
   `commit_audit` or attestation of an imported version is kept as received,
   but one whose committer names a party of this server, or carries a login
   identifier of its issuers, is a **403** unless the version was created by a

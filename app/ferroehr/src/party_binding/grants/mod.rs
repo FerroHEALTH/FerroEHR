@@ -36,16 +36,31 @@ use crate::extensions::outbox::config::is_reader_name;
 use crate::party_binding::derive::Facts;
 use crate::party_binding::grants::capabilities::Credentials;
 use crate::party_binding::grants::operation::{
-    BINDING_ISSUER, GrantCeiling, ORIGIN, Operation, READER, TOKEN_SCOPE,
+    BINDING_ISSUER, GrantCeiling, ORIGIN, Operation, READER, ROLE, TOKEN_SCOPE,
 };
 
 /// Refuses the committed body `facts` of a `ROLE` when it grants an
-/// operation `ceiling` does not admit.
+/// operation `ceiling` does not admit, or a `hold_roles` grant names a role
+/// the ceiling reserves.
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) naming the first such capability and
 /// the configuration key.
 pub(crate) fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
+    let reserved = facts
+        .grants
+        .capabilities
+        .iter()
+        .filter(|capability| Operation::of(&capability.code) == Some(Operation::HoldRoles))
+        .flat_map(|capability| Credentials::of(capability.credentials.as_ref()).texts(ROLE))
+        .find(|role| ceiling.reserves(role));
+    if let Some(role) = reserved {
+        return Err(ServiceError::not_permitted(format!(
+            "the ROLE grants the privileged role {role} through hold_roles; a privileged role \
+             of [authz.rbac] comes only from the configuration, a role_issuers token or an \
+             operation of its own"
+        )));
+    }
     let Some(above) = facts
         .grants
         .capabilities

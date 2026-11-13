@@ -9,7 +9,8 @@
 //! `time_validity` and now by the `not_before` and `not_after` elements,
 //! `[authz.grants] allowed` refuses an operation above it at commit and never
 //! honours a stored one, a change on one replica reaches another through its
-//! notification, and a refill rebuilds the rows from the versions. No openEHR
+//! notification, a refill rebuilds the rows from the versions, and an import
+//! grant admits an import with no import role (#5438). No openEHR
 //! spec gives a capability an authorization meaning: our own design.
 
 use std::collections::HashMap;
@@ -22,11 +23,14 @@ use crate::fixtures::{if_match, object, written_vo};
 use ferroehr::config::FerroEhrConfig;
 use ferroehr::error::ServiceError;
 use ferroehr::ids::VoId;
-use ferroehr::party_binding::grants::capabilities::{Actor, Capabilities, ClientState};
+use ferroehr::party_binding::grants::capabilities::{
+    Actor, Capabilities, ClientState, with_capabilities,
+};
 use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
+use ferroehr::service::message::import_policy::ImportPolicy;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
 
@@ -683,4 +687,92 @@ fn the_grant_ceiling_is_read_from_the_file_and_the_environment() {
         .expect("write");
     ferroehr::config::assemble(Some(file.path()), &HashMap::new(), &[])
         .expect_err("an unknown operation is refused");
+}
+
+#[tokio::test]
+async fn an_import_grant_admits_an_import_the_caller_holds_no_role_for() {
+    let (_source_db, source) = crate::fixtures::service().await;
+    let ehr = crate::fixtures::create_ehr(&source).await;
+    let extracts = source.extract_ehrs(ehr).await.expect("export");
+    let extract: openehr_rm::prelude::Extract =
+        openehr_its::json::from_canonical_value(&extracts[0]).expect("an EXTRACT");
+    let db = testkit::db().await.expect("testkit database");
+    let source_system = crate::committer_binding::source_system_id(&extracts[0]);
+    let target = replica(&db.pool(), GrantCeiling::new([Operation::ImportEhr]))
+        .await
+        .with_import_policy(ImportPolicy::new(
+            Some("IMPORTER".to_owned()),
+            vec![ISSUER.to_owned()],
+        ));
+    let (migrator, _) = create(&target, PartyKind::Agent, &agent("migrator"))
+        .await
+        .expect("the AGENT commits");
+    create(
+        &target,
+        PartyKind::Role,
+        &role(
+            migrator,
+            None,
+            &[capability(
+                &["import_ehr"],
+                &[crate::policy_fixtures::scope(
+                    "creating_system",
+                    &source_system,
+                )],
+                None,
+            )],
+        ),
+    )
+    .await
+    .expect("the ceiling admits import_ehr");
+    target.grants().refresh().await.expect("the grants read");
+    let granted = std::sync::Arc::new(
+        target
+            .grants()
+            .capabilities(Actor::Party(migrator.0), jiff::Timestamp::now()),
+    );
+    assert!(granted.holds(Operation::ImportEhr));
+    let person = CommitterIdentity {
+        subject: "migrator".to_owned(),
+        id_type: "basic",
+        issuer: None,
+        client: None,
+        person: false,
+        party: None,
+        representative: false,
+        bound: None,
+        system: false,
+        system_client: None,
+        external: None,
+    };
+    let refused = with_committer(
+        Some(person.clone()),
+        Box::pin(target.import_ehr(None, extract.clone())),
+    )
+    .await
+    .expect_err("neither the import role nor a grant");
+    assert!(matches!(refused.flattened(), ServiceError::Forbidden(_)));
+    with_capabilities(
+        granted,
+        with_committer(Some(person), Box::pin(target.import_ehr(None, extract))),
+    )
+    .await
+    .expect("the import_ehr grant admits the import");
+}
+
+#[test]
+fn the_privileged_roles_are_reserved_from_a_hold_roles_grant() {
+    let config =
+        config("[authz.rbac]\nimport_role = \"Importer\"\nidentifier_reader_role = \"reader\"\n");
+    assert_eq!(
+        config.authz.rbac.privileged_roles(),
+        ["ADMIN", "IMPORTER", "READER"]
+    );
+    let ceiling = config.authz.grants.ceiling(&config.authz.rbac);
+    assert!(ceiling.reserves("admin") && ceiling.reserves("IMPORTER"));
+    assert!(!ceiling.reserves("READONLY"));
+    assert_eq!(
+        ceiling.allowed().collect::<Vec<_>>(),
+        vec![Operation::CommitComposition]
+    );
 }

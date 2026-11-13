@@ -15,8 +15,9 @@
 //! a `creating_system` element of its grant of the import operation in
 //! [`crate::party_binding::policy_mark::TERMINOLOGY`], read per request from
 //! [`Capabilities::current`], and never this node's own system id. Importing
-//! needs the declared import role or a `system/` caller. No openEHR spec
-//! governs who may import: our own design (#5005, #5439).
+//! needs the declared import role, a policy grant of the import's operation,
+//! or a `system/` caller. No openEHR spec governs who may import: our own
+//! design (#5005, #5438, #5439).
 
 #![expect(
     clippy::disallowed_types,
@@ -105,9 +106,9 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// [`ServiceError::Forbidden`] (`403`) when the caller holds neither the
-    /// import role nor a `system/` grant, or a wrapped committer names a local
-    /// party or login from a system its grant does not vouch for; a storage
-    /// failure.
+    /// import role, a policy grant of `operation`, nor a `system/` grant, or a
+    /// wrapped committer names a local party or login from a system its grant
+    /// does not vouch for; a storage failure.
     pub(super) async fn admit_import(
         &self,
         containers: &[ImportContainer],
@@ -124,10 +125,12 @@ impl FerroEhrService {
                     .iter()
                     .any(|held| held.eq_ignore_ascii_case(role))
             });
-            if !(role || identity.system) {
-                return Err(ServiceError::not_permitted(
-                    "importing needs the role [authz.rbac] import_role names, or a system/ caller",
-                ));
+            let granted = Capabilities::current().holds(operation);
+            if !(role || granted || identity.system) {
+                return Err(ServiceError::not_permitted(format!(
+                    "importing needs the role [authz.rbac] import_role names, a policy grant \
+                     of {operation}, or a system/ caller"
+                )));
             }
         }
         let trusted = self.trusted_systems(operation);

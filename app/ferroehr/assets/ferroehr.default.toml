@@ -918,8 +918,9 @@ access_service_roles = []
 #? import_role = ""
 # The issuers whose role claims may grant `admin_role`,
 # `emergency_access_role`, `import_role` and `identifier_reader_role`, each a
-# `persons` issuer; empty, the default, lets no token grant them. Each renders
-# with any userinfo masked. Optional (trust).
+# `persons` issuer; empty, the default, lets no token grant them. A policy
+# grant of `import_ehr`, `import_ehr_extract` or `read_identifiers` is a second
+# source. Each renders with any userinfo masked. Optional (trust).
 role_issuers = []
 # What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default `open`).
 # Optional (trust).

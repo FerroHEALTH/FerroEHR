@@ -563,10 +563,14 @@ pub(crate) async fn middleware(
     let outcome = auth.authenticate(&parts).await;
     let mut req = Request::from_parts(parts, body);
     match outcome {
-        Ok(Authenticated {
-            mut principal,
-            fresh,
-        }) => {
+        Ok(Authenticated { principal, fresh }) => {
+            let granted = match grants::resolve(layer.service.grants(), &principal).await {
+                Ok(granted) => granted,
+                Err(e) => return refusal::response(auth, req.headers(), &e),
+            };
+            let mut principal = grants::basic(principal, &granted, |role| {
+                auth.role_issuers.is_privileged(role)
+            });
             if let Some(refusal) = purpose::mismatch(&layer, &principal, &req) {
                 return refusal;
             }
@@ -619,10 +623,6 @@ pub(crate) async fn middleware(
                     Err(e) => return refusal::response(auth, req.headers(), &e),
                 }
             }
-            let granted = match grants::resolve(layer.service.grants(), &for_audit).await {
-                Ok(granted) => granted,
-                Err(e) => return refusal::response(auth, req.headers(), &e),
-            };
             // The roles ride beside the committer identity for the request
             // scope, so a record the service layer emits by itself carries
             // them too (#3239).

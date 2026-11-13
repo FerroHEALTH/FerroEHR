@@ -45,21 +45,15 @@ pub(super) struct RoleIssuers {
 impl RoleIssuers {
     /// Returns the rule of `config`'s `[authz.rbac]`.
     fn of(config: &AppConfig) -> Self {
-        let rbac = &config.rbac;
-        let privileged = [
-            Some(&rbac.admin_role),
-            rbac.emergency_access_role.as_ref(),
-            rbac.import_role.as_ref(),
-            rbac.identifier_reader_role.as_ref(),
-        ];
         Self {
-            privileged: privileged
-                .into_iter()
-                .flatten()
-                .map(|role| role.to_uppercase())
-                .collect(),
-            issuers: rbac.role_issuers.clone(),
+            privileged: config.rbac.privileged_roles(),
+            issuers: config.rbac.role_issuers.clone(),
         }
+    }
+
+    /// Whether `role`, upper-cased, is a privileged role.
+    pub(super) fn is_privileged(&self, role: &str) -> bool {
+        self.privileged.iter().any(|held| held == role)
     }
 
     /// Returns the upper-cased roles `caller` holds: a token of an issuer

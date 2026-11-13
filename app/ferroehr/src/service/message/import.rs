@@ -126,7 +126,6 @@ impl FerroEhrService {
                 "import_ehr requires the extract to carry an EHR_STATUS versioned object",
             ));
         }
-        reject_duplicate_singleton_containers(&containers)?;
 
         let ehr_id = match an_ehr_id {
             Some(id) => id,
@@ -222,7 +221,6 @@ impl FerroEhrService {
         let (containers, parties) = self
             .admitted(&an_extract, Operation::ImportEhrExtract)
             .await?;
-        reject_duplicate_singleton_containers(&containers)?;
 
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::from)?;
@@ -476,10 +474,9 @@ pub(super) fn parse_import_containers(
             collect_content_versions(xver, kind, &position, &mut by_container)?;
         }
     }
-    Ok((
-        by_container.into_values().collect(),
-        parties.into_values().collect(),
-    ))
+    let containers: Vec<ImportContainer> = by_container.into_values().collect();
+    reject_duplicate_singleton_containers(&containers)?;
+    Ok((containers, parties.into_values().collect()))
 }
 
 /// The `X_VERSIONED_*` wrapper one `EXTRACT_CONTENT_ITEM` carries, or `None`

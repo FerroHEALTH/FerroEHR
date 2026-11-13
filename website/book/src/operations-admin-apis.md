@@ -346,8 +346,9 @@ curl -H "Authorization: Bearer $TOKEN" \
 - **Two gates.** The route is in the admin group, so it needs `api.admin`
   and the admin role, and it also needs the role
   [`authz.rbac.identifier_reader_role`](installation/config-auth.md#authzrbac)
-  names. Holding the admin role alone reveals no national identifier, and with
-  the key unset nobody may call the route (**403**).
+  names or a `read_identifiers` policy grant
+  ([Operational policy](operational-policy.md#which-checks-read-a-grant)).
+  Holding the admin role alone reveals no national identifier (**403**).
 - **Any version.** `version_uid` names one party version; a historical
   version shows the value it committed.
 - **A view, never a write.** The body is the stored `ORIGINAL_VERSION` with

@@ -556,11 +556,13 @@ its `credentials` hold, at any depth, an element whose value is a
 (`commit_composition`, `import_ehr`, `import_ehr_extract`,
 `export_ehr_extract`, `federated_person_access`,
 `federated_organisation_access`, `read_subject_audit`, `access_service`,
-`read_identifiers`, `data_origin`, `read_change_feed`, `scim_provision`);
-elements named by the qualifier codes `not_before` and `not_after` bound it
-finer than a day, and `template`, `facility`, `subject_namespace`,
-`creating_system`, `origin`, `reader`, `binding_issuer` and `token_scope`
-scope it; `acts_for` codes the acts-for relationship.
+`read_identifiers`, `data_origin`, `read_change_feed`, `scim_provision`,
+`hold_roles`, `hold_scopes`); elements named by the qualifier codes
+`not_before` and `not_after` bound it finer than a day, `template`,
+`facility`, `subject_namespace`, `creating_system`, `origin`, `reader`,
+`binding_issuer` and `token_scope` scope it, and `role` and `scope` name what
+a `hold_roles` or `hold_scopes` grant gives; `acts_for` codes the acts-for
+relationship.
 That is the RM's `ITEM_STRUCTURE` with a terminology binding, which any
 modeller produces (RM `data_types` `DV_CODED_TEXT`, `CODE_PHRASE`). A client
 is any `ACTOR` carrying a `DV_IDENTIFIER` of type `client_id` in its
@@ -601,11 +603,11 @@ listener is not connected every request that resolves a caller reads the
 revision. A request resolves its caller after authentication: a system
 client (`CallerKind::System`) by its token's issuer and `client_id`, a
 caller the login binding bound by its party, anyone else to no grants and no
-read; a copy that must be read and cannot be is `503`. Nothing decides a
-request on a grant yet: the consumers of #5433 read
-`Capabilities::current()`, which holds the caller's grants for the duration
-of the request, each an `Operation` with its `ROLE` and credentials read by
-the codes of their elements' names. A per-request read without a cache,
+read; a copy that must be read and cannot be is `503`. The caller is
+resolved before any gate runs, and a check reads `Capabilities::current()`,
+which holds the caller's grants for the duration of the request, each an
+`Operation` with its `ROLE` and credentials read by the codes of their
+elements' names. A per-request read without a cache,
 which the program first named, would add a transaction to every request,
 which the performance gate's transactions-per-request measure refuses
 (#5459).
@@ -659,6 +661,24 @@ that needs a grant, so `ferroehr party-binding grant`
 `ROLE` granting one operation offline, through `party_create` with the
 server's own committer, under the ceiling and the element rules. It is
 idempotent per client and operation. **Our own design.**
+
+**Basic users' roles and scopes, and the privileged grants** (#5438). A
+Basic user bound to a `PERSON` holds, beside its `[[auth.basic.users]]`
+table, the roles and SMART scopes its `hold_roles` and `hold_scopes` grants
+name (`ferroehr-rest` `authn::grants::basic`), which every gate then reads.
+A token's roles and scopes stay the token's: its issuer is their authority,
+and a SMART scope is what the user consented to (SMART App Launch 2.2.0,
+Scopes and Launch Context). A policy grant is the second source of the
+privileged permissions beside `role_issuers`: `import_ehr` and
+`import_ehr_extract` admit the matching import, `read_identifiers` the
+protected-identifier read. The privileged roles of `[authz.rbac]`
+(`admin_role`, `emergency_access_role`, `import_role`,
+`identifier_reader_role`) are reserved: a `hold_roles` grant naming one is
+`403` at commit (`GrantCeiling::with_reserved_roles`) and never honoured, so
+the administrator authority and break-glass never come from the party
+store. The keys `[[auth.basic.users]] roles` and `scopes` belong to
+`ferrohealth-smart`, so they leave the schema with that crate. **Our own
+design.**
 
 **Break-glass stays in the configuration.** Emergency access (EHDS Art.
 11(5)) must work when the party store does not answer, so
