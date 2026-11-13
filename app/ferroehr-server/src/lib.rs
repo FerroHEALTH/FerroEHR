@@ -949,6 +949,15 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         "version signing configured"
     );
     let access_log = access_log::build(&config, pools.audit.clone(), Arc::clone(&signer))?;
+    // NOTE: our own design, the drain appends every access's entry through the store that signs
+    // links as `[audit.access_log] sign_links` asks; no request has run before this.
+    if let Some(sender) = &audit_sender {
+        let installed = sender.use_access_log(access_log.store().clone());
+        tracing::debug!(
+            installed,
+            "access-log entries appended through the configured store"
+        );
+    }
 
     // `[server] system_id` is stamped into `EHR.system_id`,
     // `AUDIT_DETAILS.system_id` and `OBJECT_VERSION_ID.creating_system_id`;

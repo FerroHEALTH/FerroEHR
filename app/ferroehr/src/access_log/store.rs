@@ -315,14 +315,19 @@ impl AccessLogStore {
     /// when no entry has the uid, which is also the answer for one already
     /// replaced: a tombstone is never replaced again.
     ///
+    /// `recorded`, the entry that records the change to the log, is appended
+    /// in the same transaction, so the log holds the tombstone and the record
+    /// of its making or neither.
+    ///
     /// # Errors
-    /// [`AccessLogError::Invalid`] for a tombstone that breaks an invariant,
-    /// and the store and read errors of [`Self::read`].
+    /// [`AccessLogError::Invalid`] for a tombstone or a record that breaks an
+    /// invariant, and the store and read errors of [`Self::read`].
     pub async fn tombstone(
         &self,
         uid: &str,
         time_removed: DvDateTime,
         grounds: NonEmptyVec<DvCodedText>,
+        recorded: Option<Box<AccessLogEntry>>,
     ) -> Result<Option<AccessLogTombstone>, AccessLogError> {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
@@ -340,6 +345,8 @@ impl AccessLogStore {
         let entry: AccessLogEntry = stored(&row)?;
         let tombstone = tombstone_of(entry, time_removed, grounds);
         let replaced = replace(&mut tx, &[(row.try_get("chain_seq")?, &tombstone)]).await?;
+        self.append_in(&mut tx, recorded.into_iter().map(|entry| *entry).collect())
+            .await?;
         tx.commit().await?;
         Ok(replaced.then_some(tombstone))
     }

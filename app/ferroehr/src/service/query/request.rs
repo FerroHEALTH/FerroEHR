@@ -125,6 +125,9 @@ pub struct QueryOutcome {
     /// The storage domain the query read: the access record of a demographic
     /// query is filed under the demographic domain.
     pub domain: crate::aql::ir::QueryDomain,
+    /// The statement that ran, named by its stored name and the digest of its
+    /// text, for the access log, which never carries the text.
+    pub statement: Option<crate::system_log::event::QueryNaming>,
 }
 
 impl QueryOutcome {
@@ -143,6 +146,23 @@ impl QueryOutcome {
             accessed: None,
             served_ehr_content: BTreeMap::new(),
             domain: crate::aql::ir::QueryDomain::Clinical,
+            statement: None,
         }
+    }
+
+    /// The outcome with the statement that ran named: the AQL text `aql` by
+    /// its digest, under the stored-query name `name` when it has one.
+    #[must_use]
+    pub fn naming(
+        mut self,
+        aql: &str,
+        name: Option<&openehr_its::rest::stored_query::QualifiedQueryName>,
+    ) -> Self {
+        self.statement = Some(crate::system_log::event::QueryNaming::of(
+            "AQL",
+            aql,
+            name.map(ToString::to_string),
+        ));
+        self
     }
 }
