@@ -27,10 +27,12 @@ use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use serde_json::Value;
 
-use crate::access_control_draft::access_control::access_directive::AccessDirective;
-use crate::access_control_draft::access_control::access_directive_settings::AccessDirectiveSettings;
-use crate::access_terminology::{AccessDefault, ForeignCode, ForeignKind, OperationClass, Term};
 use crate::error::ServiceError;
+use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
+use openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
+use openehr_rm::draft::access_control::terminology::{
+    AccessDefault, ForeignCode, ForeignKind, OperationClass, Term,
+};
 
 /// The `_type` of the settings on the wire (canonical JSON).
 pub const SETTINGS_TYPE: &str = "ACCESS_DIRECTIVE_SETTINGS";
@@ -157,7 +159,7 @@ enum Defect {
     },
     /// The settings break a BMM invariant of the draft access control.
     #[error("EHR_ACCESS.settings break the invariant {0}")]
-    Invariant(crate::draft_invariants::Violation),
+    Invariant(openehr_rm::draft::invariants::Violation),
 }
 
 /// Reads written settings as the scheme, checking every invariant.
@@ -169,7 +171,7 @@ fn read_settings(settings: &Value) -> Result<AccessDirectiveSettings, Defect> {
     }
     let read = serde_json::from_value::<AccessDirectiveSettings>(settings.clone())
         .map_err(Defect::Decode)?;
-    if let Err(violations) = crate::access_control_invariants::check_settings(&read)
+    if let Err(violations) = openehr_rm::draft::access_control::invariants::check_settings(&read)
         && let Some(first) = violations.0.first()
     {
         return Err(Defect::Invariant(*first));

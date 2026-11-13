@@ -30,13 +30,13 @@
 )]
 
 use axum::response::{IntoResponse, Response};
-use ferroehr::access_terminology::AccessDefault;
 use ferroehr::aql::sql::EhrAccessScope;
 use ferroehr::config::authz::EhrAccessDefault;
 use ferroehr::ids::EhrId;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use ferroehr::service::ehr::access_settings::EhrAccessSettings;
 use openehr_its::rest::runtime::ApiError;
+use openehr_rm::draft::access_control::terminology::AccessDefault;
 use uuid::Uuid;
 
 use crate::api::RequestParts;
