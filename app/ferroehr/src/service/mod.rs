@@ -499,7 +499,7 @@ impl FerroEhrService {
     /// `data_origin` in force name (EHDS Annex II 3.4, [`crate::origins`]).
     ///
     /// # Errors
-    /// [`ServiceError::Storage`] when the grants must be read and the party
+    /// [`crate::error::ServiceError::Storage`] when the grants must be read and the party
     /// store cannot answer.
     pub async fn registered_origins(
         &self,

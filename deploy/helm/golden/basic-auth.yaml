@@ -203,16 +203,12 @@ data:
         issuer = "https://basic-users.ferroehr.invalid"
       [auth.scim]
     
-        [[auth.scim.client]]
-          binding_issuer = "urn:ferroehr:basic-user"
-          client_id = "basic-users"
-          issuer = "https://scim.ferroehr.invalid"
-          scope = "ferroehr/scim"
-    
     [authz]
       system_client = []
       [authz.federation]
         agreement = []
+      [authz.grants]
+        allowed = ["commit_composition", "scim_provision"]
       [authz.party_binding]
     
         [[authz.party_binding.basic_user]]
@@ -314,7 +310,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: a805aed4766f1af288a3ea9789e41b156cbdffcb97dfeb545b5fcd9326e977b6
+        checksum/config: 79d242e1b4b8741acb6e309d6b1fa8445e1eae101b887b619ac328c8a9346c9c
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr

@@ -660,12 +660,6 @@ data:
         identifier_type = "uuid"
         issuer = "https://keycloak.example.com/realms/ferroehr"
       [auth.scim]
-    
-        [[auth.scim.client]]
-          binding_issuer = "urn:example:ferroehr-login"
-          client_id = "entra-provisioning"
-          issuer = "https://machines.example.org/realms/ferroehr"
-          scope = "ferroehr/scim"
       [auth.smart]
         demographic_clients = ["ferroehr-mpi"]
         discovery = true
@@ -676,6 +670,8 @@ data:
         enabled = true
       [authz.federation]
         agreement = []
+      [authz.grants]
+        allowed = ["commit_composition", "read_change_feed", "scim_provision"]
       [authz.party_binding]
         [authz.party_binding.person]
     
@@ -754,8 +750,6 @@ data:
     
     [record]
       subject_index = "pixm"
-      [record.change_feed]
-        readers = ["ferrobridge"]
       [record.multimedia]
         enabled = true
         region = "eu-west-1"
@@ -1594,7 +1588,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: e6654a9abac812b9a3ebb487ba5c2ab0991e1e3bd422c48bea6c53d70bf06a3a
+        checksum/config: 986872ffd94037c33fc83a035ed64de74941a933ca274bd15b73ffb4cb580eb1
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
         prometheus.io/path: "/management/prometheus"
