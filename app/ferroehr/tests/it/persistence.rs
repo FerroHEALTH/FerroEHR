@@ -80,7 +80,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     assert_eq!(applied("ext").await, 12);
     assert_eq!(applied("clinical").await, 37);
     assert_eq!(applied("party").await, 39);
-    assert_eq!(applied("audit").await, 27);
+    assert_eq!(applied("audit").await, 28);
 
     let tables = |schema: &'static str| {
         let pool = pool.clone();

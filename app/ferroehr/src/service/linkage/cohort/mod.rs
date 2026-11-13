@@ -88,8 +88,6 @@ const PARTY_TYPES: &[&str] = &[
 
 use std::collections::BTreeSet;
 
-use sha2::Digest;
-
 use crate::aql::sql::EhrScopeKind;
 use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
@@ -539,17 +537,7 @@ fn definition_hash(predicates: &[CohortPredicate], subjects: &[SubjectRef]) -> S
         .chain(namespaces.iter().map(|ns| format!("subjects@{ns}")))
         .collect::<Vec<_>>()
         .join("\n");
-    sha2::Sha256::digest(canonical.as_bytes()).iter().fold(
-        String::with_capacity(64),
-        |mut out, byte| {
-            use std::fmt::Write as _;
-            // NOTE: `fmt::Write` on a `String` never fails — its `write_str`
-            // returns `Ok` unconditionally
-            // (<https://doc.rust-lang.org/std/fmt/trait.Write.html#impl-Write-for-String>).
-            let _outcome = write!(out, "{byte:02x}");
-            out
-        },
-    )
+    crate::digest::sha256_hex(&canonical)
 }
 
 #[cfg(test)]
