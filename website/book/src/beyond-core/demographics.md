@@ -129,6 +129,17 @@ add the relationship with a `PUT`. On a `PUT`, and on a CONTRIBUTION version
 that modifies a party, a body `uid` that names another container than the one
 you write to is refused **422** as well.
 
+The references between parties name a party's version container, never one of
+its versions, so a reference whose id is an `OBJECT_VERSION_ID`
+(`<uuid>::<system>::<version>`) is refused **422**: a relationship's `source`
+and `target`, inline or in a relationship container, a `ROLE`'s `performer`
+and each of an actor's `roles`. A reference also has to name the right kind of
+party. A `performer` names an actor (`PERSON`, `ORGANISATION`, `GROUP` or
+`AGENT`) and a `roles` entry names a `ROLE`, and both, with the two ends of a
+relationship container, must name a party this server holds when the write
+commits; a party the same CONTRIBUTION creates counts. A logically deleted
+party still counts. A refusal names the attribute's documentation and the path.
+
 Two limits are worth knowing because they are deliberate rather than accidental:
 
 - There is **no demographic archetype or template store**, so a party is checked
@@ -159,8 +170,9 @@ attribute:
   (`/relationships[<node> and uid='…']`), else by its archetype node id and
   name when no sibling shares both, else by its position
   (`/relationships[2]`), the three unique forms of BASE §Data Paths and
-  Uniqueness. Canonical JSON
-  and XML both carry it, and so do a `VERSION` read's `data` and the
+  Uniqueness. A relationship container whose `target` is this party is
+  listed too, as a reference to the container itself, with no path. Canonical
+  JSON and XML both carry it, and so do a `VERSION` read's `data` and the
   representation a create or update returns.
 - Under **`development`**, the attribute is not part of the model and a body
   carrying it is refused as an undeclared field, like any other unknown key.
