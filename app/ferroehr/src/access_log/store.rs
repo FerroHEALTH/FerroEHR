@@ -213,7 +213,7 @@ impl AccessLogStore {
     /// With a keyring that holds an `OpenPGP` key each link is signed before
     /// its row is written and stored by the same `INSERT`: the head of the
     /// chain is locked first, so the links the trigger gives are the ones
-    /// [`Self::foresee`] signed.
+    /// computed and signed before the insert.
     ///
     /// # Errors
     /// As [`Self::append`], [`AccessLogError::Sign`] when the keyring cannot
