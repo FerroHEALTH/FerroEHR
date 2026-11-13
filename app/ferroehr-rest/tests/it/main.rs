@@ -40,6 +40,7 @@ mod common;
 mod abac_e2e;
 mod access_delay_http;
 mod access_delay_trail;
+mod access_log_erasure_http;
 mod access_opt_out_http;
 mod access_restriction_http;
 mod admin_extension_http;

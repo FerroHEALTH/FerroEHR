@@ -293,7 +293,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   walk both in position order. An entry changes only by its replacement with
   its own tombstone, which keeps its uid, time and link, so the chain verifies
   after its content is gone (`audit/0027_access_log_record.sql`,
-  `access_log::store`). No openEHR spec governs audit storage: our own design.
+  `access_log::store`). Each entry states its retention when it is written
+  (`access_log::retention`: `retain_until` and the grounds `ehds-logging`'s
+  policy computes from its categories and origins, the longest when they
+  differ), and the audit store's hourly worker replaces every entry past its
+  `retain_until` by its tombstone, in any order of expiry
+  (`access_log::expiry`); an erasure a law orders takes the same path through
+  `POST /admin/access-log/erase`, which writes an access record. No openEHR
+  spec governs audit storage: our own design.
 - **One pool and one DSN per storage domain.** `[database.clinical]`,
   `[database.party]` and `[database.audit]` each carry a
   `url`/`url_file`, defaulting to the shared `[database].url`, and

@@ -519,6 +519,29 @@ same day can end on different dates; every other record ends the day after
 its date of access plus the horizon. A record written before FerroEHR stored
 per-record ends is reaped by the horizon.
 
+**An openEHR access-log entry states its own retention.** Each
+`ACCESS_LOG_ENTRY` carries an `ACCESS_RETENTION` when it is written:
+`retain_until`, the last day it is kept, and `grounds`, the provisions that
+set the period. The period is the one the retention policy above computes from
+the entry's categories and origins, so an entry whose categories call for
+different periods keeps the longest, and an entry kept without end states no
+`retain_until`. The grounds are coded in the `ehds-logging` terminology: the
+legal ground of the floor (`eu-2025-327-art-9-2` for Art. 9(2)) and what called
+for the period (`default`, `category:<system>|<code>` or `origin:<key>`). The
+same hourly worker replaces every entry whose `retain_until` has passed by an
+`ACCESS_LOG_TOMBSTONE` in place, in any order of expiry. The tombstone keeps the
+entry's uid, `system_id`, `time_recorded` and chain link, names the grounds of
+the period that ended, and holds nothing else of the entry, so the chain
+verifies after the content is gone ([Tamper evidence](#tamper-evidence)). A
+tombstone is never replaced again, and the database refuses any other change
+to it. An erasure a law orders before the period ends takes the same path
+through `POST {ext}/admin/access-log/erase`, with the law's provisions as the
+tombstone's grounds; the erasure is an access record of its own
+(`access-log-erasure:<uid>`) naming the administrator
+([Admin APIs](operations-admin-apis.md)). No configuration key decides an
+entry's period beyond `[audit.store] retention`, which stays the floor every
+period is held to.
+
 **The default is deliberate.** An access log is the evidence a data subject's right of access is served from, and a repository that silently
 forgets is worse than one that grows — so the software keeps everything until
 an operator says otherwise, rather than choosing a horizon on their behalf.
