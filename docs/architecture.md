@@ -437,7 +437,7 @@ which is what makes an optional stage safe to disable:
    draft BMM's invariants and the terminology groups hold (RM EHR IM
    §`ACCESS_CONTROL_SETTINGS` leaves the class "Currently implementation
    dependent": the scheme is our own design). The default archetype
-   `access_directives.v1.1.0` constrains the settings to that class, which the
+   `access_directives.v1.0.0` constrains the settings to that class, which the
    ADL 2 validator reads from the draft class tables beside RM 1.2.0
    (`draft_model`, AOM2 master11 RM adaptation). A new version is committed by a
    gate-keeper the current settings name or by `admin_role` on the subject's
