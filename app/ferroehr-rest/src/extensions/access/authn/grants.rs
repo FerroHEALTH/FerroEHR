@@ -76,6 +76,24 @@ pub(super) async fn resolve(
     Ok(Arc::new(grants.capabilities(actor, jiff::Timestamp::now())))
 }
 
+/// The principal of `principal` under its capabilities `granted`: a Basic
+/// user holding its granted roles and scopes ([`basic`]), and an external
+/// caller admitted under its federation agreement ([`admit`]).
+///
+/// # Errors
+/// The response refusing an external caller outside its agreement.
+pub(super) fn bound(
+    layer: &AuthLayer,
+    principal: Principal,
+    granted: &Capabilities,
+    headers: &http::HeaderMap,
+) -> Result<Principal, Box<Response>> {
+    let issuers = &layer.authenticator.role_issuers;
+    let mut principal = basic(principal, granted, |role| issuers.is_privileged(role));
+    admit(layer, &mut principal, granted, headers)?;
+    Ok(principal)
+}
+
 /// Admits the caller of `principal` under its capabilities `granted`
 /// ([`super::declared::Declared::admit`]), so `principal` carries the
 /// agreement an external caller was admitted under.
@@ -83,7 +101,7 @@ pub(super) async fn resolve(
 /// # Errors
 /// The response refusing an external caller outside its agreement, recorded
 /// as its failed authentication.
-pub(super) fn admit(
+fn admit(
     layer: &AuthLayer,
     principal: &mut Principal,
     granted: &Capabilities,
@@ -111,6 +129,14 @@ pub(super) fn admit(
         }
         Err(e) => Err(Box::new(super::refusal::refusal_of(auth, headers, &e))),
     }
+}
+
+/// Whether the caller of `granted` is a client whose `ACTOR` holds a grant of
+/// `operation`, as a backend client's `query_system_wide` or the
+/// DEMOGRAPHIC API's `access_demographic`: a grant to a party the login is
+/// bound to is no client's.
+pub(super) fn client_holds(granted: &Capabilities, operation: Operation) -> bool {
+    granted.client().is_some() && granted.holds(operation)
 }
 
 /// Runs `request` inside the caller's capabilities `granted`, reads the grant

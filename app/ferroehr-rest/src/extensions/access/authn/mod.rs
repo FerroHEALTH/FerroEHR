@@ -71,6 +71,7 @@ use crate::overview::error::RestError;
 use crate::smart::routes::SmartRoutes;
 use assurance::PatientDataGate;
 use build::Primary;
+use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::system_log::event::ActorAuthentication;
 use gates::patient_data_refusal;
 
@@ -116,8 +117,9 @@ pub struct Principal {
     /// checks read.
     pub access: Access,
     /// What FerroEHR honours for the caller beyond a `user/` grant: whether it
-    /// is a listed backend client and whether its issuer's `patient/` grants
-    /// count (`[auth.smart] backend_clients`, `[auth.smart] patient_issuers`).
+    /// is a backend client, a client the CDR grants `query_system_wide`, and
+    /// whether its issuer's `patient/` grants count
+    /// (`[auth.smart] patient_issuers`).
     pub honoured: Honoured,
     /// The EHR a bound representative is confined to, `None` for every other
     /// caller (#5086).
@@ -394,8 +396,7 @@ pub struct Authenticator {
     /// The party binding every admitted caller is looked up in, when an
     /// `[[auth.party]]` table binds an issuer.
     party: Option<Arc<party::Binding>>,
-    /// The system clients and the caller limits of the federation
-    /// agreements.
+    /// The system clients and the federation agreements' caller limits.
     declared: declared::Declared,
 }
 
@@ -568,12 +569,10 @@ pub(crate) async fn middleware(
                 Ok(granted) => granted,
                 Err(e) => return refusal::response(auth, req.headers(), &e),
             };
-            let mut principal = grants::basic(principal, &granted, |role| {
-                auth.role_issuers.is_privileged(role)
-            });
-            if let Err(refusal) = grants::admit(&layer, &mut principal, &granted, req.headers()) {
-                return *refusal;
-            }
+            let mut principal = match grants::bound(&layer, principal, &granted, req.headers()) {
+                Ok(principal) => principal,
+                Err(refusal) => return *refusal,
+            };
             if let Some(refusal) = purpose::mismatch(&layer, &principal, &req) {
                 return refusal;
             }
@@ -591,6 +590,13 @@ pub(crate) async fn middleware(
                 refusal.extensions_mut().insert(principal);
                 return refusal;
             }
+            let granted = match grants::resolve(&layer, &principal).await {
+                Ok(granted) => granted,
+                Err(e) => return refusal::response(auth, req.headers(), &e),
+            };
+            // NOTE: master08 §Resource Scopes, a `system/aql-*` grant reaches every
+            // query, so it counts only for a client the CDR grants `query_system_wide`.
+            principal.honoured.backend = grants::client_holds(&granted, Operation::QuerySystemWide);
             // How the person authenticated is judged before what they may do:
             // a step-up refusal is an authentication outcome (RFC 9470 §3).
             let actor = match layer.patient_data.as_deref() {
@@ -612,7 +618,7 @@ pub(crate) async fn middleware(
                 refusal.extensions_mut().insert(actor);
                 return refusal;
             }
-            if let Some(mut refusal) = gates::smart_refusal(&layer, &req, &principal) {
+            if let Some(mut refusal) = gates::smart_refusal(&layer, &req, &principal, &granted) {
                 refusal.extensions_mut().insert(actor);
                 return refusal;
             }
@@ -1565,7 +1571,6 @@ mod tests {
             smart: Arc::new(SmartRoutes::new(
                 &crate::api::Namespaces::of(&ferroehr::config::rest::ApiConfig::default()),
                 "__ferroehr.platform",
-                Vec::new(),
             )),
             served: Arc::new(ServedMethods::default()),
             service: Arc::new(ferroehr::service::FerroEhrService::new(
