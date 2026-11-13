@@ -1795,7 +1795,7 @@
                 "constraint": {
                     "_type": "P_BMM_CONTAINER_PROPERTY",
                     "name": "constraint",
-                    "documentation": "String constraint - a list of literal strings and \/ or regular expression strings delimited by the \u2018\/\u2019 character.\n\nTo represent no constraint, use an empty list, or alternatively, a regex 'any' pattern, i.e. `\/.*\/`.",
+                    "documentation": "String constraint - either a list of literal strings, or a single regular expression string, stored with its \u2018\/\u2019 or \u2018^\u2019 delimiters.\n\nTo represent no constraint, use an empty list, or alternatively, a regex 'any' pattern, i.e. `\/.*\/`.",
                     "type_def": {
                         "container_type": "List",
                         "type": "String"
@@ -3193,7 +3193,7 @@
                 },
                 "node_codes": {
                     "name": "node_codes",
-                    "documentation": "For at-coded archetypes: list of all at codes in the terminology., i.e. the 'at' codes in an ADL archetype, which are the `_node_id_` values on `C_OBJECT` descendants. For id-coded archetypes: list of all id codes in the terminology., i.e. the 'id' codes in an ADL archetype, which are the `_node_id_` values on `C_OBJECT` descendants.",
+                    "documentation": "For at-coded archetypes: list of all at codes in the terminology, i.e. the 'at' codes in an archetype, which are the `_node_id_` values on `C_OBJECT` descendants. For id-coded archetypes: list of all id codes in the terminology, i.e. the 'id' codes in an archetype, which are the `_node_id_` values on `C_OBJECT` descendants.",
                     "result": {
                         "_type": "P_BMM_CONTAINER_TYPE",
                         "container_type": "List",
@@ -3202,7 +3202,7 @@
                 },
                 "value_codes": {
                     "name": "value_codes",
-                    "documentation": "List of all value term codes in the terminology, i.e. the 'at' codes in an ADL archetype, which are used as possible values on terminological constrainer nodes.",
+                    "documentation": "List of all value term codes in the terminology, i.e. the 'at' codes in an archetype, which are used as possible values on terminological constrainer nodes.",
                     "result": {
                         "_type": "P_BMM_CONTAINER_TYPE",
                         "container_type": "List",
@@ -3212,7 +3212,7 @@
                 },
                 "value_set_codes": {
                     "name": "value_set_codes",
-                    "documentation": "List of all value set codes in the terminology defining value sets. These correspond to the 'ac' codes in an ADL archetype.",
+                    "documentation": "List of all value set codes in the terminology defining value sets. These correspond to the 'ac' codes in an archetype.",
                     "result": {
                         "_type": "P_BMM_CONTAINER_TYPE",
                         "container_type": "List",
@@ -3451,7 +3451,7 @@
                 },
                 "is_adl_code": {
                     "name": "is_adl_code",
-                    "documentation": "True if `_a_code_` is any kind of ADL archetype local code.",
+                    "documentation": "True if `_a_code_` is any kind of archetype local code.",
                     "parameters": {
                         "a_code": {
                             "_type": "P_BMM_SINGLE_FUNCTION_PARAMETER",
@@ -3949,7 +3949,7 @@
                 "constraint": {
                     "_type": "P_BMM_CONTAINER_PROPERTY",
                     "name": "constraint",
-                    "documentation": "String constraint - a list of literal strings and \/ or regular expression strings delimited by the \u2018\/\u2019 character.",
+                    "documentation": "String constraint - either a list of literal strings, or a single regular expression string, stored with its \u2018\/\u2019 or \u2018^\u2019 delimiters.",
                     "is_mandatory": true,
                     "type_def": {
                         "container_type": "List",

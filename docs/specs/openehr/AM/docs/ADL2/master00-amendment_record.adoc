@@ -7,11 +7,18 @@
 4+^h|*AM Release 2.4.0 (unreleased)*
 
 |[[latest_issue]]2.4.0
+|{spec_tickets}/SPECPR-172[SPECPR-172^]. A String constraint in <<Constraints on String>> is either a list of fixed Strings or a single regular expression, as the grammar defines; remove the text allowing any mixture of both.
+|B Verhees, +
+T Beale, +
+S Kohler
+|[[latest_issue_date]]13 Nov 2026
+
+|
 |{spec_tickets}/SPECPR-277[SPECPR-277^]. Use the `!=` inequality operator instead of `/=` in the rules examples in <<Value-dependent Existence>>, matching the BASE and EL operator definitions.
 |D Bosca, +
 T Beale, +
 S Kohler
-|[[latest_issue_date]]06 Nov 2026
+|06 Nov 2026
 
 |
 |{spec_tickets}/SPECAM-111[SPECAM-111^]. Define `unique` in cardinality constraints as value equality; remove the undefined `non-unique` keyword from the text in <<Container Attributes>> (addresses problem {spec_tickets}/SPECPR-14[SPECPR-14^]).

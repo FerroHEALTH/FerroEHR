@@ -59,7 +59,7 @@ SETS=(
 OVERLAYS=(
   "tools/openehr-codegen/vendor/bmm/components/BASE/json/openehr_base_1.3.0.bmm.json|specifications-BASE|93abaf9f656b7bc87019458303c9d88f3f688ef8|computable/BMM/openehr_base_1.3.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
   "tools/openehr-codegen/vendor/bmm/components/RM/json/openehr_rm_1.2.0.bmm.json|specifications-RM|09e481e9f2ed9e3f9d5b9257bd68c0679d80c7cc|computable/BMM/openehr_rm_1.2.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
-  "tools/openehr-codegen/vendor/bmm/components/AM/json/openehr_am_1.4.0.bmm.json|specifications-AM|38d767c898112994295f3332d45ec712ab72b7dd|computable/BMM/openehr_am_1.4.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
+  "tools/openehr-codegen/vendor/bmm/components/AM/json/openehr_am_1.4.0.bmm.json|specifications-AM|8de22a9c6c7b020b86f870d8c8a21bde29726187|computable/BMM/openehr_am_1.4.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
   "tools/openehr-codegen/vendor/bmm/components/TERM/json/openehr_term_3.1.0.bmm.json|specifications-TERM|fa5f6e7bd29dc125cb91a3e4734e030ef291f890|computable/BMM/openehr_term_3.1.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
   "tools/openehr-codegen/vendor/bmm/components/LANG/json/openehr_lang_1.1.0.bmm.json|specifications-LANG|46406fe57c606aba7c0c7a9fd60a31bc7749c175|computable/BMM/openehr_lang_1.1.0.bmm.json|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
 )

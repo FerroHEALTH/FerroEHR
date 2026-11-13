@@ -114,8 +114,8 @@ The primitive constraint for each primitive type may itself be complex. Its form
 |RM Primitive type    |AOM type                |AOM Primitive constrainer type |Constraint description
 |`Boolean`            |`C_BOOLEAN`             |`List <Boolean>`               |One or two Boolean values, enabling the logical constraints 
                                                                                 'true', 'false' and 'true or false' to be expressed.
-|`String`             |`C_STRING`              |`List <String>`                |A list of possible string values, which may include regular expressions, 
-                                                                                which are delimited by '/' characters.
+|`String`             |`C_STRING`              |`List <String>`                |Either a list of possible string values, or a single regular expression
+                                                                                delimited by '/' or '^' characters.
 |`Terminology_code`   |`C_TERMINOLOGY_CODE`    |Terminology constraint - +
                                                 `[acN]` or `[atN]`             |A string containing either a single at-code or a single ac-code. In the 
                                                                                 latter case, the constraint refers to either a locally defined value set 

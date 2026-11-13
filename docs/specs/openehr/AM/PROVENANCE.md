@@ -2,7 +2,7 @@
 
 - Source: https://github.com/openEHR/specifications-AM
 - Ref: master (AM 2.4.0 + ADL/AOM/OPT 1.4)
-- Commit: `38d767c898112994295f3332d45ec712ab72b7dd`
+- Commit: `8de22a9c6c7b020b86f870d8c8a21bde29726187`
 - License: CC-BY-SA 3.0 Unported — the upstream `LICENSE` is vendored verbatim alongside
   this file, from the same pinned commit. Root reference copies:
   `LICENSE-CC-BY-SA-3.0` / `LICENSE-APACHE-2.0`.
