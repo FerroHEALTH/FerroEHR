@@ -1033,3 +1033,148 @@ fn the_privileged_roles_are_reserved_from_a_hold_roles_grant() {
         vec![Operation::CommitComposition]
     );
 }
+
+/// The `EHR_ACCESS` restricting the EHR `ehr` to its subject, with a
+/// restriction directive, committed by the server over version 1.
+async fn restrict(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId) {
+    let term = |code: &str| {
+        json!({ "_type": "DV_CODED_TEXT", "value": code,
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY },
+                    "code_string": code } })
+    };
+    let body = svc.ehr_read(ehr).await.expect("the EHR").body;
+    let access_vo = body["ehr_access"]["id"]["value"]
+        .as_str()
+        .expect("EHR.ehr_access")
+        .to_owned();
+    let audit = json!({ "change_type": crate::fixtures::change_type("251", "modification"),
+                        "committer": crate::fixtures::committer("migration seed") });
+    let archetype = "openEHR-EHR-EHR_ACCESS.access_directives.v1";
+    let contribution = json!({
+        "_type": "CONTRIBUTION",
+        "versions": [{
+            "_type": "ORIGINAL_VERSION",
+            "commit_audit": audit,
+            "lifecycle_state": crate::fixtures::change_type("532", "complete"),
+            "preceding_version_uid": {
+                "value": format!("{access_vo}::{}::1", ferroehr::service::DEFAULT_SYSTEM_ID)
+            },
+            "data": {
+                "_type": "EHR_ACCESS", "archetype_node_id": archetype,
+                "archetype_details": archetyped(archetype),
+                "name": text("EHR Access"),
+                "settings": {
+                    "_type": "ACCESS_DIRECTIVE_SETTINGS",
+                    "default_access": term("restricted"),
+                    "gate_keepers": [{ "_type": "PARTY_SELF" }],
+                    "directives": [{
+                        "_type": "ACCESS_DIRECTIVE", "archetype_node_id": "at0001",
+                        "name": text("Mental health restriction"),
+                        "kind": term("restriction"), "effect": term("deny"),
+                        "emergency_override": true
+                    }]
+                }
+            }
+        }],
+        "audit": audit
+    });
+    svc.create_ehr_contribution(ehr, contribution)
+        .await
+        .expect("the settings commit");
+}
+
+/// An extract exported under an `export_ehr_extract` grant covering the EHR
+/// carries its `EHR_ACCESS`, and an import of it keeps the directives; an
+/// extract for a professional who may not read the settings leaves it out
+/// (#5559).
+#[tokio::test]
+async fn an_export_grant_carries_the_access_directives_through_an_import() {
+    let db = testkit::db().await.expect("testkit database");
+    let source = replica(&db.pool(), GrantCeiling::new([Operation::ExportEhrExtract])).await;
+    let subject = ferroehr::service::ehr_index::types::SubjectRef {
+        id: "pt-7".to_owned(),
+        namespace: "nl.legacy-his.patients".to_owned(),
+        r#type: "PERSON".to_owned(),
+    };
+    let ehr = crate::fixtures::create_ehr_subject(&source, &subject).await;
+    restrict(&source, ehr).await;
+    let (migrator, _) = create(&source, PartyKind::Agent, &agent("legacy-export"))
+        .await
+        .expect("the AGENT commits");
+    create(
+        &source,
+        PartyKind::Role,
+        &role(
+            migrator,
+            None,
+            &[capability(
+                &["export_ehr_extract"],
+                &[named("subject_namespace", &text(&subject.namespace))],
+                None,
+            )],
+        ),
+    )
+    .await
+    .expect("the ceiling admits export_ehr_extract");
+    source.grants().refresh().await.expect("the grants read");
+    let granted = std::sync::Arc::new(
+        source
+            .grants()
+            .capabilities(Actor::Party(migrator.0), jiff::Timestamp::now()),
+    );
+    let identity = |system: bool| CommitterIdentity {
+        subject: "legacy-export".to_owned(),
+        id_type: "oauth2",
+        issuer: Some(ISSUER.to_owned()),
+        client: Some("legacy-export".to_owned()),
+        person: false,
+        party: None,
+        representative: false,
+        bound: None,
+        system,
+        agent: system.then_some(migrator.0),
+        external: None,
+    };
+    let carries = |extracts: &[Value]| {
+        extracts
+            .iter()
+            .any(|extract| extract.to_string().contains("X_VERSIONED_EHR_ACCESS"))
+    };
+
+    let professional = with_committer(Some(identity(false)), Box::pin(source.extract_ehrs(ehr)))
+        .await
+        .expect("a professional's export");
+    assert!(
+        !carries(&professional),
+        "a professional who may not read the settings gets no EHR_ACCESS"
+    );
+    let extracts = with_capabilities(
+        granted,
+        with_committer(Some(identity(true)), Box::pin(source.extract_ehrs(ehr))),
+    )
+    .await
+    .expect("the export grant admits the export");
+    assert!(
+        carries(&extracts),
+        "the export grant carries the EHR_ACCESS"
+    );
+
+    let extract: openehr_rm::prelude::Extract =
+        openehr_its::json::from_canonical_value(&extracts[0]).expect("an EXTRACT");
+    let (_target_db, target) = crate::fixtures::service().await;
+    let imported = Box::pin(target.import_ehr(None, extract))
+        .await
+        .expect("the server imports the extract");
+    let settings = target
+        .current_ehr_access_settings(imported)
+        .await
+        .expect("the settings read");
+    let Some(ferroehr::service::ehr::access_settings::EhrAccessSettings::Directives(read)) =
+        (*settings).as_ref()
+    else {
+        panic!("the imported EHR keeps its access directives: {settings:?}");
+    };
+    assert_eq!(read.directives.as_deref().map(<[_]>::len), Some(1));
+    assert_eq!(read.gate_keepers.as_deref().map(<[_]>::len), Some(1));
+}
