@@ -87,6 +87,7 @@ mod dpop_replay;
 mod ehds_person_inserted_http;
 mod ehr_access_gate;
 mod ehr_access_repair_http;
+mod ehr_access_replicas;
 mod error_chain;
 mod example_http;
 mod extensions_openapi;

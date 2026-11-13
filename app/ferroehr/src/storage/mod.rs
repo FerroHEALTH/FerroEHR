@@ -43,6 +43,8 @@
 //! - [`tag_repo`] — the `item_tag` store (EHR-scoped and demographic).
 //! - [`marks`] — the restriction register, the research objection and the
 //!   retention register, and the marks on `ehr` / `vo_head` they drive.
+//! - [`access_projection`] — the `EHR_ACCESS` settings, directives and labels
+//!   each EHR's current version projects.
 //! - [`access_delay`] — the EHDS Art. 3(3) delay of the person's own access
 //!   and its mark on `vo_head`.
 //! - [`opt_out`] — the EHDS Art. 10 opt-out from access through the access
@@ -69,6 +71,7 @@
 //! consuming [`version_repo::read::StoredVersion`] on read.
 
 pub mod access_delay;
+pub mod access_projection;
 pub mod adl2_repo;
 pub mod archetype_repo;
 pub mod blob_ref;

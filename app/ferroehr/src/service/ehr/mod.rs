@@ -16,7 +16,9 @@
 //! - `composition`  — COMPOSITION commit and retrieval.
 //! - `contributions` — CONTRIBUTION commit and retrieval.
 //! - `access`       — the `EHR_ACCESS` top-level structure (arch-overview
-//!   master06 §`EHR_ACCESS`) + the spec-silent scheme cache.
+//!   master06 §`EHR_ACCESS`) + the spec-silent per-EHR copy of its settings.
+//! - `access_projection` — the settings, directives and labels each commit
+//!   of an `EHR_ACCESS` version projects.
 //! - `validation`   — the commit-validation choke point for every EHR-owned
 //!   kind (`EHR_STATUS` / `EHR_ACCESS` / FOLDER / COMPOSITION) + the
 //!   `VERSIONED_COMPOSITION` cross-version invariants.
@@ -49,6 +51,7 @@ mod status;
 pub(in crate::service) mod tags;
 pub(crate) mod validation;
 
+pub mod access_projection;
 pub mod access_rule;
 pub mod access_settings;
 

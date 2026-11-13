@@ -6,14 +6,15 @@
 //! `org.openehr.rm.ehr.ehr_access.adoc`). This file owns the object's default
 //! (created under the EHR-creation CONTRIBUTION — there is no direct ITS-REST
 //! `EHR_ACCESS` write), the settings read the protocol adapter consumes, and
-//! the per-EHR scheme cache; the commit validator lives in
-//! [`validation`](super::validation).
+//! this replica's copy of each EHR's settings; the commit validator lives in
+//! [`validation`](super::validation), and the rows the copy is read from in
+//! [`access_projection`](super::access_projection).
 //!
-//! The `EhrAccessCache` mechanics are spec-silent — no openEHR spec governs a
-//! per-request cache of `EHR_ACCESS` settings (our own design/extension). The
-//! cache rides along here (cross-register ruling) but the access-control
-//! *gate* that consults it (RBAC/ABAC) is a Stage-2 enterprise concern
-//! (CLAUDE.md), not designed in this chapter.
+//! The copy is read from the projection on a miss and kept until a
+//! notification on [`CHANNEL`] names the EHR, which every commit that changes
+//! its settings sends; while the listener is down every request reads the
+//! projection, and a projection that cannot be read is `503`. No openEHR spec
+//! governs the copy: our own design.
 
 #![expect(
     clippy::disallowed_types,
@@ -23,30 +24,39 @@
 )]
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::aql::sql::EhrAccessReaders;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::ehr::access_rule::SettingsCaller;
-use crate::service::ehr::access_settings::{EhrAccessIndex, EhrAccessSettings};
+use crate::service::ehr::access_settings::{EhrAccessIndex, EhrAccessSettings, UnreadableSettings};
 use moka::future::Cache;
 use openehr_rm::prelude::{DvText, DvTextData, EhrAccess};
 use serde_json::Value;
 use sqlx::PgConnection;
 
+use crate::policy_register::listen::{Dropping, Listened, Subscriber};
 use crate::service::FerroEhrService;
-use crate::storage::version_repo::read::VersionAt;
+use crate::storage::access_projection::CHANNEL;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, commit_contribution};
 
 impl FerroEhrService {
-    /// Drop the cached `EHR_ACCESS` settings for `ehr_id`, called after any
-    /// `EHR_ACCESS` commit so the next access decision reflects the
-    /// new version (the settings are change-controlled — RM ehr master04 §EHR
-    /// Access).
+    /// Drop the copy of the `EHR_ACCESS` settings for `ehr_id`, called after
+    /// any `EHR_ACCESS` commit so this replica's next access decision reflects
+    /// the new version before the commit's notification arrives (the settings
+    /// are change-controlled — RM ehr master04 §EHR Access).
     pub(crate) async fn invalidate_ehr_access(&self, ehr_id: EhrId) {
-        self.ehr_access.invalidate(ehr_id).await;
+        self.ehr_access.forget(ehr_id).await;
+    }
+
+    /// The listener that drops this replica's copy of an EHR's settings when
+    /// a commit changes them; [`Listened::spawn_listener`] starts it.
+    #[must_use]
+    pub fn ehr_access_listened(&self) -> &Arc<Listened> {
+        &self.ehr_access_listened
     }
 
     /// Pre-warm the `EHR_ACCESS` cache for a just-created EHR as default-open
@@ -57,7 +67,9 @@ impl FerroEhrService {
     /// later `EHR_ACCESS` commit evicts it through
     /// [`Self::invalidate_ehr_access`].
     pub(in crate::service) async fn prewarm_ehr_access_open(&self, ehr_id: EhrId) {
-        self.ehr_access.insert(ehr_id, None).await;
+        if self.ehr_access_listened.is_listening() {
+            self.ehr_access.insert(ehr_id, None).await;
+        }
     }
 
     /// Commit the default [`initial_ehr_access`] for an EHR that has none,
@@ -131,54 +143,60 @@ impl FerroEhrService {
         Ok(missing.len())
     }
 
-    /// Read + parse the EHR's current `EHR_ACCESS` scheme settings from
-    /// storage (the cache-miss path). `None` when the EHR has no `EHR_ACCESS`
-    /// or its `EHR_ACCESS` carries no settings, which the server-wide default
-    /// governs.
+    /// Read the EHR's projected `EHR_ACCESS` settings (the miss path). `None`
+    /// when the EHR's `EHR_ACCESS` carries no settings, which the server-wide
+    /// default governs.
     ///
     /// # Errors
-    /// [`ServiceError`] when the storage read fails, and an internal fault
-    /// naming the EHR when its settings do not read as the `access_directives`
-    /// scheme: a privacy control that cannot be read refuses the EHR.
+    /// `service_overloaded` (`503`) when the projection cannot be read, and an
+    /// internal fault naming the EHR when its settings do not read as the
+    /// `access_directives` scheme: a privacy control that cannot be read
+    /// refuses the EHR.
     async fn load_ehr_access_settings(
         &self,
         ehr_id: EhrId,
     ) -> Result<Option<EhrAccessSettings>, ServiceError> {
-        let Some((vo_id, _)) = self.current_vo(ehr_id, Kind::EhrAccess).await? else {
-            return Ok(None);
+        let stored = crate::storage::access_projection::settings_of(&self.pool, ehr_id)
+            .await
+            .map_err(|e| ServiceError::overloaded(UNANSWERED, e))?;
+        let unreadable = |error: Option<UnreadableSettings>| {
+            tracing::error!(%ehr_id, "EHR_ACCESS settings do not parse; the EHR is refused");
+            let message = format!(
+                "the EHR_ACCESS settings of EHR {ehr_id} do not parse, so the EHR is refused"
+            );
+            match error {
+                Some(error) => ServiceError::internal(message, error),
+                None => ServiceError::internal(message, HeldClosed),
+            }
         };
-        let Some(read) =
-            crate::versioning::read::read(&self.pool, self.spec_profile, VersionAt::Current(vo_id))
-                .await?
-        else {
-            return Ok(None);
-        };
-        EhrAccessSettings::from_ehr_access(&read.canonical).map_err(|error| {
-            let cause: &(dyn std::error::Error + 'static) = &error;
-            tracing::error!(%ehr_id, error = cause, "EHR_ACCESS settings do not parse; the EHR is refused");
-            ServiceError::internal(
-                format!("the EHR_ACCESS settings of EHR {ehr_id} do not parse, so the EHR is refused"),
-                error,
-            )
-        })
+        match stored {
+            None => Ok(None),
+            Some(None) => Err(unreadable(None)),
+            Some(Some(settings)) => EhrAccessSettings::from_projected(&settings)
+                .map(Some)
+                .map_err(|error| unreadable(Some(error))),
+        }
     }
 
-    /// The EHR's current `EHR_ACCESS` scheme settings, cached per EHR and
-    /// returned as the cache's own [`std::sync::Arc`] (the per-request gate
+    /// The EHR's current `EHR_ACCESS` scheme settings, from this replica's
+    /// copy, shared as the copy's own [`std::sync::Arc`] (the per-request gate
     /// never clones an access list) — the `EhrAccessAdapter` native-API
     /// extension: the protocol adapter (`ferroehr-rest`), the access-decision
-    /// point, reads the settings through this seam. No openEHR spec governs
-    /// this adapter, our own extension. `None` when the EHR carries no
-    /// settings, which the server-wide default governs.
+    /// point, reads the settings through this seam. While the listener is down
+    /// the projection is read on every call. No openEHR spec governs this
+    /// adapter, our own extension. `None` when the EHR carries no settings,
+    /// which the server-wide default governs.
     ///
     /// # Errors
-    /// [`ServiceError`] when the cache-miss load (the `current_vo` + `read_current`
-    /// storage reads) fails; the error is shared across concurrent callers of
-    /// the single-flight load.
+    /// [`ServiceError`] when the miss path fails; the error is shared across
+    /// concurrent callers of the single-flight load.
     pub async fn current_ehr_access_settings(
         &self,
         ehr_id: EhrId,
     ) -> Result<Arc<Option<EhrAccessSettings>>, ServiceError> {
+        if !self.ehr_access_listened.is_listening() {
+            return self.load_ehr_access_settings(ehr_id).await.map(Arc::new);
+        }
         // Clone the (cheap, Arc-backed) service into an owned, `'static` load
         // future so `moka`'s single-flight `try_get_with` can drive it.
         let svc = self.clone();
@@ -201,13 +219,16 @@ impl FerroEhrService {
     /// one EHR at a time ([`Self::current_ehr_access_settings`]). An EHR absent
     /// from the list has no settings and falls to the server-wide default.
     ///
-    /// Cached as one entry, dropped on every `EHR_ACCESS` commit like the
-    /// per-EHR entries, and expired after a few seconds so a commit on another
-    /// replica, or one racing a load, cannot leave a stale grant in force. No openEHR spec governs this index — our own design.
+    /// Copied as one entry, dropped on every notification like the per-EHR
+    /// entries, and read on every call while the listener is down. No openEHR
+    /// spec governs this index — our own design.
     ///
     /// # Errors
-    /// [`ServiceError`] when the storage read fails or a stored body is not JSON.
+    /// `service_overloaded` (`503`) when the projection cannot be read.
     pub async fn ehr_access_settings_index(&self) -> Result<EhrAccessIndex, ServiceError> {
+        if !self.ehr_access_listened.is_listening() {
+            return self.load_ehr_access_index().await.map(Arc::new);
+        }
         let svc = self.clone();
         let loaded = self
             .ehr_access
@@ -290,33 +311,43 @@ impl FerroEhrService {
         ))
     }
 
-    /// The cache-miss path of [`Self::ehr_access_settings_index`].
+    /// The miss path of [`Self::ehr_access_settings_index`].
     async fn load_ehr_access_index(&self) -> Result<Vec<(EhrId, EhrAccessSettings)>, ServiceError> {
-        let bodies =
-            crate::storage::version_repo::ehr_access::ehr_access_bodies_with_settings(&self.pool)
-                .await
-                .map_err(ServiceError::from)?;
-        let mut index = Vec::with_capacity(bodies.len());
-        for (ehr_id, body) in bodies {
-            let value: Value = serde_json::from_str(&body)
-                .map_err(|e| ServiceError::internal("read a stored EHR_ACCESS body", e))?;
-            match EhrAccessSettings::from_ehr_access(&value) {
-                Ok(Some(settings)) => index.push((ehr_id, settings)),
-                Ok(None) => {}
-                Err(error) => {
-                    let cause: &(dyn std::error::Error + 'static) = &error;
-                    tracing::error!(
-                        %ehr_id,
-                        error = cause,
-                        "EHR_ACCESS settings do not parse; no query reaches the EHR"
-                    );
-                    index.push((ehr_id, EhrAccessSettings::HeldClosed));
+        let stored = crate::storage::access_projection::every_settings(&self.pool)
+            .await
+            .map_err(|e| ServiceError::overloaded(UNANSWERED, e))?;
+        Ok(stored
+            .into_iter()
+            .map(|(ehr_id, settings)| {
+                let read = settings
+                    .as_deref()
+                    .map(EhrAccessSettings::from_projected)
+                    .transpose();
+                match read {
+                    Ok(Some(settings)) => (ehr_id, settings),
+                    Ok(None) => (ehr_id, EhrAccessSettings::HeldClosed),
+                    Err(error) => {
+                        let cause: &(dyn std::error::Error + 'static) = &error;
+                        tracing::error!(
+                            %ehr_id,
+                            error = cause,
+                            "EHR_ACCESS settings do not parse; no query reaches the EHR"
+                        );
+                        (ehr_id, EhrAccessSettings::HeldClosed)
+                    }
                 }
-            }
-        }
-        Ok(index)
+            })
+            .collect())
     }
 }
+
+/// The message of the `503` of a projection that cannot be read.
+const UNANSWERED: &str = "the EHR access settings could not be read";
+
+/// The cause of the refusal of an EHR the projection holds closed.
+#[derive(Debug, thiserror::Error)]
+#[error("the stored EHR_ACCESS settings do not read as the access_directives scheme")]
+struct HeldClosed;
 
 /// Builds the `EHR_ACCESS` committed with every new EHR (RM ehr master04 §EHR
 /// Creation).
@@ -367,45 +398,40 @@ pub(in crate::service) fn initial_ehr_access() -> Value {
     openehr_its::json::to_canonical_value(&access)
 }
 
-/// How long the settings index may be served before it is read again.
-const INDEX_TTL: std::time::Duration = std::time::Duration::from_secs(5);
-
-/// A shared, cloneable per-EHR cache of the current `EHR_ACCESS` scheme
-/// settings.
+/// A shared per-EHR copy of the current `EHR_ACCESS` scheme settings.
 ///
 /// The `EHR_ACCESS` gateway clause ("All access decisions to data in the EHR
 /// must be made in accordance with the policies and rules in this object" —
 /// RM ehr `ehr_access.adoc`) is consulted on **every** EHR-scoped request, so
-/// the current settings are cached rather than re-read + re-decomposed per
-/// request. Invalidated on every `EHR_ACCESS` commit (the settings are
-/// change-controlled — RM ehr master04 §EHR Access).
+/// the current settings are copied rather than read per request. An entry is
+/// dropped by this replica's own `EHR_ACCESS` commit and by every notification
+/// on [`CHANNEL`] that names its EHR; a notification of another payload, and a
+/// listener that connects or loses its connection, drop every entry. A load
+/// that a drop overtakes keeps nothing, so a load racing a commit never leaves
+/// the settings before it in force.
 ///
-/// No openEHR spec governs this cache — our own design/extension. `moka`'s
-/// `Cache` is `Arc`-backed, so every clone of the owning service shares one
-/// cache (mirroring `openehr_sdt::flat::cache::WebTemplateCache`).
-#[derive(Debug, Clone)]
-pub(in crate::service) struct EhrAccessCache {
+/// No openEHR spec governs this copy — our own design/extension.
+#[derive(Debug)]
+pub(crate) struct EhrAccessCache {
     inner: Cache<EhrId, Arc<Option<EhrAccessSettings>>>,
     index: Cache<(), EhrAccessIndex>,
+    /// Moved by every drop, so a load that started before one keeps nothing.
+    drops: AtomicU64,
 }
 
 impl EhrAccessCache {
-    /// A cache holding up to `capacity` EHRs' settings.
+    /// A copy holding up to `capacity` EHRs' settings.
     fn new(capacity: u64) -> Self {
         Self {
             inner: Cache::builder().max_capacity(capacity).build(),
-            // Invalidation cannot cancel a load already in flight, and
-            // another replica's commit never reaches this one, so the index also
-            // expires on a short timer to bound how long a stale grant survives.
-            index: Cache::builder()
-                .max_capacity(1)
-                .time_to_live(INDEX_TTL)
-                .build(),
+            index: Cache::builder().max_capacity(1).build(),
+            drops: AtomicU64::new(0),
         }
     }
 
-    /// The cached settings for `ehr_id`, or load them via `init` (run at most
-    /// once per key under contention) and cache the result.
+    /// The copied settings for `ehr_id`, or load them via `init` (run at most
+    /// once per key under contention) and copy the result unless a drop
+    /// overtook the load.
     ///
     /// # Errors
     /// Propagates the `init` error (shared across concurrent callers as an
@@ -418,21 +444,20 @@ impl EhrAccessCache {
     where
         Fut: Future<Output = Result<Option<EhrAccessSettings>, ServiceError>>,
     {
-        self.inner
+        let seen = self.drops.load(Ordering::Acquire);
+        let loaded = self
+            .inner
             .try_get_with(ehr_id, async move { init.await.map(Arc::new) })
-            .await
+            .await;
+        if self.drops.load(Ordering::Acquire) != seen {
+            self.inner.invalidate(&ehr_id).await;
+        }
+        loaded
     }
 
-    /// Seed the cache with a value for `ehr_id` without a DB read — the
-    /// pre-warm path. `try_get_with` already negative-caches a default-open
-    /// (`None`) result on the first miss, but the *first* access to a
-    /// freshly-created EHR would still pay one DB round trip (the
-    /// `current_vo` + `read_current` lookup) to discover it is default-open.
-    /// A workload that creates EHRs constantly (a hospital day) pays that miss
-    /// per new EHR; seeding the known-default-open entry at creation turns the
-    /// first access into a hit. Any later `EHR_ACCESS` commit evicts this
-    /// entry via [`Self::invalidate`], so a subsequently-restricted EHR is
-    /// re-read.
+    /// Seed the copy with a value for `ehr_id` without a DB read — the
+    /// pre-warm path of a freshly-created EHR, which is default-open. Any
+    /// later `EHR_ACCESS` commit drops this entry via [`Self::forget`].
     pub(in crate::service) async fn insert(
         &self,
         ehr_id: EhrId,
@@ -441,16 +466,22 @@ impl EhrAccessCache {
         self.inner.insert(ehr_id, Arc::new(settings)).await;
     }
 
-    /// Drop the cached settings for `ehr_id` — called on every `EHR_ACCESS`
-    /// commit so the next read reflects the new version (evicts a positive OR
-    /// a pre-warmed default-open negative entry alike).
-    pub(in crate::service) async fn invalidate(&self, ehr_id: EhrId) {
+    /// Drop the copied settings for `ehr_id` and the index.
+    pub(in crate::service) async fn forget(&self, ehr_id: EhrId) {
+        self.drops.fetch_add(1, Ordering::AcqRel);
         self.inner.invalidate(&ehr_id).await;
         self.index.invalidate(&()).await;
     }
 
-    /// The cached settings index, or load it via `init` (run at most once
-    /// under contention) and cache the result.
+    /// Drop every copied entry.
+    pub(in crate::service) fn forget_every(&self) {
+        self.drops.fetch_add(1, Ordering::AcqRel);
+        self.inner.invalidate_all();
+        self.index.invalidate_all();
+    }
+
+    /// The copied settings index, or load it via `init` (run at most once
+    /// under contention) and copy the result unless a drop overtook the load.
     ///
     /// # Errors
     /// Propagates the `init` error (shared across concurrent callers as an
@@ -462,10 +493,39 @@ impl EhrAccessCache {
     where
         Fut: Future<Output = Result<Vec<(EhrId, EhrAccessSettings)>, ServiceError>>,
     {
-        self.index
+        let seen = self.drops.load(Ordering::Acquire);
+        let loaded = self
+            .index
             .try_get_with((), async move { init.await.map(Arc::new) })
-            .await
+            .await;
+        if self.drops.load(Ordering::Acquire) != seen {
+            self.index.invalidate(&()).await;
+        }
+        loaded
     }
+}
+
+impl Subscriber for EhrAccessCache {
+    fn notified<'a>(&'a self, payload: &'a str) -> Dropping<'a> {
+        Box::pin(async move {
+            // NOTE: our own design, a payload that names no EHR, the refill's, drops every EHR.
+            match payload.parse::<uuid::Uuid>() {
+                Ok(ehr_id) => self.forget(EhrId(ehr_id)).await,
+                Err(_) => self.forget_every(),
+            }
+        })
+    }
+
+    fn reset(&self) -> Dropping<'_> {
+        self.forget_every();
+        Box::pin(std::future::ready(()))
+    }
+}
+
+/// The listener of `pool` on [`CHANNEL`], dropping from `cache`.
+pub(in crate::service) fn listened(pool: sqlx::PgPool, cache: &Arc<EhrAccessCache>) -> Listened {
+    let cache: Arc<EhrAccessCache> = Arc::clone(cache);
+    Listened::with_subscriber(pool, CHANNEL, cache)
 }
 
 /// The outcome of a single-flight load, with an error of the caller's own.

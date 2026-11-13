@@ -147,11 +147,14 @@ pub struct FerroEhrService {
     /// behaviour byte-identical.
     #[cfg(feature = "multimedia")]
     pub(crate) multimedia: Option<Arc<ferroehr_ext::multimedia::MultimediaEngine>>,
-    /// Per-EHR cache of the current `EHR_ACCESS` scheme settings ("All access
+    /// Per-EHR copy of the current `EHR_ACCESS` scheme settings ("All access
     /// decisions to data in the EHR must be made in accordance with the
     /// policies and rules in this object" — RM ehr `ehr_access.adoc`).
-    /// Invalidated on every `EHR_ACCESS` commit.
-    pub(in crate::service) ehr_access: EhrAccessCache,
+    /// Dropped by every `EHR_ACCESS` commit, on every replica.
+    pub(in crate::service) ehr_access: Arc<EhrAccessCache>,
+    /// The listener whose notifications drop entries of [`Self::ehr_access`];
+    /// while it is down every request reads the projection.
+    pub(in crate::service) ehr_access_listened: Arc<crate::policy_register::listen::Listened>,
     /// Bounded cache of lowered AQL plans keyed on the query text. Shared
     /// across service clones (moka-backed). No openEHR spec governs it — our
     /// own performance design.
@@ -262,6 +265,7 @@ impl FerroEhrService {
     /// with [`Self::with_demographic_pool`].
     #[must_use]
     pub fn new(pools: &DomainPools) -> Self {
+        let ehr_access = Arc::new(EhrAccessCache::default());
         Self {
             demographic_pool: pools.party.clone(),
             pool: pools.clinical.clone(),
@@ -283,7 +287,11 @@ impl FerroEhrService {
             terminology: None,
             #[cfg(feature = "multimedia")]
             multimedia: None,
-            ehr_access: EhrAccessCache::default(),
+            ehr_access: Arc::clone(&ehr_access),
+            ehr_access_listened: Arc::new(ehr::access::listened(
+                pools.clinical.clone(),
+                &ehr_access,
+            )),
             plan_cache: PlanCache::default(),
             archetype_lineage: archetype_lineage_cache(),
             query_timeout: None,

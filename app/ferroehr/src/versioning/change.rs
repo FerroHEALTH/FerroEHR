@@ -675,6 +675,7 @@ async fn apply_change(
         known_now,
         preplaced,
     };
+    let access = crate::service::ehr::access_projection::AccessCommit::of(&change);
     let mut resolved = match change {
         Change::Create {
             allocated,
@@ -749,16 +750,13 @@ async fn apply_change(
     // version in their state, which would otherwise put every caller's
     // future over the size the lint allows.
     let committed = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
-    crate::versioning::access_delay::hold_on_creation(tx, ctx, ehr_id, &committed.0).await?;
-    if committed.0.kind.is_demographic() {
-        Box::pin(crate::party_binding::store::reindex_committed(
-            tx,
-            ctx,
-            &committed.0,
-            party_facts.as_deref(),
-        ))
-        .await?;
-    }
+    let party_facts = party_facts.as_deref();
+    let hooks = crate::versioning::hooks::Hooks {
+        ehr_id,
+        party_facts,
+        access,
+    };
+    Box::pin(hooks.run(tx, ctx, &committed.0)).await?;
     Ok(committed)
 }
 

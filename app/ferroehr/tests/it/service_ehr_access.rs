@@ -16,6 +16,7 @@ use ferroehr::error::ServiceError;
 use ferroehr::ids::EhrId;
 use ferroehr::party_binding::BindingMapping;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
+use ferroehr::service::ehr::access_projection::Rebuild;
 use ferroehr::service::query::request::AqlQueryRequest;
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 use ferroehr::versioning::committer::CommitterIdentity;
@@ -464,5 +465,112 @@ async fn the_default_definition_is_stored_at_boot_only_when_absent() {
             "openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0.adls".to_owned()
         )),
         "the stored definition is kept: {again:?}"
+    );
+}
+
+/// Settings with one consent deny on professionals' reads and one
+/// sensitivity label, kept by the subject and the guardian.
+fn with_a_directive() -> Value {
+    let mut settings = kept();
+    settings["directives"] = json!([{
+        "_type": "ACCESS_DIRECTIVE",
+        "name": { "_type": "DV_TEXT", "value": "No professional reads" },
+        "archetype_node_id": "at0001",
+        "kind": term("consent"),
+        "effect": term("deny"),
+        "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "caller_kind": term("professional") }],
+        "operations": [term("read")],
+        "emergency_override": true
+    }]);
+    settings["labels"] = json!([{
+        "_type": "ACCESS_LABEL",
+        "target": { "_type": "OBJECT_REF", "namespace": "local", "type": "VERSIONED_COMPOSITION",
+                    "id": { "_type": "HIER_OBJECT_ID", "value": STRANGER.to_string() } },
+        "sensitivities": [{ "_type": "DV_CODED_TEXT", "value": "HIV",
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "v3-ActCode" },
+                "code_string": "HIV" } }]
+    }]);
+    settings
+}
+
+/// The projection of `ehr_id` as `(sys_version, default_access)` of its
+/// settings row and `kind/effect/caller kinds/operations` of each directive
+/// row, with the sensitivities of each label row.
+async fn projected(
+    pool: &sqlx::PgPool,
+    ehr_id: EhrId,
+) -> (Option<(i32, String)>, Vec<String>, Vec<Vec<String>>) {
+    let settings =
+        sqlx::query_as("SELECT sys_version, default_access FROM access_settings WHERE ehr_id = $1")
+            .bind(ehr_id)
+            .fetch_optional(pool)
+            .await
+            .expect("the settings row reads");
+    let directives = sqlx::query_scalar(
+        "SELECT kind || '/' || effect || '/' || array_to_string(caller_kinds, ',') || '/' || \
+         array_to_string(operations, ',') FROM access_directive WHERE ehr_id = $1 ORDER BY ordinal",
+    )
+    .bind(ehr_id)
+    .fetch_all(pool)
+    .await
+    .expect("the directive rows read");
+    let labels = sqlx::query_scalar(
+        "SELECT sensitivities FROM access_label WHERE ehr_id = $1 ORDER BY ordinal",
+    )
+    .bind(ehr_id)
+    .fetch_all(pool)
+    .await
+    .expect("the label rows read");
+    (settings, directives, labels)
+}
+
+/// A commit of an `EHR_ACCESS` version projects its settings in its own
+/// transaction, a refused one changes nothing, a version with no settings
+/// leaves no row, and a refill rebuilds the rows from the stored versions.
+#[tokio::test]
+async fn a_commit_projects_the_settings_and_a_refill_rebuilds_them() {
+    let (db, svc, ehr_id) = setup().await;
+    let pool = db.pool();
+    assert_eq!(projected(&pool, ehr_id).await, (None, vec![], vec![]));
+    write(&svc, ehr_id, &administrator(), 1, &with_a_directive())
+        .await
+        .expect("the administrator writes the settings");
+    let expected = (
+        Some((2, "restricted".to_owned())),
+        vec!["consent/deny/professional/read".to_owned()],
+        vec![vec!["v3-ActCode::HIV".to_owned()]],
+    );
+    assert_eq!(projected(&pool, ehr_id).await, expected);
+    forbidden(
+        &write(&svc, ehr_id, &professional(), 2, &kept()).await,
+        "a professional",
+    );
+    assert_eq!(
+        projected(&pool, ehr_id).await,
+        expected,
+        "a refused write projects nothing"
+    );
+    for table in ["access_directive", "access_label", "access_settings"] {
+        sqlx::query(sqlx::AssertSqlSafe(format!("DELETE FROM {table}")))
+            .execute(&pool)
+            .await
+            .expect("clear the projection");
+    }
+    svc.rebuild_ehr_access_projection(Rebuild::Refill)
+        .await
+        .expect("the refill");
+    assert_eq!(
+        projected(&pool, ehr_id).await,
+        expected,
+        "the refill rebuilds the rows"
+    );
+    write(&svc, ehr_id, &subject(), 2, &Value::Null)
+        .await
+        .expect("the subject withdraws the settings");
+    assert_eq!(
+        projected(&pool, ehr_id).await,
+        (None, vec![], vec![]),
+        "a version with no settings leaves no row"
     );
 }

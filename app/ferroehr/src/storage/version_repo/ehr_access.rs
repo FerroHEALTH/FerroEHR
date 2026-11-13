@@ -10,7 +10,7 @@
 use sqlx::{PgPool, Row};
 
 use crate::db::acquire::{acquire, lease};
-use crate::ids::EhrId;
+use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
 
 /// Every EHR's current `EHR_ACCESS` body that names `settings`, as
@@ -68,4 +68,68 @@ pub async fn current_ehr_access_body(
         .fetch_optional(conn)
         .await?;
     Ok(row.flatten())
+}
+
+/// The current `EHR_ACCESS` version of an EHR, as the projection reads it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CurrentAccess {
+    /// The EHR.
+    pub ehr_id: EhrId,
+    /// Its `EHR_ACCESS` versioned object.
+    pub vo_id: VoId,
+    /// The storage ordinal of the trunk head.
+    pub sys_version: i32,
+    /// The canonical JSON text; `None` for a logical deletion.
+    pub body: Option<String>,
+}
+
+/// The current `EHR_ACCESS` version of `ehr_id`, read on `conn`; `None` when
+/// the EHR has none.
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn current_ehr_access(
+    conn: &mut sqlx::PgConnection,
+    ehr_id: EhrId,
+) -> Result<Option<CurrentAccess>, StorageError> {
+    let statement = format!("{CURRENT} WHERE h.ehr_id = $1");
+    let row = sqlx::query(sqlx::AssertSqlSafe(statement))
+        .bind(ehr_id)
+        .fetch_optional(conn)
+        .await?;
+    row.as_ref().map(current_of).transpose()
+}
+
+/// Every EHR's current `EHR_ACCESS` version whose body names `settings`,
+/// read on `conn`, ordered by EHR; the text match only prefilters.
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn every_current_with_settings(
+    conn: &mut sqlx::PgConnection,
+) -> Result<Vec<CurrentAccess>, StorageError> {
+    let statement =
+        format!("{CURRENT} WHERE strpos(version.body, '\"settings\"') > 0 ORDER BY h.ehr_id");
+    let rows = sqlx::query(sqlx::AssertSqlSafe(statement))
+        .fetch_all(conn)
+        .await?;
+    rows.iter().map(current_of).collect()
+}
+
+/// The read of the current `EHR_ACCESS` versions, before its condition.
+const CURRENT: &str = "SELECT h.ehr_id, h.vo_id, h.trunk_head_sys_version AS sys_version, \
+                              version.body \
+                       FROM vo_head h \
+                       JOIN version ON version.vo_id = h.vo_id \
+                            AND version.sys_version = h.trunk_head_sys_version \
+                            AND h.kind = 'EHR_ACCESS'";
+
+/// One row of [`CURRENT`].
+fn current_of(row: &sqlx::postgres::PgRow) -> Result<CurrentAccess, StorageError> {
+    Ok(CurrentAccess {
+        ehr_id: row.try_get("ehr_id")?,
+        vo_id: row.try_get("vo_id")?,
+        sys_version: row.try_get("sys_version")?,
+        body: row.try_get("body")?,
+    })
 }

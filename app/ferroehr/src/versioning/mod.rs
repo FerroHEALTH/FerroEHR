@@ -69,6 +69,7 @@ pub mod change;
 pub mod committer;
 pub(crate) mod contribution;
 pub(crate) mod external;
+pub(crate) mod hooks;
 pub(crate) mod import;
 pub(crate) mod integrity;
 pub(crate) mod lifecycle;
