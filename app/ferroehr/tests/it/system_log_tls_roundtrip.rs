@@ -126,7 +126,6 @@ async fn the_drain_closes_its_connection_with_close_notify_when_it_exits() {
             sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            ..StoreConfig::default()
         },
         syslog: Some(SyslogConfig {
             url: ferrohealth_secret::secret_url::SecretUrl::new(format!(

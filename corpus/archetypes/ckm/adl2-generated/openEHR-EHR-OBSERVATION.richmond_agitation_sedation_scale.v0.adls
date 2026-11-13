@@ -1,0 +1,217 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e4592dc5-fab8-43f6-93c5-cc635d80ed84; build_uid=89248b61-9670-4517-bc25-fdc2893f505a)
+    openEHR-EHR-OBSERVATION.richmond_agitation_sedation_scale.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan D. March">
+                ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina">
+                ["email"] = <"alandmarch@gmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Alan D. March">
+        ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina">
+        ["email"] = <"alandmarch@gmail.com">
+        ["date"] = <"2016-08-31">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Sessler CN, Gosnell MS, Grap MJ, Brophy GM, O'Neal PV, Keane KA, Tesoro EP, Elswick RK. The Richmond Agitation–Sedation Scale. American Journal of Respiratory and Critical Care Medicine, 166(10): 1338-1344, 2002.">
+        ["2"] = <"Ely EW, Truman B, Shintani A, Thomason JW, Wheeler AP, Gordon S, Francis J, Speroff T, Gautam S, Margolin R, Sessler CN, Dittus RS, Bernard GR. Monitoring sedation status over time in ICU patients: reliability and validity of the Richmond Agitation-Sedation Scale (RASS). JAMA 289(22):2983-91, 2003.">
+    >
+    other_details = <
+        ["current_contact"] = <"Alan D. March <alandmarch@gmail.com>">
+        ["MD5-CAM-1.0.1"] = <"F6D949667A98B43C75E240D5AB9DC9F4">
+    >
+    details = <
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Para medir el nivel de agitación o sedación de pacientes hospitalizados.">
+            keywords = <"Escala de Agitación Sedación de Richmond", "RASS", "agitación", "sedación", "asistencia respiratoria mecánica", "unidad de cuidados intensivos">
+            use = <"La escala RASS se utiliza principalmente en pacientes bajo asistencia respiratoria mecánica en unidad de terapia intensiva para evitar el exceso o falta de sedación. Tambien se utiliza como primer paso en la administración del Método de Evaluación de Confusión en Unidad de Cuidados Intensivos (Confusion Assessment Method in the ICU - CAM-ICU), una herramienta utilizada para detectar delirio en unidades de cuidados intensivos.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To measure the agitation or sedation level of a hospitalized patients.">
+            keywords = <"Richmond Agitation Sedation Scale", "RASS", "scale", "agitation", "sedation", "mechanical ventilation", "intensive care unit">
+            use = <"RASS is mostly used in the setting of mechanically ventilated patients in the intensive care unit to avoid over- and under-sedation. Also as the first step in administering the Confusion Assessment Method in the ICU (CAM-ICU), a tool to detect delirium in intensive care unit patients.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Richmond agitation sedation scale (RASS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Scale
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{-5}, {[at0014]}],    -- Unarousable
+                                                    [{-4}, {[at0013]}],    -- Deep sedation
+                                                    [{-3}, {[at0012]}],    -- Moderate sedation
+                                                    [{-2}, {[at0011]}],    -- Light sedation
+                                                    [{-1}, {[at0010]}],    -- Drowsy
+                                                    [{0}, {[at0009]}],    -- Alert and calm
+                                                    [{1}, {[at0008]}],    -- Restless
+                                                    [{2}, {[at0007]}],    -- Agitated
+                                                    [{3}, {[at0006]}],    -- Very agitated
+                                                    [{4}, {[at0005]}]    -- Combative
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Escala de Agitación/Sedación de Richmond (RASS)">
+                description = <"Escala utilizada para medir el grado de agitación o sedación de un paciente hospitalizado.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Escala">
+                description = <"La escala de agitación/sedación de Richmond.">
+            >
+            ["at0005"] = <
+                text = <"Combativo">
+                description = <"Abiertamente combativo o violento; peligro inmediato para el personal.">
+            >
+            ["at0006"] = <
+                text = <"Muy agitado">
+                description = <"Agresivo, Tira de o se quita tubos o catéteres, o exhibe compotamiento violento hacia el personal.">
+            >
+            ["at0007"] = <
+                text = <"Agitado">
+                description = <"Movimientos frecuentes y sin propósito, o lucha con el respirador.">
+            >
+            ["at0008"] = <
+                text = <"Inquieto">
+                description = <"Ansioso, pero sin movimientos agresivos o vigorosos.">
+            >
+            ["at0009"] = <
+                text = <"Alerta y calmado">
+                description = <"Presta atención al cuidador en forma espontanea.">
+            >
+            ["at0010"] = <
+                text = <"Somnoliento">
+                description = <"El paciente tiene apertura ocular, que sostiene por mas de 10 segundos.">
+            >
+            ["at0011"] = <
+                text = <"Sedación leve">
+                description = <"El paciente tiene apertura ocular y hace contacto visual, pero no lo sostiene sostiene por mas de 10 segundos.">
+            >
+            ["at0012"] = <
+                text = <"Sedación moderada">
+                description = <"El paciente tiene movimientos en respuesta a estímulos verbales pero no realiza contacto visual.">
+            >
+            ["at0013"] = <
+                text = <"Sedación profunda">
+                description = <"El paciente tiene movimientos en respuesta a estímulos físicos.">
+            >
+            ["at0014"] = <
+                text = <"Sin respuesta">
+                description = <"El paciente no tiene movimientos en respuesta a estímulos verbales o físicos.">
+            >
+            ["ac9001"] = <
+                text = <"Escala (synthesised)">
+                description = <"La escala de agitación/sedación de Richmond. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Richmond agitation sedation scale (RASS)">
+                description = <"A scale used to measure the agitation or sedation level of a patient.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Scale">
+                description = <"The Richmond agitation/sedation scale.">
+            >
+            ["at0005"] = <
+                text = <"Combative">
+                description = <"	Overtly combative or violent; immediate danger to staff.">
+            >
+            ["at0006"] = <
+                text = <"Very agitated">
+                description = <"Pulls on or removes tube(s) or catheter(s) or has aggressive behavior toward staff.">
+            >
+            ["at0007"] = <
+                text = <"Agitated">
+                description = <"Frequent nonpurposeful movement or patient–ventilator dyssynchrony.">
+            >
+            ["at0008"] = <
+                text = <"Restless">
+                description = <"	Anxious or apprehensive but movements not aggressive or vigorous.">
+            >
+            ["at0009"] = <
+                text = <"Alert and calm">
+                description = <"Spontaneously pays attention to caregiver">
+            >
+            ["at0010"] = <
+                text = <"Drowsy">
+                description = <"Patient has eye opening and eye contact, which is sustained for more than 10 seconds.">
+            >
+            ["at0011"] = <
+                text = <"Light sedation">
+                description = <"Patient has eye opening and eye contact, but this is not sustained for 10 seconds.">
+            >
+            ["at0012"] = <
+                text = <"Moderate sedation">
+                description = <"Patient has any movement in response to voice, excluding eye contact.">
+            >
+            ["at0013"] = <
+                text = <"Deep sedation">
+                description = <"Patient has any movement to physical stimulation.">
+            >
+            ["at0014"] = <
+                text = <"Unarousable">
+                description = <"Patient has no response to voice or physical stimulation.">
+            >
+            ["ac9001"] = <
+                text = <"Scale (synthesised)">
+                description = <"The Richmond agitation/sedation scale. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0014", "at0013", "at0012", "at0011", "at0010", "at0009", "at0008", "at0007", "at0006", "at0005">
+        >
+    >

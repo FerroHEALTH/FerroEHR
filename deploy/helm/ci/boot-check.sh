@@ -341,7 +341,13 @@ boot_one() {
     return 1
   fi
   local envlist="${work}/env"
+  # The server container's environment only: the definitions init container
+  # carries a copy of it, and replaying both would hand the second copy of a
+  # secret key the placeholder.
   awk '
+    /^      initContainers:/ { ininit = 1; inenv = 0; next }
+    /^      [a-zA-Z]/ { ininit = 0 }
+    ininit { next }
     /^          env:/ { inenv = 1; next }
     inenv && /^          [a-zA-Z]/ { inenv = 0 }
     !inenv { next }

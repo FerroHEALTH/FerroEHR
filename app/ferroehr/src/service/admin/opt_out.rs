@@ -158,13 +158,14 @@ impl FerroEhrService {
 mod tests {
     use std::collections::HashMap;
 
+    use crate::party_binding::grants::operation::{GrantCeiling, Operation};
+
+    /// No configuration names an access service: it is a grant of
+    /// `access_service`, which the default ceiling does not allow, and the
+    /// removed role list is refused from the environment (#5521).
     #[test]
-    fn the_access_service_roles_are_off_by_default_and_map_from_the_environment() {
-        let defaults = crate::config::FerroEhrConfig::default();
-        assert_eq!(
-            defaults.authz.rbac.access_service_roles,
-            Vec::<String>::new()
-        );
+    fn an_access_service_is_a_grant_and_the_removed_role_list_is_refused() {
+        assert!(!GrantCeiling::default().allows(Operation::AccessService));
         let env: HashMap<String, String> = [(
             "FERROEHR__AUTHZ__RBAC__ACCESS_SERVICE_ROLES",
             "EHDS-PORTAL,EHDS-PROFESSIONAL",
@@ -172,10 +173,9 @@ mod tests {
         .into_iter()
         .map(|(k, v)| (k.to_owned(), v.to_owned()))
         .collect();
-        let config = crate::config::assemble(None, &env, &[]).expect("the config assembles");
-        assert_eq!(
-            config.authz.rbac.access_service_roles,
-            vec!["EHDS-PORTAL".to_owned(), "EHDS-PROFESSIONAL".to_owned()]
-        );
+        let refused = crate::config::assemble(None, &env, &[])
+            .expect_err("the removed key is unknown")
+            .to_string();
+        assert!(refused.contains("ACCESS_SERVICE_ROLES"), "{refused}");
     }
 }

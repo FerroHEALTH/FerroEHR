@@ -1,0 +1,88 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d2275649-ada2-4742-9129-1a693b64e10f; build_uid=a105b3ef-067d-4270-8fba-bc76d485d5ab)
+    openEHR-EHR-EVALUATION.exclusion-procedure.v1.0.0
+
+specialize
+    openEHR-EHR-EVALUATION.exclusion.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2010-03-02">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sam Heard, Ocean Informatics, Australia", "Ian McNicoll, Ocean Informatics, Australia", "Stephen Chu, NEHTA, Australia", "Stephen Royce, NEHTA, Australia">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Exclusion of a Procedure, draft archetype, NEHTA Clinical Knowledge Manager [Internet]. NEHTA. Authored: 02 Mar 2010. Available at: ">
+        ["2"] = <"http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1312_2 (accessed 3 Sept 2013)">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"70804D349EB393F42162F91B5124F0DE">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To positively record statement/s about procedures that need to be clinically excluded from the health record at a specific point in time.">
+            keywords = <"exclusion", "procedure", "intervention", "operation", "surgery">
+            use = <"Use to record positive statement/s about the absence or exclusion of procedures performed within the health record at a specific point in time. For example: to record that the patient has not had any operations or significant procedures; or that the patient has not had an appendicectomy, if presenting with abdominal pain.
+
+This archetype has specifically been designed to avoid the need to use flags or terminology to express negation about any procedures performed within the health record. 
+
+Exclusion statements can only be considered to be current and accurate at the time of recording. For example: exclusion of appendicectomy during a consultation or emergency room visit for abdominal pain is only relevant at the time of recording and is effectively obsolete if the subsequent diagnosis is appendicitis and an appendicectomy performed.">
+            misuse = <"Not to be used to record exclusion statements about adverse reactions, medications, problems or diagnoses - use other specific specialisations of the EVALUATION.exclusion archetype for these purposes.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- Exclusion of a Procedure
+        /data[at0001]/items matches {
+            ELEMENT[at0002.1] matches {    -- Exclusion Statement
+                value matches {
+                    DV_TEXT[at0.9000]
+                }
+            }
+            ELEMENT[at0003.1] matches {    -- Procedure
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.1]}    -- Procedures
+                    }
+                    DV_TEXT[at0.9002]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Exclusion of a Procedure">
+                description = <"Positive statement/s about procedures that need to be recorded as clinically excluded from the health record at a specific point in time.">
+            >
+            ["at0002.1"] = <
+                text = <"Exclusion Statement">
+                description = <"A statement about exclusion of procedures performed in the health record.">
+                comment = <"For example: \"No known operations or significant procedures\" or \"No previous\" (appendicectomy).">
+            >
+            ["at0003.1"] = <
+                text = <"Procedure">
+                description = <"Identification of the procedures to which the Exclusion Statement applies.">
+                comment = <"Coding of the Procedure with a terminology is desirable, where possible.">
+            >
+            ["ac0.1"] = <
+                text = <"Procedures">
+                description = <"All procedures that can be performed.">
+            >
+        >
+    >

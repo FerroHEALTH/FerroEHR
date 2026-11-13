@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>pt-br</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">22/05/2009</original_author>
+    <original_author id="name">Sergio Miranda Freire &amp; Rigoleta Dutra Mediano Dias</original_author>
+    <original_author id="organisation">Universidade do Estado do Rio de Janeiro - UERJ</original_author>
+    <original_author id="email">sergio@lampada.uerj.br</original_author>
+    <lifecycle_state>Authordraft</lifecycle_state>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>pt-br</code_string>
+      </language>
+      <purpose>Representação de outros dados de uma pessoa além daqueles especificados pela ISO 22220</purpose>
+      <keywords>serviço demográfico</keywords>
+      <keywords>dados demográficos de uma pessoa</keywords>
+      <use>Usado em serviço demográficos para coletar os dados de uma pessoa</use>
+      <misuse />
+      <copyright>copyright (c) 2009 openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>Representation of other person's data besides those specified in ISO 22220</purpose>
+      <keywords>demographic service</keywords>
+      <keywords>person's demographic data</keywords>
+      <use>Used in demographic service to collect a person's data</use>
+      <misuse />
+      <copyright>copyright (c) 2009 openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>en</code_string>
+    </language>
+    <author id="name">Sergio Miranda Freire</author>
+    <author id="organisation">Universidade do Estado do Rio de Janeiro - UERJ</author>
+    <author id="email">sergio@lampada.uerj.br</author>
+  </translations>
+  <archetype_id>
+    <value>openEHR-DEMOGRAPHIC-CLUSTER.person_details_br.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>0</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="CONSTRAINT_REF">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <reference>ac0001</reference>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0002</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="CONSTRAINT_REF">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <reference>ac0002</reference>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <cardinality>
+        <is_ordered>true</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="pt-br">
+      <items code="at0000">
+        <items id="text">dados da pessoa</items>
+        <items id="description">dados da pessoa</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Estado Civil</items>
+        <items id="description">Estado Civil</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Etnia</items>
+        <items id="description">Grupo étnico ao qual a pessoa pertence</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Person´s data</items>
+        <items id="description">A person's data</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Marital status</items>
+        <items id="description">Marital status</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Ethnic background</items>
+        <items id="description">The person's ethnic background</items>
+      </items>
+    </term_definitions>
+    <constraint_definitions language="pt-br">
+      <items code="ac0001">
+        <items id="text">Códigos para Estado Civil</items>
+        <items id="description">Códigos válidos para Estado Civil</items>
+      </items>
+      <items code="ac0002">
+        <items id="text">Códigos para grupos étnicos</items>
+        <items id="description">códigos válidos para grupos étnicos</items>
+      </items>
+    </constraint_definitions>
+    <constraint_definitions language="en">
+      <items code="ac0001">
+        <items id="text">Marital status codes</items>
+        <items id="description">Valid codes for marital status</items>
+      </items>
+      <items code="ac0002">
+        <items id="text">Ethnic background codes</items>
+        <items id="description">Valid codes for ethnic background</items>
+      </items>
+    </constraint_definitions>
+  </ontology>
+</archetype>

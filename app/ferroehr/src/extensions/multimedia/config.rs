@@ -41,6 +41,7 @@ use url::Url;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct MultimediaConfig {
     /// Master switch. `false` (default) = today's inline behaviour, byte for
     /// byte; no object store is built or contacted.
@@ -67,9 +68,6 @@ pub struct MultimediaConfig {
     /// secrets). Exactly one of the pair may be set; the loader reads and trims
     /// the file.
     pub secret_access_key_file: Option<PathBuf>,
-    /// Retired in v5.7.0: refused at load, naming the `url` scheme in its place.
-    #[serde(skip_serializing)]
-    pub allow_http: ferrohealth_config::removed::Removed,
 }
 
 impl Default for MultimediaConfig {
@@ -83,7 +81,6 @@ impl Default for MultimediaConfig {
             access_key_id: None,
             secret_access_key: None,
             secret_access_key_file: None,
-            allow_http: ferrohealth_config::removed::Removed::default(),
         }
     }
 }
@@ -212,6 +209,5 @@ mod tests {
         assert_eq!(c.threshold, ByteSize::from_kib(256));
         assert_eq!(c.bucket, "openehr-multimedia");
         assert!(c.is_anonymous());
-        assert!(!c.allow_http.is_set());
     }
 }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -15,7 +15,7 @@
     <lifecycle_state>in_development</lifecycle_state>
     <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
     <other_details id="custodian_organisation">Apperta UK</other_details>
-    <other_details id="references"></other_details>
+    <other_details id="references" />
     <other_details id="original_namespace">uk.org.clinicalmodels</other_details>
     <other_details id="original_publisher">Apperta UK</other_details>
     <other_details id="custodian_namespace">uk.org.clinicalmodels</other_details>
@@ -32,7 +32,7 @@
       <purpose>For the recording and reporting of patient-reported outcome information following knee operations.</purpose>
       <keywords>Outcome, knee, questionnaire</keywords>
       <use>Used tor record patient-reported outcome information following knee operations.&#xD;
-While openEHR archetypes are all freely available under an open license, the specific content of this archetype may be copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners where a copyright exists. </use>
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype may be copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners where a copyright exists.</use>
       <misuse>Not to be used unless the terms of copyright have been observed (if a copyright exists).</misuse>
       <copyright>© Apperta Foundation</copyright>
     </details>
@@ -823,7 +823,7 @@ Please indicate in the spaces below the HIGHEST level of activity that you parti
       <items code="at0052">
         <items id="text">Date of surgery</items>
         <items id="description">Details of surgery date.</items>
-        <items id="comment">When was the surgery performed? </items>
+        <items id="comment">When was the surgery performed?</items>
       </items>
       <items code="at0053">
         <items id="text">Who performed surgery?</items>
@@ -833,4 +833,3 @@ Please indicate in the spaces below the HIGHEST level of activity that you parti
     </term_definitions>
   </ontology>
 </archetype>
-

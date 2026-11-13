@@ -54,8 +54,11 @@ use crate::aom::access::{
 };
 use crate::aom::nesting::check_definition_nesting;
 use crate::artefact::{ArchetypeRepository, view};
-use crate::paths::{PathSegment, parse_path};
 use crate::validate::conformance::tuple_member_names;
+
+mod navigate;
+
+use navigate::{resolve_data_mut, resolve_object_mut};
 use openehr_am::v2_4::aom2::definitions::adl_code_definitions::AdlCodeDefinitionsData;
 
 /// A failure while flattening a specialised archetype against its parent.
@@ -201,10 +204,10 @@ fn overlay_root(
         if let Some(diff) = child_attr.differential_path.as_deref() {
             let target = resolve_object_mut(flat_def, diff)
                 .ok_or_else(|| FlattenError::UnresolvedDifferentialPath(diff.to_owned()))?;
-            overlay_attribute(target.attributes.get_or_insert_default(), child_attr, level);
+            overlay_attribute(target.attributes.get_or_insert_default(), child_attr, level)?;
         } else {
             let attrs = complex_attributes_mut(flat_def);
-            overlay_attribute(attrs, child_attr, level);
+            overlay_attribute(attrs, child_attr, level)?;
         }
     }
     Ok(())
@@ -217,7 +220,11 @@ fn overlay_root(
     clippy::indexing_slicing,
     reason = "`pos` is the `Iterator::position` of the matching attribute in this very `base_attrs` vector — the let-else below returns when there is none, and nothing removes from the vector before the indexed accesses, so every index is in bounds by construction"
 )]
-fn overlay_attribute(base_attrs: &mut Vec<CAttribute>, child_attr: &CAttribute, level: usize) {
+fn overlay_attribute(
+    base_attrs: &mut Vec<CAttribute>,
+    child_attr: &CAttribute,
+    level: usize,
+) -> Result<(), FlattenError> {
     let Some(pos) = base_attrs
         .iter()
         .position(|a| a.rm_attribute_name == child_attr.rm_attribute_name)
@@ -229,7 +236,7 @@ fn overlay_attribute(base_attrs: &mut Vec<CAttribute>, child_attr: &CAttribute, 
             strip_sibling_order(c);
         }
         base_attrs.push(added);
-        return;
+        return Ok(());
     };
     // Existence override; `existence {0}` = attribute deletion (kept visible in
     // plain flat, stripped of children — see the module NOTE).
@@ -247,9 +254,9 @@ fn overlay_attribute(base_attrs: &mut Vec<CAttribute>, child_attr: &CAttribute, 
         .is_some_and(MultiplicityInterval::is_prohibited)
     {
         base_attrs[pos].children = None;
-        return;
+        return Ok(());
     }
-    overlay_children(&mut base_attrs[pos], child_attr, level);
+    overlay_children(&mut base_attrs[pos], child_attr, level)
 }
 
 /// The overlay classification of one child object node against the flat parent.
@@ -278,13 +285,13 @@ enum Overlaid {
 fn classify_children(
     base_nodes: &[CObject],
     child_attr: &CAttribute,
-) -> Vec<(Overlaid, Option<SiblingOrder>)> {
+) -> Result<Vec<(Overlaid, Option<SiblingOrder>)>, FlattenError> {
     let mut classified: Vec<(Overlaid, Option<SiblingOrder>)> = Vec::new();
     for child in child_attr.children.iter().flatten() {
         let marker = sibling_order(child).cloned();
         let overlaid = if let Some(base_idx) = find_congruent_idx(base_nodes, object_node_id(child))
         {
-            let node = overlay_node(&base_nodes[base_idx], child);
+            let node = overlay_node(&base_nodes[base_idx], child)?;
             Overlaid::Redef { base_idx, node }
         } else {
             let mut node = child.clone();
@@ -293,7 +300,7 @@ fn classify_children(
         };
         classified.push((overlaid, marker));
     }
-    classified
+    Ok(classified)
 }
 
 /// Phase 1: the working list with every unmarked node at its default position
@@ -351,7 +358,11 @@ fn place_default_nodes(
     clippy::indexing_slicing,
     reason = "every index here is in bounds by construction: `split` is a `position(..).unwrap_or(len)` so `classified[split..]` is valid, and `runs[i]` is guarded by the enclosing `i < runs.len()`"
 )]
-fn overlay_children(base_attr: &mut CAttribute, child_attr: &CAttribute, _level: usize) {
+fn overlay_children(
+    base_attr: &mut CAttribute,
+    child_attr: &CAttribute,
+    _level: usize,
+) -> Result<(), FlattenError> {
     let base_nodes = base_attr.children.clone();
 
     // Classify each child node in source order, carrying its EXPLICIT sibling
@@ -359,7 +370,7 @@ fn overlay_children(base_attr: &mut CAttribute, child_attr: &CAttribute, _level:
     // the marker keyword; per `master09.04` L249 a marker anchors every following
     // node until the next marker, so the run range is everything from the first
     // explicitly-marked node onward.
-    let classified = classify_children(base_nodes.as_deref().unwrap_or_default(), child_attr);
+    let classified = classify_children(base_nodes.as_deref().unwrap_or_default(), child_attr)?;
     let split = classified
         .iter()
         .position(|(_, m)| m.is_some())
@@ -395,6 +406,7 @@ fn overlay_children(base_attr: &mut CAttribute, child_attr: &CAttribute, _level:
     }
 
     base_attr.children = openehr_base::containers::present(work);
+    Ok(())
 }
 
 /// One anchored run of marked sibling nodes.
@@ -469,7 +481,7 @@ fn resolve_anchor(work: &[CObject], anchor: &SiblingOrder) -> Option<InsertAt> {
 /// A node id matches a sibling-order anchor id if it is identical or conforms to
 /// it (the anchor id may have been redefined away — `master09.04` L274-279:
 /// resolve to a currently-available conforming sibling).
-fn anchor_matches(node_id: &str, anchor_id: &str) -> bool {
+pub(super) fn anchor_matches(node_id: &str, anchor_id: &str) -> bool {
     node_id == anchor_id || AdlCodeDefinitionsData::codes_conformant(node_id, anchor_id)
 }
 
@@ -539,7 +551,7 @@ fn max_effective_occurrences(node: &CObject, attr: &CAttribute) -> Option<i32> {
 /// / attributes are overlaid; a prohibited (`occurrences {0}`) child keeps the
 /// node visible but strips its sub-structure (plain flat — see the module NOTE).
 /// For any other combination the child fully specifies the node and replaces it.
-fn overlay_node(base: &CObject, child: &CObject) -> CObject {
+fn overlay_node(base: &CObject, child: &CObject) -> Result<CObject, FlattenError> {
     if let (
         CObject::CComplexObject(CComplexObject::CComplexObject(bp)),
         CObject::CComplexObject(CComplexObject::CComplexObject(cp)),
@@ -561,17 +573,25 @@ fn overlay_node(base: &CObject, child: &CObject) -> CObject {
         {
             out.attributes = None;
             out.attribute_tuples = None;
-            return CObject::CComplexObject(CComplexObject::CComplexObject(out));
+            return Ok(CObject::CComplexObject(CComplexObject::CComplexObject(out)));
         }
         for ca in cp.attributes.iter().flatten() {
-            overlay_attribute(out.attributes.get_or_insert_default(), ca, 0);
+            // NOTE: AOM2 `C_ATTRIBUTE.path` reads a nested differential path from its owning object.
+            if let Some(diff) = ca.differential_path.as_deref() {
+                let snapshot = CComplexObject::CComplexObject(out.clone());
+                let target = resolve_data_mut(&mut out, &snapshot, diff)
+                    .ok_or_else(|| FlattenError::UnresolvedDifferentialPath(diff.to_owned()))?;
+                overlay_attribute(target.attributes.get_or_insert_default(), ca, 0)?;
+            } else {
+                overlay_attribute(out.attributes.get_or_insert_default(), ca, 0)?;
+            }
         }
         overlay_attribute_tuples(&mut out, cp.attribute_tuples.as_deref().unwrap_or_default());
-        return CObject::CComplexObject(CComplexObject::CComplexObject(out));
+        return Ok(CObject::CComplexObject(CComplexObject::CComplexObject(out)));
     }
     let mut node = child.clone();
     strip_sibling_order(&mut node);
-    node
+    Ok(node)
 }
 
 /// Overlays a child node's `C_ATTRIBUTE_TUPLE` set onto the base node's, keyed
@@ -625,112 +645,6 @@ fn tuple_group_key(tuple: &CAttributeTuple) -> Vec<&str> {
     let mut names = tuple_member_names(tuple);
     names.sort_unstable();
     names
-}
-
-// ── differential-path navigation + proxy expansion ─────────────────────────
-
-/// Navigate `root` to the object node addressed by `path`, expanding any proxy
-/// (`C_COMPLEX_OBJECT_PROXY`) encountered on the way to an inline copy of its
-/// target (`master09.05` §Internal Reference (Proxy Object) Redefinition — a
-/// proxy overridden through its path is expanded inline). Returns a mutable
-/// reference to the target complex object, or `None` if the path does not
-/// resolve.
-#[expect(
-    clippy::indexing_slicing,
-    reason = "`attr_pos` is an `Iterator::position` over `current.attributes` and `child_pos` a `pick_child_pos` result over that attribute's `children`, so both are in bounds by construction; a `get_mut` rewrite would split the reborrow chain this `&mut` navigation loop depends on"
-)]
-fn resolve_object_mut<'a>(
-    root: &'a mut CComplexObject,
-    path: &str,
-) -> Option<&'a mut CComplexObjectData> {
-    let segments = parse_path(path);
-    // Resolve a fresh snapshot of proxy targets before mutating (proxy expansion
-    // reads the current tree).
-    let snapshot = root.clone();
-    let mut current: &mut CComplexObjectData = match root {
-        CComplexObject::CComplexObject(d) => d,
-        CComplexObject::CArchetypeRoot(r) => {
-            // Treat an archetype root as a complex object for navigation by
-            // reborrowing its attributes through a data view is not directly
-            // possible; the flattener only navigates plain complex objects.
-            let _ = r;
-            return None;
-        }
-    };
-    for seg in &segments {
-        let attr_pos = current
-            .attributes
-            .iter()
-            .flatten()
-            .position(|a| a.rm_attribute_name == seg.attribute)?;
-        let attributes = current.attributes.as_mut()?;
-        let child_pos = pick_child_pos(&attributes[attr_pos], seg)?;
-        // Proxy expansion: if the picked child is a proxy, replace it inline
-        // with a copy of its target structure resolved in the snapshot.
-        let children = attributes[attr_pos].children.as_mut()?;
-        if let CObject::CComplexObjectProxy(proxy) = &children[child_pos] {
-            children[child_pos] = expand_proxy(&snapshot, proxy)?;
-        }
-        current = match &mut children[child_pos] {
-            CObject::CComplexObject(CComplexObject::CComplexObject(d)) => d,
-            _ => return None,
-        };
-    }
-    Some(current)
-}
-
-/// Expand a proxy node to an inline `C_COMPLEX_OBJECT` copy of its target
-/// (resolved against `tree`), preserving the proxy's node id / occurrences.
-fn expand_proxy(
-    tree: &CComplexObject,
-    proxy: &openehr_am::v2_4::aom2::constraint_model::c_complex_object_proxy::CComplexObjectProxy,
-) -> Option<CObject> {
-    let target = resolve_object_ref(tree, &proxy.target_path)?;
-    let mut out = target.clone();
-    out.node_id.clone_from(&proxy.node_id);
-    if proxy.occurrences.is_some() {
-        out.occurrences.clone_from(&proxy.occurrences);
-    }
-    out.sibling_order = None;
-    Some(CObject::CComplexObject(CComplexObject::CComplexObject(out)))
-}
-
-/// Read-only path resolution to a complex object (used for proxy-target lookup).
-fn resolve_object_ref<'a>(root: &'a CComplexObject, path: &str) -> Option<&'a CComplexObjectData> {
-    let segments = parse_path(path);
-    let mut current: &CComplexObjectData = match root {
-        CComplexObject::CComplexObject(d) => d,
-        CComplexObject::CArchetypeRoot(_) => return None,
-    };
-    for seg in &segments {
-        let attr = current
-            .attributes
-            .iter()
-            .flatten()
-            .find(|a| a.rm_attribute_name == seg.attribute)?;
-        let child = pick_child_ref(attr, seg)?;
-        current = match child {
-            CObject::CComplexObject(CComplexObject::CComplexObject(d)) => d,
-            _ => return None,
-        };
-    }
-    Some(current)
-}
-
-fn pick_child_pos(attr: &CAttribute, seg: &PathSegment) -> Option<usize> {
-    match &seg.node_id {
-        Some(nid) => attr
-            .children
-            .iter()
-            .flatten()
-            .position(|c| object_node_id(c) == nid || anchor_matches(object_node_id(c), nid)),
-        None if attr.children.as_ref().map_or(0, Vec::len) == 1 => Some(0),
-        None => None,
-    }
-}
-
-fn pick_child_ref<'a>(attr: &'a CAttribute, seg: &PathSegment) -> Option<&'a CObject> {
-    pick_child_pos(attr, seg).and_then(|i| attr.children.as_ref()?.get(i))
 }
 
 // ── terminology merge ──────────────────────────────────────────────────────

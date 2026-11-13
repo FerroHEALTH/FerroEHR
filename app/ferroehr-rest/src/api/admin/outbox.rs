@@ -6,15 +6,18 @@
 //!
 //! No openEHR spec governs eventing: ITS-REST 1.1.0 defines no change
 //! notification, so the routes, payloads and status codes are our own design.
-//! A reader is one `[record.change_feed] readers` names; the family's export server reads
-//! the feed and delivers the events on to a message broker. The clinical and the party
+//! A reader is one the `reader` element of a `read_change_feed` grant in force
+//! names, and only a caller whose own grant names it reads it; the family's
+//! export server reads the feed and delivers the events on to a message
+//! broker. The clinical and the party
 //! outbox each keep their own `seq` and their own cursor, chosen by the
 //! `domain` parameter.
 //!
-//! Gating: mounted under `/admin/`, so the routes inherit the group's RBAC
-//! Admin class; the SMART route table holds both to the `__ferroehr.outbox`
-//! scope. The `[api] admin` toggle does not reach them: a deployment that names a
-//! reader serves its feed. Every read is one access record.
+//! Gating: the SMART route table holds both to the `__ferroehr.outbox` scope,
+//! and the service admits only a caller whose own `read_change_feed` grant
+//! names the reader. The `[api] admin` toggle does not reach them: a
+//! deployment that grants a reader serves its feed. Every read is one access
+//! record.
 
 #![expect(
     clippy::disallowed_types,
@@ -77,7 +80,7 @@ guarded_handler! {
     #[utoipa::path(
         get, path = "/admin/outbox/{reader}", tag = "admin-outbox",
         params(
-            ("reader" = String, Path, description = "A reader `[record.change_feed] readers` names."),
+            ("reader" = String, Path, description = "A reader a `read_change_feed` grant in force names."),
             ("limit" = Option<i64>, Query, description = "The most events to return, 1 to 1000; 100 when absent."),
             ("domain" = Option<String>, Query, description = "The outbox to read: `clinical` (the default) or `party`. Each has its own `seq` and its own cursor.")
         ),
@@ -109,11 +112,13 @@ guarded_handler! {
                                           `domain` is neither `clinical` nor `party`.",
              body = serde_json::Value),
             (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-            (status = 403, description = "Not in the Admin class, or the token lacks the \
-                                          `__ferroehr.outbox` scope.",
+            (status = 403, description = "The token lacks the `__ferroehr.outbox` \
+                                          scope, or the caller's own \
+                                          `read_change_feed` grant does not name \
+                                          the reader.",
              body = serde_json::Value),
-            (status = 404, description = "The reader is unknown or inactive: \
-                                          `[record.change_feed] readers` does not name it.",
+            (status = 404, description = "No `read_change_feed` grant in force \
+                                          names the reader.",
              body = serde_json::Value)
         )
     )]
@@ -128,7 +133,7 @@ guarded_handler! {
     #[utoipa::path(
         post, path = "/admin/outbox/{reader}/ack", tag = "admin-outbox",
         params(
-            ("reader" = String, Path, description = "A reader `[record.change_feed] readers` names."),
+            ("reader" = String, Path, description = "A reader a `read_change_feed` grant in force names."),
             ("domain" = Option<String>, Query, description = "The outbox whose cursor moves: `clinical` (the default) or `party`.")
         ),
         request_body(content = serde_json::Value,
@@ -141,10 +146,13 @@ guarded_handler! {
                                           or `domain` is neither `clinical` nor `party`.",
              body = serde_json::Value),
             (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-            (status = 403, description = "Not in the Admin class, or the token lacks the \
-                                          `__ferroehr.outbox` scope.",
+            (status = 403, description = "The token lacks the `__ferroehr.outbox` \
+                                          scope, or the caller's own \
+                                          `read_change_feed` grant does not name \
+                                          the reader.",
              body = serde_json::Value),
-            (status = 404, description = "The reader is unknown or inactive.",
+            (status = 404, description = "No `read_change_feed` grant in force \
+                                          names the reader.",
              body = serde_json::Value),
             (status = 409, description = "`last_seq` lies below the cursor, which never \
                                           moves back, or above the highest row of the \

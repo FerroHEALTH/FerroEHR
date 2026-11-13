@@ -1,0 +1,260 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a05e6b97-8cf7-42f3-88b0-9793263ba92e; build_uid=b6c73371-7d1b-48c8-a560-664ad35b7148)
+    openEHR-EHR-OBSERVATION.tnm_stage_pathological.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2016-08-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Hildegard Franke, freshEHR Clinical Informatics Ltd. UK", "Ian McNicoll, freshEHR Clinical Informatics Ltd. UK", "Natalia Strauch, Medizinische Hochschule Hannover, Germany">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Principles of Cancer Staging. AJCC American Joint Committee on Cancer; [cited 2019 03 15]. No longer available.">
+        ["2"] = <"TNM Classification Help (Manual for Cancer Staging); [cited 2019 03 15].  No longer available at 2019 07 18, pending update to 8th edition.">
+        ["3"] = <"Brierley JD, Gospodarowicz MK, Wittekind C. TNM Classification of Malignant Tumours. 8th ed. Wiley; 2017.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"2D3FDF92E2B46D2035F5A475E2BD0DBC">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the pathological classification and grading of malignancies using the TNM classification.">
+            use = <"Use to record the pathological classification and grading of malignancies using the TNM classification. 
+
+Each malignancy has a unique TNM staging classification and it is expected that this archetype will be further constrained to reflect these individual requirements, using a specialisation or a template for each tumour and edition of the TNM classification.">
+            misuse = <"Not to be used for clinical TNM classification.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- TNM stage - pathological
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Cancer type
+                                        value matches {
+                                            DV_TEXT[at9000]
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Anatomical site
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Anatomical subsite
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Primary tumour (pT)
+                                        value matches {
+                                            DV_TEXT[at9003]
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Regional lymph nodes (pN)
+                                        value matches {
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Distant metastasis (pM)
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Histopathological grading (G)
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Residual tumour (R)
+                                        value matches {
+                                            DV_TEXT[at9007]
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Lymphatic invasion (L)
+                                        value matches {
+                                            DV_TEXT[at9011]
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Venous invasion (V)
+                                        value matches {
+                                            DV_TEXT[at9012]
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Perineural invasion (Pn)
+                                        value matches {
+                                            DV_TEXT[at9020]
+                                        }
+                                    }
+                                    ELEMENT[at0015] matches {    -- Other descriptor
+                                        value matches {
+                                            DV_TEXT[at9021]
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Stage
+                                        value matches {
+                                            DV_TEXT[at9022]
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Stage grouping
+                                        value matches {
+                                            DV_TEXT[at9023]
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Multiple primary tumours (m)
+                                        value matches {
+                                            DV_BOOLEAN[at9024]
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Multimodality therapy (y)
+                                        value matches {
+                                            DV_BOOLEAN[at9017]
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Retreatment (r)
+                                        value matches {
+                                            DV_BOOLEAN[at9016]
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Autopsy (a)
+                                        value matches {
+                                            DV_BOOLEAN[at9018]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- TNM Edition
+                        value matches {
+                            DV_TEXT[at9019]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0022] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"TNM stage - pathological">
+                description = <"A framework for the pathological classification and grading of malignancies using the TNM classification system.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Cancer type">
+                description = <"The type of cancer being staged.">
+                comment = <"Coding of the type of the cancer with a terminology is strongly preferred.">
+            >
+            ["at0006"] = <
+                text = <"Anatomical site">
+                description = <"The anatomical site where the assessed cancer is situated.">
+            >
+            ["at0007"] = <
+                text = <"Anatomical subsite">
+                description = <"The anatomical subsite where the assessed cancer is situated.">
+            >
+            ["at0008"] = <
+                text = <"Primary tumour (pT)">
+                description = <"Pathological assessment of the primary tumour.">
+            >
+            ["at0009"] = <
+                text = <"Regional lymph nodes (pN)">
+                description = <"Pathological assessment of the regional lymph nodes.">
+                comment = <"May include suffixes. For example: sentinel nodes (sn); isolated tumor cells (ITCs) (i+); and FNA or a core biopsy (f).">
+            >
+            ["at0010"] = <
+                text = <"Distant metastasis (pM)">
+                description = <"Pathological assessment of distant metastasis.">
+            >
+            ["at0011"] = <
+                text = <"Histopathological grading (G)">
+                description = <"Histopathological grading of the tumour.">
+            >
+            ["at0012"] = <
+                text = <"Residual tumour (R)">
+                description = <"Pathological assessment of post-treatment residual tumour.">
+            >
+            ["at0013"] = <
+                text = <"Lymphatic invasion (L)">
+                description = <"Pathological assessment of invasion into the lymphatic system.">
+            >
+            ["at0014"] = <
+                text = <"Venous invasion (V)">
+                description = <"Pathological assessment of invasion into the venous system.">
+            >
+            ["at0015"] = <
+                text = <"Other descriptor">
+                description = <"Any other descriptor used in the pathological assessment.">
+            >
+            ["at0016"] = <
+                text = <"Stage">
+                description = <"Concatenation of pT, pN and pM categories plus any of G, R, L and V, if applicable.">
+            >
+            ["at0017"] = <
+                text = <"Stage grouping">
+                description = <"Pathological stage grouping.">
+            >
+            ["at0018"] = <
+                text = <"Retreatment (r)">
+                description = <"Pathological staging is performed for a recurring cancer after a disease-free interval.">
+            >
+            ["at0019"] = <
+                text = <"Multimodality therapy (y)">
+                description = <"Pathological staging is performed during or following initial multimodality therapy.">
+            >
+            ["at0020"] = <
+                text = <"Autopsy (a)">
+                description = <"Pathological staging is performed by postmortem examination after the death of the patient.">
+            >
+            ["at0021"] = <
+                text = <"TNM Edition">
+                description = <"The edition of the TNM classification system used for the assessment.">
+            >
+            ["at0022"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0023"] = <
+                text = <"Perineural invasion (Pn)">
+                description = <"Pathological assessment of invasion into nerve sheaths.">
+            >
+            ["at0024"] = <
+                text = <"Multiple primary tumours (m)">
+                description = <"Presence of multiple primary tumours at a single site.">
+            >
+        >
+    >

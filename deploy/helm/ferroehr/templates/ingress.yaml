@@ -53,8 +53,9 @@ spec:
                  any [api] base path (RFC 7644 §3.13 leaves the base URI to the
                  provider), so an identity provider reaches it only through a
                  path of its own; Prefix ignores a trailing slash
-                 (https://kubernetes.io/docs/concepts/services-networking/ingress/#examples). */}}
-          {{- if (($.Values.config).auth).scim }}
+                 (https://kubernetes.io/docs/concepts/services-networking/ingress/#examples).
+                 An empty table serves it too, since who provisions is CDR data. */}}
+          {{- if kindIs "map" (($.Values.config).auth).scim }}
           - path: /scim/v2
             pathType: Prefix
             backend:

@@ -1,1 +1,0 @@
-- `openehr-term` names the `null_flavours` and `setting` groups: `codes::NullFlavour` and `codes::Setting` give each concept's code and English rubric and read a code back, held equal to the bundled terminology by tests. Every typed group's `ALL` is now a slice.

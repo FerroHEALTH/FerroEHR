@@ -60,4 +60,5 @@ mod xml_released_rm;
 mod xml_roundtrip;
 mod xml_smoke;
 mod xml_string_dictionary_id;
+mod xml_xsd_demographic;
 mod xml_xsd_validity;

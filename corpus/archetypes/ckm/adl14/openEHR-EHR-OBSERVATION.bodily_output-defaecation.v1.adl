@@ -1,0 +1,265 @@
+﻿archetype (adl_version=1.4; uid=6e228f86-d147-4444-ac3d-ee92e14b74b3)
+	openEHR-EHR-OBSERVATION.bodily_output-defaecation.v1
+specialise
+	openEHR-EHR-OBSERVATION.bodily_output.v1
+
+concept
+	[at0000.1]	-- Defaecation
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Dr Ian McNicoll">
+		["organisation"] = <"Ocean Informatics, United Kingdom">
+		["email"] = <"ian.mcnicoll@oceaninformatics.com">
+		["date"] = <"11/11/2009">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record findings of, and measurements of  actual or estimated faecal output.">
+			use = <"Use to record faecal output.
+Use in combination with CLUSTER.fluid.v1
+Supercedes OBSERVATION.faeces.v1">
+			keywords = <"production", "output", "fluid", "fluid balance", "input output", "io", "stool", "faeces", "bowel">
+			misuse = <"">
+			copyright = <"copyright (c) 2010 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Sam Heard, Ocean Informatics, Australia", "Heather Leslie, Ocean Informatics, Australia">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["references"] = <"">
+		["build_uid"] = <"9ad30142-bf5e-4bb3-9135-375e53946fd0">
+		["original_publisher"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"59668598EED54DC21FB843251E4E8E9C">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	OBSERVATION[at0000.1] matches {	-- Defaecation
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					POINT_EVENT[at0002] occurrences matches {0..*} matches {	-- Timing
+						data matches {
+							ITEM_TREE[at0003] matches {	-- List
+								items cardinality matches {1..*; unordered} matches {
+									allow_archetype CLUSTER[at0016.1] occurrences matches {0..1} matches {	-- Faeces detail 
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.fluid(-[a-zA-Z0-9_]+)*\.v1/}
+									}
+									CLUSTER[at0032] occurrences matches {0..1} matches {	-- Voiding
+										items cardinality matches {1..*; unordered} matches {
+											ELEMENT[at0033.1] occurrences matches {0..1} matches {	-- Bowels moved
+												value matches {
+													DV_BOOLEAN matches {
+														value matches {True, False}
+													}
+												}
+											}
+											ELEMENT[at0034.1] occurrences matches {0..1} matches {	-- Datetime bowels last moved
+												value matches {
+													DV_DATE_TIME matches {*}
+												}
+											}
+											ELEMENT[at0036.1] occurrences matches {0..1} matches {	-- Period since bowels last moved
+												value matches {
+													DV_DURATION matches {
+														value matches {|>=P0M|}
+													}
+												}
+											}
+											ELEMENT[at0037.1] occurrences matches {0..1} matches {	-- Difficulty moving bowels
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+										}
+									}
+									CLUSTER[at0.38] occurrences matches {0..1} matches {	-- Continence
+										items cardinality matches {1..*; unordered} matches {
+											ELEMENT[at0.39] occurrences matches {0..1} matches {	-- Description
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					INTERVAL_EVENT[at0006] occurrences matches {0..*} matches {	-- Total
+						math_function matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {[openehr::148]}
+							}
+						}
+						data matches {
+							use_node ITEM_TREE /data[at0001]/events[at0002]/data[at0003]	-- /data[Event Series]/events[Timing]/data[List]
+						}
+					}
+					INTERVAL_EVENT[at0007] occurrences matches {0..*} matches {	-- Actual
+						math_function matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {[openehr::640]}
+							}
+						}
+						data matches {
+							use_node ITEM_TREE /data[at0001]/events[at0002]/data[at0003]	-- /data[Event Series]/events[Timing]/data[List]
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0008] matches {	-- List
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0031] occurrences matches {0..1} matches {	-- Measurement precision
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0018, 	-- Estimated
+									at0019, 	-- Measured
+									at0020]	-- Stated
+								}
+							}
+						}
+					}
+					allow_archetype CLUSTER[at0030] occurrences matches {0..1} matches {	-- Body location  
+						include
+							archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1/}
+						exclude
+							archetype_id/value matches {/.*/}
+					}
+					allow_archetype CLUSTER[at0028] occurrences matches {0..1} matches {	-- Measurement device 
+						include
+							archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1/}
+						exclude
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.38"] = <
+					text = <"Continence">
+					description = <"Findings related to faecal continence.">
+				>
+				["at0.39"] = <
+					text = <"Description">
+					description = <"Description of faecal continence issues.">
+				>
+				["at0000"] = <
+					text = <"Bodily output">
+					description = <"Recording of findings and measurement (or estimation) of bodily output such as fluid output and defaecation">
+				>
+				["at0000.1"] = <
+					text = <"Defaecation">
+					description = <"Recording of findings and measurement (or estimation) of defaecation.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Timing">
+					description = <"The estimation of fluid output without specifying the period of time">
+				>
+				["at0003"] = <
+					text = <"List">
+					description = <"@ internal @">
+				>
+				["at0006"] = <
+					text = <"Total">
+					description = <"For recording total fluid output over a period (may transcend a number of interval or point in time records)">
+				>
+				["at0007"] = <
+					text = <"Actual">
+					description = <"For recording the fluid output over a period of time when this will later be totalled.">
+				>
+				["at0008"] = <
+					text = <"List">
+					description = <"@ internal @">
+				>
+				["at0016"] = <
+					text = <"Substance detail">
+					description = <"Details of the fluid or substance observed being observed.">
+				>
+				["at0016.1"] = <
+					text = <"Faeces detail ">
+					description = <"Details of the fluid or substance observed being observed.">
+				>
+				["at0018"] = <
+					text = <"Estimated">
+					description = <"The fluid volume has been estimated.">
+				>
+				["at0019"] = <
+					text = <"Measured">
+					description = <"The fluid volume has been directly measured.">
+				>
+				["at0020"] = <
+					text = <"Stated">
+					description = <"The fluid output has been stated.">
+				>
+				["at0028"] = <
+					text = <"Measurement device ">
+					description = <"Details of device used to measure the output">
+				>
+				["at0030"] = <
+					text = <"Body location  ">
+					description = <"The location of the body from which the substance was collected.">
+				>
+				["at0031"] = <
+					text = <"Measurement precision">
+					description = <"Records the level of precision of the fluid output observation.">
+				>
+				["at0032"] = <
+					text = <"Voiding">
+					description = <"Description of any difficulty voiding the bodily substance.">
+				>
+				["at0033"] = <
+					text = <"Substance voided">
+					description = <"Has the substance been voided?">
+				>
+				["at0033.1"] = <
+					text = <"Bowels moved">
+					description = <"Have the subject's bowels moved?">
+				>
+				["at0034"] = <
+					text = <"Datetime substance last voided">
+					description = <"The date and /or time that the substance was last voided">
+				>
+				["at0034.1"] = <
+					text = <"Datetime bowels last moved">
+					description = <"The date and /or time that the substance was last voided">
+				>
+				["at0036"] = <
+					text = <"Period since substance last voided">
+					description = <"The time elapsed since the substance was last voided.">
+				>
+				["at0036.1"] = <
+					text = <"Period since bowels last moved">
+					description = <"The time elpased since the substance was last voided.">
+				>
+				["at0037"] = <
+					text = <"Voiding difficulty">
+					description = <"Description of  any difficulty voiding.">
+				>
+				["at0037.1"] = <
+					text = <"Difficulty moving bowels">
+					description = <"Description of  any difficulty voiding bowels.">
+				>
+			>
+		>
+	>

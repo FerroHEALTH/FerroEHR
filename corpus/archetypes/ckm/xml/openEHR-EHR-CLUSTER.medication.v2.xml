@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -129,8 +129,7 @@ FHIR Resource Medication, HL7 [Internet]. Available at: https://www.hl7.org/fhir
 &#xD;
 Dieser Archetyp soll für die Darstellung von Angaben zu einem Arzneimittel oder einer Arzneimittelkomponente verwendet werden. Dabei sollen vor allem die Darreichungsform und die Inhaltsstoffe detailliert beschrieben werden, z.B. zu einer Infusion oder einer Ad-hoc-Mixtur oder wenn es zu einem Arzneimittel keine Terminologie zur Verfügung steht. Im Rahmen einer Verordnung oder Abgabe eines Arzneimittels kann dieser Archetyp in den SLOT "Arzneimitteldetails" innerhalb des INSTRUCTION.medication_order Archetyps eingebettet werden. Für die Darstellung einer gegenwärtigen Verabreichung, Abgabe oder Anwendung eines Arzneimittels muss dieser Archetyp innerhalb des SLOTs "Arzneimitteldetails" in den Archetyp ACTION.medication eingefügt werden.&#xD;
 &#xD;
-Dieser Archetyp kann überflüssig sein, wenn die Verordnung eines verschreibungsfähigen Arzneimittels eine Terminologie zur Identifizierung des Arzneimittelproduktes verwendet. In diesem Fall kann der Marken- oder Produktname Informationen über die Darreichungsform und die Wirkstärke der Stoffe beinhalten.&#xD;
-</use>
+Dieser Archetyp kann überflüssig sein, wenn die Verordnung eines verschreibungsfähigen Arzneimittels eine Terminologie zur Identifizierung des Arzneimittelproduktes verwendet. In diesem Fall kann der Marken- oder Produktname Informationen über die Darreichungsform und die Wirkstärke der Stoffe beinhalten.</use>
       <misuse>Nicht für die Kontrolle des Apothekenbestands oder zur Verwaltung von Arzneimittellisten verwenden.&#xD;
 &#xD;
 Nicht zur Darstellung einer beabsichtigten oder verabreichten Dosis eines Arzneimittels einsetzen. Für diesen Zweck müssen die Archetypen INSTRUCTION.medication_order oder CLUSTER.dosage verwendet werden.&#xD;
@@ -410,9 +409,7 @@ Este arquetipo está diseñado para registrar datos de un medicamento o de un co
 &#xD;
 En el contexto de una prescripción, administración o dispensación de un medicamento, este arquetipo debe ubicarse dentro del SLOT «Datos de la medicación» del arquetipo INSTRUCTION.medication_order. En el caso del registro de la administración o dispensación real del medicamento, se debe ubicar dentro del SLOT «Datos de la medicación» del arquetipo ACTION.medication.&#xD;
 &#xD;
-Este arquetipo puede resultar redundante en situaciones donde se solicite un medicamento mediante una prescripción que utiliza una terminología codificada para identificar el medicamento. En estos casos, la marca o el nombre del producto ya pueden implicar la forma farmacéutica y la concentración de la sustancia.&#xD;
-&#xD;
-</use>
+Este arquetipo puede resultar redundante en situaciones donde se solicite un medicamento mediante una prescripción que utiliza una terminología codificada para identificar el medicamento. En estos casos, la marca o el nombre del producto ya pueden implicar la forma farmacéutica y la concentración de la sustancia.</use>
       <misuse>No utilizar para el control del inventario de farmacia ni dentro de los catálogos de medicamentos.&#xD;
 &#xD;
 No utilizar para registrar la dosis prevista o administrada de un medicamento. Utilizar los arquetipos INSTRUCTION.medication_order o CLUSTER.dosage para esta finalidad.&#xD;
@@ -2234,4 +2231,3 @@ Koda om möjligt beredningstypen med en terminologi. Läkemedelskataloger kan sk
     </term_definitions>
   </ontology>
 </archetype>
-

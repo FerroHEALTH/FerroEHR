@@ -1,0 +1,528 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>de</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2012-12-05</original_author>
+    <original_author id="name">Michael Braun</original_author>
+    <original_author id="organisation">University Medical Center Freiburg, Germany</original_author>
+    <original_author id="email">braun@imbi.uni-freiburg.de</original_author>
+    <other_contributors>Sebastian Bischoff, gfnmediber GmbH, Germany</other_contributors>
+    <other_contributors>Martin Boeker, University Medical Center Freiburg, Germany</other_contributors>
+    <other_contributors>Michael Braun, University Medical Center Freiburg, Germany (Editor)</other_contributors>
+    <other_contributors>Heather Leslie, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Sebastian Mansow-Model, gfnmediber GmbH, Germany</other_contributors>
+    <other_contributors>Catalina Martínez-Costa, Medical University of Graz, Austria</other_contributors>
+    <other_contributors>Ian McNicoll, Ocean Informatics, United Kingdom (Editor)</other_contributors>
+    <other_contributors>Alexander U. Brandt, gfnmediber GmbH, Germany</other_contributors>
+    <lifecycle_state>deprecated</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Fischer JS, Jak AJ, Kniker JE, Rudick RA, Cutter G. Multiple Sclerosis Functional Composite (MSFC), Administration and Scoring Manual: National Multiple Sclerosis Society; 2001.</other_details>
+    <other_details id="current_contact">Michael Braun, University Medical Center Freiburg, Germany, braun@imbi.uni-freiburg.de</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">C2E3543CEF6E93E0C929C718B2308564</other_details>
+    <other_details id="build_uid">82d40934-f45b-4a24-88b1-838aadac231e</other_details>
+    <other_details id="revision">1.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Aufzeichnung des MSFC-Werts einer Person bezüglich einer Referenzpopulation. Das MSFC wurde von der Clinical Outcomes Assessment Task Force der National Multiple Sclerosis Society entwickelt. Der MSFC-Wert bildet eine Gesamtgröße, die mit der Schwere der Erkrankung bezüglich einer Referenzpopulation korreliert. Dabei werden in drei einzelnen Tests (Timed 25-Foot Walk, Nine Hole Peg Test und Paced Auditory Serial Addition Test) verschiedene Aspekte höherer Gehirnfunktionen gemessen. Die Ergebnisse dieser drei Test werden in Z-Werten normiert und im MSFC-Wert zusammengeführt.</purpose>
+      <keywords>Multiple Sclerosis Functional Composite</keywords>
+      <keywords>MSFC</keywords>
+      <keywords>Multiple Sklerose</keywords>
+      <keywords>MS</keywords>
+      <keywords>Neurologie</keywords>
+      <use>Verwendung zur Aufzeichnung des MSFC-Werts und der Datenbasis, sowie von Links zu den gemessenen Ergebnissen der drei einzelnen Tests (Timed 25-Foot Walk, Nine Hole Peg Test und Paced Auditory Serial Addition Test).&#xD;
+&#xD;
+Der MSFC-Wert ist eine aus den gemittelten Ergebnissen der einzelnen Tests berechnete Größe, adjustiert bezüglich einer Referenzpopulation. D.h. MSFC-Wert = 1/3 * (Z_arm,avg. + Z_leg,avg. + Z_cognitive), mit Z_x = Z-Wert aus jedem Ergebnis eines Tests. Dieser Wert muss extern berechnet werden, nur das Ergebnis wird hier aufgezeichnet.&#xD;
+&#xD;
+Siehe MSFC-Handbuch für weitere Auswertungsanweisungen, Formeln und Hintergrundinformationen.</use>
+      <misuse>Nicht verwenden zur Aufzeichnung der Messergebnisse der drei einzelnen Tests des MSFC. Jeder Test sollte den speziell zutreffenden Archetyp verwenden: openEHR-EHR-OBSERVATION.timed_25_foot_walk.v1.adl, openEHR-EHR-OBSERVATION.nine_hole_peg_test.v1.adl und openEHR-EHR-OBSERVATION.paced_auditory_serial_addition_test.v1.adl.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record the MSFC Score for an individual with respect to a reference population. The MSFC was developed by the National Multiple Sclerosis Society’s Clinical Outcomes Assessment Task Force. The MSFC Score forms a total value that correlates with the severity of the disease with respect to a reference population. In three separate tests (Timed 25-Foot Walk, Nine Hole Peg Test and Paced Auditory Serial Addition Test) various aspects of higher brain functions are measured. The results of these three tests are standardized into Z-scores ​​and merged into the MSFC Score.</purpose>
+      <keywords>Multiple Sclerosis Functional Composite</keywords>
+      <keywords>MSFC</keywords>
+      <keywords>Multiple Sclerosis</keywords>
+      <keywords>MS</keywords>
+      <keywords>Neurology</keywords>
+      <use>Use to record the MSFC Score and the reference data set, as well as links to the measured results of the three individual tests (Timed 25-Foot Walk, Nine Hole Peg Test and Paced Auditory Serial Addition Test).&#xD;
+&#xD;
+The MSFC Score is a computed value based on the average of each test result, adjusted to the reference population. I.e. MSFC Score = 1/3 * (Z_arm,avg. + Z_leg,avg. + Z_cognitive), where Z_x = Z-score of each test result. This score has to be computed externally, only the resulting value is to be recorded here.&#xD;
+&#xD;
+Use the MSFC Manual for further scoring instructions, formulas and background information.</use>
+      <misuse>Not to be used to record the result of the three individual tests of the MSFC. Each test should use the correct specific archetype: openEHR-EHR-OBSERVATION.timed_25_foot_walk.v1.adl, openEHR-EHR-OBSERVATION.nine_hole_peg_test.v1.adl, and openEHR-EHR-OBSERVATION.paced_auditory_serial_addition_test.v1.adl.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>en</code_string>
+    </language>
+    <author id="name">Michael Braun</author>
+    <author id="organisation">University Medical Center Freiburg, Germany</author>
+    <author id="email">braun@imbi.uni-freiburg.de</author>
+  </translations>
+  <uid>
+    <value>4b519390-aee5-4630-bbd8-2fadbf3110e7</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-OBSERVATION.msfc_score.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>OBSERVATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>HISTORY</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>events</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>EVENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0010</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>data</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ITEM_TREE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0003</node_id>
+                <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                  <rm_attribute_name>items</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0004</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_DV_QUANTITY">
+                        <rm_type_name>DV_QUANTITY</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <property>
+                          <terminology_id>
+                            <value>openehr</value>
+                          </terminology_id>
+                          <code_string>380</code_string>
+                        </property>
+                        <list>
+                          <magnitude>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>-100.0</lower>
+                            <upper>100.0</upper>
+                          </magnitude>
+                          <units />
+                        </list>
+                      </children>
+                    </attributes>
+                  </children>
+                  <cardinality>
+                    <is_ordered>false</is_ordered>
+                    <is_unique>false</is_unique>
+                    <interval>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>1</lower>
+                    </interval>
+                  </cardinality>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>protocol</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0005</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0006</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0007</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_EHR_URI</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0008</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_EHR_URI</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0009</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_EHR_URI</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">MSFC-Wert</items>
+        <items id="description">Das Multiple Sclerosis Functional Composite (MSFC) ist ein dreiteiliges, quantitatives und standardisiertes Beurteilungsinstrument für klinische Untersuchungen und Studien zur Multiplen Sklerose.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Event Series</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Baum</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">MSFC-Wert</items>
+        <items id="description">Angabe des MSFC-Werts.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Baum</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Referenzpopulation</items>
+        <items id="description">Angabe der zugrundeliegenden Referenzpopulation.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Aufzeichnung des Timed 25-Foot Walk</items>
+        <items id="description">Link zur detaillierten Originalaufzeichnung des Timed 25-Foot Walk.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Aufzeichnung des Nine Hole Peg Test</items>
+        <items id="description">Link zur detaillierten Originalaufzeichnung des Nine Hole Peg Test.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Aufzeichnung des Paced Auditory Serial Addition Test</items>
+        <items id="description">Link zur detaillierten Originalaufzeichnung des Paced Auditory Serial Addition Test.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Jedes Ereignis</items>
+        <items id="description">Jedes unspezifizierte Ereignis.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">MSFC score</items>
+        <items id="description">The Multiple Sclerosis Functional Composite (MSFC) is a three-part, quantitative, and standardised assessment instrument for use in clinical studies and trials of Multiple Sclerosis.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Event Series</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">MSFC score</items>
+        <items id="description">Record of the MSFC Score.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Reference Population</items>
+        <items id="description">Specification of the underlying reference population.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Timed 25-Foot Walk Record</items>
+        <items id="description">Link to the detailed original record of the Timed 25-Foot Walk.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Nine Hole Peg Test Record</items>
+        <items id="description">Link to the detailed original record of the Nine Hole Peg Test.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Paced Auditory Serial Addition Test Record</items>
+        <items id="description">Link to the detailed original record of the Paced Auditory Serial Addition Test.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Any event</items>
+        <items id="description">Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

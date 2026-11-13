@@ -1,4 +1,4 @@
-archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=17c5a32a-e751-4540-853f-db62dbfdc1cd; build_uid=1b76ecf9-4354-439b-a2d2-be6b14a52109)
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=17c5a32a-e751-4540-853f-db62dbfdc1cd; build_uid=e6f5079e-ef48-4cb1-a06e-78694bba6379)
     openEHR-EHR-EVALUATION.impairment_summary.v0.0.1-alpha
 
 language
@@ -48,14 +48,15 @@ Each impairment can be recorded as a single, persistent instance, updated over t
 In children, a clinician may identify a function that is outside the age-appropriate range as an impairment.
 
 This archetype is one of a set of three related archetypes designed to represent different aspects of how an individual functions in everyday life:
-- OBSERVATION.functional_ability, which records an assessment of an individual's ability to perform a single activity at a point in time;
-- EVALUATION.impairment_summary, this archetype, which records summary information about an impairment that may contribute to limitations in functional ability; and
-- EVALUATION.functional_support_requirements, which records summary information about the supports required to enable or assist an individual to perform an activity.
+- OBSERVATION.functional_ability, which records what an individual can do when performing an activity;
+- EVALUATION.impairment_summary, which records an impairment that may limit what an individual can do; and
+- EVALUATION.functional_support_requirements, which records the type and level of support an individual needs for an activity.
 
-In practice, these archetypes are often used alongside others, such as EVALUATION.problem_diagnosis and CLUSTER.symptom_sign. For example:
-- For an adult with Parkinson's disease, the condition is recorded using EVALUATION.problem_diagnosis, tremor using CLUSTER.symptom_sign, motor control using this archetype, the ability to fasten buttons using OBSERVATION.functional_ability, and the need for dressing aids using EVALUATION.functional_support_requirements.
-- For an adult with depression, the condition is recorded using EVALUATION.problem_diagnosis, low mood using CLUSTER.symptom_sign, motivation using this archetype, the ability to maintain employment using OBSERVATION.functional_ability, and the need for a graded return-to-work plan using EVALUATION.functional_support_requirements.
-- For a child with chronic otitis media, the condition is recorded using EVALUATION.problem_diagnosis, ear discharge using CLUSTER.symptom_sign, hearing using this archetype, the ability to follow instructions in the classroom using OBSERVATION.functional_ability, and the need for preferential classroom seating using EVALUATION.functional_support_requirements. (en)">
+In practice, these archetypes are often used alongside others, such as CLUSTER.symptom_sign and EVALUATION.problem_diagnosis. For example:
+- For an adult with Parkinson’s disease, tremor is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to drink from a cup using OBSERVATION.functional_ability, motor control using EVALUATION.impairment_summary, and the need for a cup with a lid using EVALUATION.functional_support_requirements.
+- For an adult after a stroke, left-sided weakness is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to transfer from bed to chair using OBSERVATION.functional_ability, left lower limb motor control using EVALUATION.impairment_summary, and the need for physical assistance from two people to transfer from bed to chair using EVALUATION.functional_support_requirements.
+- For an adult with Alzheimer’s disease, forgetfulness is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to manage medications using OBSERVATION.functional_ability, short-term memory using EVALUATION.impairment_summary, and the need for prompting from a carer using EVALUATION.functional_support_requirements.
+- For a child with chronic otitis media, ear discharge is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to follow instructions in the classroom using OBSERVATION.functional_ability, hearing using EVALUATION.impairment_summary, and the need for seating near the teacher using EVALUATION.functional_support_requirements. (en)">
             misuse = <"*Not to be used to record an individual's ability to perform an activity. Use the OBSERVATION.functional_ability archetype for this purpose.
 
 Not to be used to record developmental milestones. Use the OBSERVATION.developmental_milestone archetype for this purpose.
@@ -82,14 +83,15 @@ Each impairment can be recorded as a single, persistent instance, updated over t
 In children, a clinician may identify a function that is outside the age-appropriate range as an impairment.
 
 This archetype is one of a set of three related archetypes designed to represent different aspects of how an individual functions in everyday life:
-- OBSERVATION.functional_ability, which records an assessment of an individual's ability to perform a single activity at a point in time;
-- EVALUATION.impairment_summary, this archetype, which records summary information about an impairment that may contribute to limitations in functional ability; and
-- EVALUATION.functional_support_requirements, which records summary information about the supports required to enable or assist an individual to perform an activity.
+- OBSERVATION.functional_ability, which records what an individual can do when performing an activity;
+- EVALUATION.impairment_summary, which records an impairment that may limit what an individual can do; and
+- EVALUATION.functional_support_requirements, which records the type and level of support an individual needs for an activity.
 
-In practice, these archetypes are often used alongside others, such as EVALUATION.problem_diagnosis and CLUSTER.symptom_sign. For example:
-- For an adult with Parkinson's disease, the condition is recorded using EVALUATION.problem_diagnosis, tremor using CLUSTER.symptom_sign, motor control using this archetype, the ability to fasten buttons using OBSERVATION.functional_ability, and the need for dressing aids using EVALUATION.functional_support_requirements.
-- For an adult with depression, the condition is recorded using EVALUATION.problem_diagnosis, low mood using CLUSTER.symptom_sign, motivation using this archetype, the ability to maintain employment using OBSERVATION.functional_ability, and the need for a graded return-to-work plan using EVALUATION.functional_support_requirements.
-- For a child with chronic otitis media, the condition is recorded using EVALUATION.problem_diagnosis, ear discharge using CLUSTER.symptom_sign, hearing using this archetype, the ability to follow instructions in the classroom using OBSERVATION.functional_ability, and the need for preferential classroom seating using EVALUATION.functional_support_requirements.">
+In practice, these archetypes are often used alongside others, such as CLUSTER.symptom_sign and EVALUATION.problem_diagnosis. For example:
+- For an adult with Parkinson’s disease, tremor is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to drink from a cup using OBSERVATION.functional_ability, motor control using EVALUATION.impairment_summary, and the need for a cup with a lid using EVALUATION.functional_support_requirements.
+- For an adult after a stroke, left-sided weakness is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to transfer from bed to chair using OBSERVATION.functional_ability, left lower limb motor control using EVALUATION.impairment_summary, and the need for physical assistance from two people to transfer from bed to chair using EVALUATION.functional_support_requirements.
+- For an adult with Alzheimer’s disease, forgetfulness is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to manage medications using OBSERVATION.functional_ability, short-term memory using EVALUATION.impairment_summary, and the need for prompting from a carer using EVALUATION.functional_support_requirements.
+- For a child with chronic otitis media, ear discharge is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to follow instructions in the classroom using OBSERVATION.functional_ability, hearing using EVALUATION.impairment_summary, and the need for seating near the teacher using EVALUATION.functional_support_requirements.">
             misuse = <"Not to be used to record an individual's ability to perform an activity. Use the OBSERVATION.functional_ability archetype for this purpose.
 
 Not to be used to record developmental milestones. Use the OBSERVATION.developmental_milestone archetype for this purpose.

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -14,13 +14,45 @@
     <original_author id="email">heather.leslie@atomicainformatics.com</original_author>
     <lifecycle_state>in_development</lifecycle_state>
     <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
     <other_details id="references">SOGC Fetal health Surveillance: antepartum and intrapartum Consensus Guideline: http://www.sogc.org/guidelines/documents/gui197CPG0709r.pdf&#xD;
 &#xD;
 Intrapartum care: management and delivery of care to women in labour: http://www.nice.org.uk/nicemedia/live/11837/36275/36275.pdf</other_details>
     <other_details id="current_contact">Heather Leslie, Atomica Informatics, Australia</other_details>
-    <other_details id="MD5-CAM-1.0.1">E30FED2FE0AE5E457C2CE6CC28CC0110</other_details>
-    <other_details id="build_uid">3120cd50-4b70-4f4e-8ab8-c91910d26bfa</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">96E11E016F0ED92A24010E62B4D7648A</other_details>
+    <other_details id="build_uid">f16ae29a-090c-47c1-bcb3-209ff84cfddd</other_details>
     <other_details id="revision">0.0.1-alpha</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sv</code_string>
+      </language>
+      <purpose>Att registrera observationer av fostrets hjärtfrekvens över tid, vanligtvis med hjälp av kardiotokograf eller liknande utrustning under senare delen av graviditeten eller under förlossningen, som underlag för bedömning av fostrets tillstånd i livmodern.</purpose>
+      <keywords>foster</keywords>
+      <keywords>fosterhjärta</keywords>
+      <keywords>fosterhjärtfrekvens</keywords>
+      <keywords>hjärtfrekvens</keywords>
+      <keywords>hjärtrytm</keywords>
+      <keywords>hjärtslag</keywords>
+      <keywords>fosterövervakning</keywords>
+      <keywords>fosterhjärtövervakning</keywords>
+      <keywords>CTG</keywords>
+      <keywords>kardiotokografi</keywords>
+      <use>Används för att registrera observationer av fostrets hjärtfrekvens över tid, vanligtvis med hjälp av kardiotokograf eller liknande utrustning under senare delen av graviditeten eller under förlossningen, som underlag för bedömning av fostrets tillstånd.&#xD;
+&#xD;
+Används för att registrera fynd från elektronisk övervakning, inklusive kardiotokografi (CTG).&#xD;
+&#xD;
+Används endast för att registrera uppgifter om fostrets hjärtslag.</use>
+      <misuse>Ska inte användas för att registrera enstaka, intermittenta mätningar av fostrets hjärtfrekvens. Använd i stället den överordnade arketypen OBSERVATION.fetal_heart.&#xD;
+&#xD;
+Ska inte användas för att registrera hjärtfrekvens hos spädbarn, barn eller vuxna.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
     <details>
       <language>
         <terminology_id>
@@ -45,6 +77,17 @@ Not to be used for recording the heart rate of infants, children or adults.</mis
       <copyright>© openEHR Foundation</copyright>
     </details>
   </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sv</code_string>
+    </language>
+    <author id="name">Manna Vosta</author>
+    <author id="organisation">Karolinska University Hospital</author>
+    <author id="email">manna.vosta@regionstockholm.se</author>
+  </translations>
   <uid>
     <value>ec6a2fb8-e8f1-3e41-b282-cb23715c5e35</value>
   </uid>
@@ -1602,6 +1645,231 @@ Not to be used for recording the heart rate of infants, children or adults.</mis
         <items id="description">Decelerations detected in association with over 50% of uterine contractions.</items>
       </items>
     </term_definitions>
+    <term_definitions language="sv">
+      <items code="at0.1">
+        <items id="text">Variabilitet</items>
+        <items id="description">Variabilitet i fostrets hjärtfrekvens som observerats under övervakningsperioden.</items>
+      </items>
+      <items code="at0.10">
+        <items id="text">Multimediarepresentation</items>
+        <items id="description">Digital representation av fynd från övervakningen.</items>
+        <items id="comment">Exempelvis video eller CTG-registrering.</items>
+      </items>
+      <items code="at0.11">
+        <items id="text">Ingen</items>
+        <items id="description">Variabilitet i hjärtfrekvensen kan inte detekteras.</items>
+      </items>
+      <items code="at0.12">
+        <items id="text">Minimal</items>
+        <items id="description">Variabiliteten i hjärtfrekvensen är detekterbar men högst 5 slag per minut.</items>
+      </items>
+      <items code="at0.13">
+        <items id="text">Måttlig</items>
+        <items id="description">Variabiliteten i hjärtfrekvensen är 6–25 slag per minut.</items>
+      </items>
+      <items code="at0.14">
+        <items id="text">Uttalad</items>
+        <items id="description">Variabiliteten i hjärtfrekvensen är större än 25 slag per minut.</items>
+      </items>
+      <items code="at0.15">
+        <items id="text">Saknas</items>
+        <items id="description">Accelerationer i fostrets hjärtfrekvens kan inte detekteras.</items>
+      </items>
+      <items code="at0.16">
+        <items id="text">Förekommer spontant</items>
+        <items id="description">Accelerationer i fostrets hjärtfrekvens förekommer spontant.</items>
+      </items>
+      <items code="at0.17">
+        <items id="text">Förekommer vid skalpstimulering</items>
+        <items id="description">Accelerationer i fostrets hjärtfrekvens detekteras som resultat av skalpstimulering.</items>
+      </items>
+      <items code="at0.18">
+        <items id="text">Saknas vid skalpstimulering</items>
+        <items id="description">Accelerationer i fostrets hjärtfrekvens detekteras inte vid skalpstimulering.</items>
+      </items>
+      <items code="at0.19">
+        <items id="text">Inga</items>
+        <items id="description">Inga decelerationer har detekterats.</items>
+      </items>
+      <items code="at0.2">
+        <items id="text">Variabilitetskategori</items>
+        <items id="description">Kategori för variabiliteten i fostrets hjärtfrekvens som observerats under övervakningsperioden.</items>
+      </items>
+      <items code="at0.20">
+        <items id="text">Enstaka</items>
+        <items id="description">Decelerationer har detekterats i samband med mindre än 50 % av livmodersammandragningarna.</items>
+      </items>
+      <items code="at0.21">
+        <items id="text">Återkommande</items>
+        <items id="description">Decelerationer har detekterats i samband med mer än 50 % av livmodersammandragningarna.</items>
+      </items>
+      <items code="at0.22">
+        <items id="text">Inga</items>
+        <items id="description">Inga decelerationer har detekterats.</items>
+      </items>
+      <items code="at0.23">
+        <items id="text">Enstaka</items>
+        <items id="description">Decelerationer har detekterats i samband med mindre än 50 % av livmodersammandragningarna.</items>
+      </items>
+      <items code="at0.24">
+        <items id="text">Återkommande</items>
+        <items id="description">Decelerationer har detekterats i samband med mer än 50 % av livmodersammandragningarna.</items>
+      </items>
+      <items code="at0.25">
+        <items id="text">Inga</items>
+        <items id="description">Inga decelerationer har detekterats.</items>
+      </items>
+      <items code="at0.26">
+        <items id="text">Enstaka</items>
+        <items id="description">Decelerationer har detekterats i samband med mindre än 50 % av livmodersammandragningarna.</items>
+      </items>
+      <items code="at0.27">
+        <items id="text">Återkommande</items>
+        <items id="description">Decelerationer har detekterats i samband med mer än 50 % av livmodersammandragningarna.</items>
+      </items>
+      <items code="at0.28">
+        <items id="text">Inga</items>
+        <items id="description">Inga decelerationer har detekterats.</items>
+      </items>
+      <items code="at0.29">
+        <items id="text">Enstaka</items>
+        <items id="description">Decelerationer har detekterats i samband med mindre än 50 % av livmodersammandragningarna.</items>
+      </items>
+      <items code="at0.3">
+        <items id="text">Beskrivning av variabilitet</items>
+        <items id="description">Beskrivning av det variabilitetsmönster som observerats under övervakningsperioden.</items>
+        <items id="comment">Exempelvis ett sinusoidalt mönster.</items>
+      </items>
+      <items code="at0.30">
+        <items id="text">Återkommande</items>
+        <items id="description">Decelerationer har detekterats i samband med mer än 50 % av livmodersammandragningarna.</items>
+      </items>
+      <items code="at0.4">
+        <items id="text">Accelerationer</items>
+        <items id="description">Förekomst av accelerationer som observerats under övervakningsperioden.</items>
+      </items>
+      <items code="at0.5">
+        <items id="text">Tidiga decelerationer</items>
+        <items id="description">Frekvens av tidiga decelerationer som observerats under övervakningsperioden.</items>
+      </items>
+      <items code="at0.6">
+        <items id="text">Okomplicerade variabla decelerationer</items>
+        <items id="description">Frekvens av okomplicerade variabla decelerationer som observerats under övervakningsperioden.</items>
+      </items>
+      <items code="at0.7">
+        <items id="text">Okomplicerade variabla decelerationer</items>
+        <items id="description">Frekvens av komplicerade variabla decelerationer som observerats under övervakningsperioden.</items>
+      </items>
+      <items code="at0.8">
+        <items id="text">Sena decelerationer</items>
+        <items id="description">Frekvens av sena decelerationer som observerats under övervakningsperioden.</items>
+      </items>
+      <items code="at0.9">
+        <items id="text">Förlängda decelerationer</items>
+        <items id="description">Varaktigheten av en enskild förlängd deceleration som observerats under övervakningsperioden.</items>
+        <items id="comment">Kan registreras flera gånger under övervakningsperioden, med en varaktighet för varje enskild deceleration.</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">Fosterhjärtövervakning</items>
+        <items id="description">Observationer av fostrets hjärtfrekvens över tid, vanligtvis med hjälp av kardiotokograf eller liknande utrustning.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Event Series</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Ospecificerad händelse</items>
+        <items id="description">Ospecificerad standardhändelse vid en tidpunkt eller inom ett tidsintervall som explicit kan definieras i en template eller genereras automatiskt av vissa IT-system.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Förekomst</items>
+        <items id="description">Fostrets hjärtslag kan detekteras.</items>
+        <items id="comment">Förekomst antas om fostrets hjärtfrekvens är &gt; 0.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Frekvens</items>
+        <items id="description">Fostrets observerade hjärtfrekvens.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Kommentar</items>
+        <items id="description">Kommentarer avseende fostrets hjärtfrekvens som inte beskrivs i övriga datafält.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Klinisk tolkning</items>
+        <items id="description">Enstaka ord, fras eller kort beskrivning som anger den kliniska innebörden och relevansen av fostrets hjärtfrekvens.</items>
+        <items id="comment">Exempelvis bradykardi eller takykardi.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Moderns kroppsställning</items>
+        <items id="description">Moderns kroppsställning när fostrets hjärtfrekvens mättes.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Stående</items>
+        <items id="description">Modern står vid mätningen av fostrets hjärtfrekvens.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Sittande</items>
+        <items id="description">Modern sitter vid mätningen av fostrets hjärtfrekvens.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Halvliggande</items>
+        <items id="description">Modern är halvliggande vid mätningen av fostrets hjärtfrekvens.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Liggande</items>
+        <items id="description">Modern ligger plant vid mätningen av fostrets hjärtfrekvens.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Liggande med vänsterlutning</items>
+        <items id="description">Modern ligger plant med viss sidolutning åt vänster.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Utrustning</items>
+        <items id="description">Uppgifter om den utrustning som används för att detektera fostrets hjärtfrekvens.</items>
+        <items id="comment">Exempelvis Pinardstetoskop eller dopplerultraljud.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Tilläggsinformation</items>
+        <items id="description">Plats för tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.</items>
+        <items id="comment">Exempelvis lokala informationskrav eller metadata för anpassning till FHIR.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Möjliga felkällor</items>
+        <items id="description">Beskrivning av faktorer och felkällor som inte registrerats i övriga datafält och som kan påverka mätningen av fostrets hjärtfrekvens.</items>
+        <items id="comment">Exempelvis feber hos modern eller fysisk ansträngning.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Pågående förlossning</items>
+        <items id="description">Är modern i aktiv förlossning under observationen?</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Pågående förlossning</items>
+        <items id="description">Modern är i förlossning när observationen görs.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Ingen pågående förlossning</items>
+        <items id="description">Modern är inte i förlossning när observationen görs.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Förekommer</items>
+        <items id="description">Fostrets hjärtslag kan detekteras.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Frånvarande</items>
+        <items id="description">Fostrets hjärtslag kan inte detekteras.</items>
+      </items>
+    </term_definitions>
   </ontology>
 </archetype>
-

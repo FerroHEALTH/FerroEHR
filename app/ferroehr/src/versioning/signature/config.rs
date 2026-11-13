@@ -66,6 +66,7 @@ pub enum VerifyOnRead {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct SigningConfig {
     /// Server-side signing of committed versions. Defaults **on** so the
     /// STANDARD "Signing" capability is demonstrably met.

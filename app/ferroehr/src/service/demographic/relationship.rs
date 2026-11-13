@@ -13,7 +13,9 @@
 //!
 //! The two representations are DISJOINT: neither is auto-synchronized into the
 //! other, and an inline `relationships` list in a committed PARTY body stays
-//! RM-valid data that is validated, stored and served verbatim.
+//! RM-valid data that is validated, stored and served verbatim. A container's
+//! `source` and `target` must name parties this server holds, and the container
+//! is listed in its target's `reverse_relationships` like an inline one.
 //!
 //! NOTE: no specification governs this: our own design; a relationship follows
 //! the PARTY pattern, an unknown id is a `404` and an update runs the PARTY's

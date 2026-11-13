@@ -1,0 +1,287 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=36478a12-0818-4901-9875-82c05901ef1e; build_uid=d7c0837c-3738-42d6-8dd1-05049dc207f3)
+    openEHR-EHR-EVALUATION.dnacpr_decision_uk.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2013-10-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    references = <
+        ["1"] = <"Derived from: https://ckm.apperta.org/ckm/archetypes/1051.32.205">
+        ["2"] = <"Information Standards Board ISB Data Dictionary Available at http://www.datadictionary.nhs.uk/">
+        ["3"] = <"End of Life Care Co-ordination: Core Content Standard Specification Available at http://www.isb.nhs.uk/documents/isb-1580/amd-29-2012/index_html">
+        ["4"] = <"NHS Scotland Key Information Summary">
+        ["5"] = <"Leeds ePaccs team">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"CE6CA6832444074D26A8C714E437856E">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the outcome of a clinical decision as to whether cardio-pulmonary resuscitation should be undertaken or not. This is generally referred to in UK clinical guidance as the DNACPR (Do not attempt cardio-pulmonary resuscitation) decision.
+
+This archetype is closely aligned with with the UK Information Standards Board (ISB) standard covering Core Content ">
+            keywords = <"DNACPR", "resuscitation", "EoL", "directive", "preference">
+            use = <"If cardiac or respiratory arrest is an expected part of the dying process and it is the opinion of the senior responsible clinician that attempted cardiopulmonary resuscitation would be unsuccessful or the outcome would be unacceptably burdensome for the person, the making and recording of this clinician’s opinion and recommendation for future management should a cardiopulmonary arrest occur, may be made. These are ‘Do not attempt cardiopulmonary resuscitation’ (DNACPR) orders. 
+
+Some patients with capacity to make their own decision may refuse attempted cardio pulmonary resuscitation in advance. These decisions have to be registered as part of an advance decision to refuse treatment (ADRT)">
+            misuse = <"This archetype should not be used to convey the results of other advanced directives, patient preferences or resusciation activity *e.g. suction) which falls short of full cardio-pulminary resuscitation.">
+            copyright = <"© Clinical Models UK, openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- DNACPR decision
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- DNACPR decision
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9000]}    -- DNACPR decision (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Date of DNACPR decision
+                        value matches {
+                            DV_DATE_TIME[at9007]
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Patient awareness of decision
+                        value matches {
+                            DV_CODED_TEXT[at9008] matches {
+                                defining_code matches {[ac9001]}    -- Patient awareness of decision (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Informal carer awareness of decision
+                        value matches {
+                            DV_CODED_TEXT[at9009] matches {
+                                defining_code matches {[ac9002]}    -- Informal carer awareness of decision (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0010] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- DNACPR form completed
+                        value matches {
+                            DV_CODED_TEXT[at9011] matches {
+                                defining_code matches {[ac9003]}    -- DNACPR form completed (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Discussion with patient
+                        value matches {
+                            DV_CODED_TEXT[at9012] matches {
+                                defining_code matches {[ac9004]}    -- Discussion with patient (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Discussion with informal carer
+                        value matches {
+                            DV_CODED_TEXT[at9013] matches {
+                                defining_code matches {[ac9005]}    -- Discussion with informal carer (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Location of DNACPR documentation
+                        value matches {
+                            DV_TEXT[at9014]
+                            DV_URI[at9015]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Date for review of DNACPR decision
+                        value matches {
+                            DV_DATE_TIME[at9016] matches {
+                                value
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"DNACPR decision">
+                description = <"The outcome of a clinical decision as to whether cardio-pulmonary resuscitation should be undertaken or not. This is generally referred to in UK clinical guidance as the DNACPR (Do not attempt cardio-pulmonary resuscitation) decision.">
+            >
+            ["at0002"] = <
+                text = <"Date of DNACPR decision">
+                description = <"The date at which the DNACPR decision was originally taken or last reviewed.">
+            >
+            ["at0003"] = <
+                text = <"DNACPR decision">
+                description = <"The clinical decision on whether (CPR) cardiopulmonary resuscitation  should be attempted. In some cases a clear answer may not be available to the recording clinician.">
+            >
+            ["at0004"] = <
+                text = <"For attempted cardio-pulmonary resuscitation">
+                description = <"Cardio-pulmonary resuscitation should be attempted.">
+            >
+            ["at0005"] = <
+                text = <"Not for attempted cardiopulmonary resuscitation">
+                description = <"Cardiopulmonary resuscitation should not be attempted.">
+            >
+            ["at0006"] = <
+                text = <"Patient awareness of decision">
+                description = <"Is the patient aware of the DNACPR decision?">
+            >
+            ["at0007"] = <
+                text = <"Patient not aware of DNACPR decision">
+                description = <"The patient is not aware of the do not attempt  cardiopulmonary resuscitation clinical decision">
+            >
+            ["at0008"] = <
+                text = <"Patient aware of DNACPR decision">
+                description = <"The patient is aware of the do not attempt cardiopulmonary resucitation decision.">
+            >
+            ["at0009"] = <
+                text = <"Date for review of DNACPR decision">
+                description = <"The date at which the DNACPR decision should be reviewed.">
+            >
+            ["at0011"] = <
+                text = <"Location of DNACPR documentation">
+                description = <"The location of the original DNACPR document, either a text description or an electronic link">
+            >
+            ["at0012"] = <
+                text = <"Informal carer awareness of decision">
+                description = <"Is the informal carer, or carers, aware of the DNACPR decision?">
+            >
+            ["at0013"] = <
+                text = <"Discussion with patient">
+                description = <"Has resuscitation been discussed with  the patient?">
+            >
+            ["at0014"] = <
+                text = <"Discussion with informal carer">
+                description = <"Has resuscitation been discussed with  the patient's informaral carer or carers?">
+            >
+            ["at0015"] = <
+                text = <"Resuscitation discussed with informal carer">
+                description = <"Resuscitation has been discussed with the patient's informal carer.">
+            >
+            ["at0016"] = <
+                text = <"Resuscitation discussed with patient">
+                description = <"Resuscitation has been discussed with the patient.">
+            >
+            ["at0017"] = <
+                text = <"DNACPR form completed">
+                description = <"Has the physical DNACPR form been completed?">
+            >
+            ["at0018"] = <
+                text = <"DNACPR form completed">
+                description = <"The physical DNACPR form has been completed.">
+            >
+            ["at0019"] = <
+                text = <"DNACPR form not completed">
+                description = <"The physical DNACPR form has not been completed.">
+            >
+            ["at0021"] = <
+                text = <"Comment">
+                description = <"Other narrative comment pertinent to the DNACPR decision.">
+            >
+            ["at0022"] = <
+                text = <"DNACPR decision status unknown">
+                description = <"There is no clear information on the outcome of the DNACPR decision.">
+            >
+            ["at0023"] = <
+                text = <"Resucitation not discussed with patient">
+                description = <"Resuscitation has not been discussed with the patient">
+            >
+            ["at0024"] = <
+                text = <"Resuscitation not discussed with informal carer">
+                description = <"Resuscitation has not been discussed with the patient's informal carer or carers.">
+            >
+            ["at0025"] = <
+                text = <"Informal carer not aware of DNACPR decision">
+                description = <"The informal carer is not aware of the do not attempt cardiopulmonary resuscitation clinical decision">
+            >
+            ["at0026"] = <
+                text = <"Informal carer aware of DNACPR decision">
+                description = <"The informal carer is aware of the do not attempt cardiopulmonary resucitation decision.">
+            >
+            ["ac9000"] = <
+                text = <"DNACPR decision (synthesised)">
+                description = <"The clinical decision on whether (CPR) cardiopulmonary resuscitation  should be attempted. In some cases a clear answer may not be available to the recording clinician. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Patient awareness of decision (synthesised)">
+                description = <"Is the patient aware of the DNACPR decision? (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Informal carer awareness of decision (synthesised)">
+                description = <"Is the informal carer, or carers, aware of the DNACPR decision? (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"DNACPR form completed (synthesised)">
+                description = <"Has the physical DNACPR form been completed? (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Discussion with patient (synthesised)">
+                description = <"Has resuscitation been discussed with  the patient? (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Discussion with informal carer (synthesised)">
+                description = <"Has resuscitation been discussed with  the patient's informaral carer or carers? (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["RCDSY_1999"] = <
+            ["at0004"] = <http://RCDSY_1999.org/id/1R00.>
+            ["at0005"] = <http://RCDSY_1999.org/id/1R10.>
+            ["at0022"] = <http://RCDSY_1999.org/id/9NgV.>
+        >
+        ["SNOMED-CT"] = <
+            ["at0004"] = <http://snomed.info/id/450475007>
+            ["at0005"] = <http://snomed.info/id/450476008>
+            ["at0022"] = <http://snomed.info/id/845151000000104>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0025", "at0026">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0007", "at0008">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0005", "at0022">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0015", "at0024">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0016", "at0023">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0018", "at0019">
+        >
+    >

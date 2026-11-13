@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -34,9 +34,9 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">96CF5AA5A83A89FF4CCD34E3278102D1</other_details>
-    <other_details id="build_uid">d80acb5c-7ce4-4d47-991b-5e1eb8712f4d</other_details>
-    <other_details id="revision">1.0.9</other_details>
+    <other_details id="MD5-CAM-1.0.1">6D6FD73A4DBD7B445FC8728AE45E781A</other_details>
+    <other_details id="build_uid">4fd7a514-dc89-409f-ae98-7b7dc4591fb3</other_details>
+    <other_details id="revision">1.1.1</other_details>
     <details>
       <language>
         <terminology_id>
@@ -44,7 +44,7 @@
         </terminology_id>
         <code_string>de</code_string>
       </language>
-      <purpose>Zur Darstellung von Details zur Referenzsequenz, die zur Beschreibung von Varianten verwendet wird.</purpose>
+      <purpose>Zur Erfassung von Details zur Referenzsequenz, die zur Beschreibung von Varianten verwendet wird.</purpose>
       <keywords>genetische Befunde</keywords>
       <keywords>Referenzsequenz</keywords>
       <keywords>Gentest</keywords>
@@ -115,9 +115,9 @@
       </terminology_id>
       <code_string>de</code_string>
     </language>
-    <author id="name">Natalia Strauch</author>
-    <author id="organisation">Medizinische Hochschule Hannover</author>
-    <author id="email">Strauch.Natalia@mh-hannover.de</author>
+    <author id="name">Natalia Strauch, Alina Rehberg, Hendrik Heiser</author>
+    <author id="organisation">Medizinische Hochschule Hannover, CISTEC AG</author>
+    <author id="email">Strauch.Natalia@mh-hannover.de, rehberg.alina@mh-hannover.de, hendrik.heiser@cistec.com</author>
   </translations>
   <translations>
     <language>
@@ -439,13 +439,13 @@
         </attributes>
       </children>
       <cardinality>
-        <is_ordered>true</is_ordered>
+        <is_ordered>false</is_ordered>
         <is_unique>false</is_unique>
         <interval>
           <lower_included>true</lower_included>
           <lower_unbounded>false</lower_unbounded>
           <upper_unbounded>true</upper_unbounded>
-          <lower>3</lower>
+          <lower>1</lower>
         </interval>
       </cardinality>
     </attributes>
@@ -707,129 +707,129 @@
     </term_definitions>
     <term_definitions language="de">
       <items code="at0018">
-        <items id="text">Reference sequence</items>
+        <items id="text">Referenzsequenz</items>
         <items id="description">Eine Datei mit Sequenzdaten, die als Referenz zur Beschreibung genetischer Varianten, die in einer analysierten Sequenz vorhanden sind, verwendet wird.</items>
       </items>
       <items code="at0019">
-        <items id="text">Source name</items>
-        <items id="description">The name of the data source containing the reference sequence.</items>
+        <items id="text">Quelle</items>
+        <items id="description">Der Name der Datenquelle, die die Referenzsequenz enthält.</items>
       </items>
       <items code="at0020">
-        <items id="text">Accession number</items>
-        <items id="description">A unique identifier to refer to a sequence record in a sequence repository.</items>
+        <items id="text">Zugangsnummer</items>
+        <items id="description">Eine eindeutige Kennung zur Referenzierung eines Sequenzdatensatzes in einem Sequenzrepositorium.</items>
       </items>
       <items code="at0021">
-        <items id="text">Version number</items>
-        <items id="description">The version number of the data record of the reference sequence.</items>
-        <items id="comment">For example: "hg38", "hg19".</items>
+        <items id="text">Versionsnummer</items>
+        <items id="description">Die Versionsnummer des Datensatzes der Referenzsequenz.</items>
+        <items id="comment">Zum Beispiel: "hg38", "hg19".</items>
       </items>
       <items code="at0022">
         <items id="text">URL</items>
-        <items id="description">Network address.</items>
+        <items id="description">Netzwerkadresse.</items>
       </items>
       <items code="at0023">
-        <items id="text">Chromosome label</items>
-        <items id="description">Chromosome identifier.</items>
+        <items id="text">Chromosomenlabel</items>
+        <items id="description">Chromosomenkennung.</items>
       </items>
       <items code="at0024">
-        <items id="text">Chromosome 1</items>
-        <items id="description">Chromosome 1.</items>
+        <items id="text">Chromosom 1</items>
+        <items id="description">Chromosom 1.</items>
       </items>
       <items code="at0025">
-        <items id="text">Chromosome 2</items>
-        <items id="description">Chromosome 2.</items>
+        <items id="text">Chromosom 2</items>
+        <items id="description">Chromosom 2.</items>
       </items>
       <items code="at0026">
-        <items id="text">Chromosome 3</items>
-        <items id="description">Chromosome 3.</items>
+        <items id="text">Chromosom 3</items>
+        <items id="description">Chromosom 3.</items>
       </items>
       <items code="at0027">
-        <items id="text">Chromosome 4</items>
-        <items id="description">Chromosome 4.</items>
+        <items id="text">Chromosom 4</items>
+        <items id="description">Chromosom 4.</items>
       </items>
       <items code="at0028">
-        <items id="text">Chromosome 5</items>
-        <items id="description">Chromosome 5.</items>
+        <items id="text">Chromosom 5</items>
+        <items id="description">Chromosom 5.</items>
       </items>
       <items code="at0029">
-        <items id="text">Chromosome 6</items>
-        <items id="description">Chromosome 6.</items>
+        <items id="text">Chromosom 6</items>
+        <items id="description">Chromosom 6.</items>
       </items>
       <items code="at0030">
-        <items id="text">Chromosome 7</items>
-        <items id="description">Chromosome 7.</items>
+        <items id="text">Chromosom 7</items>
+        <items id="description">Chromosom 7.</items>
       </items>
       <items code="at0031">
-        <items id="text">Chromosome 8</items>
-        <items id="description">Chromosome 8.</items>
+        <items id="text">Chromosom 8</items>
+        <items id="description">Chromosom 8.</items>
       </items>
       <items code="at0032">
-        <items id="text">Chromosome 9</items>
-        <items id="description">Chromosome 9.</items>
+        <items id="text">Chromosom 9</items>
+        <items id="description">Chromosom 9.</items>
       </items>
       <items code="at0033">
-        <items id="text">Chromosome 10</items>
-        <items id="description">Chromosome 10.</items>
+        <items id="text">Chromosom 10</items>
+        <items id="description">Chromosom 10.</items>
       </items>
       <items code="at0034">
-        <items id="text">Chromosome 11</items>
-        <items id="description">Chromosome 11.</items>
+        <items id="text">Chromosom 11</items>
+        <items id="description">Chromosom 11.</items>
       </items>
       <items code="at0035">
-        <items id="text">Chromosome 12</items>
-        <items id="description">Chromosome 12.</items>
+        <items id="text">Chromosom 12</items>
+        <items id="description">Chromosom 12.</items>
       </items>
       <items code="at0036">
-        <items id="text">Chromosome 13</items>
-        <items id="description">Chromosome 13.</items>
+        <items id="text">Chromosom 13</items>
+        <items id="description">Chromosom 13.</items>
       </items>
       <items code="at0037">
-        <items id="text">Chromosome 14</items>
-        <items id="description">Chromosome 14.</items>
+        <items id="text">Chromosom 14</items>
+        <items id="description">Chromosom 14.</items>
       </items>
       <items code="at0038">
-        <items id="text">Chromosome 15</items>
-        <items id="description">Chromosome 15.</items>
+        <items id="text">Chromosom 15</items>
+        <items id="description">Chromosom 15.</items>
       </items>
       <items code="at0039">
-        <items id="text">Chromosome 16</items>
-        <items id="description">Chromosome 16.</items>
+        <items id="text">Chromosom 16</items>
+        <items id="description">Chromosom 16.</items>
       </items>
       <items code="at0040">
-        <items id="text">Chromosome 17</items>
-        <items id="description">Chromosome 17.</items>
+        <items id="text">Chromosom 17</items>
+        <items id="description">Chromosom 17.</items>
       </items>
       <items code="at0041">
-        <items id="text">Chromosome 18</items>
-        <items id="description">Chromosome 18.</items>
+        <items id="text">Chromosom 18</items>
+        <items id="description">Chromosom 18.</items>
       </items>
       <items code="at0042">
-        <items id="text">Chromosome 19</items>
-        <items id="description">Chromosome 19.</items>
+        <items id="text">Chromosom 19</items>
+        <items id="description">Chromosom 19.</items>
       </items>
       <items code="at0043">
-        <items id="text">Chromosome 20</items>
-        <items id="description">Chromosome 20.</items>
+        <items id="text">Chromosom 20</items>
+        <items id="description">Chromosom 20.</items>
       </items>
       <items code="at0044">
-        <items id="text">Chromosome 21</items>
-        <items id="description">Chromosome 21.</items>
+        <items id="text">Chromosom 21</items>
+        <items id="description">Chromosom 21.</items>
       </items>
       <items code="at0045">
-        <items id="text">Chromosome 22</items>
-        <items id="description">Chromosome 22.</items>
+        <items id="text">Chromosom 22</items>
+        <items id="description">Chromosom 22.</items>
       </items>
       <items code="at0046">
-        <items id="text">Chromosome X</items>
-        <items id="description">Chromosome X.</items>
+        <items id="text">Chromosom X</items>
+        <items id="description">Chromosom X.</items>
       </items>
       <items code="at0047">
-        <items id="text">Chromosome Y</items>
-        <items id="description">Chromosome Y.</items>
+        <items id="text">Chromosom Y</items>
+        <items id="description">Chromosom Y.</items>
       </items>
       <items code="at0048">
-        <items id="text">Reference genome assembly</items>
-        <items id="description">The reference genome assembled as a representative model of the human genome.</items>
+        <items id="text">Referenzgenom</items>
+        <items id="description">Das Referenzgenom, das als repräsentatives Modell des menschlichen Genoms assembliert wurde.</items>
       </items>
     </term_definitions>
     <term_definitions language="sv">
@@ -1163,4 +1163,3 @@
     </term_bindings>
   </ontology>
 </archetype>
-

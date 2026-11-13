@@ -1,0 +1,292 @@
+﻿archetype (adl_version=1.4; uid=153d87af-6a60-3e3c-b7fa-137fc7d75a6e)
+	openEHR-EHR-CLUSTER.individual_personal.v0
+
+concept
+	[at0000]	-- Individual's personal demographics
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Hans Demski">
+				["organisation"] = <"Helmholtz Zentrum München">
+				["email"] = <"demski@helmholtz-muenchen.de">
+			>
+		>
+		["pt-br"] = <
+			language = <[ISO_639-1::pt-br]>
+			author = <
+				["name"] = <"Danielle Santos Alves">
+				["organisation"] = <"Federal University of Pernambuco">
+				["email"] = <"angeldannyalves@gmail.com">
+			>
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Ian McNicoll">
+		["organisation"] = <"freshEHR Clinical Informatics">
+		["email"] = <"ian.mcnicoll@freshehr.com">
+		["date"] = <"2007-11-12">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Dokumentation persönlicher Daten wie Name(n), Adresse(n) und Kontaktmöglichkeit(en) einer Person die nicht eindeutig Registern mit demografischen Daten zugeordnet werden kann.">
+			use = <"Zur Dokumentation persönlicher Daten von Bezugspersonen (z.B. Familenmitgliedern) die nicht eindeutig Registern mit demografischen Daten (z.B. einer elektronischen Krankenakte) zugeordnet werden können. Um die mehrfache Erstellung von eingebetteten Clustern zu vermeiden wäre es gut Templates für spezielle Anwendungsfälle zu erstellen.">
+			keywords = <"Person", "Persönliche Daten", "Name", "Adresse", "Kontakt">
+			misuse = <"Nicht zur Identifikation von Individuen zu benutzen, die eindeutig Registern mit demografischen Daten zugeordnet werden können (z.B. einer elektronischen Krankenakte, einem Master Patient Index, etc.).">
+			copyright = <"© openEHR Foundation">
+		>
+		["pt-br"] = <
+			language = <[ISO_639-1::pt-br]>
+			purpose = <"Para registrar dados demográficos pessoais, incluindo nome(s), endereço(s) ou contatos de telecomunicações de uma pessoa não unicamente identificada no registro eletrônico de saúde.">
+			use = <"Use para registrar detalhes de membros externas, por exemplo, membros da família que não podem ser referenciados exclusivamente no registro eletrônico de saúde. Se beneficiaria de modelar isso para casos de uso específicos para evitar a necessidade de construir os clusters aninhados a cada vez.">
+			keywords = <"pessoa", "dados demográficos", "nome", "endereço", "telecomunicações">
+			misuse = <"Não deve ser usado para identificar os indivíduos que podem ser referenciados exclusivamente a partir de registros de detalhes demográficos, por exemplo, dentro do registro eletrônico da saúde, índices principais de pacientes, etc.">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"لتسجيل المعلومات الديموغرافية الشخصية بما في ذلك الاسم/الأسماء, العنوان/العناوين, أو جهات الاتصال السلكي و اللاسلكي لشخص لا يتم التعرف عليه بشكل فريد في داخل السجل الطبي الإلكتروني">
+			use = <"يستخدم لتسجيل تفاصيل الأطراف الخارجية, مثل: أفراد العائلة الذين لا يمكن الرجوع إليهم بشكل فريد في داخل السجل الطبي الإلكتروني.
+و يفيد ذلك في توفير قالب لحالات استخدام معينة لتجنب الحاجة إلى بناء عناقيد متداخلة في كل مرة.">
+			keywords = <"الشخص", "المعلومات الديموغرافية", "الاسم", "العنوان", "الاتصال السلكي و اللاسلكي">
+			misuse = <"لا يستخدم لتعريف الأفراد الذين يمكن الرجوع إليهم بشكل فريد من سجلات التفاصيل الديموغرافية, مثلا: في داخل السجل الطبي الإلكتروني و الفهارس الرئيسية للمرضى, إلى آخره">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record personal demographics including name(s), Address(es) or telecoms contacts for a person not uniquely identifiied within the electronic health record.">
+			use = <"Use to record details of external parties e.g family members who cannot be referenced uniquely within the electronic health record. Would benefit from templating this for specific use-cases to avoid having to construct the nested clusters each time.">
+			keywords = <"person", "demographics", "name", "address", "telecom">
+			misuse = <"Not to be used to identify the individuals who can be uniquely referenced from registers of demographic details eg within the electronic health record, master patient indexes etc.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"From NHS Scotland SCI-XML messaging standards http://www.isdscotland.org/isd/files/general-v2-7.xsd NHS Scotland Interoperability Working Group http://www.isdscotland.org/isd/5194.html and based on a  structure for personal data pertaining to a person.  ENV 13606 - 4:2000 7.6.12-14">
+		["current_contact"] = <"Ian McNicoll, freshEHR Clinical Informatics, ian.mcnicoll@freshehr.com">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"72260833CA44FDD423170279C06756DF">
+		["build_uid"] = <"02e2c7b7-75a8-4964-b7e2-6e08a4292b78">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	CLUSTER[at0000] matches {    -- Individual's personal demographics
+		items cardinality matches {1..*; unordered} matches {
+			allow_archetype CLUSTER[at0013] occurrences matches {0..1} matches {    -- Person name
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.person_name\.v1|openEHR-EHR-CLUSTER\.person_name\.v0/}
+			}
+			ELEMENT[at0016] occurrences matches {0..*} matches {    -- Identifier
+				value matches {
+					DV_TEXT matches {*}
+					DV_IDENTIFIER matches {*}
+				}
+			}
+			ELEMENT[at0007] occurrences matches {0..1} matches {    -- Date of Birth
+				value matches {
+					DV_DATE_TIME matches {*}
+				}
+			}
+			ELEMENT[at0008] occurrences matches {0..1} matches {    -- Relationship to subject
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			allow_archetype CLUSTER[at0014] occurrences matches {0..*} matches {    -- Address details
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.address\.v1|openEHR-EHR-CLUSTER\.address\.v0/}
+			}
+			allow_archetype CLUSTER[at0015] occurrences matches {0..*} matches {    -- Telecom details
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.telecom_details\.v1|openEHR-EHR-CLUSTER\.telecom_details\.v0/}
+			}
+			allow_archetype CLUSTER[at0018] occurrences matches {0..*} matches {    -- Ethnicity/Indigenous status
+				include
+					archetype_id/value matches {/.*/}
+			}
+			allow_archetype CLUSTER[at0019] occurrences matches {0..*} matches {    -- Entitlements
+				include
+					archetype_id/value matches {/.*/}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Individual's personal demographics">
+					description = <"Personal demographics including name(s) , addresse(s) and telecommunication contact details.">
+				>
+				["at0007"] = <
+					text = <"Date of Birth">
+					description = <"Individual's date of birth.">
+				>
+				["at0008"] = <
+					text = <"Relationship to subject">
+					description = <"The relationship of this individual to the subject e.g. family member, informal carer.">
+				>
+				["at0013"] = <
+					text = <"Person name">
+					description = <"Name details of the individual.">
+				>
+				["at0014"] = <
+					text = <"Address details">
+					description = <"Address details of the individual.">
+				>
+				["at0015"] = <
+					text = <"Telecom details">
+					description = <"Telecommunication details of the individual.">
+				>
+				["at0016"] = <
+					text = <"Identifier">
+					description = <"Identifier of individual.">
+				>
+				["at0018"] = <
+					text = <"Ethnicity/Indigenous status">
+					description = <"Ethnicity and/or indigenous status of the individual.">
+				>
+				["at0019"] = <
+					text = <"Entitlements">
+					description = <"Inidividual's eligible entitlements.">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"Persönliche Daten">
+					description = <"Persönliche Daten wie Name(n), Adresse(n) und Kontaktmöglichkeit(en)">
+				>
+				["at0007"] = <
+					text = <"Geburtsdatum">
+					description = <"Geburtsdatum">
+				>
+				["at0008"] = <
+					text = <"Art der Beziehung">
+					description = <"Beschreibt die Art der Beziehung z.B. Familienmitglied,gesetzlicher Betreuer">
+				>
+				["at0013"] = <
+					text = <"Name">
+					description = <"*">
+				>
+				["at0014"] = <
+					text = <"Adressangaben">
+					description = <"*">
+				>
+				["at0015"] = <
+					text = <"Kontaktdetails">
+					description = <"*">
+				>
+				["at0016"] = <
+					text = <"*New element(en)">
+					description = <"**(en)">
+				>
+				["at0018"] = <
+					text = <"*Cluster(en)">
+					description = <"**(en)">
+				>
+				["at0019"] = <
+					text = <"*Cluster(en)">
+					description = <"**(en)">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0000"] = <
+					text = <"المعلومات الديموغرافية الشخصية للفرد">
+					description = <"المعلومات الديموغرافية الشخصية بما في ذلك: الاسم/الأسماء, العنوان/العناوين, و تفاصيل جهات الاتصال السلكية و اللاسلكية">
+				>
+				["at0007"] = <
+					text = <"تاريخ الميلاد">
+					description = <"تاريخ الميلاد الخاص بالفرد">
+				>
+				["at0008"] = <
+					text = <"العلاقة بالمريض">
+					description = <"علاقة هذا الفرد بالمريض, مثل: فرد من العائلة, شخص يقدم الرعاية بشكل غير رسمي">
+				>
+				["at0013"] = <
+					text = <"الاسم">
+					description = <"تفاصيل اسم الفرد">
+				>
+				["at0014"] = <
+					text = <"تفاصيل العنوان">
+					description = <"تفاصيل عنوان الفرد">
+				>
+				["at0015"] = <
+					text = <"تفاصيل الاتصال السلكي و اللاسلكي">
+					description = <"تفاصيل الاتصال السلكي و اللاسلكي للفرد">
+				>
+				["at0016"] = <
+					text = <"العنصر التعريفي">
+					description = <"العنصر التعريفي للفرد">
+				>
+				["at0018"] = <
+					text = <"حالة العرقية/الأهلية">
+					description = <"حالة العرقية و/أو الأهلية للفرد">
+				>
+				["at0019"] = <
+					text = <"الاستحقاقات">
+					description = <"الاستحقاقات المؤهلة الخاصة بالفرد">
+				>
+			>
+		>
+		["pt-br"] = <
+			items = <
+				["at0000"] = <
+					text = <"Dados demográficos pessoais do indivíduo">
+					description = <"Dados demográficos pessoais, incluindo nome (s), endereço (s) e detalhes de contato de telecomunicações.">
+				>
+				["at0007"] = <
+					text = <"Data de nascimento">
+					description = <"Data de nascimento do indivíduo.">
+				>
+				["at0008"] = <
+					text = <"Relação com o sujeito">
+					description = <"A relação deste indivíduo com o sujeito, ex. familiar, cuidador informal.">
+				>
+				["at0013"] = <
+					text = <"Nome da pessoa">
+					description = <"Detalhes do nome da pessoa.">
+				>
+				["at0014"] = <
+					text = <"Detalhes do endereço">
+					description = <"Detalhes do endereço do indivíduo.">
+				>
+				["at0015"] = <
+					text = <"Detalhes de telecomunicações">
+					description = <"Detalhes de telecomunicações do indivíduo.">
+				>
+				["at0016"] = <
+					text = <"Identificador">
+					description = <"Identificador do indivíduo">
+				>
+				["at0018"] = <
+					text = <"Etnia / Status Indígena">
+					description = <"Etnia e / ou status indígena do indivíduo.">
+				>
+				["at0019"] = <
+					text = <"Direitos">
+					description = <"Direitos elegíveis do indivíduo.">
+				>
+			>
+		>
+	>

@@ -1,0 +1,483 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=25fdab70-6cf1-4330-b7b2-84db7285cb2f; build_uid=10d55eeb-cf09-4a76-b592-a544387e8ca1)
+    openEHR-EHR-CLUSTER.tnm_staging-prostate.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.tnm_staging.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, United Kingdom">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"27/07/2009">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie Ocean Informatics Australia", "Sam Heard Ocean Informatics Australia", "Koray Atalag, University of Auckland, New Zealand">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"American Joint Committee on Cancer. TNM schema files [Internet]. [cited 2009 Jul 27 ] ">
+        ["2"] = <"Available from: http://www.cancerstaging.org/education/tnmschema/tnmschema.html">
+        ["3"] = <"Greene FL, Page DL, Fleming ID. et al, eds, for the American Joint Committee on Cancer. AJCC Cancer Staging Manual. 6th ed. New York, NY: Springer-Verlag; 2002. ">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"927A25234780B3723824C44753AB6255">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the TNM staging classification for prostate cancer (Sixth Edition).">
+            keywords = <"tumour", "TNM", "malignancy", "cancer", "staging", "classification", "grade", "grading", "stage", "lymph node", "metastasis", "prostate">
+            use = <"Use only for the Sixth edition of TNM prostate classification.">
+            misuse = <"Not to be used for other editions of TNM classification.
+Not to be to stage transitional cell carcinoma of the prostate.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- TNM staging - Prostate cancer (Sixth edition)
+        items matches {
+            CLUSTER[at0002] matches {
+                items matches {
+                    ELEMENT[at0003] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9001.1] matches {
+                                defining_code matches {[ac0.9000]}    -- Primary tumour (T) (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0004] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9002.1] matches {
+                                defining_code matches {[ac0.9001]}    -- Regional lymph nodes (N) (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0005] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9003.1] matches {
+                                defining_code matches {[ac0.9002]}    -- Distant metastasis (M) (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0014] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9005.1] matches {
+                                defining_code matches {[ac0.9003]}    -- Clinical stage grouping (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0006] matches {
+                items matches {
+                    ELEMENT[at0007] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9007.1] matches {
+                                defining_code matches {[ac0.9004]}    -- Primary tumour (pT) (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0008] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9008.1] matches {
+                                defining_code matches {[ac0.9005]}    -- Regional lymph node (pN) (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0009] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9009.1] matches {
+                                defining_code matches {[ac0.9006]}    -- Distant metastasis (pM) (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0011] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9010.1] matches {
+                                defining_code
+                            }
+                        }
+                    }
+                    ELEMENT[at0015] matches {
+                        value matches {
+                            DV_CODED_TEXT[at9011.1] matches {
+                                defining_code matches {[ac0.9007]}    -- Pathological stage grouping (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.100"] = <
+                text = <"pM0">
+                description = <"No distant metastasis.">
+            >
+            ["at0.101"] = <
+                text = <"pM1">
+                description = <"Distant metastasis present.">
+            >
+            ["at0.102"] = <
+                text = <"pM1a">
+                description = <"Metastasis to non-regional lymph nodes.">
+            >
+            ["at0.103"] = <
+                text = <"pM1b">
+                description = <"Metastasis to bone(s).">
+            >
+            ["at0.104"] = <
+                text = <"pM1c">
+                description = <"Metastasis to other site(s) with or without bone disease.">
+            >
+            ["at0.105"] = <
+                text = <"pN1mi">
+                description = <"Metastasis to regional nodes no larger than 0.2cm.">
+            >
+            ["at0.106"] = <
+                text = <"Stage I">
+                description = <"T1a,N0,M0,G1">
+            >
+            ["at0.107"] = <
+                text = <"Stage II">
+                description = <"T1a,N0,M0,G2-4; T1b-c,N0,M0,AnyG; T1-2,N0,M0,AnyG">
+            >
+            ["at0.108"] = <
+                text = <"Stage III">
+                description = <"T3,N0,M0,AnyG">
+            >
+            ["at0.109"] = <
+                text = <"Stage IV">
+                description = <"T4,N0,M0,AnyG; AnyT,N1,M0,AnyG; AnyT,AnyN,M1,AnyG">
+            >
+            ["at0.110"] = <
+                text = <"Stage I">
+                description = <"T1a,N0,M0,G1">
+            >
+            ["at0.111"] = <
+                text = <"Stage II">
+                description = <"T1a,N0,M0,G2-4; T1b-c,N0,M0,AnyG; T1-2,N0,M0,AnyG">
+            >
+            ["at0.112"] = <
+                text = <"Stage III">
+                description = <"T3,N0,M0,AnyG">
+            >
+            ["at0.113"] = <
+                text = <"Stage IV">
+                description = <"T4,N0,M0,AnyG; AnyT,N1,M0,AnyG; AnyT,AnyN,M1,AnyG">
+            >
+            ["at0.43"] = <
+                text = <"TX">
+                description = <"Primary tumour cannot be assessed.">
+            >
+            ["at0.44"] = <
+                text = <"T0">
+                description = <"No evidence of primary tumour.">
+            >
+            ["at0.45"] = <
+                text = <"T1">
+                description = <"Clinically inapparent tumour not palpable or visible by imaging.">
+            >
+            ["at0.46"] = <
+                text = <"T1a">
+                description = <"Tumour incidental histological finding in 5% or less of tissue resected.">
+            >
+            ["at0.47"] = <
+                text = <"T1b">
+                description = <"Tumour incidental histological finding in more than 5% of tissue resected.">
+            >
+            ["at0.48"] = <
+                text = <"T1c">
+                description = <"Tumour identified by needle biopsy.">
+            >
+            ["at0.49"] = <
+                text = <"T2">
+                description = <"Tumour confined within prostate.">
+            >
+            ["at0.50"] = <
+                text = <"T2a">
+                description = <"Tumour involves one half of one lobe or less.">
+            >
+            ["at0.51"] = <
+                text = <"T2b">
+                description = <"Tumour involves more than half of one lobe, but not both lobes.">
+            >
+            ["at0.52"] = <
+                text = <"T2c">
+                description = <"Tumour involves both lobes.">
+            >
+            ["at0.53"] = <
+                text = <"T3">
+                description = <"Tumour extends through the prostatic capsule.">
+            >
+            ["at0.54"] = <
+                text = <"T3a">
+                description = <"Extracapsular extension (unilateral or bilateral).">
+            >
+            ["at0.55"] = <
+                text = <"T3b">
+                description = <"Tumour invades seminal vesicle(s).">
+            >
+            ["at0.56"] = <
+                text = <"T4">
+                description = <"Tumour is fixed or invades adjacent structures other than seminal vesicles: bladder neck, external sphincter, rectum, levator muscles, or pelvic wall.">
+            >
+            ["at0.57"] = <
+                text = <"pTX">
+                description = <"Primary tumour cannot be assessed.">
+            >
+            ["at0.58"] = <
+                text = <"pT0">
+                description = <"No evidence of primary tumour.">
+            >
+            ["at0.59"] = <
+                text = <"pT1">
+                description = <"Clinically inapparent tumour not palpable or visible by imaging.">
+            >
+            ["at0.60"] = <
+                text = <"pT1a">
+                description = <"Tumour incidental histological finding in 5% or less of tissue resected.">
+            >
+            ["at0.61"] = <
+                text = <"pT1b">
+                description = <"Tumour incidental histological finding in more than 5% of tissue resected.">
+            >
+            ["at0.62"] = <
+                text = <"pT1c">
+                description = <"Tumour identified by needle biopsy.">
+            >
+            ["at0.63"] = <
+                text = <"pT2">
+                description = <"Tumour confined within prostate.">
+            >
+            ["at0.64"] = <
+                text = <"pT2a">
+                description = <"Tumour involves one half of one lobe or less.">
+            >
+            ["at0.65"] = <
+                text = <"pT2b">
+                description = <"Tumour involves more than half of one lobe, but not both lobes.">
+            >
+            ["at0.66"] = <
+                text = <"pT2c">
+                description = <"Tumour involves both lobes.">
+            >
+            ["at0.67"] = <
+                text = <"pT3">
+                description = <"Tumour extends through the prostatic capsule.">
+            >
+            ["at0.68"] = <
+                text = <"pT3a">
+                description = <"Extracapsular extension (unilateral or bilateral).">
+            >
+            ["at0.69"] = <
+                text = <"pT3b">
+                description = <"Tumour invades seminal vesicle(s).">
+            >
+            ["at0.70"] = <
+                text = <"pT4">
+                description = <"Tumour is fixed or invades adjacent structures other than seminal vesicles: bladder neck, external sphincter, rectum, levator muscles, or pelvic wall.">
+            >
+            ["at0.71"] = <
+                text = <"TX">
+                description = <"Primary tumour cannot be assessed.">
+            >
+            ["at0.72"] = <
+                text = <"T0">
+                description = <"No evidence of primary tumour.">
+            >
+            ["at0.73"] = <
+                text = <"T1">
+                description = <"Clinically inapparent tumour not palpable or visible by imaging.">
+            >
+            ["at0.74"] = <
+                text = <"T1a">
+                description = <"Tumour incidental histological finding in 5% or less of tissue resected.">
+            >
+            ["at0.75"] = <
+                text = <"T1b">
+                description = <"Tumour incidental histological finding in more than 5% of tissue resected.">
+            >
+            ["at0.76"] = <
+                text = <"T1c">
+                description = <"Tumour identified by needle biopsy.">
+            >
+            ["at0.77"] = <
+                text = <"T2">
+                description = <"Tumour confined within prostate.">
+            >
+            ["at0.78"] = <
+                text = <"T2a">
+                description = <"Tumour involves one half of one lobe or less.">
+            >
+            ["at0.79"] = <
+                text = <"T2b">
+                description = <"Tumour involves more than half of one lobe, but not both lobes.">
+            >
+            ["at0.80"] = <
+                text = <"T2c">
+                description = <"Tumour involves both lobes.">
+            >
+            ["at0.81"] = <
+                text = <"T3">
+                description = <"Tumour extends through the prostatic capsule.">
+            >
+            ["at0.82"] = <
+                text = <"T3a">
+                description = <"Extracapsular extension (unilateral or bilateral).">
+            >
+            ["at0.83"] = <
+                text = <"T4">
+                description = <"Tumour is fixed or invades adjacent structures other than seminal vesicles: bladder neck, external sphincter, rectum, levator muscles, or pelvic wall.">
+            >
+            ["at0.84"] = <
+                text = <"T3b">
+                description = <"Tumour invades seminal vesicle(s).">
+            >
+            ["at0.85"] = <
+                text = <"NX">
+                description = <"Regional nodes cannot be assessed.">
+            >
+            ["at0.86"] = <
+                text = <"N0">
+                description = <"No metastasis to regional lymph nodes.">
+            >
+            ["at0.87"] = <
+                text = <"N1">
+                description = <"Metastasis in regional lymph nodes.">
+            >
+            ["at0.88"] = <
+                text = <"N2">
+                description = <"Metastasis to ipsilateral mediastinal and/or subcarinal nodes.">
+            >
+            ["at0.89"] = <
+                text = <"N3">
+                description = <"Metastasis to contralateral mediastinal, contralateral hilar, ipsilateral or contralateral scalene, or supraclavicular nodes.">
+            >
+            ["at0.90"] = <
+                text = <"pNX">
+                description = <"Regional nodes cannot be assessed.">
+            >
+            ["at0.91"] = <
+                text = <"pN0">
+                description = <"No metastasis to regional lymph nodes.">
+            >
+            ["at0.92"] = <
+                text = <"pN1">
+                description = <"Metastasis in regional lymph nodes.">
+            >
+            ["at0.93"] = <
+                text = <"MX">
+                description = <"Distant metastasis cannot be assessed.">
+            >
+            ["at0.94"] = <
+                text = <"M0">
+                description = <"No distant metastasis.">
+            >
+            ["at0.95"] = <
+                text = <"M1">
+                description = <"Distant metastasis present.">
+            >
+            ["at0.96"] = <
+                text = <"M1a">
+                description = <"Metastasis to non-regional lymph nodes.">
+            >
+            ["at0.97"] = <
+                text = <"M1b">
+                description = <"Metastasis to bone(s).">
+            >
+            ["at0.98"] = <
+                text = <"M1c">
+                description = <"Metastasis to other site(s) with or without bone disease.">
+            >
+            ["at0.99"] = <
+                text = <"pMX">
+                description = <"Distant metastasis cannot be assessed.">
+            >
+            ["at0000.1"] = <
+                text = <"TNM staging - Prostate cancer (Sixth edition)">
+                description = <"TNM Staging classification for prostate cancer (Sixth edition).">
+            >
+            ["ac0.1"] = <
+                text = <"New constraint">
+                description = <"*">
+            >
+            ["ac0.9000"] = <
+                text = <"Primary tumour (T) (synthesised)">
+                description = <"Clincal assessment of the primary tumour. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Regional lymph nodes (N) (synthesised)">
+                description = <"Clinical assessment of the regional lymph nodes. (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Distant metastasis (M) (synthesised)">
+                description = <"Clinical assessment of distant metastasis. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Clinical stage grouping (synthesised)">
+                description = <"The TNM Clinical stage grouping. (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"Primary tumour (pT) (synthesised)">
+                description = <"Pathological assessment of the primary tumour. (synthesised)">
+            >
+            ["ac0.9005"] = <
+                text = <"Regional lymph node (pN) (synthesised)">
+                description = <"Pathological assessment of the regional lymph nodes. (synthesised)">
+            >
+            ["ac0.9006"] = <
+                text = <"Distant metastasis (pM) (synthesised)">
+                description = <"Pathological assessment of distant metastases. (synthesised)">
+            >
+            ["ac0.9007"] = <
+                text = <"Pathological stage grouping (synthesised)">
+                description = <"The TNM Pathological stage grouping. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.43", "at0.44", "at0.45", "at0.46", "at0.47", "at0.48", "at0.49", "at0.50", "at0.51", "at0.52", "at0.53", "at0.54", "at0.55", "at0.56">
+        >
+        ["ac0.9007"] = <
+            id = <"ac0.9007">
+            members = <"at0.110", "at0.111", "at0.112", "at0.113">
+        >
+        ["ac0.9005"] = <
+            id = <"ac0.9005">
+            members = <"at0.90", "at0.91", "at0.92", "at0.105">
+        >
+        ["ac0.9006"] = <
+            id = <"ac0.9006">
+            members = <"at0.99", "at0.100", "at0.101", "at0.102", "at0.103", "at0.104">
+        >
+        ["ac0.9003"] = <
+            id = <"ac0.9003">
+            members = <"at0.106", "at0.107", "at0.108", "at0.109">
+        >
+        ["ac0.9004"] = <
+            id = <"ac0.9004">
+            members = <"at0.57", "at0.58", "at0.63", "at0.64", "at0.65", "at0.66", "at0.67", "at0.68", "at0.69", "at0.70">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.85", "at0.86", "at0.87">
+        >
+        ["ac0.9002"] = <
+            id = <"ac0.9002">
+            members = <"at0.93", "at0.94", "at0.95", "at0.96", "at0.97", "at0.98">
+        >
+    >

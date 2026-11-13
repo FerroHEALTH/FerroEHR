@@ -1,0 +1,1364 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4e40b1e4-4308-47b3-9fc7-0809caed7a6a; build_uid=4f36346d-38d1-4906-805d-54c0343d3731)
+    openEHR-EHR-OBSERVATION.body_temperature.v1.0.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sebastian Garde">
+                ["organisation"] = <"Ocean Informatics">
+            >
+        >
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            author = <
+                ["name"] = <"Igor Lizunov">
+                ["email"] = <"i.lizunov@infinnity.ru">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Jostein Ven">
+                ["organisation"] = <"KITH">
+                ["email"] = <"jostein.ven@kith.no">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Domingo Liotta">
+                ["organisation"] = <"University of Morón">
+            >
+            accreditation = <"University of Morón">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Marco Borges">
+                ["organisation"] = <"P2D">
+                ["email"] = <"marco.borges@p2d.com.br">
+            >
+            accreditation = <"P2D Health Advisor Council">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["fa"] = <
+            language = <[ISO_639-1::fa]>
+            author = <
+                ["name"] = <"Shahla Foozonkhah">
+                ["organisation"] = <"Ocean Informatics">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Domingo Liotta">
+                ["organisation"] = <"University of Morón">
+            >
+            accreditation = <"University of Morón">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2004-05-18">
+    >
+    other_contributors = <"Knut Bernstein", "Sebastian Garde", "Ian McNicoll", "Omer Hotomaroglu", "Sundaresan Jaganathan", "Heather Leslie", "Shahla Foozonkhah">
+    lifecycle_state = <"deprecated">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"17B20069ACCD746C2C21854960BC3BFD">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the measured temperature of a person - as a surrogate for the temperature of the whole body.">
+            keywords = <"temperature", "body", "core", "fever", "hypothermia", "hyperthermia">
+            use = <"Used for recording the whole body temperature of a person or body.
+Additional clusters can be included to provide additional state data - including environmental conditions, menstrual cycle details and exertion details, where appropriate.
+Please Note: The site and method of recording may need to be displayed to the end user to facilitate accurate interpretation of the temperature recorded.">
+            misuse = <"This archetype is not to be used to record the temperature of any other object.
+This archetype is not to be used to record the temperature of a part of the body in isolation e.g. temperature of the sole of the foot as a part of chronic diabetes management.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Messung der Temperatur einer Person - als Surrogat for die Temperatur des gesamten Körpers.">
+            keywords = <"Temperatur", "Körper", "Kern", "Fieber", "Hypothermie", "Hyperthermie">
+            use = <"Benutzt zur Aufzeichnung der gesamten Körpertemperatur einer Person oder eines Körpers.
+
+
+
+Wenn benötigt, können zusätzliche Cluster Archetypen eingefügt werden, um zusätzliche Statusdaten bereitzustellen - darunter Details zu Umgebungsbedingungen, Menstruationszyklus und Betätigung.
+
+
+
+Bitte beachten: Die Stelle und Methode der Messung muss ggf. dem Endverbraucher angezeigt werden, um eine präzise Interpretation der gemessenen Temperatur zu ermöglichen.">
+            misuse = <"Dieser Archetyp soll nicht benutzt werden, um die Messung der Temperatur irgendeines anderen Objekts zu dokumentieren.
+
+
+
+Dieser Archetyp soll nicht benutzt werden, um die Temperatur eines Körperteils isoliert zu messen, z. B. die Temperatur an der Fußsohle im Rahmen des Managements von chronischem Diabetes.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para registrar a temperatura aferida de uma pessoa - com valor médio equivalente para o corpo inteiro.">
+            keywords = <"temperatura", "corpo", "febre", "hipotermia", "hipertermia">
+            use = <"Usado para registrar a temperatura corporal de uma pessoa ou organismo.
+Clusters adicionais podem ser incluídos para fornecer dados adicionais - incluindo as condições ambientais, os detalhes do ciclo menstrual e detalhes de esforço, se for caso.
+
+Observação: O local e método de gravação podem precisar de ser exibidos ao usuário final para facilitar a interpretação exata da temperatura registrada.">
+            misuse = <"Esse arquétipo não pode ser usado para registrar a temperatura de qualquer outro objeto.
+Esse arquétipo não pode ser usado para registrar a temperatura de uma parte do corpo isoladamente, por exemplo, temperatura da sola do pé, como parte do controle de diabetes crônica.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            purpose = <"Для записи измеряемой температуры человека - в качестве суррогата температуры всего тела.">
+            keywords = <"температура", "лихорадка", "жар", "гипертермия", "гипотермия">
+            use = <"Используется для записи температуры тела пациента или органа.
+Дополнительные кластеры могут быть включены для получения дополнительной информации о состоянии - в том числе условия внешней среды, фаза менструального цикла и другие детали, где это уместно.
+Обратите внимание: запись о месте и методе измерения  может потребоваться  для облегчения точной интерпретации регистрируемой температуры.">
+            misuse = <"Этот архетип не следует использовать для записи температуры любого другого объекта.
+Этот архетип не следует использовать для записи температуры части тела, например, отдельного измерения температуры ступни в лечении больных с диабетической стопой.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Registrar la temperatura medida de una persona - como un derivado de la temperatura corporal">
+            keywords = <"temperatura", "cuerpo", "central", "fiebre", "hipotermia", "hipertermia">
+            use = <"Usar para registrar la temperatura corporal de una persona o cuerpo.
+Clusters adicionales pueden incluirse para proveer datos adicionales de estado - incluyendo condiciones ambientales, detalles del ciclo menstrual y de ejercicio físico, cuando se considera apropiado.
+Tener en cuenta: El sitio y el método del registro quizás sea necesario mostrarlo al usuario final, para la adecuada interpretación del registro de temperatura.">
+            misuse = <"Este arquetipo no debe usarse para registrar la temperatura de cualquier otro objeto.
+Este arquetipo no debe usarse para registrar la temperatura de una parte del cuerpo aislado por ej: la temperatura de la planta del pie como parte del manejo de la diabetes crónica.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Å registrere målt temperatur til en person - med hensikt at den målte temperaturen skal gjenspeile temperaturen den faktiske kroppstemperaturen.
+
+To record the measured temperature of a person - as a surrogate for the temperature of the whole body.(en)">
+            keywords = <"temperatur", "kropp", "kjerne", "feber", "hypotermi", "hypertermi">
+            use = <"Brukes for å registrere kropptemperatur.
+Ekstra clustere kan inkluderes for å sørge for tilleggsdata slik som beskrivelse av omgivelser, menstruasjonssyklus og anstrengelse.
+Vær oppmerksom på at metode for måling kan være nødvendig å vise til sluttbrukeren for å gi en korrekt tolkning av den målte temperaturen.
+
+Used for recording the whole body temperature of a person or body.
+Additional clusters can be included to provide additional state data - including environmental conditions, menstrual cycle details and exertion details, where appropriate.
+Please Note: The site and method of recording may need to be displayed to the end user to facilitate accurate interpretation of the temperature recorded.(en)">
+            misuse = <"Arketypen skal ikke brukes for å registrere temperaturen til andre objekter.
+Arketypen skal ikke brukes for å registrerer en isolert del av kroppen, som for eksempel temperaturen i fotsålen som del av håndtering av en pasient med kronisk diabetes.
+
+*This archetype is not to be used to record the temperature of any other object.
+This archetype is not to be used to record the temperature of a part of the body in isolation e.g. temperature of the sole of the foot as a part of chronic diabetes management.(en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل درجة الحرارة التي تم قياسها للشخص - كبديل عن درجة حرارة الجسم كله">
+            keywords = <"الحرارة", "الجسم", "اللُّب", "الحمى", "انخفاض الحرارة", "فرط الحرارة">
+            use = <"يستخدم لتسجيل حرارة جميع الجسم للشخص أو الجثة.
+يمكن تضمين عناقيد أخرى للإمداد بالمزيد من تفاصيل الحالة - بما في ذلك العوامل البيئية, تفاصيل الدورة الشهرية, تفاصيل المجهود, حيثما تطلب الأمر.
+الرجاء ملاحظة: قد يكون من الواجب عرض هذا الموقع و طريقة التسجيل للمستخدِم النهائي لتسهيل التفسير الدقيق للحرارة التي يتم تسجيلها.">
+            misuse = <"هذا النموذج لا يستخدم لتسجيل حرارة أي شيئ آخر.
+هذا النموذج لا يستخدم لتسجيل الحرارة لجزء معزول من الجسم, مثلا حرارة أخمص القدم كجزء من التدبير العلاجي لمرض السكري المزمن.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fa"] = <
+            language = <[ISO_639-1::fa]>
+            purpose = <"برای ثبت اندازه گیری دمای بدن یک فرد بکار می رود- به عنوان جایگزینی برای دمای کل بدن">
+            keywords = <"دما", "بدن", "مرکز", "تب", "کاهش دمای بدن", "افزایش دمای بدن">
+            use = <"برای ثبت دمای کل بدن فرد یا بدن استفاده می شود . خوشه‌های اضافی، برای در بر گرفتن داده‌های حالت بیشتر، شامل شرایط محیطی ، جزییات عادت ماهیانه و جزییات جنب و جوش فرد، هر جا که مناسب باشند، می‌توانند گنجانده شوند.
+لطفا توجه داشته باشید که برای تسهیل در تفسیر صحیح دما ثبت شده، توسط کاربر نهایی ممکن است که نمایش محل و روش ثبت لازم باشد">
+            misuse = <"این الگو ساز جهت ثبت دما اشیا دیگر بکار نمی رود .
+این الگو ساز جهت ثبت دمای بخشهایی از بدن -
+به عنوان مثال دمای کف پا به عنوان بخشی از پایش دیابت مزمن- بصورت جداگانه استفاده نمی شود
+   ">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar la temperatura medida de una persona - como un derivado de la temperatura corporal">
+            keywords = <"temperatura", "cuerpo", "central", "fiebre", "hipotermia", "hipertermia">
+            use = <"Usar para registrar la temperatura corporal de una persona o cuerpo.
+Clusters adicionales pueden incluirse para proveer datos adicionales de estado - incluyendo condiciones ambientales, detalles del ciclo menstrual y de ejercicio físico, cuando se considera apropiado.
+Tener en cuenta: El sitio y el método del registro quizás sea necesario mostrarlo al usuario final, para la adecuada interpretación del registro de temperatura.">
+            misuse = <"Este arquetipo no debe usarse para registrar la temperatura de cualquier otro objeto.
+Este arquetipo no debe usarse para registrar la temperatura de una parte del cuerpo aislado por ej: la temperatura de la planta del pie como parte del manejo de la diabetes crónica.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Body temperature
+        data matches {
+            HISTORY[at0002] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0003] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0001] matches {
+                                items cardinality matches {1; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- Temperature
+                                        value matches {
+                                            DV_QUANTITY[at9074] matches {
+                                                property matches {[at9000]}    -- Temperature
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"°C"}, {1}],
+                                                    [{|>=0.0|}, {"°F"}, {1}],
+                                                    [{|0.0..<100.0|}, {"Cel"}, {1}],
+                                                    [{|30.0..<200.0|}, {"[degF]"}, {1}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0029] matches {    -- State
+                                items matches {
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Body exposure
+                                        value matches {
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9075; at34]}    -- Body exposure (synthesised)
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0056] occurrences matches {0..1} matches {    -- Environmental Conditions
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.environmental_conditions\.v1\..*/}
+                                    }
+                                    allow_archetype CLUSTER[at0057] occurrences matches {0..1} matches {    -- Exertion
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.level_of_exertion\.v1\..*/}
+                                    }
+                                    allow_archetype ELEMENT[at0058] occurrences matches {0..1} matches {    -- Menstrual Cycle
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-ELEMENT\.last_normal_menstrual_period\.v1\..*|openEHR-EHR-ELEMENT\.menstrual_cycle_day\.v1\..*/}
+                                    }
+                                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- Description of thermal stress
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0020] matches {
+                items matches {
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Site of measurement
+                        value matches {
+                            DV_CODED_TEXT[at9070] matches {
+                                defining_code matches {[ac9076]}    -- Site of measurement (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0059] occurrences matches {0..1} matches {    -- Device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device\.v1\..*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Körpertemperatur">
+                description = <"Eine Messung der Körpertemperatur an einer bestimmten Stelle als Surrogat für den gesamten Körper der Person.">
+            >
+            ["at0003"] = <
+                text = <"Any event">
+                description = <"Any event.">
+            >
+            ["at0004"] = <
+                text = <"Temperatur">
+                description = <"Die gemessene Körpertemperatur (als Surrogat für den gesamten Körper).">
+            >
+            ["at0021"] = <
+                text = <"Messstelle">
+                description = <"Die anatomische Stelle der Temperaturmessung.">
+            >
+            ["at0022"] = <
+                text = <"Mund">
+                description = <"Messung der Temperatur im Mund.">
+            >
+            ["at0023"] = <
+                text = <"Ohrenkanal">
+                description = <"Messung der Temperatur innerhalb des äußeren Gehörgangs.">
+            >
+            ["at0024"] = <
+                text = <"Achselhöhle">
+                description = <"Messung der Temperatur an der Haut der Achselhöhle mit seitlich angelegtem Arm.">
+            >
+            ["at0025"] = <
+                text = <"Rektum">
+                description = <"Messung der Temperatur innerhalb des Rektums.">
+            >
+            ["at0026"] = <
+                text = <"Nasopharynx">
+                description = <"Messung der Temperatur innerhalb des Nasopharynxs (Nasenrachens).">
+            >
+            ["at0027"] = <
+                text = <"Harnblase">
+                description = <"Messung der Temperatur in der Harnblase.">
+            >
+            ["at0028"] = <
+                text = <"Intravaskulär">
+                description = <"Messung der Temperatur innerhalb des vaskulären Systems.">
+            >
+            ["at0029"] = <
+                text = <"Status">
+                description = <"Statusinformationen über die Person.">
+            >
+            ["at0030"] = <
+                text = <"Körperexposition">
+                description = <"Die thermale Situation der Person, deren Temperatur gemessen wird.">
+            >
+            ["at0031"] = <
+                text = <"Nackt">
+                description = <"Keine Kleidung, Bettzeug oder andere Bedeckung.">
+            >
+            ["at0032"] = <
+                text = <"Verminderte Kleidung/Bettzeug">
+                description = <"Die Person wird bedeckt von einer geringeren Menge an Kleidung oder Bettzeug als für die Umgebungsbedingungen angemessen erscheint.">
+            >
+            ["at0033"] = <
+                text = <"Angemessene Kleidung/Bettzeug">
+                description = <"Die Person wird bedeckt von einer Menge an Kleidung oder Bettzeug, die den Umgebungsbedingungen angemessen erscheint.">
+            >
+            ["at0034"] = <
+                text = <"Erhöhte Kleidung/Bettzeug">
+                description = <"Die Person wird bedeckt von einer größeren Menge an Kleidung oder Bettzeug als für die Umgebungsbedingungen angemessen erscheint.">
+            >
+            ["at0041"] = <
+                text = <"Beschreibung der Wärmebelastung">
+                description = <"Beschreibung von Bedingungen, denen die Person ausgesetzt ist, welche die gemessene Körpertemperatur beeinflussen könnten.">
+            >
+            ["at0043"] = <
+                text = <"Haut">
+                description = <"Messung der Temperatur an freiliegender Haut.">
+            >
+            ["at0051"] = <
+                text = <"Vagina">
+                description = <"Messung der Temperatur innerhalb der Vagina.">
+            >
+            ["at0054"] = <
+                text = <"Oesophagus">
+                description = <"Messung der Temperatur innerhalb des Oesophagus.">
+            >
+            ["at0055"] = <
+                text = <"Inguinale Hautfalte">
+                description = <"Messung der Temperatur in der inguinalen Hautfalte zwischen Bein und Abdominalwand.">
+            >
+            ["at0056"] = <
+                text = <"Umgebungsbedingungen">
+                description = <"Details über die Umgebungsbedingungen zur Zeit der Messung.">
+            >
+            ["at0057"] = <
+                text = <"Betätigung">
+                description = <"Details über die Betätigung der Person zum Zeitpunkt der Messung der Temperatur.">
+            >
+            ["at0058"] = <
+                text = <"Menstruationszyklus">
+                description = <"Details über den Menstruationszyklus einer Frau.">
+            >
+            ["at0059"] = <
+                text = <"Gerät">
+                description = <"Details über das Gerät, das zur Temperaturmessung benutzt wurde.">
+            >
+            ["at9000"] = <
+                text = <"* Temperature (en)">
+                description = <"* Temperature (en)">
+            >
+            ["ac9075"] = <
+                text = <"Körperexposition (synthesised)">
+                description = <"Die thermale Situation der Person, deren Temperatur gemessen wird. (synthesised)">
+            >
+            ["ac9076"] = <
+                text = <"Messstelle (synthesised)">
+                description = <"Die anatomische Stelle der Temperaturmessung. (synthesised)">
+            >
+        >
+        ["ru"] = <
+            ["at0000"] = <
+                text = <"Температура тела">
+                description = <"Измерение температуры тела, которая является суррогатом температуры тела человека в целом.">
+            >
+            ["at0003"] = <
+                text = <"Любое событие">
+                description = <"Любое событие.">
+            >
+            ["at0004"] = <
+                text = <"Температура(ru)">
+                description = <"Измеряется температура тела (как суррогат для всего тела).">
+            >
+            ["at0021"] = <
+                text = <"Место измерения">
+                description = <"Анатомическое место измернеия температуры.">
+            >
+            ["at0022"] = <
+                text = <"Рот">
+                description = <"Температура измеряется в ротовой полости.">
+            >
+            ["at0023"] = <
+                text = <"Наружный слуховой проход">
+                description = <"Температура измеряется в наружном слуховом проходе.">
+            >
+            ["at0024"] = <
+                text = <"Подмышечная впадина">
+                description = <"Температура измеряется в кожной складке в подмышечной впадине, рука опущена вниз и прижата к туловищу.">
+            >
+            ["at0025"] = <
+                text = <"Прямая кишка">
+                description = <"Температура измеряется внутри прямой кишки.">
+            >
+            ["at0026"] = <
+                text = <"Носоглотка">
+                description = <"Температура измеряется в носоглотке.">
+            >
+            ["at0027"] = <
+                text = <"Мочевой пузырь">
+                description = <"Температура измеряется внутри мочевого пузыря.">
+            >
+            ["at0028"] = <
+                text = <"Внутрисосудистая">
+                description = <"Температура измеряется внутри сосоудистого русла.">
+            >
+            ["at0029"] = <
+                text = <"Состояние">
+                description = <"Информация о состоянии пациента.">
+            >
+            ["at0030"] = <
+                text = <"*Body exposure(en)">
+                description = <"*The thermal situation of the person who is having the temperature taken(en)">
+            >
+            ["at0031"] = <
+                text = <"Обнажён">
+                description = <"Без одежды, ничем не укрыт.">
+            >
+            ["at0032"] = <
+                text = <"Лёгкая одежда/постель">
+                description = <"На пациенте меньшее количество одежды / постельных принадлежностей, чем этого требуют условия внешней среды.">
+            >
+            ["at0033"] = <
+                text = <"Соответствующая одежда/постель">
+                description = <"Одежда/постельные принадлежности пациента соответствуют условиям внешней среды.">
+            >
+            ["at0034"] = <
+                text = <"Теплая одежда/постель">
+                description = <"На пациенте большее количество одежды / постельных принадлежностей, чем этого требуют условия внешней среды.">
+            >
+            ["at0041"] = <
+                text = <"Тепловой стресс">
+                description = <"Описание особенностей, которые могут повлиять на результат измерения температуры тела.">
+            >
+            ["at0043"] = <
+                text = <"Кожа">
+                description = <"Температура измеряется на поверхности кожи.">
+            >
+            ["at0051"] = <
+                text = <"Влагалище">
+                description = <"Температура измеряется внутри влагвалища.">
+            >
+            ["at0054"] = <
+                text = <"Пищевод">
+                description = <"Температура измеряется внитри пищевода.">
+            >
+            ["at0055"] = <
+                text = <"Паховая складка">
+                description = <"Температура измеряется в паховой складке кожи между ногой и передней брюшной стенкой.">
+            >
+            ["at0056"] = <
+                text = <"Условия внешней среды">
+                description = <"Подробная информация об условиях внешней среды в момент изменения температуры.">
+            >
+            ["at0057"] = <
+                text = <"Нагрузка">
+                description = <"Подробная информация о нагрузках в момент измерения температуры.">
+            >
+            ["at0058"] = <
+                text = <"Менструальный цикл">
+                description = <"Информация о фазе менструального цикла у женщины.">
+            >
+            ["at0059"] = <
+                text = <"Устройство">
+                description = <"Информация об устройстве, используемом для измерения температуры тела.">
+            >
+            ["at9000"] = <
+                text = <"* Temperature (en)">
+                description = <"* Temperature (en)">
+            >
+            ["ac9075"] = <
+                text = <"*Body exposure(en) (synthesised)">
+                description = <"*The thermal situation of the person who is having the temperature taken(en) (synthesised)">
+            >
+            ["ac9076"] = <
+                text = <"Место измерения (synthesised)">
+                description = <"Анатомическое место измернеия температуры. (synthesised)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Temperatura Corporal">
+                description = <"La medición de la temperatura corporal, que deriva en la temperatura de todo el cuerpo de una persona.">
+            >
+            ["at0003"] = <
+                text = <"Cualquier evento">
+                description = <"Cualquier evento">
+            >
+            ["at0004"] = <
+                text = <"Temperatura">
+                description = <"La temperatura corporal medida (representa la temperatura de todo el cuerpo).">
+            >
+            ["at0021"] = <
+                text = <"Sitio de la medición">
+                description = <"El sitio anatómico donde se mide la temperatura.">
+            >
+            ["at0022"] = <
+                text = <"Boca">
+                description = <"Temperatura bucal.">
+            >
+            ["at0023"] = <
+                text = <"Canal auditivo">
+                description = <"La temperatura se mide en el canal auditivo externo.">
+            >
+            ["at0024"] = <
+                text = <"Axila">
+                description = <"La temperatura se mide en el hueco axilar con el brazo posicionado al costado del cuerpo.">
+            >
+            ["at0025"] = <
+                text = <"Recto">
+                description = <"Temperatura rectal.">
+            >
+            ["at0026"] = <
+                text = <"Nasofaríngeo">
+                description = <"La temperatura se mide dentro de la nasofaringe.">
+            >
+            ["at0027"] = <
+                text = <"Vejiga urinaria">
+                description = <"La temperatura se mide en la vejiga urinaria.">
+            >
+            ["at0028"] = <
+                text = <"Intravascular">
+                description = <"La temperatura se mide dentro del sistema vascular.">
+            >
+            ["at0029"] = <
+                text = <"Estado">
+                description = <"Estado de la información del paciente.">
+            >
+            ["at0030"] = <
+                text = <"Exposición corporal">
+                description = <"La situación térmica de la persona al cual se le registra la temperatura.">
+            >
+            ["at0031"] = <
+                text = <"Desnudo">
+                description = <"Sin ropas, sabanas o coberturas.">
+            >
+            ["at0032"] = <
+                text = <"Ropas/lecho reducidas">
+                description = <"La persona esta cubierto por una cantidad menor de ropas o sabanas que lo considerado apropiado para las circunstancias ambientales.">
+            >
+            ["at0033"] = <
+                text = <"Ropas/lecho apropiadas">
+                description = <"La persona esta cubierta por una adecuada cantidad de ropas o sabanas, que lo considerado apropiado para las circunstancias ambientales.">
+            >
+            ["at0034"] = <
+                text = <"Ropas/lecho aumentado">
+                description = <"La persona se encuentra cubierto por una cantidad incrementada de ropas o sabanas que lo considerado apropiado para las circunstancias ambientales.">
+            >
+            ["at0041"] = <
+                text = <"Descripción de estrés térmico">
+                description = <"Descripción de las condiciones que le suceden al sujeto que puede influenciar la temperatura corporal medida.">
+            >
+            ["at0043"] = <
+                text = <"Piel">
+                description = <"La temperatura se mide sobre la piel expuesta.">
+            >
+            ["at0051"] = <
+                text = <"Vagina">
+                description = <"Temperatura vaginal.">
+            >
+            ["at0054"] = <
+                text = <"Esófago">
+                description = <"Temperatura se mide dentro del esófago.">
+            >
+            ["at0055"] = <
+                text = <"Pliegue inguinal">
+                description = <"La temperatura se mide en el pliegue inguinal entre el muslo y la pared abdominal.">
+            >
+            ["at0056"] = <
+                text = <"Condiciones Ambientales">
+                description = <"Detalles de las condiciones ambientales al momento del registro de la temperatura.">
+            >
+            ["at0057"] = <
+                text = <"Ejercicio">
+                description = <"Detalles sobre la actividad física de la persona al momento de la medición de la temperatura.">
+            >
+            ["at0058"] = <
+                text = <"Ciclo Menstrual">
+                description = <"Detalles sobre el ciclo menstrual de la mujer.">
+            >
+            ["at0059"] = <
+                text = <"Dispositivo">
+                description = <"Detalles sobre el dispositivo usado para medir la temperatura corporal.">
+            >
+            ["at9000"] = <
+                text = <"* Temperature (en)">
+                description = <"* Temperature (en)">
+            >
+            ["ac9075"] = <
+                text = <"Exposición corporal (synthesised)">
+                description = <"La situación térmica de la persona al cual se le registra la temperatura. (synthesised)">
+            >
+            ["ac9076"] = <
+                text = <"Sitio de la medición (synthesised)">
+                description = <"El sitio anatómico donde se mide la temperatura. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kroppstemperatur">
+                description = <"Måling av kroppstemperatur som skal gjenspeile den faktiske kroppstemperaturen">
+            >
+            ["at0003"] = <
+                text = <"Tidfestet hendelse">
+                description = <"En tidfestet hendelse">
+            >
+            ["at0004"] = <
+                text = <"Temperatur">
+                description = <"Målt kroppstemperatur (som gjenspeiler faktisk kroppstemperatur) ">
+            >
+            ["at0021"] = <
+                text = <"Anatomisk målested">
+                description = <"Det anatomiske målestedet for måling av temperatur ">
+            >
+            ["at0022"] = <
+                text = <"Munn">
+                description = <"Temperatur målt i munnhulen ">
+            >
+            ["at0023"] = <
+                text = <"Øre">
+                description = <"Temperatur målt i den ytre ørekanalen ">
+            >
+            ["at0024"] = <
+                text = <"Aksille">
+                description = <"Temperatur er målt i aksille når armen er posisjonert ned langs siden">
+            >
+            ["at0025"] = <
+                text = <"Rektum">
+                description = <"Temperatur målt i rektum">
+            >
+            ["at0026"] = <
+                text = <"Nasofarynks">
+                description = <"Temperatur målt i nasofarynks">
+            >
+            ["at0027"] = <
+                text = <"Urinblære">
+                description = <"Temperatur målt i urinblære">
+            >
+            ["at0028"] = <
+                text = <"Intravaskulært">
+                description = <"Temperatur målt intravaskulært">
+            >
+            ["at0029"] = <
+                text = <"*State(en)">
+                description = <"*State information about the patient.(en)">
+            >
+            ["at0030"] = <
+                text = <"*Body exposure(en)">
+                description = <"*The thermal situation of the person who is having the temperature taken.(en)">
+            >
+            ["at0031"] = <
+                text = <"Naken">
+                description = <"Ingen klær eller tildekking">
+            >
+            ["at0032"] = <
+                text = <"Redusert bekledning/tildekking">
+                description = <"Personen er mindre kledt eller tildekket enn omgivelsene skulle tilsi">
+            >
+            ["at0033"] = <
+                text = <"Passende bekleding/tildekking">
+                description = <"Personen er passende kledt eller tildekket i forhold til omgivelsene">
+            >
+            ["at0034"] = <
+                text = <"Økt bekledning/tildekking">
+                description = <"Personen er mer kledt eller tildekket enn omgivelsene skulle tilsi">
+            >
+            ["at0041"] = <
+                text = <"Tilført temperaturpåvirkning">
+                description = <"Temperaturpåvirkning tilført pasienten for å oppnå en økning eller reduksjon i kroppstemperatur.">
+            >
+            ["at0043"] = <
+                text = <"Hud">
+                description = <"Temperaturen mål i eksponert hud">
+            >
+            ["at0051"] = <
+                text = <"Vagina">
+                description = <"Temperatur målt i vagina">
+            >
+            ["at0054"] = <
+                text = <"Øsofagus">
+                description = <"Temperatur målt i øsofagus">
+            >
+            ["at0055"] = <
+                text = <"Inguinalt">
+                description = <"Temperatur målt inguinalt når overeksremitet ligger mot abdomen">
+            >
+            ["at0056"] = <
+                text = <"Omgivelser">
+                description = <"Detaljer om omgivelsene når temperatur ble målt">
+            >
+            ["at0057"] = <
+                text = <"Anstrengelse">
+                description = <"Detaljer om anstrengelse/aktivitet hos personen når temperaturen ble målt">
+            >
+            ["at0058"] = <
+                text = <"Menstruasjonssyklus">
+                description = <"Detaljer om menstruasjonssyklus">
+            >
+            ["at0059"] = <
+                text = <"Måleinstrument">
+                description = <"Detaljer om måleinstrument som ble brukt til å måle temperaturen">
+            >
+            ["at9000"] = <
+                text = <"* Temperature (en)">
+                description = <"* Temperature (en)">
+            >
+            ["ac9075"] = <
+                text = <"*Body exposure(en) (synthesised)">
+                description = <"*The thermal situation of the person who is having the temperature taken.(en) (synthesised)">
+            >
+            ["ac9076"] = <
+                text = <"Anatomisk målested (synthesised)">
+                description = <"Det anatomiske målestedet for måling av temperatur  (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Temperatura Corporal">
+                description = <"O valor para a temperatura corporal, com valor médio equivalente para o corpo inteiro.">
+            >
+            ["at0003"] = <
+                text = <"Qualquer evento">
+                description = <"Qualquer evento.">
+            >
+            ["at0004"] = <
+                text = <"Temperatura">
+                description = <"A temperatura corporal aferida (média para o corpo inteiro).">
+            >
+            ["at0021"] = <
+                text = <"Local da medida">
+                description = <"O local anatômico de onde a temperatura foi aferida.">
+            >
+            ["at0022"] = <
+                text = <"Boca">
+                description = <"A temperatura é eferida no interior da boca.">
+            >
+            ["at0023"] = <
+                text = <"Canal auditivo">
+                description = <"A temperatura é aferida dentro do canal auditivo do ouvido externo (conduto auditivo).">
+            >
+            ["at0024"] = <
+                text = <"Axilla">
+                description = <"A temperatura é aferida na pele da axila com o braço abaixado.">
+            >
+            ["at0025"] = <
+                text = <"Reto">
+                description = <"A temperatura é aferida no reto.">
+            >
+            ["at0026"] = <
+                text = <"Nasofaringe">
+                description = <"A temperatura é aferida na parte nasal da faringe.">
+            >
+            ["at0027"] = <
+                text = <"Bexiga">
+                description = <"A temperatura é aferida na bexiga.">
+            >
+            ["at0028"] = <
+                text = <"Intravascular">
+                description = <"A temperatura é aferida no sistema vascular.">
+            >
+            ["at0029"] = <
+                text = <"Estado">
+                description = <"Informações sobre o estado do paciente.">
+            >
+            ["at0030"] = <
+                text = <"Exposição do corpo">
+                description = <"A situação térmica da pessoa que tem a sua temperatura aferida.">
+            >
+            ["at0031"] = <
+                text = <"Despido">
+                description = <"Sem roupas, camisola ou capa.">
+            >
+            ["at0032"] = <
+                text = <"Vestuário reduzido/camisola">
+                description = <"A pessoa está vestida por pouca roupa ou camisola considerado o vestuário necessário para as circunstâncias ambientais.">
+            >
+            ["at0033"] = <
+                text = <"Apropriadamente vestido">
+                description = <"A pessoa está vestida apropriadamente considerado o vestuário necessário para as circunstâncias ambientais.">
+            >
+            ["at0034"] = <
+                text = <"Excessivamente vestido">
+                description = <"A pessoa está excessivamente vestida considerado o vestuário necessário para as circunstâncias ambientais.">
+            >
+            ["at0041"] = <
+                text = <"Choque térmico">
+                description = <"Descrição das condições aplicadas ao sujeito que possa influenciar a medida de sua temperatura corporal.">
+            >
+            ["at0043"] = <
+                text = <"Pele">
+                description = <"A temperatura é aferida a partir da pele exposta.">
+            >
+            ["at0051"] = <
+                text = <"Vagina">
+                description = <"A temperatura é afereida no interior da vagina.">
+            >
+            ["at0054"] = <
+                text = <"Esófago">
+                description = <"A temperatura é aferida no esófago.">
+            >
+            ["at0055"] = <
+                text = <"Região Inguinal">
+                description = <"A temperatura é aferida na dobra da pele entre a região inguinal e a região abdominal.">
+            >
+            ["at0056"] = <
+                text = <"Condições ambientais">
+                description = <"Detalhes sobre as condições ambientais no momento em que foi aferida a temperatura.">
+            >
+            ["at0057"] = <
+                text = <"Esforço">
+                description = <"Detalhes sobre esforço que a pessoa fez no momento da aferição da temperatura.">
+            >
+            ["at0058"] = <
+                text = <"Ciclo Menstrual">
+                description = <"Detalhes sobre o ciclo menstrual da mulher.">
+            >
+            ["at0059"] = <
+                text = <"Dispositivo">
+                description = <"Detalhes sobre o dispositivo utilizado para medir a temperatura corporal.">
+            >
+            ["at9000"] = <
+                text = <"* Temperature (en)">
+                description = <"* Temperature (en)">
+            >
+            ["ac9075"] = <
+                text = <"Exposição do corpo (synthesised)">
+                description = <"A situação térmica da pessoa que tem a sua temperatura aferida. (synthesised)">
+            >
+            ["ac9076"] = <
+                text = <"Local da medida (synthesised)">
+                description = <"O local anatômico de onde a temperatura foi aferida. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Body temperature">
+                description = <"A measurement of the body temperature, which is a surrogate for the whole body temperature of the person.">
+            >
+            ["at0003"] = <
+                text = <"Any event">
+                description = <"Any event.">
+            >
+            ["at0004"] = <
+                text = <"Temperature">
+                description = <"The measured body temperature (as a surrogate for the whole body).">
+            >
+            ["at0021"] = <
+                text = <"Site of measurement">
+                description = <"The anatomical site of measurement of the temperature.">
+            >
+            ["at0022"] = <
+                text = <"Mouth">
+                description = <"Temperature is measured within the mouth.">
+            >
+            ["at0023"] = <
+                text = <"Ear canal">
+                description = <"Temperature is measured from within the external auditory canal.">
+            >
+            ["at0024"] = <
+                text = <"Axilla">
+                description = <"Temperature is measured from the skin of the axilla with the arm positioned down by the side.">
+            >
+            ["at0025"] = <
+                text = <"Rectum">
+                description = <"Temperature measured within the rectum.">
+            >
+            ["at0026"] = <
+                text = <"Nasopharynx">
+                description = <"Temperature is measured within the nasopharynx.">
+            >
+            ["at0027"] = <
+                text = <"Urinary bladder">
+                description = <"Temperature is measured in the urinary bladder.">
+            >
+            ["at0028"] = <
+                text = <"Intravascular">
+                description = <"Temperature is measured within the vascular system.">
+            >
+            ["at0029"] = <
+                text = <"State">
+                description = <"State information about the patient.">
+            >
+            ["at0030"] = <
+                text = <"Body exposure">
+                description = <"The thermal situation of the person who is having the temperature taken.">
+            >
+            ["at0031"] = <
+                text = <"Naked">
+                description = <"No clothing, bedding or covering.">
+            >
+            ["at0032"] = <
+                text = <"Reduced clothing/bedding">
+                description = <"The person is covered by a lesser amount of clothing or bedding than deemed appropriate for the environmental circumstances.">
+            >
+            ["at0033"] = <
+                text = <"Appropriate clothing/bedding">
+                description = <"The person is covered by an amount of clothing or bedding deemed appropriate for the environmental circumstances.">
+            >
+            ["at0034"] = <
+                text = <"Increased clothing/bedding">
+                description = <"The person is covered by an increased amount of clothing or bedding than deemed appropriate for the environmental circumstances.">
+            >
+            ["at0041"] = <
+                text = <"Description of thermal stress">
+                description = <"Description of the conditions applied to the subject that might influence their measured body temperature.">
+            >
+            ["at0043"] = <
+                text = <"Skin">
+                description = <"Temperature is measured from exposed skin.">
+            >
+            ["at0051"] = <
+                text = <"Vagina">
+                description = <"Temperature is measured within the vagina.">
+            >
+            ["at0054"] = <
+                text = <"Oesophagus">
+                description = <"Temperatue is measured within the oesophagus.">
+            >
+            ["at0055"] = <
+                text = <"Inguinal skin crease">
+                description = <"Temperature is measured in the inguinal skin crease between the leg and abdominal wall.">
+            >
+            ["at0056"] = <
+                text = <"Environmental Conditions">
+                description = <"Details about the environmental conditions at the time of temperature measurement.">
+            >
+            ["at0057"] = <
+                text = <"Exertion">
+                description = <"Details about the exertion of the person at the time of temperature measurement.">
+            >
+            ["at0058"] = <
+                text = <"Menstrual Cycle">
+                description = <"Details about the menstrual cycle of a woman.">
+            >
+            ["at0059"] = <
+                text = <"Device">
+                description = <"Details about the device use to measure body temperature.">
+            >
+            ["at9000"] = <
+                text = <"Temperature">
+                description = <"Temperature">
+            >
+            ["ac9075"] = <
+                text = <"Body exposure (synthesised)">
+                description = <"The thermal situation of the person who is having the temperature taken. (synthesised)">
+            >
+            ["ac9076"] = <
+                text = <"Site of measurement (synthesised)">
+                description = <"The anatomical site of measurement of the temperature. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"درجة حرارة الجسم">
+                description = <"قياس لدرجة حرارة الجسم, و التي تحل كبديل لدرجة الحرارة الكلية لجسم الشخص">
+            >
+            ["at0003"] = <
+                text = <"إحدى الوقائع">
+                description = <"إحدى الوقائع">
+            >
+            ["at0004"] = <
+                text = <"درجة الحرارة">
+                description = <"درجة الحرارة التي تم قياسها - كبديل عن الجسم الكلي">
+            >
+            ["at0021"] = <
+                text = <"موضع القياس">
+                description = <"الموضع التشريحي الذي يتم فيه قياس درجة الحرارة">
+            >
+            ["at0022"] = <
+                text = <"الفم">
+                description = <"يتم قياس الحرارة في داخل الفم">
+            >
+            ["at0023"] = <
+                text = <"قناة الأذن">
+                description = <"يتم قياس درجة الحرارة من داخل القناة السمعية الخارجية">
+            >
+            ["at0024"] = <
+                text = <"الإبط">
+                description = <"يتم قياس درجة الحرارة من بشرة/ جلد الإبط في حالة وضع الذراع جانبا و هو متجه إلى أسفل">
+            >
+            ["at0025"] = <
+                text = <"المستقيم">
+                description = <"درجة الحرارة التي يتم قياسها في داخل المستقيم">
+            >
+            ["at0026"] = <
+                text = <"البلعوم الأنفي">
+                description = <"درجة الحرارة التي يتم قياسها من داخل البلعوم الأنفي">
+            >
+            ["at0027"] = <
+                text = <"المثانة البولية ">
+                description = <"يتم قياس درجة الحرارة من داخل المثانة البولية">
+            >
+            ["at0028"] = <
+                text = <"داخل الأوعية الدموية">
+                description = <"يتم قياس درجة الحرارة من داخل الجهاز الدوري - الأوعية الدموية">
+            >
+            ["at0029"] = <
+                text = <"الحالة">
+                description = <"معلومات حول حالة المريض">
+            >
+            ["at0030"] = <
+                text = <"تَعَرُّض الجسم">
+                description = <"الموقف الحراري للشخص الذي يتم قياس درجة حرارته">
+            >
+            ["at0031"] = <
+                text = <"مُعرَّى">
+                description = <"لا يوجد ملابس أو شراشف أو غطاء">
+            >
+            ["at0032"] = <
+                text = <"ملابس/ شراشف خفيفة">
+                description = <"الشخص مُغَطَّى بكمية من الملابس أو الشراشف أقل من تلك المناسبة للظروف البيئية المحيطة">
+            >
+            ["at0033"] = <
+                text = <"ملابس/شراشف مناسبة">
+                description = <"الشخص مُغَطَّى بكمية من الملابس أو الشراشف المناسبة للظروف البيئية المحيطة">
+            >
+            ["at0034"] = <
+                text = <"ملابس/شراشف زائدة">
+                description = <"الشخص مُغَطَّى بكمية زائدة من الملابس/ الشراشف المناسبة للظروف البيئية المحيطة">
+            >
+            ["at0041"] = <
+                text = <"وصف الضغط الحرارة">
+                description = <"وصف للظروف المُطبَّقة على المريض و التي قد تؤثر على درجة الحرارة التي يتم قياسها">
+            >
+            ["at0043"] = <
+                text = <"الجلد/ البشرة">
+                description = <"يتم قياس درجة الحرارة من الجلد المُعَرَّض/ المكشوف">
+            >
+            ["at0051"] = <
+                text = <"المهبل">
+                description = <"يتم قياس درجة الحرارة من داخل المهبل">
+            >
+            ["at0054"] = <
+                text = <"المريئ">
+                description = <"يتم قياس درجة الحرارة من داخل المريئ">
+            >
+            ["at0055"] = <
+                text = <"غضن الجلد عند الأربتين">
+                description = <"يتم قياس درجة الحرارة عند غضن الجلد بين الأربتين - بين الرجل و جدار البطن">
+            >
+            ["at0056"] = <
+                text = <"الظروف البيئية">
+                description = <"تفاصيل حول الظروف البيئية في وقت قياس درجة الحرارة">
+            >
+            ["at0057"] = <
+                text = <"المجهود">
+                description = <"تفاصيل حول المجهود الذي يقوم به الشخص في وقت قياس درجة الحرارة">
+            >
+            ["at0058"] = <
+                text = <"دورة الحيض">
+                description = <"تفاصيل حول دورة الحيض لدى المرأة">
+            >
+            ["at0059"] = <
+                text = <"الجهيزة">
+                description = <"تفاصيل حول الجهيزة المستخدمة لقياس درجة حرارة الجسم">
+            >
+            ["at9000"] = <
+                text = <"* Temperature (en)">
+                description = <"* Temperature (en)">
+            >
+            ["ac9075"] = <
+                text = <"تَعَرُّض الجسم (synthesised)">
+                description = <"الموقف الحراري للشخص الذي يتم قياس درجة حرارته (synthesised)">
+            >
+            ["ac9076"] = <
+                text = <"موضع القياس (synthesised)">
+                description = <"الموضع التشريحي الذي يتم فيه قياس درجة الحرارة (synthesised)">
+            >
+        >
+        ["fa"] = <
+            ["at0000"] = <
+                text = <"دمای بدن">
+                description = <"اندازه گیری دمای بدن که جایگزینی برای دمای کل بدن فرد است">
+            >
+            ["at0003"] = <
+                text = <"هر رویداد">
+                description = <"هر رویداد">
+            >
+            ["at0004"] = <
+                text = <"دما">
+                description = <"دمای اندازه گیری شده از بدن (به عنوان جایگزینی برای کل بدن)٬">
+            >
+            ["at0021"] = <
+                text = <"محل اندازه گیری">
+                description = <"محل آناتومیکی اندازه گیری دمای بدن">
+            >
+            ["at0022"] = <
+                text = <"ماه">
+                description = <"دما در عرض یک ماه اندازه گیری می شود">
+            >
+            ["at0023"] = <
+                text = <"کانال گوش">
+                description = <"دما از طریق کانال شنوایی خارجی اندازه گیری می شود">
+            >
+            ["at0024"] = <
+                text = <"زیر بغل">
+                description = <"دما از طریق پوستی و در زیر بغل، بصورتی که بازو پایین و در کنار بدن باشد، اندازه گیری می شود">
+            >
+            ["at0025"] = <
+                text = <"مقعد">
+                description = <"دما از طریق مقعد اندازه گیری می شود">
+            >
+            ["at0026"] = <
+                text = <"بینی حلقی">
+                description = <"دما از طریق بینی حلقی اندازه گیری می شود">
+            >
+            ["at0027"] = <
+                text = <"مثانه">
+                description = <"دما از طریق مثانه اندازه گیری می شود">
+            >
+            ["at0028"] = <
+                text = <"داخل عروقی">
+                description = <"دما از طریق سیستم عروقی اندازه گیری می شود">
+            >
+            ["at0029"] = <
+                text = <"حالت">
+                description = <"اطلاعات حالت بیمار">
+            >
+            ["at0030"] = <
+                text = <"نحوه پوشش بدن">
+                description = <"وضعیت گرمایی (به لحاظ پوشش) فردی که دمایش گرفته شده است">
+            >
+            ["at0031"] = <
+                text = <"لخت">
+                description = <"بدون لباس ، ملافه و یا پوشش
+">
+            >
+            ["at0032"] = <
+                text = <" لباس و یا ملافه کم">
+                description = <"فرد با مقدار لباس و یا ملافه کمتر از حد مناسب با شرایط محیطی پوشانده شده است">
+            >
+            ["at0033"] = <
+                text = <"لباس یا ملافه مناسب">
+                description = <"فرد با لباس و یا ملافه مناسب با شرایط محیطی پوشانده شده است">
+            >
+            ["at0034"] = <
+                text = <"لباس و یا ملافه زیاد">
+                description = <"فرد با مقدار لباس و یا ملافه بیشتر از حد مناسب با شرایط محیطی پوشانده شده است">
+            >
+            ["at0041"] = <
+                text = <"توصیف استرسهای گرمایی">
+                description = <"توصیف شرایط اعمال شده به شخص که ممکن است اندازه گیری دمای بدن فرد را تحت تاثیر قرار دهد">
+            >
+            ["at0043"] = <
+                text = <"پوست">
+                description = <"دما از طریق پوست بدن اندازه گیری می شود">
+            >
+            ["at0051"] = <
+                text = <"مهبل">
+                description = <"دما از  طریق داخل مهبل اندازه گیری می شود">
+            >
+            ["at0054"] = <
+                text = <"مری">
+                description = <"دما از طریق داخل مری اندازه گیری می شود">
+            >
+            ["at0055"] = <
+                text = <"چین پوستی کشاله رانی">
+                description = <"دما از طریق چین پوستی کشاله ران بین ران و دیواره شکم اندازه گیری می شود">
+            >
+            ["at0056"] = <
+                text = <"شرایط محیطی">
+                description = <"جزییاتی در مورد شرایط محیطی در زمان اندازه گیری دما ">
+            >
+            ["at0057"] = <
+                text = <"جنب و جوش">
+                description = <"جزییاتی در مورد جنب و جوش  فرد در زمان اندازه گیری دما ">
+            >
+            ["at0058"] = <
+                text = <"عادت ماهیانه">
+                description = <"جزییاتی در مورد عادت ماهیانه زنان ">
+            >
+            ["at0059"] = <
+                text = <"تجهیز">
+                description = <"جزییاتی در موردتجهیزات استفاده شده در اندازه گیری دمای بدن">
+            >
+            ["at9000"] = <
+                text = <"* Temperature (en)">
+                description = <"* Temperature (en)">
+            >
+            ["ac9075"] = <
+                text = <"نحوه پوشش بدن (synthesised)">
+                description = <"وضعیت گرمایی (به لحاظ پوشش) فردی که دمایش گرفته شده است (synthesised)">
+            >
+            ["ac9076"] = <
+                text = <"محل اندازه گیری (synthesised)">
+                description = <"محل آناتومیکی اندازه گیری دمای بدن (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Temperatura Corporal">
+                description = <"La medición de la temperatura corporal, que deriva en la temperatura de todo el cuerpo de una persona.">
+            >
+            ["at0003"] = <
+                text = <"Cualquier evento">
+                description = <"Cualquier evento">
+            >
+            ["at0004"] = <
+                text = <"Temperatura">
+                description = <"La temperatura corporal medida (representa la temperatura de todo el cuerpo).">
+            >
+            ["at0021"] = <
+                text = <"Sitio de la medición">
+                description = <"El sitio anatómico donde se mide la temperatura.">
+            >
+            ["at0022"] = <
+                text = <"Boca">
+                description = <"Temperatura bucal.">
+            >
+            ["at0023"] = <
+                text = <"Canal auditivo">
+                description = <"La temperatura se mide en el canal auditivo externo.">
+            >
+            ["at0024"] = <
+                text = <"Axila">
+                description = <"La temperatura se mide en el hueco axilar con el brazo posicionado al costado del cuerpo.">
+            >
+            ["at0025"] = <
+                text = <"Recto">
+                description = <"Temperatura rectal.">
+            >
+            ["at0026"] = <
+                text = <"Nasofaríngeo">
+                description = <"La temperatura se mide dentro de la nasofaringe.">
+            >
+            ["at0027"] = <
+                text = <"Vejiga urinaria">
+                description = <"La temperatura se mide en la vejiga urinaria.">
+            >
+            ["at0028"] = <
+                text = <"Intravascular">
+                description = <"La temperatura se mide dentro del sistema vascular.">
+            >
+            ["at0029"] = <
+                text = <"Estado">
+                description = <"Estado de la información del paciente.">
+            >
+            ["at0030"] = <
+                text = <"Exposición corporal">
+                description = <"La situación térmica de la persona al cual se le registra la temperatura.">
+            >
+            ["at0031"] = <
+                text = <"Desnudo">
+                description = <"Sin ropas, sabanas o coberturas.">
+            >
+            ["at0032"] = <
+                text = <"Ropas/lecho reducidas">
+                description = <"La persona esta cubierto por una cantidad menor de ropas o sabanas que lo considerado apropiado para las circunstancias ambientales.">
+            >
+            ["at0033"] = <
+                text = <"Ropas/lecho apropiadas">
+                description = <"La persona esta cubierta por una adecuada cantidad de ropas o sabanas, que lo considerado apropiado para las circunstancias ambientales.">
+            >
+            ["at0034"] = <
+                text = <"Ropas/lecho aumentado">
+                description = <"La persona se encuentra cubierto por una cantidad incrementada de ropas o sabanas que lo considerado apropiado para las circunstancias ambientales.">
+            >
+            ["at0041"] = <
+                text = <"Descripción de estrés térmico">
+                description = <"Descripción de las condiciones que le suceden al sujeto que puede influenciar la temperatura corporal medida.">
+            >
+            ["at0043"] = <
+                text = <"Piel">
+                description = <"La temperatura se mide sobre la piel expuesta.">
+            >
+            ["at0051"] = <
+                text = <"Vagina">
+                description = <"Temperatura vaginal.">
+            >
+            ["at0054"] = <
+                text = <"Esófago">
+                description = <"Temperatura se mide dentro del esófago.">
+            >
+            ["at0055"] = <
+                text = <"Pliegue inguinal">
+                description = <"La temperatura se mide en el pliegue inguinal entre el muslo y la pared abdominal.">
+            >
+            ["at0056"] = <
+                text = <"Condiciones Ambientales">
+                description = <"Detalles de las condiciones ambientales al momento del registro de la temperatura.">
+            >
+            ["at0057"] = <
+                text = <"Ejercicio">
+                description = <"Detalles sobre la actividad física de la persona al momento de la medición de la temperatura.">
+            >
+            ["at0058"] = <
+                text = <"Ciclo Menstrual">
+                description = <"Detalles sobre el ciclo menstrual de la mujer.">
+            >
+            ["at0059"] = <
+                text = <"Dispositivo">
+                description = <"Detalles sobre el dispositivo usado para medir la temperatura corporal.">
+            >
+            ["at9000"] = <
+                text = <"Temperatura">
+                description = <"Temperatura">
+            >
+            ["ac9075"] = <
+                text = <"Exposición corporal (synthesised)">
+                description = <"La situación térmica de la persona al cual se le registra la temperatura. (synthesised)">
+            >
+            ["ac9076"] = <
+                text = <"Sitio de la medición (synthesised)">
+                description = <"El sitio anatómico donde se mide la temperatura. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/127>
+        >
+        ["LNC205"] = <
+            ["/data[at0002]/events[at0003]/data[at0001]/items[at0004]"] = <http://LNC205.org/id/8310-5>
+        >
+    >
+    value_sets = <
+        ["ac9075"] = <
+            id = <"ac9075">
+            members = <"at0031", "at0032", "at0033", "at0034">
+        >
+        ["ac9076"] = <
+            id = <"ac9076">
+            members = <"at0022", "at0023", "at0024", "at0025", "at0026", "at0027", "at0028", "at0043", "at0051", "at0054", "at0055">
+        >
+    >

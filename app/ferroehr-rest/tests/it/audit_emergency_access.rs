@@ -24,7 +24,7 @@ use axum::Router;
 use axum::body::Body;
 use ehds_logging::balp::{EMERGENCY_DESCRIPTION, EMERGENCY_ENTITY};
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::service::FerroEhrService;
+use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::sender::{
     AuditHandle, ResolvedSubject, SubjectLookup, SubjectResolver, start,
@@ -56,7 +56,8 @@ fn basic(name: &str) -> String {
 
 /// An audited app with the local store on, `ETREAT` agreed as an emergency
 /// purpose, Basic users for a clinician, an administrator and a patient portal
-/// holding the subject-scoped audit role, and one EHR; returns the EHR id.
+/// holding a `read_subject_audit` grant in the CDR, and one EHR; returns the
+/// EHR id.
 async fn app() -> (testkit::TestDb, PgPool, Router, String) {
     let (db, pool) = common::migrated_pool().await;
     let audit = AuditConfig {
@@ -76,22 +77,27 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
         .await
         .expect("the audit sender");
     let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        common::binding_service(&pool)
             .with_audit(sender)
-            .with_audit_store(AuditStore::new(pool.clone())),
+            .with_audit_store(AuditStore::new(pool.clone()))
+            .with_binding_mapping(crate::party_binding_http::mapping())
+            .with_grant_ceiling(GrantCeiling::new([Operation::ReadSubjectAudit])),
     );
     let mut config = common::api_config(true);
     common::with_basic_users(
         &mut config,
+        &svc,
+        &pool,
         &[
             ("root", &["ADMIN"]),
             ("clinician", &["USER"]),
             ("portal", &["PORTAL"]),
         ],
-    );
+    )
+    .await;
+    common::grant_to(&svc, &pool, "portal", Operation::ReadSubjectAudit).await;
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
-    authz.rbac.subject_audit_role = Some("PORTAL".to_owned());
     let authz = AuthzHandle::build(
         &authz,
         &config.api.base_path,
@@ -99,9 +105,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = ferroehr_rest::build_full(config, svc, authz, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, svc, authz, Observability::default()).await;
 
     let (status, body) = common::send_body(
         &app,
@@ -196,7 +200,7 @@ async fn composition_reads(pool: &PgPool, expected: usize) -> Vec<(Option<String
 /// ordinary purpose carries no mark.
 #[tokio::test]
 async fn an_emergency_access_is_marked_and_shown_in_the_subjects_own_access_log() {
-    let (_db, pool, app, ehr) = app().await;
+    let (_db, pool, app, ehr) = Box::pin(app()).await;
     let vo_id = commit(&app, &ehr).await;
 
     let (status, body) = read(&app, &ehr, &vo_id, Some("ETREAT")).await;
@@ -274,7 +278,7 @@ async fn an_emergency_access_is_marked_and_shown_in_the_subjects_own_access_log(
 /// refused attempt is still logged, and still carries the emergency mark.
 #[tokio::test]
 async fn an_emergency_purpose_does_not_lift_a_gdpr_restriction() {
-    let (_db, pool, app, ehr) = app().await;
+    let (_db, pool, app, ehr) = Box::pin(app()).await;
     let vo_id = commit(&app, &ehr).await;
 
     let (status, body) = common::send_body(

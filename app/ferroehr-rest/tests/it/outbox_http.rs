@@ -3,16 +3,17 @@
 
 //! The outbox feed end to end over the assembled router (#4786): the events
 //! after a reader's cursor in `seq` order, the page size, the acknowledgement
-//! that moves the cursor, the refusal of an unknown or inactive reader and of
-//! a caller without the `__ferroehr.outbox` scope, and one access record per
-//! read. No openEHR spec governs eventing: our own design/extension.
+//! that moves the cursor, the refusal of a reader no `read_change_feed` grant
+//! in the CDR names, of a caller whose own grant does not name it and of a
+//! caller without the `__ferroehr.outbox` scope, and one access record per
+//! read (#5439). No openEHR spec governs eventing: our own design/extension.
 
 use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
-use ferroehr::extensions::outbox::reconcile;
+use ferroehr::extensions::outbox::{OutboxGate, reconcile};
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::AuditStore;
@@ -21,17 +22,23 @@ use http::{Request, StatusCode, header};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 
+use crate::caller_kinds_http::{audience, bearer, machines};
 use crate::common;
 use crate::common::BASE;
+use crate::policy_fixture::{capability, grant, scope};
 
-/// The reader the configuration names.
+/// The reader the `read_change_feed` grant of the `bridge` client names.
 const READER: &str = "ferrobridge";
-/// A reader the configuration named once and no longer does.
+/// A reader once registered that no grant names.
 const FORMER: &str = "former";
+/// The machines issuer of the feed's clients.
+const MACHINES: &str = "https://outbox.machines.example";
 
-/// An audited app with a feed reader holding the outbox scope alone, and an
-/// administrator holding every other scope; `ferrobridge` is an active
-/// reader and `former` an inactive one.
+/// An audited app whose `bridge` client holds the outbox scope alone and the
+/// `read_change_feed` grant of `ferrobridge`, whose `other` client holds that
+/// of another reader, and an administrator holding every other scope;
+/// `former` is a registered reader no grant names. The outbox is written
+/// while a reader is granted, as the binary writes it.
 async fn app() -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
     let party = ferroehr::db::domain_pool_from(&pool, ferroehr::db::domain::Domain::Party);
@@ -47,22 +54,43 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         start(common::local_audit(), None, Some(pool.clone()))
             .await
             .expect("the audit sender");
-    let svc = Arc::new(
+    let svc = crate::policy_fixture::granting(
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender)
-            .with_audit_store(AuditStore::new(pool.clone())),
-    );
+            .with_audit_store(AuditStore::new(pool.clone()))
+            .with_outbox_gate(OutboxGate::WhileGranted),
+    )
+    .await;
+    // NOTE: the Basic user's PERSON is committed before any reader is
+    // granted, so its commits write no outbox row.
     let mut config = common::api_config(true);
-    common::with_basic_users(&mut config, &[("bridge", &[]), ("root", &[])]);
-    if let Some(basic) = config.auth.shared.basic.as_mut() {
-        for user in basic.users.iter_mut().filter(|user| user.user == "bridge") {
-            user.scopes = vec!["__ferroehr.outbox".to_owned()];
-        }
+    common::with_basic_users(&mut config, &svc, &pool, &[("root", &[])]).await;
+    for (client, reader) in [("bridge", READER), ("other", "other")] {
+        let reads = capability("read_change_feed", &[scope("reader", reader)]);
+        grant(&svc, MACHINES, client, &[reads]).await;
     }
-    let app = ferroehr_rest::build_full(config, svc, None, Observability::default())
-        .await
-        .expect("build app");
+    // The replica's refresher reads the grants on the commits' notification.
+    svc.grants().refresh().await.expect("the grants read");
+    let svc = Arc::new(svc);
+    config.auth.shared.issuer.push(machines(
+        MACHINES,
+        ferrohealth_smart::profile::Preset::Rfc9068,
+    ));
+    let app = common::build_full(config, svc, None, Observability::default()).await;
     (db, pool, app)
+}
+
+/// The credential of `user`: the Basic administrator `root`, or an app-only
+/// token of the client `user` holding the outbox scope alone.
+fn credential(user: &str) -> String {
+    if user == "root" {
+        return common::basic_credential(user);
+    }
+    bearer(
+        MACHINES,
+        &audience(MACHINES),
+        &json!({ "sub": user, "client_id": user, "scope": "__ferroehr.outbox" }),
+    )
 }
 
 /// Sends `method uri` as `user`, with an optional JSON body.
@@ -76,7 +104,7 @@ async fn send(
     let req = Request::builder()
         .method(method)
         .uri(uri)
-        .header(header::AUTHORIZATION, common::basic_credential(user))
+        .header(header::AUTHORIZATION, credential(user))
         .header(header::ACCEPT, "application/json");
     let req = match body {
         Some(body) => req
@@ -225,6 +253,17 @@ async fn an_unknown_or_inactive_reader_is_not_found() {
             "{reader}"
         );
     }
+}
+
+#[tokio::test]
+async fn another_readers_client_is_refused() {
+    let (_db, _pool, app) = app().await;
+    create_ehrs(&app, 1).await;
+    let (status, body) = send(&app, "GET", &feed(READER, ""), "other", None).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    assert!(body.contains("read_change_feed"), "{body}");
+    let (status, body) = send(&app, "GET", &feed("other", ""), "other", None).await;
+    assert_eq!(status, StatusCode::OK, "its own reader: {body}");
 }
 
 #[tokio::test]

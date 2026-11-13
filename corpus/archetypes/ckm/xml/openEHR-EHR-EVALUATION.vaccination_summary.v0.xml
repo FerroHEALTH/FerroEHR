@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1315,7 +1315,7 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
       <items code="at0003">
         <items id="text">Primary course status</items>
         <items id="description">Status of the primary (or catch up) course of vaccinations.</items>
-        <items id="comment">This status should be revised if the course has not been completed and the 'Next vaccination due' date or 'Next review due' has passed. </items>
+        <items id="comment">This status should be revised if the course has not been completed and the 'Next vaccination due' date or 'Next review due' has passed.</items>
       </items>
       <items code="at0004">
         <items id="text">Course not commenced</items>
@@ -1361,7 +1361,7 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
       <items code="at0023">
         <items id="text">Specific vaccine name</items>
         <items id="description">Name of the specific vaccine administered.</items>
-        <items id="comment">For example: a trade name that may be more specific than  the index 'Vaccine name'. </items>
+        <items id="comment">For example: a trade name that may be more specific than  the index 'Vaccine name'.</items>
       </items>
       <items code="at0024">
         <items id="text">Date of administration</items>
@@ -1370,7 +1370,7 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
       </items>
       <items code="at0027">
         <items id="text">Administration location</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Sequence in series</items>
@@ -1396,11 +1396,11 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
       </items>
       <items code="at0039">
         <items id="text">Primary course</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Booster</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Description</items>
@@ -1423,13 +1423,11 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
       <items code="at0047">
         <items id="text">Total number of administrations</items>
         <items id="description">Total number of vaccine doses administered over the lifetime of the individual.</items>
-        <items id="comment">May be manually calculated or extracted from EHR sources.&#xD;
-&#xD;
-</items>
+        <items id="comment">May be manually calculated or extracted from EHR sources.</items>
       </items>
       <items code="at0048">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Comment</items>
@@ -1527,7 +1525,7 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
       </items>
       <items code="at0027">
         <items id="text">*Administration location (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">*Sequence in series (en)</items>
@@ -1553,11 +1551,11 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
       </items>
       <items code="at0039">
         <items id="text">Primary course</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Booster</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Description</items>
@@ -1586,7 +1584,7 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
       </items>
       <items code="at0048">
         <items id="text">Unknown</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">*New element(en)</items>
@@ -1684,7 +1682,7 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
       </items>
       <items code="at0027">
         <items id="text">*Administration location (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">*Sequence in series (en)</items>
@@ -1710,11 +1708,11 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
       </items>
       <items code="at0039">
         <items id="text">*Primary course (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">*Booster (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Descrição</items>
@@ -1743,7 +1741,7 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
       </items>
       <items code="at0048">
         <items id="text">*Unknown (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">*New element(en)</items>
@@ -1841,7 +1839,7 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
       </items>
       <items code="at0027">
         <items id="text">Verabreichungsort</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Reihenfolge der Mehrfachimpfung</items>
@@ -1867,11 +1865,11 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
       </items>
       <items code="at0039">
         <items id="text">Grundimpfung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Booster</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Beschreibung</items>
@@ -1898,7 +1896,7 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
       </items>
       <items code="at0048">
         <items id="text">Unbekannt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Kommentar</items>
@@ -1926,4 +1924,3 @@ Not to be used for recording screening question/answer pairs regarding vaccinati
     </term_definitions>
   </ontology>
 </archetype>
-

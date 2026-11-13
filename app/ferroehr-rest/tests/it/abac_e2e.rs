@@ -33,14 +33,12 @@ use ferroehr::storage::version_repo::meta::VersionContent;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, start};
 use ferroehr_rest::config::AppConfig;
+use ferroehr_rest::extensions::access::authz::content::ContentRules;
 use ferroehr_rest::extensions::access::authz::request::{
     CATEGORY, ORIGIN, PATIENT, ResourceKind, TEMPLATE,
 };
-use ferroehr_rest::extensions::access::authz::{
-    AuthzHandle, AuthzResolvers, ContentRules, ResolveError,
-};
+use ferroehr_rest::extensions::access::authz::{AuthzHandle, AuthzResolvers, ResolveError};
 use ferroehr_rest::extensions::management::Observability;
-use ferroehr_rest::{build_full, build_with};
 use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
 use ferrohealth_authz::request::{Attr, Decision};
 use http::{Request, StatusCode};
@@ -238,14 +236,13 @@ async fn service(audit: Option<AuditSender>) -> (testkit::TestDb, Arc<FerroEhrSe
 
 /// The ABAC app over `svc`.
 async fn abac_app(svc: Arc<FerroEhrService>, abac_enabled: bool) -> Router {
-    build_full(
+    common::build_full(
         rest_config(),
         svc,
         authz(abac_enabled),
         Observability::default(),
     )
     .await
-    .expect("build app")
 }
 
 // ── seeding through an auth-off app over the same service ───────────────────────
@@ -295,7 +292,6 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
             sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            ..StoreConfig::default()
         },
         syslog: Some(SyslogConfig {
             url: ferrohealth_secret::secret_url::SecretUrl::new(format!("tls://127.0.0.1:{port}")),
@@ -396,9 +392,7 @@ async fn status(app: &Router, req: Request<Body>) -> StatusCode {
 /// the gate under test).
 async fn service_and_seed_app() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     let (pg, svc) = service(None).await;
-    let seed = build_with(seed_config(), Arc::clone(&svc))
-        .await
-        .expect("seed app");
+    let seed = common::build_with(seed_config(), Arc::clone(&svc)).await;
     (pg, svc, seed)
 }
 
@@ -410,14 +404,13 @@ async fn probe(app: &Router, method: &str, path: &str, patient: Option<&str>) ->
 /// The app whose PDP permits only requests carrying the IPS template attribute,
 /// resolved from the REAL service.
 async fn template_scoped_app(svc: Arc<FerroEhrService>) -> Router {
-    build_full(
+    common::build_full(
         rest_config(),
         Arc::clone(&svc),
         authz_with(Arc::new(RequireIpsTemplate), service_resolvers(svc)),
         Observability::default(),
     )
     .await
-    .expect("build app")
 }
 
 // ── tests ─────────────────────────────────────────────────────────────────────
@@ -581,7 +574,6 @@ async fn the_accessing_organisation_reaches_the_stored_record() {
             sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            ..StoreConfig::default()
         },
         suppress_login_events: true,
         fail_mode: FailMode::Open,
@@ -595,9 +587,7 @@ async fn the_accessing_organisation_reaches_the_stored_record() {
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
-    let seed = build_with(seed_config(), Arc::clone(&svc))
-        .await
-        .expect("seed app");
+    let seed = common::build_with(seed_config(), Arc::clone(&svc)).await;
     seed_ehr(&seed, EHR_OWN).await;
     let app = abac_app(Arc::clone(&svc), true).await;
 
@@ -657,7 +647,6 @@ async fn the_accessing_organisation_is_recorded_with_the_abac_gate_off() {
             sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            ..StoreConfig::default()
         },
         suppress_login_events: true,
         fail_mode: FailMode::Open,
@@ -671,9 +660,7 @@ async fn the_accessing_organisation_is_recorded_with_the_abac_gate_off() {
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
-    let seed = build_with(seed_config(), Arc::clone(&svc))
-        .await
-        .expect("seed app");
+    let seed = common::build_with(seed_config(), Arc::clone(&svc)).await;
     seed_ehr(&seed, EHR_OWN).await;
     let app = abac_app(Arc::clone(&svc), false).await;
 
@@ -844,21 +831,32 @@ async fn content_scoped_app(svc: Arc<FerroEhrService>, engine: RequireContent) -
     let categories: ferroehr::system_log::categories::CategoryMapConfig =
         serde_json::from_value(json!({ "templates": { IPS_TEMPLATE_ID: ["Patient-Summaries"] } }))
             .expect("the map parses");
+    let newest = svc
+        .policy_register(ferroehr::policy_register::Register::AuditCategories)
+        .await
+        .expect("read the category register")
+        .version;
+    svc.put_policy_register(
+        ferroehr::policy_register::Register::AuditCategories,
+        newest,
+        &serde_json::to_string(&categories).expect("the map serializes"),
+    )
+    .await
+    .expect("the category register takes the map");
     let resolvers = AuthzResolvers {
         content: Arc::new(ContentRules {
-            categories: categories.compile().expect("the map compiles"),
+            registers: Some(Arc::clone(svc.policy_registers())),
             ..ContentRules::default()
         }),
         ..service_resolvers(Arc::clone(&svc))
     };
-    build_full(
+    common::build_full(
         rest_config(),
         Arc::clone(&svc),
         authz_with(Arc::new(engine), resolvers),
         Observability::default(),
     )
     .await
-    .expect("build app")
 }
 
 /// The category token a stored record carries for `code`.
@@ -1121,14 +1119,13 @@ async fn the_query_post_check_applies_to_an_ehr_only_query() {
     seed_ehr_for(&seed, EHR_OTHER, PATIENT_OTHER).await;
     seed_composition(&seed, EHR_OWN).await;
 
-    let app = build_full(
+    let app = common::build_full(
         rest_config(),
         svc,
         authz_with(Arc::new(DenyOwnPatientQueries), resolvers()),
         Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     for aql in [
         "SELECT e/ehr_id/value FROM EHR e",
         "SELECT e/time_created/value FROM EHR e",
@@ -1163,9 +1160,7 @@ async fn db_resolved_apps(patient_namespace: Option<&str>) -> (testkit::TestDb, 
     let svc = Arc::new(FerroEhrService::new(
         &ferroehr::db::domain::DomainPools::from_shared(&pool),
     ));
-    let seed = build_with(seed_config(), Arc::clone(&svc))
-        .await
-        .expect("seed app");
+    let seed = common::build_with(seed_config(), Arc::clone(&svc)).await;
     let resolvers = AuthzResolvers {
         subject: Arc::new(move |ehr_id: String| {
             let pool = pool.clone();
@@ -1190,9 +1185,7 @@ async fn db_resolved_apps(patient_namespace: Option<&str>) -> (testkit::TestDb, 
         resolvers,
     )
     .map(Arc::new);
-    let app = build_full(rest_config(), svc, handle, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(rest_config(), svc, handle, Observability::default()).await;
     (pg, seed, app)
 }
 
@@ -1278,9 +1271,7 @@ async fn a_patient_keyed_rule_applies_to_the_touched_subjects_without_a_claim() 
         resolvers(),
     )
     .map(Arc::new);
-    let app = build_full(rest_config(), svc, handle, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(rest_config(), svc, handle, Observability::default()).await;
 
     assert_eq!(
         unscoped_query_status(&app, "SELECT e/ehr_id/value FROM EHR e").await,

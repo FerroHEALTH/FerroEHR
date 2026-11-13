@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -96,8 +96,7 @@ The total score is the arithmetic sum of all 15 responses, excluding any untesta
       <keywords>scale, neurological, stroke, assessment, examination, NIHSS</keywords>
       <use>Used to record the results of NIHSS scoring as a quantitative measurement of stroke-related neurological deficits. The total score is the arithmetic sum of all 15 responses, with all 'untestable' values excluded.&#xD;
 &#xD;
-The ordinal value '99' is included to represent the non-numeric value 'untestable'. Currently, neither modeling tools nor existing openEHR journal systems allow for a combination of numeric and non-numeric values within a single value set.&#xD;
-</use>
+The ordinal value '99' is included to represent the non-numeric value 'untestable'. Currently, neither modeling tools nor existing openEHR journal systems allow for a combination of numeric and non-numeric values within a single value set.</use>
       <misuse />
       <copyright>© openEHR Foundation</copyright>
     </details>
@@ -2091,19 +2090,19 @@ The ordinal value '99' is included to represent the non-numeric value 'untestabl
       </items>
       <items code="at0005">
         <items id="text">Alert; keenly responsive.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Not Alert; but arousable by minor stimulation to obey, answer, or respond.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Not Alert; requires repeated stimulation to attend, or is obtunded and requires strong or painful</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Responds only with reflex motor or autonomic effects, or totally unresponsive, flaccid, and areflexic.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">LOC questions</items>
@@ -2111,15 +2110,15 @@ The ordinal value '99' is included to represent the non-numeric value 'untestabl
       </items>
       <items code="at0010">
         <items id="text">Answers both questions correctly.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Answers one question correctly.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Answers neither question correctly.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">LOC commands</items>
@@ -2127,123 +2126,123 @@ The ordinal value '99' is included to represent the non-numeric value 'untestabl
       </items>
       <items code="at0014">
         <items id="text">Performs both tasks correctly.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Performs one task correctly.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Performs neither task correctly.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Best Gaze</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Normal.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Partial gaze palsy; gaze is abnormal in one or both eyes, but forced deviation or total gaze paresis is not present.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Forced deviation, or total gaze paresis is not overcome by the oculocephalic maneuver.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Visual</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">No visual loss.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Partial hemianopia.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Complete hemianopia.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Bilateral hemianopia (blind including cortical blindness).</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Facial palsy</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Normal symmetrical movements.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Minor paralysis (flattened nasolabial fold, asymmetry on smiling).</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Partial paralysis (total or near-total paralysis of lower face).</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Complete paralysis of one or both sides (absence of facial movement in the upper and lower face).</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0067">
         <items id="text">Sensory</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0068">
         <items id="text">Normal; no sensory loss.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0069">
         <items id="text">Mild-to-moderate sensory loss; patient feels pinprick is less sharp or is dull on the affected side; or  there is a loss of superficial pain with pinprick, but patient is aware of being touched.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0070">
         <items id="text">Severe or total sensory loss; patient is not aware of being touched in the face, arm, and leg.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Best Language</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0072">
         <items id="text">No aphasia; normal.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0073">
         <items id="text">Mild-to-moderate aphasia; some obvious loss of fluency or facility of comprehension, without  significant limitation on ideas expressed or form of expression. Reduction of speech and/or  comprehension, however, makes conversation about provided materials difficult or impossible. For  example, in conversation about provided materials, examiner can identify picture or naming card  content from patient’s response.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0074">
         <items id="text">Severe aphasia; all communication is through fragmentary expression; great need for inference, questioning, and guessing by the listener. Range of information that can be exchanged is limited; listener carries burden of communication. Examiner cannot identify materials provided from patient response.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0075">
         <items id="text">Mute, global aphasia; no usable speech or auditory comprehension.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0082">
         <items id="text">Extinction and inattention</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0083">
         <items id="text">No abnormality.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0084">
         <items id="text">Visual, tactile, auditory, spatial, or personal inattention, or extinction to bilateral simultaneous stimulation in one of the sensory modalities.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0085">
         <items id="text">Profound hemi-inattention or extinction to more than one modality; does not recognize own hand or orients to only one side of space.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0086">
         <items id="text">Total score</items>
@@ -2261,27 +2260,27 @@ Implementation note: Although the 'Untestable' value is included in the ordinal 
       </items>
       <items code="at0032">
         <items id="text">No drift; limb holds 90 (or 45) degrees for full 10 seconds.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Drift; limb holds 90 (or 45) degrees, but drifts down before full 10 seconds; does not hit bed or other support.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Some effort against gravity; limb cannot get to or maintain (if cued) 90 (or 45) degrees, drifts down  to bed, but has some effort against gravity.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0124">
         <items id="text">No effort against gravity; limb falls.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">No movement.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Untestable: Amputation or joint fusion.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Motor - right arm</items>
@@ -2291,27 +2290,27 @@ Implementation note: Although the 'Untestable' value is included in the ordinal 
       </items>
       <items code="at0039">
         <items id="text">No drift; limb holds 90 (or 45) degrees for full 10 seconds.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Drift; limb holds 90 (or 45) degrees, but drifts down before full 10 seconds; does not hit bed or other support.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Some effort against gravity; limb cannot get to or maintain (if cued) 90 (or 45) degrees, drifts down  to bed, but has some effort against gravity.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">No effort against gravity; limb falls.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">No movement.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Untestable: Amputation or joint fusion.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Motor - left leg</items>
@@ -2321,27 +2320,27 @@ Implementation note: Although the 'Untestable' value is included in the ordinal 
       </items>
       <items code="at0047">
         <items id="text">No drift; leg holds 30-degree position for full 5 seconds.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Drift; leg falls by the end of the 5-second period but does not hit the bed.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Some effort against gravity; leg falls to bed by 5 seconds but has some effort against gravity.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">No effort against gravity; leg falls to bed immediately.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">No movement.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Untestable: Amputation or joint fusion.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0141">
         <items id="text">Motor - right leg</items>
@@ -2351,65 +2350,65 @@ Implementation note: Although the 'Untestable' value is included in the ordinal 
       </items>
       <items code="at0054">
         <items id="text">No drift; leg holds 30-degree position for full 5 seconds.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Drift; leg falls by the end of the 5-second period but does not hit the bed.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Some effort against gravity; leg falls to bed by 5 seconds but has some effort against gravity.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0057">
         <items id="text">No effort against gravity; leg falls to bed immediately.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">No movement.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0059">
         <items id="text">Untestable: Amputation or joint fusion.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Limb ataxia</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Absent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">Present in one limb</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">Present in two limbs</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Untestable: Amputation or joint fusion, explain:</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0076">
         <items id="text">Dysarthria</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Only if the patient is intubated or has other physical barriers to producing speech, the examiner should record the score as 'Untestable' and record the reason in the 'Reason speech untestable' data element. &#xD;
 Implementation note: Although the 'Untestable' value is included in the ordinal to allow its inclusion in the user interface dropdown menu, NIHSS does not assign a numerical score for the 'Untestable' option in the total NIHSS score.</items>
       </items>
       <items code="at0077">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0078">
         <items id="text">Mild-to-moderate dysarthria; patient slurs at least some words and, at worst, can be understood with some difficulty.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0079">
         <items id="text">Severe dysarthria; patient’s speech is so slurred as to be unintelligible in the absence of or out of proportion to any dysphasia, or is mute/anarthric.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0087">
         <items id="text">2 hours post treatment</items>
@@ -2457,7 +2456,7 @@ Implementation note: Although the 'Untestable' value is included in the ordinal 
       </items>
       <items code="at0080">
         <items id="text">Untestable: Intubated or other physical barrier.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0093">
         <items id="text">Extension</items>
@@ -2888,19 +2887,19 @@ Only in the case of amputation or joint fusion, the examiner should record the s
       </items>
       <items code="at0005">
         <items id="text">Våken og adekvat</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Døsig, reagerer adekvat ved lett stimulering</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Døsig, reagerer først ved kraftigere/gjentatt stimulering</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Reagerer ikke, eller bare med ikke-målrettet bevegelse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Orientering</items>
@@ -2908,15 +2907,15 @@ Only in the case of amputation or joint fusion, the examiner should record the s
       </items>
       <items code="at0010">
         <items id="text">Riktig svar på begge spørsmål</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Riktig svar på ett spørsmål</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Ingen riktige svar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Respons på kommando</items>
@@ -2924,15 +2923,15 @@ Only in the case of amputation or joint fusion, the examiner should record the s
       </items>
       <items code="at0014">
         <items id="text">Utfører begge kommandoer korrekt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Utfører en kommando korrekt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Utfører ingen korrekt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Blikkbevegelse</items>
@@ -2940,15 +2939,15 @@ Only in the case of amputation or joint fusion, the examiner should record the s
       </items>
       <items code="at0018">
         <items id="text">Normal øyebevegelse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Delvis blikkparese (eller ved øyemuskelparese)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Fiksert blikkdreining til siden eller total blikkparese</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Synsfelt</items>
@@ -2956,19 +2955,19 @@ Only in the case of amputation or joint fusion, the examiner should record the s
       </items>
       <items code="at0022">
         <items id="text">Normalt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Delvis hemianopsi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Total hemianopsi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Bilateral hemianopsi/blind</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Ansikt</items>
@@ -2976,19 +2975,19 @@ Only in the case of amputation or joint fusion, the examiner should record the s
       </items>
       <items code="at0027">
         <items id="text">Normale symmetriske bevegelser</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Utvisket nasolabalfure, asymmetri ved smil</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Betydelig lammelse i nedre ansiktshalvdel</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Total lammelse i halve ansiktet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Kraft i armen - venstre arm</items>
@@ -2998,23 +2997,23 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0032">
         <items id="text">Ingen drifting</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Drifter til lavere posisjon (treffer ikke underlag)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Noe bevegelse mot tyngdekraften, drifter til sengen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Ingen bevegelse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Ikke testbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Beskriv Ikke testbar - venstre arm</items>
@@ -3028,27 +3027,27 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0039">
         <items id="text">Ingen drifting</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Drifter til lavere posisjon (treffer ikke underlag)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Noe bevegelse mot tyngdekraften, drifter til sengen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Kun små muskelbevegelser, faller til sengen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Ingen bevegelse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Ikke testbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Beskriv Ikke testbar - høyre arm</items>
@@ -3062,27 +3061,27 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0047">
         <items id="text">Ingen drifting</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Drifter til lavere posisjon (treffer ikke underlag)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Noe bevegelse mot tyngdekraften, drifter til sengen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Ingen bevegelse mot tyngdekraften, faller til sengen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Ingen bevegelse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Ikke testbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Beskriv Ikke testbar - venstre ben</items>
@@ -3090,27 +3089,27 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0054">
         <items id="text">Ingen drifting</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0055">
         <items id="text">Drifter til lavere posisjon (treffer ikke underlag)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0056">
         <items id="text">Noe bevegelse mot tyngdekraften, drifter til sengen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0057">
         <items id="text">Kun små muskelbevegelser, faller til sengen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0058">
         <items id="text">Ingen bevegelse</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0059">
         <items id="text">Ikke testbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Beskriv Ikke testbar - høyre ben</items>
@@ -3124,19 +3123,19 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0062">
         <items id="text">Ingen ataksi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">Tilstede i en ekstremitet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">Tilstede i to ekstremiteter</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Ikke testbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0066">
         <items id="text">Beskriv Ikke testbar - ataksi</items>
@@ -3148,15 +3147,15 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0068">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0069">
         <items id="text">Mild til moderat utfall (kjenne stikk som mindre skarpt)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0070">
         <items id="text">Alvorlig til total utfall (også ved coma, kvadriplegisk)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0071">
         <items id="text">Språk</items>
@@ -3164,19 +3163,19 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0072">
         <items id="text">Ingen afasi</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0073">
         <items id="text">Mild til moderat afasi, samtale mulig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0074">
         <items id="text">Alvorlig afasi, samtale svært vanskelig eller umulig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0075">
         <items id="text">Ikke språk (også ved coma)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0076">
         <items id="text">Dysartri</items>
@@ -3186,19 +3185,19 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0077">
         <items id="text">Ingen dysartri</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0078">
         <items id="text">Mild - moderat dysartri (lett snøvling)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0079">
         <items id="text">Nær uforståelig tale eller stum/global afasi (også koma)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0080">
         <items id="text">Ikke testbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0081">
         <items id="text">Beskriv Ikke testbar - dysartri</items>
@@ -3210,15 +3209,15 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0083">
         <items id="text">Ingen neglekt (også ved hemianopsi med normal sensibilitet)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0084">
         <items id="text">Neglekt i en sansemodalitet</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0085">
         <items id="text">Neglekt i begge sansemodaliteter</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0086">
         <items id="text">Total NIHSS-Score</items>
@@ -3255,7 +3254,7 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0124">
         <items id="text">Kun små muskelbevegelser, faller til sengen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0141">
         <items id="text">Kraft i benet - høyre ben</items>
@@ -3304,19 +3303,19 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0009">
         <items id="text">Orientierung</items>
-        <items id="description"> Frage nach Monat und Alter des Patienten.</items>
+        <items id="description">Frage nach Monat und Alter des Patienten.</items>
       </items>
       <items code="at0010">
         <items id="text">Beide Fragen richtig beantwortet.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Eine Frage richtig beantwortet.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Keine Frage richtig beantwortet.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Befolgung von Aufforderungen</items>
@@ -3324,15 +3323,15 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0014">
         <items id="text">Beide Aufforderungen richtig befolgt.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Eine Aufforderung richtig befolgt.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Keine Aufforderung richtig befolgt.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Blickbewegungen (Oculomotorik)</items>
@@ -3340,7 +3339,7 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0018">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Partielle Blickparese</items>
@@ -3356,19 +3355,19 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0022">
         <items id="text">Keine Einschränkung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Partielle Hemianopsie</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Komplette Hemianopsie</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Bilaterale Hemianopsie</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Facialisparese</items>
@@ -3376,7 +3375,7 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0027">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Gering</items>
@@ -3432,15 +3431,15 @@ Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen fo
       </items>
       <items code="at0083">
         <items id="text">Keine Abnormalität</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0084">
         <items id="text">Visuelle, taktile, auditive oder personenbezogene Unaufmerksamkeit oder Auslöschung bei Überprüfung von gleichzeitiger bilateraler Stimulation in einer der sensiblen Qualitäten.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0085">
         <items id="text">Schwere halbseitige Unaufmerksamkeit. Kein Erkennen der eigenen Hand oder Orientierung nur zu einer Seite des Raumes.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0086">
         <items id="text">Gesamtscore</items>
@@ -3474,11 +3473,11 @@ Implementation note: Although the 'Untestable' value is included in the ordinal 
       </items>
       <items code="at0035">
         <items id="text">Keine Bewegung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Kann nicht getestet werden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Motorik rechter Arm</items>
@@ -3504,11 +3503,11 @@ Implementation note: Although the 'Untestable' value is included in the ordinal 
       </items>
       <items code="at0043">
         <items id="text">Keine Bewegung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Kann nicht getestet werden.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Motorik linkes Bein</items>
@@ -3534,11 +3533,11 @@ Implementation note: Although the 'Untestable' value is included in the ordinal 
       </items>
       <items code="at0051">
         <items id="text">Keine Bewegung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Kann nicht getestet werden.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0141">
         <items id="text">Motorik rechtes Bein</items>
@@ -3564,11 +3563,11 @@ Implementation note: Although the 'Untestable' value is included in the ordinal 
       </items>
       <items code="at0058">
         <items id="text">Keine Bewegung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0059">
         <items id="text">Kann nicht getestet werden.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Extremitätenataxie</items>
@@ -3576,19 +3575,19 @@ Implementation note: Although the 'Untestable' value is included in the ordinal 
       </items>
       <items code="at0062">
         <items id="text">Fehlend</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">In einer Extremität vorhanden.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">In zwei Extremitäten vorhanden.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Kann nicht getestet werden.</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0076">
         <items id="text">Dysarthrie</items>
@@ -3654,7 +3653,7 @@ Implementation note: Although the 'Untestable' value is included in the ordinal 
       </items>
       <items code="at0080">
         <items id="text">Kann nicht getestet werden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0093">
         <items id="text">Erweiterung</items>
@@ -3664,4 +3663,3 @@ Implementation note: Although the 'Untestable' value is included in the ordinal 
     </term_definitions>
   </ontology>
 </archetype>
-

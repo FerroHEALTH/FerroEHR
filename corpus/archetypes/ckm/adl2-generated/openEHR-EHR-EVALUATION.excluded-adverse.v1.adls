@@ -1,0 +1,76 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-EVALUATION.excluded-adverse.v1.0.0
+
+specialize
+    openEHR-EHR-EVALUATION.excluded.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"23/04/2006">
+    >
+    lifecycle_state = <"AuthorDraft">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"8E963461595D0EA8A5956C3A763D53C2">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording exclusion statements about allergies and adverse reactions to a particular agent">
+            keywords = <"allergy", "adverse", "reaction", "allergies", "medication">
+            use = <"">
+            misuse = <"Do not use as a general statement - use 'openEHR-EHR-EVALUATION.excluded' instead.">
+            copyright = <"copyright (c) 2009 openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- Exclusion of adverse reaction caused by specific agent
+        /data[at0001]/items cardinality matches {2..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {1} matches {
+                /value[at9001]/defining_code matches {[ac9000.2]}    -- Statement (synthesised)
+            }
+            ELEMENT[at0.7] occurrences matches {1} matches {    -- Agent
+                value matches {
+                    DV_TEXT[at0.9000]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.7"] = <
+                text = <"Agent">
+                description = <"The agent that is referred to in the statement">
+            >
+            ["at0000.1"] = <
+                text = <"Exclusion of adverse reaction caused by specific agent">
+                description = <"A statement that there has been no known prior reaction to a specific agent">
+            >
+            ["at0006.1"] = <
+                text = <"No known adverse reactions to">
+                description = <"The person has had no adverse reactions to this agent">
+            >
+            ["at0013.1"] = <
+                text = <"No known allergies to">
+                description = <"No allergies known to the specific agent">
+            >
+            ["ac9000.2"] = <
+                text = <"Statement (synthesised)">
+                description = <"The statement about what is excluded (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000.2"] = <
+            id = <"ac9000.2">
+            members = <"at0006.1", "at0013.1">
+        >
+    >

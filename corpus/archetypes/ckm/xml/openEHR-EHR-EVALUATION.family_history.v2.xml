@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -2098,7 +2098,7 @@ Note: More data elements will be needed in future to record detailed genetic mar
       </items>
       <items code="at0071">
         <items id="text">Impact</items>
-        <items id="description">Overall assessment of the impact on the subject of the health record, of a health problem present in family members. </items>
+        <items id="description">Overall assessment of the impact on the subject of the health record, of a health problem present in family members.</items>
         <items id="comment">The same problem or diagnosis in family members, even with the same severity, can have a different impact in each subject of the health record. This relevance factor implies adjusting the overall impact of that health problem according to the characteristics of the subject of the health record.</items>
       </items>
     </term_definitions>
@@ -2287,7 +2287,7 @@ Note: More data elements will be needed in future to record detailed genetic mar
       </items>
       <items code="at0071">
         <items id="text">*DV_TEXT (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nb">
@@ -2557,8 +2557,7 @@ Note: More data elements will be needed in future to record detailed genetic mar
         <items id="text">生物标志物</items>
         <items id="description">关于当前家族成员生物学状态或状况的可测量指标的详情。</items>
         <items id="comment">例如：关于家族成员之中BRCA突变的详情。&#xD;
-注：将来需要更多的数据元来记录详细的遗传标记信息。&#xD;
-</items>
+注：将来需要更多的数据元来记录详细的遗传标记信息。</items>
       </items>
       <items code="at0025">
         <items id="text">Tree</items>
@@ -2664,7 +2663,7 @@ Note: More data elements will be needed in future to record detailed genetic mar
       </items>
       <items code="at0071">
         <items id="text">*DV_TEXT (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="de">
@@ -2777,13 +2776,11 @@ Hinweis: Künftig werden weitere Datenelemente benötigt, um detaillierte geneti
       <items code="at0045">
         <items id="text">Erweiterung</items>
         <items id="description">Zusätzliche Informationen, die erforderlich sind, um lokale Inhalte zu erfassen oder mit anderen Referenzmodellen/Formalismen abzugleichen.</items>
-        <items id="comment">Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR- oder CIMI-Äquivalente.&#xD;
-</items>
+        <items id="comment">Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR- oder CIMI-Äquivalente.</items>
       </items>
       <items code="at0046">
         <items id="text">Anmerkung</items>
-        <items id="description">Zusätzliche Informationen über das Familienmitglied, welche nicht bereits an anderen Stellen dokumentiert wurden.&#xD;
-</items>
+        <items id="description">Zusätzliche Informationen über das Familienmitglied, welche nicht bereits an anderen Stellen dokumentiert wurden.</items>
       </items>
       <items code="at0048">
         <items id="text">Angaben zum Familienmitglied</items>
@@ -3043,7 +3040,7 @@ Note : D'autres éléments de données seront nécessaires à l'avenir pour enre
       </items>
       <items code="at0071">
         <items id="text">Impact</items>
-        <items id="description">Overall assessment of the impact of a health problem for the specific patient. </items>
+        <items id="description">Overall assessment of the impact of a health problem for the specific patient.</items>
         <items id="comment">The same diagnosis, with the same severity, has a different impact on each patient. This relevance qualifier implies adjusting the overall impact of that health problem according to the patient's characteristics.&#xD;
 For example: Two patients have the same diagnosis. First-degree burn.&#xD;
 One is a healthy person, the other is a diabetic patient.&#xD;
@@ -3235,7 +3232,7 @@ This element is meant to allow for multiple types of impact, including but not l
       </items>
       <items code="at0071">
         <items id="text">*DV_TEXT (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="el">
@@ -3423,7 +3420,7 @@ This element is meant to allow for multiple types of impact, including but not l
       </items>
       <items code="at0071">
         <items id="text">Impact</items>
-        <items id="description">Overall assessment of the impact of a health problem for the specific patient. </items>
+        <items id="description">Overall assessment of the impact of a health problem for the specific patient.</items>
         <items id="comment">The same diagnosis, with the same severity, has a different impact on each patient. This relevance qualifier implies adjusting the overall impact of that health problem according to the patient's characteristics.&#xD;
 For example: Two patients have the same diagnosis. First-degree burn.&#xD;
 One is a healthy person, the other is a diabetic patient.&#xD;
@@ -3448,7 +3445,7 @@ This element is meant to allow for multiple types of impact, including but not l
       <items code="at0003">
         <items id="text">Per membre de familia</items>
         <items id="description">Detalls sobre un membre específic de la família</items>
-        <items id="comment">Els elements de dades d'aquest clúster es relacionaran amb la persona identificada pel seu nom o per un àlies. Repetiu l'ús del clúster per a altres membres de la família. </items>
+        <items id="comment">Els elements de dades d'aquest clúster es relacionaran amb la persona identificada pel seu nom o per un àlies. Repetiu l'ús del clúster per a altres membres de la família.</items>
       </items>
       <items code="at0004">
         <items id="text">Nom membre de la familia</items>
@@ -3489,7 +3486,7 @@ This element is meant to allow for multiple types of impact, including but not l
       </items>
       <items code="at0016">
         <items id="text">Parentesc</items>
-        <items id="description">La relació del membre de la família amb el pacient objecte de l'atenció. </items>
+        <items id="description">La relació del membre de la família amb el pacient objecte de l'atenció.</items>
         <items id="comment">Per exemple: mare, padrastre, àvia materna o oncle patern. Es prefereix la codificació de la relació amb una terminologia, sempre que sigui possible i incloent-hi l'especificació de matern i patern segons calgui.</items>
       </items>
       <items code="at0020">
@@ -3812,4 +3809,3 @@ Por ejemplo:</items>
     </term_definitions>
   </ontology>
 </archetype>
-

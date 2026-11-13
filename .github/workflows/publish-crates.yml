@@ -68,14 +68,14 @@ jobs:
           fetch-depth: 0
       # No cache in a publishing lane: the dry run must verify the same bytes
       # the real publish will upload (setup-rust-toolchain caches by default).
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
       # The SemVer judge `plan` takes the version from (scripts/checks/semver.sh, #5353).
       - id: semver-pin
         name: Read the cargo-semver-checks pin
         run: echo "version=$(bash scripts/checks/semver.sh --pin)" >> "$GITHUB_OUTPUT"
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-semver-checks@${{ steps.semver-pin.outputs.version }}
       - name: Plan and stamp the lockstep version
@@ -117,14 +117,14 @@ jobs:
           fetch-depth: 0
       # No cache in the lane that uploads to crates.io: a published version is
       # immutable, so it must be built from this checkout and nothing else.
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
       # The SemVer judge `plan` takes the version from (scripts/checks/semver.sh, #5353).
       - id: semver-pin
         name: Read the cargo-semver-checks pin
         run: echo "version=$(bash scripts/checks/semver.sh --pin)" >> "$GITHUB_OUTPUT"
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-semver-checks@${{ steps.semver-pin.outputs.version }}
       - name: Plan and stamp the lockstep version

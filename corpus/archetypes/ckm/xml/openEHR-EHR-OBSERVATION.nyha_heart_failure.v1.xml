@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -10,7 +10,7 @@
   <description>
     <original_author id="date">2012-04-12</original_author>
     <original_author id="name">Dr Ian McNicoll</original_author>
-    <original_author id="organisation">freshEHR Informatics, UK, </original_author>
+    <original_author id="organisation">freshEHR Informatics, UK,</original_author>
     <original_author id="email">ian@freshehr.com</original_author>
     <other_contributors>Tomas Alme, DIPS ASA, Norway</other_contributors>
     <other_contributors>Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)</other_contributors>
@@ -890,8 +890,7 @@ American Heart Association [Internet]. Dallas, Texas: American Heart Association
       </items>
       <items code="at0006">
         <items id="text">Klasse II</items>
-        <items id="description">Leichte Einschränkung der körperlichen Aktivität. Entspannt im Ruhezustand. Gewöhnliche körperliche Aktivität führt zu Ermüdung, Herzrasen, oder Dyspnoe (Atemnot).&#xD;
-</items>
+        <items id="description">Leichte Einschränkung der körperlichen Aktivität. Entspannt im Ruhezustand. Gewöhnliche körperliche Aktivität führt zu Ermüdung, Herzrasen, oder Dyspnoe (Atemnot).</items>
       </items>
       <items code="at0007">
         <items id="text">Klasse III</items>
@@ -944,8 +943,7 @@ American Heart Association [Internet]. Dallas, Texas: American Heart Association
       <items code="at0019">
         <items id="text">Erweiterung</items>
         <items id="description">Zusätzliche Informationen zur Erfassung lokaler Inhalte oder zur Anpassung an andere Referenzmodelle/Formalismen.</items>
-        <items id="comment">Zum Beispiel: Informationen zu örtlichen Krankenhausabteilungen oder zusätzliche Metadaten zur Anpassung an FHIR- oder CIMI-Modelle.&#xD;
-</items>
+        <items id="comment">Zum Beispiel: Informationen zu örtlichen Krankenhausabteilungen oder zusätzliche Metadaten zur Anpassung an FHIR- oder CIMI-Modelle.</items>
       </items>
     </term_definitions>
     <term_definitions language="pt-pt">
@@ -1034,4 +1032,3 @@ American Heart Association [Internet]. Dallas, Texas: American Heart Association
     </term_definitions>
   </ontology>
 </archetype>
-

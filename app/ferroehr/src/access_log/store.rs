@@ -42,8 +42,9 @@ use crate::access_log_draft::access_log::access_log_entry::AccessLogEntry;
 use crate::access_log_draft::access_log::access_log_link::AccessLogLink;
 use crate::access_log_draft::access_log::access_log_record::AccessLogRecord;
 use crate::access_log_draft::access_log::access_log_tombstone::AccessLogTombstone;
-use crate::access_log_invariants::{Violations, check_entry, check_tombstone};
+use crate::access_log_invariants::{check_entry, check_tombstone};
 use crate::db::acquire::{AcquireError, acquire};
+use crate::draft_invariants::Violations;
 
 /// The member of a record's ITS-JSON form its canonical form leaves out.
 const LINK: &str = "link";

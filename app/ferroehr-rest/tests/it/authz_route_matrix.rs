@@ -246,6 +246,10 @@ const CLINICAL_READ: &[(&str, &str)] = &[
     ("GET", "/demographic/role/{uid_based_id}"),
     ("GET", "/demographic/role/{uid_based_id}/tags"),
     ("GET", "/demographic/party_relationship/{uid_based_id}"),
+    (
+        "GET",
+        "/demographic/party/{uid_based_id}/reverse_relationships",
+    ),
     ("GET", "/demographic/versioned_party/{versioned_object_uid}"),
     (
         "GET",
@@ -389,10 +393,13 @@ const ADMIN_READ: &[(&str, &str)] = &[
     // The EHDS Art. 10 opt-out register (#4516).
     ("GET", "/admin/access-opt-out"),
     // The audited read of a party's protected national identifiers (#3776). It
-    // also needs `authz.rbac.identifier_reader_role`, checked in its handler.
+    // also needs a `read_identifiers` grant, checked in its handler.
     ("GET", "/admin/party/identifiers"),
     // The outbox feed read (#4786); a read moves no cursor.
     ("GET", "/admin/outbox/{reader}"),
+    // The operational-policy registers and their versions (#5442).
+    ("GET", "/admin/registers/{register}"),
+    ("GET", "/admin/registers/{register}/history"),
 ];
 
 /// Admin-class writes (relative to their namespace).
@@ -449,6 +456,9 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     ("POST", "/admin/integrity/rebuild-nodes"),
     // The outbox acknowledgement moves the reader's cursor (#4786).
     ("POST", "/admin/outbox/{reader}/ack"),
+    // A new version of an operational-policy register decides every request
+    // after it (#5442).
+    ("PUT", "/admin/registers/{register}"),
 ];
 
 /// The ITI-81 audit retrieval: the node's security-surveillance record, so the
@@ -574,14 +584,13 @@ async fn app() -> (testkit::TestDb, Router) {
         &ferroehr::db::domain::DomainPools::from_shared(&pool),
     )
     .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool));
-    let app = ferroehr_rest::build_full(
+    let app = common::build_full(
         served_config().await,
         Arc::new(svc),
         authz(),
         ferroehr_rest::extensions::management::Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     (pg, app)
 }
 
@@ -920,7 +929,7 @@ async fn the_swagger_surface_honours_its_access_level() {
             c.auth.smart.discovery = smart;
             c
         };
-        let app = ferroehr_rest::build_full(
+        let app = common::build_full(
             cfg,
             Arc::new(ferroehr::service::FerroEhrService::new(
                 &ferroehr::db::domain::DomainPools::from_shared(&pool),
@@ -928,8 +937,7 @@ async fn the_swagger_surface_honours_its_access_level() {
             authz(),
             ferroehr_rest::extensions::management::Observability::default(),
         )
-        .await
-        .expect("build app");
+        .await;
         (pg, app)
     }
     let ui = "/ferroehr/rest/swagger-ui";

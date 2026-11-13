@@ -47,43 +47,85 @@ pub(crate) struct DraftModule {
     pub doc: &'static str,
 }
 
-/// The draft access log of `docs/plans/access-log.md`, emitted into
-/// `app/ferroehr` until openEHR adopts the package.
-pub(crate) const DRAFTS: &[DraftModule] = &[DraftModule {
-    file: "openehr_access_log_0.1.0.bmm.json",
-    crate_name: "ferroehr",
-    crate_dir: "app/ferroehr",
-    module: "access_log_draft",
-    includes: &["openehr_rm_1.2.0"],
-    model_deps: &[
-        DepGeneration {
-            key: "base",
-            generation: "v1_3",
-        },
-        DepGeneration {
-            key: "rm",
-            generation: "v1_2",
-        },
-    ],
-    prelude_deps: &[
-        DepGeneration {
-            key: "rm",
-            generation: "v1_2",
-        },
-        DepGeneration {
-            key: "base",
-            generation: "v1_3",
-        },
-    ],
-    doc: "The draft openEHR access log (`org.openehr.rm.access_log` 0.1.0), generated from its \
-          FerroEHR-local BMM `tools/openehr-codegen/draft/bmm/openehr_access_log_0.1.0.bmm.json`.\n\
-          \n\
-          The package is a draft change proposal and no openEHR release, so it is emitted here \
-          rather than in `openehr-rm`; if openEHR adopts it, it moves to `openehr-rm` as a \
-          generation of the RM. Its classes resolve against RM 1.2.0 and BASE 1.3.0, the \
-          schemas the draft includes, and read and write the canonical JSON form with `_type` \
-          through the same strict runtime as the spec crates.",
-}];
+/// The dependency generations every draft that includes `openehr_rm_1.2.0`
+/// merges into its resolution model: BASE 1.3.0, then RM 1.2.0.
+const RM_1_2_MODEL_DEPS: &[DepGeneration] = &[
+    DepGeneration {
+        key: "base",
+        generation: "v1_3",
+    },
+    DepGeneration {
+        key: "rm",
+        generation: "v1_2",
+    },
+];
+
+/// The dependency generations whose exported names resolve the references of
+/// a draft that includes `openehr_rm_1.2.0`: RM 1.2.0 first, then BASE 1.3.0.
+const RM_1_2_PRELUDE_DEPS: &[DepGeneration] = &[
+    DepGeneration {
+        key: "rm",
+        generation: "v1_2",
+    },
+    DepGeneration {
+        key: "base",
+        generation: "v1_3",
+    },
+];
+
+/// The module doc of a draft package that includes `openehr_rm_1.2.0`: its
+/// title, package and BMM file, then why it is emitted outside `openehr-rm`.
+macro_rules! rm_1_2_draft_doc {
+    ($title:literal, $package:literal, $file:literal) => {
+        concat!(
+            "The draft openEHR ",
+            $title,
+            " (`",
+            $package,
+            "` 0.1.0), generated from its FerroEHR-local BMM `tools/openehr-codegen/draft/bmm/",
+            $file,
+            "`.\n\nThe package is a draft change proposal and no openEHR release, so it is \
+             emitted here rather than in `openehr-rm`; if openEHR adopts it, it moves to \
+             `openehr-rm` as a generation of the RM. Its classes resolve against RM 1.2.0 and \
+             BASE 1.3.0, the schemas the draft includes, and read and write the canonical JSON \
+             form with `_type` through the same strict runtime as the spec crates."
+        )
+    };
+}
+
+/// The draft access log of `docs/plans/access-log.md` and the draft access
+/// control of `docs/plans/abac-openehr.md`, emitted into `app/ferroehr` until
+/// openEHR adopts the packages.
+pub(crate) const DRAFTS: &[DraftModule] = &[
+    DraftModule {
+        file: "openehr_access_log_0.1.0.bmm.json",
+        crate_name: "ferroehr",
+        crate_dir: "app/ferroehr",
+        module: "access_log_draft",
+        includes: &["openehr_rm_1.2.0"],
+        model_deps: RM_1_2_MODEL_DEPS,
+        prelude_deps: RM_1_2_PRELUDE_DEPS,
+        doc: rm_1_2_draft_doc!(
+            "access log",
+            "org.openehr.rm.access_log",
+            "openehr_access_log_0.1.0.bmm.json"
+        ),
+    },
+    DraftModule {
+        file: "openehr_access_control_0.1.0.bmm.json",
+        crate_name: "ferroehr",
+        crate_dir: "app/ferroehr",
+        module: "access_control_draft",
+        includes: &["openehr_rm_1.2.0"],
+        model_deps: RM_1_2_MODEL_DEPS,
+        prelude_deps: RM_1_2_PRELUDE_DEPS,
+        doc: rm_1_2_draft_doc!(
+            "access control",
+            "org.openehr.rm.access_control",
+            "openehr_access_control_0.1.0.bmm.json"
+        ),
+    },
+];
 
 /// A draft resolved into its schema, resolution model and reference index.
 pub(crate) struct ComposedDraft {
@@ -196,6 +238,21 @@ mod tests {
         for d in DRAFTS {
             let composed = compose_draft(d).unwrap_or_else(|e| panic!("{}: {e}", d.file));
             assert!(!composed.schema.classes.is_empty(), "{}", d.file);
+        }
+    }
+
+    #[test]
+    fn every_draft_module_is_named_as_a_draft() {
+        // The drift check, `.gitattributes` and the Sonar scope find the draft
+        // modules by the glob `app/*/src/*_draft`.
+        for d in DRAFTS {
+            assert!(
+                d.module.ends_with("_draft") && d.crate_dir.starts_with("app/"),
+                "{}: module {} in {} must match app/*/src/*_draft",
+                d.file,
+                d.module,
+                d.crate_dir
+            );
         }
     }
 

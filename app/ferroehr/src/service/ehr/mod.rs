@@ -44,7 +44,7 @@ mod composition;
 mod contributions;
 mod directory;
 pub(in crate::service) mod meta;
-pub(in crate::service) mod service;
+pub(crate) mod service;
 mod status;
 pub(in crate::service) mod tags;
 pub(crate) mod validation;

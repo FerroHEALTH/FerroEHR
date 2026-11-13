@@ -13,6 +13,8 @@
 
 use serde_json::{Map, Value};
 
+use crate::class::{Class, Ledger, MUST_SET, Rules};
+
 /// How a section is written in TOML.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Shape {
@@ -53,20 +55,31 @@ pub(crate) struct Key {
     pub(crate) example: String,
     /// The first paragraph of the key's description.
     pub(crate) description: String,
+    /// Why the key is in the file.
+    pub(crate) class: Class,
+    /// Whether a deployment holding real data sets the key.
+    pub(crate) must_set: bool,
+    /// Whether every table of its kind must name the key.
+    pub(crate) required: bool,
 }
 
 /// The sections of the tree `root` describes, every table before the tables
 /// it holds.
 ///
 /// # Errors
-/// A message naming the path whose `$ref` the schema does not define.
+/// A message naming the path whose `$ref` the schema does not define, or
+/// every key the schema leaves unclassified ([`crate::class`]).
 pub(crate) fn sections(root: &Value) -> Result<Vec<Section>, String> {
     let defs = root
         .get("$defs")
         .and_then(Value::as_object)
         .cloned()
         .unwrap_or_default();
-    let walker = Walker { defs: &defs };
+    let ledger = Ledger::default();
+    let walker = Walker {
+        defs: &defs,
+        ledger: &ledger,
+    };
     let mut out = Vec::new();
     let place = Place {
         path: String::new(),
@@ -74,8 +87,18 @@ pub(crate) fn sections(root: &Value) -> Result<Vec<Section>, String> {
         optional: false,
         described: None,
         inherited: None,
+        subtree: None,
+        rules: Vec::new(),
     };
     walker.table(root, &place, &mut out)?;
+    let problems = ledger.finish();
+    if !problems.is_empty() {
+        return Err(format!(
+            "every key needs a class (`x-ferroehr-class` on its field or table, \
+             tools/config-reference/src/class.rs):\n  {}",
+            problems.join("\n  ")
+        ));
+    }
     // The root holds no key of its own, only its sections.
     out.retain(|section| !section.path.is_empty() || !section.keys.is_empty());
     Ok(out)
@@ -94,12 +117,30 @@ struct Place<'a> {
     described: Option<&'a str>,
     /// The holder's default of the table.
     inherited: Option<&'a Value>,
+    /// The class a holder gives every key below it.
+    subtree: Option<Class>,
+    /// The relative entries of the tables above and of this one.
+    rules: Vec<Rules>,
+}
+
+/// What a leaf key takes from the table that holds it.
+struct Holder<'a> {
+    /// The relative entries of the tables above and of this one.
+    rules: &'a [Rules],
+    /// The class of the table's own keys, else of every key below it.
+    fallback: Option<Class>,
+    /// The holder's default of the table.
+    inherited: Option<&'a Value>,
+    /// Whether the table's schema requires the key.
+    required: bool,
 }
 
 /// Reads schemas against the `$defs` of one root.
 struct Walker<'a> {
     /// The root's `$defs`.
     defs: &'a Map<String, Value>,
+    /// The classification the walk records.
+    ledger: &'a Ledger,
 }
 
 impl Walker<'_> {
@@ -182,9 +223,20 @@ impl Walker<'_> {
             optional,
             described,
             inherited,
+            subtree,
+            rules,
         } = place;
         let (path, shape, optional, described, inherited) =
             (path.as_str(), *shape, *optional, *described, *inherited);
+        let table_class = self.ledger.own(node, path);
+        let mut rules = rules.clone();
+        rules.extend(self.ledger.rules(node, path));
+        let required: Vec<&str> = node
+            .get("required")
+            .and_then(Value::as_array)
+            .map_or_else(Vec::new, |names| {
+                names.iter().filter_map(Value::as_str).collect()
+            });
         let mut keys = Vec::new();
         let mut children = Vec::new();
         let members = node
@@ -220,34 +272,20 @@ impl Walker<'_> {
                     continue;
                 }
             }
-            // NOTE: a holder's own default wins over its member type's, as serde's
-            // container `default` fills a missing table from the holder.
-            let default = inherited
-                .and_then(|holder| holder.get(name))
-                .or_else(|| member.get("default"))
-                .filter(|d| !d.is_null());
-            let rendered = default.map(toml_value);
-            keys.push(Key {
-                name: name.clone(),
-                masked: rendered.as_deref().is_some_and(|d| d.contains("***")),
-                default: rendered,
-                example: self.example(member)?,
-                description: first_paragraph(member, name),
-            });
+            let holder = Holder {
+                rules: &rules,
+                fallback: table_class.or(*subtree),
+                inherited,
+                required: required.contains(&name.as_str()),
+            };
+            if let Some(key) = self.key(name, member, &child, nullable, &holder)? {
+                keys.push(key);
+            }
         }
         out.push(Section {
             path: path.to_owned(),
             shape,
-            description: described
-                .or_else(|| node.get("description").and_then(Value::as_str))
-                .map(|text| {
-                    let header = match shape {
-                        Shape::Array => format!("[[{path}]]"),
-                        Shape::Table | Shape::Named => format!("[{path}]"),
-                    };
-                    clean(paragraph(text), &header)
-                })
-                .unwrap_or_default(),
+            description: table_description(described, node, shape, path),
             optional,
             keys,
         });
@@ -264,16 +302,61 @@ impl Walker<'_> {
                     .filter(|d| d.is_object()),
                 Shape::Array | Shape::Named => None,
             };
+            let subtree = self.ledger.classify(member, &child, &rules, *subtree);
             let place = Place {
                 path: child,
                 shape,
                 optional,
                 described: text,
                 inherited: default,
+                subtree,
+                rules: rules.clone(),
             };
             self.table(target, &place, out)?;
         }
         Ok(())
+    }
+
+    /// The leaf key `name` at `path` whose holder schema is `member`, or
+    /// `None` when it has no class (the ledger records why).
+    fn key(
+        &self,
+        name: &str,
+        member: &Value,
+        path: &str,
+        nullable: bool,
+        holder: &Holder<'_>,
+    ) -> Result<Option<Key>, String> {
+        // NOTE: a holder's own default wins over its member type's, as serde's
+        // container `default` fills a missing table from the holder.
+        let default = holder
+            .inherited
+            .and_then(|table| table.get(name))
+            .or_else(|| member.get("default"))
+            .filter(|d| !d.is_null());
+        let rendered = default.map(toml_value);
+        let class = self
+            .ledger
+            .classify(member, path, holder.rules, holder.fallback);
+        let must_set = member.get(MUST_SET).is_some_and(|m| m == true)
+            || self.ledger.must_set(holder.rules, path);
+        let has_default = rendered.is_some() || nullable;
+        let Some(class) = self
+            .ledger
+            .check(path, class, must_set, holder.required, has_default)
+        else {
+            return Ok(None);
+        };
+        Ok(Some(Key {
+            name: name.to_owned(),
+            masked: rendered.as_deref().is_some_and(|d| d.contains("***")),
+            default: rendered,
+            example: self.example(member)?,
+            description: first_paragraph(member, name),
+            class,
+            must_set,
+            required: holder.required,
+        }))
     }
 
     /// A value of `node`'s type for a commented example line.
@@ -332,6 +415,20 @@ impl Walker<'_> {
         }
         .to_owned())
     }
+}
+
+/// The description of the table at `path`: its holder's, else its own.
+fn table_description(described: Option<&str>, node: &Value, shape: Shape, path: &str) -> String {
+    described
+        .or_else(|| node.get("description").and_then(Value::as_str))
+        .map(|text| {
+            let header = match shape {
+                Shape::Array => format!("[[{path}]]"),
+                Shape::Table | Shape::Named => format!("[{path}]"),
+            };
+            clean(paragraph(text), &header)
+        })
+        .unwrap_or_default()
 }
 
 /// `path` and `name`, dotted.

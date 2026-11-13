@@ -1,0 +1,1344 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2017-03-21</original_author>
+    <original_author id="name">Ian McNicoll</original_author>
+    <original_author id="organisation">freshEHR Clinical Informatics</original_author>
+    <original_author id="email">ian@freshehr.com</original_author>
+    <other_contributors>Tomas Alme, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Paula Anderson, UCLH, United Kingdom</other_contributors>
+    <other_contributors>Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Koray Atalag, University of Auckland, New Zealand</other_contributors>
+    <other_contributors>Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Marcus Baw, openGPSoC / BawMedical Ltd, United Kingdom</other_contributors>
+    <other_contributors>John Bennett, NEHTA, Australia</other_contributors>
+    <other_contributors>SBhusan Bhattacharyya, Sudisa Consultancy Services, India</other_contributors>
+    <other_contributors>Sharmila Biswas, Australia</other_contributors>
+    <other_contributors>Lars Bitsch-Larsen, Haukeland University hospital, Norway</other_contributors>
+    <other_contributors>Laila Bruun, Oslo universitetssykehus HF, Norway</other_contributors>
+    <other_contributors>Ruth Caudwell, retired, United Kingdom</other_contributors>
+    <other_contributors>Bjørn Christensen, Helse Bergen HF, Norway</other_contributors>
+    <other_contributors>Stephen Chu, NEHTA, Australia (Editor)</other_contributors>
+    <other_contributors>Matthew Cordell, NEHTA, Australia</other_contributors>
+    <other_contributors>Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway</other_contributors>
+    <other_contributors>Robert Eager, Healthways, Australia</other_contributors>
+    <other_contributors>Gail Easterbrook, Flinders Medical Centre, Australia</other_contributors>
+    <other_contributors>David Evans, Queensland Health, Australia</other_contributors>
+    <other_contributors>Samuel Frade, Marand, Portugal</other_contributors>
+    <other_contributors>Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom</other_contributors>
+    <other_contributors>Sarah Gaunt, NEHTA, Australia</other_contributors>
+    <other_contributors>Mikkel Gaup Grønmo, FSE, Helse Nord, Norway</other_contributors>
+    <other_contributors>Heather Grain, Llewelyn Grain Informatics, Australia</other_contributors>
+    <other_contributors>Trina Gregory, cpc, Australia</other_contributors>
+    <other_contributors>Robert Hausam, Hausam Consulting LLC, United States</other_contributors>
+    <other_contributors>Sam Heard, Ocean Informatics, Australia (Editor)</other_contributors>
+    <other_contributors>Teresa Highway, Alberta Health Services, Canada</other_contributors>
+    <other_contributors>Annette Hole Sjøborg, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Hilde Hollås, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Alfred Honore, Haukeland, Norway</other_contributors>
+    <other_contributors>Evelyn Hovenga, EJSH Consulting, Australia</other_contributors>
+    <other_contributors>Lars Ivar Mehlum, Helse Bergen HF, Norway</other_contributors>
+    <other_contributors>Tom Jarl Jakobsen, Helse Bergen, Norway</other_contributors>
+    <other_contributors>Mary Kelaher, NEHTA, Australia</other_contributors>
+    <other_contributors>Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway</other_contributors>
+    <other_contributors>Robert L'egan, NEHTA, Australia</other_contributors>
+    <other_contributors>Russell Leftwich, Russell B Leftwich MD, United States</other_contributors>
+    <other_contributors>Heather Leslie, Ocean Health Systems, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Marit Ludvigsen, St Olavs Hospital, Norway</other_contributors>
+    <other_contributors>Colin Macfarlane, Elsevier, United Kingdom</other_contributors>
+    <other_contributors>Siv Marie Lien, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Olof Mattsson, Region Skane, Sweden</other_contributors>
+    <other_contributors>Susan McIndoe, Royal District Nursing Service, Australia</other_contributors>
+    <other_contributors>David McKillop, NEHTA, Australia</other_contributors>
+    <other_contributors>Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)</other_contributors>
+    <other_contributors>Chris Mitchell, RACGP, Australia</other_contributors>
+    <other_contributors>Stewart Morrison, NEHTA, Australia</other_contributors>
+    <other_contributors>Andrej Orel, Marand d.o.o., Slovenia</other_contributors>
+    <other_contributors>Chris Pearce, Melbourne East GP Network, Australia</other_contributors>
+    <other_contributors>Vladimir Pizzo, Hospital Sírio Libanês, Brazil</other_contributors>
+    <other_contributors>Camilla Preeston, Royal Australian College of General Practitioners, Australia</other_contributors>
+    <other_contributors>Margaret Prichard, NEHTA, Australia</other_contributors>
+    <other_contributors>Norwegian Review Summary, Nasjonal IKT HF, Norway</other_contributors>
+    <other_contributors>Cathy Richardson, NEHTA, Australia</other_contributors>
+    <other_contributors>Robyn Richards, NEHTA - Clinical Terminology, Australia</other_contributors>
+    <other_contributors>Anoop Shah, University College London, United Kingdom</other_contributors>
+    <other_contributors>Line Silsand, Universitetssykehuset i Nord-Norge, Norway</other_contributors>
+    <other_contributors>Sam Stokes, Citizen Scientist, United States</other_contributors>
+    <other_contributors>Iztok Stotl, UKCLJ, Slovenia</other_contributors>
+    <other_contributors>John Taylor, NEHTA, Australia</other_contributors>
+    <other_contributors>Nyree Taylor, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Rowan Thomas, St. Vincent's Hospital Melbourne, Australia</other_contributors>
+    <other_contributors>Richard Townley-O'Neill, NEHTA, Australia</other_contributors>
+    <other_contributors>Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway</other_contributors>
+    <other_contributors>John Tore Valand, Helse Bergen, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Ines Vaz, UFN, Portugal</other_contributors>
+    <other_contributors>Soon Ghee Yap, Singapore General Hospital, Singapore</other_contributors>
+    <other_contributors>Kylie Young, The Royal Australian College of General Practitioners, Australia</other_contributors>
+    <lifecycle_state>deprecated</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Medication statement, [Internet]. Intermountain Healthcare. Available from http://www.opencem.org/#/20170613/Intermountain/MedicationStatement&#xD;
+&#xD;
+Messaging Implementation Manual (GP2GP messages) [Internet], NHS Digital England. Available from: https://data.developer.nhs.uk/dms/mim/6.3.01/Domains/GP2GP/Document%20files/GP2GP%20IM.htm#_Toc_Section_7.2&#xD;
+&#xD;
+Standards for the clinical structure and content of patient records (Complete document) [Internet]. PRSB London. [cited 2017 Aug 29]. Available from: http://theprsb.org/download/document/7-standards-for-the-clinical-structure-and-content-of-patient-records"</other_details>
+    <other_details id="current_contact">Ian McNicoll, freshEHR Clinical Informatics, UK &lt;ian@freshehr.com&gt;</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">15B1D4C3F6B3ACBEE8FA7C9EE67CD32A</other_details>
+    <other_details id="build_uid">ba47e122-0505-4a7e-af07-63f2d22eb9ab</other_details>
+    <other_details id="revision">1.0.6</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Darstellung der Kombination von Medikamentendosis und Verabreichungszeit an einem Tag im Kontext einer Medikamentenverordnung oder der Arzneimittelverwaltung oder gegebenenfalls für andere therapeutische/verschreibungspflichtige Produkte.</purpose>
+      <keywords>Medikation</keywords>
+      <keywords>Verordnung</keywords>
+      <keywords>verschreiben</keywords>
+      <keywords>verordnen</keywords>
+      <keywords>Therapie</keywords>
+      <keywords>Substanz</keywords>
+      <keywords>Wirkstoff</keywords>
+      <keywords>Arzneimittel</keywords>
+      <keywords>Medikament</keywords>
+      <keywords>therapeutisch</keywords>
+      <keywords>therapeutisches Erzeugnis</keywords>
+      <keywords>Pharmazeutikum</keywords>
+      <keywords>Produkt</keywords>
+      <keywords>Posologie</keywords>
+      <keywords>Dosierung</keywords>
+      <keywords>Behandlung</keywords>
+      <keywords>Fluid</keywords>
+      <keywords>Flüssigkeit</keywords>
+      <keywords>Ernährung</keywords>
+      <keywords>Timing</keywords>
+      <keywords>Zeitplan</keywords>
+      <keywords>Verabreichung</keywords>
+      <keywords>Applikation</keywords>
+      <keywords>Dosis</keywords>
+      <use>Wird verwendet, um die Kombination einer Medikamentendosis und der Verabreichungszeiten innerhalb eines Tages, als Teil einer Medikamentenverordnung oder der Arzneimittelverwaltung oder gegebenenfalls für andere verschriebene therapeutische Produkte darzustellen.&#xD;
+Das Zeitmuster für einen einzelnen Tag kann einfach eine einzelne Verabreichungszeit oder mehrere Verabreichungszeiten mit unterschiedlichem Komplexitätsgrad sein.&#xD;
+&#xD;
+Timing-Details, die nicht innerhalb eines Tages liegen, z. B. wöchentlicher oder monatlicher Rhythmus, werden im CLUSTER-Archetyp "Verabreichungszeitpunkte - nicht täglich" aufgeführt, der im CLUSTER-Archetyp "Therapeutische Anweisungen" (CLUSTER.therapeutic_direction) enthalten ist.&#xD;
+&#xD;
+Im Kontext einer therapeutischen INSTRUCTION kann dieser Archetyp in den SLOT "Strukturierte Dosis- und Zeitangaben" im CLUSTER "Therapeutische Anweisung" (CLUSTER.therapeutic_direction) eingefügt werden, um die Dosis und Details zum Zeitmuster der einzelnen beabsichtigten Verabreichungen eines therapeutischen Produktes darzustellen.&#xD;
+&#xD;
+Im Kontext eines ACTION-Archetyps fügen Sie diesen Archetyp direkt in den SLOT 'Dosis' ein, um die Dosis und den Zeitpunkt der tatsächlichen Verabreichung eines therapeutischen Produktes darzustellen.&#xD;
+&#xD;
+Spezifische Start- / Stoppzeiten der Verabreichung sollten in einem CLUSTER-Archetyp "Verabreichungszeitpunkte - täglich" angegeben werden.</use>
+      <misuse />
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sv</code_string>
+      </language>
+      <purpose>Att registrera kombinationen av läkemedelsmängd och administrationstid för en enda dag, som en del av en läkemedelsorder eller läkemedelshantering eller för andra lämpliga terapeutiska / förskrivningsbara föremål.</purpose>
+      <keywords>medicinering</keywords>
+      <keywords>beställa</keywords>
+      <keywords>ordinera</keywords>
+      <keywords>terapi</keywords>
+      <keywords>ämne</keywords>
+      <keywords>läkemedel</keywords>
+      <keywords>terapeutisk</keywords>
+      <keywords>terapeutiskt bra</keywords>
+      <keywords>läkemedel</keywords>
+      <keywords>produkt</keywords>
+      <keywords>dosering</keywords>
+      <keywords>behandling</keywords>
+      <keywords>vätska</keywords>
+      <keywords>näring</keywords>
+      <keywords>timing</keywords>
+      <keywords>administration</keywords>
+      <keywords>dos</keywords>
+      <use>Används för att registrera kombinationen av läkemedelsmängd och administreringstid för en enda dag, som en del av en läkemedelsorder eller läkemedelshantering eller för andra lämpliga terapeutiska / förskrivningsbara föremål.&#xD;
+Tidmönstret för en dag kan vara så enkelt som en enda administreringstid eller flera administreringstider med varierande nivåer av komplexitet.&#xD;
+&#xD;
+Tidsuppgifter som inte ligger inom en enda dag, t.ex. vecko- eller månatliga tider, tas i CLUSTER 'Timing - non-daily' arketypen, inom CLUSTER 'Therapeutic direction' arketypen.&#xD;
+&#xD;
+I samband med en terapeutisk INSTRUCTION kan den här arketypen införas i 'Strukturerad dos och tidsriktning' SLOT i 'Therapeutic direction' CLUSTER för att registrera dos- och tidsdetaljer för mönstret för enstaka avsedda administrationer av en terapeutisk artikel.&#xD;
+&#xD;
+I samband med en ACTION-arketyp, sätt in den här arketypen direkt i 'Amount' SLOT för att registrera dosen och tidpunkten för den faktiska administreringen av ett terapeutisk objekt&#xD;
+&#xD;
+Specifika administrationsstart / stopptider bör anges inom en innesluten CLUSTER 'Timing - daily' arketyp.</use>
+      <misuse />
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For å registrere kombinasjonen av en legemiddeldose og administrasjonstidspunkter innenfor en dag, som del av en legemiddelordinering eller legemiddelhåndtering, eller for andre ordinerte produkter der det er passende.</purpose>
+      <keywords>legemiddel</keywords>
+      <keywords>ordinering</keywords>
+      <keywords>foreskrive</keywords>
+      <keywords>terapi</keywords>
+      <keywords>substans</keywords>
+      <keywords>medisin</keywords>
+      <keywords>terapeutisk</keywords>
+      <keywords>farmasøytisk</keywords>
+      <keywords>produkt</keywords>
+      <keywords>behandling</keywords>
+      <keywords>væske</keywords>
+      <keywords>ernæring</keywords>
+      <keywords>timing</keywords>
+      <keywords>administrering</keywords>
+      <keywords>administrasjon</keywords>
+      <keywords>dose</keywords>
+      <use>Brukes for å registrere kombinasjonen av en legemiddeldose og administrasjonstidspunkter innenfor en dag, som del av en legemiddelordinering eller legemiddelhåndtering, eller for andre ordinerte produkter der det er passende. Mønsteret for administrasjonstidspunkter innenfor en dag kan være så enkelt som ett administrasjonstidspunkt, eller flere administrasjonstidspunkter med forskjellige nivåer av kompleksitet.&#xD;
+&#xD;
+Timingdetaljer som ikke er innenfor én dag, f.eks. ukentlig eller månedlige timinger, håndteres av CLUSTER-arketypen "Timing - repetering" som benyttes i CLUSTER-arketypen "Terapeutisk anvisning".&#xD;
+&#xD;
+Innenfor en INSTRUCTION og i den igjen innenfor CLUSTER-arketypen "Terapeutisk anvisning" (CLUSTER.therapeutic_direction) for å registrere dose og timing av et ordinert produkt, som f.eks. et legemiddel.&#xD;
+&#xD;
+Innenfor en ACTION-arketype kan denne arketypen brukes for å registrere dosen og timing for den faktiske administreringen av det ordinerte produktet.&#xD;
+&#xD;
+Spesifikke tidspunkter for administrering og start/stopp-tidspunkter spesifiseres i CLUSTER-arketypen "Timing - daglig".</use>
+      <misuse />
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>pt-br</code_string>
+      </language>
+      <purpose>Para gravar a combinação de uma quantidade de medicamento e o tempo de administração diário, como parte de uma solicitação ou gestão de medicamentos ou para outros itens terapêuticos/prescritos apropriados.</purpose>
+      <keywords>medicamento</keywords>
+      <keywords>solicitação</keywords>
+      <keywords>prescrever</keywords>
+      <keywords>terapia</keywords>
+      <keywords>substância</keywords>
+      <keywords>fármaco</keywords>
+      <keywords>terapêutico</keywords>
+      <keywords>item terapêutico</keywords>
+      <keywords>farmacêutico</keywords>
+      <keywords>produto</keywords>
+      <keywords>posologia</keywords>
+      <keywords>tratamento</keywords>
+      <keywords>fluido</keywords>
+      <keywords>nutrição</keywords>
+      <keywords>tempo</keywords>
+      <keywords>administração</keywords>
+      <keywords>dose</keywords>
+      <use>Usado para gravar a combinação de uma quantidade de medicamento e o tempo de administração diário, como parte de uma solicitação ou gestão de medicamentos ou para outros itens terapêuticos/prescritos apropriados.&#xD;
+O padrão de tempo diário pode ser simples como uma administração única ou múltiplas administrações com níveis variados de complexidade.&#xD;
+&#xD;
+Os detalhes de tempo que não estão dentro de um mesmo dia p.e. semanalmente ou mensalmente são incluídos dentro do arquétipo CLUSTER "Timing repetition" carregado dentro do arquétipo CLUSTER "Therapeutic direction".&#xD;
+&#xD;
+No contexto de uma INSTRUÇÃO terapêutica este arquétipo pode ser inserido dentro do SLOT "Dosage administration" no CLUSTER "Therapeutic direction" para gravar a dose e detalhes de tempo do padrão de uma administração única de um item terapêutico.&#xD;
+&#xD;
+No contexto de um arquétipo tipo ACTION insira este arquétipo diretamente no SLOT "Amount" para gravar a dose e tempo da administração de um item terapêutico.&#xD;
+&#xD;
+Tempos específicos de início e parada de administração devem ser especificados dentro do arquétipo CLUSTER "Timing - daily".</use>
+      <misuse />
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record the combination of a medication amount and the administration timing within a single day, as part of a medication order or medication management or for other appropriate therapeutic/prescribable items.</purpose>
+      <keywords>medication</keywords>
+      <keywords>order</keywords>
+      <keywords>prescribe</keywords>
+      <keywords>therapy</keywords>
+      <keywords>substance</keywords>
+      <keywords>drug</keywords>
+      <keywords>therapeutic</keywords>
+      <keywords>therapeutic good</keywords>
+      <keywords>pharmaceutical</keywords>
+      <keywords>product</keywords>
+      <keywords>posology</keywords>
+      <keywords>treatment</keywords>
+      <keywords>fluid</keywords>
+      <keywords>nutrition</keywords>
+      <keywords>timing</keywords>
+      <keywords>administration</keywords>
+      <keywords>dose</keywords>
+      <use>Use to record the combination of a medication amount and the administration timing for a single day, as part of a medication order or medication management or for other appropriate therapeutic/prescribable items. &#xD;
+The timing pattern for a single day can be as simple as a single administration time, or multiple administration times with varying levels of complexity.&#xD;
+&#xD;
+Timing details which are not within a single day e.g weekly or monthly timings are carried in the CLUSTER 'Timing - non-daily' archetype carried within the CLUSTER 'Therapeutic direction' archetype.&#xD;
+&#xD;
+In the context of a therapeutic INSTRUCTION, this archetype may be inserted into the 'Structured dose and timing directions' SLOT in the 'Therapeutic direction' CLUSTER to record the dose and timing details of the pattern of single intended administrations of a therapeutic item. &#xD;
+&#xD;
+In the context of an ACTION archetype insert this archetype directly into the 'Amount' SLOT to record the dose and timing of the actual administration of a therapeutic item.&#xD;
+&#xD;
+Specific administration start/stop times should be specified within a contained CLUSTER 'Timing - daily' archetype.</use>
+      <misuse />
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Nazli Soltani, Natalia Strauch</author>
+    <author id="organisation">UMG, Medizinische Schule Hannover (MHH), Medizinische Hochschule Hannover</author>
+    <author id="email">nazli.soltani@med.uni-goettingen.de, strauch.natalia@mh-hannover.de, Strauch.Natalia@mh-hannover.de</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sv</code_string>
+    </language>
+    <author id="name">Therese Lindberg</author>
+    <author id="organisation">Cambio CDS</author>
+    <author id="email">therese.lindberg@cambio.se</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Silje Ljosland Bakke</author>
+    <author id="organisation">Nasjonal IKT HF</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>pt-br</code_string>
+    </language>
+    <author id="name">Debora Farage, Fernanda Maia, Laíse Figueiredo</author>
+    <author id="organisation">Core Consulting</author>
+    <author id="email">contato@coreconsulting.com.br</author>
+    <accreditation>Hospital Alemão Oswaldo Cruz (HAOC)</accreditation>
+  </translations>
+  <uid>
+    <value>ac331b21-71f6-4ae5-950a-1a8d78c9f0c4</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-CLUSTER.dosage.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>true</upper_unbounded>
+      <lower>0</lower>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0164</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_COUNT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>magnitude</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_PRIMITIVE_OBJECT">
+                <rm_type_name>INTEGER</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <item xsi:type="C_INTEGER">
+                  <range>
+                    <lower_included>true</lower_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>true</upper_unbounded>
+                    <lower>1</lower>
+                  </range>
+                </item>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0144</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_DV_QUANTITY">
+            <rm_type_name>DV_QUANTITY</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <property>
+              <terminology_id>
+                <value>openehr</value>
+              </terminology_id>
+              <code_string>380</code_string>
+            </property>
+            <list>
+              <magnitude>
+                <lower_included>true</lower_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>true</upper_unbounded>
+                <lower>0.0</lower>
+              </magnitude>
+              <units>1</units>
+            </list>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_INTERVAL&lt;DV_QUANTITY&gt;</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>upper</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_DV_QUANTITY">
+                <rm_type_name>DV_QUANTITY</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <property>
+                  <terminology_id>
+                    <value>openehr</value>
+                  </terminology_id>
+                  <code_string>380</code_string>
+                </property>
+                <list>
+                  <magnitude>
+                    <lower_included>true</lower_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>true</upper_unbounded>
+                    <lower>0.0</lower>
+                  </magnitude>
+                  <units>1</units>
+                </list>
+              </children>
+            </attributes>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>lower</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_DV_QUANTITY">
+                <rm_type_name>DV_QUANTITY</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <property>
+                  <terminology_id>
+                    <value>openehr</value>
+                  </terminology_id>
+                  <code_string>380</code_string>
+                </property>
+                <list>
+                  <magnitude>
+                    <lower_included>true</lower_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>true</upper_unbounded>
+                    <lower>0.0</lower>
+                  </magnitude>
+                  <units>1</units>
+                </list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0145</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0135</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_QUANTITY</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0178</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0037</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.timing_daily(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-CLUSTER\.timing_daily(-[a-zA-Z0-9_]+)*\.v1</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0134</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_DV_QUANTITY">
+            <rm_type_name>DV_QUANTITY</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <property>
+              <terminology_id>
+                <value>openehr</value>
+              </terminology_id>
+              <code_string>126</code_string>
+            </property>
+            <list>
+              <magnitude>
+                <lower_included>true</lower_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>true</upper_unbounded>
+                <lower>0.0</lower>
+              </magnitude>
+              <units>l/h</units>
+            </list>
+            <list>
+              <magnitude>
+                <lower_included>true</lower_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>true</upper_unbounded>
+                <lower>0.0</lower>
+              </magnitude>
+              <units>ml/min</units>
+            </list>
+            <list>
+              <magnitude>
+                <lower_included>true</lower_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>true</upper_unbounded>
+                <lower>0.0</lower>
+              </magnitude>
+              <units>ml/s</units>
+            </list>
+            <list>
+              <magnitude>
+                <lower_included>true</lower_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>true</upper_unbounded>
+                <lower>0.0</lower>
+              </magnitude>
+              <units>ml/h</units>
+            </list>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0102</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_DURATION</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_PRIMITIVE_OBJECT">
+                <rm_type_name>DV_DURATION</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <item xsi:type="C_DURATION">
+                  <pattern>PDTHMS</pattern>
+                  <range>
+                    <lower_included>true</lower_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>true</upper_unbounded>
+                    <lower>PT0H</lower>
+                  </range>
+                </item>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0176</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_DV_QUANTITY">
+            <rm_type_name>DV_QUANTITY</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <property>
+              <terminology_id>
+                <value>openehr</value>
+              </terminology_id>
+              <code_string>380</code_string>
+            </property>
+            <list>
+              <magnitude>
+                <lower_included>true</lower_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>true</upper_unbounded>
+                <lower>0.0</lower>
+              </magnitude>
+              <units>1</units>
+            </list>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_INTERVAL&lt;DV_QUANTITY&gt;</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>upper</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_DV_QUANTITY">
+                <rm_type_name>DV_QUANTITY</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <property>
+                  <terminology_id>
+                    <value>openehr</value>
+                  </terminology_id>
+                  <code_string>380</code_string>
+                </property>
+                <list>
+                  <magnitude>
+                    <lower_included>true</lower_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>true</upper_unbounded>
+                    <lower>0.0</lower>
+                  </magnitude>
+                  <units>1</units>
+                </list>
+              </children>
+            </attributes>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>lower</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_DV_QUANTITY">
+                <rm_type_name>DV_QUANTITY</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <property>
+                  <terminology_id>
+                    <value>openehr</value>
+                  </terminology_id>
+                  <code_string>380</code_string>
+                </property>
+                <list>
+                  <magnitude>
+                    <lower_included>true</lower_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>true</upper_unbounded>
+                    <lower>0.0</lower>
+                  </magnitude>
+                  <units>1</units>
+                </list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0177</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>1</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Dosage</items>
+        <items id="description">The combination of a medication amount and administration timing for a single day, in the context of a medication order or medication management.</items>
+        <items id="comment">For example: '2 tablets at 6pm' or '20mg three times per day'. Please note: this cluster allows multiple occurrences to enable representation of a complete set of dose patterns for a single dose direction.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Daily timing</items>
+        <items id="description">Structured details about the timing pattern for a single day.</items>
+        <items id="comment">For example: 'in the morning', 'at 0600, 1400, 2100'.</items>
+      </items>
+      <items code="at0102">
+        <items id="text">Administration duration</items>
+        <items id="description">The period of time over which a single dose of the medication or vaccine should be administered.</items>
+        <items id="comment">For example: 'Administer over 10 minutes'.</items>
+      </items>
+      <items code="at0134">
+        <items id="text">Administration rate</items>
+        <items id="description">The rate at which the medication, such as an infusion, is to be administered.</items>
+        <items id="comment">For example: '200 ml/h'. Use the text data type to record non- or semi-quantifiable instructions.</items>
+      </items>
+      <items code="at0135">
+        <items id="text">Dose formula</items>
+        <items id="description">The formula used to calculate the dose amount or administration rate where this is dependent on some other factor, such as body weight or surface area.</items>
+        <items id="comment">For example: '10mg/kg/day'. The result of this formula would normally be held in Dose amount/unit or Administration rate/duration. Where clinical measurements such as body weight is used in the dose calculation, a LINK attribute should used to specify which particular measurement has been used.</items>
+      </items>
+      <items code="at0144">
+        <items id="text">Dose amount</items>
+        <items id="description">The value of the amount of medication administered at one time, as a real number, or range of real numbers, and associated with the Dose unit.</items>
+        <items id="comment">For example: 1, 1.5, 0.125 or 1-2, 12.5-20.5</items>
+      </items>
+      <items code="at0145">
+        <items id="text">Dose unit</items>
+        <items id="description">The unit which is associated with the Dose amount.</items>
+        <items id="comment">For example: 'tablet','mg'. Coding of the dose unit with a terminology is preferred, where possible.</items>
+      </items>
+      <items code="at0164">
+        <items id="text">Dosage sequence</items>
+        <items id="description">The intended position of this dosage within the overall sequence of dosages.</items>
+        <items id="comment">For example: '1', '2', '3'. &#xD;
+Where multiple dosages are expressed, the 'Pattern sequence' makes the order in which they should be executed explicit. For example: (1) 1 tab in the morning, (2) 2 tab at 2pm, (3) 1 tab at night.</items>
+      </items>
+      <items code="at0176">
+        <items id="text">Alternate dose amount</items>
+        <items id="description">An alternate representation of the value of the amount of medication administered at one time, as a real number, or range of real numbers, and associated with the Dose unit.</items>
+        <items id="comment">For example, can be used to represent a unit-dose based value such as 'tabs', when the Dose amount is expressed as an SI unit such as 'mg', or where it is required to express the total amount of an infusion as well as the dose amount of the active ingredient.</items>
+      </items>
+      <items code="at0177">
+        <items id="text">Alternate dose unit</items>
+        <items id="description">The unit which is associated with the Alternate dose amount.</items>
+      </items>
+      <items code="at0178">
+        <items id="text">Dose description</items>
+        <items id="description">Text description of the dose.</items>
+        <items id="comment">For example: "Apply ointment to affected area until it glistens". This element is intended to allow implementers to use the structures for increasing/tapering dosages without necessarily specifying the doses in a structured way.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Dosering</items>
+        <items id="description">Kombinasjonen av legemiddeldose og administrasjonstidspunkter for en dag, innenfor sammenhengen legemiddelordinering eller legemiddelhåndtering.</items>
+        <items id="comment">For eksempel "2 tabletter kl. 18:00" eller "20 mg tre ganger om dagen". Merk: Dette clusteret er laget for å repeteres for å kunne representere et fullstendig sett av doseringsmønstre for en enkelt Terapeutisk anvisning.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Administreringstidspunkt</items>
+        <items id="description">Strukturerte detaljer om mønsteret for administreringstidspunkter innenfor en dag.</items>
+        <items id="comment">For eksempel "om morgenen", "kl 6, 14 og 21".</items>
+      </items>
+      <items code="at0102">
+        <items id="text">Administreringsvarighet</items>
+        <items id="description">Tidsperioden en enkelt dose av legemiddelet eller vaksinen skal administreres over.</items>
+        <items id="comment">For eksempel "Administreres over 10 minutter".</items>
+      </items>
+      <items code="at0134">
+        <items id="text">Administreringshastighet</items>
+        <items id="description">Hastigheten som skal benyttes under administreringen, for eksempel ved en infusjon.</items>
+        <items id="comment">For eksempel "200 ml/t". Bruk datatypen "tekst" for å registrere ikke- eller semikvantifiserbare instruksjoner.</items>
+      </items>
+      <items code="at0135">
+        <items id="text">Doseringsformel</items>
+        <items id="description">Formelen som er brukt for å regne ut dosen eller administreringshastigheten der dette er avhengig av en annen faktor som f.eks. kroppsvekt eller hudoverflate.</items>
+        <items id="comment">For eksempel "10mg/kg/dag". Resultatet av denne formelen vil normalt registreres i Dosemengde/-enhet eller Administreringshastighet/-varighet. Der det benyttes kliniske målinger som for eksempel kroppsvekt i doseberegningen, bør det brukes en LINK-attributt for å spesifisere hvilken måling som er brukt.</items>
+      </items>
+      <items code="at0144">
+        <items id="text">Dosemengde</items>
+        <items id="description">Verdien av legemiddelmengden (dosen) administrert på ett tidspunkt, som et reelt tall eller som et intervall av reelle tall. Dette elementet er tilknyttet elementet Doseenhet.</items>
+        <items id="comment">For eksempel 1, 1.5, 0.125 eller 1-2, 12.5-20.5. Dette elementet inneholder kun talldelen av dosen, mens "Doseenhet" inneholder enheten.</items>
+      </items>
+      <items code="at0145">
+        <items id="text">Doseenhet</items>
+        <items id="description">Enheten "Dosemengde" er målt i.</items>
+        <items id="comment">For eksempel "tablett" eller "mg". Koding av doseenheten med en terminologi, f.eks. FEST, foretrekkes der det er mulig. Dette elementet inneholder kun enhetsdelen av dosen, mens "Dosemengde" inneholder tallet.</items>
+      </items>
+      <items code="at0164">
+        <items id="text">Doseringsrekkefølge</items>
+        <items id="description">Tilsiktet rekkefølge for denne doseringen i den overordnede sekvensen av doseringer.</items>
+        <items id="comment">For eksempel "1", "2", "3". Der det er spesifisert flere doseringer, gjør Doseringsrekkefølge det tydelig hvilken rekkefølge de hører hjemme i. Eksempel: (1) 1 tablett om morgenen, (2) 2 tabletter kl. 14, (3) 1 tablett om kvelden.</items>
+      </items>
+      <items code="at0176">
+        <items id="text">Alternativ dosemengde</items>
+        <items id="description">En alternativ representasjon av verdien av legemiddelmengden (dosen) administrert på ett tidspunkt, som et reelt tall eller som et intervall av reelle tall. Dette elementet er tilknyttet elementet Alternativ doseenhet.</items>
+        <items id="comment">Kan for eksempel brukes for å representere en verdi basert på pakningsenheter som "tabletter", der Dosemengde uttrykkes som en SI-enhet som "mg", eller der det er nødvendig å uttrykke den totale mengden infusjonsvæske i tillegg til mengden aktiv substans.</items>
+      </items>
+      <items code="at0177">
+        <items id="text">Alternativ doseenhet</items>
+        <items id="description">Enheten "Alternativ dosemengde" er målt i.</items>
+      </items>
+      <items code="at0178">
+        <items id="text">Dosebeskrivelse</items>
+        <items id="description">Tekstbeskrivelse av dosen.</items>
+        <items id="comment">For eksempel "Påfør salve på det affiserte området til det glinser". Dette elementet har som hensikt å tillate implementasjoner å bruke strukturene for økende og avtagende dosering uten å nødvendigvis spesifisere dosene strukturert.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="pt-br">
+      <items code="at0000">
+        <items id="text">Dose</items>
+        <items id="description">A combinação de uma quantidade de medicamento e o tempo de administração para um único dia, no contexto de uma solicitação ou gestão de medicamento.</items>
+        <items id="comment">Por exemplo: "2 comprimidos às 18h" ou "20 mg três vezes ao dia". Por favor note que: este cluster permite ocorrências múltiplas para possibilitar a representação de um conjunto completo de padrões de dose para uma orientação de dose única.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Tempo</items>
+        <items id="description">Detalhes estruturados sobre o padrão temporal dentro de um único dia.</items>
+        <items id="comment">Por exemplo: "pela manhã", às 6h, 14h, 21h.</items>
+      </items>
+      <items code="at0102">
+        <items id="text">Duração da administração</items>
+        <items id="description">O período de tempo no qual uma única dose do medicamento ou vacina deve ser administrado.</items>
+        <items id="comment">Por exemplo: "Administrar por 10 minutos".</items>
+      </items>
+      <items code="at0134">
+        <items id="text">Taxa de administração</items>
+        <items id="description">A taxa na qual o medicamento, como uma infusão, deve ser administrado.</items>
+        <items id="comment">Por exemplo: "200 ml/h". Use o tipo de dado texto para gravar instruções qualitativas ou semi-quantitativas.</items>
+      </items>
+      <items code="at0135">
+        <items id="text">Fórmula da dose</items>
+        <items id="description">A fórmula utilizada para calcular a quantidade da dose ou taxa de administração à qual é dependente ou algum outro fator, como peso corporal ou área de superfície.</items>
+        <items id="comment">Por exemplo: "10mg/kg/dia". O resultado desta fórmula seria normalmente suportado em Quantidade/unidade da dose ou Duração/taxa de administração. Um link de atributo deve ser usado para especificar qual medida particular foi utilizada quando medições clínicas, como peso corporal, são usadas para o cálculo da dose.</items>
+      </items>
+      <items code="at0144">
+        <items id="text">Quantidade da dose</items>
+        <items id="description">O valor da quantidade do medicamento administrado em uma vez, como valor numérico ou uma faixa numérica, e associado à unidade da dose.</items>
+        <items id="comment">Por exemplo: 1; 1,5; 0,125 ou 1-2; 12,5-20,5</items>
+      </items>
+      <items code="at0145">
+        <items id="text">Unidade da dose</items>
+        <items id="description">A unidade associada à quantidade da dose.</items>
+        <items id="comment">Por exemplo: "comprimido", "mg". A codificação da unidade da dose com uma terminologia é preferível, quando possível.</items>
+      </items>
+      <items code="at0164">
+        <items id="text">Sequência de dosagem</items>
+        <items id="description">A posição determinada desta dose dentro da sequência geral de doses.</items>
+        <items id="comment">Por exemplo: "1", "2", "3". &#xD;
+Quando são expressas múltiplas doses, a "Sequência Padrão" indica a ordem na qual deve ser explicitamente executada. Por exemplo: (1) 1 comprimido pela manhã, (2) 2 comprimidos às 14h, (3) 1 comprimido à noite.</items>
+      </items>
+      <items code="at0176">
+        <items id="text">Quantidade alternativa da dose</items>
+        <items id="description">Uma representação alternativa do valor da quantidade de medicamento administrado uma vez, como valor numérico, ou faixa numérica, e associada à unidade da dose.</items>
+        <items id="comment">Por exemplo, pode ser usado para representar uma unidade de dose baseada em valores como "comprimidos", quando a quantidade da dose é expressa em unidades do SI como "mg", ou quando é requerida para expressar a quantidade total de uma infusão assim como a quantidade da dose do princípio ativo.</items>
+      </items>
+      <items code="at0177">
+        <items id="text">Unidade alternativa da dose</items>
+        <items id="description">A unidade associada à quantidade alternativa da dose.</items>
+      </items>
+      <items code="at0178">
+        <items id="text">Descrição da dose</items>
+        <items id="description">Descrição textual da dose.</items>
+        <items id="comment">Por exemplo: "Aplicar pomada na área afetada até preenchê-la". Este elemento pretende permitir aos implementadores o uso de estruturas para doses crescentes/decrescentes sem especificar necessariamente as doses de uma forma estruturada.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Dosierung</items>
+        <items id="description">Kombination von Medikamentendosis und Verabreichungszeit an einem Tag im Kontext einer Medikamentenverordnung oder der Arzneimittelverwaltung.</items>
+        <items id="comment">Zum Beispiel: "2 Tabletten um 18 Uhr" oder "20 mg dreimal täglich". Bitte beachten Sie: Dieser Cluster kann mehrfach vorkommen, um einen vollständigen Satz von Dosismustern für eine einzelne Dosisanweisung darzustellen.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Tägliche Verabreichungszeiten</items>
+        <items id="description">Strukturierte Details des Musters für Verabreichungszeiten innerhalb eines Tages.</items>
+        <items id="comment">Zum Beispiel: "Morgens", "Um 06:00, 14:00, 21:00"'.</items>
+      </items>
+      <items code="at0102">
+        <items id="text">Verabreichungsdauer</items>
+        <items id="description">Der Zeitraum, in dem eine Einzeldosis des Medikaments oder Impfstoffs verabreicht werden soll.</items>
+        <items id="comment">Zum Beispiel: "Über 10 Minuten verabreichen".</items>
+      </items>
+      <items code="at0134">
+        <items id="text">Verabreichungsrate</items>
+        <items id="description">Die Rate, mit der das Medikament, beispielsweise eine Infusion, verabreicht werden soll.</items>
+        <items id="comment">Zum Beispiel: '200 ml/h'. Verwenden Sie den Datentyp Text, um nicht- oder nur teilweise quantifizierbare Anweisungen aufzuzeichnen.</items>
+      </items>
+      <items code="at0135">
+        <items id="text">Dosisformel</items>
+        <items id="description">Die Formel zur Berechnung der Dosismenge oder der Verabreichungsrate, wenn dies von einem anderen Faktor abhängt, wie z. B. dem Körpergewicht oder der Hautoberfläche.</items>
+        <items id="comment">Zum Beispiel: "10 mg/kg/Tag". Das Ergebnis dieser Formel wird normalerweise in Dosismenge / Einheit oder Verabreichungsrate / Dauer gespeichert. Wenn klinische Messungen wie das Körpergewicht bei der Dosisberechnung verwendet werden, sollte ein LINK-Attribut verwendet werden, um anzugeben, welche bestimmte Messung verwendet wurde.</items>
+      </items>
+      <items code="at0144">
+        <items id="text">Dosismenge</items>
+        <items id="description">Der Wert der Arzneimittelmenge, die an einem Zeitpunkt verabreicht wird, als reelle Zahl oder als Bereich von reellen Zahlen. Dem Wert ist die Dosiseinheit zugeordnet.</items>
+        <items id="comment">Zum Beispiel: 1; 1,5; 0,125 oder 1-2; 12,5 - 20,5</items>
+      </items>
+      <items code="at0145">
+        <items id="text">Dosiseinheit</items>
+        <items id="description">Die Einheit, die der Dosismenge zugeordnet ist.</items>
+        <items id="comment">Zum Beispiel: "Tablette", "mg". Die Kodierung der Dosiseinheit mit einer Terminologie wird nach Möglichkeit bevorzugt.</items>
+      </items>
+      <items code="at0164">
+        <items id="text">Dosierungsreihenfolge</items>
+        <items id="description">Beabsichtigte Reihenfolge dieser Dosierung in der Gesamtdosierungsfolge.</items>
+        <items id="comment">Zum Beispiel: '1', '2', '3'.&#xD;
+Wenn mehrere Dosierungen angegeben werden, gibt die 'Dosierungsreihenfolge' die Reihenfolge an, in der sie ausgeführt werden soll. Zum Beispiel: (1) 1 Tablette am Morgen, (2) 2 Tabletten um 14 Uhr, (3) 1 Tablette am Abend.</items>
+      </items>
+      <items code="at0176">
+        <items id="text">Alternative Dosismenge</items>
+        <items id="description">Eine alternative Darstellung des Werts, der an einem Zeitpunkt verabreichten Medikamentenmenge als reelle Zahl oder als Bereich von reellen Zahlen, die der Dosiseinheit zugeordnet sind.</items>
+        <items id="comment">Kann zum Beispiel verwendet werden, um einen Wert darzustellen, der auf Verpackungseinheit wie "Tabletten" basiert, wobei die Dosismenge als SI-Einheit angegeben ist, z. B. 'mg'; oder wenn sowohl die Gesamtmenge als auch die Dosismenge des Wirkstoffes einer Infusionslösung angegeben werden müssen.</items>
+      </items>
+      <items code="at0177">
+        <items id="text">Alternative Dosiseinheit</items>
+        <items id="description">Die Einheit, die der alternativen Dosismenge zugeordnet ist.</items>
+      </items>
+      <items code="at0178">
+        <items id="text">Dosisbeschreibung</items>
+        <items id="description">Textbeschreibung der Dosis.</items>
+        <items id="comment">Zum Beispiel: "Salbe auf die betroffene Stelle auftragen, bis sie glänzt". Dieses Element soll den Entwicklern ermöglichen, die Strukturen zum Erhöhen / Verringern von Dosierungen zu verwenden, ohne die Dosierungen notwendigerweise auf strukturierte Weise spezifizieren zu müssen.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="sv">
+      <items code="at0000">
+        <items id="text">Dosering</items>
+        <items id="description">Kombinationen av läkemedelsmängd och administreringstidpunkt för en dag, i samband med en läkemedelsorder eller läkemedelshantering.</items>
+        <items id="comment">Till exempel: "2 tabletter kl. 18" eller "20 mg tre gånger per dag". Observera: cluster tillåter här flera förekomster för att möjliggöra representation av en komplett uppsättning dosmönster för en enda dosriktning.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Daglig timing</items>
+        <items id="description">Strukturerade detaljer om tidsmönstret för en dag.</items>
+        <items id="comment">Till exempel: "på morgonen", "0600, 1400, 2100".</items>
+      </items>
+      <items code="at0102">
+        <items id="text">Administrationens varaktighet</items>
+        <items id="description">Tiden under vilken en enda dos av läkemedlet eller vaccinet ska administreras.</items>
+        <items id="comment">Till exempel: 'Administrera över 10 minuter'.</items>
+      </items>
+      <items code="at0134">
+        <items id="text">Administrationshastighet</items>
+        <items id="description">Den hastighet med vilken läkemedlet, såsom en infusion, ska administreras.</items>
+        <items id="comment">Till exempel: '200 ml / h'. Använd textdatatypen för att spela in icke- eller halvkvantifierbara instruktioner.</items>
+      </items>
+      <items code="at0135">
+        <items id="text">Doseringsformel</items>
+        <items id="description">Formeln som används för att beräkna dosmängden eller administreringshastigheten då detta är beroende av någon annan faktor, såsom kroppsvikt eller ytarea.</items>
+        <items id="comment">Till exempel: '10 mg / kg / dag'. Resultatet av denna formel är normalt dosmängd / enhet eller administreringshastighet / varaktighet. När kliniska mätningar såsom kroppsvikt används vid dosberäkningen bör ett LINK-attribut användas för att specificera vilken specifik mätning som har använts.</items>
+      </items>
+      <items code="at0144">
+        <items id="text">Dosemängd</items>
+        <items id="description">Värdet av mängden läkemedel som administreras samtidigt, som ett reellt antal eller intervall av reella tal och associerat med doseringsenheten.</items>
+        <items id="comment">Till exempel: 1, 1,5, 0,125 eller 1-2, 12,5-20,5</items>
+      </items>
+      <items code="at0145">
+        <items id="text">Dosenhet</items>
+        <items id="description">Enheten som är associerad med dosmängden.</items>
+        <items id="comment">Till exempel: "tablett", "mg". Kodning av dosenheten med en terminologi är att föredra, där det är möjligt.</items>
+      </items>
+      <items code="at0164">
+        <items id="text">Doseringssekvens</items>
+        <items id="description">Den avsedda positionen för denna dosering inom den totala doseringssekvensen.</items>
+        <items id="comment">Till exempel: '1', '2', '3'.&#xD;
+När flera doser uttrycks, gör 'Mönstresekvensen' ordningen i vilken de ska köras. Till exempel: (1) 1 flik på morgonen, (2) 2 flik vid 14:00, (3) 1 flik på natten.</items>
+      </items>
+      <items code="at0176">
+        <items id="text">Alternativ dosmängd</items>
+        <items id="description">En alternativ representation av värdet på mängden läkemedel som administreras samtidigt, som ett reellt tal eller intervall av reella tal och associerat med doseringsenheten.</items>
+        <items id="comment">Kan till exempel användas för att representera ett enhetsdosbaserat värde såsom "tabs", när dosmängden uttrycks som en SI-enhet som "mg", eller där det krävs att uttrycka den totala mängden av en infusion som samt dosmängden av den aktiva ingrediensen.</items>
+      </items>
+      <items code="at0177">
+        <items id="text">Alternativ dosenhet</items>
+        <items id="description">Enheten som är associerad med den alternativa dosmängden.</items>
+      </items>
+      <items code="at0178">
+        <items id="text">Doseringsbeskrivning</items>
+        <items id="description">Textbeskrvining av dosen.</items>
+        <items id="comment">Till exempel: "Applicera salva på det drabbade området tills det glänser". Detta element är avsett att tillåta implementerare att använda strukturerna för att öka/minska doser utan att nödvändigtvis specificera doserna på ett strukturerat sätt.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

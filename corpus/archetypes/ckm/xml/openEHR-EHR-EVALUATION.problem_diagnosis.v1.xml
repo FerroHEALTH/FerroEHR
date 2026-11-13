@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -234,8 +234,7 @@ Not to be used for the explicit recording of an absence (or negative presence) o
       </language>
       <purpose>Att dokumentera detaljer om ett hälsoproblem eller en diagnos.&#xD;
 &#xD;
-Hälsoproblem har en bred betydelse för att fånga alla objektiva eller upplevda hälsobesvär som i någon omfattning kan påverka en individs välbefinnande negativt. Ett hälsoproblem kan identifieras av individen, en anhörigvårdare eller hälso- och sjukvårdspersonal. En diagnos definieras däremot endast baserat på objektiva kliniska kriterier, och fastställs vanligen av hälso- och sjukvårdspersonal.&#xD;
-</purpose>
+Hälsoproblem har en bred betydelse för att fånga alla objektiva eller upplevda hälsobesvär som i någon omfattning kan påverka en individs välbefinnande negativt. Ett hälsoproblem kan identifieras av individen, en anhörigvårdare eller hälso- och sjukvårdspersonal. En diagnos definieras däremot endast baserat på objektiva kliniska kriterier, och fastställs vanligen av hälso- och sjukvårdspersonal.</purpose>
       <keywords>bekymmer</keywords>
       <keywords>tillstånd</keywords>
       <keywords>problem</keywords>
@@ -621,9 +620,7 @@ Dans certaines situations, on peut supposer que l’identification d’un diagno
 &#xD;
 并非旨在用于记录关于不良反应、过敏/变态反应或不耐的陈述 - 对此，请采用评价型不良反应原始型 EVALUATION.adverse_reaction。&#xD;
 &#xD;
-并非旨在用于明确记录关于并不存在（或否定存在）特定问题或诊断的情况，如“无已知问题或诊断”或“无已知糖尿病”。对此，请采用评价型除外问题/诊断原始型 EVALUATION.exclusion-problem_diagnosis 来表达关于排除特定问题或诊断的明确陈述。&#xD;
-&#xD;
-</misuse>
+并非旨在用于明确记录关于并不存在（或否定存在）特定问题或诊断的情况，如“无已知问题或诊断”或“无已知糖尿病”。对此，请采用评价型除外问题/诊断原始型 EVALUATION.exclusion-problem_diagnosis 来表达关于排除特定问题或诊断的明确陈述。</misuse>
       <copyright />
     </details>
     <details>
@@ -782,8 +779,7 @@ En la práctica, los clínicos utilizan muchos calificadores dependientes del co
 &#xD;
 Este arquetipo será utilizado como un componente del Registro Médico Orientado al Problema descripto por Larry Weed. Se requerirá del desarrollo de arquetipos adicionales para la representación de conceptos clínicos tales como una condición para un organizador general de diagnósticos, etc.&#xD;
 &#xD;
-En algunas situaciones puede asumirse que la identificación de un diagnóstico solo se ajusta a la experticia del médico, pero no es el propósito de este arquetipo. Los diagnósticos pueden ser registrados mediante este arquetipo por parte de cualquier profesional.&#xD;
-</use>
+En algunas situaciones puede asumirse que la identificación de un diagnóstico solo se ajusta a la experticia del médico, pero no es el propósito de este arquetipo. Los diagnósticos pueden ser registrados mediante este arquetipo por parte de cualquier profesional.</use>
       <misuse>No debe ser utilizado para registrar síntomas tal cual fueron descriptos por el individuo; para ello se debe utilizar el arquetipo CLUSTER.symptom, habitualmente dentro del contexto del arquetipo OBSERVATION.story.&#xD;
 &#xD;
 No debe ser utilizado para registrar hallazgo de exámenes, para ello se debe utilizar la familia de arquetipos relacionados a exámenes, habitualmente contenidos dentro del arquetipo OBSERVATION.exam.&#xD;
@@ -870,9 +866,7 @@ Not to be used for the explicit recording of an absence (or negative presence) o
       </language>
       <purpose>Registrar dades sobre un únic problema de salut o diagnòstic identificat. &#xD;
 &#xD;
-En el context d’una documentació clínica, l’envergadura d’un problema relacionat amb la salut té deliberadament pocs detalls, amb el fi de captar qualsevol preocupació real o percebuda que pugui afectar negativament a la salut de la persona en qualsevol grau. Un problema de salut pot ser identificat per la persona, per un cuidador o per un professional sanitari. No obstant això, un diagnòstic es defineix addicionalment basat en criteris clínics objectius, i determinat, en general, només per un professional sanitari.&#xD;
-&#xD;
-</purpose>
+En el context d’una documentació clínica, l’envergadura d’un problema relacionat amb la salut té deliberadament pocs detalls, amb el fi de captar qualsevol preocupació real o percebuda que pugui afectar negativament a la salut de la persona en qualsevol grau. Un problema de salut pot ser identificat per la persona, per un cuidador o per un professional sanitari. No obstant això, un diagnòstic es defineix addicionalment basat en criteris clínics objectius, i determinat, en general, només per un professional sanitari.</purpose>
       <keywords>Malaltia</keywords>
       <keywords>condició</keywords>
       <keywords>problema</keywords>
@@ -892,8 +886,7 @@ En la pràctica, molts mèdics utilitzen uns qualificatius o altres depenent del
 &#xD;
 Aquest arquetip s’utilitzarà com un component sense el qual l’història clínica orientada a problemes descrits per Larry Weed. Per ajudar a aquest enfocament, serà necessari desenvolupar arquetips addicionals que representen conceptes clínics, com un organitzador global per a diagnòstics, etc., que necessitarà ser desenvolupat. &#xD;
 &#xD;
-En algunes situacions, es pot pressuposar que la identificació d’un diagnòstic sols és competència dels metges, però aquesta no és la intenció d’aquest arquetip. Qualsevol professional sanitari pot registrar diagnòstics utilitzant aquest arquetip.&#xD;
-</use>
+En algunes situacions, es pot pressuposar que la identificació d’un diagnòstic sols és competència dels metges, però aquesta no és la intenció d’aquest arquetip. Qualsevol professional sanitari pot registrar diagnòstics utilitzant aquest arquetip.</use>
       <misuse>No utilitzar per a registrar els símptomes descrits per la persona. Utilitzar l’arquetip CLUSTER.symptom, normalment dins de l’arquetip OBSERVATION.story. &#xD;
 &#xD;
 No utilitzar per a registrar els resultats dels exàmens. Utilitzar la família d’arquetips d’examinació CLUSTER, normalment trobats dins de l’arquetip OBSERVATION.exam. &#xD;
@@ -2136,7 +2129,7 @@ Si la localización anatómica está incluida en el nombre del problema o diagn�
       </items>
       <items code="at0080">
         <items id="text">*DV_TEXT (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="de">
@@ -2308,8 +2301,7 @@ Use this data element to record precoordinated anatomical locations. If the requ
       <items code="at0030">
         <items id="text">Date/time of resolution</items>
         <items id="description">Estimated or actual date/time of resolution or remission for this problem or diagnosis, as determined by a healthcare professional.</items>
-        <items id="comment">Partial dates are acceptable. If the subject of care is under the age of one year, then the complete date or a minimum of the month and year is necessary to enable accurate age calculations - for example, if used to drive decision support. Data captured/imported as "Age at time of resolution" should be converted to a date using the subject's date of birth.&#xD;
-</items>
+        <items id="comment">Partial dates are acceptable. If the subject of care is under the age of one year, then the complete date or a minimum of the month and year is necessary to enable accurate age calculations - for example, if used to drive decision support. Data captured/imported as "Age at time of resolution" should be converted to a date using the subject's date of birth.</items>
       </items>
       <items code="at0032">
         <items id="text">Tree</items>
@@ -2527,7 +2519,7 @@ If the anatomical location is included in the Problem/diagnosis name via precoor
       </items>
       <items code="at0080">
         <items id="text">*DV_TEXT (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="pt-br">
@@ -2659,7 +2651,7 @@ Por exemplo: evolução do estado: inicial, inativo, resolvido, em remissão; es
       </items>
       <items code="at0080">
         <items id="text">*DV_TEXT (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nb">
@@ -2892,9 +2884,7 @@ Exempelvis status på:&#xD;
       <items code="at0073">
         <items id="text">Diagnostisk säkerhet</items>
         <items id="description">Graden av säkerhet vid fastställande av diagnosen.</items>
-        <items id="comment">Använd datatypen DV_TEXT i en template om en alternativ graderingsskala krävs.&#xD;
-&#xD;
-</items>
+        <items id="comment">Använd datatypen DV_TEXT i en template om en alternativ graderingsskala krävs.</items>
       </items>
       <items code="at0074">
         <items id="text">Misstänkt</items>
@@ -3058,7 +3048,7 @@ Detta datafält är avsett att fånga flera typer av påverkan, inklusive men in
       </items>
       <items code="at0080">
         <items id="text">*DV_TEXT (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="fi">
@@ -3186,7 +3176,7 @@ If the anatomical location is included in the Problem/diagnosis name via precoor
       </items>
       <items code="at0080">
         <items id="text">*DV_TEXT (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="it">
@@ -3311,7 +3301,7 @@ If the anatomical location is included in the Problem/diagnosis name via precoor
       </items>
       <items code="at0080">
         <items id="text">*DV_TEXT (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nl">
@@ -3415,8 +3405,7 @@ Use this data element to record precoordinated anatomical locations. If the requ
       </items>
       <items code="at0002">
         <items id="text">Naam van het probleem / de diagnose</items>
-        <items id="description">Identificatie van het probleem of de diagnose bij naam.&#xD;
-                            </items>
+        <items id="description">Identificatie van het probleem of de diagnose bij naam.</items>
         <items id="comment">*Coding of the name of the problem or diagnosis with a terminology is preferred, where possible.(en)</items>
       </items>
       <items code="at0001">
@@ -3440,7 +3429,7 @@ Use this data element to record precoordinated anatomical locations. If the requ
       </items>
       <items code="at0080">
         <items id="text">*DV_TEXT (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="zh">
@@ -3567,7 +3556,7 @@ If the anatomical location is included in the Problem/diagnosis name via precoor
       </items>
       <items code="at0080">
         <items id="text">*DV_TEXT (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="ca">
@@ -3829,7 +3818,7 @@ Aquest element està pensat per permetre múltiples tipus d'impacte, incloent-hi
       </items>
       <items code="at0080">
         <items id="text">*DV_TEXT (en)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="fr">
@@ -3967,4 +3956,3 @@ Cet élément vise à prendre en compte plusieurs types d’impact, notamment, m
     </term_definitions>
   </ontology>
 </archetype>
-

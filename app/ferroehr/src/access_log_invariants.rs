@@ -27,6 +27,7 @@ use crate::access_log_draft::access_log::access_outcome::AccessOutcome;
 use crate::access_log_draft::access_log::access_query::AccessQuery;
 use crate::access_log_draft::access_log::accessed_item::AccessedItem;
 use crate::access_log_draft::access_log::accessor::Accessor;
+use crate::draft_invariants::{Check, Violations};
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
 /// The rubrics of the draft `access action` group.
@@ -57,55 +58,6 @@ const ACCESS_AUTHORISATION: &[&str] = &[
     "representation",
     "legal obligation",
 ];
-
-/// One broken invariant: the class and the invariant, as the BMM names them.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Violation {
-    /// The BMM class whose invariant broke, such as `ACCESS_LOG_LINK`.
-    pub class: &'static str,
-    /// The invariant's BMM name, such as `Sequence_valid`.
-    pub invariant: &'static str,
-}
-
-impl std::fmt::Display for Violation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}.{}", self.class, self.invariant)
-    }
-}
-
-/// The invariants a record or a checkpoint breaks.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("the access-log record breaks {}", list(.0))]
-pub struct Violations(pub Vec<Violation>);
-
-/// The violations, comma-separated.
-fn list(violations: &[Violation]) -> String {
-    violations
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
-/// Collects the broken invariants.
-#[derive(Default)]
-struct Check(Vec<Violation>);
-
-impl Check {
-    fn hold(&mut self, holds: bool, class: &'static str, invariant: &'static str) {
-        if !holds {
-            self.0.push(Violation { class, invariant });
-        }
-    }
-
-    fn finish(self) -> Result<(), Violations> {
-        if self.0.is_empty() {
-            Ok(())
-        } else {
-            Err(Violations(self.0))
-        }
-    }
-}
 
 /// Whether `coded` is a term of the draft openEHR group whose rubrics are
 /// `group`.

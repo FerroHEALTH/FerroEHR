@@ -1,0 +1,668 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2013-02-19</original_author>
+    <original_author id="name">Sam Heard</original_author>
+    <original_author id="organisation">Ocean Informatics, Australia</original_author>
+    <original_author id="email">sam.heard@oceaninformatics.com</original_author>
+    <other_contributors>Nadim Anani, Karolinska Institutet, Sweden</other_contributors>
+    <other_contributors>Vebjoern Arntzen, Oslo university hospital, Norway</other_contributors>
+    <other_contributors>Koray Atalag, University of Auckland, New Zealand</other_contributors>
+    <other_contributors>Silje Ljosland Bakke, Bergen Hospital Trust, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Sistine Barretto-Daniels, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Lars Bitsch-Larsen, Haukeland University hospital, Norway</other_contributors>
+    <other_contributors>Shahla Foozonkhah, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway</other_contributors>
+    <other_contributors>Sebastian Garde, Ocean Informatics, Germany</other_contributors>
+    <other_contributors>Heather Grain, Llewelyn Grain Informatics, Australia</other_contributors>
+    <other_contributors>Sam Heard, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Lars Karlsen, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Shinji Kobayashi, Kyoto University, Japan</other_contributors>
+    <other_contributors>Heather Leslie, Ocean Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Hallvard Lærum, Oslo University Hospital, Norway</other_contributors>
+    <other_contributors>Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)</other_contributors>
+    <other_contributors>Andrej Orel, Marand d.o.o., Slovenia</other_contributors>
+    <other_contributors>Jussara Rotzsch, UNB, Brazil</other_contributors>
+    <other_contributors>Rowan Thomas, St. Vincent's Hospital Melbourne, Australia</other_contributors>
+    <lifecycle_state>deprecated</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Problem List, draft archetype [Internet]. National eHealth Transition Authority, NEHTA Clinical Knowledge Manager. Authored: 2013 Feb 19. Available at: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1235 [accessed 2015 Apr 28].</other_details>
+    <other_details id="current_contact">Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">201F825200A50B409F9B2D0F9FF8741E</other_details>
+    <other_details id="build_uid">292eb31f-ff48-496e-9571-c16891aa0563</other_details>
+    <other_details id="revision">1.0.3</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ko</code_string>
+      </language>
+      <purpose>확인된 진단이나 환자가 겪는 문제 또는 임상의사결정과 환자진료에 영향을 줄 수 있는 이전에 시행된 처치에 대한 영구적으로 관리되는 목록.</purpose>
+      <keywords>*문제(ko)</keywords>
+      <keywords>*목록(ko)</keywords>
+      <keywords>*진단(ko)</keywords>
+      <keywords>*처치(ko)</keywords>
+      <use>확인된 진단이나 환자가 겪는 문제 또는 임상의사결정과 환자진료에 영향을 줄 수 있는 이전에 시행된 처치에 대한 영구적으로 관리되는 목록을 기록하는데 사용.&#xD;
+&#xD;
+이 목록은 교환이나 의사결정을 위한 근거로써 최근의 문제목록 데이터로써 이용될 수 있다.&#xD;
+&#xD;
+이 목록은 3가지의 아키타입 종류들로 구성된다.&#xD;
+&#xD;
+- 문제나 진단 또는 이전에 받은 처치가 있는(positive presence) 경우에 EVALUATION.problem_diagnosis 와/또는 ACTION.procedure 아키타입들을 이용하여 진술문이 기록된다; 또는&#xD;
+&#xD;
+- 약물의 이용을 배제하는(positive exclusion) 진술문은 특별한 EVALUATION.exclusion-problem_diagnosis 또는 EVALUATION.exclusion-procedure 아키타입들을 이용하여 진술문이 기록될 수 있다 - 예를 들어, "중요한 문제들이나 진단들이 없음" 이나 "중요한 수술들이나 처치들의 이력이 없음"; 또는&#xD;
+&#xD;
+- 이용가능한 정보가 없는 것(문제나 진단 또는 처치를 받거나 받지 않은 두 경우가 모두 아님)에 대한 진술문이 EVALUATION.absence 아키타입을 이용하여 기록될 수 있다.&#xD;
+&#xD;
+이 목록이 의사결정과 교환의 근거로서 정확하고 안전하게 사용되기 위해서는 이 문제목록은 비즈니스 규칙들에 따라 임상시스템에 의해서 자동적으로 관리되기 보다는 이상적으로 기록에 책임이 있는 임상의에 의해 관리되어야 한다.</use>
+      <misuse />
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>pt-br</code_string>
+      </language>
+      <purpose>Registrar uma lista permanente e gerenciável de diagnósticos identificados, problemas experimentados pelo indivíduo ou procedimentos previamente realizados, que podem influenciar o processo de tomada de decisão clínica e provisão do cuidado.</purpose>
+      <keywords>lista</keywords>
+      <keywords>problema</keywords>
+      <keywords>diagnóstico</keywords>
+      <keywords>procedimento</keywords>
+      <keywords>lista de problemas</keywords>
+      <use>Utilizar como estrutura sugerida para apoiar modelagem consistente da Lista de problemas como uma lista de diagnósticos identificados, problemas vivenciados pelo indivíduo ou procedimentos previamente realizados persistente e gerenciável. &#xD;
+&#xD;
+Esta lista pode ser utilizada como uma fonte de dados da lista de problemas atuais para troca de informações ou base para suporte à decisão.&#xD;
+&#xD;
+Esta lista pode ser composta por três tipos de declarações, cada uma representada por arquétipos específicos:&#xD;
+- declarações sobre a presença de problemas, diagnósticos ou procedimentos prévios são registradas utilizando arquétipos EVALUATION.problem_diagnosis e/ou ACTION.procedure archetypes; ou&#xD;
+- declarações sobre a exclusão de problemas, diagnósticos ou procedimentos prévios podem ser registrados utilizando os arquétipos específicos EVALUATION.exclusion-problem_diagnosis ou EVALUATION.exclusion-procedure - por exemplo: "Ausência de problemas ou diagnósticos significantes" ou "Ausência de história de procedimentos ou operações significantes"; ou&#xD;
+- declarações sobre a ausência de informações disponíveis - nem a afirmação da presença de um problema, diagnóstico ou procedimento realizado nem uma exclusão - pode ser registrado utilizando o arquétipo EVALUATION.absence.&#xD;
+&#xD;
+Para que esta lista seja acurada e segura para ser utilizada como base para atividades de suporte à decisão e troca de informações, esta Lista de Problemas deve, idealmente, estar sob a responsabilidade de um clínico para o registro de saúde ao invés de gerenciada automaticamente por um sistema clínico baseado apenas em regras de negócio. &#xD;
+&#xD;
+Num sistema clínico fechado, é esperado que a introdução da informação na Lista de prolemas seja gerenciada através do versionamento deste COMPOSITION e seu conteúdo com a opção de uma trilha de auditoria baseada no sistema. &#xD;
+&#xD;
+Embora o ideal seja ter apenas uma Lista de problemas para cada indivíduo é mais realista esperar que num ambiente compartilhado podem haver múltiplas listas para um sujeito do cuidado, cada uma gerenciada e priorizada por um médico, episódio de cuidado ou outro contexto específico. Por exemplo, uma Lista de problemas de um médico de atenção primária pode ter uma configuração bem diferente daquela que é útil para um cirurgião especialista ou para referência durante um episódio de internação hospitalar. Em atenção primária é comum organizar a Lista de problemas baseada em problemas ou diagnósticos ativos e inativos; especialistas podem preferir ver suas listas organizadas ao redor dos diagnósticos primários que estão relacionados às suas especialidades e secundariamente aqueles que não estão; e uma admissão hospitalar pode incluir aspectos adicionais relacionados a prioridades de enfermagem imediatas que podem não ser relevantes na alta domiciliar - para estes propósitos há um SLOT Status no arquétipo Problem/Diagnosis que permite o uso de um arquétipo que pode suportar sistemas clínicos para organizar as Listas de problemas de acordo com as preferências dos usuários clínicos dos sistemas, sem perpetuar estes rótulos de status contextuais para outros cenários clínicos. &#xD;
+&#xD;
+Este arquétipo é normalmente gerenciado como uma lista persistente, entretanto há situações em que a lista pode ser utilizada num contexto de cuidado episódico e requeira atributos adicionais como um contexto para permitir um registro acurado. Atualmente o modelo de referência openEHR apenas permite que o contexto seja registrado em arquétipos COMPOSITION baseados em Eventos. Como resultado este arquétipo vem sendo modelado como um Evento ao invés de Persistente, COMPOSITION para permitir a flexibilidade para que alguns sistemas clínicos possam gerenciar de maneira segura as Listas de problemas para episódios de cuidado, enquanto outros escolherão implementar este COMPOSITION para agir de maneira persistente.</use>
+      <misuse />
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ar-sy</code_string>
+      </language>
+      <purpose>للمحافظة على قائمة مُحكَمة للمشكلات الصحية الحالية المؤثرة التي يُعتَدّ بها للشخص.</purpose>
+      <keywords>قائمة المشكلات</keywords>
+      <use>للمشكلات النشطة و غير النشطة - و تُعرف المشكلات غير النشطة بوجود تاريخ البُرْء/الشفاء</use>
+      <misuse>لا يستخدم للمشكلات قصيرة المدى</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record a persistent and managed list of diagnoses identified, problems experienced by the subject or previous procedures performed, that may influence clinical decision-making and care provision.</purpose>
+      <keywords>problem</keywords>
+      <keywords>list</keywords>
+      <keywords>diagnosis</keywords>
+      <keywords>diagnoses</keywords>
+      <keywords>procedure</keywords>
+      <keywords>problem list</keywords>
+      <use>Use as a suggested framework to support consistent modelling of the Problem list as a persistent and managed list of diagnoses identified, problems experienced by the subject or previous procedures performed. &#xD;
+&#xD;
+This list can be utilised as a source of current problem list data for exchange or as the basis for decision support. &#xD;
+&#xD;
+This list can be comprised of three types of statements, each represented by specific archetypes:&#xD;
+- statements about the positive presence of problems, diagnoses or previous procedures are recorded using the EVALUATION.problem_diagnosis and/or ACTION.procedure archetypes; OR&#xD;
+- statements about the positive exclusion of problems, diagnoses or previous procedures can be recorded using the specific EVALUATION.exclusion-problem_diagnosis or EVALUATION.exclusion-procedure archetypes - for example: "No significant problems or diagnoses" or "No history of significant operations or procedures"; OR&#xD;
+- statements about no information being available - neither a positive presence of a problem, diagnosis or procedure performed nor a positive exclusion - can be recorded using the EVALUATION.absence archetype.&#xD;
+&#xD;
+In order for this list to be accurate and safe to use as the basis for decision support activities and for exchange, this Problem List should ideally be curated by a clinician responsible for the health record, rather than managed automatically by the clinical system through business rules alone.&#xD;
+&#xD;
+In a closed clinical system, it is expected that provenance of this Problem list can be managed through versioning of this COMPOSITION and its contents, with the additional option of a system-based audit trail.&#xD;
+&#xD;
+While it may be ideal to have only one Problem list for each subject of care, it is more realistic to expect that in a distributed environment there may be multiple Problem lists for a single subject of care, each managed and prioritised for a specific clinician, episode of care or other context. For example, a Problem list for a primary care clinician may be a very different configuration to that which is useful for a specialist surgeon or for reference during a hospital inpatient episode. In primary care it is common to organise the Problem list based on active or inactive problems or diagnoses; specialists may prefer to see their list organised around primary diagnoses which are related to their specific speciality and secondary ones which are not; and an inpatient admission may include additional issues related to immediate nursing priorities that would not be relevant once discharged home - for these purposes there is a Status SLOT in the Problem/Diagnosis archetype, which allow use of an archetype that could support clinical systems to organise Problem lists according to the preference of the clinical users of the system, without perpetuating these contextual status labels to other clinical scenarios or for persistence.&#xD;
+&#xD;
+This archetype is usually managed as a persistent list, however there are situations where the list may be used within episodic care and require additional attributes such as context etc to enable accurate recording. The openEHR reference model currently only allows context to be recorded within Event-based COMPOSITION archetypes. As a result, this archetype has been modelled as an Event, rather than Persistent, COMPOSITION, to allow for flexibility so that some clinical systems can safely manage Problem lists for episodes of care, while others will choose to implement this COMPOSITION to act in a persistent manner.</use>
+      <misuse />
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ko</code_string>
+    </language>
+    <author id="name">Seung-Jong Yu</author>
+    <author id="organisation">NOUSCO Co.,Ltd.</author>
+    <author id="email">seungjong.yu@gmail.com</author>
+    <accreditation>Certified Board of Family Medicine in South Korea</accreditation>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>pt-br</code_string>
+    </language>
+    <author id="name">Vladimir Pizzo</author>
+    <author id="organisation">Hospital Sirio Libanes, Brazil</author>
+    <author id="email">vladimir.pizzo@hsl.org.br</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ar-sy</code_string>
+    </language>
+    <author id="name">Mona Saleh</author>
+  </translations>
+  <uid>
+    <value>2233cb32-3002-4887-b9f1-40e1c36915ea</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-COMPOSITION.problem_list.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>COMPOSITION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>category</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>DV_CODED_TEXT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id />
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>defining_code</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>1</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_CODE_PHRASE">
+            <rm_type_name>CODE_PHRASE</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <terminology_id>
+              <value>openehr</value>
+            </terminology_id>
+            <code_list>433</code_list>
+          </children>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>context</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>EVENT_CONTEXT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id />
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>other_context</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ITEM_TREE</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0006</node_id>
+            <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+              <rm_attribute_name>items</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="ARCHETYPE_SLOT">
+                <rm_type_name>CLUSTER</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>0</lower>
+                </occurrences>
+                <node_id>at0008</node_id>
+                <includes>
+                  <string_expression>archetype_id/value matches {/.*/}</string_expression>
+                  <expression xsi:type="EXPR_BINARY_OPERATOR">
+                    <type>Boolean</type>
+                    <operator>2007</operator>
+                    <precedence_overridden>false</precedence_overridden>
+                    <left_operand xsi:type="EXPR_LEAF">
+                      <type>String</type>
+                      <item xsi:type="xsd:string">archetype_id/value</item>
+                      <reference_type>attribute</reference_type>
+                    </left_operand>
+                    <right_operand xsi:type="EXPR_LEAF">
+                      <type>C_STRING</type>
+                      <item xsi:type="C_STRING">
+                        <pattern>.*</pattern>
+                      </item>
+                      <reference_type>constraint</reference_type>
+                    </right_operand>
+                  </expression>
+                </includes>
+              </children>
+              <cardinality>
+                <is_ordered>false</is_ordered>
+                <is_unique>false</is_unique>
+                <interval>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>0</lower>
+                </interval>
+              </cardinality>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>content</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>EVALUATION</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0002</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-EVALUATION\.problem_diagnosis(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-EVALUATION\.problem_diagnosis(-[a-zA-Z0-9_]+)*\.v1</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>ACTION</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0003</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-ACTION\.procedure(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-ACTION\.procedure(-[a-zA-Z0-9_]+)*\.v1</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>EVALUATION</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0004</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-EVALUATION\.exclusion-problem_diagnosis(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-EVALUATION\.exclusion-procedure(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-EVALUATION\.exclusion-problem_diagnosis(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-EVALUATION\.exclusion-procedure(-[a-zA-Z0-9_]+)*\.v1</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>EVALUATION</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0005</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-EVALUATION\.absence(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-EVALUATION\.absence(-[a-zA-Z0-9_]+)*\.v1</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>SECTION</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0007</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-SECTION\.problem_list(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-SECTION\.problem_list(-[a-zA-Z0-9_]+)*\.v1</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>1</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="ar-sy">
+      <items code="at0000">
+        <items id="text">قائمة المشكلات</items>
+        <items id="description">قائمة من المشكلات الصحية الحالية لهذا الشخص.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">فعل</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Procedures(en)</items>
+        <items id="description">*Details about identified procedures that have been performed.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">*Exclusion statements(en)</items>
+        <items id="description">*Positive statement about the exclusion of known problems or diagnoses and procedures performed.(en)</items>
+        <items id="comment">*For example: "No significant problems or diagnoses" or "No history of significant operations or procedures".(en)</items>
+      </items>
+      <items code="at0005">
+        <items id="text">*Absent Information(en)</items>
+        <items id="description">*Positive statement that no information is available about identification of problems or diagnoses, nor procedures performed.(en)</items>
+      </items>
+      <items code="at0006">
+        <items id="text">*Tree(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0007">
+        <items id="text">*ENTRY(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0008">
+        <items id="text">*Extension(en)</items>
+        <items id="description">*Additional information required to capture local context or to align with other reference models/formalisms.(en)</items>
+        <items id="comment">*For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Problem list</items>
+        <items id="description">A persistent and managed list of any combination of diagnoses, problems and/or procedures that may influence clinical decision-making and care provision for the subject of care.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Problems, diagnoses, concerns or Health issue threads</items>
+        <items id="description">Detail about identified problems, diagnoses, concerns or health issue threads.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Procedures</items>
+        <items id="description">Detail about identified procedures that have been performed.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Exclusion statements</items>
+        <items id="description">Positive statement about the exclusion of known problems or diagnoses and procedures performed.</items>
+        <items id="comment">For example: "No significant problems or diagnoses" or "No history of significant operations or procedures".</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Absent information</items>
+        <items id="description">Positive statement that no information is available about identification of problems or diagnoses, nor procedures performed.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Other</items>
+        <items id="description">SLOT to contain SECTION archetypes which support alternative modelling patterns for Problem lists in specific clinical scenarios.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Extension</items>
+        <items id="description">Additional information required to capture local context or to align with other reference models/formalisms.</items>
+        <items id="comment">For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="ko">
+      <items code="at0000">
+        <items id="text">문제 목록</items>
+        <items id="description">확인된 진단이나 환자가 겪는 문제 또는 임상의사결정과 환자진료에 영향을 줄 수 있는 이전에 시행된 처치에 대한 영구적으로 관리되는 목록.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">문제 또는 진단</items>
+        <items id="description">확인된 문제 또는 진단에 대한 상세내역</items>
+      </items>
+      <items code="at0003">
+        <items id="text">처치</items>
+        <items id="description">시행된 적이 있는 확인된 처치에 대한 상세사항</items>
+      </items>
+      <items code="at0004">
+        <items id="text">*Exclusion statements(en)</items>
+        <items id="description">*Positive statement about the exclusion of known problems or diagnoses and procedures performed.(en)</items>
+        <items id="comment">*For example: "No significant problems or diagnoses" or "No history of significant operations or procedures".(en)</items>
+      </items>
+      <items code="at0005">
+        <items id="text">정보 없음</items>
+        <items id="description">문제나 진단 또는 시행된 처치를 확인하는데 있어서 이용가능한 정보가 없다는 진술문.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">*Tree(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0007">
+        <items id="text">*ENTRY(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0008">
+        <items id="text">*Extension(en)</items>
+        <items id="description">*Additional information required to capture local context or to align with other reference models/formalisms.(en)</items>
+        <items id="comment">*For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="pt-br">
+      <items code="at0000">
+        <items id="text">Lista de problemas</items>
+        <items id="description">Uma lista permanente e gerenciável de quaisquer combinações de diagnósticos, problemas e/ou procedimentos que possam influenciar o processo de tomada de decisão clínica e provisão de cuidado ao indivíduo.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Problemas, diagnósticos, preocupações ou tópicos relacionados à Saúde</items>
+        <items id="description">Detalhes sobre problemas, diagnósticos, preocupações ou tópicos relacionados à Saúde que foram identificados.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Procedimentos</items>
+        <items id="description">Detalhes sobre procedimentos identificados que tenham sido realizados.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Declarações de exclusão</items>
+        <items id="description">Afirmação sobre exclusão de problemas ou diagnósticos conhecidos assim como de procedimentos realizados.</items>
+        <items id="comment">Por exemplo: "Ausência de problemas ou diagnósticos relevantes" ou "Ausência de história de cirurgias ou procedimentos relevantes".</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Informação ausente</items>
+        <items id="description">Afirmação de que que não há informação disponível sobre a identificação de problemas ou diagnósticos nem de procedimentos realizados.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Outros</items>
+        <items id="description">SLOT para conter arquétipos SECTION que apoiam padrões de modelagem alternativos para Lista de Problemas em cenários clínicos específicos.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Extensão</items>
+        <items id="description">Informação adicional necessária para identificar contexto local ou alinhar com outros formalismos/modelos de referência.</items>
+        <items id="comment">Por exemplo: informação departamental local de hospital ou metadados para alinhar com equivalentes FHIR ou CIMI.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

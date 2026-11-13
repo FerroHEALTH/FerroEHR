@@ -1,0 +1,627 @@
+﻿archetype (adl_version=1.4; uid=9fae9ce0-884f-49fc-816b-fa5c1d3bff88)
+	openEHR-EHR-OBSERVATION.intravascular_pressure-jvp.v0
+specialise
+	openEHR-EHR-OBSERVATION.intravascular_pressure.v1
+
+concept
+	[at0000.1]	-- Jugular venous pressure
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["date"] = <"2004-05-18">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"Intravascular pressure measurement in jugular vein.">
+			use = <"">
+			keywords = <"pressure", "intravascular", "jugular">
+			misuse = <"">
+			copyright = <"© 2011 openEHR Foundation, openEHR Foundation">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"قياس الضغط داخل الوعاء الدموي في الوريد الرَّقَبي - الوِداجي.">
+			use = <"">
+			keywords = <"الضغط", "داخل الوعاء", "الرَّقَبي - الوِدَاجي">
+			misuse = <"">
+			copyright = <"© 2011 openEHR Foundation, openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"6AB14D886A4D28B7D98DB113855CD7BE">
+		["build_uid"] = <"2f3b12fe-b145-4bc4-a1eb-81d47aad229e">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	OBSERVATION[at0000.1] matches {	-- Jugular venous pressure
+		data matches {
+			HISTORY[at0001] matches {	-- history
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..*} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {1; ordered} matches {
+									allow_archetype CLUSTER[at0036] occurrences matches {0..1} matches {	-- Location
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1/}
+										exclude
+											archetype_id/value matches {/.*/}
+									}
+									ELEMENT[at0.39] occurrences matches {0..1} matches {	-- Side
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0.40, 	-- Left
+													at0.41]	-- Right
+												}
+											}
+										}
+									}
+									ELEMENT[at0.24] occurrences matches {0..1} matches {	-- Visible
+										value matches {
+											DV_BOOLEAN matches {
+												value matches {True, False}
+											}
+										}
+									}
+									ELEMENT[at0005.1] occurrences matches {0..1} matches {	-- Visible column
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::125]>
+												list = <
+													["1"] = <
+														units = <"cm[H20]">
+														magnitude = <|<=0.0|>
+													>
+												>
+											>
+										}
+									}
+									ELEMENT[at0015] occurrences matches {0..1} matches {	-- Relative pressure
+										value matches {
+											0|[local::at0016], 	-- markedly reduced
+											2|[local::at0017], 	-- lowered
+											4|[local::at0018], 	-- normal/expected
+											6|[local::at0019], 	-- raised
+											8|[local::at0020]  	-- markedly increased
+										}
+									}
+									ELEMENT[at0007] occurrences matches {0..1} matches {	-- Phase of heart cycle
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0008, 	-- Systolic
+													at0009]	-- Diastolic
+												}
+											}
+										}
+									}
+									ELEMENT[at0.23] occurrences matches {0..1} matches {	-- Character
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0.30] occurrences matches {0..1} matches {	-- Hepatojugular reflux
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0.31, 	-- Negative
+													at0.32]	-- Positive
+												}
+											}
+										}
+									}
+									ELEMENT[at0.33] occurrences matches {0..1} matches {	-- Kussmaul's sign
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0.34, 	-- Negative
+													at0.35]	-- Positive
+												}
+											}
+										}
+									}
+									ELEMENT[at0.36] occurrences matches {0..1} matches {	-- Identifiable waveforms
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0.37, 	-- Cannon a-wave
+													at0.38]	-- c-v waves
+												}
+											}
+										}
+									}
+									ELEMENT[at0034] occurrences matches {0..1} matches {	-- Multimedia
+										value matches {
+											DV_MULTIMEDIA matches {
+												media_type matches {[openEHR::]}
+											}
+										}
+									}
+									allow_archetype CLUSTER[at0033] occurrences matches {0..1} matches {	-- Waveform
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.waveform(-[a-zA-Z0-9_]+)*\.v1/}
+										exclude
+											archetype_id/value matches {/.*/}
+									}
+									ELEMENT[at0035] occurrences matches {0..1} matches {	-- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+						state matches {
+							ITEM_TREE[at0038] matches {	-- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0039.1] occurrences matches {0..1} matches {	--  Position
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0.27, 	-- Lying flat
+													at0.28, 	-- Reclining at 45 degrees
+													at0.29]	-- Sitting
+												}
+											}
+										}
+									}
+									ELEMENT[at0040] occurrences matches {0..1} matches {	-- Confounding factors
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+					INTERVAL_EVENT[at0004] occurrences matches {0..*} matches {	-- Average over heart cycle
+						math_function matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {[openehr::146]}
+							}
+						}
+						data matches {
+							use_node ITEM_TREE /data[at0001]/events[at0002]/data[at0003]	-- /data[history]/events[Any event]/data[Tree]
+						}
+						state matches {
+							use_node ITEM_TREE /data[at0001]/events[at0002]/state[at0038]	-- /data[history]/events[Any event]/state[Tree]
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0021] matches {	-- Tree
+				items cardinality matches {0..*; unordered} matches {
+					allow_archetype CLUSTER[at0030] occurrences matches {0..1} matches {	-- Device
+						include
+							archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.23"] = <
+					text = <"Character">
+					description = <"The character of the jugular pulse.">
+				>
+				["at0.24"] = <
+					text = <"Visible">
+					description = <"Is JVP visible?">
+				>
+				["at0.27"] = <
+					text = <"Lying flat">
+					description = <"Subject is lying flat.">
+				>
+				["at0.28"] = <
+					text = <"Reclining at 45 degrees">
+					description = <"Subject is reclining at 45 degrees.">
+				>
+				["at0.29"] = <
+					text = <"Sitting">
+					description = <"Subject is sitting.">
+				>
+				["at0.30"] = <
+					text = <"Hepatojugular reflux">
+					description = <"Observation that JVP changes with changes of abdominal pressure; also known as abdominal jugular reflux.">
+				>
+				["at0.31"] = <
+					text = <"Negative">
+					description = <"Indicated the internal jugular vein swelling as a response to increased abdominal pressure, but returning to normal immediately.">
+				>
+				["at0.32"] = <
+					text = <"Positive">
+					description = <"Indicated the internal jugular vein swelling as a response to increased abdominal pressure, but being sustained and followed by a slower than normal return to usual levels.">
+				>
+				["at0.33"] = <
+					text = <"Kussmaul's sign">
+					description = <"A positive Kussmaul's sign represents the abnormal response where a JVP rises with inspiration.">
+				>
+				["at0.34"] = <
+					text = <"Negative">
+					description = <"Normal response where the JVP is lowered during inspiration.">
+				>
+				["at0.35"] = <
+					text = <"Positive">
+					description = <"Abnormal response where the JVP rises with inspiration.">
+				>
+				["at0.36"] = <
+					text = <"Identifiable waveforms">
+					description = <"Presence of identifiable waveforms.">
+				>
+				["at0.37"] = <
+					text = <"Cannon a-wave">
+					description = <"Abnormal wave pattern resulting when the atrium contracts against a closed tricuspid valve.">
+				>
+				["at0.38"] = <
+					text = <"c-v waves">
+					description = <"Abnormal finding in tricuspid regurgitation.">
+				>
+				["at0.39"] = <
+					text = <"Side">
+					description = <"Laterality of the pressure.">
+				>
+				["at0.40"] = <
+					text = <"Left">
+					description = <"Left side jugular venous pressure.">
+				>
+				["at0.41"] = <
+					text = <"Right">
+					description = <"Right side jugular venous pressure.">
+				>
+				["at0000"] = <
+					text = <"Intravascular pressure">
+					description = <"The pressure in a specific location, blood vessel or heart cavity, at a specific phase of the heart or an average over the heart cycle.">
+				>
+				["at0000.1"] = <
+					text = <"Jugular venous pressure">
+					description = <"The pressure in the internal jugular vein during specific phase of the heart cycle or an average over the heart cycle.">
+				>
+				["at0001"] = <
+					text = <"history">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Generic event.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Average over heart cycle">
+					description = <"The average over one heart cycle.">
+				>
+				["at0005"] = <
+					text = <"Pressure">
+					description = <"The pressure measured.">
+				>
+				["at0005.1"] = <
+					text = <"Visible column">
+					description = <"The pressure measured.">
+				>
+				["at0007"] = <
+					text = <"Phase of heart cycle">
+					description = <"The phase of the heart cycle at the time of the measurement">
+				>
+				["at0008"] = <
+					text = <"Systolic">
+					description = <"During contraction of the heart.">
+				>
+				["at0009"] = <
+					text = <"Diastolic">
+					description = <"During relaxation of the heart.">
+				>
+				["at0015"] = <
+					text = <"Relative pressure">
+					description = <"The pressure in relative terms.">
+				>
+				["at0016"] = <
+					text = <"markedly reduced">
+					description = <"The pressure is much lower than normal or expected.">
+				>
+				["at0017"] = <
+					text = <"lowered">
+					description = <"The pressure is reduced.">
+				>
+				["at0018"] = <
+					text = <"normal/expected">
+					description = <"The pressure is normal or as expected.">
+				>
+				["at0019"] = <
+					text = <"raised">
+					description = <"The pressure is raised.">
+				>
+				["at0020"] = <
+					text = <"markedly increased">
+					description = <"The pressure is much higher than normal or expected.">
+				>
+				["at0021"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0022"] = <
+					text = <"Device">
+					description = <"The device used to measure the pressure.">
+				>
+				["at0023"] = <
+					text = <"Pre-systolic">
+					description = <"Phase of the heart immediately prior to contraction of the heart.">
+				>
+				["at0024"] = <
+					text = <"Pre-diastolic">
+					description = <"The phase of the heart immediately prior to filling of the ventricle.">
+				>
+				["at0027"] = <
+					text = <"Whole cycle">
+					description = <"The pressure measueerd is over the whole heart cycle.">
+				>
+				["at0030"] = <
+					text = <"Device">
+					description = <"The device used to record the measurement.">
+				>
+				["at0033"] = <
+					text = <"Waveform">
+					description = <"A waveform representation of the pressure">
+				>
+				["at0034"] = <
+					text = <"Multimedia">
+					description = <"A multimedia representation of the pressure reading, other than waveforms.">
+				>
+				["at0035"] = <
+					text = <"Comment">
+					description = <"A text comment on the reading.">
+				>
+				["at0036"] = <
+					text = <"Location">
+					description = <"The location of the pressure measurement.">
+				>
+				["at0038"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0039"] = <
+					text = <"Position">
+					description = <"Position of patient during measurment.">
+				>
+				["at0039.1"] = <
+					text = <" Position">
+					description = <"Position of patient during measurment.">
+				>
+				["at0040"] = <
+					text = <"Confounding factors">
+					description = <"Other factors that may interfere with interpretation of the measurement.">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0.23"] = <
+					text = <"الخاصية">
+					description = <"خاصية - صفة - النبض الرقبي/ الوداجي">
+				>
+				["at0.24"] = <
+					text = <"مَرْئي">
+					description = <"هل ضغط الدم في الوريد الرقبي (الوداجي) مرئي">
+				>
+				["at0.27"] = <
+					text = <"مستلقٍ بشكل مستوٍ">
+					description = <"المريض مستلقٍ بشكل مستوٍ">
+				>
+				["at0.28"] = <
+					text = <"مُنكَفِت بزاوية 45 درجة">
+					description = <"المريض مُنكَفت بزاوية 45 درجة">
+				>
+				["at0.29"] = <
+					text = <"جالس">
+					description = <"المريض جالس">
+				>
+				["at0.30"] = <
+					text = <"الجَزْر (الجريان الرجوعي) الكبدي الوِداجي">
+					description = <"ملاحظة أن الضغط الوريدي الوداجي يتغير بتغير الضغط البطني, يُعْرَف أيضا بالجَزْر (الجريان الرجوعي) الكبدي الوِداجي.">
+				>
+				["at0.31"] = <
+					text = <"سالب">
+					description = <"يشير إلى أن الوريد الرقبي (الوداجي) الداخلي ينتفخ كنتيجة لزيادة في الضغط البطني, و لكن سرعان ما يعود للوضع الطبيعي.">
+				>
+				["at0.32"] = <
+					text = <"موجب">
+					description = <"يشير إلى أن الوريد الرقبي (الوداجي) الداخلي ينتفخ كنتيجة لزيادة الضغط البطني, و لكنه يبقى لفترة و يتبعه رجوعإلى المستويات طبيعية بشكل أبطأ من المتوقع">
+				>
+				["at0.33"] = <
+					text = <"علامة كوسماول">
+					description = <"علامة كوسماول الإيجابية تمثل الاستجابة غير الطبيعية حيث يزيد الضغط داخل الوريد الرقبي (الوداجي) مع الشهيق.">
+				>
+				["at0.34"] = <
+					text = <"سالب">
+					description = <"استجابة طبيعية حيث ينخفض الضغط الوريدي الرقبي (الوداجي) في أثناء الشهيق.">
+				>
+				["at0.35"] = <
+					text = <"موجب">
+					description = <"استجابة غير طبيعية حيث يرتفع الضغط الوريدي الرقبي (الوداجي) مع الشهيق.">
+				>
+				["at0.36"] = <
+					text = <"التموجات التي يتم التعرف عليها">
+					description = <"وجود التموجات التي يتم التعرف عليها.">
+				>
+				["at0.37"] = <
+					text = <"موجة كانون أ">
+					description = <"نمط تموجي غير طبيعي ينتج عند انقباض أذين القلب في لحظة انقباض الصمام ثلاثي الشرفات.">
+				>
+				["at0.38"] = <
+					text = <"موجات سي في">
+					description = <"موجودات غير طبيعية في القَلَس الثلاثي الشُرَف.">
+				>
+				["at0.39"] = <
+					text = <"الجانب">
+					description = <"تجانُب الضغط.">
+				>
+				["at0.40"] = <
+					text = <"الأيسر">
+					description = <"الجانب الأيسر للضغط الوريدي الرقبي - الوداجي.">
+				>
+				["at0.41"] = <
+					text = <"الأيمن">
+					description = <"الجانب الأيمن للضغط الوريدي الرقبي - الوداجي">
+				>
+				["at0000"] = <
+					text = <"*Intravascular pressure(en)">
+					description = <"*The pressure in a specific location, blood vessel or heart cavity, at a specific phase of the heart or an average over the heart cycle.(en)">
+				>
+				["at0000.1"] = <
+					text = <"ضغط الدم في الوريد الرقبي - الوداجي">
+					description = <"الضغط في الوريد الرقبي (الوداجي) الداخلي في أثناء طور معين من دورة القلب أو المتوسط خلال دورة القلب.">
+				>
+				["at0001"] = <
+					text = <"*history(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"إحدى الوقائع">
+					description = <"واقعة جنيسة - غير محددة الملكية.">
+				>
+				["at0003"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"المتوسط خلال الدورة القلبية">
+					description = <"المتوسط خلال الدورة القلبية الواحدة">
+				>
+				["at0005"] = <
+					text = <"*Pressure(en)">
+					description = <"*The pressure measured.(en)">
+				>
+				["at0005.1"] = <
+					text = <"العمود المرئي">
+					description = <"الضغط الذي تم قياسه.">
+				>
+				["at0007"] = <
+					text = <"طور دورة القلب">
+					description = <"طور دورة القلب عند لحظة قياس الضغط">
+				>
+				["at0008"] = <
+					text = <"الانقباضي">
+					description = <"في أثناء انقباض القلب.">
+				>
+				["at0009"] = <
+					text = <"انبساطي">
+					description = <"في أثناء انبساط القلب">
+				>
+				["at0015"] = <
+					text = <"الضغط النسبي">
+					description = <"الضغط بمصطلحات نسبية.">
+				>
+				["at0016"] = <
+					text = <"منخفض بشكل ملحوظ">
+					description = <"ضغط الدم أقل من المتوقع بفرق كبير.">
+				>
+				["at0017"] = <
+					text = <"أقل من الطبيعي">
+					description = <"ضغط الدم أقل من الطبيعي">
+				>
+				["at0018"] = <
+					text = <"طبيعي - متوقع">
+					description = <"ضغط الدم طبيعي أو كما هو متوقع">
+				>
+				["at0019"] = <
+					text = <"مرتفع">
+					description = <"ضغط الدم مرتفع">
+				>
+				["at0020"] = <
+					text = <"مرتفع بشكل ملحوظ">
+					description = <"ضغط الدم أعلى من الطبيعي أو المتوقع بشكل ملحوظ.">
+				>
+				["at0021"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0022"] = <
+					text = <"*Device(en)">
+					description = <"*The device used to measure the pressure.(en)">
+				>
+				["at0023"] = <
+					text = <"*Pre-systolic(en)">
+					description = <"*Phase of the heart immediately prior to contraction of the heart.(en)">
+				>
+				["at0024"] = <
+					text = <"*Pre-diastolic(en)">
+					description = <"*The phase of the heart immediately prior to filling of the ventricle.(en)">
+				>
+				["at0027"] = <
+					text = <"*Whole cycle(en)">
+					description = <"*The pressure measueerd is over the whole heart cycle.(en)">
+				>
+				["at0030"] = <
+					text = <"الجهيزة">
+					description = <"الجهيزة المستخدمة في القياس">
+				>
+				["at0033"] = <
+					text = <"التموجات">
+					description = <"تمثيل ضغط الدم بشكل تموجي.">
+				>
+				["at0034"] = <
+					text = <"الوسائط المتعددة">
+					description = <"تمثيل قراءة الضغط باستخدام الوسائط المتعددة, بخلاف التموجات.">
+				>
+				["at0035"] = <
+					text = <"تعليق">
+					description = <"تعليق نَصِّي على القراءة.">
+				>
+				["at0036"] = <
+					text = <"المكان ">
+					description = <"مكان قياس ضغط الدم">
+				>
+				["at0038"] = <
+					text = <"*Tree(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0039"] = <
+					text = <"*Position(en)">
+					description = <"*Position of patient during measurment.(en)">
+				>
+				["at0039.1"] = <
+					text = <"الوضع">
+					description = <"وضع المريض في أثناء القياس">
+				>
+				["at0040"] = <
+					text = <"العوامل المربكة">
+					description = <"العوامل الأخرى التي قد تتداخل مع تفسير القياس.">
+				>
+			>
+		>
+	>

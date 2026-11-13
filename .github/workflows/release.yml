@@ -173,13 +173,13 @@ jobs:
       # #5353): `plan` takes the version from it, and the release plan checks
       # the stamped version with it. No cache: the judge builds the crates
       # from this checkout and from crates.io.
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
       - id: semver-pin
         name: Read the cargo-semver-checks pin
         run: echo "version=$(bash scripts/checks/semver.sh --pin)" >> "$GITHUB_OUTPUT"
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-semver-checks@${{ steps.semver-pin.outputs.version }}
       # The crates the crates.io leg publishes, for the per-crate SBOM matrix:
@@ -279,7 +279,7 @@ jobs:
       # supplier, component name, version, other unique identifiers (purl),
       # dependency relationships, SBOM author and timestamp
       # (https://www.cisa.gov/sbom).
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: syft@1.50.0
       - name: Generate the repository SPDX SBOM
@@ -344,8 +344,17 @@ jobs:
           bash scripts/release/quickstart-compose.sh "$VERSION" docker-compose.yml
           sha256sum docker-compose.yml > docker-compose.yml.sha256sum
 
+      # The default demographic definitions of deploy/definitions/ ride along one
+      # asset each, with a sha256sum file beside each, so a deployment fetches
+      # the set this tag ships by version (#5428).
+      - name: Stage the default demographic definitions
+        run: |
+          set -euo pipefail
+          mkdir definition-assets
+          bash scripts/release/definition-assets.sh stage definition-assets
+
       - name: Create the GitHub release as a draft
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           draft: true
           tag_name: ${{ needs.plan.outputs.tag }}
@@ -357,6 +366,8 @@ jobs:
           # file pulls the images this tag published, and the two standalone
           # overlays are downloaded beside it, so a downloader never has to
           # clone the repo to run the release.
+          # The default demographic definitions ride along the same way, each
+          # with its checksum.
           files: |
             docker-compose.yml
             docker-compose.yml.sha256sum
@@ -364,6 +375,7 @@ jobs:
             docker-compose.observability.yml
             docker-compose.db-publish.yml
             ferroehr-${{ needs.plan.outputs.tag }}.spdx.json
+            definition-assets/*
             ferroehr-${{ needs.plan.outputs.tag }}-information-sheet.md
             ferroehr-${{ needs.plan.outputs.tag }}-instructions-for-use.md
           # Releases publish as OFFICIAL releases (owner sign-off
@@ -443,10 +455,10 @@ jobs:
           ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
       # A publishing lane restores no cache: the archive packaged here must be
       # the one the crates leg uploads from the same commit.
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-cyclonedx@0.5.9
       - name: The archive the SBOM describes, and the SBOM
@@ -475,7 +487,7 @@ jobs:
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
         run: cp "$BUNDLE" "${ARCHIVE}.sbom.sigstore.json"
       - name: Attach to the draft release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           draft: true
           tag_name: ${{ needs.plan.outputs.tag }}
@@ -512,7 +524,7 @@ jobs:
         run: bash scripts/security/vulnerability-record.sh --self-test
       - name: Install Trivy from its GitHub release, checked by sha256
         run: bash scripts/security/install-trivy.sh "$TRIVY_VERSION" "$RUNNER_TEMP/trivy-bin"
-      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -551,7 +563,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
       - name: Attach the record to the draft release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           draft: true
           tag_name: ${{ needs.plan.outputs.tag }}
@@ -572,6 +584,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      # The tagged tree, for the list of the default demographic definitions.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
       # Refuse to publish a release whose assets are missing. After the publish
       # step the set is frozen for good, so this is the last moment the check is
       # worth anything.
@@ -622,6 +639,10 @@ jobs:
             "ferroehr-${TAG}-logging-performance.md"; do
             grep -Fxq "$asset" <<<"$assets" || missing="$missing $asset"
           done
+          # Each default demographic definition and its checksum.
+          while IFS= read -r asset; do
+            grep -Fxq "$asset" <<<"$assets" || missing="$missing $asset"
+          done < <(bash scripts/release/definition-assets.sh list)
           # The exploitability record (CRA Annex I Part I(2)(a)), and one SBOM
           # with its attestation bundle per published crate (Part II(1)).
           for asset in \
@@ -714,7 +735,7 @@ jobs:
       # docker/Dockerfile and release-build.yml; the action fetches the
       # prebuilt binary and installs curl and jq into the slim container itself.
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-auditable@0.7.5
 
@@ -845,7 +866,7 @@ jobs:
       # The viewer binary carries its dependency list too (#3675): the same
       # pinned `cargo auditable` as the app binary job above.
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-auditable@0.7.5
 
@@ -981,7 +1002,7 @@ jobs:
           persist-credentials: false
           ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
 
-      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -1062,7 +1083,7 @@ jobs:
           persist-credentials: false
           ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
 
-      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -1119,12 +1140,12 @@ jobs:
           persist-credentials: false
           ref: ${{ github.sha }} # == plan's pinned commit: the dispatch-at-tag refusal makes them equal (#2790)
       # No cache: this lane gates a publish, so it builds the load test cold.
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
       - name: Build the load test
         run: cargo build --locked --release -p loadtest
-      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -1185,7 +1206,7 @@ jobs:
             perf-gate/
           if-no-files-found: ignore
       - name: Attach the logging performance evaluation to the draft release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           draft: true
           tag_name: ${{ needs.plan.outputs.tag }}
@@ -1285,7 +1306,7 @@ jobs:
 
   # After the deploy, the seed. The wipe and the fresh boot happened in the
   # `sandbox` job above, so the reseed workflow is called seed-only; the
-  # nightly schedule keeps its own wipe and restart. Environment secrets
+  # nightly schedule keeps its own wipe and deploy (#5406). Environment secrets
   # reach the called workflow's own environment-naming jobs here (measured:
   # the v4.0.13 release's reseed succeeded through two call hops).
   #
@@ -1432,7 +1453,7 @@ jobs:
       # No cache in the lane that uploads to crates.io: a published version is
       # immutable, so it is built from this checkout and nothing else
       # (setup-rust-toolchain caches by default).
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache: false
       - id: auth

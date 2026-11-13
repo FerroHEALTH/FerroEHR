@@ -1,0 +1,514 @@
+﻿archetype (adl_version=1.4)
+	openEHR-DEMOGRAPHIC-ADDRESS.address_iso-health_provider.v1
+specialise
+	openEHR-DEMOGRAPHIC-ADDRESS.address_iso.v1
+
+concept
+	[at0000.1]	-- Endereço
+language
+	original_language = <[ISO_639-1::pt-br]>
+	translations = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			author = <
+				["name"] = <"Sergio Miranda Freire">
+				["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+				["email"] = <"sergio@lampada.uerj.br">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+		["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+		["email"] = <"sergio@lampada.uerj.br">
+		["date"] = <"22/05/2009">
+	>
+	details = <
+		["pt-br"] = <
+			language = <[ISO_639-1::pt-br]>
+			purpose = <"Representação dos detalhes do endereço de um prestador de assistência à saúde">
+			use = <"Usado em serviços demográficos para registrar os detalhes de um endereço de um prestador de assistência à saúde">
+			keywords = <"serviço demográfico", "endereço de um prestador de assistência à saúde">
+			misuse = <"">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"Representation of data about a health provider address">
+			use = <"Used in demographic services to register data about a health provider address">
+			keywords = <"demographic service", "health provider address">
+			misuse = <"">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"AuthorDraft">
+	other_contributors = <>
+	other_details = <
+		["references"] = <"ISO/DTS 27527:2007(E) - Provider Identification - Draft Technnical Specification - International Organization for Standardization">
+	>
+
+definition
+	ADDRESS[at0000.1] matches {	-- address
+		details matches {
+			ITEM_TREE[at0001] matches {
+				items cardinality matches {0..*; ordered} matches {
+					CLUSTER[at0002] occurrences matches {0..*} matches {  --  Address line components
+						items cardinality matches {0..*; ordered} matches {
+							ELEMENT[at0021] occurrences matches {0..1} matches { -- Building/complex sub-unit type—abbreviation
+								value matches { 
+									DV_CODED_TEXT matches {
+										defining_code matches {[ac0000]}		
+									}
+								}
+							}
+							ELEMENT[at0022] occurrences matches {0..1} matches { -- Building/complex sub-unit number
+								value matches { 
+									DV_TEXT matches {*}										
+								}
+							}
+							ELEMENT[at0023] occurrences matches {0..1} matches { -- Address site name
+								value matches { 
+									DV_TEXT matches {*}										
+								}
+							}
+							ELEMENT[at0024] occurrences matches {0..1} matches { -- Floor/level number
+								value matches { 
+									DV_TEXT matches {*}										
+								}
+							}
+							ELEMENT[at0025] occurrences matches {0..1} matches { -- Floor/level type
+								value matches { 
+									DV_TEXT matches {*}										
+								}
+							}
+							ELEMENT[at0026] occurrences matches {0..1} matches { -- Lot number
+								value matches { 
+									DV_TEXT matches {*}										
+								}
+							}
+							ELEMENT[at0027] occurrences matches {0..1} matches {  -- Street type code
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {[ac0001]}		
+									}
+								}
+							}
+							ELEMENT[at0028] occurrences matches {0..1} matches {	-- Street name
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0029] occurrences matches {0..1} matches {	-- Street number
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0030] occurrences matches {0..1} matches {	-- Street suffix code
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {[ac0002]}		
+									}
+								}
+							}
+							ELEMENT[at0031] occurrences matches {0..1} matches {	-- Complete address line
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+	            					allow_archetype CLUSTER[at0032] occurrences matches {0..1} matches {
+                						include
+			                    				archetype_id/value matches {/(addres_line_other_data)[a-zA-Z0-9_-]*\.v1/}
+							}
+						}
+					}
+					CLUSTER[at0004] occurrences matches {0..1} matches {  --  high level address components
+						items cardinality matches {0..*; ordered} matches {
+							ELEMENT[at0041] occurrences matches {0..1} matches {	-- Delivery point identifier
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0042] occurrences matches {0..1} matches {	-- Postal code (zip code)
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0043] occurrences matches {0..1} matches {	-- Suburb/town/locality
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0044] occurrences matches {0..1} matches {	-- State/territory/province
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {[ac0003]}		
+									}
+								}
+							}
+							ELEMENT[at0045] occurrences matches {0..1} matches {	-- Country identifier
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {[ac0004]}		
+									}
+								}
+							}
+							ELEMENT[at0046] occurrences matches {0..*} matches {	-- Address type
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+												       [local::
+                                				    				        at0461,
+                                    									at0462,
+				                                    					at0463,
+                                				    					at0464,
+		                      									at0465,
+                				                    					at0466]
+													}
+									}
+								}
+							}
+							ELEMENT[at0047] occurrences matches {0..*} matches {	-- Time validity
+								value matches {
+									DV_INTERVAL<DV_DATE> matches {*}
+								}
+							}
+	            					allow_archetype CLUSTER[at0048] occurrences matches {0..1} matches {
+    					            		include
+                    							archetype_id/value matches {/(high_level_address_other_data)[a-zA-Z0-9_-]*\.v1/}
+
+							}
+						}
+					}
+			                ELEMENT[at0.2] occurrences matches {0..1} matches {  -- Indicador de privacidade
+       		        		        value matches {
+               		            			DV_BOOLEAN matches {*}  
+                      				}
+               				}
+       		        		ELEMENT[at0.3] occurrences matches {0..*} matches {  -- Identificador do prestador
+       	                     			value matches {
+              	                    			DV_TEXT matches {*}  
+						}
+					}
+				}	
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["pt-br"] = <
+			items = <
+				["at0000.1"] = <
+					text = <"Endereço">
+					description = <"Endereço">
+				>
+				["at0001"] = <
+					text = <"Itens do endereço ">
+					description = <"Itens do endereço">
+				>
+				["at0002"] = <
+					text = <"Linha de endereço">
+					description = <"Uma composição de um ou mais componentes padrões do endereço que fornece uma descrição geográfica/física de uma localização e que, usada em conjunto com outros componentes de nível mais alto do endereço, isto é, 'Subúrbio/cidade/nome da localidade', 'Código Postal', 'Estado/território/província', e 'País', formam um endereço geográfico/físico completo">
+				>
+				["at0004"] = <
+					text = <"Componentes de alto nível do endereço">
+					description = <"Uma composição de um ou mais componentes padrões do endereço que, juntamente com a linha de endereço, formam um endereço geográfico/físico completo">
+				>
+				["at0021"] = <
+					text = <"Abreviação do tipo de sub-unidade">
+					description = <"A especificação do tipo de uma parte identificada separadamente em um edifício/complexo, marina, etc, para distinguí-la de outras">
+				>
+				["at0022"] = <
+					text = <"Número da sub-unidade">
+					description = <"A especificação do número do identificador de um edifício/complexo, marina, etc, para distinguí-lo de outros">
+				>
+				["at0023"] = <
+					text = <"Nome do edifício/propriedade">
+					description = <"O nome completo usado para identificar a propriedade física ou o edifício como parte de sua localização">
+				>
+				["at0024"] = <
+					text = <"Número do andar/nível">
+					description = <"Descritor usado para identificar o andar ou nível de um complexo/edifício de múltiplos andares">
+				>
+				["at0025"] = <
+					text = <"Tipo do andar/nível">
+					description = <"Descritor usado para classificar o tipo de andar ou nível de um complexo/edifício de múltiplos andares">
+				>
+				["at0026"] = <
+					text = <"Número do lote">
+					description = <"Seção, Número no Loteamento">
+				>
+				["at0027"] = <
+					text = <"Tipo do Logradouro">
+					description = <"Um código que identifica o tipo de logradouro público">
+				>
+				["at0028"] = <
+					text = <"Logradouro">
+					description = <"O nome que identifica um logradouro público e o diferencia de outros no mesmo subúrbio/cidade/localidade">
+				>
+				["at0029"] = <
+					text = <"Número">
+					description = <"O número de referência (numérico ou string) da residência ou propriedade que é único em um nome de logradouro, subúrbio">
+				>
+				["at0030"] = <
+					text = <"Sufixo do logradouro">
+					description = <"Termo usado para qualificar um nome de logradouro adequado para uma referência direcional">
+				>
+				["at0031"] = <
+					text = <"Linha de endereço">
+					description = <"Linha de endereço completa">
+				>
+				["at0032"] = <
+					text = <"Outros componentes da linha de endereço">
+					description = <"Outros componentes da linha de endereço">
+				>
+				["at0041"] = <
+					text = <"Caixa Postal">
+					description = <"Um número único atribuído a um endereço postal conforme designado pelo serviço postal">
+				>
+				["at0042"] = <
+					text = <"CEP">
+					description = <"O código para uma área de entrega postal, alinhada com a localidade, subúrbio ou local para o endereço, conforme definido pelo serviço postal">
+				>
+				["at0043"] = <
+					text = <"Município">
+					description = <"O nome completo da localidade que contém o endereço específico de uma pessoa/organização">
+				>
+				["at0044"] = <
+					text = <"Estado">
+					description = <"Um identificador da Província, Estado ou Território que contém o endereço">
+				>
+				["at0045"] = <
+					text = <"País">
+					description = <"Um código que representa o país componente de um endereço">
+				>
+				["at0046"] = <
+					text = <"Tipo de Endereço">
+					description = <"Um código que representa o tipo de endereço">
+				>
+				["at0047"] = <
+					text = <"Período de validade">
+					description = <"Intervalo de tempo em que este endereço é válido">
+				>
+				["at0048"] = <
+					text = <"Outros componentes de alto nível do endereço">
+					description = <"Outros componentes de alto nível do endereço">
+				>
+				["at0461"] = <
+					text = <"Comercial">
+					description = <"Usado para indicar um endereço que é a localização física de um escritório ou de um negócio no qual uma entidade pode ser contactada">
+				>
+				["at0462"] = <
+					text = <"Correio ou postal">
+					description = <"Usado para indicar um endereço que é somente para correspondência e/ou cobrança">
+				>
+				["at0463"] = <
+					text = <"Acomodação temporária">
+					description = <"Acomodação temporária (tal como um endereço de uma pessoa que usualmente reside no exterior ou onde o fornecedor do endereço está em uma acomodação temporária devido a renovação ou tratamento)">
+				>
+				["at0464"] = <
+					text = <"Residencial">
+					description = <"Usado para indicar onde a pessoa está morando. Observe que este código não é válido para organizações">
+				>
+				["at0465"] = <
+					text = <"Sem endereço fixo">
+					description = <"Usado onde a pessoa não possui endereço fixo">
+				>
+				["at0466"] = <
+					text = <"Desconhecido/Não declarado/Descrito inadequadamente">
+					description = <"'Desconhecido/Não declarado/Descrito inadequadamente' podem também ser usado onde a pessoa não possui endereço fixo ou não deseja ter o seu endereço residencial ou para correspondência registrado">
+				>
+				["at0.2"] = <
+					text = <"Indicador de privacidade">
+					description = <"Indica quando um mecanismo de comunicação não é para ser exibido abertamente, exceto para organizações específicas.">
+				>
+				["at0.3"] = <
+					text = <"Identificador do prestador">
+					description = <"Identificador de um prestador que pode acessar este meio de comunicação">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0000.1"] = <
+					text = <"Address">
+					description = <"Address">
+				>
+				["at0001"] = <
+					text = <"Itens">
+					description = <"Address items">
+				>
+				["at0002"] = <
+					text = <"Address line">
+					description = <"A composite of one or more standard address components that describe a low level of geographical/physical description of a location that, used in conjunction with the other high-level address components i.e. ‘suburb / town / locality name’, ‘postal code’, ‘state / territory / province’, and ‘country’, forms a complete geographical/physical address">
+				>
+				["at0004"] = <
+					text = <"High level address">
+					description = <"A composite of one or more standard address components that describe a high level address which, used with an address line, forms a complete geographical/physical address">
+				>
+				["at0021"] = <
+					text = <"Building/complex sub-unit type—abbreviation">
+					description = <"The specification of the type of a separately identifiable portion within a building/complex, marina etc. to clearly distinguish it from another">
+				>
+				["at0022"] = <
+					text = <"Building/complex sub-unit number">
+					description = <"The specification of the number of identifier of a building/complex, marina etc. to clearly distinguish it from another">
+				>
+				["at0023"] = <
+					text = <"Address site name">
+					description = <"The full name used to identify the physical building or property as part of its location">
+				>
+				["at0024"] = <
+					text = <"Floor/level number">
+					description = <"Descriptor used to identify the floor or level of a multi-storey building/complex">
+				>
+				["at0025"] = <
+					text = <"Floor/level type">
+					description = <"Descriptor used to classify the type of floor or level of a multi-storey building/complex">
+				>
+				["at0026"] = <
+					text = <"Lot number">
+					description = <"Section, allotment number">
+				>
+				["at0027"] = <
+					text = <"Street type code">
+					description = <"A code that identifies the type of public thoroughfare">
+				>
+				["at0028"] = <
+					text = <"Street name">
+					description = <"The name that identifies a public thoroughfare and differentiates it from others in the same suburb/town/locality">
+				>
+				["at0029"] = <
+					text = <"Street number">
+					description = <"The numeric or string reference number of a house or property that is unique within a street name, suburb">
+				>
+				["at0030"] = <
+					text = <"Street suffix code">
+					description = <"Term used to qualify street name suitable for directional references">
+				>
+				["at0031"] = <
+					text = <"Address line">
+					description = <"Complete address line">
+				>
+				["at0032"] = <
+					text = <"Other address line components">
+					description = <"Other address line components">
+				>
+				["at0041"] = <
+					text = <"Delivery point identifier">
+					description = <"A unique number assigned to a postal address as designated by the postal service">
+				>
+				["at0042"] = <
+					text = <"Postal code (ZIP code)">
+					description = <"The code for a postal delivery area, aligned with locality, suburb or place for the address, as defined by the postal service">
+				>
+				["at0043"] = <
+					text = <"Suburb/town/locality">
+					description = <"The full name of the general locality containing the specific address">
+				>
+				["at0044"] = <
+					text = <"State/territory/province identifier">
+					description = <"An identifier of the province, state or territory containing the address">
+				>
+				["at0045"] = <
+					text = <"Country identifier">
+					description = <"A code representing the country component of an address">
+				>
+				["at0046"] = <
+					text = <"Address Type">
+					description = <"A code representing a type of address">
+				>
+				["at0047"] = <
+					text = <"Time validity">
+					description = <"Time interval in which this address is valid">
+				>
+				["at0048"] = <
+					text = <"Other high level address components">
+					description = <"Other high level address components">
+				>
+				["at0461"] = <
+					text = <"Business">
+					description = <"Used to indicate an address that is the physical location of a business or office at which an entity can be contacted">
+				>
+				["at0462"] = <
+					text = <"Mailing or postal">
+					description = <"Used to indicate an address that is only for correspondence and/or billing purposes">
+				>
+				["at0463"] = <
+					text = <"Temporary accomodation">
+					description = <"Temporary accomodation address (such as for a person who usually resides overseas or where the provider of the address is in temporary accomodation due to renovation or treatment)">
+				>
+				["at0464"] = <
+					text = <"Residential">
+					description = <"Used to indicate where a person is living. Note that this code is not valid for organisations">
+				>
+				["at0465"] = <
+					text = <"No fixed address">
+					description = <"Used where a person has no fixed address">
+				>
+				["at0466"] = <
+					text = <"Unknown/not stated/inadequately described">
+					description = <"'Unknown/not stated/inadequately described' may also be used where the person has no fixed address or does not wish to have their residential or correspondence address recorded">
+				>
+				["at0.2"] = <
+					text = <"Communication privacy">
+					description = <"Indicates taht this communication mechanism is not to be openly displayed, except to specific providers">
+				>
+				["at0.3"] = <
+					text = <"Provider Identifier">
+					description = <"Identifier of a provider who may access this communication mechanism">
+				>
+			>
+		>
+	>
+	constraint_definitions = <
+		["pt-br"] = <
+			items = <
+				["ac0000"] = <
+					text = <"Códigos de tipos de edifício">
+					description = <"Códigos válidos para tipo de edifício">
+				>
+				["ac0001"] = <
+					text = <"Códigos de logradouros">
+					description = <"Códigos válidos para tipo de logradouro">
+				>
+				["ac0002"] = <
+					text = <"Códigos de sufixos de logradouro">
+					description = <"Códigos válidos para sufixos de logradouro">
+				>
+				["ac0003"] = <
+					text = <"Códigos de estados">
+					description = <"Códigos válidos para estados">
+				>
+				["ac0004"] = <
+					text = <"Códigos de países">
+					description = <"Códigos válidos para países">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["ac0000"] = <
+					text = <"Building type codes">
+					description = <"Valid codes for types of buildings">
+				>
+				["ac0001"] = <
+					text = <"Street type codes">
+					description = <"Valid codes for street types">
+				>
+				["ac0002"] = <
+					text = <"Street suffix codes">
+					description = <"Valid codes for street suffixes">
+				>
+				["ac0003"] = <
+					text = <"State codes">
+					description = <"valid codes for state/territory/province">
+				>
+				["ac0004"] = <
+					text = <"Country codes">
+					description = <"valid codes for countries">
+				>
+			>
+		>
+	>

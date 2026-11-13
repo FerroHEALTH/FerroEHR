@@ -45,8 +45,7 @@ use utoipa_axum::routes;
 use utoipa_swagger_ui::{Config, SwaggerFile, Url};
 
 use crate::config::AppConfig;
-use crate::extensions::health;
-use crate::extensions::management;
+use crate::extensions::{health, management};
 use crate::overview::status;
 use crate::state::AppState;
 use ferroehr::telemetry::provenance;
@@ -157,10 +156,11 @@ const SECURITY_SCHEME: &str = "openehr_auth";
         (name = "admin-report", description = "The activity-report calls (contribution/version statistics per platform service). OUR OWN EXTENSION: the released Admin API is the two EHR deletes alone, so no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
         (name = "admin-archive", description = "Move selected EHRs / parties to archival storage, and restore them from it. OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
         (name = "admin-integrity", description = "The storage-parity sweep: every stored version is re-derived from its decomposed node rows and compared with its materialized body, so tampering or corruption of either copy is reported. OUR OWN EXTENSION: no ITS-REST operation governs this route, and no openEHR spec governs storage mechanics (same admin gate + RBAC Admin class)."),
-        (name = "admin-identifiers", description = "The audited read of a party's protected national identifiers: a party version with the identifiers `[privacy.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and `authz.rbac.identifier_reader_role`, and every read is an access record naming the reader, the party and the scheme, never the value."),
+        (name = "admin-identifiers", description = "The audited read of a party's protected national identifiers: a party version with the identifiers `[privacy.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and a `read_identifiers` grant in the CDR, and every read is an access record naming the reader, the party and the scheme, never the value."),
         (name = "admin-marks", description = "The legal marks storage carries beside the clinical content: the GDPR Art. 18 restriction register, the Art. 21(6) research objection, and the Art. 5(1)(e) / Art. 30(1)(f) retention register with its due list. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and nothing here deletes anything (same admin gate + RBAC Admin class)."),
         (name = "admin-dump-load", description = "Export every EHR to a file-system archive, and populate the repository from one. OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
         (name = "message", description = "EHR-Extract export and import. OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no message/extract API at all, so no released operation governs any route here; they carry the ordinary clinical authentication class, not the admin gate."),
+        (name = "admin-registers", description = "The operational-policy admin registers: the audit category map, the EHDS Art. 3(3) access delay and the Cedar policy set, each read, replaced whole over the version `If-Match` names and listed by version, by `admin_role` only. Every version keeps its committer, and a change applies on the next request with no restart. OUR OWN EXTENSION: no openEHR spec governs operational policy."),
         (name = "admin-outbox", description = "The commit-event outbox feed: the PHI-free events after a configured reader's cursor, in `seq` order, and the acknowledgement that moves the cursor. OUR OWN EXTENSION: no openEHR spec governs eventing. It needs the `__ferroehr.outbox` scope, and every read is an access record."),
     )
 )]

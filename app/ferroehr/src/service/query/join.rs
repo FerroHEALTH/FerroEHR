@@ -35,7 +35,7 @@ use crate::aql;
 use crate::aql::exec::{ColumnMeta, QueryResult};
 use crate::aql::ir::{Params, QueryDomain, QueryIr};
 use crate::aql::join::{JoinPlan, Side};
-use crate::aql::sql::{EhrAccessScope, EhrScopeKind, SqlCtx};
+use crate::aql::sql::{EhrAccessScope, EhrScopeKind, PolicyParties, SqlCtx};
 use crate::error::ServiceError;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
@@ -141,6 +141,7 @@ impl FerroEhrService {
             limit: ceiling.map(|c| c.saturating_add(1)),
             offset: None,
             archetype_lineage: self.archetype_lineage().await,
+            policy_parties: PolicyParties::of_request(&self.binding),
         };
         let party = aql::exec::execute(
             &self.demographic_pool,
@@ -324,25 +325,56 @@ impl FerroEhrService {
     }
 
     /// The `(party, EHR)` pairs of the EHRs whose current `EHR_STATUS.subject`
-    /// `external_ref` names one of `parties`, read on the clinical pool.
+    /// `external_ref` names one of `parties` as its own class or one of that
+    /// class's RM ancestors, read on the clinical pool.
     ///
     /// The `id.value` is the party's versioned-object id, which is what
     /// `uid/value` carries before its first `::` (RM common master06 §Version
-    /// Identification).
+    /// Identification). Under a concrete root every party is of that class;
+    /// under the abstract `PARTY` or `ACTOR` each party's class is read from
+    /// the demographic pool, so a reference naming a party under a class it
+    /// is not of matches under no root.
     async fn party_subject_ehrs(
         &self,
         parties: &[VoId],
         root: &str,
     ) -> Result<Vec<(VoId, EhrId)>, Failure> {
-        let ids: Vec<String> = parties.iter().map(|party| party.0.to_string()).collect();
-        // NOTE: BASE `OBJECT_REF.namespace` takes any name a deployment chooses, so the
-        // namespace is not matched: the party's own id and its class decide.
-        let found =
-            crate::storage::ehr_repo::ehrs_by_subject_ids(&self.pool, &ids, subject_types(root))
+        let mut by_class: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        if openehr_rm::v1_2::model::class(root).is_some_and(|c| c.is_abstract) {
+            let kinds =
+                crate::storage::version_repo::meta::object_kinds(&self.demographic_pool, parties)
+                    .await
+                    .map_err(|e| {
+                        Failure::analysis(ServiceError::internal(
+                            "read the classes of the parties",
+                            e,
+                        ))
+                    })?;
+            for (party, class) in kinds {
+                by_class.entry(class).or_default().push(party.0.to_string());
+            }
+        } else {
+            by_class.insert(
+                root.to_owned(),
+                parties.iter().map(|party| party.0.to_string()).collect(),
+            );
+        }
+        let mut found = Vec::new();
+        for (class, ids) in &by_class {
+            // NOTE: BASE `OBJECT_REF.namespace` takes any name a deployment chooses, so the
+            // namespace is not matched: the party's own id and its class decide.
+            found.extend(
+                crate::storage::ehr_repo::ehrs_by_subject_ids(
+                    &self.pool,
+                    ids,
+                    &subject_types(class),
+                )
                 .await
                 .map_err(|e| {
                     Failure::analysis(ServiceError::internal("read the EHRs of the subjects", e))
-                })?;
+                })?,
+            );
+        }
         found
             .into_iter()
             .map(|(subject, ehr)| {
@@ -380,16 +412,19 @@ impl FerroEhrService {
 }
 
 /// The `OBJECT_REF.type` values a subject `external_ref` may carry to name a
-/// party of class `root`.
-fn subject_types(root: &str) -> &'static [&'static str] {
+/// party of the concrete class `class`: the class and its demographic RM
+/// ancestors.
+fn subject_types(class: &str) -> Vec<&'static str> {
     // NOTE: BASE `OBJECT_REF.type` names "the class (concrete or abstract)" and
-    // `PARTY_REF` admits `PARTY` and `ACTOR`, so a root matches itself and its RM ancestors.
-    match root {
-        "PERSON" => &["PERSON", "ACTOR", "PARTY"],
-        "ORGANISATION" => &["ORGANISATION", "ACTOR", "PARTY"],
-        "ROLE" => &["ROLE", "PARTY"],
-        _ => &[],
-    }
+    // `PARTY_REF` admits `PARTY` and `ACTOR`, so a party matches its class and its RM ancestors.
+    let Some(rm) = openehr_rm::v1_2::model::class(class) else {
+        return Vec::new();
+    };
+    std::iter::once(rm.name)
+        .chain(rm.ancestors.iter().copied().filter(|ancestor| {
+            openehr_rm::v1_2::model::class(ancestor).is_some_and(|a| a.package == rm.package)
+        }))
+        .collect()
 }
 
 /// Lowers one half and checks it planned to the domain the split gave it.
@@ -556,5 +591,29 @@ fn empty_result() -> QueryResult {
         origin_count: 0,
         served_content: Vec::new(),
         constraints: crate::system_log::categories::QueryConstraints::default(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::subject_types;
+
+    /// A party matches its own class and its demographic RM ancestors, never
+    /// a sibling class (RM demographic §Class Descriptions).
+    #[test]
+    fn a_party_matches_its_class_and_its_rm_ancestors() {
+        for (class, expected) in [
+            ("PERSON", &["PERSON", "PARTY", "ACTOR"][..]),
+            ("ORGANISATION", &["ORGANISATION", "PARTY", "ACTOR"][..]),
+            ("GROUP", &["GROUP", "PARTY", "ACTOR"][..]),
+            ("AGENT", &["AGENT", "PARTY", "ACTOR"][..]),
+            ("ROLE", &["ROLE", "PARTY"][..]),
+        ] {
+            let mut got = subject_types(class);
+            got.sort_unstable();
+            let mut expected = expected.to_vec();
+            expected.sort_unstable();
+            assert_eq!(got, expected, "{class}");
+        }
     }
 }

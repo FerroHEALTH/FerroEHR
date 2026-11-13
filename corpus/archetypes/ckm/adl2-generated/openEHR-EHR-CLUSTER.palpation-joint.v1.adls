@@ -1,0 +1,311 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.palpation-joint.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.palpation.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"23/04/2007">
+    >
+    lifecycle_state = <"Rejected">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"18054520E6103DF17E0432A786FE9F34">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record data found on examination through palpation of joint.">
+            keywords = <"palpate", "joint">
+            use = <"To be embedded in the openEHR-EHR-OBSERVATION.exam cluster to express findings determined by palpation.">
+            misuse = <"Not for use in any other context at present.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"الموجودات التي يتم التعرف عليها من خلال جس المفاصل.">
+            keywords = <"يجس", "المفصل">
+            use = <"يتم إدماجه كعنقود في نموذج ملاحظة.فحص, للتعبير عن الموجودات التي يتم تحديدها بالجس.">
+            misuse = <"لا تستخدم في أي سياق آخر في الوقت الحالي.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Palpation of joint
+        /items[at0080]/items matches {
+            CLUSTER[at0019] matches {
+                items matches {
+                    after [at0005]
+                    use_node ELEMENT[at0.9012] occurrences matches {1} /items[at0080]/items[at0010]/items[at0011]    -- Tenderness (synthesised)
+                }
+            }
+            CLUSTER[at0010] matches {
+                items matches {
+                    after [at0011]
+                    ELEMENT[at0.83] occurrences matches {0..1} matches {    -- Deformity
+                        value matches {
+                            DV_CODED_TEXT[at0.9002] matches {
+                                defining_code
+                            }
+                        }
+                    }
+                }
+            }
+            after [at0053]
+            ELEMENT[at0.93] occurrences matches {0..1} matches {    -- Crepitus present
+                value matches {
+                    DV_BOOLEAN[at0.9003] matches {
+                        value matches {True, False}
+                    }
+                }
+            }
+            ELEMENT[at0.94] occurrences matches {0..1} matches {    -- Locking of joint present
+                value matches {
+                    DV_BOOLEAN[at0.9004] matches {
+                        value matches {True, False}
+                    }
+                }
+            }
+            CLUSTER[at0.85] occurrences matches {0..1} matches {    -- Effusion
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0.86] occurrences matches {0..1} matches {    -- Present
+                        value matches {
+                            DV_BOOLEAN[at0.9005] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0.87] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_CODED_TEXT[at0.9006] matches {
+                                defining_code
+                            }
+                        }
+                    }
+                    ELEMENT[at0.88] occurrences matches {0..1} matches {    -- Degree
+                        value matches {
+                            DV_ORDINAL[at0.9007] matches {
+                                [value, symbol] matches {
+                                    [{0}, {[at0.89]}],    -- Absent
+                                    [{1}, {[at0.90]}],    -- Mild
+                                    [{2}, {[at0.91]}],    -- Moderate
+                                    [{3}, {[at0.92]}]    -- Large
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.84] occurrences matches {0..1} matches {    -- Comparison to other side
+                value matches {
+                    DV_TEXT[at0.9008]
+                }
+            }
+            CLUSTER[at0.95] matches {    -- Specific Test
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0.96] occurrences matches {0..1} matches {    -- Name of test
+                        value matches {
+                            DV_CODED_TEXT[at0.9009] matches {
+                                defining_code
+                            }
+                        }
+                    }
+                    ELEMENT[at0.97] occurrences matches {0..1} matches {    -- Outcome of test
+                        value matches {
+                            DV_CODED_TEXT[at0.9010] matches {
+                                defining_code
+                            }
+                        }
+                    }
+                    ELEMENT[at0.98] occurrences matches {0..1} matches {    -- Comments
+                        value matches {
+                            DV_CODED_TEXT[at0.9011] matches {
+                                defining_code
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.83"] = <
+                text = <"Deformity">
+                description = <"*">
+            >
+            ["at0.84"] = <
+                text = <"Comparison to other side">
+                description = <"*">
+            >
+            ["at0.85"] = <
+                text = <"Effusion">
+                description = <"*">
+            >
+            ["at0.86"] = <
+                text = <"Present">
+                description = <"*">
+            >
+            ["at0.87"] = <
+                text = <"Description">
+                description = <"*">
+            >
+            ["at0.88"] = <
+                text = <"Degree">
+                description = <"Size of effusion.">
+            >
+            ["at0.89"] = <
+                text = <"Absent">
+                description = <"*">
+            >
+            ["at0.90"] = <
+                text = <"Mild">
+                description = <"*">
+            >
+            ["at0.91"] = <
+                text = <"Moderate">
+                description = <"*">
+            >
+            ["at0.92"] = <
+                text = <"Large">
+                description = <"*">
+            >
+            ["at0.93"] = <
+                text = <"Crepitus present">
+                description = <"Presence of crepitus.">
+            >
+            ["at0.94"] = <
+                text = <"Locking of joint present">
+                description = <"*">
+            >
+            ["at0.95"] = <
+                text = <"Specific Test">
+                description = <"*">
+            >
+            ["at0.96"] = <
+                text = <"Name of test">
+                description = <"*">
+            >
+            ["at0.97"] = <
+                text = <"Outcome of test">
+                description = <"*">
+            >
+            ["at0.98"] = <
+                text = <"Comments">
+                description = <"*">
+            >
+            ["at0000.1"] = <
+                text = <"Palpation of joint">
+                description = <"Findings on palpation of joint.">
+            >
+            ["ac0.9000"] = <
+                text = <"Degree (synthesised)">
+                description = <"Size of effusion. (synthesised)">
+            >
+            ["at0.9012"] = <
+                text = <"Tenderness (synthesised)">
+                description = <"A group of statements about a tenderness finding. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0.83"] = <
+                text = <"التشوه">
+                description = <"*">
+            >
+            ["at0.84"] = <
+                text = <"المقارنة بالجانب الآخر">
+                description = <"*">
+            >
+            ["at0.85"] = <
+                text = <"انصباب">
+                description = <"*">
+            >
+            ["at0.86"] = <
+                text = <"موجود">
+                description = <"*">
+            >
+            ["at0.87"] = <
+                text = <"الوصف">
+                description = <"*">
+            >
+            ["at0.88"] = <
+                text = <"الدرجة">
+                description = <"حجم الانصباب">
+            >
+            ["at0.89"] = <
+                text = <"غائب/غير موجود">
+                description = <"*">
+            >
+            ["at0.90"] = <
+                text = <"طفيف">
+                description = <"*">
+            >
+            ["at0.91"] = <
+                text = <"متوسط">
+                description = <"*">
+            >
+            ["at0.92"] = <
+                text = <"كبير">
+                description = <"*">
+            >
+            ["at0.93"] = <
+                text = <"توجد فرقعة">
+                description = <"توجد فرقعة">
+            >
+            ["at0.94"] = <
+                text = <"يوجد قفل في المفصل">
+                description = <"*">
+            >
+            ["at0.95"] = <
+                text = <"اختبار محدد">
+                description = <"*">
+            >
+            ["at0.96"] = <
+                text = <"اسم الاختبار">
+                description = <"*">
+            >
+            ["at0.97"] = <
+                text = <"ناتج الاختبار">
+                description = <"*">
+            >
+            ["at0.98"] = <
+                text = <"تعليقات">
+                description = <"*">
+            >
+            ["at0000.1"] = <
+                text = <"جس المفصل">
+                description = <"الموجودات عند جس المفصل">
+            >
+            ["ac0.9000"] = <
+                text = <"الدرجة (synthesised)">
+                description = <"حجم الانصباب (synthesised)">
+            >
+            ["at0.9012"] = <
+                text = <"الإيلام/المضض (synthesised)">
+                description = <"مجموعة من البيانات حول وجود الألم (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.89", "at0.90", "at0.91", "at0.92">
+        >
+    >

@@ -1,0 +1,231 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=02741e5d-37e3-4322-9915-8589cd73dfe9; build_uid=aa056dc1-5b47-4db3-a521-5a2ce50b8892)
+    openEHR-EHR-CLUSTER.imaging_result.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Ramona Wellmann">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"wellmann.ramona@mh-hannover.de">
+            >
+        >
+    >
+
+description
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"298F853ADF5E820C1B4F33596E2B34C5">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung von Details zu den Ergebnissen der Bildgebung als Einzelwert oder als verschachtelte Gruppe von Ergebniswerten.
+">
+            keywords = <"Bildgebung", "Ergebnis", "bildgebend", "Diagnostik", "Visualisierung", "bildgebendes Verfahren", "bildgebende Diagnostik">
+            use = <"Zur Erfassung von Details zu den Ergebnissen der Bildgebung als Einzelwert oder als verschachtelte Gruppe von Ergebniswerten. Dieser Archetyp wird normalerweise in Verbindung mit dem übergeordneten Archetypen \"Bildgebungsuntersuchung\" (OBSERVATION) verwendet.
+
+Neben einem einzelnen Ergebniswert ermöglicht der Archetyp auch die Dokumentation einer bestimmten anatomischen Lage und die weitere Verschachtelung der zu erfassenden Ergebniswerte. Das Modell ermöglicht es auch, lokale Cluster aufzunehmen.
+">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For the capture of imaging result details as a single value or as a nested group of result values.">
+            use = <"To record imaging results as a single value or as a nested group of result values. Normally used in conjunction with a parent Imaging examination (Observation) archetype.
+
+As well as a single result value, the archetype also allows for a specific anatomical location and further nesting of result values to be captured. The pattern also allows for local clusters to be accommodated.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Imaging result
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0001] occurrences matches {0..1} matches {    -- Imaging result
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1}    -- Result
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Result status
+                        value matches {
+                            DV_CODED_TEXT[at9002] matches {
+                                defining_code matches {[ac9000]}    -- Result status (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Result status timestamp
+                        value matches {
+                            DV_DATE_TIME[at9003]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0012] matches {    -- Imaging result detail
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0013] matches {    -- Anatomical location
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_clock(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0014] matches {    -- Other detail
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Ergebnis der Bildgebung">
+                description = <"Ergebnis der Bildgebung als Einzelwert oder als eine verschachtelte Gruppe von Ergebniswerten.">
+            >
+            ["at0001"] = <
+                text = <"Ergebnis der Bildgebung">
+                description = <"Ein spezifisches detailliertes Ergebnis der Bildgebung, das sowohl den Wert des Ergebnisses, als auch zusätzliche Informationen enthält, die für die klinische Interpretation nützlich sein können.">
+            >
+            ["at0002"] = <
+                text = <"Ergebnis">
+                description = <"Der tatsächliche Wert des Ergebnisses der Bildgebung. Der Name dieses Elements kann während der Template Erstellung oder zur Laufzeit, entsprechend der tatsächlichen Bezeichnung, definiert werden. Dieser Wert wird oft kodiert. 
+">
+            >
+            ["at0003"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Informationen über das Ergebnis, die nicht im Ergebnisfeld erfasst wurden.">
+            >
+            ["at0004"] = <
+                text = <"Status des Ergebnisses">
+                description = <"Der Status des Ergebniswerts.">
+            >
+            ["at0005"] = <
+                text = <"Registriert">
+                description = <"Noch kein Ergebnis verfügbar.">
+            >
+            ["at0006"] = <
+                text = <"Vorläufig">
+                description = <"Dies ist ein erstes oder ein vorläufiges Ergebnis: es können Daten fehlen oder die Prüfung des Ergebnisses wurde noch nicht durchgeführt.">
+            >
+            ["at0007"] = <
+                text = <"Final">
+                description = <"Das Ergebnis ist komplett und wurde vom zuständigen Pathologen überprüft.">
+            >
+            ["at0008"] = <
+                text = <"Geändert">
+                description = <"Das Ergebnis wurde nach der Finalisierung modifiziert und ist nun vollständig und vom zuständigen Pathologen verifiziert.">
+            >
+            ["at0009"] = <
+                text = <"Storniert/Abgebrochen">
+                description = <"Das Ergebnis ist nicht verfügbar, da der Test nicht begonnen oder nicht abgeschlossen wurde.">
+            >
+            ["at0010"] = <
+                text = <"Nicht angefordert">
+                description = <"Das Ergebnis ist nicht verfügbar, weil der Test nicht angefordert wurde.">
+            >
+            ["at0011"] = <
+                text = <"Zeitstempel vom Status des Ergebnisses">
+                description = <"Das Datum und/oder die Uhrzeit des ausgegebenen Status des Ergebnisses.">
+            >
+            ["at0012"] = <
+                text = <"Details zum Ergebnis der Bildgebung">
+                description = <"Weitere Details zu einem einzelnen Ergebnis.">
+            >
+            ["at0013"] = <
+                text = <"Anatomische Lageposition">
+                description = <"Details über die individuelle anatomische Position, auf die sich das Ergebnis bezieht, wenn eine präzisere Wiedergabe der anatomischen Position erforderlich ist.">
+            >
+            ["at0014"] = <
+                text = <"Andere Details">
+                description = <"Weitere Details zu einem einzelnen Ergebnis oder einem gruppiertem Ergebnis oder zu einer verschachtelten Gruppe von Ergebniswerten.">
+            >
+            ["ac9000"] = <
+                text = <"Status des Ergebnisses (synthesised)">
+                description = <"Der Status des Ergebniswerts. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Imaging result">
+                description = <"Imaging result as a single value or as a nested group result.">
+            >
+            ["at0001"] = <
+                text = <"Imaging result">
+                description = <"Specific detailed imaging result, including both the value of the result item, and additional information that may be useful for clinical interpretation.">
+            >
+            ["at0002"] = <
+                text = <"Result">
+                description = <"Actual value of the imaging result. The name of this element can be replaced in a template or at run-time to reflect the actual result name and will often be coded.">
+            >
+            ["at0003"] = <
+                text = <"Comment">
+                description = <"Additional information about the result not captured in the Result field.">
+            >
+            ["at0004"] = <
+                text = <"Result status">
+                description = <"The status of the result value.">
+            >
+            ["at0005"] = <
+                text = <"Registered">
+                description = <"No result yet available.">
+            >
+            ["at0006"] = <
+                text = <"Interim">
+                description = <"This is an initial or interim result: data may be missing or verification not been performed.">
+            >
+            ["at0007"] = <
+                text = <"Final">
+                description = <"The result is complete and verified by the responsible pathologist.">
+            >
+            ["at0008"] = <
+                text = <"Amended">
+                description = <"The result has been modified subsequent to being Final, and is complete and verified by the responsible pathologist.">
+            >
+            ["at0009"] = <
+                text = <"Cancelled/Aborted">
+                description = <"The result is unavailable because the test was not started or not completed.">
+            >
+            ["at0010"] = <
+                text = <"Not requested">
+                description = <"The result is not available as the test was not requested.">
+            >
+            ["at0011"] = <
+                text = <"Result status timestamp">
+                description = <"The date and/or time that the entire result was issued for the recorded ‘Result status’.">
+            >
+            ["at0012"] = <
+                text = <"Imaging result detail">
+                description = <"Further detail about an individual result.">
+            >
+            ["at0013"] = <
+                text = <"Anatomical location">
+                description = <"Details about the individual anatomical location to which the result refers, where finer-grained representation of Anatomical location is required.">
+            >
+            ["at0014"] = <
+                text = <"Other detail">
+                description = <"Further details for the individual result or group or a further nested result.">
+            >
+            ["ac9000"] = <
+                text = <"Result status (synthesised)">
+                description = <"The status of the result value. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009", "at0010">
+        >
+    >

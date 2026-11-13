@@ -1,0 +1,372 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b7a3d73a-00bc-4815-92b5-3df9afa22891; build_uid=78412684-a0b5-42e2-b5f2-d9beaa07c098)
+    openEHR-EHR-CLUSTER.coordination.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"19/03/2007">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"CFAE2B32C1B02994F104723B3E5C6ABD">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To capture examination details about coordination.">
+            keywords = <"coordination", "cerebellum", "dysdiadokinesis", "finger-nose", "heel-shin", "tapping">
+            use = <"For use as a part of an examination OBSERVATION.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Coordination
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0001] occurrences matches {0..1} matches {    -- Normal Statements
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0002] matches {    -- Normal statement
+                        value matches {
+                            DV_CODED_TEXT[at9007] matches {
+                                defining_code matches {}
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0003] occurrences matches {0..1} matches {    -- Findings
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Clinical Description
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    CLUSTER[at0050] matches {    -- General test findings
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0051] occurrences matches {0..1} matches {    -- Test
+                                value matches {
+                                    DV_CODED_TEXT[at9009] matches {
+                                        defining_code matches {[ac9000]}    -- Test (synthesised)
+                                    }
+                                }
+                            }
+                            use_node ELEMENT[at9022] occurrences matches {1} /items[at0003]/items[at0005]/items[at0045]    -- General test findings (synthesised)
+                            use_node ELEMENT[at9023] occurrences matches {1} /items[at0003]/items[at0005]/items[at0009]    -- General test findings (synthesised)
+                            use_node ELEMENT[at9024] occurrences matches {1} /items[at0003]/items[at0005]/items[at0041]    -- General test findings (synthesised)
+                        }
+                    }
+                    CLUSTER[at0005] matches {    -- Specific test findings
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0008] matches {    -- Test
+                                value matches {
+                                    DV_CODED_TEXT[at9013] matches {
+                                        defining_code matches {[ac9001]}    -- Test (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0045] occurrences matches {0..1} matches {    -- Eyes open/closed
+                                value matches {
+                                    DV_CODED_TEXT[at9014] matches {
+                                        defining_code matches {[ac9002]}    -- Eyes open/closed (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Intention tremor
+                                value matches {
+                                    DV_BOOLEAN[at9015] matches {
+                                        value matches {True, False}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Overshooting
+                                value matches {
+                                    DV_BOOLEAN[at9016] matches {
+                                        value matches {True, False}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Rate
+                                value matches {
+                                    DV_ORDINAL[at9017] matches {
+                                        [value, symbol] matches {
+                                            [{0}, {[at0030]}],    -- Normal
+                                            [{1}, {[at0031]}],    -- Slightly slower than expected
+                                            [{2}, {[at0032]}]    -- Much slower than expected
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Fluidity
+                                value matches {
+                                    DV_ORDINAL[at9018] matches {
+                                        [value, symbol] matches {
+                                            [{0}, {[at0033]}],    -- Smooth and even
+                                            [{1}, {[at0034]}],    -- Slightly uneven
+                                            [{2}, {[at0035]}]    -- Markedly uneven
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0041] occurrences matches {0..1} matches {    -- Affected side
+                                value matches {
+                                    DV_CODED_TEXT[at9019] matches {
+                                        defining_code matches {[ac9005]}    -- Affected side (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Overall Performance
+                                value matches {
+                                    DV_ORDINAL[at9020] matches {
+                                        [value, symbol] matches {
+                                            [{0}, {[at0010]}],    -- Normal
+                                            [{1}, {[at0011]}],    -- Mild impairment
+                                            [{2}, {[at0012]}]    -- Marked impairment
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Coordination">
+                description = <"Examination of coordination.">
+            >
+            ["at0001"] = <
+                text = <"Normal Statements">
+                description = <"Collection of normal statements about the examination of coordination.">
+            >
+            ["at0002"] = <
+                text = <"Normal statement">
+                description = <"Normal statement about the Collection of normal statements about the examination of coordination.">
+            >
+            ["at0003"] = <
+                text = <"Findings">
+                description = <"Findings on examination.">
+            >
+            ["at0004"] = <
+                text = <"Clinical Description">
+                description = <"General description of findings on examination of Coordination.">
+            >
+            ["at0005"] = <
+                text = <"Specific test findings">
+                description = <"Findings of specific coordination tests.">
+            >
+            ["at0006"] = <
+                text = <"Overshooting">
+                description = <"Finding of overshooting, alternatively known as past-pointing or dysmetria.">
+            >
+            ["at0007"] = <
+                text = <"Intention tremor">
+                description = <"Presence of intention tremor on performance of test.">
+            >
+            ["at0008"] = <
+                text = <"Test">
+                description = <"Name of test.">
+            >
+            ["at0009"] = <
+                text = <"Overall Performance">
+                description = <"Overall description of performance.">
+            >
+            ["at0010"] = <
+                text = <"Normal">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Mild impairment">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Marked impairment">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Rate">
+                description = <"Description of rate of performance.">
+            >
+            ["at0026"] = <
+                text = <"Fluidity">
+                description = <"Description of smoothness and evenness of performance.">
+            >
+            ["at0030"] = <
+                text = <"Normal">
+                description = <"*">
+            >
+            ["at0031"] = <
+                text = <"Slightly slower than expected">
+                description = <"*">
+            >
+            ["at0032"] = <
+                text = <"Much slower than expected">
+                description = <"*">
+            >
+            ["at0033"] = <
+                text = <"Smooth and even">
+                description = <"*">
+            >
+            ["at0034"] = <
+                text = <"Slightly uneven">
+                description = <"*">
+            >
+            ["at0035"] = <
+                text = <"Markedly uneven">
+                description = <"*">
+            >
+            ["at0037"] = <
+                text = <"Finger-nose test">
+                description = <"Findings on movement of patient's index finger between tester's finger and patient's nose.">
+            >
+            ["at0038"] = <
+                text = <"Dysdiadokinesis">
+                description = <"Findings on testing dysdiadokinese or alternate hand tapping.">
+            >
+            ["at0039"] = <
+                text = <"Rapid alternating finger movements">
+                description = <"Findings on patient touching of the tips of each finger to the thumb of the same hand.">
+            >
+            ["at0040"] = <
+                text = <"Heel to shin test">
+                description = <"Findings of patient moving the heel of one foot up and down along the top of the opposite shin.">
+            >
+            ["at0041"] = <
+                text = <"Affected side">
+                description = <"Identification of side of abnormal finding.">
+            >
+            ["at0042"] = <
+                text = <"Left">
+                description = <"*">
+            >
+            ["at0043"] = <
+                text = <"Right">
+                description = <"*">
+            >
+            ["at0044"] = <
+                text = <"Both">
+                description = <"*">
+            >
+            ["at0045"] = <
+                text = <"Eyes open/closed">
+                description = <"Record of eyes being open or closed during performance of test.">
+            >
+            ["at0046"] = <
+                text = <"Eyes open">
+                description = <"*">
+            >
+            ["at0047"] = <
+                text = <"Eyes closed">
+                description = <"*">
+            >
+            ["at0048"] = <
+                text = <"Squatting">
+                description = <"*">
+            >
+            ["at0049"] = <
+                text = <"Stand on heels">
+                description = <"*">
+            >
+            ["at0050"] = <
+                text = <"General test findings">
+                description = <"*">
+            >
+            ["at0051"] = <
+                text = <"Test">
+                description = <"*">
+            >
+            ["at0052"] = <
+                text = <"Bend over">
+                description = <"*">
+            >
+            ["at0053"] = <
+                text = <"Stand on tiptoe">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"Test (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Test (synthesised)">
+                description = <"Name of test. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Eyes open/closed (synthesised)">
+                description = <"Record of eyes being open or closed during performance of test. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Rate (synthesised)">
+                description = <"Description of rate of performance. (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Fluidity (synthesised)">
+                description = <"Description of smoothness and evenness of performance. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Affected side (synthesised)">
+                description = <"Identification of side of abnormal finding. (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Overall Performance (synthesised)">
+                description = <"Overall description of performance. (synthesised)">
+            >
+            ["at9022"] = <
+                text = <"General test findings (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["at9023"] = <
+                text = <"General test findings (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["at9024"] = <
+                text = <"General test findings (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0030", "at0031", "at0032">
+        >
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0046", "at0047">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0037", "at0038", "at0039", "at0040">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0048", "at0049", "at0052", "at0053">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0010", "at0011", "at0012">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0033", "at0034", "at0035">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0042", "at0043", "at0044">
+        >
+    >

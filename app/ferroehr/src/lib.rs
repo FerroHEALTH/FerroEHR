@@ -38,12 +38,17 @@
 //!   — the redacted deployment report `ferroehr report` writes.
 //! - [`support`] — the support period of this release, which every identity
 //!   surface states.
+//! - [`policy_register`] — the operational-policy admin registers (the audit
+//!   category map, the access delay and the Cedar policy set), versioned and
+//!   read on every request.
 //! - [`served_vocabulary`] — the deployment gap codes and OpenAPI family slugs
 //!   the server serves and the viewer names.
 
 // Doctests are copy-paste templates: they must use `?`, never unwrap
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
 #![doc(test(attr(deny(warnings))))]
+pub mod access_control_draft;
+pub mod access_control_invariants;
 pub mod access_log;
 pub mod access_log_draft;
 pub mod access_log_invariants;
@@ -52,6 +57,7 @@ pub mod banner;
 pub mod config;
 pub mod db;
 pub mod decommission;
+pub mod draft_invariants;
 pub mod error;
 pub mod extensions;
 pub mod identifier_protection;
@@ -61,6 +67,7 @@ pub mod manufacturer;
 pub mod origins;
 pub mod outbound;
 pub mod party_binding;
+pub mod policy_register;
 pub mod privacy;
 pub mod report;
 pub mod served_vocabulary;

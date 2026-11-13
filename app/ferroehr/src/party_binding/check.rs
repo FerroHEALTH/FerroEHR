@@ -10,9 +10,9 @@
 //! inside a transaction that is then rolled back, so the check writes
 //! nothing. For each binding key a live `PERSON` carries it reports the
 //! committer of the version that introduced the key and judges it: a SCIM
-//! client of `[[auth.scim.client]]`, an administrator the operator names, a
-//! migration the operator declares, or just-in-time creation on an issuer
-//! with `jit = true`. A stored version records no role its
+//! client by its `scim_provision` grant, an administrator the operator names, a
+//! migration the operator declares, or just-in-time creation on a bound
+//! `persons` issuer. A stored version records no role its
 //! committer held, so the administrators are operator input, named in the
 //! report. No openEHR spec governs a deployment's migration: our own design.
 
@@ -122,7 +122,9 @@ pub struct CheckInput {
     pub key_types: BTreeMap<String, String>,
     /// The mapped Basic users.
     pub basic_users: Vec<BasicUser>,
-    /// Each `[[auth.scim.client]]` as its token `issuer` and `client_id`.
+    /// Each SCIM client, a client whose `ACTOR` holds a `scim_provision`
+    /// grant ([`crate::party_binding::grants::store::provisioning_clients`]),
+    /// as its token `issuer` and `client_id`.
     pub scim_clients: Vec<(String, String)>,
     /// The administrators the operator names.
     pub administrators: Vec<Administrator>,
@@ -133,8 +135,9 @@ pub struct CheckInput {
     /// `[authz.party_binding] provisional_report_after`: the age past which a
     /// provisional `PERSON` is reported.
     pub provisional_report_after: ferrohealth_config::units::Duration,
-    /// The `[[authz.party_binding.issuer]]`s with `jit = true`.
-    pub jit_issuers: Vec<String>,
+    /// The `persons` issuers an `[[auth.party]]` table binds, whose first
+    /// logins a `create_at_login` grant may create a `PERSON` for.
+    pub jit_issuers: Vec<ferrohealth_secret::secret_url::SecretUrl>,
     /// The date a professional `ROLE` is judged on (`YYYY-MM-DD`).
     pub today: String,
 }
@@ -263,13 +266,13 @@ pub struct Committer {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Origin {
-    /// A `[[auth.scim.client]]`.
+    /// A SCIM client, by its `scim_provision` grant.
     Scim,
     /// An administrator the operator named.
     Administrator,
     /// A migration the operator declared.
     Migration,
-    /// Just-in-time creation at a first login of an issuer with `jit = true`.
+    /// Just-in-time creation at a first login of a bound `persons` issuer.
     Jit,
 }
 

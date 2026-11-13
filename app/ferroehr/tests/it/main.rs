@@ -36,6 +36,7 @@
               approval 2026-11-02, #4767)"
 )]
 
+mod access_control_draft;
 mod access_delay_sinks;
 mod access_event_fail_closed;
 mod access_log_draft;
@@ -74,6 +75,7 @@ mod directory_item_refs;
 mod ehr_index_ihe;
 mod ext_functions;
 mod external_callers;
+mod federation_agreements;
 mod federation_node;
 mod fixtures;
 mod import_concurrency;
@@ -95,7 +97,13 @@ mod party_binding_config;
 mod party_binding_source;
 mod party_mapping;
 mod party_mapping_templates;
+mod party_reverse_paths;
 mod persistence;
+mod policy_elements;
+mod policy_fixtures;
+mod policy_grants;
+mod policy_parties;
+mod policy_parties_aql;
 mod privacy_leak;
 mod privacy_policy;
 mod privacy_rules;
@@ -117,6 +125,7 @@ mod service_branching;
 mod service_contribution;
 mod service_definition;
 mod service_demographic;
+mod service_demographic_refs;
 mod service_dump_load;
 mod service_ehr;
 mod service_ehr_access;
@@ -139,7 +148,9 @@ mod storage_parity;
 mod storage_plans;
 mod subject_pseudonym_guard;
 mod system_callers;
+mod system_grants;
 mod system_log_tls_roundtrip;
+mod system_migration;
 mod telemetry;
 mod telemetry_metrics;
 mod telemetry_samplers;

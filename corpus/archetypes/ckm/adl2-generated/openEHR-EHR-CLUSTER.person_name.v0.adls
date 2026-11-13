@@ -1,0 +1,600 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c4afe75a-0176-402c-824e-debdf25766e7; build_uid=0266adb6-11af-4618-ad71-3b81f3524b7f)
+    openEHR-EHR-CLUSTER.person_name.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Hans Demski, Natalia Strauch">
+                ["organisation"] = <"Helmholtz Zentrum München, Medizinische Hochschule Hannover">
+                ["email"] = <"demski@helmholtz-muenchen.de, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan March">
+                ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima, Débora Farage, Fernanda Maia, Laíse Figueiredo, Marivan Abrahão">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2011-11-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (Editor)", "Heather Leslie, Ocean Informatics, Australia", "Ian McNicoll, Ocean Informatics, United Kingdom (Editor)">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"From NHS Scotland SCI-XML messaging standards http://www.isdscotland.org/isd/files/general-v2-7.xsd NHS Scotland Interoperability Working Group http://www.isdscotland.org/isd/5194.htm originally based on: Personal name of the person.  ENV 13606 - 4:2000 7.11.12">
+        ["2"] = <"Aligned with openEHR-DEMOGRAPHICS-person_name.v1 http://www.openehr.org/ckm/#showArchetype_1013.1.477_9">
+        ["3"] = <"ISO/TS 22220:2008(E) - Identification of Subject of Care - Technical Specification- International Organization for Standardization.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"FBEFB311DE64CEE94A1450268C5DE3F6">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation des Personennamens eines Patienten, Verwandten, medizinischen Versorgers oder einer anderen dritten Person.">
+            keywords = <"Familenname", "Vorname", "Name">
+            use = <"Zur Dokumentation der Namensangaben einer Person.">
+            misuse = <"Nicht zur Erstaufzeichnung des Patientennamens zu benutzen. Nicht zur Identifikation von Individuen zu benutzen, die eindeutig Registern mit demografischen Daten zugeordnet werden können (z.B. einer elektronischen Krankenakte, einem Master Patient Index, etc.).">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Registrar el nombre personal de un paciente, familiar, proveedor de servicios de salud u otra tercera parte.">
+            keywords = <"apellido", "nombre de pila", "primer nombre">
+            use = <"Utilizar para registrar detalles del nombre de un individuo.">
+            misuse = <"No utilizar para el registro primario del nombre del paciente. No utilizar para identificar individuos que pueden ser unívocamente referenciados desde registros de datos demográficos. ej.: dentro del registro de salud electrónico, índices maestros de pacientes, etc.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Registrar o nome pessoal de um paciente, parente, provedor de saúde ou terceiros.">
+            keywords = <"último nome", "nome próprio", "primeiro nome">
+            use = <"Usado para registrar detalhes do nome de um indivíduo.
+">
+            misuse = <"Não deve ser usado para registro primário do nome do paciente. Não deve ser usado para identificar os indivíduos que podem ser referenciados unicamente por meio de detalhes do registro demográfico p.e. registro eletrônico de saúde, prontuário eletrônico em saúde e etc.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل الاسم الشخصي للمريض, قريب المريض, مقدم الرعاية الصحية أو أي طرف ثالث.">
+            keywords = <"اسم العائلة/اللقب", "الاسم الشخصي", "الاسم الأول">
+            use = <"لتسجيل تفاصيل الاسم حول شخص ما.">
+            misuse = <"لا يستخدم للتسجيل الأولي لاسم المريض. لا يستخدم لتعريف الأفراد الذين يمكن الرجوع إليهم في سجلات التفاصيل الديموغرافية, مثلا: السجل الطبي الإلكتروني و فهرس المرضى الرئيسي.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the personal name of a patient, relative, healthcare provider or other third party.">
+            keywords = <"surname", "forename", "first name">
+            use = <"Use to record name details about an individual.">
+            misuse = <"Not to be used for primary recording of patient name. Not to be used to identify the individuals who can be uniquely referenced from registers of demographic details eg within the electronic health record, master patient indexes etc.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Person name
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Name type
+                value matches {
+                    DV_CODED_TEXT[at9013] matches {
+                        defining_code matches {[ac9001]}    -- Name type (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Preferred name
+                value matches {
+                    DV_BOOLEAN[at9014] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Unstructured name
+                value matches {
+                    DV_TEXT[at9015]
+                }
+            }
+            CLUSTER[at0002] occurrences matches {0..1} matches {    -- Structured name
+                items cardinality matches {2..*; unordered} matches {
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Title
+                        value matches {
+                            DV_TEXT[at9016]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {1} matches {    -- Given name
+                        value matches {
+                            DV_TEXT[at9017]
+                        }
+                    }
+                    ELEMENT[at0004] matches {    -- Middle name
+                        value matches {
+                            DV_TEXT[at9018]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {1} matches {    -- Family name
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Suffix
+                        value matches {
+                            DV_TEXT[at9009]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Validity period
+                value matches {
+                    DV_INTERVAL<DV_DATE_TIME>[at9010] matches {
+                        upper matches {
+                            DV_DATE_TIME[at9011]
+                        }
+                        lower matches {
+                            DV_DATE_TIME[at9012]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Personenname">
+                description = <"Details des Personennamens einer Privatperson, eines Versorgers oder einer Dritten Person.">
+            >
+            ["at0001"] = <
+                text = <"Name unstrukturiert">
+                description = <"Name in unstrukturierter Form als Freitext.">
+            >
+            ["at0002"] = <
+                text = <"Name strukturiert">
+                description = <"Name in strukturierter Form.">
+            >
+            ["at0003"] = <
+                text = <"Vorname">
+                description = <"Vorname">
+            >
+            ["at0004"] = <
+                text = <"Weiterer Vorname">
+                description = <"Zweiter Vorname oder zweite Namen.">
+            >
+            ["at0005"] = <
+                text = <"Nachname">
+                description = <"Familienname oder Nachname.">
+            >
+            ["at0006"] = <
+                text = <"Namensart">
+                description = <"Art des beschriebenen Namens.">
+            >
+            ["at0008"] = <
+                text = <"Früherer Name">
+                description = <"Von der Person früher benutzter Name.">
+            >
+            ["at0009"] = <
+                text = <"Geburtsname">
+                description = <"Der Person bei Geburt gegebener Name.">
+            >
+            ["at0010"] = <
+                text = <"AKA">
+                description = <"Die Person ist auch bekannt als.">
+            >
+            ["at0011"] = <
+                text = <"Alias">
+                description = <"Ein Anderer von der Person benutzter Name.">
+            >
+            ["at0012"] = <
+                text = <"Mädchenname">
+                description = <"Der Name der bis zur Heirat benutzt wurde.">
+            >
+            ["at0014"] = <
+                text = <"Gültigkeitszeitraum">
+                description = <"Das Datumsintervall, in dem dieser Name gültig war.">
+            >
+            ["at0017"] = <
+                text = <"Titel">
+                description = <"Das von der Person verwendete Präfix oder Titel.">
+                comment = <"z.B. \"Mr\", \"Mrs\", \"Ms\", \"Dr\", \"Lord\".">
+            >
+            ["at0018"] = <
+                text = <"Suffix">
+                description = <"Zusätzlicher Begriff, der nach einem Personennamen verwendet wird.">
+                comment = <"z.B. \"Snr\".">
+            >
+            ["at0019"] = <
+                text = <"Berufsname">
+                description = <"Der Name, den die Person für geschäftliche oder berufliche Zwecke verwendet.">
+            >
+            ["at0020"] = <
+                text = <"Registrierter Name">
+                description = <"Der Name, unter dem die Person offiziell registriert ist.">
+            >
+            ["at0021"] = <
+                text = <"Berichtsname">
+                description = <"Der Name der Person, wie er für die Berichterstellung verwendet werden soll, wenn er mit einer bestimmten Kennung verwendet wird.">
+            >
+            ["at0022"] = <
+                text = <"Bevorzugter Name">
+                description = <"Gibt an, dass dies der Name ist, unter dem eine Person identifiziert werden soll.">
+            >
+            ["ac9001"] = <
+                text = <"Namensart (synthesised)">
+                description = <"Art des beschriebenen Namens. (synthesised)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Nombre personal">
+                description = <"Detalles del nombre personal de un individuo, proveedor o tercera parte.">
+            >
+            ["at0001"] = <
+                text = <"Nombre no estructurado">
+                description = <"Nombre en formato no estructurado de texto libre.">
+            >
+            ["at0002"] = <
+                text = <"Nombre estructurado">
+                description = <"Nombre en formato estructurado.">
+            >
+            ["at0003"] = <
+                text = <"Nombre de pila">
+                description = <"Primer nombre / nombre de pila.">
+            >
+            ["at0004"] = <
+                text = <"Segundo nombre">
+                description = <"Segundo nombre o nombres">
+            >
+            ["at0005"] = <
+                text = <"Apellido">
+                description = <"Nombre de familia o apellido.">
+            >
+            ["at0006"] = <
+                text = <"Tipo de nombre">
+                description = <"Descripción del tipo de nombre.">
+            >
+            ["at0008"] = <
+                text = <"Nombre previo">
+                description = <"Nombre previamente utilizado por esta persona.">
+            >
+            ["at0009"] = <
+                text = <"Nombre de nacimiento">
+                description = <"Nombre dado a esta persona al momento de su nacimiento.">
+            >
+            ["at0010"] = <
+                text = <"tambien conocido como">
+                description = <"La persona es también conocida como.">
+            >
+            ["at0011"] = <
+                text = <"Alias">
+                description = <"Otro nombre utilizado por esta persona.">
+            >
+            ["at0012"] = <
+                text = <"Nombre de soltera">
+                description = <"Nombre utilizado por esta persona antes de su casamiento.">
+            >
+            ["at0014"] = <
+                text = <"Nombre válido desde">
+                description = <"La fecha a partir de la cual este nombre se tornó válido.">
+            >
+            ["at0017"] = <
+                text = <"*Title(en)">
+                description = <"*The prefix or title used by the subject.(en)">
+                comment = <"*e.g. 'Mr', 'Mrs', 'Ms', 'Dr', 'Lord'(en)">
+            >
+            ["at0018"] = <
+                text = <"*Suffix(en)">
+                description = <"*Additional term used following a person name.(en)">
+                comment = <"*e.g. 'Snr'(en)">
+            >
+            ["at0019"] = <
+                text = <"*Professional name(en)">
+                description = <"*The name used by the subject for business or professional purposes.(en)">
+            >
+            ["at0020"] = <
+                text = <"*Registered name(en)">
+                description = <"*The name by which the subject is officially registered.(en)">
+            >
+            ["at0021"] = <
+                text = <"*Reporting name(en)">
+                description = <"*The subject’s name as it is to be used for reporting, when used with a specific identifier.(en)">
+            >
+            ["at0022"] = <
+                text = <"*Preferred name(en)">
+                description = <"*Indicates that this is the name by which a person chooses to be identified.(en)">
+            >
+            ["ac9001"] = <
+                text = <"Tipo de nombre (synthesised)">
+                description = <"Descripción del tipo de nombre. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Nome da pessoa">
+                description = <"Detalhes do nome pessoal de um indivíduo, provedor ou terceiros.
+">
+            >
+            ["at0001"] = <
+                text = <"Nome não estruturado">
+                description = <"Nome em texto livre em formato não estruturado.">
+            >
+            ["at0002"] = <
+                text = <"Nome estruturado">
+                description = <"Nome em formato estruturado.">
+            >
+            ["at0003"] = <
+                text = <"Nome atribuído">
+                description = <"Informado / pessoal / primeiro nome.">
+            >
+            ["at0004"] = <
+                text = <"Nome do meio">
+                description = <"Nome ou nome do meio.">
+            >
+            ["at0005"] = <
+                text = <"Nome da família">
+                description = <"Nome de família ou último nome.">
+            >
+            ["at0006"] = <
+                text = <"Tipo de Nome">
+                description = <"Tipo do nome descrito.">
+            >
+            ["at0008"] = <
+                text = <"Nome anterior">
+                description = <"Nome previamente usado por essa pessoa.">
+            >
+            ["at0009"] = <
+                text = <"Nome de nascimento">
+                description = <"Nome dado a essa pessoa no nascimento.">
+            >
+            ["at0010"] = <
+                text = <"Apelido">
+                description = <"Nome pelo qual a pessoa também é conhecida.">
+            >
+            ["at0011"] = <
+                text = <"Pseudônimo">
+                description = <"Outro nome usado por essa pessoa.">
+            >
+            ["at0012"] = <
+                text = <"Nome de solteiro">
+                description = <"Nome utilizado por essa pessoa antes do casamento.">
+            >
+            ["at0014"] = <
+                text = <"Período de validade">
+                description = <"Intervalo de tempo no qual esse nome foi válido.">
+            >
+            ["at0017"] = <
+                text = <"Título">
+                description = <"O prefixo ou título usado pelo indivíduo.">
+                comment = <"p.e. Sr, Sra, Srta, Dr.">
+            >
+            ["at0018"] = <
+                text = <"Sufixo">
+                description = <"Termo adicional usado em sequência ao nome da pessoa">
+                comment = <"p.e. Jr.">
+            >
+            ["at0019"] = <
+                text = <"Nome profissional">
+                description = <"O nome usado pelo pelo indivíduo para negócios ou assuntos profissionais.">
+            >
+            ["at0020"] = <
+                text = <"Nome de registro">
+                description = <"O nome no qual o sujeito é oficialmente registrado.">
+            >
+            ["at0021"] = <
+                text = <"Nome informado">
+                description = <"O nome do sujeito que é usado para relatórios, quando usado com um identificador específico.">
+            >
+            ["at0022"] = <
+                text = <"Nome favorito">
+                description = <"Indica o nome pelo qual a pessoa prefere ser identificada.">
+            >
+            ["ac9001"] = <
+                text = <"Tipo de Nome (synthesised)">
+                description = <"Tipo do nome descrito. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Person name">
+                description = <"Details of personal name of an individual, provider or third party.">
+            >
+            ["at0001"] = <
+                text = <"Unstructured name">
+                description = <"Name in free text unstructured format.">
+            >
+            ["at0002"] = <
+                text = <"Structured name">
+                description = <"Name in structured format.">
+            >
+            ["at0003"] = <
+                text = <"Given name">
+                description = <"Given / personal / first name.">
+            >
+            ["at0004"] = <
+                text = <"Middle name">
+                description = <"Middle name or names.">
+            >
+            ["at0005"] = <
+                text = <"Family name">
+                description = <"Family name or Surname.">
+            >
+            ["at0006"] = <
+                text = <"Name type">
+                description = <"Type of name described.">
+            >
+            ["at0008"] = <
+                text = <"Previous name">
+                description = <"Name previously used by this person.">
+            >
+            ["at0009"] = <
+                text = <"Birth name">
+                description = <"Name given to this person at birth.">
+            >
+            ["at0010"] = <
+                text = <"AKA">
+                description = <"Person also known as.">
+            >
+            ["at0011"] = <
+                text = <"Alias">
+                description = <"Other name used by this person.">
+            >
+            ["at0012"] = <
+                text = <"Maiden name">
+                description = <"Name used by this persion before marriage.">
+            >
+            ["at0014"] = <
+                text = <"Validity period">
+                description = <"The date interval at which this name was valid.">
+            >
+            ["at0017"] = <
+                text = <"Title">
+                description = <"The prefix or title used by the subject.">
+                comment = <"e.g. 'Mr', 'Mrs', 'Ms', 'Dr', 'Lord'">
+            >
+            ["at0018"] = <
+                text = <"Suffix">
+                description = <"Additional term used following a person name.">
+                comment = <"e.g. 'Snr'">
+            >
+            ["at0019"] = <
+                text = <"Professional name">
+                description = <"The name used by the subject for business or professional purposes.">
+            >
+            ["at0020"] = <
+                text = <"Registered name">
+                description = <"The name by which the subject is officially registered.">
+            >
+            ["at0021"] = <
+                text = <"Reporting name">
+                description = <"The subject’s name as it is to be used for reporting, when used with a specific identifier.">
+            >
+            ["at0022"] = <
+                text = <"Preferred name">
+                description = <"Indicates that this is the name by which a person chooses to be identified.">
+            >
+            ["ac9001"] = <
+                text = <"Name type (synthesised)">
+                description = <"Type of name described. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"الاسم الشخصي">
+                description = <"تفاصيل الاسم الشخصي للفرد, مقدم الخدمة أو طرف ثالث.">
+            >
+            ["at0001"] = <
+                text = <"الاسم غير المركب">
+                description = <"الاسم في تنسيق نصي غير مركب">
+            >
+            ["at0002"] = <
+                text = <"الاسم التركيبي">
+                description = <"الاسم في تنسيق تركيبي">
+            >
+            ["at0003"] = <
+                text = <"الاسم المعين">
+                description = <"الاسم المعين/الشخصي/الأول">
+            >
+            ["at0004"] = <
+                text = <"الاسم الأوسط">
+                description = <"الاسم/الأسماء الوسطى">
+            >
+            ["at0005"] = <
+                text = <"اسم العائلة">
+                description = <"اسم العائلة أو الاسم الأخير">
+            >
+            ["at0006"] = <
+                text = <"نوع الاسم">
+                description = <"نوع الاسم الذي يتم وصفه">
+            >
+            ["at0008"] = <
+                text = <"الاسم السابق">
+                description = <"الاسم الذي استخدم من قبل بواسطة المريض">
+            >
+            ["at0009"] = <
+                text = <"الاسم عند الولادة">
+                description = <"الاسم الذي أعطي للشخص عند الولادة">
+            >
+            ["at0010"] = <
+                text = <"يُعْرَف بـ... أيضا">
+                description = <"الفرد يُعْرَف أيضا بـ...">
+            >
+            ["at0011"] = <
+                text = <"الاسم المستعار">
+                description = <"اسم آخر يتم استخدامه بواسطة هذا الشخص">
+            >
+            ["at0012"] = <
+                text = <"الاسم قبل الزواج">
+                description = <"الاسم الذي كان يستخدم بواسطة الشخص قبل الزواج">
+            >
+            ["at0014"] = <
+                text = <"بداية سريان صلاحية الاسم">
+                description = <"التاريخ الذي أصبح فيه الاسم صالحا للاستخدام">
+            >
+            ["at0017"] = <
+                text = <"*Title(en)">
+                description = <"*The prefix or title used by the subject.(en)">
+                comment = <"*e.g. 'Mr', 'Mrs', 'Ms', 'Dr', 'Lord'(en)">
+            >
+            ["at0018"] = <
+                text = <"*Suffix(en)">
+                description = <"*Additional term used following a person name.(en)">
+                comment = <"*e.g. 'Snr'(en)">
+            >
+            ["at0019"] = <
+                text = <"*Professional name(en)">
+                description = <"*The name used by the subject for business or professional purposes.(en)">
+            >
+            ["at0020"] = <
+                text = <"*Registered name(en)">
+                description = <"*The name by which the subject is officially registered.(en)">
+            >
+            ["at0021"] = <
+                text = <"*Reporting name(en)">
+                description = <"*The subject’s name as it is to be used for reporting, when used with a specific identifier.(en)">
+            >
+            ["at0022"] = <
+                text = <"*Preferred name(en)">
+                description = <"*Indicates that this is the name by which a person chooses to be identified.(en)">
+            >
+            ["ac9001"] = <
+                text = <"نوع الاسم (synthesised)">
+                description = <"نوع الاسم الذي يتم وصفه (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0020", "at0008", "at0009", "at0010", "at0011", "at0012", "at0019", "at0021">
+        >
+    >

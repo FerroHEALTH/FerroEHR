@@ -1,0 +1,85 @@
+{
+  "resourceType" : "Consent",
+  "id" : "consent-example-CDA",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p><b>Generated Narrative: Consent</b><a name=\"consent-example-CDA\"> </a></p><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\">Resource Consent &quot;consent-example-CDA&quot; </p></div><p><b>identifier</b>: <span title=\"  The patient opts in to sharing CDA documents from a specific author to a specific recipient for a limited period  \">id:\u00a0494e0c7a-a69e-4fb4-9d02-6aae747790d7</span></p><p><b>status</b>: active</p><p><b>category</b>: Notice of Privacy Practices <span style=\"background: LightGoldenRodYellow; margin: 4px; border: 1px solid khaki\"> (<a href=\"http://terminology.hl7.org/5.1.0/CodeSystem-consentcategorycodes.html\">Consent Category Codes</a>#npp)</span></p><p><b>subject</b>: <a href=\"patient-example-b.html\">Patient/pat2</a> &quot;Duck DONALD&quot;</p><p><b>date</b>: 2018-12-28</p><p><b>grantee</b>: <a href=\"patient-example-b.html\">Patient/pat2</a> &quot;Duck DONALD&quot;</p><p><b>controller</b>: <span title=\"  this consent relates to sharing data with a specific recipient  \"><a href=\"organization-example-f001-burgers.html\">Organization/f001</a> &quot;Burgers University Medical Center&quot;</span></p><p><b>sourceReference</b>: <a href=\"pcd-example-notAuthor.html\">Contract/pcd-example-notAuthor</a></p><p><b>regulatoryBasis</b>: information access <span style=\"background: LightGoldenRodYellow; margin: 4px; border: 1px solid khaki\"> (<a href=\"http://terminology.hl7.org/5.1.0/CodeSystem-v3-ActCode.html\">ActCode</a>#INFA)</span></p><p><b>decision</b>: <span title=\"  A base denial of access to Dr. F001 but allows for sharing CDA documents of type Discharge Summary + Summarization of Episode Note from a specific author for a limited period  \">permit</span></p><blockquote><p><b>provision</b></p><p><b>period</b>: 2018-10-10 --&gt; 2019-10-10</p><h3>Actors</h3><table class=\"grid\"><tr><td>-</td><td><b>Role</b></td><td><b>Reference</b></td></tr><tr><td>*</td><td>primary information recipient <span style=\"background: LightGoldenRodYellow; margin: 4px; border: 1px solid khaki\"> (<a href=\"http://terminology.hl7.org/5.1.0/CodeSystem-v3-ParticipationType.html\">ParticipationType</a>#PRCP)</span></td><td><a href=\"practitioner-example-f001-evdb.html\">Practitioner/f001</a> &quot;Eric VAN DEN BROEK&quot;</td></tr></table><blockquote><p><b>provision</b></p><blockquote><p><b>actor</b></p></blockquote><p><b>documentType</b>: <span title=\"  CDA documents  \">application/hl7-cda+xml (Details: urn:ietf:bcp:13 code application/hl7-cda+xml = 'application/hl7-cda+xml', stated as 'null')</span></p><p><b>code</b>: <span title=\"  code rules  \">Summary of episode note <span style=\"background: LightGoldenRodYellow; margin: 4px; border: 1px solid khaki\"> (<a href=\"https://loinc.org/\">LOINC</a>#34133-9)</span></span>, Discharge summary <span style=\"background: LightGoldenRodYellow; margin: 4px; border: 1px solid khaki\"> (<a href=\"https://loinc.org/\">LOINC</a>#18842-5)</span></p></blockquote></blockquote></div>"
+  },
+  "identifier" : [{
+    "system" : "urn:oid:2.16.840.1.113883.3.72.5.9.1",
+    "value" : "494e0c7a-a69e-4fb4-9d02-6aae747790d7"
+  }],
+  "status" : "active",
+  "category" : [{
+    "coding" : [{
+      "system" : "http://terminology.hl7.org/CodeSystem/consentcategorycodes",
+      "code" : "npp"
+    }]
+  }],
+  "subject" : {
+    "reference" : "Patient/pat2"
+  },
+  "date" : "2018-12-28",
+  "grantee" : [{
+    "reference" : "Patient/pat2"
+  }],
+  "controller" : [{
+    "reference" : "Organization/f001"
+  }],
+  "sourceReference" : [{
+    "reference" : "Contract/pcd-example-notAuthor"
+  }],
+  "regulatoryBasis" : [{
+    "coding" : [{
+      "system" : "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+      "code" : "INFA"
+    }]
+  }],
+  "decision" : "permit",
+  "provision" : [{
+    "period" : {
+      "start" : "2018-10-10",
+      "end" : "2019-10-10"
+    },
+    "actor" : [{
+      "role" : {
+        "coding" : [{
+          "system" : "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+          "code" : "PRCP"
+        }]
+      },
+      "reference" : {
+        "reference" : "Practitioner/f001"
+      }
+    }],
+    "provision" : [{
+      "actor" : [{
+        "role" : {
+          "coding" : [{
+            "system" : "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+            "code" : "AUT"
+          }]
+        },
+        "reference" : {
+          "reference" : "Practitioner/xcda-author"
+        }
+      }],
+      "documentType" : [{
+        "system" : "urn:ietf:bcp:13",
+        "code" : "application/hl7-cda+xml"
+      }],
+      "code" : [{
+        "coding" : [{
+          "system" : "http://loinc.org",
+          "code" : "34133-9"
+        }]
+      },
+      {
+        "coding" : [{
+          "system" : "http://loinc.org",
+          "code" : "18842-5"
+        }]
+      }]
+    }]
+  }]
+}
