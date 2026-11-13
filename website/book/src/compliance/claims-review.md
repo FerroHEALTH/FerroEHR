@@ -1579,3 +1579,25 @@ carried. The facts added since, checked in every text in scope:
 - The public sandbox follows the `latest` image tags and stays on 5.7.0, since a pre-release moves no tag.
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #5258 for 5.8.0.
 - The performance page keeps its earlier figures until a record measured on the reference host replaces them.
+
+## The review of 2026-11-13, for 5.7.1
+
+Read on the tree after commit `1396a07d8`, for the FerroEHR release 5.7.1.
+The review for 5.7.1-rc1 stands for everything that candidate carried. The
+facts added since, checked in every text in scope:
+
+- The server carries the openEHR access control types of the draft BMM as generated code that no route, check or configuration key reads yet (#5537).
+- Chart 32.0.0 carries `appVersion` 5.7.1.
+
+### Read and kept on 2026-11-13, for 5.7.1
+
+- **The 5.7.1 changelog section** carries the entries of the 5.7.1-rc1 section unchanged, under an opening paragraph that names the upgrade steps from 5.7.0, the 920 and 855 key counts and GHSA-gwh2-7hjm-4pj4.
+- **The installation pins:** the [Kubernetes installation](../installation/kubernetes.md), the chart README and [verifying releases](../verifying-releases.md) name chart 32.0.0 and image 5.7.1 in the book of main, which the release freezes under `/docs/v5.7.1/`.
+- **The landing page, the README, `SECURITY.md`, the crate READMEs, the [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the image labels and the chart description** make no claim this release changes.
+
+### Left open on 2026-11-13, for 5.7.1
+
+- **The [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html)** at the pinned revision (2026-10-26) still name keys 5.7.0 and 5.7.1 refuse at start, tracked on #5534 for 5.7.2.
+- The public sandbox follows the `latest` image tags, which the release legs move to 5.7.1 once its images are scanned and tagged.
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #5258 for 5.8.0.
+- The performance page keeps its earlier figures until a record measured on the reference host replaces them.

@@ -18,6 +18,310 @@ has no matching section here.
 
 ## [Unreleased]
 
+## [5.7.1] - 2026-11-13
+
+5.7.1 follows 5.7.0 as the stable release and carries every change of its release candidate. Operational policy moves out of `ferroehr.toml` into the CDR as openEHR demographic data. Who may do what is coded content of parties written through the Demographic API, read on every request with no restart and capped by the grant ceiling `[authz.grants] allowed`: system clients with their imports and exports, the clients persons sign in through and the delegates that act for them, Basic users' roles and scopes, trusted import systems, data origins, change-feed readers, SCIM clients, federation agreements, just-in-time admission and the privileges beyond clinical access. The audit category map, the access delay and the Cedar policy set become admin registers. The configuration shrinks from 920 keys in 5.7.0 to 855, and the reference names the 10 keys a deployment must set, where 5.7.0 named none; a removed key refuses the start as an unknown key, with no removal aid. Before you upgrade from 5.7.0: run `ferroehr config check` on your file; name the Basic user who writes the first policy parties in `[authz.rbac] first_admin`, or give an administrator through a token issuer in `role_issuers`; then write each client, agreement and grant your file held through the Demographic API or `ferroehr party-binding grant`, and list each operation in `[authz.grants] allowed`, as the book's Operational policy page shows. Representatives of a patient sign in through the patient portal under the representations the deployment records. FerroEHR runs on `ferrohealth-smart` 0.24.1, `ferrohealth-authz` 0.17.0, `ferrohealth-session` 0.19.0, `ihe-atna` and `ehds-logging` 0.18.0, `ihe-iti` 0.9.0 and `ferrobridge-term` 0.10.0. Party migrations 0033 to 0038 add the reverse-relationship validity, the policy party mark, the grant and client-provider rows, the standalone representations and who once represented whom, and clinical migration 0036 the admin registers. Helm chart 32.0.0 carries `appVersion` 5.7.1. Security carries one advisory, GHSA-gwh2-7hjm-4pj4: an issuer written with credentials in its URL rendered them unmasked.
+
+### Added
+
+- FerroEHR ships a complete default set of demographic definitions under `deploy/definitions/`: the professional `PERSON` and `ROLE`, a care-team `GROUP`, and the membership and representation `PARTY_RELATIONSHIP` archetypes the party mapping names, each adapted from openEHR CKM archetypes with a `PROVENANCE.md` naming its sources. The quickstart, its Keycloak overlay, the hosted sandbox, the development lanes and the conformance harness load all five and map them, so SCIM Users, Groups and representation work out of the box; the Helm chart's default `definitions.files` (chart 25.1.0) loads them and leaves the party mapping to the operator. Every release attaches each file with a `.sha256sum`, and the book's new "Default demographic definitions" page lists them with the keys that name them. A deployment may load its own templates instead (#5428).
+
+- A system client imports and exports under its own grants (#5432): `message_import_ehr` needs an `import_ehr` grant and `message_import_ehr_extract` an `import_ehr_extract` grant, and a system client's `message_export_ehrs` and `message_export_ehr_extracts` need an `export_ehr_extract` grant, each covering the EHR's subject namespace in its `subject_namespace` elements. Each commit of a system client, an import included, records a committer whose `external_ref` names the client's `ACTOR` (`PARTY_REF` type `ACTOR`), and its access record names that `ACTOR` and the identifier of the provider it acts for. A `ROLE` whose grant lacks the terms of its operation (an origin, a device identifier issuer for a device, a facility's issuer with one identifier or prefix, a subject namespace for an import or an export) is refused with `422` at its commit. The terminology gains the qualifier codes `issuer`, `identifier`, `identifier_prefix`, `origin`, `relay`, `device` and `device_identifier_issuer`.
+
+- Operational policy has a home in the party store, with no configuration key. FerroEHR ships example policy definitions: a system's `AGENT` (`openEHR-DEMOGRAPHIC-AGENT.system.v1`), the acts-for `PARTY_RELATIONSHIP` to the provider it acts for, and the system-client, federation-partner and privileged `ROLE`s, each with a `CAPABILITY` whose credentials hold the grant. The binary carries a default template of each, and each boot stores one only when no definition of its id is stored, never overwriting a deployment's version. A party is a policy party by the codes it holds, in any archetype, as the entry under Changed describes. Every write of a policy party is validated against its own template. Only a caller holding `[authz.rbac] admin_role` writes or reads a policy party through the Demographic API, a `CONTRIBUTION` included; any other caller, a SCIM client too, is answered `403`. The book's "Operational policy" page documents the terminology as the contract, with a worked example of each kind (#5434).
+
+- The default demographic set gains a patient `PERSON` (`deploy/definitions/patient/`), adapted from the openEHR CKM `person-patient` archetype, with its patient identifiers, date of birth and sex in `details`, its names named by their usage, a postal and an electronic address, and its relationships to personal contacts, payers and providers, and a healthcare provider `ORGANISATION` (`deploy/definitions/provider/`), identified by its provider identifier, which the acts-for relationship targets and a federation partner is. The quickstart, the hosted sandbox, the conformance harness, the viewer lane and the Helm chart's default `definitions.files` load all seven definitions, and every release attaches each (#5434).
+
+- Every authenticated request resolves its caller's policy grants from the party store, read from coded content in parties of any archetype: a capability grants an operation when its credentials hold a `DV_CODED_TEXT` of the `ferroehr-operations` terminology (`commit_composition`, `import_ehr`, `import_ehr_extract`, `export_ehr_extract`, `federated_person_access`, `federated_organisation_access`, `read_subject_audit`, `access_service`, `read_identifiers`), and a client is the party carrying a `DV_IDENTIFIER` of type `client_id` under the token issuer. A system client resolves by its token's issuer and `client_id`, a bound person by their `PERSON`, each to the operations of the `ROLE`s it performs that hold on the request's date by the `ROLE`'s and the capability's `time_validity` and at its instant by the `not_before` and `not_after` elements. A grant changed through the Demographic API decides the caller's next request on every replica with no restart, a second party naming the same client is refused with `409`, and a request whose grants cannot be read is `503`. Each replica keeps the grants in memory and reads them again when a commit notifies it, so a request adds no database read. `ferroehr party-binding refill` rebuilds them. See the book's "Operational policy" page for the terminology contract (#5435).
+
+- `[authz.grants] allowed` (`FERROEHR__AUTHZ__GRANTS__ALLOWED`), the operations the party store may grant. A `ROLE` committed with a capability coding an operation it does not list is refused with `403`, and a stored one is never honoured. The default, `["commit_composition"]`, admits system client writes only; an import, an export, a federation agreement and each privilege are admitted by name (#5435).
+
+- A Basic user bound to a `PERSON` holds the roles and SMART scopes its policy grants name: the new `ferroehr-operations` codes `hold_roles` and `hold_scopes` grant what the capability's `role` and `scope` elements name, under `[authz.grants] allowed`. A change through the Demographic API applies to the user's next request with no restart. A token's roles and scopes still come from the token alone (#5438).
+
+- A `hold_roles` grant naming `admin_role` or `emergency_access_role` is refused at commit with `403` and never honoured: the administrator authority and break-glass come from the configuration and the token issuers alone. See the book's "Operational policy" page, "What the grants decide" (#5438).
+
+- The `ferroehr-operations` terminology gains the operations `data_origin`,
+  `read_change_feed` and `scim_provision` and the scope elements `creating_system`,
+  `origin`, `reader`, `binding_issuer` and `token_scope`. A change an administrator commits
+  through the Demographic API decides the next request with no restart: the outbox is
+  written while a reader is granted and only that reader's client reads it, a retention
+  period may be keyed on an origin a grant names, and a SCIM request is admitted for a
+  client whose grant is in force. A `ROLE` that names one of these elements other than as
+  its operation reads it is refused with `400` (#5439).
+
+- `ferroehr party-binding grant` commits a client's first grant on the operator's
+  authority, such as the `scim_provision` of the client that provisions the administrators,
+  who cannot log in before their `PERSON` exists. The compose quickstart, the Keycloak
+  overlay and the hosted sandbox run it in a `ferroehr-grant` one-shot, and
+  `scripts/scim-provision.sh` takes the client's binding issuer and runs it through
+  `SCIM_GRANT` (#5439).
+
+- The audit category map, the EHDS Art. 3(3) access delay and the Cedar policy set are
+  admin registers under `{ext}/admin/registers/{audit-categories,access-delay,cedar-policies}`:
+  `admin_role` reads one, replaces it whole over the version `If-Match` names (`412` on a
+  stale write, the new version as the `ETag`) and lists its history. Every version is kept
+  with its committer, every read and write is an access record, and a change applies on
+  the next request on every replica with no restart. A document that does not hold is
+  refused with `400`, so a Cedar policy set that does not parse or validate never replaces
+  the set in force (#5442).
+
+- Representatives in the patient portal (#5446). A parent, a guardian or a
+  proxy signs in through a `patients` issuer, as the RFC 8693 `act` of the
+  patient's token or under their own login naming the patient's EHR, and
+  reads the patient's record while their `PERSON` holds a live
+  representation of the patient: a `PARTY_RELATIONSHIP` carrying
+  `ferroehr-operations::represents`, in any archetype. Who represents whom
+  and until when, including the age and legal-capacity rules of national
+  law, is the representations and `time_validity` the deployment records;
+  FerroEHR builds in no country's rules. The patient authorises a proxy with
+  `POST /demographic/party_relationship` and revokes it with a `DELETE`,
+  effective on the next request, and every access is recorded bound to the
+  representative, naming the subject.
+
+- `[authz.party_binding.patient]` names the template of a patient's `PERSON` (`template_id`), the path of its identifiers (`identifier`) and the path of its name (`name`), and defaults to the shipped `openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0`. Boot judges it against the definition store, and a `PERSON` written under that template is validated against it (#5462).
+
+- `GET /ferroehr/rest/extensions/v1/demographic/party/{uid_based_id}/reverse_relationships` evaluates the RM 1.2.0 function `PARTY.reverse_relationships()` in either specification profile: a JSON array of the `LOCATABLE_REF`s a stable-profile party read carries, as they stand now or, for a version id or a `version_at_time`, as they stood at that version's commit. No ITS-REST resource serves the function, so this is a FerroEHR extension (#5473).
+
+- AQL over the demographic store serves every demographic root: `GROUP` and
+  `AGENT` as `PERSON` is, the abstract `PARTY` and `ACTOR` over the concrete
+  classes below them, and a standalone `PARTY_RELATIONSHIP`. The policy
+  filter applies under every root, through `CONTAINS` and the join to an
+  `EHR`, so a caller who is no administrator never receives a system
+  `AGENT`, a policy `ROLE`, an acts-for relationship or a party holding one.
+  Each `reverse_relationships` reference now names exactly one relationship,
+  by its `uid`, by a unique node id and name, or by its position (#5474).
+
+### Changed
+
+- The book's command-line page shows how to run `ferroehr config check`, `party-binding check` and `party-binding adopt` in each place FerroEHR runs. On a host you call the binary. Under Docker, `docker run … config check` checks a mounted file before an upgrade, `docker compose run --rm --no-deps ferroehr config check` checks the configuration of a service that refuses to start, and `docker compose exec` runs the database commands. Under the Helm chart, `kubectl exec deploy/<release>-ferroehr -c ferroehr` runs them, and a one-off pod copied from a failing pod runs `config check` on a configuration the server refuses. The party-binding migration page links each of its steps to these forms. Each example was run against the 5.7.0 image and chart 25.0.1 (#5416).
+
+- The FerroHEALTH family crates move to their newest releases:
+  `ferrohealth-smart` 0.18.0 to 0.19.1, `ferrohealth-session` 0.13.0 to
+  0.14.0, `ferrohealth-authz` 0.11.0 to 0.12.0, `ferrobridge-term` 0.5.0 to
+  0.6.0, `ihe-atna` and `ehds-logging` 0.12.0 to 0.13.0, and `ihe-iti` 0.4.0
+  to 0.5.0. A `private_key_jwt` client assertion FerroEHR signs for a token
+  request or an onward exchange is now valid for 60 seconds, down from 300,
+  so an authorization server that caps the lifetime below five minutes
+  accepts it. No configuration key changes (#5417).
+
+- The FerroHEALTH family crates move to their newest releases:
+  `ferrohealth-smart` 0.19.1 to 0.21.0, `ferrohealth-session` 0.14.0 to
+  0.16.0, `ferrohealth-authz` 0.12.0 to 0.14.0, `ferrobridge-term` 0.6.0 to
+  0.8.0, `ihe-atna` and `ehds-logging` 0.13.0 to 0.15.0, and `ihe-iti` 0.5.0
+  to 0.7.0. FerroEHR's own checks of `[authz.rbac] role_issuers` and of the
+  issuer the SMART discovery document describes give way to the shared
+  crate's: a refused role issuer still renders with its userinfo masked, and
+  the refusal now names only the first refused issuer of the list (#5422).
+
+- **Breaking: the SMART discovery document describes exactly one issuer, never a `machines` issuer and never by table order.** With `[auth.smart] discovery = true`, 5.7.0 described the first issuer whose metadata it read, whatever its kind, so in the quickstart with the Keycloak overlay the document sent user launches to the `machines` SCIM issuer, which signs no user token (SMART App Launch 2.2.0, Conformance, §Metadata: `authorization_endpoint` is where a launch starts). The document now describes the issuer the new key `[auth] described_issuer` names, else the one issuer that is not of kind `machines` and whose metadata FerroEHR has (read from it, introspected, or supplied by `[auth.smart] issuer_metadata_file`). With discovery on, naming a `machines`, unknown or metadata-less issuer refuses the start. Without the key, more than one such issuer refuses the start, naming them and the key, and none refuses it, saying no issuer can be described. The rule is `ferrohealth-smart`'s, and `described_issuer` is the same `[auth]` key in every FerroHEALTH product. Upgrade step: set `[auth] described_issuer` when you run more than one user-facing issuer (`persons`, `patients` or `federation`) with discovery on (#5425) (#5426).
+
+- The quickstart, its Keycloak overlay, the hosted sandbox and the development lanes map the care-team `GROUP`, the membership and the representation of the default demographic definitions, with a group claim on their `[[auth.party]]` tables, so a fresh start serves SCIM Users, Groups and representation out of the box. The book's "Default demographic definitions" page and the chart README show the full mapping; the Helm chart's own party mapping stays the operator's (#5428).
+
+- A system caller no longer imports with no grant (#5432): before, any `system/` caller could import an EHR or an extract; it now needs a grant of the import operation covering the EHR's subject namespace.
+
+- The default professional definitions follow openEHR CKM more closely: the professional `ROLE` (`openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0`) records a clinician's registrations and qualifications as its `CAPABILITY`, adapted from the CKM `individual_credentials` archetype, and the professional `PERSON` names its name by usage and its email address by type and usage, as CKM codes them, with free text still accepted. Every default definition's `derived_from` names its CKM citeable id and modification time, and the representation relationship is re-cited to the person-to-person relationship of the CKM `PERSON` archetypes. The text of each definition changes under the same id, so a definition store that holds the 5.7.0 text of the professional `PERSON` or `ROLE` refuses `ferroehr definitions load` of the new one with `409` (#5434).
+
+- Breaking: which clients count as backend clients and which reach the DEMOGRAPHIC API is policy the CDR holds, read on every request with no restart, never a configuration key. `[auth.smart] backend_clients` and `[auth.smart] demographic_clients` are removed, and a file or `FERROEHR__AUTH__SMART__*` variable that sets either is refused as an unknown key. A client's `system/aql-*` scope counts when the client's `AGENT` performs a `ROLE` whose capability codes `ferroehr-operations::query_system_wide`, and the DEMOGRAPHIC API admits a client whose `ROLE` codes `ferroehr-operations::access_demographic`, beside a caller holding `[auth] product_scope`. Both are new operations of the terminology, admitted by name in `[authz.grants] allowed`, whose default admits neither. A grant counts for the client's own app-only token; a person signed in through the client holds the person's grants. To move a deployment, write an `AGENT` carrying the client's `client_id` and a `ROLE` coding the operation through the Demographic API, and list the operation in `[authz.grants] allowed`; the book's "Operational policy" page has the worked example. `[auth.smart] patient_issuers` stays: it is trust, the issuers whose `ehrId` claim names an EHR of this platform (#5437).
+
+- Federation agreements are read from the CDR on every request. An agreement is a grant of `federated_person_access` or `federated_organisation_access` on the partner's party, which carries a `client_id` identifier for each client its `federation` issuer issues tokens to; its terms are elements of the capability's credentials named by `ferroehr-operations` codes (`agreement_name`, `agreement_version`, `jurisdiction`, `exchange`, `purpose`, `gdpr_art_6_1`, `gdpr_art_9_2`, `national_provision`, `consent`, `read_scope`, `template`, `discard_window`, `ehdsi_service`, `requests_per_second`, `burst`, `opt_out_override`, `access_class`, `requester_log_retention`), and its validity is the grant's own. A verified external caller is admitted only under the agreement its partner holds for its accessor kind, so a new, changed or ended agreement takes effect on the next request with no restart. Every legal check the configuration ran at boot now refuses the `ROLE` at its commit with `422`, naming each rule it breaks. `/management/info` and the boot line list every agreement in force with its partner's issuer and client. The legal checks hold no rule of one country: the jurisdiction is the agreement's own element, and the consent source is `registry` or `local`. See the book's "Operational policy" page, "Federation agreements" (#5440).
+
+- Just-in-time creation of a provisional `PERSON` at a first login is admitted by CDR data instead of configuration. An administrator writes a `ROLE` whose capability grants `ferroehr-operations::create_at_login` through the Demographic API; its credentials name the token issuer (`login_issuer`) and the admission conditions (`admit_idp`, `admit_group`, `admit_role`, `admit_assurance`, and `admit_guests` for a guest), and any grant in force admits a login that meets every condition it declares. Each first login reads the grants from the replica's in-memory copy, so a change applies to the next login with no restart. A grant that names no issuer or declares no condition is refused with `422`, and `[authz.grants] allowed` must list `create_at_login`, which the default does not. See the book's "Operational policy" page, "Just-in-time admission" (#5441).
+
+- `ferroehr.default.toml` opens with a "What you must set" block: the ten keys a deployment that
+  holds real data sets (`[deployment] profile`, `[[auth.issuer]] issuer`, `kind` and `audience`,
+  `[authz.party_binding.provider] issuer` and `id`, `[api] system_id`, `[database] url`,
+  `[privacy] subject_namespaces` and `[record] subject_index`). Every other key is marked
+  optional with its built-in default, and each key's note says why it is in the file:
+  infrastructure, trust, or a tuning key. The configuration types carry the classification
+  (`x-ferroehr-class`), and the reference generator, run by the `config-reference` guard, fails
+  on a key with no class, an optional key with no default, or a class entry that names no key.
+  The classification adds and removes no key.
+  The shipped configurations (the quickstart, the hosted sandbox, the
+  development, perf and conformance files, the chart's `values.yaml`, `values-production.yaml`
+  and CI overlays) no longer restate a default: `deployment.spec_profile`, `auth.enabled`,
+  `[[auth.issuer]] profile = "rfc9068"`, the default `[server]` listener and body limit, the
+  chart's `api`, `database`, `authz.rbac`, `authz.abac`, `authz.party_binding.namespace`,
+  `management.endpoints`, `record.signing`, `record.multimedia` and `audit.store` defaults and
+  the like. The server reads the same values as before (#5455).
+
+- **Breaking (chart):** the chart moves to 27.0.0. Its `values.yaml` no longer carries
+  `config.deployment.spec_profile`, `config.api.openapi_ui`, `admin`, `terminology`,
+  `config.database.migrations`, `acquire_timeout`, `statement_timeout`, `config.authz.rbac`,
+  `config.authz.abac`, `config.authz.party_binding.namespace`, `config.management.endpoints`,
+  `config.record.signing`, `config.record.multimedia` or `config.audit.store`, each of which
+  only restated the server's default. A values file that sets them still works; a tool that
+  reads them from the chart's defaults finds them unset (#5455).
+
+- `ferroehr.default.toml` lists 855 keys, down from 920 in 5.7.0, and marks 10
+  of them as must-set, where 5.7.0 marked none. 72 keys are gone: the
+  operational policy moved into the CDR (#5432, #5436 to #5441, #5521), three
+  tables became admin registers (#5442), the representation mapping became a
+  code the relationship carries (#5446) and the three public URLs became one
+  (#5465). 7 keys are new, each infrastructure or trust: `[server]
+  public_base_url` (#5465), `[auth] described_issuer` (#5425), the three keys
+  of `[authz.party_binding.patient]` (#5462), the grant ceiling `[authz.grants]
+  allowed` (#5435) and `[authz.rbac] first_admin`, the one Basic user that
+  holds `admin_role` from the file and writes the first policy parties
+  (#5438). Both counts are the ones the file's "What you must set" block
+  states (#5455).
+
+- The shipped `ferroehr.default.toml` sets only the keys of its "What you
+  must set" block: `[deployment] profile`, `[api] system_id` and
+  `[privacy] subject_namespaces` are its live lines, and every other key is
+  a `#?` line that shows its default. A copy of the file sets 3 keys where
+  it set 115 (122 in 5.7.0); this change removes and adds no key. The
+  book's "Operational policy" page merges "Which checks read a grant" into
+  "What the grants decide" (#5455).
+
+- The party mapping defaults to FerroEHR's default demographic definitions. Each boot stores the seven definitions of `deploy/definitions/` whose id the definition store does not hold, as it stores the policy definitions, and never overwrites a stored one. With no mapping key set, `[authz.party_binding]` `person`, `professional_role`, `group`, `membership`, `representation` and the new `patient` section map them, so an empty configuration boots with SCIM Users, Groups and representation working. A section a deployment sets replaces that section's default, and nothing is stored under a deployment's own ids. A SCIM client whose `[[auth.party]]` table sets no `group_identifier_issuer` writes its Groups' `externalId`s under its `binding_issuer` with `/groups` appended, where the start was refused before. The quickstart (both its EHR index variants), the hosted sandbox, the development, conformance, performance and viewer lanes and the Helm chart drop the mapping keys that restated the default and their `ferroehr definitions load` step, and the chart's `definitions.files` is empty by default (chart 27.1.0). A deployment that maps its own templates keeps its keys and its definition list (#5462).
+
+- The FerroHEALTH family crates move to the releases that take the DPoP
+  external URL from the product: `ferrohealth-smart` 0.21.0 to 0.22.0,
+  `ferrohealth-authz` 0.14.0 to 0.15.0, `ferrohealth-session` 0.16.0 to
+  0.17.0, `ferrobridge-term` 0.8.0 to 0.9.0, `ihe-atna` and `ehds-logging`
+  0.15.0 to 0.16.0, and `ihe-iti` 0.7.0 to 0.8.0 (#5465).
+
+- A policy party is recognised by what it holds, in any archetype or template, and no longer by its archetype id: a `CAPABILITY` whose `credentials` hold a `DV_CODED_TEXT` of FerroEHR's operation terminology `ferroehr-operations`, a `PARTY_RELATIONSHIP` whose `name` or `details` hold `ferroehr-operations::acts_for`, or a `DV_IDENTIFIER` of type `client_id`. A deployment's own `ROLE` archetype whose capability holds `import_ehr` is a policy party, and a party of the shipped policy archetypes that holds none of these codes is an ordinary one. The shipped policy definitions are examples that carry the codes: each policy `ROLE` requires an `Operation` element (`id90`) in its credentials, and the acts-for relationship an acts-for code element (`id6`) in its details. A `403` for a policy party now names what makes it one in place of the archetype. The book's "Operational policy" page states the rule (#5485).
+
+### Removed
+
+- **Breaking: `[[authz.system_client]]` is removed from `ferroehr.toml`**, with every key it held (`issuer`, `client_id`, `provider`, `facilities`, `writes`, `origins`, `device_identifier_issuers`); a configuration that still sets it refuses boot as an unknown key. A system client is now granted in the CDR: an `AGENT` (or any `ACTOR`) carrying its `client_id`, acting for its provider `ORGANISATION` by an acts-for relationship (or, with none, for the deployment's `[authz.party_binding] provider`), and performing a `ROLE` whose capability grants `commit_composition` with its templates, facilities, origin (`relay` or `device`) and device identifier issuers, each read by its `ferroehr-operations` code; a change applies on the next request with no restart. The Helm chart 31.0.0 drops `config.authz.system_client` (a major bump: a values file that sets it is refused), and the Keycloak quickstart grants its service client `commit_composition` beside `query_system_wide` through the Demographic API. See the book's "Operational policy" page (#5436).
+
+- The example `ROLE` `openEHR-DEMOGRAPHIC-ROLE.data_migration.v1` is removed (#5432): a migration is a system client whose `ROLE` grants the import and export operations, on the system client example `ROLE`, which now names each credentials element by its `ferroehr-operations` code (#5436).
+
+- **Breaking: the client lists `ferrohealth-smart` read while it classifies a token are policy the CDR holds**, read on every request with no restart. `[[auth.issuer]] first_party_clients`, `[[auth.issuer.delegates]]` (with `client`, `sub` and `issuer`) and `[[auth.scopeless_subjects]]` (with `issuer` and `sub`) are removed, and a file or `FERROEHR__AUTH__*` variable that sets one is refused as an unknown key. The server answers the crate's standing questions from the grants of the `ACTOR` carrying the client identifier under the token's issuer, through three new operations of `ferroehr-operations`: `sign_in_persons` (a client persons sign in through), `act_for_persons` (a client, or the RFC 8693 actor a person's token names, that acts for a person) and `access_without_scope` (a system caller admitted to every SMART on openEHR requirement without a resource scope). `[authz.grants] allowed` admits each by name, and its default admits none. The answer comes from the copy of the grant rows each replica holds, so a token adds no database transaction, and a party store that cannot answer refuses the token with `503`. To move a deployment, write the client's `AGENT` and a `ROLE` coding the operation through the Demographic API (or `ferroehr party-binding grant`), and list the operation in `[authz.grants] allowed`. The Helm chart 32.0.0 drops `first_party_clients` from its example values (a major bump), and the Keycloak quickstart grants its viewer `sign_in_persons`. `ferrohealth-smart` moves to 0.24, `ferrohealth-authz` to 0.17, `ferrohealth-session` to 0.19, `ihe-atna` and `ehds-logging` to 0.18, `ihe-iti` to 0.9 and `ferrobridge-term` to 0.10 (#5437).
+
+- **Breaking: a Basic user is a credential alone.** `[[auth.basic.users]] roles` and `scopes` are removed, and a file that sets either is refused as an unknown key. A Basic user bound to a `PERSON` holds the roles and SMART scopes the `hold_roles` and `hold_scopes` grants of its `PERSON` name, never a privileged role. The one trust key added, `[authz.rbac] first_admin` (`FERROEHR__AUTHZ__RBAC__FIRST_ADMIN`), names the Basic user that holds `admin_role` and `[auth] product_scope` from the configuration: the first administrator, who writes the first policy parties; a name that is no Basic user refuses the start. `ferroehr party-binding grant --basic-user <user>` grants an operation to the `PERSON` a Basic user binds to, on the operator's authority. The quickstart, the hosted sandbox, the development lanes and the performance gate make their Basic user the first administrator and grant its scopes and roles this way (`scripts/scim-provision.sh` does it for the lanes it provisions), and the development configuration no longer declares `import_role`. The Helm chart 32.0.0 drops `roles` and `scopes` from its Basic users (#5438).
+
+- **Breaking: `[authz.import] trusted_systems`, `[[authz.origin]]`, `[record.change_feed]
+  readers` and `[[auth.scim.client]]` are removed from `ferroehr.toml`.** Each is now a
+  grant in the CDR, read on every request, and a configuration that still sets one refuses
+  boot as an unknown key. An import's `creating_system` element vouches for the systems
+  whose wrapped committers it may carry, a `data_origin` grant names an origin, a
+  `read_change_feed` grant names a reader of the change feed, and a `scim_provision` grant
+  names a SCIM client's `binding_issuer` and `token_scope`; `[authz.grants] allowed` must
+  admit each operation. The Helm chart 30.0.0 drops the outbox-readers line of its notes
+  and documents the grants (a major bump: a values file that sets one of these keys is
+  refused) (#5439).
+
+- **Breaking: `[authz.federation]` and its `[[authz.federation.agreement]]` tables are
+  removed from `ferroehr.toml`** (`issuer`, `accessor`, `name`, `version`, `jurisdiction`,
+  `exchange`, `purpose`, `legal_ground`, `consent`, `reads`, `writes`, `discard`,
+  `discard_window`, `ehdsi_service`, `caller_rate`, `opt_out_override`, `access_class`,
+  `chained_log_retention`). A configuration that still holds them refuses boot as an
+  unknown key; write each agreement to the CDR as the book's "Operational policy" page
+  describes. The Helm chart 29.0.0 drops `config.authz.federation.agreement` (a major
+  bump: a values file that sets it is refused) (#5440).
+
+- **Breaking: the admission keys of `[[authz.party_binding.issuer]]` are removed from `ferroehr.toml`:** `jit`, `guests_jit`, `admit_idp`, `admit_groups`, `admit_roles` and `admit_assurance`. A configuration that still sets one refuses boot as an unknown key. Admission is a `create_at_login` grant in the CDR. The table keeps `issuer`, `user_name_claim` and `idp_claim` (#5441).
+
+- **Breaking: `[audit.categories]`, `[privacy.access_delay]` and `[authz.abac.cedar]` are
+  removed from `ferroehr.toml`.** Each is now an admin register, and a configuration that
+  still sets one refuses boot as an unknown key. Write the category map, the access delay
+  and the Cedar policy set through `{ext}/admin/registers/{register}` once the server
+  runs; until then the shipped category map applies, the delay is off, and the Cedar set
+  is empty, so an ABAC deployment on the embedded engine permits nothing until its
+  policies are written. The Helm chart 26.0.0 drops `config.audit.categories` (a major
+  bump: a values file that sets it is refused), and the server
+  no longer reads Cedar policy files from a directory (#5442).
+
+- **Breaking: `[authz.party_binding.representation]` is removed**, with its `archetype_id` and
+  `relationship_codes` (#5446). A representation is recognised by the
+  `ferroehr-operations::represents` code it carries in any archetype, and
+  names its openEHR `subject_relationship` code itself; the section is now
+  an unknown key. The `refused-patient-representative` refusal is gone: a
+  `patients` token whose `act` names a representative is admitted while a
+  live representation binds them.
+
+- **The v5.7.0 configuration removal aids are gone.** A key a release before v5.7.0
+  read, in the server's `ferroehr.toml` or the viewer's configuration, is now an unknown
+  key like any other: the start is refused naming it and the keys its table does read,
+  where v5.7.0 named the key that replaced it. The v5.7.0 changelog still maps every old
+  key to its replacement (#5463).
+
+- **Breaking: `[auth.smart] public_base_url`, `[auth.scim] public_base_url` and
+  `[auth.dpop] external_url` are removed from `ferroehr.toml`, and
+  `[server] public_base_url` takes their place.** A deployment names the URL
+  clients reach it at once. The SMART discovery document's `baseUrl` is that
+  URL with `server.base_path` and `api.base_path`, every SCIM `meta.location`
+  hangs off it with `server.base_path` and `/scim/v2`, and a DPoP proof's `htu`
+  must name it with `server.base_path` and the request path (RFC 9449 §4.3).
+  The SMART `baseUrl` and the SCIM locations now carry `server.base_path`,
+  which they left out before. The key is required with `auth.smart.discovery`,
+  `[auth.scim]` or `[auth.dpop]`, and a configuration that still sets a removed
+  key refuses boot as an unknown key: move its value to `[server]
+  public_base_url`. `ferroehr.default.toml` lists two keys fewer. The Helm
+  chart 28.0.0 takes `config.server.public_base_url` in place of
+  `config.auth.smart.public_base_url` and `config.auth.scim.public_base_url`
+  (a major bump: a values file that sets either is refused at boot) (#5465).
+
+- **Breaking: four role names are removed from `[authz.rbac]`:** `subject_audit_role`, `access_service_roles`, `import_role` and `identifier_reader_role`. A configuration that still sets one refuses boot as an unknown key. Each permission is now a grant in the CDR and nothing else, under `[authz.grants] allowed`: `read_subject_audit` reads the access log of one subject (`GET /fhir/r4/AuditEvent` with one `patient`), `access_service` makes a caller an EHDS Art. 10 access service held to an opt-out, `import_ehr` and `import_ehr_extract` admit the matching import, and `read_identifiers` admits `GET /admin/party/identifiers` beside the admin role. A role a token or a Basic user names grants none of them. Recording an access opt-out is refused with `400` while `[authz.grants] allowed` does not allow `access_service`. `[authz.rbac] role_issuers` now governs `admin_role` and `emergency_access_role` alone, and the development compose configuration drops `import_role`. See the book's "Operational policy" page, "What the grants decide" (#5521).
+
+### Fixed
+
+- A Web Template keeps the `time` of a single `EVENT` that the level removal collapses. ITS-REST simplified formats master04, §"Conditionally Collapsed Wrapper Types", collapses an `EVENT` with occurrences `0..1` into its OBSERVATION, and the builder dropped the event's RM-mandatory `time` with it (RM data structures, `EVENT.time` 1..1). FLAT and STRUCTURED had no key for the event time, so a written time was lost and read back as the history origin. The OBSERVATION now carries an in-context `time` leaf at the event's own path (`…/events[at0002]/time`). It builds into that event and reads out of it, as a retained event's `time` does. In `openehr-sdt` (#5421).
+
+- The worked `[authz.party_binding]` example of the book's authentication page names only definitions that exist: its `PERSON`, `ROLE`, `GROUP`, membership and representation ids and paths are those of the shipped default set, and a test boots the example from the page against the files (#5428).
+
+- `ferroehr party-binding refill` and the first fill rebuild the client identifiers of every kind of `ACTOR`, a `PERSON`, an `ORGANISATION` and a `GROUP` included; before, only an `AGENT`'s were rebuilt, so a client carried by another kind of party held no grant after a refill (#5436).
+
+- A demographic AQL query by a caller without `[authz.rbac] admin_role` no longer returns policy parties. A query under any demographic root, alone or under `VERSION`, leaves out every version of a policy party, together with every node it reaches inside them through `CONTAINS` or a path. The rule is part of the query's one SQL statement, so `COUNT`, the other aggregates and paging count only the parties the caller may read, and no extra statement runs. An administrator's query returns them, as the Demographic API read does. The book's "Operational policy" page states the rule (#5450).
+
+- A specialised ADL 2 archetype whose differential path sits on an attribute
+  below the root (`ELEMENT[at0002] matches { /value[at9001]/defining_code
+  matches {...} }`) is read from the object that owns the attribute, as AOM2
+  `C_ATTRIBUTE.path` defines it. The upload no longer refuses such a path
+  with VDIFP when the flat parent carries it, and the flat form overlays the
+  constraint on the node the path names instead of adding it as a new
+  attribute of the owning object (#5452).
+
+- Archetype validation accepts a term binding keyed by a path that runs through
+  a `use_node` internal reference, as AOM 2 VTTBK allows ("a path that is valid
+  in the flat archetype") and ADL 2 §Paths and Proxy Objects forms it, with the
+  target's node id. The 2013 CKM `openEHR-EHR-OBSERVATION.apgar.v1` no longer
+  fails VTTBK; a CDR whose terminology server serves LOINC still refuses it
+  under VETDF, since it binds LOINC answer codes without their check digit (#5457).
+
+- **Breaking: a party's inline relationship must be sourced at that party on every write.** RM demographic `PARTY.Relationships_validity` (`relationships.for_all (r | r.source = self)`) was judged only on a `PUT` whose body carried no `uid`. A `POST /demographic/{kind}`, a demographic CONTRIBUTION version, and a `PUT` whose body `uid` named another party's container committed a relationship sourced at another party, which then showed in that party's `reverse_relationships`. Each is now refused `422` naming `PARTY.Relationships_validity` and the relationship's `source`, and commits nothing. A new party's container id is assigned by the commit, so a create that carries a relationship is refused: add the relationship with an update once the party exists. A `PUT`, or a CONTRIBUTION version that modifies a party, whose body `uid` names another container than the one it writes is refused `422` at `uid` (#5471).
+
+- **Breaking: demographic references must name a party's version container of the right kind.** RM demographic `master02-demographic_package.adoc` §Party Relationships has relationship references denote "the Version container of a Party" by `HIER_OBJECT_ID`, `role.adoc` makes `performer` the "Reference to Version container of Actor playing the role", and `actor.adoc` makes `roles` the "Identifiers of the Version container for each Role". An inline relationship whose `source` or `target` named an `OBJECT_VERSION_ID`, a `ROLE.performer` typed `ROLE` or naming a version or a party this server does not hold, an `ACTOR.roles` entry typed `PERSON` or naming a version or a missing `ROLE`, and a relationship container between parties that do not exist all committed. Each is now refused `422` on the direct routes and in a demographic CONTRIBUTION, naming the attribute and its path; a reference to a party the same CONTRIBUTION creates, or to a logically deleted one, stands. A relationship container now appears in its target's `reverse_relationships` (stable profile), as a reference to the container (#5472).
+
+- A party read of an older version, by its `OBJECT_VERSION_ID` or at a `version_at_time`, listed in `reverse_relationships` the relationships other parties hold today. It now lists them as they stood when that version was committed, and so do a `VERSION<PARTY>` read and the representation a create or update returns, which carried no `reverse_relationships` before. The reverse-relationship index keeps when each relationship held: the party migration `0033_relationship_target_validity` rebuilds it from the stored party versions, once, at startup (#5473).
+
+- A party that ever had a policy version is now hidden from a caller without `[authz.rbac] admin_role` on both read paths, every version of it. Demographic AQL judged each version on its own, so it served the ordinary versions of a party an administrator had turned from a policy party into an ordinary one, while the Demographic API refused them. The commit that stores a policy version now marks the party in the same transaction, nothing clears the mark, and the party migration marks the parties already stored; an import, an archive load and `ferroehr party-binding refill` mark from the stored versions. The Demographic API read and write rules and demographic AQL all key on that one mark, which AQL reads from the head row each query already joins, so no statement is added (#5485).
+
+- An import or export grant can reach an EHR whose `EHR_STATUS.subject` has no `external_ref`, such as an anonymous record's `PARTY_SELF`, which no grant could reach once `[authz.rbac] import_role` was removed: a `subject_namespace` element holding the `DV_CODED_TEXT` `no_subject_namespace` of `ferroehr-operations` covers exactly those EHRs, for `import_ehr`, `import_ehr_extract` and `export_ehr_extract`. A grant naming real namespaces still does not reach them, the code reaches no EHR whose subject names a namespace, and a grant naming no `subject_namespace` is still refused at its commit. See the book's "Operational policy" page (#5530).
+
+- A former patient-portal representative is no longer admitted as the patient
+  once their representation ends or is deleted (#5532). On the own-login
+  path, a login whose `PERSON` holds or has ever held a representation of
+  the EHR's subject is judged only as a representative: admitted while a
+  representation is live, refused with `refused-representation-unrecorded`
+  once none is. FerroEHR keeps who once represented whom in the binding side
+  table, and a refill rebuilds it from every version.
+
+### Security
+
+Shipped with functional changes because: the fix of `[[auth.attributes]]`, `[[auth.federation]]`, `[[auth.party]]` and `auth.scopeless_subjects` comes only with `ferrohealth-smart` 0.19, which has no security-only release and changes the public API FerroEHR's authentication is written against, and three of the FerroEHR keys the fix covers (`[[authz.system_client]]`, `[[authz.federation.agreement]]` and `[[auth.scim.client]]`) were already replaced on main by grants the CDR holds, so a security-only patch of 5.7.0 would change code that no later release carries.
+
+- An issuer written with a user name and password in its URL userinfo
+  (RFC 3986 §3.2.1) showed that password wherever 5.7.0 renders its
+  configuration: `ferroehr config check`, `GET /management/env`, `GET
+  /ferroehr/rest/extensions/v1/admin/config`, `ferroehr report`, the binding
+  posture and the refusals at start-up (GHSA-gwh2-7hjm-4pj4, CWE-532,
+  CWE-200). The keys that held the issuer as a plain string were
+  `[[authz.federation.agreement]] issuer`,
+  `[[authz.party_binding.issuer]] issuer`, `[[authz.system_client]] issuer`,
+  `[[auth.scim.client]] issuer`, `authz.rbac.role_issuers` and
+  `auth.smart.patient_issuers`, and, through `ferrohealth-smart` 0.18,
+  `[[auth.attributes]]`, `[[auth.federation]]`, `[[auth.party]]` and
+  `auth.scopeless_subjects`. Each of these keys that 5.7.1 still reads holds
+  the issuer as a `SecretUrl` and renders it as `https://***@host/...`, as
+  `[[auth.issuer]]` already did; the others are removed with the move of
+  policy into the CDR. Only a deployment that wrote credentials into an issuer
+  identifier is affected: remove them from every key that names the issuer
+  and rotate the credential (#5418).
+
 ## [5.7.1-rc1] - 2026-11-13
 
 5.7.1-rc1 is the first release candidate of 5.7.1, published for testing. 5.7.0 stays the stable release: this pre-release moves neither the `latest` image tags, the book under `/docs/latest/` nor the hosted sandbox, it publishes no crates, and it receives no fixes; the next release candidate or 5.7.1 itself replaces it. Operational policy moves out of `ferroehr.toml` into the CDR as openEHR demographic data. Who may do what is coded content of parties written through the Demographic API, read on every request with no restart and capped by the grant ceiling `[authz.grants] allowed`: system clients with their imports and exports, the clients persons sign in through and the delegates that act for them, Basic users' roles and scopes, trusted import systems, data origins, change-feed readers, SCIM clients, federation agreements, just-in-time admission and the privileges beyond clinical access. The audit category map, the access delay and the Cedar policy set become admin registers. The configuration shrinks from 920 keys in 5.7.0 to 855, and the reference names the 10 keys a deployment must set, where 5.7.0 named none; a removed key refuses the start as an unknown key, with no removal aid. Before you try it: run `ferroehr config check` on your file; name the Basic user who writes the first policy parties in `[authz.rbac] first_admin`, or give an administrator through a token issuer in `role_issuers`; then write each client, agreement and grant your file held through the Demographic API or `ferroehr party-binding grant`, and list each operation in `[authz.grants] allowed`, as the book's Operational policy page shows. Representatives of a patient sign in through the patient portal under the representations the deployment records. FerroEHR runs on `ferrohealth-smart` 0.24.1, `ferrohealth-authz` 0.17.0, `ferrohealth-session` 0.19.0, `ihe-atna` and `ehds-logging` 0.18.0, `ihe-iti` 0.9.0 and `ferrobridge-term` 0.10.0. Party migrations 0033 to 0038 add the reverse-relationship validity, the policy party mark, the grant and client-provider rows, the standalone representations and who once represented whom, and clinical migration 0036 the admin registers. Helm chart 32.0.0-rc1 carries `appVersion` 5.7.1-rc1. Security carries one advisory, GHSA-gwh2-7hjm-4pj4: an issuer written with credentials in its URL rendered them unmasked.
@@ -26466,7 +26770,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.7.0...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.7.1...HEAD
+[5.7.1]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.7.0...v5.7.1
 [5.7.1-rc1]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.7.0...v5.7.1-rc1
 [5.7.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.3...v5.7.0
 [5.7.0-rc4]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.3...v5.7.0-rc4

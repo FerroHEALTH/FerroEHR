@@ -1,1 +1,0 @@
-- `ferroehr party-binding refill` and the first fill rebuild the client identifiers of every kind of `ACTOR`, a `PERSON`, an `ORGANISATION` and a `GROUP` included; before, only an `AGENT`'s were rebuilt, so a client carried by another kind of party held no grant after a refill (#5436).

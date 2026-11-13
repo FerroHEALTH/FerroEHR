@@ -38,5 +38,5 @@ keywords:
   - ITS-REST
   - Rust
   - PostgreSQL
-version: 5.7.1-rc1
+version: 5.7.1
 date-released: 2026-11-13

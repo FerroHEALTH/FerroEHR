@@ -1,1 +1,0 @@
-- **Breaking: the admission keys of `[[authz.party_binding.issuer]]` are removed from `ferroehr.toml`:** `jit`, `guests_jit`, `admit_idp`, `admit_groups`, `admit_roles` and `admit_assurance`. A configuration that still sets one refuses boot as an unknown key. Admission is a `create_at_login` grant in the CDR. The table keeps `issuer`, `user_name_claim` and `idp_claim`.

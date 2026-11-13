@@ -1263,7 +1263,7 @@ checksum = "2ebdda89edc534bf8d5dd2857562633b6495557e5846552ade994b99ed13c36a"
 
 [[package]]
 name = "config-reference"
-version = "5.7.1-rc1"
+version = "5.7.1"
 dependencies = [
  "ferroehr",
  "schemars 1.2.3",
@@ -1927,7 +1927,7 @@ dependencies = [
 
 [[package]]
 name = "docs-meta"
-version = "5.7.1-rc1"
+version = "5.7.1"
 
 [[package]]
 name = "dotenvy"
@@ -2256,7 +2256,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr"
-version = "5.7.1-rc1"
+version = "5.7.1"
 dependencies = [
  "aes-gcm 0.11.1",
  "assert_fs",
@@ -2336,7 +2336,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-ext"
-version = "5.7.1-rc1"
+version = "5.7.1"
 dependencies = [
  "base64 0.23.1",
  "bytes",
@@ -2354,7 +2354,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-rest"
-version = "5.7.1-rc1"
+version = "5.7.1"
 dependencies = [
  "argon2 0.6.0",
  "assert_fs",
@@ -2421,7 +2421,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-server"
-version = "5.7.1-rc1"
+version = "5.7.1"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2446,7 +2446,7 @@ dependencies = [
 
 [[package]]
 name = "ferroehr-viewer"
-version = "5.7.1-rc1"
+version = "5.7.1"
 dependencies = [
  "axum",
  "base64 0.23.1",
@@ -2901,7 +2901,7 @@ dependencies = [
 
 [[package]]
 name = "forwarders"
-version = "5.7.1-rc1"
+version = "5.7.1"
 dependencies = [
  "anyhow",
  "proc-macro2",
@@ -4173,7 +4173,7 @@ checksum = "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0"
 
 [[package]]
 name = "loadtest"
-version = "5.7.1-rc1"
+version = "5.7.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -4748,7 +4748,7 @@ dependencies = [
 
 [[package]]
 name = "openehr-codegen"
-version = "5.7.1-rc1"
+version = "5.7.1"
 dependencies = [
  "http",
  "roxmltree",
@@ -6201,7 +6201,7 @@ dependencies = [
 
 [[package]]
 name = "scaleseed"
-version = "5.7.1-rc1"
+version = "5.7.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -7241,7 +7241,7 @@ dependencies = [
 
 [[package]]
 name = "testkit"
-version = "5.7.1-rc1"
+version = "5.7.1"
 dependencies = [
  "ferroehr",
  "jiff",
