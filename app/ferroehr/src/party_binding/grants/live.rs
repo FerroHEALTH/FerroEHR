@@ -1,14 +1,17 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! [`LiveGrants`]: this replica's copy of the grant rows, from which every
-//! request resolves its caller's capabilities with no read of its own.
+//! [`LiveGrants`]: this replica's copy of the grant rows and the caller
+//! facts, from which every request resolves its caller's capabilities and
+//! facts with no read of its own.
 //!
 //! The copy is read again when a notification on [`CHANNEL`] marks it stale,
 //! when the listener is down, and after a request whose own commit changed a
-//! grant, so the next request on every replica decides under the change. A
-//! read is one indexed read of the revision, and the rows only when the
-//! revision moved. Which grants hold is judged at each request on its own
+//! grant or a fact, so the next request on every replica decides under the
+//! change. A read is one indexed read of the two revisions; the grant rows
+//! and every fact when the grant revision moved, and otherwise, when the
+//! facts revision moved, one indexed read of the facts of the parties
+//! stamped since ([`caller::store::FACTS`]). Which grants hold is judged at each request on its own
 //! date and instant, and a grant of an operation `[authz.grants] allowed` does not
 //! admit is never honoured. No openEHR spec governs operational policy: our
 //! own design.
@@ -24,6 +27,8 @@ use uuid::Uuid;
 
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
+use crate::party_binding::grants::caller::store::{Changed, FactRow};
+use crate::party_binding::grants::caller::{self, CallerFacts, CareTeam, FactKind, FactValue};
 use crate::party_binding::grants::capabilities::{
     Actor, Capabilities, Client, ClientState, Credentials, Grant, Provider,
 };
@@ -84,13 +89,42 @@ struct Held {
     capabilities: BTreeMap<Uuid, Vec<CapabilityRow>>,
 }
 
-/// This replica's copy of the grant rows and the ceiling it honours them
-/// under.
+/// The caller facts as this replica holds them.
+#[derive(Debug, Default)]
+struct HeldFacts {
+    /// The facts revision read; `None` before the first read.
+    revision: Option<i64>,
+    /// The facts about each party.
+    by_party: BTreeMap<Uuid, Arc<[FactRow]>>,
+}
+
+impl HeldFacts {
+    /// These facts with `changed` applied: each party read holds the facts
+    /// read, and a party read with none holds none.
+    fn with(&self, changed: Changed) -> Self {
+        let mut by_party = self.by_party.clone();
+        for (party, facts) in changed.parties {
+            if facts.is_empty() {
+                by_party.remove(&party);
+            } else {
+                by_party.insert(party, facts.into());
+            }
+        }
+        Self {
+            revision: Some(changed.revision),
+            by_party,
+        }
+    }
+}
+
+/// This replica's copy of the grant rows and the caller facts, and the
+/// ceiling it honours the grants under.
 pub struct LiveGrants {
     pool: PgPool,
     ceiling: RwLock<Arc<GrantCeiling>>,
     federation: RwLock<Arc<FederationTrust>>,
     held: RwLock<Arc<Held>>,
+    facts: RwLock<Arc<HeldFacts>>,
     /// Serializes the reads that install a new revision.
     installing: tokio::sync::Mutex<()>,
     /// The listener on [`CHANNEL`].
@@ -116,6 +150,7 @@ impl LiveGrants {
             ceiling: RwLock::new(Arc::new(GrantCeiling::default())),
             federation: RwLock::new(Arc::default()),
             held: RwLock::new(Arc::default()),
+            facts: RwLock::new(Arc::default()),
             installing: tokio::sync::Mutex::new(()),
         }
     }
@@ -181,6 +216,19 @@ impl LiveGrants {
             .clone()
     }
 
+    fn held_facts(&self) -> Arc<HeldFacts> {
+        self.facts
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
+    /// The facts revision this replica holds; `None` before its first read.
+    #[must_use]
+    pub fn facts_revision(&self) -> Option<i64> {
+        self.held_facts().revision
+    }
+
     /// Read the grant rows when a notification marked them stale or the
     /// listener is down; otherwise the copy stands, and the request touches
     /// no database.
@@ -194,7 +242,9 @@ impl LiveGrants {
         Ok(())
     }
 
-    /// Read the revision, and the rows when it moved past the one held.
+    /// Read the revisions; every grant row and fact when the grant revision
+    /// moved past the one held, else the facts of the parties stamped since
+    /// the facts revision held when that moved.
     ///
     /// # Errors
     /// [`GrantsUnavailable`] when the party store does not answer; the copy
@@ -202,12 +252,21 @@ impl LiveGrants {
     pub async fn refresh(&self) -> Result<(), GrantsUnavailable> {
         let read = async {
             let mut conn = self.pool.acquire().await?;
-            if Some(store::revision(&mut conn).await?) == self.revision() {
-                return Ok(());
+            let (revision, facts_revision) = store::revisions(&mut conn).await?;
+            if Some(revision) != self.revision() {
+                let _installing = self.installing.lock().await;
+                let loaded = store::load(&mut conn).await?;
+                self.install(loaded);
+            } else if Some(facts_revision) != self.facts_revision() {
+                let _installing = self.installing.lock().await;
+                let since = self.facts_revision();
+                let changed = read_facts(&mut conn, since).await?;
+                let held = self.held_facts();
+                if held.revision.is_none_or(|held| held < changed.revision) {
+                    *self.facts.write().unwrap_or_else(PoisonError::into_inner) =
+                        Arc::new(held.with(changed));
+                }
             }
-            let _installing = self.installing.lock().await;
-            let loaded = store::load(&mut conn).await?;
-            self.install(loaded);
             Ok::<(), StorageError>(())
         };
         match read.await {
@@ -255,6 +314,8 @@ impl LiveGrants {
         for row in loaded.capabilities {
             capabilities.entry(row.performer_id).or_default().push(row);
         }
+        *self.facts.write().unwrap_or_else(PoisonError::into_inner) =
+            Arc::new(HeldFacts::default().with(loaded.facts));
         *self.held.write().unwrap_or_else(PoisonError::into_inner) = Arc::new(Held {
             revision: Some(loaded.revision),
             clients,
@@ -264,7 +325,8 @@ impl LiveGrants {
 
     /// The capabilities of `actor` at `now`, from the copy held: the
     /// operations the `ROLE`s it performs grant that hold on the date of
-    /// `now` in UTC and at `now`, of an operation the ceiling admits.
+    /// `now` in UTC and at `now`, of an operation the ceiling admits, and its
+    /// caller facts in force then ([`Self::facts_of`]).
     #[must_use]
     pub fn capabilities(&self, actor: Actor<'_>, now: jiff::Timestamp) -> Capabilities {
         let held = self.held();
@@ -301,7 +363,61 @@ impl LiveGrants {
                 ))
             })
             .collect();
-        Capabilities::new(client, grants)
+        Capabilities::new(client, grants).with_facts(self.facts_of(performer, now))
+    }
+
+    /// The caller facts of the party `party` at `now`, from the copy held:
+    /// the clearances and purposes of the capabilities of the `ROLE`s it
+    /// performs that hold on the date of `now` in UTC and at `now`, and the
+    /// care teams it is a member of on that date.
+    #[must_use]
+    pub fn facts_of(&self, party: Uuid, now: jiff::Timestamp) -> CallerFacts {
+        let held = self.held_facts();
+        let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
+        let (mut clearances, mut purposes, mut care_teams) = (Vec::new(), Vec::new(), Vec::new());
+        for row in held
+            .by_party
+            .get(&party)
+            .into_iter()
+            .flat_map(|rows| rows.iter())
+        {
+            if !row.term.holds(today, now) {
+                continue;
+            }
+            match (row.kind, &row.value) {
+                (FactKind::Clearance, FactValue::Code(code)) => clearances.push(code.clone()),
+                (FactKind::Purpose, FactValue::Code(code)) => purposes.push(code.clone()),
+                (FactKind::MemberOf, FactValue::Team(team)) => {
+                    care_teams.extend(row.term.dates.map(|dates| CareTeam::new(*team, dates)));
+                }
+                _ => {}
+            }
+        }
+        CallerFacts::new(clearances, purposes, care_teams)
+    }
+
+    /// The care teams and units the subject `subject` is under the care of,
+    /// from the copy held: each `under_care_of` relationship of its live
+    /// `PERSON` head with the dates it holds, whether or not it holds today,
+    /// so the evaluator judges a discharge and the grace after it.
+    #[must_use]
+    pub fn under_care_of(&self, subject: Uuid) -> Vec<CareTeam> {
+        let held = self.held_facts();
+        let mut out: Vec<CareTeam> = held
+            .by_party
+            .get(&subject)
+            .into_iter()
+            .flat_map(|rows| rows.iter())
+            .filter(|row| row.kind == FactKind::UnderCareOf)
+            .filter(|row| matches!(row.term.lifecycle_state.as_str(), "532" | "553"))
+            .filter_map(|row| match (row.value.clone(), row.term.dates) {
+                (FactValue::Team(team), Some(dates)) => Some(CareTeam::new(team, dates)),
+                _ => None,
+            })
+            .collect();
+        out.sort();
+        out.dedup();
+        out
     }
 
     /// Every federation agreement in force at `now`, once per client
@@ -481,18 +597,28 @@ fn in_force(
     now: jiff::Timestamp,
 ) -> Option<Operation> {
     let operation = Operation::of(&row.operation).filter(|operation| ceiling.allows(*operation))?;
-    let live = matches!(row.lifecycle_state.as_str(), "532" | "553");
-    let dated = row.role_dates.is_some_and(|dates| dates.holds(today))
-        && row.dates.is_some_and(|dates| dates.holds(today));
-    let timed = row.not_before.is_none_or(|before| before <= now)
-        && row.not_after.is_none_or(|after| now <= after);
-    (live && dated && timed).then_some(operation)
+    row.term.holds(today, now).then_some(operation)
+}
+
+/// The facts of the parties stamped after `since` (every party for `None`),
+/// read in one repeatable-read snapshot on `conn`.
+async fn read_facts(
+    conn: &mut sqlx::PgConnection,
+    since: Option<i64>,
+) -> Result<Changed, StorageError> {
+    let mut tx = sqlx::Connection::begin(&mut *conn).await?;
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+        .execute(&mut *tx)
+        .await?;
+    let changed = caller::store::load(&mut tx, since).await?;
+    tx.commit().await?;
+    Ok(changed)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::party_binding::grants::store::Dates;
+    use crate::party_binding::grants::store::{Dates, Term};
 
     fn date(text: &str) -> jiff::civil::Date {
         text.parse().expect("a date")
@@ -503,17 +629,19 @@ mod tests {
             role_id: Uuid::nil(),
             performer_id: Uuid::nil(),
             operation: code.to_owned(),
-            lifecycle_state: "532".to_owned(),
-            role_dates: Some(Dates {
-                lower: None,
-                upper: None,
-            }),
-            dates: Some(Dates {
-                lower: Some(date("2026-12-01")),
-                upper: Some(date("2026-12-03")),
-            }),
-            not_before: None,
-            not_after: None,
+            term: Term {
+                lifecycle_state: "532".to_owned(),
+                role_dates: Some(Dates {
+                    lower: None,
+                    upper: None,
+                }),
+                dates: Some(Dates {
+                    lower: Some(date("2026-12-01")),
+                    upper: Some(date("2026-12-03")),
+                }),
+                not_before: None,
+                not_after: None,
+            },
             credentials: None,
         }
     }
@@ -539,16 +667,16 @@ mod tests {
             "an operation the ceiling does not admit is never honoured"
         );
         let mut timed = relay.clone();
-        timed.not_before = Some("2026-12-02T13:00:00Z".parse().expect("an instant"));
+        timed.term.not_before = Some("2026-12-02T13:00:00Z".parse().expect("an instant"));
         assert_eq!(in_force(&timed, &ceiling, today, now), None);
-        timed.not_before = None;
-        timed.not_after = Some("2026-12-02T11:00:00Z".parse().expect("an instant"));
+        timed.term.not_before = None;
+        timed.term.not_after = Some("2026-12-02T11:00:00Z".parse().expect("an instant"));
         assert_eq!(in_force(&timed, &ceiling, today, now), None);
         let mut empty = relay.clone();
-        empty.role_dates = None;
+        empty.term.role_dates = None;
         assert_eq!(in_force(&empty, &ceiling, today, now), None);
         let mut inactive = relay;
-        inactive.lifecycle_state = "800".to_owned();
+        inactive.term.lifecycle_state = "800".to_owned();
         assert_eq!(in_force(&inactive, &ceiling, today, now), None);
         assert_eq!(
             in_force(&row("import_everything"), &ceiling, today, now),

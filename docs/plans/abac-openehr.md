@@ -29,11 +29,11 @@ openEHR change, laid out as the access log draft is
   `tools/openehr-codegen/vendor/bmm/`;
 - `antora/manifest-entry.json`: its entry for the RM component's
   `manifest.json`;
+- `antora/modules/access_control/`: the specification pages, with the
+  Change Request draft (#5519);
+- `antora/modules/ROOT/partials/`: the class partials, rendered from the BMM
+  by `scripts/render/bmm-partials.sh`;
 - `antora/PROVENANCE.md`: what the tree is and how it was checked.
-
-The specification pages and the rendered class partials follow once the
-owner has decided the model; writing them before the model is settled would
-be text to throw away.
 
 ## The decision asked of the owner
 
@@ -1119,8 +1119,10 @@ The package is written as an openEHR RM proposal: a concrete settings scheme
 for the slot the RM leaves open, and a controller policy root. A Change
 Request would cite RM EHR IM §EHR Access and BASE Security §Access Control,
 which name the slot and ask for "alternative models of access control, each
-defined by a subtype". The terminology groups would go to TERM. Nothing has
-been submitted.
+defined by a subtype". The terminology groups would go to TERM. The pages and
+the Change Request draft are in `antora/modules/access_control/` (#5519).
+Nothing has been submitted, and nothing is submitted without the owner's
+approval.
 
 ## Tasks
 

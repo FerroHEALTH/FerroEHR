@@ -28,6 +28,7 @@
 pub mod admission;
 pub mod agreement;
 pub mod bootstrap;
+pub mod caller;
 pub mod capabilities;
 pub(crate) mod derive;
 pub mod live;

@@ -23,6 +23,7 @@
 use serde_json::Value;
 
 use crate::party_binding::derive::container;
+use crate::party_binding::grants::caller::{self, CallerFact};
 use crate::party_binding::grants::operation::{NOT_AFTER, NOT_BEFORE, is_qualifier};
 use crate::party_binding::policy_mark::{ACTS_FOR, CLIENT_ID, carries, coded};
 use crate::versioning::Kind;
@@ -71,6 +72,11 @@ pub(crate) struct GrantFacts {
     /// An `ORGANISATION`'s identifier as a provider, `(issuer, id)`: the
     /// first `DV_IDENTIFIER` in its `details` that names no client.
     pub(crate) identifier: Option<(String, String)>,
+    /// The caller facts: a `ROLE`'s clearances and permitted purposes, a
+    /// `PERSON`'s care relationships, in document order.
+    pub(crate) facts: Vec<CallerFact>,
+    /// Why a fact the body carries cannot be read, which its commit refuses.
+    pub(crate) unread: Vec<String>,
 }
 
 impl GrantFacts {
@@ -105,6 +111,7 @@ impl GrantFacts {
                 if kind == Kind::Organisation {
                     facts.identifier = body.get("details").and_then(provider_identifier);
                 }
+                caller::relationships(kind, body, &mut facts);
             }
             Kind::Role => {
                 for (ordinal, capability) in body
@@ -118,9 +125,10 @@ impl GrantFacts {
                     facts
                         .capabilities
                         .extend(CapabilityFacts::of(ordinal, capability));
+                    caller::qualifiers(ordinal, capability, &mut facts);
                 }
             }
-            _ => {}
+            _ => caller::relationships(kind, body, &mut facts),
         }
         facts
     }
@@ -133,7 +141,6 @@ impl CapabilityFacts {
             return Vec::new();
         };
         let mut codes: Vec<String> = Vec::new();
-        let (mut before, mut after) = (Bound::Open, Bound::Open);
         walk(credentials, &mut |node| {
             let name = node.get("name").and_then(coded);
             // NOTE: the value of an element a qualifier names is that qualifier's
@@ -145,12 +152,8 @@ impl CapabilityFacts {
             {
                 codes.push(code.to_owned());
             }
-            match name {
-                Some(NOT_BEFORE) if before == Bound::Open => before = bound(node),
-                Some(NOT_AFTER) if after == Bound::Open => after = bound(node),
-                _ => {}
-            }
         });
+        let (before, after) = bounds(credentials);
         codes
             .into_iter()
             .map(|code| Self {
@@ -163,6 +166,21 @@ impl CapabilityFacts {
             })
             .collect()
     }
+}
+
+/// The first `Not before` and `Not after` bounds of the capability
+/// `credentials`.
+pub(crate) fn bounds(credentials: &Value) -> (Bound, Bound) {
+    let (mut before, mut after) = (Bound::Open, Bound::Open);
+    walk(
+        credentials,
+        &mut |node| match node.get("name").and_then(coded) {
+            Some(NOT_BEFORE) if before == Bound::Open => before = bound(node),
+            Some(NOT_AFTER) if after == Bound::Open => after = bound(node),
+            _ => {}
+        },
+    );
+    (before, after)
 }
 
 /// Calls `visit` on `value` and every object below it.

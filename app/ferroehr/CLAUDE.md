@@ -8,7 +8,10 @@ change proposals, no openEHR release), with the canonical-JSON serde the spec
 crates get. Never hand-edit them: change the draft BMM or the emitter and
 regenerate (`codegen-drift` checks them). Their class invariants are
 hand-written in `access_log_invariants` and `access_control_invariants`, over
-the shared report of `draft_invariants`. `access_control_draft` re-emits the
+the shared report of `draft_invariants`; `access_control_invariants` reads
+every coded attribute through `access_terminology`, the access control
+groups of `ferroehr-operations` and the only codes the access evaluator and
+write checks read. `access_control_draft` re-emits the
 RM polymorphic parents its `LOCATABLE` and `VERSIONED_OBJECT` subtypes join
 (`LOCATABLE`, `VERSIONED_OBJECT` and the EHR Extract classes that hold a
 `LOCATABLE`), and its `open_seam` converts `ACCESS_DIRECTIVE_SETTINGS` to and

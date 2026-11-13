@@ -1,0 +1,107 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_DATA_SCOPE",
+  "documentation": "A description of data in an EHR. Data match when they match every attribute that is set, and an attribute holding a list matches when any of its members does.",
+  "properties": {
+    "objects": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "objects",
+      "documentation": "Individual versioned objects, such as one `VERSIONED_COMPOSITION`.",
+      "type_def": {
+        "container_type": "List",
+        "type": "OBJECT_REF"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "templates": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "templates",
+      "documentation": "Template identifiers the data were committed under.",
+      "type_def": {
+        "container_type": "List",
+        "type": "String"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "archetypes": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "archetypes",
+      "documentation": "Root archetypes of the data; a specialisation of a named archetype matches too.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ARCHETYPE_ID"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "categories": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "categories",
+      "documentation": "Categories of the data, such as the EHDS priority categories, coded in a terminology the jurisdiction names.",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "sensitivities": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "sensitivities",
+      "documentation": "Sensitivity codes, matched against the labels the data carry, coded in a terminology the system documents (such as the HL7 v3 confidentiality and sensitivity codes).",
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "origins": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "origins",
+      "documentation": "The systems the data came from, as `FEEDER_AUDIT_DETAILS._system_id_` or the committing system's `_system_id_` records them.",
+      "type_def": {
+        "container_type": "List",
+        "type": "String"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "recorded": {
+      "_type": "P_BMM_GENERIC_PROPERTY",
+      "name": "recorded",
+      "documentation": "When the data were committed.",
+      "type_def": {
+        "root_type": "DV_INTERVAL",
+        "generic_parameters": [
+          "DV_DATE_TIME"
+        ]
+      }
+    }
+  },
+  "invariants": {
+    "Not_empty": "objects /= Void or templates /= Void or archetypes /= Void or categories /= Void or sensitivities /= Void or origins /= Void or recorded /= Void",
+    "Objects_valid": "objects /= Void implies not objects.is_empty",
+    "Templates_valid": "templates /= Void implies not templates.is_empty",
+    "Archetypes_valid": "archetypes /= Void implies not archetypes.is_empty",
+    "Categories_valid": "categories /= Void implies not categories.is_empty",
+    "Sensitivities_valid": "sensitivities /= Void implies not sensitivities.is_empty",
+    "Origins_valid": "origins /= Void implies not origins.is_empty"
+  }
+}
+--------

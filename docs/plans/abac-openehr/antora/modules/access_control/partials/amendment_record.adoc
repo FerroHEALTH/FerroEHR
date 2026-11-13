@@ -1,0 +1,13 @@
+== Amendment Record
+
+[cols="1,6,2,2", options="header"]
+|===
+|Issue|Details|Raiser|Completed
+
+4+^h|*Draft, not part of an RM release*
+
+|[[latest_issue]]0.1.0
+|Initial draft: the `access_control` package with the `access_directives` scheme of `ACCESS_CONTROL_SETTINGS` and the versioned `ACCESS_POLICY`, the decision procedure, the terminology groups, ITS-REST resources and the mappings to FHIR `Consent`, IHE BPPC and IHE APPC.
+|FerroEHR
+|[[latest_issue_date]]13 Nov 2026
+|===

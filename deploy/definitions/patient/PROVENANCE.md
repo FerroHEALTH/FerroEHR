@@ -58,6 +58,10 @@ one licence.
 - The payer and provider relationships hold their patient identifiers as
   `DV_IDENTIFIER` elements; the personal relationship's type is a `DV_TEXT`,
   since the source's value set is unbound.
+- A care relationship (`id32`) is added, which the CKM source does not
+  have: the patient's relationship to a care team or unit, whose one
+  mandatory element is the coded `under_care_of` of FerroEHR's terminology
+  `ferroehr-operations`, with an optional discharge time.
 - Every element is optional and every relationship `0..*`, so a patient
   known by one identifier commits `532|complete|`. The CKM source makes the
   details, the name and a contact mandatory.

@@ -79,7 +79,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 12);
     assert_eq!(applied("clinical").await, 36);
-    assert_eq!(applied("party").await, 38);
+    assert_eq!(applied("party").await, 39);
     assert_eq!(applied("audit").await, 28);
 
     let tables = |schema: &'static str| {
@@ -135,6 +135,8 @@ async fn migrations_apply_cleanly_and_idempotently() {
     assert_eq!(
         tables("party").await,
         [
+            "binding_caller_fact",
+            "binding_caller_fact_party",
             "binding_capability",
             "binding_client",
             "binding_grant_revision",

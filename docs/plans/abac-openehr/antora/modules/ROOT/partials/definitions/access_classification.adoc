@@ -1,0 +1,27 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_CLASSIFICATION*
+
+h|*Description*
+2+a|One classification rule: data the scope describes carry the given sensitivity labels.
+
+h|*Inherit*
+2+|`xref:common:archetyped_package.adoc#_locatable_class[LOCATABLE]`
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*data*: `xref:access_control:access_control_package.adoc#_access_data_scope_class[ACCESS_DATA_SCOPE]`
+a|The kind of data the rule classifies. It names no individual object.
+
+h|*1..1*
+|*sensitivities*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|The sensitivity codes the data carry.
+
+h|*Invariants*
+2+a|__No_objects__: `data.objects = Void`
+
+|===

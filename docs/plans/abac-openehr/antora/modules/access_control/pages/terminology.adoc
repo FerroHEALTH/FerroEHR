@@ -1,0 +1,64 @@
+include::partial$module_vars.adoc[]
+
+= Terminology
+
+include::partial$draft_notice.adoc[]
+
+NOTE: This page proposes a change to the xref:TERM::index.adoc[openEHR Terminology] (SPECTERM).
+
+== Groups
+
+Ten groups are added to the openEHR Terminology. The codes are for the terminology editors to assign; until then each rubric serves as its code, as it does in FerroEHR's `ferroehr-operations` terminology, which defines these groups today. If openEHR adopts them, `Terminology_id_access_control` in the invariants is `openehr`; until then a system names the terminology it documents for them.
+
+[cols="2,3,3", options="header"]
+|===
+|Group |Rubrics |Coded attribute or use
+
+|access default
+|open, restricted, consent_required
+|`ACCESS_DIRECTIVE_SETTINGS._default_access_` (`Group_id_access_default`)
+
+|access directive kind
+|consent, restriction, opt_out, delegation
+|`ACCESS_DIRECTIVE._kind_` (`Group_id_access_directive_kind`)
+
+|access effect
+|permit, deny
+|`ACCESS_DIRECTIVE._effect_` (`Group_id_access_effect`)
+
+|access relationship
+|care, representative, proxy
+|`ACCESS_ACTOR_SCOPE._relationship_` (`Group_id_access_relationship`)
+
+|access caller kind
+|professional, access_service, subject, representative, system
+|`ACCESS_ACTOR_SCOPE._caller_kind_` (`Group_id_access_caller_kind`)
+
+|access operation
+|read, write, export, query
+|`ACCESS_DIRECTIVE._operations_`: the classes of operation a directive applies to
+
+|access sensitivity clearance
+|sensitivity_clearance
+|The `_name_` of an `ELEMENT` in `CAPABILITY._credentials_` whose value is a sensitivity code the capability clears
+
+|access permitted purpose
+|permitted_purpose
+|The `_name_` of an `ELEMENT` in `CAPABILITY._credentials_` whose value is a purpose of use the capability permits
+
+|care relationship
+|member_of, under_care_of
+|The `_name_` of a `PARTY_RELATIONSHIP`: a professional's membership of a care-team `GROUP`, and the subject being under the care of a team or unit
+
+|access refusal
+|refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required
+|The refusal of each step of xref:decision_procedure.adoc#_procedure[the procedure]
+|===
+
+The first five groups have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other five are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a clearance, a permitted purpose or a care relationship by the code in an element's or a relationship's `_name_`. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
+
+A system that keeps the access log of the Access Log Information Model records a refusal of this procedure in `ACCESS_OUTCOME._reason_` with its `access refusal` code; `refused-opt-out` and `refused-restricted` correspond to its `opted out` and `restricted by the subject` reasons.
+
+== Codes from Other Terminologies
+
+Sensitivity, category and purpose-of-use codes are not part of these groups. They come from the terminology the jurisdiction names, such as the HL7 v3 `Confidentiality` and `ActCode` sensitivity codes, the EHDS categories, and the HL7 `PurposeOfUse` codes, and a system compares them by terminology identifier and code. This keeps the privacy levels "defined by standards or agreements within jurisdictions of use" (xref:BASE:architecture_overview:security.adoc[Security Policy], Privacy).

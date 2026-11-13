@@ -533,6 +533,23 @@ recognition runs with or without a party mapping and enters no mapping
 digest: the grant rows it derives do not depend on the mapping. **Our own
 design.**
 
+**The access control terminology** (`ferroehr::access_terminology`, #5507)
+adds the groups the ABAC design of #5487 reads to `ferroehr-operations`:
+`access default`, `access directive kind`, `access effect`, `access
+relationship`, `access caller kind`, `access operation`, `access
+sensitivity clearance`, `access permitted purpose`, `care relationship` and
+`access refusal`, each a closed set of rubrics read into a typed term
+(`Term::read`), with a value of another terminology or a code outside its
+group refused. The operations gain the grants `write_care_relationship` and
+`write_access_policy`, and the clearance, purpose and care relationship codes
+are qualifiers, never operations. Sensitivity, category, purpose and legal
+ground stay in the terminology the jurisdiction names and are compared by
+terminology id and code (`ForeignCode`). The draft invariants of
+`access_control_invariants` read their groups through it, and the evaluator
+and the `EHR_ACCESS` and `ACCESS_POLICY` write checks read no other code. RM
+EHR IM `ACCESS_CONTROL_SETTINGS` is "Currently implementation dependent" and
+openEHR names no access control terminology: **our own design.**
+
 The default demographic definitions of `deploy/definitions/` (the
 professional `PERSON` and `ROLE`, the care-team `GROUP`, the membership and
 representation `PARTY_RELATIONSHIP`s, the patient `PERSON` and the provider
@@ -641,6 +658,35 @@ elements' names. A per-request read without a cache,
 which the program first named, would add a transaction to every request,
 which the performance gate's transactions-per-request measure refuses
 (#5459).
+
+**Caller facts** (#5511). Beside the grants, the side table holds what the
+access evaluator reads about a caller (migration `party/0039`):
+`binding_caller_fact`, one row per sensitivity clearance and permitted
+purpose a `CAPABILITY` carries (an element named `sensitivity_clearance` or
+`permitted_purpose` of `ferroehr-operations` whose value is a
+`DV_CODED_TEXT` of the jurisdiction's terminology, read with
+`ForeignCode::read`), and per care relationship a `PERSON` holds (an inline
+`PARTY_RELATIONSHIP` whose `name` or `details` carry `member_of` or
+`under_care_of`, RM demographic `party_relationship.adoc`: `source`,
+`target`, `time_validity`), each with the term of its holder. The patient's
+`under_care_of` team ids are projected at the commit of the patient's
+`PERSON`. A commit whose facts changed moves `facts_revision` beside the
+grant revision and stamps every party whose facts changed in
+`binding_caller_fact_party`; a replica whose grant revision is current reads
+only the facts of the parties stamped since its copy, one indexed read
+(`grants::caller::store::FACTS`), so an admission costs each replica one
+small read and the request path still adds no transaction. A refill and an
+erasure move the grant revision, which reads every fact again.
+`Capabilities::facts()` gives a request's caller its clearances, purposes
+and care teams in force; `LiveGrants::under_care_of` gives a subject's care
+relationships with their dates, so the evaluator applies the grace after a
+discharge. A `PERSON` version that changes its care relationships commits
+only for a caller holding `write_care_relationship` or an administrator
+(BASE Architecture Overview `master07-security.adoc` §The Problem of Roles:
+the care delivery environment evaluates "care deliverer"). A care
+relationship of another party kind or of its own container is refused
+`422`. **Our own design:** no openEHR spec gives a capability or a
+relationship an access meaning.
 
 **The client lists are grants** (#5437). A backend client, whose
 `system/aql-*` scope "would grant access to all registered and ad-hoc AQL
