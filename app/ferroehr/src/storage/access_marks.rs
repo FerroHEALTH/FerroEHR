@@ -5,7 +5,7 @@
 //!
 //! `ehr.access_restricted_at`, `vo_head.access_restricted_at` and
 //! `ehr.opted_out_at` are the projection of the `restriction` and `opt_out`
-//! directives in force in an EHR's current `EHR_ACCESS`, written by [`write`]
+//! directives in force in an EHR's current `EHR_ACCESS`, written by [`write()`]
 //! in the transaction of every `EHR_ACCESS` commit; the read paths filter on
 //! them (`docs/law/eu/ehds/text.html` Art. 8 and Art. 10). No openEHR spec
 //! governs either right or the projection: our own design/extension.

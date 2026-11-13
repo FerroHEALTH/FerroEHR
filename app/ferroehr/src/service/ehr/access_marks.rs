@@ -248,7 +248,7 @@ impl FerroEhrService {
     /// returns how many it projected: the boot's refill after a migration
     /// cleared the marks.
     ///
-    /// Settings [`project`] would refuse are projected here as far as they
+    /// Settings `project` would refuse are projected here as far as they
     /// read, an unplaceable object scope covering the whole EHR, and logged,
     /// since they are already stored.
     ///
@@ -339,17 +339,27 @@ impl FerroEhrService {
         Ok(access_marks::ehr_hidden(&mut conn, ehr_id, restricted, opted_out).await?)
     }
 
-    /// Record that an access-service caller reached the opted-out EHR `ehr_id`
-    /// under the EHDS Art. 10(2) override.
+    /// Record that an access-service caller reached each opted-out EHR among
+    /// `ehr_ids` under the EHDS Art. 10(2) override, once per EHR; an EHR
+    /// with no opt-out records nothing.
     ///
-    /// The record carries the declared purpose, which gives it the emergency
+    /// Each record carries the declared purpose, which gives it the emergency
     /// mark, beside the access record of the request itself.
     ///
     /// # Errors
-    /// `service_overloaded` — the access record was refused under
-    /// `[audit] fail_mode = "closed"`.
-    pub fn record_access_opt_out_override(&self, ehr_id: EhrId) -> Result<(), ServiceError> {
-        self.emit_mark_access(EventActionCode::Execute, ehr_id, None, OPT_OUT_OVERRIDE)
+    /// `exception` when a mark cannot be read; `service_overloaded` when an
+    /// access record was refused under `[audit] fail_mode = "closed"`.
+    pub async fn record_access_opt_out_overrides(
+        &self,
+        ehr_ids: &[EhrId],
+    ) -> Result<(), ServiceError> {
+        let named: std::collections::BTreeSet<EhrId> = ehr_ids.iter().copied().collect();
+        for ehr_id in named {
+            if self.is_ehr_opted_out(ehr_id).await? {
+                self.emit_mark_access(EventActionCode::Execute, ehr_id, None, OPT_OUT_OVERRIDE)?;
+            }
+        }
+        Ok(())
     }
 }
 

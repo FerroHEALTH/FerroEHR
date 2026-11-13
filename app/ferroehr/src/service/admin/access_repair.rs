@@ -9,7 +9,7 @@
 //! version over the one it read (`docs/law/eu/ehds/text.html`): the settings
 //! hold them as `restriction` and `opt_out` directives, and the commit
 //! projects them onto the marks the read paths filter on
-//! ([`crate::service::ehr::access_marks`]). Its read returns every version, so
+//! (`service::ehr::access_marks`). Its read returns every version, so
 //! the history of the person's choices is the version history (BASE
 //! Architecture Overview §Security and Confidentiality, "Audit trailing").
 //!
@@ -110,7 +110,7 @@ impl FerroEhrService {
     /// This is the controller's route for the EHDS Art. 8 restriction and the
     /// Art. 10 opt-out, which are `restriction` and `opt_out` directives of
     /// the settings; the commit projects them onto the marks the read paths
-    /// filter on ([`crate::service::ehr::access_marks`]). `settings` is the
+    /// filter on (`service::ehr::access_marks`). `settings` is the
     /// whole new `EHR_ACCESS.settings` object, or `null` for none.
     ///
     /// # Errors
@@ -119,7 +119,7 @@ impl FerroEhrService {
     /// - `bad_request` (`400`) — `settings` are not settings of the
     ///   `access_directives` scheme whose every invariant holds, or hold a
     ///   `restriction` or `opt_out` directive the projection refuses
-    ///   ([`crate::service::ehr::access_marks::refused`]).
+    ///   (`service::ehr::access_marks::refused`).
     /// - `version_conflict` (`412`) — `preceding_version_uid` is not the
     ///   current version, or the `EHR_ACCESS` moved on while the commit ran.
     /// - `exception` — a database fault (rolled back).
