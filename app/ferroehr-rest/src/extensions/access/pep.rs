@@ -42,7 +42,6 @@ use crate::extensions::access::authn::{Principal, current_principal};
 use crate::extensions::access::authz::AbacGate;
 use crate::extensions::access::authz::content::ContentRules;
 use crate::overview::error::RestError;
-use ferroehr::config::authz::AbacEngineKind;
 use ferroehr::storage::version_repo::meta::VersionContent;
 use ferroehr::system_log::categories::{AccessedContent, ContentIds};
 
@@ -159,7 +158,7 @@ pub(crate) async fn query_post(
             kind: ResourceKind::Query,
             access: AccessMode::Execute,
             organization: organization(abac, &principal),
-            subject_patient: abac.subject_patient(claim.as_ref()),
+            subject_patient: claim.clone(),
             patient,
             template: template.clone(),
             category: category.clone(),
@@ -233,7 +232,7 @@ async fn abac_pre(
         kind,
         access: row.access().unwrap_or(AccessMode::Read),
         organization: organization(abac, &principal),
-        subject_patient: abac.subject_patient(patient.as_ref()),
+        subject_patient: patient.clone(),
         patient: patient.map(Attr::One),
         template: content.template,
         category: content.category,
@@ -312,7 +311,7 @@ async fn abac_post(state: &AppState, op: &'static str, resp: Response) -> Respon
         kind,
         access: row.access().unwrap_or(AccessMode::Read),
         organization: organization(abac, &principal),
-        subject_patient: abac.subject_patient(patient.as_ref()),
+        subject_patient: patient.clone(),
         patient: patient.map(Attr::One),
         template: content.template,
         category: content.category,
@@ -693,11 +692,9 @@ async fn decide(
         Err(_) => "error",
     };
     let metrics = ferroehr::telemetry::metrics::metrics();
-    let counter = match abac.engine_kind {
-        AbacEngineKind::Cedar => &metrics.authz_cedar_decisions,
-        AbacEngineKind::Remote => &metrics.authz_remote_pdp_calls,
-    };
-    counter.add(1, &[opentelemetry::KeyValue::new("result", result)]);
+    metrics
+        .authz_cedar_decisions
+        .add(1, &[opentelemetry::KeyValue::new("result", result)]);
     match outcome {
         Ok(decision) if decision.is_permit() => Ok(()),
         Ok(_) => Err(forbidden(principal, "policy denied")),
@@ -946,7 +943,6 @@ mod tests {
             patient_claim: Some("patient_id".to_owned()),
             patient_namespace: None,
             directory_checked: false,
-            engine_kind: AbacEngineKind::Cedar,
         }
     }
 

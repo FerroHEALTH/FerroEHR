@@ -258,7 +258,6 @@ fn url_userinfo_reaches_no_rendering() {
             ..crate::service::terminology::config::TerminologyServerConfig::default()
         },
     );
-    c.authz.abac.remote.endpoint.url = leaky(12);
     c.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
         endpoint: leaky(13),
         ..ferrohealth_telemetry::section::OtlpSection::default()
@@ -278,8 +277,9 @@ fn url_userinfo_reaches_no_rendering() {
     c.auth.smart.platform_base_url = Some(leaky(17));
     c.server.public_base_url = Some(leaky(18));
     // URL 11 was the usage report endpoint, whose type refuses userinfo, so it
-    // can hold no sentinel; URL 7 was the removed event broker; URL 19 was
-    // `[auth.scim] public_base_url`, which URL 18 replaces.
+    // can hold no sentinel; URL 7 was the removed event broker; URL 12 was the
+    // removed remote PDP; URL 19 was `[auth.scim] public_base_url`, which URL
+    // 18 replaces.
     assert!(
         ferrohealth_usage_report::section::Endpoint::new(
             "https://u11:URL_PW_SENTINEL_11@h11:1/p11"
@@ -293,7 +293,7 @@ fn url_userinfo_reaches_no_rendering() {
             !rendered.contains("URL_PW_SENTINEL"),
             "URL userinfo leaked into the {surface} rendering: {rendered}"
         );
-        for n in (1..=21).filter(|n| ![7, 11, 19].contains(n)) {
+        for n in (1..=21).filter(|n| ![7, 11, 12, 19].contains(n)) {
             assert!(
                 rendered.contains(&format!("https://***@h{n}:1/p{n}")),
                 "URL {n} lost its host and path in the {surface} rendering: {rendered}"

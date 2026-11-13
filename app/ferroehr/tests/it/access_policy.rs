@@ -212,7 +212,7 @@ type Defect = (&'static str, fn(&mut Value));
 #[tokio::test]
 async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
     let (_db, svc) = crate::fixtures::service().await;
-    let cases: [Defect; 7] = [
+    let cases: [Defect; 8] = [
         ("an undeclared member", |p| p["colour"] = json!("red")),
         ("a missing mandatory member", |p| {
             p.as_object_mut()
@@ -229,6 +229,10 @@ async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
             p["classifications"][0]["data"]["objects"] = json!([{ "_type": "OBJECT_REF",
                 "namespace": "local", "type": "VERSIONED_COMPOSITION",
                 "id": { "_type": "HIER_OBJECT_ID", "value": HOSPITAL } }]);
+        }),
+        ("a sensitivity in FerroEHR's own terminology", |p| {
+            p["classifications"][0]["sensitivities"][0]["defining_code"]["terminology_id"]["value"] =
+                json!("ferroehr-operations");
         }),
         ("a controller that is no ORGANISATION", |p| {
             p["controller"]["type"] = json!("PERSON");

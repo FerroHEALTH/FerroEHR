@@ -221,6 +221,8 @@ client identifier type are the stable contract.
 | `sign_in_persons` | Be a client the persons of its token issuer sign in through: a person's token through it is the person's own, or their representative's |
 | `act_for_persons` | Act for the persons of its token issuer, as a third-party client or as the RFC 8693 actor a person's token names in `act` |
 | `access_without_scope` | Be admitted, as a system caller whose token carries no resource scope, to every SMART on openEHR requirement |
+| `write_care_relationship` | Write the `member_of` and `under_care_of` care relationships through the Demographic API, as a hospital's ADT system does ([The access control terminology](#the-access-control-terminology)) |
+| `write_access_policy` | Write the controller's `ACCESS_POLICY` |
 
 The same terminology names the elements that qualify a grant, by the code
 in the element's `name`:
@@ -255,6 +257,10 @@ in the element's `name`:
 | `admit_role` | A text: a role an admitted login holds |
 | `admit_assurance` | A text, `low`, `substantial` or `high`: the lowest assurance level an admitted login carries |
 | `admit_guests` | A `DV_BOOLEAN`: whether a guest is admitted too |
+| `sensitivity_clearance` | A `DV_CODED_TEXT` of the jurisdiction's sensitivity terminology: a sensitivity the capability clears |
+| `permitted_purpose` | A `DV_CODED_TEXT` of the jurisdiction's purpose-of-use terminology: a purpose the capability lets its holder declare |
+| `member_of` | On a `PARTY_RELATIONSHIP`: the source, a professional's `PERSON`, is a member of the target, a care-team `GROUP` |
+| `under_care_of` | On a `PARTY_RELATIONSHIP`: the source, a patient's `PERSON`, is under the care of the target, a team `GROUP` or an organisational unit |
 
 The terms of a federation agreement are named by codes of the same
 terminology ([Federation agreements](#federation-agreements)), and the value of
@@ -301,6 +307,47 @@ and the database cannot answer, the request is answered `503`.
 
 `ferroehr party-binding refill` rebuilds the grants from the party versions,
 with the rest of the binding side table.
+
+### The access control terminology
+
+The access directives of an EHR, the controller's access policy and the
+caller facts they are read against are coded in `ferroehr-operations` too.
+The groups below are the stable contract: the access evaluator and the
+access write checks read these codes and no archetype id, so you model
+consent, restriction and care relationships with your own archetypes and
+bind their coded attributes to these groups. A value of another terminology,
+or a code of `ferroehr-operations` outside the group its attribute is bound
+to, is refused. Each code is the group's rubric until codes are assigned.
+openEHR defines no access control terminology (RM EHR IM,
+`ACCESS_CONTROL_SETTINGS`: "Currently implementation dependent"), so every
+group is FerroEHR's own design.
+
+| Group | Codes | Read from |
+|---|---|---|
+| `access default` | `open`, `restricted`, `consent_required` | `ACCESS_DIRECTIVE_SETTINGS.default_access`: the disposition of an EHR where no directive applies |
+| `access directive kind` | `consent`, `restriction`, `opt_out`, `delegation` | `ACCESS_DIRECTIVE.kind`. A `restriction` (EHDS Art. 8) is always a deny; an `opt_out` (EHDS Art. 10) is a deny of the whole record |
+| `access effect` | `permit`, `deny` | `ACCESS_DIRECTIVE.effect`; a deny overrides a permit |
+| `access relationship` | `care`, `representative`, `proxy` | `ACCESS_ACTOR_SCOPE.relationship`: the caller's relationship to the subject |
+| `access caller kind` | `professional`, `access_service`, `subject`, `representative`, `system` | `ACCESS_ACTOR_SCOPE.caller_kind`. An `access_service` caller is one holding the `access_service` grant |
+| `access operation` | `read`, `write`, `export`, `query` | `ACCESS_DIRECTIVE.operations`: the operation classes a directive applies to. No capability grants one |
+| `access sensitivity clearance` | `sensitivity_clearance` | The `name` of a credentials element whose value is a sensitivity code |
+| `access permitted purpose` | `permitted_purpose` | The `name` of a credentials element whose value is a purpose-of-use code |
+| `care relationship` | `member_of`, `under_care_of` | The `name` of a `PARTY_RELATIONSHIP` |
+| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-purpose-not-permitted`, `refused-consent-required` | The access record of a refusal |
+
+Two grants of the operation table belong to access control:
+`write_care_relationship` and `write_access_policy`.
+
+**Codes FerroEHR does not own.** Sensitivity, data category, purpose of use
+and legal ground are coded in the terminology your jurisdiction names, such
+as HL7 v3 `Confidentiality` and `ActCode`, the EHDS categories and HL7
+`PurposeOfUse`. FerroEHR compares them by terminology id and code, and refuses
+one coded in `ferroehr-operations`, which holds none.
+
+**Refusals.** `refused-opt-out` and `refused-restricted` answer `404`, as if
+the data did not exist, and appear only in the access record, so that a
+restriction or an opt-out is not visible to the caller (EHDS Art. 8). Every
+other refusal answers `403` and names its code.
 
 ### What the grants decide
 

@@ -1,0 +1,58 @@
+include::partial$module_vars.adoc[]
+
+//
+// ============================================ Asciidoc HEADER =============================================
+//
+
+//
+// ============================================ Asciidoc PREAMBLE =============================================
+//
+
+
+= {spec_title} [.spec-status.spec-status-development]#{spec_status}#
+
+A concrete access control scheme for the slot the openEHR RM leaves open in `EHR_ACCESS._settings_`, and a versioned access policy of the controller of the data. The scheme records the subject's directives (consent, restriction, opt-out, delegation) and sensitivity labels as versioned facts of the EHR; the policy classifies kinds of data and states the controller's requirements. The classes hold facts only, and the procedure that decides an access from them is fixed by the scheme.
+
+include::partial$draft_notice.adoc[]
+
+== Purpose
+
+The openEHR EHR Information Model gives every EHR one `EHR_ACCESS` object, and states that "all access decisions to data in the EHR must be made in accordance with the policies and rules in this object" (xref:ehr:ehr_package.adoc[EHR Package], EHR Access). Its `_settings_` attribute holds "a subtype of the type `ACCESS_CONTROL_SETTINGS`, allowing for the use of different access control schemes", and `ACCESS_CONTROL_SETTINGS` is abstract with the note "Currently implementation dependent". The Architecture Overview explains why: "there is currently no published formal, proven model of access control for shared health information", so the architecture "is therefore designed to accommodate alternative models of access control, each defined by a subtype of the class `ACCESS_CONTROL_SETTING`", with the scheme in use "always indicated in the EHR Access object" (xref:BASE:architecture_overview:security.adoc[Security and Confidentiality], Access Control, Overview).
+
+This document defines one such subtype, `ACCESS_DIRECTIVE_SETTINGS`, the scheme `access_directives`, together with the classes it needs and an `ACCESS_POLICY` that holds what is true for every EHR a controller keeps. It follows the Security Policy of the Architecture Overview: an access list of identified parties and categories, a gate-keeper for the settings, privacy levels defined within jurisdictions, sensible defaults with exceptions, and time-limited access. Any CDR that implements the scheme reaches the same decision from the same facts, and an EHR Extract carries the facts to another system.
+
+The intended audience includes:
+
+* Standards bodies producing health informatics standards;
+* Solution vendors;
+* Medical informaticians, privacy officers and security officers.
+
+== Related Documents
+
+Prerequisite documents for reading this document include:
+
+* The {openehr_overview}[openEHR Architecture Overview^];
+* The {openehr_rm_common}[openEHR Common Information Model^];
+* The {openehr_rm_ehr}[openEHR EHR Information Model^].
+
+Related documents include:
+
+* The {openehr_rm_demographic}[openEHR Demographic Information Model^], whose `ROLE`, `CAPABILITY` and `PARTY_RELATIONSHIP` hold the facts about callers this scheme reads;
+* The {openehr_rm_ehr_extract}[openEHR EHR Extract Information Model^], whose `X_VERSIONED_EHR_ACCESS` carries the settings with the EHR.
+
+//
+// ============================================= Asciidoc BODY ===============================================
+//
+
+
+//
+// --------------------------------------------- Preface -----------------------------------------------
+//
+
+== Feedback
+
+Feedback may be provided on the {openehr_rm_forum}[openEHR RM specifications forum^].
+
+Issues may be raised on the {component_prs}[specifications Problem Report tracker^].
+
+To see changes made due to previously reported issues, see the {component_history}[{component} component Change Request tracker^].

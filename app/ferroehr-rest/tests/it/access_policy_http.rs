@@ -14,8 +14,9 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
+use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::service::FerroEhrService;
-use ferroehr_rest::extensions::access::authz::{AuthzHandle, build_engine};
+use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
 use http::{Request, StatusCode, header};
 use serde_json::{Value, json};
@@ -26,8 +27,9 @@ use crate::common::{BASE, EXT};
 
 const ARCHETYPE: &str = "openEHR-EHR-ACCESS_POLICY.controller.v1";
 
-/// One replica of a deployment over `pool`: `root` holds `admin_role`, `dr`
-/// does not. Its access policy listener runs when `listening`.
+/// One replica of a deployment over `pool`: `root` holds `admin_role` and the
+/// `write_access_policy` grant, `dr` neither, and `clerk` the admin role
+/// alone. Its access policy listener runs when `listening`.
 async fn replica(pool: &PgPool, listening: bool) -> (Arc<FerroEhrService>, Router) {
     let svc = Arc::new(FerroEhrService::new(
         &ferroehr::db::domain::DomainPools::from_shared(pool),
@@ -37,7 +39,11 @@ async fn replica(pool: &PgPool, listening: bool) -> (Arc<FerroEhrService>, Route
         &mut config,
         &svc,
         pool,
-        &[("dr", &["USER"]), ("root", &["ADMIN"])],
+        &[
+            ("dr", &["USER"]),
+            ("root", &["ADMIN"]),
+            ("clerk", &["ADMIN"]),
+        ],
     )
     .await;
     if listening {
@@ -52,12 +58,11 @@ async fn replica(pool: &PgPool, listening: bool) -> (Arc<FerroEhrService>, Route
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
     }
-    let authz = AuthzConfig::default();
-    let engine = build_engine(&authz.abac, svc.policy_registers()).expect("the ABAC engine");
+    common::grant_to(&svc, pool, "root", Operation::WriteAccessPolicy).await;
     let handle = AuthzHandle::build(
-        &authz,
+        &AuthzConfig::default(),
         &config.api.base_path,
-        engine,
+        None,
         common::null_resolvers(),
     )
     .map(Arc::new);
@@ -351,4 +356,27 @@ async fn a_replica_that_lost_its_listener_reads_on_the_next_request() {
         1,
         "with its listener down the replica read the policy on that request"
     );
+}
+
+/// An admin without the `write_access_policy` grant reads the policy and is
+/// refused a write.
+#[tokio::test]
+async fn an_admin_without_the_write_grant_is_refused_a_write() {
+    let (_db, pool) = common::migrated_pool().await;
+    let (_svc, app) = replica(&pool, false).await;
+    let first = create(&app, &policy(false)).await;
+    let (status, _, answer) = call(
+        &app,
+        "PUT",
+        "clerk",
+        "",
+        Some((header::IF_MATCH, &first)),
+        Some(&policy(true)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{answer}");
+    let (status, headers, body) = call(&app, "GET", "clerk", "", None, None).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(common::header(&headers, header::ETAG), Some(first.as_str()));
+    assert_eq!(body["care_relationship_required"], false);
 }

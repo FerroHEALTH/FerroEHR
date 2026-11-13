@@ -46,8 +46,7 @@ pub const KINDS: [ResourceKind; 6] = [
 ];
 
 impl ResourceKind {
-    /// The canonical key this kind uses in the `abac.policy` config map and in
-    /// the Cedar action names.
+    /// The canonical key this kind uses in the Cedar action names.
     #[must_use]
     pub const fn config_key(self) -> &'static str {
         match self {
@@ -71,12 +70,6 @@ impl ResourceKind {
             ResourceKind::Query => "Query",
             ResourceKind::Directory => "Directory",
         }
-    }
-
-    /// The kind whose [`Self::config_key`] is `key`.
-    #[must_use]
-    pub fn from_config_key(key: &str) -> Option<Self> {
-        KINDS.into_iter().find(|kind| kind.config_key() == key)
     }
 }
 
@@ -182,8 +175,7 @@ pub struct AuthzRequest<'a> {
     /// The caller's organization (resolved `abac.organization_claim`), if any.
     pub organization: Option<String>,
     /// The caller's patient (resolved `abac.patient_claim`), the principal's
-    /// `patient`; the PEP leaves it unset for the remote decision point, which
-    /// reads a parameter the resource lacks from the subject.
+    /// `patient`.
     pub subject_patient: Option<String>,
     /// The patient of the touched objects (one, or a set for a query).
     pub patient: Option<Attr>,
@@ -311,13 +303,5 @@ mod tests {
             r.to_request(&subject),
             Err(RequestError::EmptySet { .. })
         ));
-    }
-
-    #[test]
-    fn a_config_key_names_its_kind() {
-        for kind in KINDS {
-            assert_eq!(ResourceKind::from_config_key(kind.config_key()), Some(kind));
-        }
-        assert_eq!(ResourceKind::from_config_key("folder"), None);
     }
 }

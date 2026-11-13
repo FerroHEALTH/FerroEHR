@@ -3,9 +3,8 @@
 
 //! The binary's authorization construction seam
 //! ([`ferroehr_server::build_authz`]): the shipped run path builds the RBAC
-//! gate AND the ABAC engine, and an enabled-but-unbuildable ABAC block aborts
-//! boot instead of silently degrading to authz-off (the mis-wiring #1815
-//! caught: the binary once constructed an RBAC-only handle unconditionally).
+//! gate AND the ABAC engine (the mis-wiring #1815 caught: the binary once
+//! constructed an RBAC-only handle unconditionally).
 //!
 //! Offline by design, like the rest of this crate's suite: handle
 //! CONSTRUCTION touches no database — the resolvers are inert stubs here, and
@@ -64,33 +63,6 @@ async fn enabled_abac_is_live_on_the_built_handle() {
     assert!(
         handle.abac_active(),
         "abac.enabled must produce a live ABAC gate on the served handle"
-    );
-}
-
-/// `abac.enabled = true` with an engine that cannot be built → boot ABORTS.
-/// A configuration that promises fine-grained authorization must never
-/// degrade to authz-off.
-#[tokio::test]
-async fn enabled_but_unbuildable_abac_fails_boot() {
-    let cfg = AuthzConfig {
-        abac: serde_json::from_str(
-            r#"{"enabled": true, "engine": "remote",
-                "remote": {"endpoint": {"url": "https://pdp.example/"}},
-                "policy": {"nonsense": {"name": "p"}}}"#,
-        )
-        .expect("the ABAC table reads"),
-        ..AuthzConfig::default()
-    };
-    let err = build_authz(
-        &cfg,
-        "/ferroehr/rest/openehr/v1",
-        &registers(),
-        inert_resolvers(),
-    )
-    .expect_err("an enabled ABAC block whose engine cannot be built must refuse to boot");
-    assert!(
-        format!("{err:#}").contains("nonsense"),
-        "the boot error names what could not be built: {err:#}"
     );
 }
 

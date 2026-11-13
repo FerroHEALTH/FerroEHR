@@ -85,7 +85,7 @@ Scalars are typed automatically (bool / int / float, else string).
 **List-typed keys take comma-separated values**
 (`FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=https://a,https://b`). Map-keyed tables
 are reachable too: the map key is just another segment
-(`FERROEHR__AUTHZ__ABAC__POLICY__COMPOSITION__NAME`). An array of tables is
+(`FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__NODE`). An array of tables is
 set by element index: `FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr` sets
 `audience` of the first `[[auth.issuer]]` table key by key over the file's,
 and the next index past the end adds a table. An index with a leading zero,

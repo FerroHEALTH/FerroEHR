@@ -6,8 +6,10 @@
 //! It runs the canonical-JSON reader of the generated draft type, which refuses an
 //! undeclared, missing or duplicate member and an empty optional list, then
 //! the class invariants of the draft BMM
-//! ([`crate::access_control_invariants::check_policy`]) and the root rules of
-//! a `LOCATABLE` and of the `controller`.
+//! ([`crate::access_control_invariants::check_policy`]), the root rules of a
+//! `LOCATABLE` and of the `controller`, and that each sensitivity and
+//! category a classification names comes from the jurisdiction's terminology
+//! ([`crate::access_terminology::ForeignCode`]).
 //!
 //! The draft package is FerroEHR's change proposal and no openEHR release:
 //! our own design over our own model (#5512).
@@ -22,6 +24,7 @@ use serde_json::Value;
 
 use crate::access_control_invariants::check_policy;
 use crate::access_policy::draft::Policy;
+use crate::access_terminology::{ForeignCode, ForeignKind, NotForeign};
 use crate::draft_invariants::Violations;
 
 /// The RM class an access policy archetype constrains.
@@ -54,6 +57,10 @@ pub enum PolicyDefect {
     /// `archetype_details` names an archetype of another RM class.
     #[error("archetype_details names {0:?}, which is no archetype of an ACCESS_POLICY")]
     ArchetypeClass(String),
+    /// A sensitivity or category of a classification is coded in FerroEHR's
+    /// own terminology, which holds none.
+    #[error(transparent)]
+    NotForeign(#[from] NotForeign),
     /// The controller is not an `ORGANISATION`.
     #[error("the controller is a {0:?} reference; the controller is an ORGANISATION")]
     Controller(String),
@@ -77,6 +84,19 @@ pub fn checked(body: &Value) -> Result<Policy, PolicyDefect> {
         }
         if details.archetype_id.rm_entity() != RM_CLASS {
             return Err(PolicyDefect::ArchetypeClass(archetype_id.clone()));
+        }
+    }
+    for classification in policy.classifications.as_deref().unwrap_or_default() {
+        let data = &classification.data;
+        for sensitivity in classification
+            .sensitivities
+            .iter()
+            .chain(data.sensitivities.as_deref().unwrap_or_default())
+        {
+            ForeignCode::read(ForeignKind::Sensitivity, sensitivity)?;
+        }
+        for category in data.categories.as_deref().unwrap_or_default() {
+            ForeignCode::read(ForeignKind::Category, category)?;
         }
     }
     if policy.controller.r#type != CONTROLLER_TYPE {

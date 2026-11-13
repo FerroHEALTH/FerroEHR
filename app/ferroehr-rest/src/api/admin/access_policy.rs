@@ -19,7 +19,9 @@
 //! Gating: mounted under `/admin/`, so every route inherits the group's RBAC
 //! Admin class (`admin_role`, `401`/`403`) and the `AppConfig::api.admin`
 //! config gate (`405` with an empty `Allow` when off), and the audit trail
-//! records every read and write.
+//! records every read and write. A write also needs a policy grant of
+//! `write_access_policy` in the CDR, so the admin role alone changes no
+//! policy.
 
 #![expect(
     clippy::disallowed_types,
@@ -33,6 +35,8 @@ use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+use ferroehr::party_binding::grants::capabilities::Capabilities;
+use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::service::admin::access_policy::{PolicyPrecondition, PolicyVersion};
 
 use super::body::AdminRefusal;
@@ -243,6 +247,13 @@ fn precondition(parts: &RequestParts) -> Result<PolicyPrecondition, RestError> {
 
 /// The `admin_access_policy_write` operation.
 async fn write(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
+    if !Capabilities::current().holds(Operation::WriteAccessPolicy) {
+        return Err(RestError::from(ApiError::Forbidden(
+            "writing the access policy needs a policy grant of \
+             ferroehr-operations::write_access_policy"
+                .to_owned(),
+        )));
+    }
     let precondition = precondition(&parts)?;
     let body = negotiate::decode::json_value(&parts.headers, &parts.body)?;
     let version = state

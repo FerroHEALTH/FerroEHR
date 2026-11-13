@@ -1,0 +1,12 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*VERSIONED_ACCESS_POLICY*
+
+h|*Description*
+2+a|Version container for an `ACCESS_POLICY`, committed in contributions with their audit like any other versioned object.
+
+h|*Inherit*
+2+|`xref:common:change_control_package.adoc#_versioned_object_class[VERSIONED_OBJECT]`
+
+|===
