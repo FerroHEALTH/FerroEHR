@@ -154,7 +154,12 @@ attribute:
   derives that attribute itself. A party read lists, in
   `reverse_relationships`, one `LOCATABLE_REF` per relationship another party
   carries with this party as its target: the reference names that party's
-  version container and the relationship's path in its data. Canonical JSON
+  version container and the relationship's path in its data. The path names
+  that one relationship: by its `uid` when no sibling shares it
+  (`/relationships[<node> and uid='…']`), else by its archetype node id and
+  name when no sibling shares both, else by its position
+  (`/relationships[2]`), the three unique forms of BASE §Data Paths and
+  Uniqueness. Canonical JSON
   and XML both carry it, and so do a `VERSION` read's `data` and the
   representation a create or update returns.
 - Under **`development`**, the attribute is not part of the model and a body
