@@ -512,7 +512,7 @@ fn every_organisation_agreement_refusal_is_named() {
         )
         .replacen(
             "[authz.import]",
-            "[auth.dpop]\nexternal_url = \"https://ehr.example\"\n\n[authz.import]",
+            "[server]\npublic_base_url = \"https://ehr.example\"\n\n[auth.dpop]\n\n[authz.import]",
             1,
         );
     let text = refusal(&contact);
@@ -541,7 +541,7 @@ fn a_contact_points_person_agreement_names_its_ehdsi_service() {
         )
         .replacen(
             "[authz.import]",
-            "[auth.dpop]\nexternal_url = \"https://ehr.example\"\n\n[authz.import]",
+            "[server]\npublic_base_url = \"https://ehr.example\"\n\n[auth.dpop]\n\n[authz.import]",
             1,
         );
     let start = contact
@@ -872,7 +872,7 @@ fn a_relationship_code_outside_subject_relationship_is_refused() {
 /// `binding_issuer`, followed by `extra`.
 fn scim(issuer: &str, binding_issuer: &str, extra: &str) -> String {
     format!(
-        "{}\n[auth.scim]\npublic_base_url = \"https://cdr.example.com\"\n\n\
+        "{}\n[server]\npublic_base_url = \"https://cdr.example.com\"\n\n[auth.scim]\n\
          [[auth.scim.client]]\nissuer = \"{issuer}\"\nclient_id = \"entra\"\nscope = \"ferroehr/scim\"\n\
          binding_issuer = \"{binding_issuer}\"\n{extra}",
         full()

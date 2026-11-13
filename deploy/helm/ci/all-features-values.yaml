@@ -46,6 +46,10 @@ config:
   # The chart has no default posture and refuses to render without one.
   deployment:
     profile: sandbox
+  # The URL clients reach the server at, named once: the SMART baseUrl and
+  # every SCIM location hang off it.
+  server:
+    public_base_url: https://ferroehr.example.com
   # The clinical domain FerroPIX mints pseudonyms in, and the grant the EHR
   # index asks it with; the chart injects the provider and the in-cluster
   # PIXm URL. The client secret is secrets.ehrIndexClientSecret.
@@ -87,14 +91,9 @@ config:
       # Serves the discovery document, built at boot from the [auth] issuer's
       # metadata, so it needs no endpoint list of its own.
       discovery: true
-      # Required whenever SMART is on: the launch context's service URLs are
-      # absolute, so the server has to be told the origin clients reach it at;
-      # it cannot infer one from a request. Matches the ingress host below.
-      public_base_url: https://ferroehr.example.com
       demographic_clients: [ferroehr-mpi]
       patient_issuers: [https://keycloak.example.com/realms/ferroehr]
     scim:
-      public_base_url: https://ferroehr.example.com
       client:
         - issuer: https://machines.example.org/realms/ferroehr
           client_id: entra-provisioning

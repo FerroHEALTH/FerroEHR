@@ -42,8 +42,7 @@ use crate::scim::protocol::filter::Filter;
 use crate::scim::protocol::list::Projection;
 use crate::scim::protocol::patch::PatchRequest;
 use crate::scim::protocol::path::AttrPath;
-use crate::scim::protocol::resource::{Resource, ResourceSchema};
-use crate::scim::protocol::urn;
+use crate::scim::protocol::resource::Resource;
 
 /// What the `/Groups` handlers share.
 #[derive(Clone)]
@@ -59,26 +58,12 @@ struct Inner {
 }
 
 impl Groups {
-    /// The handlers' state over `service`.
-    ///
-    /// # Errors
-    /// The refusal naming what the schema lacks.
-    pub(crate) fn new(
-        service: Arc<FerroEhrService>,
-        map: GroupMap,
-        schema: ResourceSchema,
-        scim: &ferroehr::config::scim::ScimConfig,
-    ) -> Result<Self, String> {
-        let listing = Listing::new(
-            schema,
-            scim,
-            urn::CORE_GROUP,
-            &["displayName", "externalId", "id"],
-        )?;
-        Ok(Self {
+    /// The handlers' state over `service`, listing Groups by `listing`.
+    pub(crate) fn new(service: Arc<FerroEhrService>, map: GroupMap, listing: Listing) -> Self {
+        Self {
             service,
             inner: Arc::new(Inner { map, listing }),
-        })
+        }
     }
 }
 

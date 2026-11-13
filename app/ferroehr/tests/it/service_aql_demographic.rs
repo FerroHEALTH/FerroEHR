@@ -115,7 +115,9 @@ fn organisation(name: &str, id: &str, system: &str) -> Value {
     })
 }
 
-fn role(name: &str, id: &str, system: &str) -> Value {
+/// A ROLE whose performer is the PERSON container `performer` (RM demographic
+/// `role.adoc` `performer`: the version container of an Actor).
+fn role(name: &str, id: &str, system: &str, performer: &str) -> Value {
     json!({
         "_type": "ROLE",
         "archetype_node_id": "openEHR-DEMOGRAPHIC-ROLE.role.v1",
@@ -127,7 +129,7 @@ fn role(name: &str, id: &str, system: &str) -> Value {
             "_type": "PARTY_REF",
             "namespace": "demographic",
             "type": "PERSON",
-            "id": { "_type": "HIER_OBJECT_ID", "value": "cccccccc-cccc-4ccc-8ccc-cccccccccccc" }
+            "id": { "_type": "HIER_OBJECT_ID", "value": performer }
         }
     })
 }
@@ -244,7 +246,12 @@ async fn each_root_finds_its_party_by_identifier() {
         &organisation("Acme", "O-1", "urn:agb"),
     )
     .await;
-    let nurse = create(&svc, PartyKind::Role, &role("Nurse", "R-1", "urn:big")).await;
+    let nurse = create(
+        &svc,
+        PartyKind::Role,
+        &role("Nurse", "R-1", "urn:big", party_id(&jane)),
+    )
+    .await;
     let ward = create(&svc, PartyKind::Group, &group("Ward 3", "G-1", "urn:ward")).await;
     let analyser = create(
         &svc,
@@ -437,12 +444,12 @@ async fn paths_into_relationships_contacts_roles_and_capabilities() {
         &organisation("Acme", "O-1", "urn:agb"),
     )
     .await;
-    let mut nurse = role("Nurse", "R-1", "urn:big");
+    let mut jane = person("Jane", "P-1", "urn:bsn");
+    let draft = create(&svc, PartyKind::Person, &jane).await;
+    let mut nurse = role("Nurse", "R-1", "urn:big", party_id(&draft));
     nurse["capabilities"] = capabilities("BIG-42");
     let nurse = create(&svc, PartyKind::Role, &nurse).await;
 
-    let mut jane = person("Jane", "P-1", "urn:bsn");
-    let draft = create(&svc, PartyKind::Person, &jane).await;
     jane["contacts"] = contacts("Main street 1");
     jane["roles"] = json!([party_ref("ROLE", &nurse)]);
     let mut employment = relationship(
@@ -934,7 +941,12 @@ async fn an_ehr_whose_subject_names_the_party_joins() {
     )
     .await;
     let acme_ehr = subject_ehr(&svc, party_id(&acme), "local", "ORGANISATION", "visit o").await;
-    let nurse = create(&svc, PartyKind::Role, &role("Nurse", "R-1", "urn:big")).await;
+    let nurse = create(
+        &svc,
+        PartyKind::Role,
+        &role("Nurse", "R-1", "urn:big", party_id(&ada)),
+    )
+    .await;
     let nurse_ehr = subject_ehr(&svc, party_id(&nurse), "local", "ROLE", "visit r").await;
     let ward = create(&svc, PartyKind::Group, &group("Ward 3", "G-1", "urn:ward")).await;
     let ward_ehr = subject_ehr(&svc, party_id(&ward), "local", "GROUP", "visit w").await;
