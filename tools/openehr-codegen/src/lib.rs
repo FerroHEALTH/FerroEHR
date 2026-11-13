@@ -33,9 +33,12 @@
 //! Usage:
 //!   `openehr-codegen check`          — load + validate the vendored BMM schemas.
 //!   `openehr-codegen emit [OUTDIR]`  — emit Rust into the spec crates.
+//!   `openehr-codegen emit-drafts`    — emit the FerroEHR-local draft modules.
 
 mod analyze;
 mod cli;
+mod draft_cli;
+mod generated_tree;
 mod load;
 mod plan;
 mod render;
@@ -66,10 +69,11 @@ pub fn run() -> std::process::ExitCode {
         "emit-aom2" => cli::cmd_emit_aom2(),
         "emit-rm-model" => cli::cmd_emit_rm_model(),
         "emit-validate" => cli::cmd_emit_validate(),
+        "emit-drafts" => draft_cli::cmd_emit_drafts(),
         "model-query" => cli::cmd_model_query(args.get(1..).unwrap_or_default()),
         other => {
             eprintln!(
-                "unknown command {other:?}; use `check`, `emit [OUTDIR]`, `check-xsd`, `emit-xml`, `emit-json`, `emit-rest`, `emit-opt`, `emit-aom2`, `emit-rm-model`, `emit-validate`, or `model-query`"
+                "unknown command {other:?}; use `check`, `emit [OUTDIR]`, `check-xsd`, `emit-xml`, `emit-json`, `emit-rest`, `emit-opt`, `emit-aom2`, `emit-rm-model`, `emit-validate`, `emit-drafts`, or `model-query`"
             );
             return std::process::ExitCode::from(cli::EXIT_USAGE);
         }

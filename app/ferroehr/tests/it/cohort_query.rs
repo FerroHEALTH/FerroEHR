@@ -503,7 +503,6 @@ async fn every_execution_is_recorded_as_a_linkage_access() {
             sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            ..StoreConfig::default()
         },
         ..AuditConfig::default()
     };
@@ -618,6 +617,8 @@ fn the_two_statements_never_cross_the_boundary() {
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
+        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
     };
     let ast = openehr_query::parser::parse_str(COHORT_AQL).expect("the AQL parses");
     let params = Params::default();

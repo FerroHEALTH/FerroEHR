@@ -1,0 +1,465 @@
+// SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-License-Identifier: BUSL-1.1
+
+//! `emit-drafts`: render each FerroEHR-local draft schema of
+//! [`crate::plan::drafts::DRAFTS`] as one generated package module under the
+//! `draft` module of its openEHR crate: the type files through the same
+//! [`emit::emit_version`] the spec crates take, the canonical-JSON impls
+//! through [`emit_json::emit_file`], the conversions of each draft subtype of
+//! a spec-declared open extension point through [`open_seam_file`], a package
+//! root that declares them, and one `draft` root per crate that declares the
+//! packages.
+//!
+//! The text half only; the draft CLI writes the files.
+
+use crate::analyze::{Model, augment_with_reemit, cross_schema_reemit};
+use crate::cli::EmittedFile;
+use crate::load::bmm::BmmSchema;
+use crate::load::impls::SiblingImpls;
+use crate::plan::drafts::{self, DRAFTS, DraftModule, compose_draft};
+use crate::plan::overrides::open_extension_point;
+use crate::render::{emit, emit_json, emit_rm_model, naming};
+use std::path::{Path, PathBuf};
+
+/// The workspace root, two levels above this tool's manifest.
+pub(crate) fn workspace_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
+
+/// The `draft` directories of the crates that receive a draft, relative to
+/// the workspace root (`crates/openehr-rm/src/draft`), sorted and unique.
+pub(crate) fn draft_roots() -> Vec<String> {
+    let roots: std::collections::BTreeSet<String> = DRAFTS
+        .iter()
+        .map(|d| format!("{}/src/{}", d.crate_dir, drafts::MODULE))
+        .collect();
+    roots.into_iter().collect()
+}
+
+/// Render every draft module's files without touching the filesystem.
+///
+/// # Errors
+/// Returns an error if a draft does not compose (`plan::drafts::compose_draft`).
+pub(crate) fn render_draft_files() -> Result<Vec<EmittedFile>, Box<dyn std::error::Error>> {
+    let mut out = Vec::new();
+    let mut packages: std::collections::BTreeMap<(&'static str, &'static str), Vec<&DraftModule>> =
+        std::collections::BTreeMap::new();
+    for draft in DRAFTS {
+        let c = compose_draft(draft)?;
+        let module = draft.module_path();
+        let dir = draft.module_dir();
+        let dep_refs: Vec<&BmmSchema> = c.dep_schemas.iter().collect();
+        let reemit = cross_schema_reemit(&c.model, &c.schema);
+        let schema = augment_with_reemit(&c.schema, &c.model, &reemit, &dep_refs);
+        let impls = SiblingImpls::scan(&workspace_root().join(draft.crate_dir).join("src"));
+        let version = emit::emit_version(&c.model, &schema, &module, &c.external, &impls);
+        let root_file = format!("{dir}/mod.rs");
+        let seams = open_seam_file(&c.model, &c.schema, &schema, &module);
+        let mut files = Vec::with_capacity(version.files.len() + 2);
+        for f in version.files {
+            // The `draft` root is shared by every package of the crate and is
+            // rendered once below.
+            if !f.path.starts_with(&format!("{dir}/")) {
+                continue;
+            }
+            let body = if f.path == root_file {
+                module_root(draft, &f.body, seams.is_some())
+            } else {
+                f.body
+            };
+            files.push((f.path, body));
+        }
+        if let Some(seams) = seams {
+            files.push((format!("{dir}/open_seam.rs"), seams));
+        }
+        let krate = draft.crate_name.replace('-', "_");
+        let json_root = format!("{krate}::{module}");
+        let json = emit_json::emit_file(
+            &[emit_json::JsonSchema {
+                model: &c.model,
+                schema: &schema,
+                root: &json_root,
+                external: &c.external,
+            }],
+            &krate,
+        );
+        files.push((format!("{dir}/json_serde.rs"), json));
+        let mut model_schemas = dep_refs.clone();
+        model_schemas.push(&c.schema);
+        // A draft emitted inside `openehr-rm` names the RM class table by its crate path.
+        let rm_model = if draft.crate_name == "openehr-rm" {
+            "crate::v1_2::model"
+        } else {
+            "openehr_rm::v1_2::model"
+        };
+        files.push((
+            format!("{dir}/model.rs"),
+            emit_rm_model::draft_model_file(&c.model, &model_schemas, &c.schema, rm_model)?,
+        ));
+        for (path, body) in files {
+            out.push(EmittedFile {
+                path: format!("{}/src/{path}", draft.crate_dir),
+                crate_name: draft.crate_name,
+                body,
+            });
+        }
+        packages
+            .entry((draft.crate_name, draft.crate_dir))
+            .or_default()
+            .push(draft);
+    }
+    for ((crate_name, crate_dir), rows) in packages {
+        out.push(EmittedFile {
+            path: format!("{crate_dir}/src/{}/mod.rs", drafts::MODULE),
+            crate_name,
+            body: draft_root(&rows),
+        });
+    }
+    Ok(out)
+}
+
+/// The `draft` root of one crate: what a draft is and the package modules.
+///
+/// Hand-written modules beside it (the invariant checks) are declared by the
+/// draft CLI, the way `emit` declares a spec crate's hand-written siblings.
+fn draft_root(rows: &[&DraftModule]) -> String {
+    let mut b = String::from(
+        "// @generated by openehr-codegen (emit-drafts) — DO NOT EDIT.\n\
+         //! FerroEHR-local draft packages: openEHR change proposals generated from\n\
+         //! their draft BMM under `tools/openehr-codegen/draft/bmm/`, no openEHR release.\n\
+         //!\n\
+         //! The module compiles only with the `draft` feature, which no default feature\n\
+         //! set enables, so a consumer of the published crate meets no draft type\n\
+         //! unless it asks for one. A draft carries no prelude and no `Generation`;\n\
+         //! its types are named by full module path.\n\n",
+    );
+    let mut names: Vec<&str> = rows.iter().map(|d| d.package).collect();
+    names.sort_unstable();
+    names.dedup();
+    for name in names {
+        b.push_str(&format!("pub mod {name};\n"));
+    }
+    b
+}
+
+/// The spec-declared open extension point `class` specializes, and the Rust
+/// carrier the published generation types that point with, if any.
+///
+/// `ancestors` is walked depth first in declaration order, so the nearest
+/// open ancestor wins.
+fn open_ancestor(model: &Model, class: &str) -> Option<(String, &'static str)> {
+    let mut stack: Vec<&str> = model
+        .get(class)?
+        .ancestors
+        .iter()
+        .rev()
+        .map(String::as_str)
+        .collect();
+    let mut seen = std::collections::BTreeSet::new();
+    while let Some(name) = stack.pop() {
+        if !seen.insert(name) {
+            continue;
+        }
+        if let Some(carrier) = open_extension_point(name) {
+            return Some((name.to_owned(), carrier));
+        }
+        if let Some(c) = model.get(name) {
+            stack.extend(c.ancestors.iter().rev().map(String::as_str));
+        }
+    }
+    None
+}
+
+/// The conversions between the carrier of a spec-declared open extension
+/// point and each draft class that specializes it, or `None` when the draft
+/// specializes none.
+///
+/// A published generation cannot name a scheme's subtype, so it types the
+/// open point with a verbatim carrier (`EHR_ACCESS.settings` holds an
+/// `openehr_base::serde_support::OpenSubtype`). A draft that defines such a
+/// subtype opens the seam at its own boundary: the typed class reads from
+/// the carrier and writes back into it through the canonical-JSON codec, and
+/// a carrier whose `_type` names another scheme is refused by the codec's
+/// `_type` check. `own` is the draft's own schema, so only its classes get a
+/// seam; `schema` is the re-emission-augmented one the module paths come
+/// from.
+fn open_seam_file(
+    model: &Model,
+    own: &BmmSchema,
+    schema: &BmmSchema,
+    module: &str,
+) -> Option<String> {
+    let mut imports = std::collections::BTreeSet::new();
+    let mut b = String::new();
+    for name in own.classes.keys() {
+        let Some((point, carrier)) = open_ancestor(model, name) else {
+            continue;
+        };
+        let ty = naming::type_name(name);
+        let short = carrier.rsplit("::").next().unwrap_or(carrier);
+        imports.insert(format!(
+            "crate::{module}::{}::{ty}",
+            emit::type_module_path(schema, name)
+        ));
+        imports.insert(carrier.to_owned());
+        b.push_str(&format!(
+            "/// Reads the draft class `{name}` out of the `{point}` carrier, refusing a carrier\n\
+             /// of another scheme or one whose members break the class.\n\
+             impl TryFrom<&{short}> for {ty} {{\n\
+             type Error = serde_json::Error;\n\n\
+             fn try_from(carrier: &{short}) -> Result<Self, Self::Error> {{\n\
+             serde_json::from_value(serde_json::to_value(carrier)?)\n\
+             }}\n\
+             }}\n\n\
+             /// Writes the draft class `{name}` into the `{point}` carrier, tagged with its\n\
+             /// `_type`.\n\
+             impl TryFrom<&{ty}> for {short} {{\n\
+             type Error = serde_json::Error;\n\n\
+             fn try_from(value: &{ty}) -> Result<Self, Self::Error> {{\n\
+             serde_json::from_value(serde_json::to_value(value)?)\n\
+             }}\n\
+             }}\n\n"
+        ));
+    }
+    if b.is_empty() {
+        return None;
+    }
+    let mut out = String::from(
+        "// @generated by openehr-codegen (emit-drafts) — DO NOT EDIT.\n\
+         //! The seams between the open extension points of the published RM and\n\
+         //! the draft classes that specialize them, through the canonical-JSON\n\
+         //! codec.\n\n",
+    );
+    for path in imports {
+        out.push_str(&format!("use {path};\n"));
+    }
+    out.push('\n');
+    out.push_str(&b);
+    Some(out)
+}
+
+/// The draft package's root: its documentation, the doc-lint allowances every
+/// generated spec crate declares at its root, the package modules the type
+/// emission declared (without the prelude a spec generation carries), the
+/// private codec module, the class table and, when the draft has one, the
+/// private open-seam module.
+fn module_root(draft: &DraftModule, generated: &str, seams: bool) -> String {
+    let mut b = String::from("// @generated by openehr-codegen (emit-drafts) — DO NOT EDIT.\n");
+    for line in draft.doc.lines() {
+        if line.is_empty() {
+            b.push_str("//!\n");
+        } else {
+            b.push_str(&format!("//! {line}\n"));
+        }
+    }
+    b.push_str(
+        "\n#![allow(\n    \
+         clippy::doc_markdown,\n    \
+         clippy::doc_link_with_quotes,\n    \
+         clippy::doc_lazy_continuation,\n    \
+         clippy::struct_excessive_bools,\n    \
+         clippy::struct_field_names,\n    \
+         clippy::module_inception,\n    \
+         clippy::large_enum_variant,\n    \
+         clippy::enum_variant_names,\n    \
+         reason = \"inherent to faithful BMM generation: verbatim model prose in doc comments, \
+         and model-owned class, variant and field names\"\n\
+         )]\n\n",
+    );
+    for line in generated.lines() {
+        if line.starts_with("pub mod ") && line != "pub mod prelude;" {
+            b.push_str(line);
+            b.push('\n');
+        }
+    }
+    b.push_str("mod json_serde;\npub mod model;\n");
+    if seams {
+        b.push_str("mod open_seam;\n");
+    }
+    b
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{open_ancestor, render_draft_files};
+    use crate::cli::EmittedFile;
+    use crate::plan::drafts::{DRAFTS, compose_draft};
+
+    /// The body of the rendered file at `path`.
+    fn body<'a>(files: &'a [EmittedFile], path: &str) -> &'a str {
+        files
+            .iter()
+            .find(|f| f.path == path)
+            .map_or_else(|| panic!("{path} is not rendered"), |f| f.body.as_str())
+    }
+
+    #[test]
+    fn only_a_subtype_of_an_open_extension_point_has_an_open_ancestor() {
+        let d = DRAFTS
+            .iter()
+            .find(|d| d.package == "access_control")
+            .expect("the access control draft row");
+        let c = compose_draft(d).expect("the access control draft composes");
+        assert_eq!(
+            open_ancestor(&c.model, "ACCESS_DIRECTIVE_SETTINGS"),
+            Some((
+                "ACCESS_CONTROL_SETTINGS".to_owned(),
+                "openehr_base::serde_support::OpenSubtype"
+            ))
+        );
+        for closed in [
+            "ACCESS_DIRECTIVE",
+            "ACCESS_POLICY",
+            "VERSIONED_ACCESS_POLICY",
+            "EHR_ACCESS",
+        ] {
+            assert_eq!(open_ancestor(&c.model, closed), None, "{closed}");
+        }
+    }
+
+    #[test]
+    fn the_settings_subtype_reads_and_writes_through_the_rm_carrier() {
+        let files = render_draft_files().expect("the drafts render");
+        let root = "crates/openehr-rm/src/draft/access_control";
+        let seam = body(&files, &format!("{root}/open_seam.rs"));
+        for line in [
+            "use crate::draft::access_control::access_control::access_directive_settings::\
+             AccessDirectiveSettings;",
+            "use openehr_base::serde_support::OpenSubtype;",
+            "impl TryFrom<&OpenSubtype> for AccessDirectiveSettings",
+            "impl TryFrom<&AccessDirectiveSettings> for OpenSubtype",
+        ] {
+            assert!(seam.contains(line), "{line} missing from {seam}");
+        }
+        assert_eq!(
+            seam.matches("impl ").count(),
+            2,
+            "one class, two directions"
+        );
+        assert!(body(&files, &format!("{root}/mod.rs")).contains("mod open_seam;"));
+        // The RM types `EHR_ACCESS.settings` with the carrier, so no RM class
+        // that holds the settings is re-emitted into the draft.
+        assert!(
+            !files
+                .iter()
+                .any(|f| f.path.starts_with(&format!("{root}/ehr/"))),
+            "EHR_ACCESS is re-emitted"
+        );
+        // The access log specializes no open point, so it carries no seam.
+        let log = "crates/openehr-rm/src/draft/access_log";
+        assert!(
+            !files
+                .iter()
+                .any(|f| f.path == format!("{log}/open_seam.rs"))
+        );
+        assert!(!body(&files, &format!("{log}/mod.rs")).contains("open_seam"));
+    }
+
+    #[test]
+    fn a_draft_versioned_object_joins_the_reemitted_versioned_object_enum() {
+        let files = render_draft_files().expect("the drafts render");
+        let root = "crates/openehr-rm/src/draft/access_control";
+        let parent = body(
+            &files,
+            &format!("{root}/common/change_control/versioned_object.rs"),
+        );
+        for variant in [
+            "VersionedAccessPolicy(VersionedAccessPolicy)",
+            "VersionedComposition(VersionedComposition)",
+            "VersionedEhrAccess(VersionedEhrAccess)",
+            "VersionedObject(VersionedObjectData)",
+        ] {
+            assert!(parent.contains(variant), "{variant} missing from {parent}");
+        }
+        // The generic parameter of `VERSIONED_OBJECT<T>` types no attribute,
+        // so the subtype carries the three inherited attributes, as the RM's
+        // own `VERSIONED_COMPOSITION` does.
+        let leaf = body(
+            &files,
+            &format!("{root}/access_control/versioned_access_policy.rs"),
+        );
+        for field in [
+            "pub uid: HierObjectId",
+            "pub owner_id: ObjectRef",
+            "pub time_created: DvDateTime",
+        ] {
+            assert!(leaf.contains(field), "{field} missing from {leaf}");
+        }
+        assert!(!leaf.contains('<'), "no generic argument: {leaf}");
+    }
+
+    #[test]
+    fn every_draft_carries_the_class_table_of_its_own_classes() {
+        let files = render_draft_files().expect("the drafts render");
+        let root = "crates/openehr-rm/src/draft/access_control";
+        let model = body(&files, &format!("{root}/model.rs"));
+        for row in [
+            "name: \"ACCESS_POLICY\"",
+            "name: \"VERSIONED_ACCESS_POLICY\"",
+            "ancestors: &[\"Any\", \"LOCATABLE\", \"PATHABLE\"]",
+            "ref_target: Some(\"ORGANISATION\")",
+        ] {
+            assert!(model.contains(row), "{row} missing from the class table");
+        }
+        // The table holds the draft's own classes, never the RM it includes.
+        assert!(!model.contains("name: \"LOCATABLE\""));
+        for package in ["access_control", "access_log"] {
+            assert!(
+                body(
+                    &files,
+                    &format!("crates/openehr-rm/src/draft/{package}/mod.rs")
+                )
+                .contains("pub mod model;"),
+                "{package}"
+            );
+        }
+        assert!(
+            model.contains("use crate::v1_2::model::{"),
+            "inside openehr-rm"
+        );
+    }
+
+    #[test]
+    fn one_draft_root_per_crate_declares_every_package() {
+        let files = render_draft_files().expect("the drafts render");
+        let mut paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
+        let all = paths.len();
+        paths.sort_unstable();
+        paths.dedup();
+        assert_eq!(paths.len(), all, "a file is rendered twice");
+        assert!(
+            paths
+                .iter()
+                .all(|p| p.starts_with("crates/openehr-rm/src/draft/"))
+        );
+        let root = body(&files, "crates/openehr-rm/src/draft/mod.rs");
+        for package in ["pub mod access_control;", "pub mod access_log;"] {
+            assert!(root.contains(package), "{package} missing from {root}");
+        }
+    }
+
+    #[test]
+    fn the_access_log_draft_renders_every_class_and_its_codec() {
+        let files = render_draft_files().expect("the drafts render");
+        let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
+        for expected in [
+            "crates/openehr-rm/src/draft/access_log/mod.rs",
+            "crates/openehr-rm/src/draft/access_log/json_serde.rs",
+            "crates/openehr-rm/src/draft/access_log/access_log/mod.rs",
+            "crates/openehr-rm/src/draft/access_log/access_log/access_log_entry.rs",
+            "crates/openehr-rm/src/draft/access_log/access_log/access_log_record.rs",
+            "crates/openehr-rm/src/draft/access_log/access_log/access_log_tombstone.rs",
+        ] {
+            assert!(
+                paths.contains(&expected),
+                "{expected} missing from {paths:?}"
+            );
+        }
+        assert!(files.iter().all(|f| f.body.starts_with("// @generated")));
+        let root = files
+            .iter()
+            .find(|f| f.path.ends_with("draft/access_log/mod.rs"))
+            .expect("the module root renders");
+        assert!(!root.body.contains("prelude"), "{}", root.body);
+    }
+}

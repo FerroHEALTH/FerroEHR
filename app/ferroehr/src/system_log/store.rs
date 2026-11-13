@@ -34,11 +34,14 @@ use std::sync::{Mutex, PoisonError};
 use jiff_sqlx::Timestamp;
 use sqlx::postgres::{PgConnection, PgRow};
 use sqlx::{Connection, PgPool, Row};
-use tokio::sync::OnceCell;
 use uuid::Uuid;
 
+mod access_log;
 mod batch;
+pub(crate) mod lax;
+mod writers;
 
+use crate::access_log::store::AccessLogStore;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 #[cfg(feature = "fhir")]
@@ -50,6 +53,8 @@ use crate::system_log::render::RenderPolicy;
 #[cfg(feature = "fhir")]
 use crate::system_log::render::{CompiledPolicy, StoredRecord};
 use batch::BatchColumns;
+use lax::{any_equals, any_is, lax_path};
+use writers::{WritePolicy, Writers};
 
 use ferrohealth_smart::assurance::AssuranceLevel;
 
@@ -167,14 +172,20 @@ pub enum RecordEnd {
     Never,
 }
 
-/// One record as the store writes it: the resolved event and the patient its
-/// subject resolver found behind the event's EHR.
+/// One record as the store writes it: the resolved event, the patient its
+/// subject resolver found behind the event's EHR, and the openEHR access-log
+/// entry the access writes beside it.
 #[derive(Debug, Clone)]
 pub struct AuditRecord {
     /// The resolved event.
     pub event: AuditEvent,
     /// The patient (EHR subject) id, when the resolver found one.
     pub subject: Option<String>,
+    /// The access-log entry of the access (`crate::access_log::entry`),
+    /// written in the transaction that writes the record; `None` for a
+    /// record of no access to EHR data.
+    pub entry:
+        Option<Box<openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry>>,
 }
 
 /// [`INSERT_ONE`] that also enters the record in the FHIR Feed's outbox, in
@@ -196,30 +207,6 @@ static INSERT_BATCH_OWED: LazyLock<String> = LazyLock::new(|| {
     )
 });
 
-/// The render policy a store writes its records under, registered in the
-/// store the first time a record is written.
-#[derive(Debug)]
-struct WritePolicy {
-    policy: RenderPolicy,
-    /// The policy's digest, once the store holds the policy.
-    digest: OnceCell<Vec<u8>>,
-    /// The policy compiled, which renders each record's document for its
-    /// search tokens.
-    #[cfg(feature = "fhir")]
-    compiled: OnceCell<Arc<CompiledPolicy>>,
-}
-
-impl WritePolicy {
-    fn new(policy: RenderPolicy) -> Self {
-        Self {
-            policy,
-            digest: OnceCell::new(),
-            #[cfg(feature = "fhir")]
-            compiled: OnceCell::new(),
-        }
-    }
-}
-
 /// The policies records name, compiled once each, by digest.
 #[cfg(feature = "fhir")]
 type PolicyCache = Arc<Mutex<BTreeMap<Vec<u8>, Arc<CompiledPolicy>>>>;
@@ -234,18 +221,22 @@ type LearnedSets = ();
 /// The PG-backed Audit Record Repository (the `store` sink).
 #[derive(Debug, Clone)]
 pub struct AuditStore {
-    pub(super) pool: PgPool,
+    pub(crate) pool: PgPool,
     /// Whether the FHIR Feed delivers from this store, so each record written
     /// is owed to it.
     fhir_feed: bool,
-    /// The policy every record this store writes is rendered under.
-    writing: Arc<WritePolicy>,
+    /// The policies the records this store writes are rendered under.
+    writing: Arc<Writers>,
     /// The policies of the records this store has read.
     #[cfg(feature = "fhir")]
     policies: PolicyCache,
     /// The search tokens and sets this store has written.
     #[cfg(feature = "fhir")]
     tokens: Arc<crate::system_log::search::TokenRegistry>,
+    /// The access-log store the records' entries are appended through, which
+    /// signs their links as `[audit.access_log]` asks once the server installs
+    /// it ([`Self::use_access_log`]); an unsigning one until then.
+    access_log: Arc<std::sync::OnceLock<AccessLogStore>>,
 }
 
 impl AuditStore {
@@ -258,11 +249,12 @@ impl AuditStore {
         AuditStore {
             pool,
             fhir_feed: false,
-            writing: Arc::new(WritePolicy::new(RenderPolicy::default())),
+            writing: Arc::new(Writers::new(RenderPolicy::default())),
             #[cfg(feature = "fhir")]
             policies: Arc::new(Mutex::new(BTreeMap::new())),
             #[cfg(feature = "fhir")]
             tokens: Arc::new(crate::system_log::search::TokenRegistry::default()),
+            access_log: Arc::default(),
         }
     }
 
@@ -285,17 +277,21 @@ impl AuditStore {
     /// FHIR `AuditEvent` is rendered under when it is read.
     #[must_use]
     pub fn with_render_policy(mut self, policy: RenderPolicy) -> Self {
-        self.writing = Arc::new(WritePolicy::new(policy));
+        self.writing = Arc::new(Writers::new(policy));
         self
     }
 
-    /// The digest of the policy this store writes under, storing the policy
-    /// the first time.
+    /// This store writing every record from now on with `categories` as its
+    /// category map; a record of an earlier map keeps that map's policy.
+    pub fn set_categories(&self, categories: &crate::system_log::categories::CategoryMapConfig) {
+        self.writing.set_categories(categories);
+    }
+
+    /// The digest of `writing`, storing the policy the first time.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the policy cannot be stored.
-    async fn writing_digest(&self) -> Result<Vec<u8>, AuditError> {
-        let writing = &self.writing;
+    async fn writing_digest(&self, writing: &WritePolicy) -> Result<Vec<u8>, AuditError> {
         writing
             .digest
             .get_or_try_init(|| async {
@@ -324,13 +320,13 @@ impl AuditStore {
     #[cfg(feature = "fhir")]
     async fn search_tokens<'a>(
         &self,
+        writing: &WritePolicy,
         conn: &mut PgConnection,
         records: impl Iterator<Item = (&'a AuditEvent, Option<&'a str>)>,
     ) -> Result<(Vec<Vec<i32>>, LearnedSets), AuditError> {
-        let compiled = self
-            .writing
+        let compiled = writing
             .compiled
-            .get_or_try_init(|| async { self.writing.policy.compile().map(Arc::new) })
+            .get_or_try_init(|| async { writing.policy.compile().map(Arc::new) })
             .await?;
         let tokens: Vec<_> = records
             .map(|(event, subject)| {
@@ -366,11 +362,13 @@ impl AuditStore {
     #[cfg(feature = "fhir")]
     async fn batch_tokens(
         store: &Self,
+        writing: &WritePolicy,
         conn: &mut PgConnection,
         records: &[AuditRecord],
     ) -> Result<(Vec<String>, LearnedSets), AuditError> {
         let (ids, learned) = store
             .search_tokens(
+                writing,
                 conn,
                 records
                     .iter()
@@ -393,6 +391,7 @@ impl AuditStore {
     #[cfg(not(feature = "fhir"))]
     fn batch_tokens(
         _store: &Self,
+        _writing: &WritePolicy,
         _conn: &mut PgConnection,
         records: &[AuditRecord],
     ) -> std::future::Ready<Result<(Vec<String>, LearnedSets), AuditError>> {
@@ -410,13 +409,14 @@ impl AuditStore {
         event: &AuditEvent,
         subject: Option<&str>,
     ) -> Result<Uuid, AuditError> {
-        let policy = self.writing_digest().await?;
+        let writing = self.writing.of(event);
+        let policy = self.writing_digest(&writing).await?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         #[cfg(feature = "fhir")]
         let (tokens, learned) = {
             let (mut tokens, learned) = self
-                .search_tokens(&mut tx, std::iter::once((event, subject)))
+                .search_tokens(&writing, &mut tx, std::iter::once((event, subject)))
                 .await?;
             (tokens.pop().ok_or(AuditError::SearchToken)?, learned)
         };
@@ -489,10 +489,15 @@ impl AuditStore {
     /// per record), which the reaper honours ([`Self::reap_due`]). With `ends`
     /// empty no record states an end, and each keeps the store horizon.
     ///
+    /// The access-log entries the records carry are appended in the same
+    /// transaction, after the records, so a batch of accesses costs one commit
+    /// whatever it writes and no access is stored without its entry.
+    ///
     /// # Errors
     /// [`AuditError::Store`] when the INSERT fails (the whole batch fails
-    /// together; the caller retries), and [`AuditError::RetentionEnds`] when
-    /// `ends` is neither empty nor one end per record.
+    /// together; the caller retries), [`AuditError::AccessLog`] when an entry
+    /// cannot be appended, and [`AuditError::RetentionEnds`] when `ends` is
+    /// neither empty nor one end per record.
     pub async fn insert_batch(
         &self,
         records: &[AuditRecord],
@@ -507,15 +512,37 @@ impl AuditStore {
         if records.is_empty() {
             return Ok(());
         }
-        let policy = self.writing_digest().await?;
+        let runs = self.writing.runs(records);
+        let mut digests = Vec::with_capacity(runs.len());
+        for (writing, _, _) in &runs {
+            digests.push(self.writing_digest(writing).await?);
+        }
         // NOTE: one transaction holds the tokens and the records, so a batch costs one commit.
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        let (tokens, learned) = Self::batch_tokens(self, &mut tx, records).await?;
-        self.insert_rows(&mut tx, records, ends, policy, tokens)
-            .await?;
+        let mut learned_all = Vec::with_capacity(runs.len());
+        for ((writing, start, end), policy) in runs.iter().zip(digests) {
+            let run = records.get(*start..*end).unwrap_or_default();
+            let run_ends = ends.get(*start..*end).unwrap_or_default();
+            let (tokens, learned) = Self::batch_tokens(self, writing, &mut tx, run).await?;
+            self.insert_rows(&mut tx, run, run_ends, policy, tokens)
+                .await?;
+            learned_all.push(learned);
+        }
+        let entries: Vec<_> = records
+            .iter()
+            .filter_map(|record| record.entry.as_deref().cloned())
+            .collect();
+        if !entries.is_empty() {
+            let access_log = self
+                .access_log()
+                .unwrap_or_else(|| AccessLogStore::new(self.pool.clone()));
+            access_log.append_in(&mut tx, entries).await?;
+        }
         tx.commit().await?;
-        self.remember(learned);
+        for learned in learned_all {
+            self.remember(learned);
+        }
         Ok(())
     }
 
@@ -1119,46 +1146,6 @@ impl AuditToken {
             AuditTokenSystem::Named(system) => any_equals(node, &["system"], system),
         }
     }
-}
-
-/// The items `steps` reaches from `from`, read as an SQL/JSON path in lax mode
-/// reads them: an array is unwrapped before each member step and once at the
-/// end, and a missing member yields nothing (ISO/IEC 9075-2 SQL/JSON path, as
-/// PostgreSQL 18 documents it in "The SQL/JSON Path Language",
-/// <https://www.postgresql.org/docs/18/functions-json.html#FUNCTIONS-SQLJSON-PATH>).
-pub(crate) fn lax_path<'a>(
-    from: &'a serde_json::Value,
-    steps: &[&str],
-) -> Vec<&'a serde_json::Value> {
-    let unwrap = |items: Vec<&'a serde_json::Value>| -> Vec<&'a serde_json::Value> {
-        items
-            .into_iter()
-            .flat_map(|item| match item {
-                serde_json::Value::Array(elements) => elements.iter().collect::<Vec<_>>(),
-                other => vec![other],
-            })
-            .collect()
-    };
-    let mut items = vec![from];
-    for step in steps {
-        items = unwrap(items)
-            .into_iter()
-            .filter_map(|item| item.get(*step))
-            .collect();
-    }
-    unwrap(items)
-}
-
-/// Whether any item `steps` reaches from `from` is `value`.
-fn any_is(from: &serde_json::Value, steps: &[&str], value: &serde_json::Value) -> bool {
-    lax_path(from, steps).into_iter().any(|item| item == value)
-}
-
-/// Whether any item `steps` reaches from `from` is the string `text`.
-fn any_equals(from: &serde_json::Value, steps: &[&str], text: &str) -> bool {
-    lax_path(from, steps)
-        .into_iter()
-        .any(|item| item.as_str() == Some(text))
 }
 
 /// A token value (FHIR R4 Search §3.1.1.4.10).

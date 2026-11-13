@@ -20,8 +20,6 @@ readonly DEFAULT_TOML="${DEFAULT_TOML:-${REPO_ROOT}/app/ferroehr/assets/ferroehr
 # Tables whose keys are the operator's own names (a template id, a user id, a
 # predicate name), so any key below them is defined.
 readonly MAP_TABLES='
-audit.categories.templates
-audit.categories.archetypes
 authz.assurance.levels
 cohort.predicates
 '

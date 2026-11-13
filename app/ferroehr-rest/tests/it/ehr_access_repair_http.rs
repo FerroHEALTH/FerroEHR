@@ -18,7 +18,6 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::service::FerroEhrService;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::AuditStore;
@@ -34,9 +33,6 @@ use crate::common;
 const HELD: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 /// An EHR with the default, settings-less `EHR_ACCESS`.
 const OPEN: &str = "7c1b9d3e-2a45-4f6b-9c8d-0e1f2a3b4c5d";
-/// The `_type` of the scheme the server reads.
-const SCHEME: &str = "FERROEHR_ACCESS_CONTROL_V1";
-
 fn basic(name: &str) -> String {
     use base64::Engine;
     format!(
@@ -45,13 +41,9 @@ fn basic(name: &str) -> String {
     )
 }
 
-/// Settings of the scheme that restrict the EHR to `user`.
-fn restricted_to(user: &str) -> Value {
-    json!({
-        "_type": SCHEME,
-        "default_access": "restricted",
-        "access_list": [ { "principal": format!("user:{user}"), "access": "full" } ]
-    })
+/// Settings that restrict the EHR to the Basic user `user` as its gate-keeper.
+async fn restricted_to(pool: &PgPool, user: &str) -> Value {
+    common::access_settings("restricted", &[common::basic_person(pool, user).await])
 }
 
 /// An audited app with RBAC on, an administrator and two clinicians, over
@@ -62,7 +54,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         start(common::local_audit(), None, Some(pool.clone()))
             .await
             .expect("the audit sender");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+    let svc = common::binding_service(&pool)
         .with_audit(sender)
         .with_audit_store(AuditStore::new(pool.clone()));
     for id in [HELD, OPEN] {
@@ -72,11 +64,26 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         .await
         .expect("create the EHR");
     }
+    let mut config = common::api_config(true);
+    common::with_basic_users(
+        &mut config,
+        &svc,
+        &pool,
+        &[
+            ("root", &["ADMIN"]),
+            ("bob", &["USER"]),
+            ("carol", &["USER"]),
+        ],
+    )
+    .await;
     let held: ferroehr::ids::EhrId = HELD.parse().expect("an EHR id");
     let ehr = svc.ehr_read(held).await.expect("the EHR").body;
-    svc.create_ehr_contribution(held, access_contribution(&ehr, &restricted_to("bob")))
-        .await
-        .expect("the settings commit");
+    svc.create_ehr_contribution(
+        held,
+        access_contribution(&ehr, &restricted_to(&pool, "bob").await),
+    )
+    .await
+    .expect("the settings commit");
     sqlx::query(
         "UPDATE version SET body = jsonb_set(body::jsonb, '{settings,default_access}', \
          '\"bogus\"')::text WHERE kind = 'EHR_ACCESS' AND ehr_id = $1",
@@ -85,16 +92,6 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     .execute(&pool)
     .await
     .expect("store settings that do not parse");
-
-    let mut config = common::api_config(true);
-    common::with_basic_users(
-        &mut config,
-        &[
-            ("root", &["ADMIN"]),
-            ("bob", &["USER"]),
-            ("carol", &["USER"]),
-        ],
-    );
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
     let authz = AuthzHandle::build(
@@ -104,9 +101,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = ferroehr_rest::build_full(config, Arc::new(svc), authz, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, Arc::new(svc), authz, Observability::default()).await;
     (db, pool, app)
 }
 
@@ -236,7 +231,7 @@ async fn an_administrator_repairs_a_held_ehr() {
         "the EHR is held before the repair"
     );
 
-    let (status, body) = repair(&app, "root", HELD, &restricted_to("carol")).await;
+    let (status, body) = repair(&app, "root", HELD, &restricted_to(&pool, "carol").await).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let answer: Value = serde_json::from_str(&body).expect("a JSON answer");
     let version_uid = answer["version_uid"].as_str().expect("version_uid");
@@ -247,12 +242,12 @@ async fn an_administrator_repairs_a_held_ehr() {
     assert_eq!(
         status,
         StatusCode::OK,
-        "the new access list admits carol: {body}"
+        "the new settings name carol their gate-keeper: {body}"
     );
     assert_eq!(
         send(&app, "GET", &ehr, "bob", None).await.0,
         StatusCode::FORBIDDEN,
-        "the new settings no longer list bob"
+        "the new settings no longer name bob"
     );
 
     let (change_type, contributions): (String, i64) = sqlx::query_as(
@@ -284,7 +279,7 @@ async fn an_administrator_repairs_a_held_ehr() {
 #[tokio::test]
 async fn the_repair_is_refused_unless_an_administrator_repairs_a_held_ehr() {
     let (_db, pool, app) = Box::pin(app()).await;
-    let fixed = restricted_to("carol");
+    let fixed = restricted_to(&pool, "carol").await;
 
     let (status, body) = repair(&app, "bob", HELD, &fixed).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");

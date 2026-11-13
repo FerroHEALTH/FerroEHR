@@ -1,0 +1,241 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-CLUSTER.delivery_of_infant.v1
+
+concept
+	[at0000]	-- Delivery of infant
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Jasmin Buck, Sebastian Garde">
+				["organisation"] = <"University of Heidelberg, Central Queensland University">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"13/04/2007">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Dient der Dokumentation von Einzelheiten zur Entbindung eines Kindes.">
+			use = <"">
+			keywords = <"Neugeborenes", "Entbindung", "Plazenta">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"Record of details related to delivery of infant.">
+			use = <"">
+			keywords = <"infant", "delivery", "placenta">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <>
+	other_details = <
+		["references"] = <"">
+		["MD5-CAM-1.0.1"] = <"93F07E7CE5C796540B2555E76ABBFCA7">
+	>
+
+definition
+	CLUSTER[at0000] matches {	-- Delivery of infant
+		items cardinality matches {1..*; unordered} matches {
+			ELEMENT[at0001] occurrences matches {0..1} matches {	-- Presentation
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[local::]}
+					}
+				}
+			}
+			ELEMENT[at0002] occurrences matches {0..1} matches {	-- Position
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {[local::]}
+					}
+				}
+			}
+			CLUSTER[at0006] occurrences matches {0..1} matches {	-- Delivery details
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0005] occurrences matches {0..1} matches {	-- Description
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {[local::]}
+							}
+						}
+					}
+					ELEMENT[at0004] occurrences matches {0..1} matches {	-- Difficult delivery
+						value matches {
+							DV_BOOLEAN matches {
+								value matches {True, False}
+							}
+						}
+					}
+					CLUSTER[at0007] occurrences matches {0..1} matches {	-- Assisted extraction
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0003] occurrences matches {0..1} matches {	-- Method
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0008] occurrences matches {0..1} matches {	-- Details of method used
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {[local::]}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			CLUSTER[at0009] occurrences matches {0..1} matches {	-- Placenta
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0010] occurrences matches {0..1} matches {	-- Delivery method
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0011, 	-- Controlled cord traction
+									at0012, 	-- Manual removal
+									at0013]	-- Not removed
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"Entbindung eines Kindes">
+					description = <"Zur Dokumentation von Einzelheiten zur Entbindung eines Kindes.">
+				>
+				["at0001"] = <
+					text = <"Einstellung">
+					description = <"Einstellung bei der Entbindung.">
+				>
+				["at0002"] = <
+					text = <"Lage">
+					description = <"Lage bei der Entbindung.">
+				>
+				["at0003"] = <
+					text = <"Verfahren">
+					description = <"Methode der Geburtshilfe.">
+				>
+				["at0004"] = <
+					text = <"Schwere Entbindung">
+					description = <"*">
+				>
+				["at0005"] = <
+					text = <"Beschreibung">
+					description = <"Beschreibung der Entbindung.">
+				>
+				["at0006"] = <
+					text = <"Einzelheiten zur Entbindung">
+					description = <"*">
+				>
+				["at0007"] = <
+					text = <"Geburtshilfe">
+					description = <"*">
+				>
+				["at0008"] = <
+					text = <"Einzelheiten zur angewendeten Methoden">
+					description = <"Detaillierte Beschreibung der angewendeten Entbindungsmethode.">
+				>
+				["at0009"] = <
+					text = <"Plazenta">
+					description = <"*">
+				>
+				["at0010"] = <
+					text = <"Entbindungsmethode">
+					description = <"Entbindungsmethode der Plazenta.">
+				>
+				["at0011"] = <
+					text = <"kontrollierte Nabelschnurdistraktion">
+					description = <"*">
+				>
+				["at0012"] = <
+					text = <"Manuelle Entfernung">
+					description = <"*">
+				>
+				["at0013"] = <
+					text = <"Nicht entfernt">
+					description = <"*">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Delivery of infant">
+					description = <"Record of details related to delivery of infant.">
+				>
+				["at0001"] = <
+					text = <"Presentation">
+					description = <"Presentation at delivery.">
+				>
+				["at0002"] = <
+					text = <"Position">
+					description = <"Position at delivery.">
+				>
+				["at0003"] = <
+					text = <"Method">
+					description = <"Method of assisted extraction.">
+				>
+				["at0004"] = <
+					text = <"Difficult delivery">
+					description = <"*">
+				>
+				["at0005"] = <
+					text = <"Description">
+					description = <"Description of delivery.">
+				>
+				["at0006"] = <
+					text = <"Delivery details">
+					description = <"*">
+				>
+				["at0007"] = <
+					text = <"Assisted extraction">
+					description = <"*">
+				>
+				["at0008"] = <
+					text = <"Details of method used">
+					description = <"Detailed description of extraction method use.">
+				>
+				["at0009"] = <
+					text = <"Placenta">
+					description = <"*">
+				>
+				["at0010"] = <
+					text = <"Delivery method">
+					description = <"Method of delivery of placenta.">
+				>
+				["at0011"] = <
+					text = <"Controlled cord traction">
+					description = <"*">
+				>
+				["at0012"] = <
+					text = <"Manual removal">
+					description = <"*">
+				>
+				["at0013"] = <
+					text = <"Not removed">
+					description = <"*">
+				>
+			>
+		>
+	>

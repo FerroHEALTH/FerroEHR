@@ -1,0 +1,582 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2013-02-14</original_author>
+    <original_author id="name">Heather Leslie</original_author>
+    <original_author id="organisation">Atomica Informatics</original_author>
+    <original_author id="email">heather.leslie@atomicainformatics.com</original_author>
+    <other_contributors>Koray Atalag, University of Auckland, New Zealand</other_contributors>
+    <other_contributors>Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Lars Bitsch-Larsen, Haukeland University hospital, Norway</other_contributors>
+    <other_contributors>Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway</other_contributors>
+    <other_contributors>Sam Heard, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Shinji Kobayashi, Kyoto University, Japan</other_contributors>
+    <other_contributors>Heather Leslie, Atomica Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)</other_contributors>
+    <other_contributors>Andrej Orel, Marand d.o.o., Slovenia</other_contributors>
+    <other_contributors>Anne Pauline Anderssen, Helse Nord RHF, Norway</other_contributors>
+    <other_contributors>Vebjørn Arntzen, Oslo universitetssykehus HF, Norway</other_contributors>
+    <other_contributors>Bente Gjelsvik, Helse Bergen, Norway</other_contributors>
+    <other_contributors>Kristian Heldal, Telemark Hospital Trust, Norway</other_contributors>
+    <other_contributors>Hilde Hollås, Norway</other_contributors>
+    <other_contributors>Lars Morgan Karlsen, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Hallvard Lærum, Oslo Universitetssykehus HF, Norway</other_contributors>
+    <other_contributors>Tanja Riise, Nasjonal IKT HF, Norway</other_contributors>
+    <other_contributors>John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)</other_contributors>
+    <lifecycle_state>deprecated</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="current_contact">Heather Leslie, Atomica Informatics&lt;heather.leslie@atomicainformatics.com&gt;</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">46F4300816AAEAB8D16622F35E51C165</other_details>
+    <other_details id="build_uid">8b00e90a-b1d3-4d4f-9f73-28e3c2e1d07e</other_details>
+    <other_details id="revision">1.1.3</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Darstellung einer Empfehlung, einer Beratung oder eines Vorschlags für das klinische Management zu einem bestimmten Zeitpunkt.</purpose>
+      <keywords>Beratung</keywords>
+      <keywords>Empfehlung</keywords>
+      <keywords>Vorschlag</keywords>
+      <use>Verwenden Sie diese Option, um eine Empfehlung, eine Beratung oder einen Vorschlag für das klinische Management zu einem bestimmten Zeitpunkt darzustellen.&#xD;
+Der vorgesehene Anwendungsfall ist, um einen Kliniker bei der Aufzeichnung einer oder mehreren Empfehlung/en zu einem bestimmten Zeitpunkt zu unterstützen.&#xD;
+Zum Beispiel als Bestandteil der Schlussfolgerungen, die im Rahmen einer klinischen Beratung getroffen werden.</use>
+      <misuse />
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sv</code_string>
+      </language>
+      <purpose>Att föreslå eller ge råd om behandlingsåtgärd vid ett specifikt tillfälle.</purpose>
+      <keywords>råd</keywords>
+      <keywords>förslag</keywords>
+      <keywords>rekommendation</keywords>
+      <use>Att föreslå eller ge råd om behandlingsåtgärd vid ett specifikt tillfälle.&#xD;
+&#xD;
+Är tänkt att ge stöd för att dokumentera en behandlingsrekommendation vid en specifik tidpunkt. Exempelvis som en del av slutsatsen vid en klinisk konsultation.</use>
+      <misuse />
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>es-ar</code_string>
+      </language>
+      <purpose>Para el registro de una sugerencia, consejo o propuesta para el manejo clínico en un momento determinado.</purpose>
+      <keywords>consejo</keywords>
+      <keywords>propuesta</keywords>
+      <keywords>sugerencia</keywords>
+      <use>Utilícese para registrar una sugerencia, consejo o propuesta para el manejo clínico en un momento específico.&#xD;
+&#xD;
+El caso de uso previsto se vincula a permitir el registro por parte del clínico de una o mas recomendaciones, en un mento específico en el tiempo. Por ejemplo, como un componente de las conclusiones a las que se ha arribado como parte de una consutla clínica.</use>
+      <misuse />
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>Anvendes for å registrere et forslag, et råd eller en anmodning om klinisk oppfølging på et spesifikt tidspunkt.</purpose>
+      <keywords>råd</keywords>
+      <keywords>forslag</keywords>
+      <keywords>anmodning</keywords>
+      <keywords>tilråde</keywords>
+      <keywords>tilrådning</keywords>
+      <keywords>instruks</keywords>
+      <use>Anvendes for å registrere et forslag, et råd eller en anmodning om klinisk oppfølging på et spesifikt tidspunkt.&#xD;
+&#xD;
+Arketypen er ment å understøtte klinikere som dokumenterer en eller flere anbefalinger på et spesifikt tidspunkt.&#xD;
+Anbefalingen kan for eksempel benyttes som en del av dokumentasjonen av konklusjonene som trekkes i forbindelse med en klinisk konsultasjon.</use>
+      <misuse />
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>pt-br</code_string>
+      </language>
+      <purpose>Registrar uma sugestão, conselho ou proposta de manejo clínico num tempo específico.</purpose>
+      <keywords>conselho</keywords>
+      <keywords>proposta</keywords>
+      <keywords>sugestão</keywords>
+      <use>Utilizar para registrar uma sugestão, conselho ou proposta de manejo clínico num tempo específico.&#xD;
+&#xD;
+O caso de uso pretendido é apoiar o registro clínico de uma recomendação, ou recomendações, num ponto específico no tempo.&#xD;
+Por exemplo, como um componente das conclusões tiradas como parte de uma consulta clínica.</use>
+      <misuse />
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record a suggestion, advice or proposal for clinical management at a specific time.</purpose>
+      <keywords>advice</keywords>
+      <keywords>proposal</keywords>
+      <keywords>suggestion</keywords>
+      <use>Use to record a suggestion, advice or proposal for clinical management at a specific time.&#xD;
+&#xD;
+The intended use case is to support a clinician recording a recommendation, or recommendations, at a specific point-in-time. &#xD;
+For example, as a component of the conclusions drawn as part of a clinical consultation.</use>
+      <misuse />
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Alina Rehberg</author>
+    <author id="organisation">Medizinische Hochschule Hannover</author>
+    <author id="email">rehberg.alina@mh-hannover.de</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sv</code_string>
+    </language>
+    <author id="name">Åsa Skagerhult</author>
+    <author id="organisation">Region Östergötland</author>
+    <author id="email">asa.skagerhult@regionostergotland.se</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>es-ar</code_string>
+    </language>
+    <author id="name">Alan March</author>
+    <author id="organisation">Hospital Universitario Austral, Buenos Aires, Argentina</author>
+    <author id="alandmarch@gmail.com">alandmarch@gmail.com</author>
+    <author id="email">alandmarch@gmail.com</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Bjørn Grøva</author>
+    <author id="organisation">Direktoratet for e-helse</author>
+    <author id="email">bjorn.grova@ehelse.no</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>pt-br</code_string>
+    </language>
+    <author id="name">Vladimir Pizzo</author>
+    <author id="organisation">Hospital Sirio Libanes, Brazil</author>
+    <author id="email">vladimir.pizzo@hsl.org.br</author>
+  </translations>
+  <uid>
+    <value>1acecc29-89c0-4733-833d-162b576f40dc</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-EVALUATION.recommendation.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>EVALUATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0002</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0003</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>protocol</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0004</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0005</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/.*/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>.*</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Recommendation</items>
+        <items id="description">A suggestion, advice or proposal for clinical management.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Recommendation</items>
+        <items id="description">Narrative description of the recommendation.</items>
+        <items id="comment">May be coded, using a terminology, if required.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Rationale</items>
+        <items id="description">Justifications for the recommendation.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Extension</items>
+        <items id="description">Additional information required to capture local content or to align with other reference models/formalisms.</items>
+        <items id="comment">For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="es-ar">
+      <items code="at0000">
+        <items id="text">Recomendación</items>
+        <items id="description">Una sugerencia, consejo o propuesta para el manejo clínico.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Recomendación</items>
+        <items id="description">Descripción narrativa de la recomendación</items>
+        <items id="comment">Puede ser codificada mediante una terminología si así se lo requiere.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Rationale(en)</items>
+        <items id="description">*Justifications for the recommendation.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Extensión</items>
+        <items id="description">Información adicional requerida para representar contenido local o para alineamiento con otros modelos de referencia o formalismos.</items>
+        <items id="comment">Por ejemplo: requerimientos locales de información o metadatos adicionales para el alineamiento con equivalentes FHIR o CIMI.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="pt-br">
+      <items code="at0000">
+        <items id="text">Recomendação</items>
+        <items id="description">Uma sugestão, conselho ou proposta para manejo clínico.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Recomendação</items>
+        <items id="description">Descrição narrativa da recomendação.</items>
+        <items id="comment">Pode ser codificada, utilizando terminologia, se necessário.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Justificativa</items>
+        <items id="description">Justificativa para a recomendação.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Extensão</items>
+        <items id="description">Informação adicional necessária para capturar conteúdo local ou para alinhar com outros modelos de referência/formalismos.</items>
+        <items id="comment">Por exemplo: necessidades de informação local ou metadados adicionais para alinhar com equivalentes CIMI ou FHIR.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Anbefaling</items>
+        <items id="description">Et forslag, råd eller anmodning om klinisk oppfølging.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Anbefaling</items>
+        <items id="description">Fritekstbeskrivelse av anbefalingen.</items>
+        <items id="comment">Det bør om mulig benyttes terminologi for å angi anbefaling.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Begrunnelse</items>
+        <items id="description">Begrunnelse for anbefalingen.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Utvidelse</items>
+        <items id="description">Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.</items>
+        <items id="comment">For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="sv">
+      <items code="at0000">
+        <items id="text">Rekommendation</items>
+        <items id="description">Ett förslag eller råd om behandling.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Rekommendation</items>
+        <items id="description">Beskrivning av rekommendationen.</items>
+        <items id="comment">Kan kodas i en terminologi vid behov.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">*Rationale(en)</items>
+        <items id="description">*Justifications for the recommendation.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Tilläggsinformation</items>
+        <items id="description">Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.</items>
+        <items id="comment">Exempelvis lokala informationskrav eller metadata för anpassning till FHIR- eller CIMI-motsvarigheter.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Empfehlung</items>
+        <items id="description">Eine Empfehlung, eine Beratung oder ein Vorschlag für das klinische Management.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Empfehlung</items>
+        <items id="description">Beschreibung der Empfehlung.</items>
+        <items id="comment">Kann bei Bedarf mit einer Terminologie kodiert werden.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Begründung</items>
+        <items id="description">Begründung für die Empfehlung.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Erweiterung</items>
+        <items id="description">Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.</items>
+        <items id="comment">Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR- oder CIMI-Modelle.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

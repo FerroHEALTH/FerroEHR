@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Gate over CKM's generated ADL 2 export (`corpus/archetypes/ckm/adl2-generated/`,
-//! CKM Release 1.22.0, #4973).
+//! CKM Release 1.22.0, #4973; every lifecycle state since #5451).
 //!
 //! Every file is CKM's own 1.4->2 conversion, so this measures that conversion
-//! and the CKM sources, never FerroEHR's converter. Each file parses or is the
+//! and the CKM sources, never FerroEHR's converter. Each file parses or is an
 //! adjudicated parse refusal, and validates as an ADL 2 upload is validated
 //! (parents first, the production RM) or is refused on its adjudicated code.
 //! Each reason opens with what causes it: `conversion:` (CKM's converter),
@@ -33,14 +33,29 @@ fn pack() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/archetypes/ckm/adl2-generated")
 }
 
-/// The one file of the export that does not parse: CKM writes the 1.4
-/// `[local::]` (a terminology constraint with no codes) as
-/// `defining_code matches {}`, an empty block ADL 2 has no production for
-/// (openEHR/archie#896, the shape whose `[openEHR::]` twin CKM exports empty).
-const PARSE_REFUSAL: (&str, SyntaxErrorCode) = (
+/// The files of the export that do not parse: CKM writes the 1.4 `[local::]`
+/// (a terminology constraint with no codes) as `defining_code matches {}`, an
+/// empty block ADL 2 has no production for (openEHR/archie#896, the shape
+/// whose `[openEHR::]` twin CKM exports empty). Each refuses with SCAS. All
+/// but `exclusion_symptom_sign` are REJECTED in CKM.
+const PARSE_REFUSALS: &[&str] = &[
+    "openEHR-EHR-CLUSTER.coordination.v1.adls",
+    "openEHR-EHR-CLUSTER.cranial_nerves.v1.adls",
+    "openEHR-EHR-CLUSTER.delivery_of_infant.v1.adls",
     "openEHR-EHR-CLUSTER.exclusion_symptom_sign.v0.adls",
-    SyntaxErrorCode::Scas,
-);
+    "openEHR-EHR-CLUSTER.inspection.v1.adls",
+    "openEHR-EHR-CLUSTER.percussion.v1.adls",
+    "openEHR-EHR-ITEM_TREE.intravenous_fluids.v1.adls",
+    "openEHR-EHR-ITEM_TREE.medication.v1.adls",
+    "openEHR-EHR-ITEM_TREE.procedure.v1.adls",
+    "openEHR-EHR-OBSERVATION.faeces.v0.adls",
+    "openEHR-EHR-OBSERVATION.menstruation_old.v0.adls",
+    "openEHR-EHR-OBSERVATION.operation_record.v1.adls",
+    "openEHR-EHR-OBSERVATION.oral_fluid_intake.v1.adls",
+];
+
+/// The syntax code every parse refusal carries.
+const PARSE_REFUSAL_CODE: SyntaxErrorCode = SyntaxErrorCode::Scas;
 
 /// The adjudicated validity refusals with no terminology served.
 const ADJUDICATED: &[ValidityRefusal] = &[
@@ -78,6 +93,11 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "openEHR-EHR-ACTION.blood_transfusion_management.v0.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-ADMIN_ENTRY.admission.v0.adls",
+        ValidationCode::Vatid,
+        "conversion: mints at9024 and further at90NN ids for 1.4 nodes under a container that carry no node id, and defines none of them in the terminology (master07 VATID)",
     ),
     (
         "openEHR-EHR-CLUSTER.acquisition_details_on_eye_fundus_images.v0.adls",
@@ -120,9 +140,19 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-CLUSTER.anatomical_location_relative.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-CLUSTER.anatomical_location_relative.v2.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.auscultation-chest.v1.adls",
+        ValidationCode::Vpov,
+        "source: adds at0.1 to the value set ac9000 its parent defines, where a redefinition may only narrow it (master04.5 VPOV)",
     ),
     (
         "openEHR-EHR-CLUSTER.catheter_cuff.v0.adls",
@@ -165,6 +195,16 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-CLUSTER.dimensions.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.dosage.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-CLUSTER.dosage.v2.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
@@ -176,6 +216,26 @@ const ADJUDICATED: &[ValidityRefusal] = &[
     ),
     (
         "openEHR-EHR-CLUSTER.environmental_conditions.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.exam-auscultation-breath_sounds.v0.adls",
+        ValidationCode::Valc,
+        "source: declares language de, which its flat parent lacks (master03 VALC)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.exam-fetus.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.exam-palpation-cervix.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.exam-palpation-uterus.v0.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
@@ -200,7 +260,17 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-CLUSTER.exam-uterine_cervix.v1.adls",
+        ValidationCode::Valc,
+        "source: declares language es-cl, which its flat parent lacks (master03 VALC)",
+    ),
+    (
         "openEHR-EHR-CLUSTER.exam-uterus.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.exam_eye_pupil.v0.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
@@ -211,6 +281,11 @@ const ADJUDICATED: &[ValidityRefusal] = &[
     ),
     (
         "openEHR-EHR-CLUSTER.exam_oocyte.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.exam_pupils.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
@@ -231,6 +306,11 @@ const ADJUDICATED: &[ValidityRefusal] = &[
     ),
     (
         "openEHR-EHR-CLUSTER.findings_glaucoma.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.fluid.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
@@ -355,6 +435,56 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-CLUSTER.inspection-ear_canal.v1.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-CLUSTER.inspection.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.inspection-external_ear.v1.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-CLUSTER.inspection.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.inspection-joint.v1.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-CLUSTER.inspection.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.inspection-skin-scalp.v1.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-CLUSTER.inspection-skin.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.inspection-skin-wound.v1.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-CLUSTER.inspection-skin.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.inspection-skin.v1.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-CLUSTER.inspection.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.inspection-tongue.v1.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-CLUSTER.inspection.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.inspection-trauma.v1.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-CLUSTER.inspection.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.inspection-tympanic_membrane.v1.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-CLUSTER.inspection.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.inspection-tympanic_perforation.v1.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-CLUSTER.inspection.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
+    (
         "openEHR-EHR-CLUSTER.inspection_body_fluid-sputum.v0.adls",
         ValidationCode::Vasid,
         "conversion: names its parent openEHR-EHR-CLUSTER.inspection_body_fluid.v0 by major version, but the conversion versions that parent as the pre-release 0.0.1-alpha, which a reference reaches only by its full id (BASE artefact_identification master07-referencing)",
@@ -420,6 +550,26 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-CLUSTER.medication.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.medication_amount.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.medication_preparation.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.menstrual_cycle.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-CLUSTER.micronutrients.v0.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
@@ -435,6 +585,11 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-CLUSTER.move.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-CLUSTER.mydriasis_application.v0.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
@@ -445,12 +600,32 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-CLUSTER.palpation-external_ear.v1.adls",
+        ValidationCode::Vsonin,
+        "source: adds at0011, a code of level 0, as a new node of a level 1 specialisation (master04.5 VSONIN), and restates its parent slot at0083 (VDSSM)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.palpation_of_cervix.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.palpation_of_uterus.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-CLUSTER.pharmacogenetic_test_result.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
         "openEHR-EHR-CLUSTER.physical_dimensions.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.pupils.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
@@ -475,14 +650,34 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-CLUSTER.specimen_measurements.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-CLUSTER.symptom_sign-cvid.v0.adls",
         ValidationCode::Vasid,
         "source: names the parent openEHR-EHR-CLUSTER.symptom_sign.v1, a version CKM does not publish",
     ),
     (
+        "openEHR-EHR-CLUSTER.symptom_sign.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.timing.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-CLUSTER.timing_daily.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-CLUSTER.tnm_staging-breast.v1.adls",
+        ValidationCode::Valc,
+        "source: declares language ar-sy, which its flat parent lacks (master03 VALC)",
     ),
     (
         "openEHR-EHR-CLUSTER.tumour_resection_margins.v0.adls",
@@ -498,6 +693,36 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "openEHR-EHR-EVALUATION.alcohol_consumption_summary.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-EVALUATION.death_details_old.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-EVALUATION.excluded-adverse.v1.adls",
+        ValidationCode::Vpov,
+        "conversion: names the redefined value set ac9000.2 while the conversion of its parent names that value set ac9001, so the code specialises no parent code (master04.5 VPOV)",
+    ),
+    (
+        "openEHR-EHR-EVALUATION.excluded-condition.v1.adls",
+        ValidationCode::Vpov,
+        "conversion: names the redefined value set ac9000.2 while the conversion of its parent names that value set ac9001, so the code specialises no parent code (master04.5 VPOV)",
+    ),
+    (
+        "openEHR-EHR-EVALUATION.excluded-intervention.v1.adls",
+        ValidationCode::Vpov,
+        "conversion: names the redefined value set ac9000.1 while the conversion of its parent names that value set ac9001, so the code specialises no parent code (master04.5 VPOV)",
+    ),
+    (
+        "openEHR-EHR-EVALUATION.exclusion-adverse.v1.adls",
+        ValidationCode::Vsancc,
+        "source: widens its parent cardinality {1..*} of /data[at0001]/items to {0..*} (master04.5 VSANCC), as in the 1.4 source",
+    ),
+    (
+        "openEHR-EHR-EVALUATION.exclusion-problem_diagnosis.v1.adls",
+        ValidationCode::Valc,
+        "source: declares language nb, which its flat parent lacks (master03 VALC)",
     ),
     (
         "openEHR-EHR-EVALUATION.goal.v1.adls",
@@ -546,21 +771,31 @@ const ADJUDICATED: &[ValidityRefusal] = &[
     ),
     (
         "openEHR-EHR-EVALUATION.recommendation-DR_treatment.v1.adls",
-        ValidationCode::Vasid,
-        "source: names the parent openEHR-EHR-EVALUATION.recommendation.v1, a version CKM does not publish",
+        ValidationCode::Valc,
+        "source: declares language es, which its parent openEHR-EHR-EVALUATION.recommendation.v1 (DEPRECATED) lacks (master03 VALC)",
     ),
     (
         "openEHR-EHR-EVALUATION.recommendation-amd_treatment.v0.adls",
-        ValidationCode::Vasid,
-        "source: names the parent openEHR-EHR-EVALUATION.recommendation.v1, a version CKM does not publish",
-    ),
-    (
-        "openEHR-EHR-EVALUATION.recommendation-glaucoma_treatment.v0.adls",
-        ValidationCode::Vasid,
-        "source: names the parent openEHR-EHR-EVALUATION.recommendation.v1, a version CKM does not publish",
+        ValidationCode::Valc,
+        "source: declares language es, which its parent openEHR-EHR-EVALUATION.recommendation.v1 (DEPRECATED) lacks (master03 VALC)",
     ),
     (
         "openEHR-EHR-EVALUATION.smokeless_tobacco_summary.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-EVALUATION.substance_use_summary-alcohol.v1.adls",
+        ValidationCode::Vsonct,
+        "source: redefines its parent ELEMENT at0007 as a CLUSTER (master04.5 VSONCT) and adds at0005, a code of level 0 (VSONIN)",
+    ),
+    (
+        "openEHR-EHR-EVALUATION.substance_use_summary-tobacco.v1.adls",
+        ValidationCode::Vsonct,
+        "source: redefines its parent ELEMENT at0007 as a CLUSTER (master04.5 VSONCT) and adds at0005, a code of level 0 (VSONIN)",
+    ),
+    (
+        "openEHR-EHR-EVALUATION.tobacco_smoking_summary.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
@@ -570,9 +805,29 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-EVALUATION.tobacco_use_summary.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-INSTRUCTION.assisted_ventilation.v0.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-INSTRUCTION.medication_order.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-INSTRUCTION.medication_order.v2.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-INSTRUCTION.procedure.v1.adls",
+        ValidationCode::Vatid,
+        "conversion: mints at9001 for 1.4 nodes under a container that carry no node id, and defines none of them in the terminology (master07 VATID)",
     ),
     (
         "openEHR-EHR-INSTRUCTION.service_request-imaging_examination.v0.adls",
@@ -593,6 +848,21 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "openEHR-EHR-INSTRUCTION.transfusion_order.v0.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-ITEM_TREE.gas_administration.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-ITEM_TREE.medication-formulation.v1.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-ITEM_TREE.medication.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
+    (
+        "openEHR-EHR-ITEM_TREE.medication-vaccine.v1.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-ITEM_TREE.medication.v1 is refused above, so no flat parent exists (master03 VASID)",
     ),
     (
         "openEHR-EHR-OBSERVATION.abc_stroke_risk_score.v0.adls",
@@ -621,6 +891,11 @@ const ADJUDICATED: &[ValidityRefusal] = &[
     ),
     (
         "openEHR-EHR-OBSERVATION.aos_score.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.audiogram.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
@@ -655,6 +930,16 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-OBSERVATION.blood_gases.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.blood_pressure.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-OBSERVATION.blood_pressure.v2.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
@@ -665,7 +950,17 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-OBSERVATION.body_mass_index.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-OBSERVATION.body_mass_index.v2.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.body_segment.v0.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
@@ -695,14 +990,39 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-OBSERVATION.body_temperature.v1.adls",
+        ValidationCode::Vatda,
+        "conversion: the assumed value takes the shifted code at34 while value set ac9075 keeps the 1.4 members",
+    ),
+    (
         "openEHR-EHR-OBSERVATION.body_temperature.v2.adls",
         ValidationCode::Vatda,
         "conversion: the assumed value takes the shifted code at34 while value set ac9075 keeps the 1.4 members",
     ),
     (
+        "openEHR-EHR-OBSERVATION.body_weight-adjusted.v1.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-OBSERVATION.body_weight.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.body_weight-birth.v1.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-OBSERVATION.body_weight.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.body_weight.v1.adls",
+        ValidationCode::Vatda,
+        "conversion: the assumed value takes the shifted code at12 while value set ac9001 keeps the 1.4 members",
+    ),
+    (
         "openEHR-EHR-OBSERVATION.body_weight.v2.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.braden_scale-q.v0.adls",
+        ValidationCode::Vsonin,
+        "source: adds at0035, a code of level 0, as a new node of a level 1 specialisation (master04.5 VSONIN)",
     ),
     (
         "openEHR-EHR-OBSERVATION.briganti_risk_score.v0.adls",
@@ -725,6 +1045,11 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-OBSERVATION.charlson_comorbidity_index.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-OBSERVATION.charlson_comorbidity_index.v2.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
@@ -733,6 +1058,11 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "openEHR-EHR-OBSERVATION.chest_circumference.v0.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.chest_expansion.v1.adls",
+        ValidationCode::Vatda,
+        "conversion: the assumed value takes the shifted code at10 while value set ac9001 keeps the 1.4 members",
     ),
     (
         "openEHR-EHR-OBSERVATION.child_growth_indicator.v0.adls",
@@ -765,6 +1095,11 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-OBSERVATION.distraction_hearing_test.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-OBSERVATION.ecg_result.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
@@ -776,6 +1111,11 @@ const ADJUDICATED: &[ValidityRefusal] = &[
     ),
     (
         "openEHR-EHR-OBSERVATION.ejection_fraction.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.electroacoustic_hearing_test.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
@@ -910,6 +1250,16 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-OBSERVATION.height-adjusted.v0.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-OBSERVATION.height.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.height.v1.adls",
+        ValidationCode::Vatda,
+        "conversion: the assumed value takes the shifted code at17 while value set ac9015 keeps the 1.4 members",
+    ),
+    (
         "openEHR-EHR-OBSERVATION.height.v2.adls",
         ValidationCode::Vatda,
         "conversion: the assumed value takes the shifted code at17 while value set ac9015 keeps the 1.4 members",
@@ -940,6 +1290,11 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: the assumed value takes the shifted code at17 while value set ac9004 keeps the 1.4 members",
     ),
     (
+        "openEHR-EHR-OBSERVATION.leg_length_discrepancy.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-OBSERVATION.mantoux_test_result.v0.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
@@ -965,7 +1320,7 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
-        "openEHR-EHR-OBSERVATION.mini_nutritional_assessmemt_short_form.v0.adls",
+        "openEHR-EHR-OBSERVATION.msfc_score.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
@@ -990,12 +1345,27 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: 1.4 node codes unique only among siblings (at0005, at0011, at0017) are not re-minted, and ADL 2 needs them unique archetype-wide (VCOSU)",
     ),
     (
+        "openEHR-EHR-OBSERVATION.pathology_test-lipids.v1.adls",
+        ValidationCode::Vacdf,
+        "conversion: its new node at0.9004 names the value set ac9000, which only the conversion of its parent defines; VACDF reads the current archetype's terminology (master03 VACDF)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.pefr_result.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-OBSERVATION.pf_ratio.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
         "openEHR-EHR-OBSERVATION.physical_activity.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.pulse.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
@@ -1040,6 +1410,11 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-OBSERVATION.spirometry_result.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
         "openEHR-EHR-OBSERVATION.spirometry_result.v2.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
@@ -1050,12 +1425,27 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-OBSERVATION.tendon_babinski_reflexes.v0.adls",
+        ValidationCode::Vacmcu,
+        "source: a row allows two occurrences under rows cardinality {0..1} (master04.5 VACMCU), as in the 1.4 source",
+    ),
+    (
         "openEHR-EHR-OBSERVATION.testicular_volume.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
     (
+        "openEHR-EHR-OBSERVATION.third_party_observation-hearing.v1.adls",
+        ValidationCode::Vasid,
+        "source: names the parent openEHR-EHR-OBSERVATION.third_party_observation.v1, a version CKM does not publish",
+    ),
+    (
         "openEHR-EHR-OBSERVATION.tobacco_use.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.tympanogram.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
@@ -1066,6 +1456,11 @@ const ADJUDICATED: &[ValidityRefusal] = &[
     ),
     (
         "openEHR-EHR-OBSERVATION.tympanogram_hf.v0.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.urine_output.v1.adls",
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
@@ -1094,10 +1489,36 @@ const ADJUDICATED: &[ValidityRefusal] = &[
         ValidationCode::Vcarm,
         "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
     ),
+    (
+        "openEHR-EHR-OBSERVATION.warble_tones_hearing_test.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.word_list_hearing_test.v1.adls",
+        ValidationCode::Vcarm,
+        "conversion: constrains `property` on DV_QUANTITY, which no RM release defines; the converter still writes AOM 1.4 C_DV_QUANTITY.property (#4921)",
+    ),
+    (
+        "openEHR-EHR-SECTION.discharge_summary_outline.v1.adls",
+        ValidationCode::Vatid,
+        "conversion: mints at9000 and further at90NN ids for 1.4 nodes under a container that carry no node id, and defines none of them in the terminology (master07 VATID)",
+    ),
 ];
 
-/// The refusals a LOINC-serving terminology adds.
+/// The refusals a LOINC-serving terminology adds, and the one it changes: a
+/// row here replaces the [`ADJUDICATED`] row of the same file.
 const ADJUDICATED_LOINC: &[ValidityRefusal] = &[
+    (
+        "openEHR-EHR-OBSERVATION.apgar.v1.adls",
+        ValidationCode::Vetdf,
+        "source: binds the LOINC answer codes LA6713 to LA6727 without the check digit every LOINC code carries after its hyphen, so LOINC defines none of them (master03 VETDF)",
+    ),
+    (
+        "openEHR-EHR-OBSERVATION.braden_scale-q.v0.adls",
+        ValidationCode::Vasid,
+        "parent: its parent openEHR-EHR-OBSERVATION.braden_scale.v1 is refused above, so no flat parent exists (master03 VASID)",
+    ),
     (
         "openEHR-EHR-OBSERVATION.braden_scale.v1.adls",
         ValidationCode::Vetdf,
@@ -1111,32 +1532,41 @@ const ADJUDICATED_LOINC: &[ValidityRefusal] = &[
 ];
 
 #[test]
-fn every_file_parses_but_the_adjudicated_one() {
+fn every_file_parses_but_the_adjudicated_ones() {
     let files = files_with_extension(&pack(), "adls");
     assert!(files.len() > 900, "the export holds {} files", files.len());
+    let mut refused = Vec::new();
     for path in &files {
         let src = std::fs::read_to_string(path).expect("read the export");
         let name = file_name(path);
         match parse_artefact(&src, Dialect::Adl2) {
-            Ok(_) => assert_ne!(
-                name, PARSE_REFUSAL.0,
-                "the adjudicated parse refusal now parses"
+            Ok(_) => assert!(
+                !PARSE_REFUSALS.contains(&name.as_str()),
+                "the adjudicated parse refusal {name} now parses"
             ),
             Err(errors) => {
-                assert_eq!(name, PARSE_REFUSAL.0, "{name} does not parse: {errors:?}");
                 assert!(
-                    errors.iter().any(|e| e.code == PARSE_REFUSAL.1),
-                    "{errors:?}"
+                    PARSE_REFUSALS.contains(&name.as_str()),
+                    "{name} does not parse: {errors:?}"
                 );
+                assert!(
+                    errors.iter().any(|e| e.code == PARSE_REFUSAL_CODE),
+                    "{name}: {errors:?}"
+                );
+                refused.push(name);
             }
         }
     }
+    assert_eq!(
+        refused, PARSE_REFUSALS,
+        "every adjudicated parse refusal is in the pack"
+    );
 }
 
 #[test]
 fn every_parseable_file_validates_or_is_adjudicated() {
     let files = files_with_extension(&pack(), "adls");
-    let parseable = files.len() - 1;
+    let parseable = files.len() - PARSE_REFUSALS.len();
     let without = validate_all(&files, ADJUDICATED, &NoTerminologyResolver);
     assert!(
         without.broken_adjudications.is_empty(),
@@ -1147,9 +1577,13 @@ fn every_parseable_file_validates_or_is_adjudicated() {
     assert_eq!(without.refused, ADJUDICATED.len());
     assert_eq!(without.clean + without.refused, parseable);
 
-    let table: Vec<ValidityRefusal> = ADJUDICATED
+    let table: Vec<ValidityRefusal> = ADJUDICATED_LOINC
         .iter()
-        .chain(ADJUDICATED_LOINC)
+        .chain(
+            ADJUDICATED
+                .iter()
+                .filter(|(file, _, _)| ADJUDICATED_LOINC.iter().all(|(l, _, _)| l != file)),
+        )
         .copied()
         .collect();
     let with = validate_all(&files, &table, &LoincServed);

@@ -113,7 +113,7 @@ Details that decide behaviour:
   password hashes, signing-key secrets and S3 secret keys render as
   `***`; every URL that can carry credentials (database, the FHIR audit
   feed, the syslog audit repository, the terminology server and its token
-  endpoint, the remote policy server, the OTLP collector, the object store,
+  endpoint, the OTLP collector, the object store,
   the SMART platform and public base URLs, the SCIM public base URL) keeps
   its host and path and masks the embedded credentials and query
   (`postgres://***@host:5432/db`). The usage-report endpoint refuses
@@ -210,6 +210,43 @@ Two consequences to plan for:
   visibility is the effect to plan around, and the restore routes are how you
   get it back.
 
+## Operational-policy registers
+
+Three routes behind the same switch, for `admin_role` only, carry the
+operational policy that is data rather than configuration: the audit category
+map, the EHDS Art. 3(3) access delay and the Cedar policy set. What each
+register holds is on [Operational policy](operational-policy.md#the-admin-registers).
+
+| Route | Body or header | Success |
+|---|---|---|
+| `GET {ext}/admin/registers/{register}` | — | **200** `{"register", "version", "committer", "committed_at", "document"}`: the newest version, or version 0, the default; the `ETag` is the version |
+| `PUT {ext}/admin/registers/{register}` | `If-Match: "<version>"` and the whole register document | **200**: the new version, as the read answers it, with its `ETag`; the next request on every replica runs under it |
+| `GET {ext}/admin/registers/{register}/history` | — | **200** `{"register", "versions": [...]}`: every version, newest first, ending with version 0 |
+
+`{register}` is `audit-categories`, `access-delay` or `cedar-policies`, and any
+other name is **404**. A write without `If-Match` is **400**, and one whose
+`If-Match` is no longer the newest version is **412**: read the register again
+and write over the version it answers. A document that does not hold is
+**400** and leaves the version in force. Every read and write is an access
+record of its own.
+
+## The access policy
+
+Four routes behind the same switch, for `admin_role` only, carry the
+controller's access policy. What it holds is on
+[Operational policy](operational-policy.md#the-access-policy).
+
+| Route | Body or header | Success |
+|---|---|---|
+| `GET {ext}/admin/access_policy` | — | **200**: the newest `ACCESS_POLICY`; the weak `ETag` is its version uid and `Last-Modified` its commit time. **404** while none is committed |
+| `PUT {ext}/admin/access_policy` | `If-Match: <version uid>`, or `If-None-Match: *` for the first version, and the whole `ACCESS_POLICY` | **200** (**201** for the first): the new version with its `ETag`; the next request on every replica runs under it. Needs a policy grant of `write_access_policy` |
+| `GET {ext}/admin/access_policy/history` | — | **200**: every `ORIGINAL_VERSION`, newest first, with its contribution and commit audit |
+| `GET {ext}/admin/access_policy/versioned` | — | **200**: the `VERSIONED_ACCESS_POLICY` |
+
+A write with neither condition is **400**, and one whose condition no longer
+holds is **412**: read the policy again and write over the version it answers.
+A policy that does not hold is **400** and leaves the version in force.
+
 ## Legal marks: restriction, objection and retention
 
 Eleven routes behind the same switch and role, carrying the four marks the law
@@ -222,7 +259,7 @@ anything.
 | `GET {ext}/admin/restriction` | `?ehr_id=…` | **200**: the register, newest request first, lifts included |
 | `POST {ext}/admin/restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force restriction at that grain is lifted |
 | `POST {ext}/admin/research-objection` | `{"ehr_id": "…", "objected": true, "ground": "…"?}` | **204**: the objection, its override, or its withdrawal is recorded |
-| `PUT {ext}/admin/retention/policy` | `{"kind": "…", "jurisdiction": "…", "category": "…"?, "origin": "…"?, "period": "…", "anchor": "…", "source": "…"}` | **204**: the period is declared, keyed on one EHDS priority category when `category` is set and on one registered origin (`[[authz.origin]]`) when `origin` is set |
+| `PUT {ext}/admin/retention/policy` | `{"kind": "…", "jurisdiction": "…", "category": "…"?, "origin": "…"?, "period": "…", "anchor": "…", "source": "…"}` | **204**: the period is declared, keyed on one EHDS priority category when `category` is set and on one origin a `data_origin` grant in force names when `origin` is set |
 | `GET {ext}/admin/retention/policy` | — | **200**: the whole retention register, each period with its `category` and `origin` (`null` for every object of the kind, or every origin) |
 | `PUT {ext}/admin/retention/anchor` | `{"ehr_id": "…", "jurisdiction": "…", "anchored_at": "…"?, "hold_at": "…"?, "hold_ground": "…"?}` | **204**: the EHR's anchor and any whole-record hold |
 | `POST {ext}/admin/retention/hold` | `{"vo_id": "…", "held": true}` | **204**: the per-object exemption is placed or released |
@@ -230,13 +267,14 @@ anything.
 | `POST {ext}/admin/access-restriction` | `{"ehr_id": "…", "vo_id": "…"?, "note": "…"?}` | **204**: the EHDS Art. 8 restriction of access by health professionals is recorded and in force |
 | `GET {ext}/admin/access-restriction` | `?ehr_id=…` | **200**: the access-restriction register, newest request first, lifts included |
 | `POST {ext}/admin/access-restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force access restriction at that grain is lifted |
-| `POST {ext}/admin/access-delay` | `{"ehr_id": "…", "vo_id": "…", "until": "…"?, "note": "…"?}` | **204**: the composition is withheld from the person under EHDS Art. 3(3) until `until` (an RFC 3339 instant within `privacy.access_delay.max_delay` of now) or for `privacy.access_delay.max_delay`; **400** while `[privacy.access_delay]` is off |
+| `POST {ext}/admin/access-delay` | `{"ehr_id": "…", "vo_id": "…", "until": "…"?, "note": "…"?}` | **204**: the composition is withheld from the person under EHDS Art. 3(3) until `until` (an RFC 3339 instant within the access-delay register's `max_delay` of now) or for the access-delay register's `max_delay`; **400** while the [access-delay register](installation/config-auth.md#the-access-delay-register) is off |
 | `GET {ext}/admin/access-delay` | `?ehr_id=…` | **200**: the access-delay register, newest hold first, each with its `basis` (`category` or `professional`), its end and its release |
 | `POST {ext}/admin/access-delay/release` | `{"ehr_id": "…", "vo_id": "…"}` | **204**: every hold of the composition still in force is released, and the person reads it |
 | `POST {ext}/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release` | none | **204**: the treating professional's release from the clinical surface, with the checks of a write to that EHR; **403** to a request that may be the person's |
 | `POST {ext}/admin/access-opt-out` | `{"ehr_id": "…", "note": "…"?}` | **204**: the person's EHDS Art. 10 opt-out from the access services is recorded for the whole EHR; **400** while `authz.rbac.access_service_roles` is empty |
 | `GET {ext}/admin/access-opt-out` | `?ehr_id=…` | **200**: the opt-out register, newest first, reversals included |
 | `POST {ext}/admin/access-opt-out/reverse` | `{"ehr_id": "…"}` | **204**: every opt-out of the EHR that stands is reversed, and the access services read it again |
+| `POST {ext}/admin/access-log/erase` | `{"uid": "…", "grounds": [DV_CODED_TEXT, …]}` | **200**: the `ACCESS_LOG_TOMBSTONE` that replaced the access-log entry, for an erasure a law orders before the entry's retention ends; it keeps the entry's uid, `system_id`, `time_recorded` and chain link and names these grounds ([Retention, and who chooses it](audit.md#retention-and-who-chooses-it)); **409** for a tombstone or while the local audit store is off |
 | `POST {ext}/admin/ehr-access/repair` | `{"ehr_id": "…", "settings": {…}}` | **200** `{"ehr_id", "version_uid"}`: the `EHR_ACCESS` of an EHR held closed by settings that do not parse is committed again with these settings, which must parse; **409** for an EHR that is not held |
 
 A body of the wrong shape or a malformed id is **400**, an id that names nothing
@@ -244,14 +282,15 @@ is **404**, and a body without `Content-Type: application/json` is **415**, in
 each case before anything is recorded. Setting or lifting a mark is an access
 record of its own.
 
-A `category` is named as `[audit.categories]` names it (a priority category by
+A `category` is named as the [audit category register](installation/config-audit.md#the-audit-category-register) names it (a priority category by
 its code, `Patient-Summaries`, `Electronic-Prescriptions`,
 `Electronic-Dispensations`, `Medical-Imaging`, `Laboratory-Reports` or
 `Discharge-Reports`, or as `<system>|<code>`; a declared national category as
 its `<system>|<code>`; or `none`; an unknown one is **400**) and stored as its
 `<system>|<code>` token, which serves EHDS
 Annex II 3.4: retention periods that take the categories of the data into
-account. The server mirrors the map into the register at every boot. A period
+account. The server mirrors the map into the register at every boot and with
+every write of the audit category register. A period
 keyed on a category lists the objects the map places in it; an object the map
 cannot classify is listed under the longest period configured for its kind,
 and a category row with no object is left out of `due`. A period with no
@@ -323,10 +362,10 @@ curl -H "Authorization: Bearer $TOKEN" \
 ```
 
 - **Two gates.** The route is in the admin group, so it needs `api.admin`
-  and the admin role, and it also needs the role
-  [`authz.rbac.identifier_reader_role`](installation/config-auth.md#authzrbac)
-  names. Holding the admin role alone reveals no national identifier, and with
-  the key unset nobody may call the route (**403**).
+  and the admin role, and it also needs a `read_identifiers` policy grant in
+  the CDR
+  ([Operational policy](operational-policy.md#what-the-grants-decide)).
+  Holding the admin role alone reveals no national identifier (**403**).
 - **Any version.** `version_uid` names one party version; a historical
   version shows the value it committed.
 - **A view, never a write.** The body is the stored `ORIGINAL_VERSION` with
@@ -715,15 +754,15 @@ other `Content-Type` is **415**.
 ## Other routes under `{base}/admin`
 
 The outbox feed shares the `/admin` path prefix but **not** the
-`api.admin` switch: it answers for the readers `[record.change_feed] readers` names,
-and **404** for any other name, whatever `api.admin` says:
+`api.admin` switch: it answers for the readers the `read_change_feed` grants in
+force name, and **404** for any other name, whatever `api.admin` says:
 
 | Routes | Gate | Documented in |
 |---|---|---|
-| `{base}/admin/outbox/{reader}`, `{base}/admin/outbox/{reader}/ack` | `record.change_feed.readers` and the `__ferroehr.outbox` scope | [Change events (outbox feed)](beyond-core/outbox-feed.md) |
+| `{base}/admin/outbox/{reader}`, `{base}/admin/outbox/{reader}/ack` | the `__ferroehr.outbox` scope and the caller's own `read_change_feed` grant naming the reader | [Change events (outbox feed)](beyond-core/outbox-feed.md) |
 
-They are still admin-class routes for authorization, so the same **401** /
-**403** split applies.
+An unauthenticated caller is **401**, and a caller without the scope or the
+grant **403**.
 
 For everything else an operator needs (migrations, health probes, the
 management surface, observability and upgrades) see

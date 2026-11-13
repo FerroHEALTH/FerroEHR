@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>pt-br</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">22/05/2009</original_author>
+    <original_author id="name">Sergio Miranda Freire &amp; Rigoleta Dutra Mediano Dias</original_author>
+    <original_author id="organisation">Universidade do Estado do Rio de Janeiro - UERJ</original_author>
+    <original_author id="email">sergio@lampada.uerj.br</original_author>
+    <lifecycle_state>Authordraft</lifecycle_state>
+    <other_details id="references">ISO/TS 22220:2008(E) - Identification of Subject of Care - Technical Specification - International Organization for Standardization</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>pt-br</code_string>
+      </language>
+      <purpose>Representação dos dados demográficos de uma pessoa</purpose>
+      <keywords>serviço demográfico</keywords>
+      <keywords>dados demográficos de uma pessoa</keywords>
+      <use>Usado em serviço demográficos para coletar os dados demográficos de uma pessoa</use>
+      <misuse />
+      <copyright>copyright (c) 2009 openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>Representation of a person's demographic data</purpose>
+      <keywords>demographic service</keywords>
+      <keywords>person's demographic data</keywords>
+      <use>Used in demographic service to collect a person's demographic data</use>
+      <misuse />
+      <copyright>copyright (c) 2009 openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>en</code_string>
+    </language>
+    <author id="name">Sergio Miranda Freire</author>
+    <author id="organisation">Universidade do Estado do Rio de Janeiro - UERJ</author>
+    <author id="email">sergio@lampada.uerj.br</author>
+  </translations>
+  <archetype_id>
+    <value>openEHR-DEMOGRAPHIC-CLUSTER.person_details_iso.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>0</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_CODE_PHRASE">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <terminology_id>
+                  <value>local</value>
+                </terminology_id>
+                <code_list>at0010</code_list>
+                <code_list>at0011</code_list>
+                <code_list>at0012</code_list>
+                <code_list>at0013</code_list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0002</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0003</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <cardinality>
+        <is_ordered>true</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="pt-br">
+      <items code="at0000">
+        <items id="text">dados demográficos da pessoa</items>
+        <items id="description">dados da pessoa</items>
+      </items>
+      <items code="at0001">
+        <items id="text">sexo</items>
+        <items id="description">sexo da pessoa</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Sobrenome da Mãe</items>
+        <items id="description">Sobrenome da mãe</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Comentários de identificação</items>
+        <items id="description">Comentários registrados para uma pessoa para distinguir entre duas ou mais pessoas com a mesma informação demográfica ou similar.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Masculino</items>
+        <items id="description">Sexo masculino</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Feminino</items>
+        <items id="description">Sexo feminino</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Intersexo ou indeterminado</items>
+        <items id="description">Usado normalmente para bebês para os quais o sexo não foi determinado por qualquer razão. Não deve ser usado em formulários de coleta de dados completados pelo respondente e deve ser usado somente se a pessoa ou respondente voluntariamente afirma que a pessoa é intersexo ou onde fica claro durante o processo de coleta que o indivíduo não é nem do sexo masculino nem feminino</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Não declarado/inadequadamente descrito</items>
+        <items id="description">Não é para ser usado em formulários de coleta primária. É primariamente usado em coleções administrativas, ao transferir conjuntos de dados onde o item não foi coletado</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Person´s data</items>
+        <items id="description">A person's data</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Sex</items>
+        <items id="description">The sex of the subject</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Mother's family name</items>
+        <items id="description">Mother's original family name</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Identification comment</items>
+        <items id="description">Comments recorded for a person registration to distinguish between two or more persons with the same or similar demographic information</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Male</items>
+        <items id="description">Male</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Female</items>
+        <items id="description">Female</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Intersex or indeterminate</items>
+        <items id="description">is normally used for babies for whom sex has not been determined for whatever reason, should not generally be used on data collection forms completed by the respondent and should only be used if the person or respondent volunteers that the person is intersex or where it otherwise becomes clear during the collection process that the individual is neither male nor female</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Not declared/inadequately described</items>
+        <items id="description">is not to be used on primary collection forms. It is primarily for use in administrative collections when transferring data from data sets where the item has not been collected.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

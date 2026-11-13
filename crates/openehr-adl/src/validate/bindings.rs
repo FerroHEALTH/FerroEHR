@@ -7,7 +7,7 @@
 //! Key validity is
 //! `docs/specs/openehr/AM/docs/AOM2/master07-terminology_package.adoc`
 //! §Validity Rules (a binding key is a defined at/ac-code, or a path that
-//! resolves in the archetype). External term validity is
+//! is valid in the flat archetype). External term validity is
 //! `master03-archetype_package.adoc` §Validity Rules, VETDF: "external term
 //! validity. Each external term used within the archetype definition must exist
 //! in the relevant terminology (subject to tool accessibility; codes for
@@ -38,13 +38,13 @@ use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTermino
 use super::ValidationIssue;
 use super::catalogue::ValidationCode;
 use crate::artefact::{ArchetypeView, view};
-use crate::paths::{Resolution, has_node_id_predicate, resolve};
+use crate::paths::{Resolution, has_node_id_predicate, resolve_in_flat};
 use openehr_am::v2_4::aom2::definitions::adl_code_definitions::AdlCodeDefinitionsData;
 
 // ── binding keys (VTTBK / VTCBK) ──────────────────────────────────────────
 
 /// VTTBK / VTCBK: every `term_bindings` key must be a defined at/ac-code, or a
-/// path that resolves within the archetype (`master07` §Validity Rules).
+/// path that is valid in the flat archetype (`master07` §Validity Rules).
 pub(super) fn check_bindings(
     v: &ArchetypeView<'_>,
     defined: &BTreeSet<&str>,
@@ -79,7 +79,8 @@ pub(super) fn check_term_bindings(
 /// A constraint (ac) key must be a defined ac-code (VTCBK); a term key must be
 /// a defined at-code (VTTBK); a non-code key that is not even a path (a bare
 /// word) is never a valid binding target; and a node-id-predicated path must
-/// resolve within the archetype. A pure-RM path (no predicate) is a
+/// resolve within the flat archetype, through any `use_node` on its way
+/// ([`resolve_in_flat`]). A pure-RM path (no predicate) is a
 /// reference-model concern ([`super::rm`]).
 fn binding_key_issue(
     definition: Option<&CComplexObject>,
@@ -110,7 +111,7 @@ fn binding_key_issue(
     }
     if let Some(definition) = definition
         && has_node_id_predicate(key)
-        && resolve(definition, key) != Resolution::Found
+        && resolve_in_flat(definition, key) != Resolution::Found
     {
         return Some(ValidationIssue::new(
             ValidationCode::Vttbk,

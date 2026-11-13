@@ -25,24 +25,21 @@
 
 pub mod loader;
 
-pub mod abac_rules;
-pub mod access_delay;
-pub mod agreement;
 pub mod auth;
 pub mod auth_section;
 pub mod authz;
+mod beside;
 pub mod binding;
-pub mod clients;
 pub mod deployment;
+pub mod federation;
 pub mod management;
 pub mod profile;
 pub mod record;
 pub mod redact;
 pub mod rest;
 pub mod retention;
-pub mod retired;
-pub mod retired_shared;
 pub mod scim;
+pub mod server;
 pub mod smart;
 mod validate;
 pub mod versioning;
@@ -51,7 +48,6 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use ferrohealth_config::loader::Loaded;
-use ferrohealth_config::removed::Removed;
 use serde::{Deserialize, Serialize};
 
 use crate::config::loader::{ConfigError, ConfigErrors};
@@ -63,20 +59,22 @@ use crate::config::loader::{ConfigError, ConfigErrors};
 /// table a boot error. One table per concern: what the deployment is, the
 /// family's shared sections (`[server]`, `[telemetry]`, `[usage_report]`,
 /// `[auth]`), FerroEHR's own surfaces and policies, and one table per outbound
-/// integration (`[terminology]`, `[pixm]`). Every table a release before
-/// v5.7.0 read is kept only to be refused at load, naming its replacement
-/// ([`retired`]).
+/// integration (`[terminology]`, `[pixm]`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = ["database.url"],
+    "x-ferroehr-class" = { "server": "infrastructure", "telemetry": "infrastructure", "usage_report": "infrastructure", "database": "infrastructure",
+    "database.max_connections": "optional", "database.min_connections": "optional", "database.acquire_timeout": "optional", "database.statement_timeout": "optional" })))]
 pub struct FerroEhrConfig {
     /// `[deployment]`: the declared posture, the openEHR specification set
     /// and the licence token.
     pub deployment: profile::DeploymentConfig,
     /// `[server]` — the HTTP listener: the family's section (the listen
     /// address, the timeouts, the body limit, the overload bound, the drain,
-    /// TLS, the trusted proxies, the caller rate and compression).
-    pub server: ferrohealth_server::section::ServerSection,
+    /// TLS, the trusted proxies, the caller rate and compression) and the
+    /// public base URL every public URL derives from.
+    pub server: server::ServerConfig,
     /// `[telemetry]`: the console, the request log and the OpenTelemetry
     /// export, the family's shared section.
     pub telemetry: ferrohealth_telemetry::section::TelemetrySection,
@@ -87,7 +85,7 @@ pub struct FerroEhrConfig {
     /// `[auth.smart]` and `[auth.scim]`.
     pub auth: auth_section::AuthConfig,
     /// `[authz]` — RBAC, ABAC, assurance, the party binding, the system
-    /// clients, the federation agreements and the registered origins.
+    /// clients and the grant ceiling.
     pub authz: authz::AuthzConfig,
     /// `[api]` — the openEHR REST API: the base path, the system identifier,
     /// the `OPTIONS` identity, the `OpenAPI` UI, CORS, the clinical body tier
@@ -114,66 +112,6 @@ pub struct FerroEhrConfig {
     /// `[pixm]` — the IHE PIXm patient identity source the subject index asks
     /// (ITI-83) under `record.subject_index = "pixm"`.
     pub pixm: Option<crate::service::ehr_index::config::PixmConfig>,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub spec_profile: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub deployment_profile: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub deployment_accepts: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub rest: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub db: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub storage: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub admin: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub smart: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub signing: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub licence: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub query: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub outbox: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub multimedia: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub origins: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub demographic: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub cohort: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub ehr_index: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub access_delay: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub versioning: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub scim: Removed,
 }
 
 impl Default for FerroEhrConfig {
@@ -186,10 +124,13 @@ impl Default for FerroEhrConfig {
     fn default() -> Self {
         Self {
             deployment: profile::DeploymentConfig::default(),
-            server: ferrohealth_server::section::ServerSection {
-                listen: std::net::SocketAddr::from(([0, 0, 0, 0], 8080)),
-                body_limit: ferrohealth_config::units::ByteSize::from_mib(64),
-                ..ferrohealth_server::section::ServerSection::default()
+            server: server::ServerConfig {
+                shared: ferrohealth_server::section::ServerSection {
+                    listen: std::net::SocketAddr::from(([0, 0, 0, 0], 8080)),
+                    body_limit: ferrohealth_config::units::ByteSize::from_mib(64),
+                    ..ferrohealth_server::section::ServerSection::default()
+                },
+                public_base_url: None,
             },
             telemetry: ferrohealth_telemetry::section::TelemetrySection::default(),
             usage_report: ferrohealth_usage_report::section::UsageReportSection::default(),
@@ -203,45 +144,14 @@ impl Default for FerroEhrConfig {
             record: record::RecordConfig::default(),
             terminology: None,
             pixm: None,
-            spec_profile: Removed::default(),
-            deployment_profile: Removed::default(),
-            deployment_accepts: Removed::default(),
-            rest: Removed::default(),
-            db: Removed::default(),
-            storage: Removed::default(),
-            admin: Removed::default(),
-            smart: Removed::default(),
-            signing: Removed::default(),
-            licence: Removed::default(),
-            query: Removed::default(),
-            outbox: Removed::default(),
-            multimedia: Removed::default(),
-            origins: Removed::default(),
-            demographic: Removed::default(),
-            cohort: Removed::default(),
-            ehr_index: Removed::default(),
-            access_delay: Removed::default(),
-            versioning: Removed::default(),
-            scim: Removed::default(),
         }
     }
 }
 
-/// The shipped default `ferroehr.toml`: every key with its default.
-///
-/// `tools/config-reference` generates it from the configuration types, each
-/// key under its description (#5316).
+/// The shipped default `ferroehr.toml`, which `tools/config-reference` generates (#5316, #5455).
 pub const DEFAULT_TEMPLATE: &str = include_str!("../../assets/ferroehr.default.toml");
 
 impl FerroEhrConfig {
-    /// The registered origins `[[authz.origin]]` declares.
-    #[must_use]
-    pub fn origins(&self) -> crate::origins::OriginsConfig {
-        crate::origins::OriginsConfig {
-            registered: self.authz.origin.clone(),
-        }
-    }
-
     /// Returns the redacted configuration as a TOML table, the tree
     /// `ferroehr report` records.
     ///
@@ -346,6 +256,8 @@ pub fn load_with_provenance(
 }
 
 #[cfg(test)]
+mod abac_tests;
+#[cfg(test)]
 mod audit_tests;
 #[cfg(test)]
 mod secret_tests;
@@ -358,7 +270,6 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::config::authz::AbacParam;
     use crate::service::ehr_index::config::SubjectIndex;
     use crate::storage::cohort_predicate::PredicateKind;
     use ferrohealth_secret::secret_url::SecretUrl;
@@ -406,6 +317,14 @@ mod tests {
         let f = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp");
         f.write_str(content).expect("write");
         f
+    }
+
+    /// The refusal `assemble` gives a file carrying `content`, as text.
+    pub(super) fn file_refusal(content: &str) -> String {
+        let file = toml_file(content);
+        assemble(Some(file.path()), &env(&[]), &[])
+            .expect_err(content)
+            .to_string()
     }
 
     pub(super) fn assemble_ok(
@@ -542,7 +461,7 @@ mod tests {
         // PORT alone sets server.listen on all interfaces (the container-
         // platform convention: Vercel/Cloud Run/Heroku inject only the port).
         let c = assemble_ok(None, &env(&[("PORT", "3123")]), &[]);
-        assert_eq!(c.server.listen.to_string(), "0.0.0.0:3123");
+        assert_eq!(c.server.shared.listen.to_string(), "0.0.0.0:3123");
         let c = assemble_ok(
             None,
             &env(&[
@@ -551,7 +470,7 @@ mod tests {
             ]),
             &[],
         );
-        assert_eq!(c.server.listen.to_string(), "127.0.0.1:9000");
+        assert_eq!(c.server.shared.listen.to_string(), "127.0.0.1:9000");
     }
 
     // ── 2. Mapping ────────────────────────────────────────────────────────────
@@ -566,12 +485,20 @@ mod tests {
                 ("FERROEHR__AUTH__ISSUER__0__KIND", "persons"),
                 ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr,other"),
                 ("FERROEHR__AUTH__ISSUER__0__TIMEOUT", "1500ms"),
-                ("FERROEHR__AUTHZ__ABAC__POLICY__EHR__NAME", "ehr-policy"),
+                (
+                    "FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__ARCHETYPE",
+                    "openEHR-DEMOGRAPHIC-ADDRESS.address.v1",
+                ),
+                (
+                    "FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__NODE",
+                    "at0012",
+                ),
+                ("FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__KIND", "text"),
             ]),
             &[],
         );
         assert_eq!(
-            c.server.max_concurrent_requests,
+            c.server.shared.max_concurrent_requests,
             std::num::NonZeroUsize::new(64)
         );
         let [issuer] = c.auth.shared.issuers() else {
@@ -601,12 +528,12 @@ mod tests {
             ferrohealth_config::units::Duration::from_mins(1)
         );
         assert_eq!(
-            c.authz
-                .abac
-                .policy
-                .get("ehr")
-                .map(|rule| rule.name.as_str()),
-            Some("ehr-policy")
+            c.privacy
+                .cohort
+                .predicates
+                .get("city")
+                .map(|predicate| predicate.archetype.as_str()),
+            Some("openEHR-DEMOGRAPHIC-ADDRESS.address.v1")
         );
     }
 
@@ -638,13 +565,10 @@ mod tests {
                 ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr"),
                 ("FERROEHR__AUTH__ISSUER__0__ALGORITHMS", "ES256"),
                 ("FERROEHR__AUTH__SCOPES_SUPPORTED", "openid"),
-                ("FERROEHR__AUTH__SMART__BACKEND_CLIENTS", "etl"),
                 (
                     "FERROEHR__AUTH__SMART__PATIENT_ISSUERS",
                     "https://as.example",
                 ),
-                ("FERROEHR__AUTH__SMART__DEMOGRAPHIC_CLIENTS", "mpi"),
-                ("FERROEHR__RECORD__CHANGE_FEED__READERS", "ferrobridge"),
             ]),
             &[],
         );
@@ -660,38 +584,9 @@ mod tests {
         assert_eq!(issuer.audience, vec!["ferroehr".to_owned()]);
         assert_eq!(issuer.algorithms.len(), 1);
         assert_eq!(c.auth.shared.scopes_supported, vec!["openid".to_owned()]);
-        assert_eq!(c.auth.smart.backend_clients, vec!["etl".to_owned()]);
         assert_eq!(
             c.auth.smart.patient_issuers,
-            vec!["https://as.example".to_owned()]
-        );
-        assert_eq!(c.auth.smart.demographic_clients, vec!["mpi".to_owned()]);
-        assert_eq!(c.record.change_feed.readers, vec!["ferrobridge".to_owned()]);
-    }
-
-    /// A list nested under a MAP key is addressable from the environment too,
-    /// so it needs registration like any other — `authz.abac.policy.<kind>` is
-    /// a map, not an array of tables, and the scalar case above already proves
-    /// the env grammar reaches into one.
-    #[test]
-    fn a_list_under_a_map_key_parses_from_env() {
-        let c = assemble_ok(
-            None,
-            &env(&[
-                ("FERROEHR__AUTHZ__ABAC__POLICY__EHR__NAME", "ehr-policy"),
-                (
-                    "FERROEHR__AUTHZ__ABAC__POLICY__EHR__PARAMETERS",
-                    "patient,template",
-                ),
-            ]),
-            &[],
-        );
-        let rule = c.authz.abac.policy.get("ehr").expect("the ehr policy rule");
-        assert_eq!(rule.name, "ehr-policy");
-        assert_eq!(
-            rule.parameters,
-            vec![AbacParam::Patient, AbacParam::Template],
-            "a policy's parameter list must be reachable from the environment"
+            vec![SecretUrl::new("https://as.example")]
         );
     }
 
@@ -804,11 +699,14 @@ mod tests {
 
     #[test]
     fn unknown_env_var_is_a_boot_error_with_suggestion() {
-        let err = assemble(None, &env(&[("FERROEHR__SIGNIN__ENABLED", "true")]), &[])
+        let err = assemble(None, &env(&[("FERROEHR__TELEMETRI__FILTER", "info")]), &[])
             .expect_err("unknown var");
         let msg = err.to_string();
-        assert!(msg.contains("FERROEHR__SIGNIN__ENABLED"), "{msg}");
-        assert!(msg.contains("signing"), "did-you-mean missing: {msg}");
+        assert!(msg.contains("FERROEHR__TELEMETRI__FILTER"), "{msg}");
+        assert!(
+            msg.contains("did you mean `telemetry"),
+            "did-you-mean missing: {msg}"
+        );
     }
 
     #[test]
@@ -1368,6 +1266,22 @@ mod tests {
         assert!(c.validate().is_ok());
     }
 
+    /// Checkpoints and signed links sign with the keyring's key, so either
+    /// one on without a `pgp` keyring is a configuration error (#5129).
+    #[test]
+    fn access_log_signing_requires_a_pgp_keyring() {
+        for (checkpoints, sign_links) in [(true, false), (false, true)] {
+            let mut c = standalone();
+            c.audit.access_log.checkpoints = checkpoints;
+            c.audit.access_log.sign_links = sign_links;
+            let err = c.validate().expect_err("no OpenPGP key in the keyring");
+            assert!(format!("{err:?}").contains("audit.access_log"), "{err:?}");
+            c.record.signing.mode = crate::versioning::signature::config::Mode::Pgp;
+            c.record.signing.key_file = Some(PathBuf::from("/k.asc"));
+            assert!(c.validate().is_ok(), "{:?}", c.validate());
+        }
+    }
+
     /// The discovery document is built from the `[auth]` issuer's metadata and
     /// sends applications to that issuer, so serving it without an issuer whose
     /// tokens this server accepts is refused.
@@ -1375,7 +1289,7 @@ mod tests {
     fn a_served_smart_document_needs_an_issuer() {
         let mut c = standalone();
         c.auth.smart.discovery = true;
-        c.auth.smart.public_base_url = Some(SecretUrl::new("https://cdr.example.com"));
+        c.server.public_base_url = Some(SecretUrl::new("https://cdr.example.com"));
         let err = c
             .validate()
             .expect_err("SMART without an [auth] issuer must refuse");
@@ -1449,7 +1363,7 @@ mod tests {
     #[test]
     fn validate_management_port_must_differ_from_the_listen_port() {
         let mut c = standalone();
-        c.server.listen = "0.0.0.0:8080".parse().expect("an address");
+        c.server.shared.listen = "0.0.0.0:8080".parse().expect("an address");
         c.management.listen = Some("0.0.0.0:8080".parse().expect("an address"));
         assert!(c.validate().is_err());
         c.management.listen = Some("127.0.0.1:8080".parse().expect("an address"));
@@ -1466,7 +1380,7 @@ mod tests {
     #[test]
     fn validate_keeps_the_clinical_body_tier_below_the_listener_limit() {
         let mut c = standalone();
-        c.server.body_limit = ferrohealth_config::units::ByteSize::from_bytes(64);
+        c.server.shared.body_limit = ferrohealth_config::units::ByteSize::from_bytes(64);
         c.api.body_limit = Some(ferrohealth_config::units::ByteSize::from_bytes(64));
         let err = c.validate().expect_err("a tier at the ceiling").to_string();
         assert!(err.contains("api.body_limit"), "{err}");
@@ -1773,13 +1687,12 @@ mod tests {
 
     /// Every outbound grant is the `ferrohealth-smart` client table, so the
     /// key `token_url` that preceded `token_endpoint` stops startup by name
-    /// in each of the three tables that take a grant.
+    /// in each of the two tables that take a grant.
     #[test]
     fn the_old_token_url_key_is_refused_in_every_grant() {
         for table in [
             "terminology.endpoint.credentials.oauth",
             "audit.fhir_feed.endpoint.credentials.oauth",
-            "authz.abac.remote.endpoint.credentials.oauth",
         ] {
             let file = toml_file(&format!(
                 "[{table}]\ntoken_url = \"https://idp.example/token\"\nclient_id = \"c\"\n"

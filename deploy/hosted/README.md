@@ -88,7 +88,7 @@ limits, with what each used on 2026-10-27 in the local rehearsal of #4242
 | **Total** | **6528m** | |
 
 That leaves about 1.1 GiB for the OS, Docker and the page cache. The one-shots
-(`identity-issuer-ready`, `ferropix-seed`, `ferroehr-definitions`) live for seconds and carry no limit; `ferroehr-definitions` stores the professional PERSON and ROLE templates the party mapping names before the CDR starts.
+(`identity-issuer-ready`, `ferropix-seed`) live for seconds and carry no limit. The CDR stores its default demographic definitions itself as it boots.
 
 ## What is in this directory
 
@@ -154,8 +154,9 @@ every step. Three callers:
    seed-only) — verbs `wipe` (drop the CDR's five schemas on the private
    database box, plus the four superseded first-generation ones a box seeded
    before the storage rewrite still carries, with the DSN this box already
-   holds), `restart` (recreate the CDR so a fresh boot re-runs the
-   migrations against the wiped database) and `identities` (below).
+   holds), `deploy` (as above: the CDR boots fresh on the wiped store, re-runs
+   its migrations and stores its default definitions; #5406) and `identities`
+   (below).
 
 The deploy key is restricted on the box to `deploy.sh` (`command=` in
 `cloud-init.yaml`), which reads `SSH_ORIGINAL_COMMAND` and accepts exactly
@@ -183,9 +184,9 @@ beside it, so **adding content is editing data**: a template slug, an EHR
 subject, an AQL file, a party. The walker itself never changes.
 
 The reseed seeds the release the sandbox runs, with that release's scripts
-(#4370). Its `identities` job reads `solution_version` from the ITS-REST
-system `OPTIONS /ferroehr/rest/openehr/v1`, and both the `identities` and the
-`seed` job check out the tag `v<version>`, so the routes the walker calls,
+(#4370). Its first job, `served`, reads `solution_version` from the ITS-REST
+system `OPTIONS /ferroehr/rest/openehr/v1` before anything is wiped, and both
+the `identities` and the `seed` job check out the tag `v<version>`, so the routes the walker calls,
 the corpus it loads and the manifest's pins are the deployed version's. A
 change to the walker or the dataset on `main` reaches the sandbox with the
 next release, and a version with no tag fails the run by name.
@@ -198,19 +199,26 @@ binds the `PERSON` that carries its binding key `ferroehr` under
 request is refused `refused-unbound` while none does. The nightly wipe deletes
 every `PERSON`, so the compose file's `ferroehr-provision` service provisions
 it again the way an identity provider provisions people: as the
-`sandbox-scim` client (`[[auth.scim.client]]`), with a client credentials token for
+`sandbox-scim` client, which the `ferroehr-grant` service grants
+`scim_provision` in the CDR first (`ferroehr party-binding grant`), with a
+client credentials token for
 the scope `ferroehr/scim` from the development issuer, it asks
 `/scim/v2/Users` for `userName eq "ferroehr"` every 30 seconds and creates the
 User when it is missing (RFC 7644 §3.3). FerroEHR creates the `PERSON` and its
 professional `ROLE` and issues the `PERSON`'s id, so no party id is fixed
-anywhere, and no Basic machine user or administrator role seeds it.
-`reseed.sh` waits for the login to bind before it commits anything, so every
+anywhere, and no Basic machine user or administrator role seeds it. A Basic
+user is a credential alone, so the `ferroehr-hold` service then grants that
+`PERSON` the SMART on openEHR scopes of every resource family
+(`ferroehr party-binding grant --basic-user ferroehr --operation hold_scopes`),
+running again until the `PERSON` exists; the demo user holds ADMIN and the
+product scope as `[authz.rbac] first_admin`.
+`reseed.sh` waits for the login to bind and hold its scopes before it commits anything, so every
 seeded version names the demo `PERSON`, and it reads the marker's
 `EHR_STATUS` version back to check that its committer references a `PERSON`.
 
 ### The patients and FerroPIX
 
-The CDR resolves patients through FerroPIX (`[ehr_index] provider = "ihe"`),
+The CDR resolves patients through FerroPIX (`[record] subject_index = "pixm"`),
 so every `EHR_STATUS` names its patient by a pseudonym in the clinical domain
 `urn:oid:2.999.7.1` (`[privacy] subject_namespaces`). The manifest's subjects
 (`sandbox-patient-01` and on, and the marker) are the patients' identifiers in
@@ -223,9 +231,15 @@ as the CDR's client `ferroehr` (ITI-83), which mints its pseudonym on the
 first ask and answers the same one after. The answer is the file
 `reseed.sh` reads as `SANDBOX_IDENTITIES`. FerroPIX's database is never wiped,
 so every night answers the same pseudonyms, and after a reset the CDR's EHRs
-and FerroPIX's identities agree. A visitor sees the resolution through
+and FerroPIX's identities agree. The `identities` job refuses an answer whose namespace
+the served release's `[privacy] subject_namespaces` does not declare, or whose
+pseudonyms are not UUIDs, before the seed sends anything, and the
+`hosted-deploy-script` guard runs the verb on a stand-in box and holds every
+`EHR_STATUS` body `reseed.sh --render-ehrs` writes to the same list (#5409).
+The verb always runs the one-shot: it reads no CDR configuration key, since
+the copy on the box never sees a release rename one. A visitor sees the resolution through
 `POST /ferroehr/rest/extensions/v1/query/cohort` with `subjects` named in
-`urn:oid:2.999.1.1` (`[cohort] subjects = true`; the small-cell floor of 5
+`urn:oid:2.999.1.1` (`[privacy.cohort] subjects = true`; the small-cell floor of 5
 applies).
 
 FerroPIX and the CDR accept a plain-`http` token issuer only on loopback
@@ -252,23 +266,25 @@ One run loads, in about 590 requests:
 
 The ADL 2 archetype step offers the whole 322-file corpus, parents before
 children, and pins both outcomes in the manifest: 231 artefacts stored, 91
-refused with a `422`. 89 refusals are AOM2 validity findings on the 2013
+refused with a `422`. 88 refusals are AOM2 validity findings on the 2013
 conversions: constraints on an attribute the RM does not declare
 (`DV_QUANTITY.property`), languages, slots and node ids that do not conform
 to the flat parent, and eight children of refused parents that therefore have
 no flat parent to validate against, and the one template whose filler
-(`apgar`) is refused, which no stored archetype can fill (VARXR). Every
+(`apgar`) the upload order reaches only after it, so no stored archetype
+fills it (VARXR). Every
 refused file is adjudicated by name in the corpus gate (`crates/openehr-adl/tests/it/ckm_archetype_packs.rs`), and
 a change in either count fails the run instead of passing quietly.
 
-The other two refusals need the LOINC index FerroTERM serves on the box:
-`braden_scale` binds the mistyped LOINC answer code `LA9605-4` (VETDF), and
+The other three refusals need the LOINC index FerroTERM serves on the box:
+`apgar` binds the LOINC answer codes `LA6713` to `LA6727` without their check
+digit and `braden_scale` binds the mistyped `LA9605-4` (both VETDF), and
 `braden_scale-child` then has no stored parent (VASID). A terminology server
-that serves no LOINC cannot verify the binding, so the CDR warns and stores
-both (AOM2 VETDF: "subject to tool accessibility"), and the library loads 233
-/ 89. The seed asks the CDR for a LOINC code before the library step and
+that serves no LOINC cannot verify the bindings, so the CDR warns and stores
+all three (AOM2 VETDF: "subject to tool accessibility"), and the library loads
+234 / 88. The seed asks the CDR for a LOINC code before the library step and
 stops with that diagnosis when the posture serves none (#4278). A local run
-without LOINC sets `SANDBOX_TERMINOLOGY=without-loinc` and expects 233 / 89.
+without LOINC sets `SANDBOX_TERMINOLOGY=without-loinc` and expects 234 / 88.
 
 Two of the eight EHRs end the run with
 a second `EHR_STATUS` version: one not queryable, one not modifiable, so both

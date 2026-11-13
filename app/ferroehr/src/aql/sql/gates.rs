@@ -7,10 +7,32 @@
 //! services (`docs/law/eu/ehds/text.html`), each published for the request by
 //! `crate::system_log::access_context`. No openEHR spec governs any of them:
 //! our own design/extension.
+//!
+//! A demographic query by a caller who is no administrator also leaves out
+//! every version of a party that ever had a policy version
+//! ([`crate::party_binding::policy_mark`]), the rule the Demographic API read gate
+//! applies (`party_binding::protect::check_read`). The commit that writes a
+//! policy version marks the party's head row, nothing clears the mark, and
+//! the predicate is one column of the head row every versioned-object source
+//! reaches by its primary key ([`super::head::bind_head`]), so every root, an
+//! `OR` branch's included, and every node a query reaches through `CONTAINS`
+//! or a path, which belongs to its root's version, is covered; counts, paging
+//! and aggregates see only what the caller may read. No openEHR spec governs
+//! who reads a party, and QUERY master03 §FROM gives semantics to the clinical
+//! repository only: our own design.
+//!
+//! The same head row carries the read rule of the `EHR_ACCESS` settings: an
+//! `EHR_ACCESS` object contributes a row only when its EHR is one whose
+//! settings the caller may read ([`super::EhrAccessReaders`]), so a
+//! restriction stays invisible to a provider (EHDS Art. 8) in every query
+//! shape. Who reads the settings is our own design (#5508).
 
+use sea_query::extension::postgres::PgFunc;
 use sea_query::{Alias, Expr, ExprTrait as _, Query};
 
 use super::expr::col;
+use super::{EhrAccessReaders, PolicyParties};
+use crate::aql::ir::QueryDomain;
 use crate::db::iden::{Ehr, VoHead};
 
 /// The alias of the `ehr` row the opt-out probe reads.
@@ -18,7 +40,7 @@ const OPT_OUT_PROBE: &str = "opt_out_ehr";
 
 /// Which access gates hold for the query being built.
 #[derive(Debug, Clone, Copy)]
-pub(super) struct Gates {
+pub(super) struct Gates<'a> {
     /// The Art. 8 restriction: a restricted object or EHR contributes no row.
     access_restricted: bool,
     /// The Art. 3(3) delay: an object withheld from the person contributes no
@@ -27,11 +49,23 @@ pub(super) struct Gates {
     /// The Art. 10 opt-out: no object or EHR of an opted-out EHR contributes a
     /// row.
     opted_out: bool,
+    /// Whether a demographic query leaves the policy parties out: no party
+    /// whose head carries the policy mark contributes a row. A clinical
+    /// query reads no party, so it is [`PolicyParties::Served`] there.
+    policy_parties: PolicyParties,
+    /// The EHRs whose `EHR_ACCESS` objects contribute rows.
+    access_settings: &'a EhrAccessReaders,
 }
 
-impl Gates {
-    /// The gates the current request publishes.
-    pub(super) fn current() -> Self {
+impl<'a> Gates<'a> {
+    /// The gates the current request publishes for a query of `domain`
+    /// that reads the policy parties as `policy_parties` says and the
+    /// `EHR_ACCESS` objects of the EHRs `access_settings` names.
+    pub(super) fn current(
+        domain: QueryDomain,
+        policy_parties: PolicyParties,
+        access_settings: &'a EhrAccessReaders,
+    ) -> Self {
         use crate::system_log::access_context::{
             access_delay_enforced, access_opt_out_enforced, access_restriction_enforced,
         };
@@ -39,12 +73,22 @@ impl Gates {
             access_restricted: access_restriction_enforced(),
             person_withheld: access_delay_enforced(),
             opted_out: access_opt_out_enforced(),
+            policy_parties: if domain == QueryDomain::Demographic {
+                policy_parties
+            } else {
+                PolicyParties::Served
+            },
+            access_settings,
         }
     }
 
     /// The predicates on the head row `h` of one versioned object.
     pub(super) fn on_head(self, h: &str) -> Vec<Expr> {
         let mut predicates = Vec::new();
+        // NOTE: our own design, only an administrator reads any version of a marked party.
+        if self.policy_parties == PolicyParties::Hidden {
+            predicates.push(col(h, VoHead::PolicyPartyAt).is_null());
+        }
         // NOTE: EHDS Art. 8, an object under an access restriction contributes no row.
         if self.access_restricted {
             predicates.push(col(h, VoHead::AccessRestrictedAt).is_null());
@@ -53,6 +97,17 @@ impl Gates {
         if self.person_withheld {
             let until = col(h, VoHead::PersonWithheldUntil);
             predicates.push(until.clone().is_null().or(until.lte(Expr::cust("now()"))));
+        }
+        // NOTE: EHDS Art. 8, an EHR_ACCESS whose settings the caller may not read
+        // contributes no row, so a restriction stays invisible (our own design).
+        if let EhrAccessReaders::Only(ehr_ids) = self.access_settings {
+            let ids: Vec<uuid::Uuid> = ehr_ids.iter().map(|id| id.0).collect();
+            let other_kind = col(h, VoHead::Kind).ne(Expr::val("EHR_ACCESS"));
+            predicates.push(if ids.is_empty() {
+                other_kind
+            } else {
+                other_kind.or(col(h, VoHead::EhrId).eq(Expr::from(PgFunc::any(Expr::val(ids)))))
+            });
         }
         predicates
     }

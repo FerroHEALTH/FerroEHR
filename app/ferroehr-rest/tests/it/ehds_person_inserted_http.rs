@@ -64,7 +64,10 @@ async fn app(persons: &str, patients: &str) -> (testkit::TestDb, Router) {
         auth: common::trusting(vec![common::entry(persons, AUDIENCE), patient]),
         ..common::api_config(false)
     };
-    cfg.auth.smart.patient_issuers = vec![persons.to_owned(), patients.to_owned()];
+    cfg.auth.smart.patient_issuers = vec![
+        ferrohealth_secret::secret_url::SecretUrl::new(persons),
+        ferrohealth_secret::secret_url::SecretUrl::new(patients),
+    ];
     let (pg, service) = common::test_service().await;
     (pg, common::router_with(cfg, service).await)
 }

@@ -19,4 +19,16 @@ a|Quantity magnitude constraint.
 h|*0..1*
 |*units*: `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
 a|Optional units constraint.
+
+h|*0..1*
+|*units_system*: `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
+a|Optional units system from which the code in `_units_` is defined, as for `DV_QUANTITY._units_system_`: a URI identifying a terminology containing units concepts.
+
+If not set, the UCUM standard (case-sensitive codes) is assumed as the units system.
+
+h|*0..1*
+|*units_display_name*: `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
+a|Optional displayable form of `_units_`, as for `DV_QUANTITY._units_display_name_`, e.g. `'lb'` for `'[lb_av]'`.
+
+NOTE: The display name may be language-dependent, so it is better set in templates than in archetypes.
 |===

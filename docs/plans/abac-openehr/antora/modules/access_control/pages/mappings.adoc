@@ -1,0 +1,105 @@
+include::partial$module_vars.adoc[]
+
+= Mappings (informative)
+
+include::partial$draft_notice.adoc[]
+
+== FHIR Consent
+
+FHIR R4 and R5 both describe a `Consent` as "a base policy ... followed by a listing of exceptions to that policy" (R4 and R5 `Consent`, Background and Context). R4 states the base in `policyRule` (`OPTIN` or `OPTOUT`) and nests exceptions as `provision` with a required `type` below the root; R5 states it in `decision` and makes every provision an exception to its parent. A directive with its exceptions has that shape.
+
+* *Export.* A directive with no scope is the base, and its exceptions are the exception provisions. A directive with a scope is written as a base of the opposite effect, its scope as the one exception provision, and its own exceptions nested in that one. FHIR then states the opposite effect outside the scope, where the scheme decides by `_default_access_` and the other directives.
+* *Import.* A `Consent` whose exception provisions nest no further is one directive. A `Consent` whose exception provisions nest one level further gives one directive per exception provision. A provision nested deeper is refused with the element named.
+
+[cols="2,3,3", options="header"]
+|===
+|`ACCESS_DIRECTIVE` |R4 |R5
+
+|`_kind_`
+|`scope` `patient-privacy`; `category` LOINC `59284-0`, the kind as a second coding
+|`category`
+
+|`_effect_`
+|`policyRule` and `provision.type`
+|`decision` and nesting
+
+|`_instructed_by_`
+|`performer`
+|`grantor`
+
+|`_instructed_`
+|extension (`dateTime` is the time of the statement)
+|`date` (the day only)
+
+|`_evidence_`
+|`sourceReference` (one)
+|`sourceReference`
+
+|`_legal_grounds_`
+|`policy`
+|`regulatoryBasis`
+
+|`_identifiers_`
+|`identifier`
+|`identifier`
+
+|`_time_validity_`
+|root `provision.period`
+|`period`
+
+|`_applies_to.party_`, `_applies_to.role_`
+|`provision.actor.reference` (a `Group` for a role)
+|the same
+
+|`_operations_`, `_purposes_`
+|`provision.action`, `provision.purpose`
+|the same
+
+|`_data.sensitivities_`, `_data.categories_`
+|`provision.securityLabel`, `provision.code`
+|the same
+
+|`_data.templates_`
+|`provision.class`
+|`provision.documentType`
+
+|`_data.recorded_`, `_data.objects_`
+|`provision.dataPeriod`, `provision.data` (`instance`)
+|the same
+
+|`_emergency_override_`, `_applies_to.relationship_`, `_applies_to.caller_kind_`, `_data.origins_`
+|no core element
+|no core element
+|===
+
+Losses from FHIR, each refused with the element named on import: a deeper nesting, `provision.data.meaning` `related`, `dependents` or `authoredby`, R5 `provision.expression`, a `policyRule` or `policyBasis` the controller's catalogue does not hold, and an actor with no party in the demographic service.
+
+== IHE BPPC
+
+BPPC records that a patient acknowledged a policy the policy domain publishes, and carries no structured rule (ITI TF-1 19.1.1). Each `documentationOf/serviceEvent` of the acknowledgement names one policy by `code` and `codeSystem` and gives its time range in `effectiveTime` (ITI TF-3 5.1.2.2.6, 5.1.2.2.7). A system maps each service event to the `ACCESS_POLICY._catalogue_` entry with that identifier: the entry's directive is copied into the subject's settings with `effectiveTime` as `_time_validity_`, the policy identifier in `_identifiers_` and the acknowledgement as `_evidence_`. A policy the catalogue does not hold is refused. Export writes one acknowledgement per distinct `_time_validity_`.
+
+== IHE APPC
+
+An APPC Privacy Consent Document is an XACML 2.0 policy set (APPC ITI TF-3 5.6.2.1.1). XACML places `Effect` on `Rule` alone (XACML 2.0 §5.29, §5.30), so a policy maps to one directive whose `_effect_` is that of its base rule, and a narrower rule of the opposite effect maps to an exception where the policy's rule-combining algorithm lets it decide (deny-overrides for a permit base, permit-overrides for a deny base, first-applicable when the exceptions come first; XACML 2.0 Appendix C). Directives combine across an EHR as the XACML policy-combining deny-overrides (C.1), so a policy set under another policy-combining algorithm is refused. The APPC subject, resource and action attributes map to `_applies_to_`, `_data_` and `_operations_`; a reference to a foundational policy resolves against the catalogue.
+
+== EHDS
+
+[cols="1,3", options="header"]
+|===
+|Right |Form in this package
+
+|Art 8 restriction
+|A `restriction` directive binding professionals, with an optional `_data_` scope and exceptions; not visible to providers.
+
+|Art 11(5) vital interests
+|`_emergency_override_` on the restriction; the access is marked and logged.
+
+|Art 10 opt-out
+|An `opt_out` directive over the whole EHR binding the access services; `_emergency_override_` set by the Member State's rule (Art 10(2)).
+
+|Art 4(2) proxies
+|The representation relationships of the demographic service, narrowed by a `delegation` directive.
+
+|Annex II 3.4
+|`_data.categories_` and `_data.origins_` in directives and classifications.
+|===

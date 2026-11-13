@@ -275,8 +275,7 @@ impl FerroEhrService {
     /// create/update path and the CONTRIBUTION path so neither can bypass
     /// validation.
     ///
-    /// The demographic arms (party roots + `PARTY_RELATIONSHIP`) dispatch to
-    /// the demographic register (`service/demographic/`).
+    /// Demographic arms go to [`Self::demographic_commit_check`]; a party needs its container.
     ///
     /// The clinical arms additionally run the data-minimisation pass
     /// ([`crate::privacy`]) — the subject-reference rule, the identified-party
@@ -317,7 +316,8 @@ impl FerroEhrService {
             | Kind::Person
             | Kind::Role
             | Kind::PartyRelationship => {
-                self.demographic_commit_check(kind, data, incomplete).await
+                self.demographic_commit_check(kind, data, incomplete, None)
+                    .await
             }
         }
     }
@@ -504,7 +504,7 @@ pub(in crate::service) fn validate_ehr_status(
 /// [`ServiceError::Unprocessable`] naming the first violated rule, or
 /// [`ServiceError::ValidationFailed`] carrying the RM-invariant violations
 /// found below the root (both → 422), and the `400` of
-/// [`check_written_settings`](crate::service::ehr::access_types::check_written_settings).
+/// [`check_written_settings`](crate::service::ehr::access_settings::check_written_settings).
 pub(in crate::service) fn validate_ehr_access(
     access: &Value,
     incomplete: bool,
@@ -526,7 +526,7 @@ pub(in crate::service) fn validate_ehr_access(
     // invariants apply identically.
     validate_root_locatable(obj, "EHR_ACCESS")?;
     if let Some(settings) = obj.get("settings").filter(|v| !v.is_null()) {
-        crate::service::ehr::access_types::check_written_settings(settings)?;
+        crate::service::ehr::access_settings::check_written_settings(settings)?;
     }
     // `EHR_ACCESS.settings` is the RM's one implementation-defined slot
     // (`org.openehr.rm.ehr.ehr_access.adoc` §Attributes) and its type is

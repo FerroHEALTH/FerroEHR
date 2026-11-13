@@ -239,10 +239,10 @@ fn every_component_schema_published_in_both_serialisations_reads_to_one_value() 
         assert_same_reading(file, &json, &odin);
         pairs += 1;
     }
-    // Eighteen json schemas; the ODIN twins of BASE 1.3.0, RM 1.2.0, TERM 3.1.0
-    // and LANG 1.1.0 are not vendored, since only their json carries the
-    // release, and AM 2.4.0's json does not read (`REFUSED_JSON`).
-    assert_eq!(pairs, 13);
+    // Eighteen json schemas; the ODIN twins of BASE 1.3.0, RM 1.2.0, AM 1.4.0,
+    // TERM 3.1.0 and LANG 1.1.0 are not vendored, since only their json carries
+    // the release, and AM 2.4.0's json does not read (`REFUSED_JSON`).
+    assert_eq!(pairs, 12);
 }
 
 #[test]

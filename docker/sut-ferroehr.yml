@@ -90,41 +90,6 @@ services:
       retries: 20
       start_period: 10s
 
-  # Loads the professional PERSON and ROLE templates of
-  # deploy/definitions/professional/ into the definition store, then exits, so
-  # the SUT boots with the templates its party mapping names. Same image and
-  # config as the SUT; a template already stored is left alone.
-  ferroehr-definitions:
-    cap_drop: [ALL]
-    security_opt:
-      - no-new-privileges:true
-    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:local}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: runtime-from-source
-      args:
-        REVISION: ${REVISION:-}
-        CARGO_BUILD_JOBS: ${CARGO_BUILD_JOBS:-2}
-    depends_on:
-      ferroehr-postgres:
-        condition: service_healthy
-    command:
-      - definitions
-      - load
-      - /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls
-      - /etc/ferroehr/definitions/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls
-    environment:
-      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
-      FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
-      FERROEHR__USAGE_REPORT__ENABLED: "false"
-    volumes:
-      - ./docker/ferroehr.dev.toml:/etc/ferroehr/ferroehr.toml:ro
-      - ./docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro
-      - ./deploy/definitions/professional:/etc/ferroehr/definitions:ro
-    read_only: true
-    restart: "no"
-
   ferroehr:
     cap_drop: [ALL]
     security_opt:
@@ -145,9 +110,6 @@ services:
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
-      # The professional templates the party mapping names are stored first.
-      ferroehr-definitions:
-        condition: service_completed_successfully
     environment:
       # The server reads the file this names and searches for none.
       FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
@@ -164,8 +126,6 @@ services:
       # the same failure mode as upstream's Tomcat admission window — instead
       # of shed errors tripping the stress envelope's error-rate arm.
       FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS: ${FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS:-256}
-      # The conformance catalogue uploads operational templates up to 5.4 MB.
-      FERROEHR__SERVER__BODY_LIMIT: "64MiB"
       # Per-caller request-rate limiting ([server.caller_rate]). On, exactly as a
       # production deployment runs it, so the functional catalogue exercises the
       # real posture. The MEASUREMENT overlay (docker/sut-measurement.yml)

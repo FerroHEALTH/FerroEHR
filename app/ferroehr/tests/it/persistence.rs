@@ -78,9 +78,9 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // One file per concern, numbered per domain with no gaps, so
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 12);
-    assert_eq!(applied("clinical").await, 35);
-    assert_eq!(applied("party").await, 32);
-    assert_eq!(applied("audit").await, 26);
+    assert_eq!(applied("clinical").await, 38);
+    assert_eq!(applied("party").await, 39);
+    assert_eq!(applied("audit").await, 28);
 
     let tables = |schema: &'static str| {
         let pool = pool.clone();
@@ -103,6 +103,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
         [
             "access_delay",
             "access_opt_out",
+            "access_policy_version",
             "access_restriction",
             "adl2_artefact",
             "archetype_store",
@@ -117,6 +118,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "event_outbox_reader",
             "item_tag",
             "node",
+            "policy_register",
             "restriction",
             "retention_anchor",
             "retention_policy",
@@ -134,10 +136,16 @@ async fn migrations_apply_cleanly_and_idempotently() {
     assert_eq!(
         tables("party").await,
         [
+            "binding_caller_fact",
+            "binding_caller_fact_party",
+            "binding_capability",
+            "binding_client",
+            "binding_grant_revision",
             "binding_group_revision",
             "binding_identifier",
             "binding_lease",
             "binding_membership",
+            "binding_provider",
             "binding_representation",
             "binding_state",
             "blob_ref",

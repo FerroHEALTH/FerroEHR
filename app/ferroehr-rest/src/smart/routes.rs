@@ -21,9 +21,11 @@
 //!   stored version, so the policy-enforcement point checks it once the
 //!   template is known ([`Need::Composition`]). A tag operation is metadata of
 //!   the EHR's data and is held to every template.
-//! - The DEMOGRAPHIC API has no family: a client listed in
-//!   `[auth.smart] demographic_clients`, or a caller holding the product scope,
-//!   reaches it. The ADMIN API needs the product scope, except the outbox
+//! - The DEMOGRAPHIC API has no family: a client whose `ACTOR` the CDR grants
+//!   `access_demographic` ([`Need::Demographic`]), or a caller holding the
+//!   product scope, reaches it. A patient's own credential also writes a
+//!   standalone `PARTY_RELATIONSHIP` ([`Need::Representation`]), which the
+//!   party protection holds to a representation of the patient. The ADMIN API needs the product scope, except the outbox
 //!   feed, which needs [`OUTBOX_SCOPE`] alone, so a feed reader reaches no
 //!   other admin route and no admin caller reads the feed by default.
 //! - A `patient/` grant reaches only the EHR of the token's launch context
@@ -57,6 +59,15 @@ pub(crate) enum Need {
     /// family, checked by the policy-enforcement point once the template is
     /// known.
     Composition(Permission),
+    /// The DEMOGRAPHIC API: met by a client the CDR grants
+    /// `access_demographic`, read from the caller's grants, and otherwise by
+    /// the requirement held, the product scope.
+    Demographic(Requirement),
+    /// A write of a standalone `PARTY_RELATIONSHIP`: met as
+    /// [`Need::Demographic`] is, and by the patient's own credential, whose
+    /// write the party protection holds to a representation of the patient,
+    /// the authorisation of a proxy.
+    Representation(Requirement),
 }
 
 /// The generated ITS-REST group an operation belongs to.
@@ -85,18 +96,12 @@ pub(crate) struct SmartRoutes {
     namespaces: crate::api::Namespaces,
     /// The product scope (`[auth] product_scope`).
     product_scope: String,
-    /// The clients that reach the DEMOGRAPHIC API.
-    demographic_clients: Vec<String>,
 }
 
 impl SmartRoutes {
     /// Returns the table for an API under `base_path`, with the product scope
-    /// and the DEMOGRAPHIC clients the deployment configured.
-    pub(crate) fn new(
-        namespaces: &crate::api::Namespaces,
-        product_scope: &str,
-        demographic_clients: Vec<String>,
-    ) -> Self {
+    /// the deployment configured.
+    pub(crate) fn new(namespaces: &crate::api::Namespaces, product_scope: &str) -> Self {
         let mut ops = HashMap::new();
         for (group, table) in [
             (Group::Ehr, openehr_its::rest::generated::ehr::ROUTES),
@@ -124,7 +129,6 @@ impl SmartRoutes {
             ops,
             namespaces: namespaces.clone(),
             product_scope: product_scope.to_owned(),
-            demographic_clients,
         }
     }
 
@@ -138,6 +142,12 @@ impl SmartRoutes {
             return self.need_of_op(op, *group, matched, path);
         }
         let relative = self.namespaces.relative(matched).unwrap_or(matched);
+        if is_under(relative, "/demographic/party_relationship") && method != Method::GET {
+            return Need::Representation(self.product());
+        }
+        if is_under(relative, "/demographic") {
+            return self.demographic();
+        }
         Need::Now(self.extension(method, relative, matched, path))
     }
 
@@ -148,7 +158,7 @@ impl SmartRoutes {
         let permission = row.map_or(Permission::Read, Operation::permission);
         let requirement = match group {
             Group::Admin => self.product(),
-            Group::Demographic => self.demographic(),
+            Group::Demographic => return self.demographic(),
             Group::System => Requirement::Caller,
             Group::Query => Requirement::OpenEhr {
                 family: ResourceFamily::Aql,
@@ -182,19 +192,12 @@ impl SmartRoutes {
         template: &str,
         path: &str,
     ) -> Requirement {
-        let under = |root: &str| {
-            relative
-                .strip_prefix(root)
-                .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
-        };
+        let under = |root: &str| is_under(relative, root);
         if under("/admin/outbox") {
             return Requirement::Scope(OUTBOX_SCOPE.to_owned());
         }
         if under("/admin") {
             return self.product();
-        }
-        if under("/demographic") {
-            return self.demographic();
         }
         if under("/definition/archetype") || under("/definition/artefact") {
             // NOTE: master08 §Resource Scopes names no archetype family; an
@@ -253,20 +256,18 @@ impl SmartRoutes {
         Requirement::Scope(self.product_scope.clone())
     }
 
-    /// The DEMOGRAPHIC API's requirement: a bearer client listed by
-    /// `client_id`, or a caller holding the product scope.
-    ///
-    /// The product-scope arm stays beside the client list because a bearer
-    /// caller without a listed `client_id` reaches the API through it.
-    fn demographic(&self) -> Requirement {
-        Requirement::Either(
-            Box::new(Requirement::Client {
-                client_ids: self.demographic_clients.clone(),
-                basic_users: Vec::new(),
-            }),
-            Box::new(self.product()),
-        )
+    /// The DEMOGRAPHIC API's need: a client the CDR grants
+    /// `access_demographic`, or a caller holding the product scope.
+    fn demographic(&self) -> Need {
+        Need::Demographic(self.product())
     }
+}
+
+/// Whether the API-relative path `relative` is `root` or below it.
+fn is_under(relative: &str, root: &str) -> bool {
+    relative
+        .strip_prefix(root)
+        .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
 }
 
 /// The requirement on an EHR's data that names no template: the
@@ -444,7 +445,6 @@ mod tests {
         SmartRoutes::new(
             &crate::api::Namespaces::of(&ferroehr::config::rest::ApiConfig::default()),
             "__ferroehr.platform",
-            vec!["mpi".to_owned()],
         )
     }
 
@@ -623,9 +623,9 @@ mod tests {
         assert!(check(&ehr_data(Permission::Read), &both, Some("ehr-2")).is_ok());
     }
 
-    /// A subject on `[auth] scopeless_subjects` whose token carries no resource
-    /// scope meets every SMART on openEHR requirement; one off the list, or one
-    /// whose token carries resource scopes, gets only its scopes.
+    /// A subject granted `access_without_scope` whose token carries no
+    /// resource scope meets every SMART on openEHR requirement; one without
+    /// it, or one whose token carries resource scopes, gets only its scopes.
     #[test]
     fn a_scopeless_subject_meets_an_openehr_requirement_only_without_scopes() {
         let caller = |scope: &str, scopeless: bool| {
@@ -656,33 +656,63 @@ mod tests {
         );
     }
 
-    /// The DEMOGRAPHIC API has no family: a listed client or the product scope
-    /// reaches it, and no SMART grant does.
+    /// The DEMOGRAPHIC API has no family: a client granted
+    /// `access_demographic` or the product scope reaches it, and no SMART
+    /// grant does. The grant arm reads the caller's grants
+    /// (`authn::gates::smart_refusal`); the requirement held is the product
+    /// scope's, which no client name meets.
     #[test]
-    fn the_demographic_api_needs_a_listed_client_or_the_product_scope() {
+    fn the_demographic_api_needs_a_granted_client_or_the_product_scope() {
         let table = routes();
-        let template = format!("{BASE}/demographic/person/{{uid_based_id}}");
-        let Need::Now(requirement) = table.need(&Method::GET, Some(&template), &template) else {
-            panic!("a demographic route is checked at once");
-        };
+        let ext = "/ferroehr/rest/extensions/v1";
         let none = Honoured::default();
-        assert!(check(&requirement, &principal("", Some("mpi"), none), None).is_ok());
-        assert!(
-            check(
-                &requirement,
-                &principal("__ferroehr.platform", None, none),
-                None
-            )
-            .is_ok()
-        );
-        assert!(
-            check(
-                &requirement,
-                &principal("system/composition-*.cruds", Some("app"), none),
-                None
-            )
-            .is_err()
-        );
+        for template in [
+            format!("{BASE}/demographic/person/{{uid_based_id}}"),
+            format!("{ext}/demographic/party/{{party_id}}/relationships"),
+        ] {
+            let Need::Demographic(requirement) =
+                table.need(&Method::GET, Some(&template), &template)
+            else {
+                panic!("a demographic route reads the caller's grants: {template}");
+            };
+            assert_eq!(requirement, table.product());
+            assert!(
+                check(
+                    &requirement,
+                    &principal("__ferroehr.platform", None, none),
+                    None
+                )
+                .is_ok()
+            );
+            for client in ["mpi", "app"] {
+                assert!(
+                    check(
+                        &requirement,
+                        &principal("system/composition-*.cruds", Some(client), none),
+                        None
+                    )
+                    .is_err(),
+                    "no client name meets it: {client}"
+                );
+            }
+        }
+    }
+
+    /// The patient writes a standalone relationship; reading one is the DEMOGRAPHIC API's.
+    #[test]
+    fn a_patient_writes_a_standalone_relationship_and_reads_none() {
+        let create = "/ferroehr/rest/extensions/v1/demographic/party_relationship".to_owned();
+        let (table, one) = (routes(), format!("{create}/{{uid_based_id}}"));
+        for (method, path) in [
+            (Method::POST, &create),
+            (Method::PUT, &one),
+            (Method::DELETE, &one),
+        ] {
+            let need = table.need(&method, Some(path), path);
+            assert_eq!(need, Need::Representation(table.product()), "{method}");
+        }
+        let read = table.need(&Method::GET, Some(&one), &one);
+        assert!(matches!(read, Need::Demographic(_)));
     }
 
     /// The outbox feed needs its own scope: the product scope does not reach it,

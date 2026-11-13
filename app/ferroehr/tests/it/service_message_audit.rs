@@ -35,7 +35,6 @@ fn store_only_config() -> AuditConfig {
             sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            ..StoreConfig::default()
         },
         ..AuditConfig::default()
     }

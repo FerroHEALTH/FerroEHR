@@ -105,6 +105,9 @@ async fn service() -> (testkit::TestDb, FerroEhrService) {
     svc.template_adl2_upload(&archetype(GROUP, "GROUP", PARTS))
         .await
         .expect("the group archetype uploads");
+    svc.seed_default_definitions()
+        .await
+        .expect("a boot seeds the definitions the unset sections default to");
     (db, svc)
 }
 
@@ -116,7 +119,6 @@ fn config(mapping: &str) -> FerroEhrConfig {
 issuer = "https://idp.example/realms/staff"
 kind = "persons"
 audience = ["ferroehr"]
-first_party_clients = ["ferroehr-viewer"]
 
 [[auth.party]]
 issuer = "https://idp.example/realms/staff"

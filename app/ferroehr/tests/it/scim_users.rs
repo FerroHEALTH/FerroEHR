@@ -202,7 +202,7 @@ async fn as_client<F: Future>(fut: F) -> F::Output {
         representative: false,
         bound: None,
         system: true,
-        system_client: None,
+        agent: None,
         external: None,
     };
     with_committer(Some(identity), fut).await

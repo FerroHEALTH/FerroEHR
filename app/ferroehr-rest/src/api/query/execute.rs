@@ -139,12 +139,15 @@ pub(crate) async fn serve(
             } else {
                 outcome.accessed.clone()
             },
+            query: outcome.statement.clone(),
+            ..crate::system_log::middleware::AuditObject::default()
         });
     if !outcome.served_ehrs.is_empty() {
         resp.extensions_mut()
             .insert(crate::system_log::served::AuditServedEhrs {
                 served: outcome.served_ehrs,
                 content: outcome.served_ehr_content,
+                query: outcome.statement,
             });
     }
     Ok(resp)

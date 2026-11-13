@@ -21,10 +21,14 @@
 pub mod check;
 pub(crate) mod derive;
 pub mod fill;
+pub mod grants;
 pub mod lookup;
+pub mod policy;
+pub mod policy_mark;
 pub mod protect;
 pub mod provisioned;
 mod rows;
+pub mod shipped;
 pub mod source;
 pub mod store;
 
@@ -280,6 +284,13 @@ struct Step {
     node_id: Option<String>,
 }
 
+/// Whether `path` is an absolute openEHR path of attribute steps, each with
+/// at most one node id predicate, as a selector path must be.
+#[must_use]
+pub fn parses(path: &str) -> bool {
+    parse(path).is_some()
+}
+
 /// Parses `path`, an absolute path of attribute steps each with at most one
 /// node id predicate, ending with a step that reads the `value` of the
 /// `ELEMENT` it names unless the path already ends at `value`.
@@ -373,8 +384,9 @@ fn node_id_text(node_id: &str) -> bool {
 ///
 /// It names the templates a professional's `PERSON` may use with the key
 /// selector of each, the professional `ROLE` template, the group template
-/// with its `externalId` selector, and the membership and representation
-/// archetypes.
+/// with its `externalId` selector, and the membership archetype. A
+/// representation is recognised by its code
+/// ([`policy_mark::REPRESENTS`]) in any archetype, so the mapping names none.
 ///
 /// Empty by default, which derives no row, so every login is unbound until a
 /// deployment installs its mapping. Template and archetype ids compare in
@@ -390,14 +402,11 @@ pub struct BindingMapping {
     group: Option<GroupSelectors>,
     /// The canonical archetype id of a membership `PARTY_RELATIONSHIP`.
     membership: Option<String>,
-    /// The canonical archetype id of a representation `PARTY_RELATIONSHIP`.
-    representation: Option<String>,
-    /// Each representation type code, mapped to its openEHR
-    /// `subject_relationship` code.
-    relationship_codes: BTreeMap<String, String>,
     /// The role whose holder may write a protected party
     /// ([`protect`]), compared case-insensitively.
     admin_role: Option<String>,
+    /// Whether the policy parties are recognised and guarded.
+    policy: bool,
 }
 
 impl BindingMapping {
@@ -453,26 +462,26 @@ impl BindingMapping {
         self
     }
 
-    /// Returns this mapping reading a representative's subjects from the
-    /// inline `PARTY_RELATIONSHIP`s of `archetype_id`, each type code mapped
-    /// by `codes` to an openEHR `subject_relationship` code.
-    #[must_use]
-    pub fn with_representation(
-        mut self,
-        archetype_id: &str,
-        codes: BTreeMap<String, String>,
-    ) -> Self {
-        self.representation = Some(canonical_key(archetype_id));
-        self.relationship_codes = codes;
-        self
-    }
-
     /// Returns this mapping letting the holders of `role` write a protected
     /// party through the demographic API.
     #[must_use]
     pub fn with_admin_role(mut self, role: impl Into<String>) -> Self {
         self.admin_role = Some(role.into());
         self
+    }
+
+    /// Returns this mapping recognising the policy parties ([`policy`]) by
+    /// their archetypes, which the protection then guards.
+    #[must_use]
+    pub fn with_policy(mut self) -> Self {
+        self.policy = true;
+        self
+    }
+
+    /// Whether the mapping recognises the policy parties.
+    #[must_use]
+    pub fn names_policy(&self) -> bool {
+        self.policy
     }
 
     /// The binding-key selector of the person template `template_id`, in any
@@ -533,7 +542,6 @@ impl BindingMapping {
     /// archetypes and relationship codes, in lower-case hex.
     #[must_use]
     pub fn digest(&self) -> String {
-        use sha2::Digest as _;
         let mut text = String::new();
         let mut line = |parts: &[&str]| {
             text.push_str(&parts.join("\u{1f}"));
@@ -568,28 +576,22 @@ impl BindingMapping {
         if let Some(membership) = &self.membership {
             line(&["membership", membership]);
         }
-        if let Some(representation) = &self.representation {
-            line(&["representation", representation]);
-        }
-        for (code, mapped) in &self.relationship_codes {
-            line(&["relationship", code, mapped]);
-        }
-        sha2::Sha256::digest(text.as_bytes()).iter().fold(
-            String::with_capacity(64),
-            |mut hex, byte| {
-                use std::fmt::Write as _;
-                // NOTE: `impl fmt::Write for String` never fails
-                // (<https://doc.rust-lang.org/std/fmt/trait.Write.html#impl-Write-for-String>).
-                let _written = write!(hex, "{byte:02x}");
-                hex
-            },
-        )
+        crate::digest::sha256_hex(&text)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_policy_moves_no_digest() {
+        assert_eq!(
+            BindingMapping::default().with_policy().digest(),
+            BindingMapping::default().digest(),
+            "the policy derives no row, so it moves no digest"
+        );
+    }
 
     #[test]
     fn a_path_parses_into_its_steps_and_reads_the_element_value() {

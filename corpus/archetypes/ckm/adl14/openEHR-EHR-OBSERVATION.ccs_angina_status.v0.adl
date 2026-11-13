@@ -95,7 +95,6 @@ definition
 		}
 	}
 
-
 ontology
 	terminologies_available = <"Snomed", ...>
 	term_definitions = <

@@ -1,0 +1,70 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.exam-generic-joint.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.exam-generic.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"23/04/2007">
+    >
+    lifecycle_state = <"Rejected">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"CD624D54E78341D7B6C6F4BDFA855072">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A generic cluster for recording findings on physical examination of a joint.
+
+.">
+            keywords = <"examination", "physical", "joint">
+            use = <"">
+            misuse = <"">
+            copyright = <"copyright (c) 2010 openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1.1] matches {    -- Examination of a named joint
+        items matches {
+            ELEMENT[at0.9.1]    -- Joint
+            CLUSTER[at0008.0.1] matches {    -- Joint findings
+                items matches {
+                    before [at0.11]
+                    allow_archetype CLUSTER[at0.0.2] matches {    -- Joint detail
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.inspection-joint(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.inspection(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.move-joint(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.move(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.palpation-joint(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.0.2"] = <
+                text = <"Joint detail">
+                description = <"Detail relating to the joint.">
+            >
+            ["at0.9.1"] = <
+                text = <"Joint">
+                description = <"The joint examined.">
+            >
+            ["at0000.1.1"] = <
+                text = <"Examination of a named joint">
+                description = <"For describing a finding on physical examination of a named joint.">
+            >
+            ["at0008.0.1"] = <
+                text = <"Joint findings">
+                description = <"Clinical findings for a single joint.">
+            >
+        >
+    >

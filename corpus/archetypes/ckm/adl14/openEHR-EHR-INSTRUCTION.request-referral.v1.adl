@@ -1,0 +1,309 @@
+﻿archetype (adl_version=1.4; uid=7b2cc4f9-b433-4af8-a7ff-6e671984e0d2)
+	openEHR-EHR-INSTRUCTION.request-referral.v1
+specialise
+	openEHR-EHR-INSTRUCTION.request.v1
+
+concept
+	[at0000.1]	-- Referral request
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Dr Ian McNicoll">
+		["organisation"] = <"Ocean Informatics, United Kingdom">
+		["email"] = <"ian.mcnicoll@oceaninformatics.com">
+		["date"] = <"08/12/2009">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To communicate details of a referral request to another healthcare provider or organisation for provision of a specified service.">
+			use = <"Use to communicate the details of the request for provision of a specified service by another healthcare provider or organisation.  This request will usually be supported by additional information that provide clinical context about the patient using other archetypes.">
+			keywords = <"request", "refer", "order", "service", "provide">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Heather Leslie, Ocean Informatics, Australia", ...>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["references"] = <"">
+		["build_uid"] = <"ab0ef5ed-98ff-4a35-9343-971dd3e06e7f">
+		["original_publisher"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"C6241DD74B43CF806F198CCC95591EEC">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	INSTRUCTION[at0000.1] matches {	-- Referral request
+		activities cardinality matches {0..*; unordered} matches {
+			ACTIVITY[at0001] occurrences matches {1..*} matches {	-- Request
+				description matches {
+					ITEM_TREE[at0009] matches {	-- Tree
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0121] matches {	-- Service requested
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0135] occurrences matches {0..1} matches {	-- Description of service
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0132] occurrences matches {0..*} matches {	-- Specific details
+								include
+									archetype_id/value matches {/.*/}
+							}
+							ELEMENT[at0062] occurrences matches {0..1} matches {	-- Reason for request
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0064] occurrences matches {0..1} matches {	-- Reason description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0065] occurrences matches {0..1} matches {	-- Intent
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0068] occurrences matches {0..1} matches {	-- Urgency
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+											[local::
+											at0136, 	-- Emergency
+											at0137, 	-- Urgent
+											at0138]	-- Routine
+										}
+									}
+								}
+							}
+							ELEMENT[at0040] occurrences matches {0..1} matches {	-- Date &/or time service required
+								value matches {
+									DV_DATE_TIME matches {*}
+								}
+							}
+							ELEMENT[at0144] occurrences matches {0..1} matches {	-- Latest date service required
+								value matches {
+									DV_DATE_TIME matches {*}
+								}
+							}
+							ELEMENT[at0076] occurrences matches {0..1} matches {	-- Supplementary information to follow
+								value matches {
+									DV_BOOLEAN matches {
+										value matches {True}
+									}
+								}
+							}
+							ELEMENT[at0078] occurrences matches {0..1} matches {	-- Supplementary information expected
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							allow_archetype CLUSTER[at0116] occurrences matches {0..*} matches {	-- Patient requirements
+								include
+									archetype_id/value matches {/.*/}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0008] matches {	-- Tree
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0010] occurrences matches {0..1} matches {	-- Requestor Identifier
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					allow_archetype CLUSTER[at0141] occurrences matches {0..*} matches {	-- Requestor
+						include
+							archetype_id/value matches {/.*/}
+					}
+					ELEMENT[at0011] occurrences matches {0..1} matches {	-- Receiver identifier
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					allow_archetype CLUSTER[at0142] occurrences matches {0..*} matches {	-- Receiver
+						include
+							archetype_id/value matches {/.*/}
+					}
+					ELEMENT[at0127] occurrences matches {0..1} matches {	-- Request status
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					allow_archetype CLUSTER[at0128] occurrences matches {0..*} matches {	-- Distribution list for response
+						include
+							archetype_id/value matches {/openEHR-EHR-CLUSTER\.distribution\.v1/}
+					}
+					allow_archetype CLUSTER[at0.5] occurrences matches {0..*} matches {	-- Contacts
+						include
+							archetype_id/value matches {/.*/}
+					}
+					CLUSTER[at0.2] occurrences matches {0..1} matches {	-- Duration
+						items cardinality matches {1..*; unordered} matches {
+							ELEMENT[at0.3] occurrences matches {0..1} matches {	-- Duration
+								value matches {
+									DV_DURATION matches {*}
+								}
+							}
+							ELEMENT[at0.4] occurrences matches {0..1} matches {	-- Indefinite
+								value matches {
+									DV_BOOLEAN matches {
+										value matches {True}
+									}
+								}
+							}
+						}
+					}
+					allow_archetype CLUSTER[at0112] occurrences matches {0..*} matches {	-- Localisation
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.2"] = <
+					text = <"Duration">
+					description = <"Length of time the referral is valid.">
+				>
+				["at0.3"] = <
+					text = <"Duration">
+					description = <"Duration for which the referral is valid.">
+				>
+				["at0.4"] = <
+					text = <"Indefinite">
+					description = <"If true, referral is for an indefinite period of time.">
+				>
+				["at0.5"] = <
+					text = <"Contacts">
+					description = <"A list of people or organisations who are relevant to this referral, including next of kin.">
+				>
+				["at0000"] = <
+					text = <"Healthcare service request">
+					description = <"Generic request for a range of different healthcare services e.g referral, lab request, equipment request.">
+				>
+				["at0000.1"] = <
+					text = <"Referral request">
+					description = <"Request for provision of a specified service by another healthcare provider or organisation.">
+				>
+				["at0001"] = <
+					text = <"Request">
+					description = <"Current Activity.">
+				>
+				["at0008"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0009"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0010"] = <
+					text = <"Requestor Identifier">
+					description = <"The local ID assigned to the order by the healthcare provider or organisation requesting the service. This is also referred to as Placer Order Identifier.">
+				>
+				["at0011"] = <
+					text = <"Receiver identifier">
+					description = <"The ID assigned to the order by the healthcare provider or organisation receiving the request for service. This is also referred to as Filler Order Identifier.">
+				>
+				["at0040"] = <
+					text = <"Date &/or time service required">
+					description = <"The date and time that the service should be performed or completed.">
+				>
+				["at0062"] = <
+					text = <"Reason for request">
+					description = <"A short description of the reason for the request.  This is often coded with an external terminology.">
+				>
+				["at0064"] = <
+					text = <"Reason description">
+					description = <"A narrative description explaining the reason for request.">
+				>
+				["at0065"] = <
+					text = <"Intent">
+					description = <"Stated intent of the request by the referrer.">
+				>
+				["at0068"] = <
+					text = <"Urgency">
+					description = <"Urgency of the request.">
+				>
+				["at0076"] = <
+					text = <"Supplementary information to follow">
+					description = <"True indicates that additional information has been identified and will be forwarded when available eg incomplete pathology test results.">
+				>
+				["at0078"] = <
+					text = <"Supplementary information expected">
+					description = <"Details of the nature of supplementary information that is to follow e.g name of laboratory results.">
+				>
+				["at0112"] = <
+					text = <"Localisation">
+					description = <"Local detailed information such as billing requirements.">
+				>
+				["at0116"] = <
+					text = <"Patient requirements">
+					description = <"Language, transport or other personal requirements to support the patient's attendance or participation in provision of the service.">
+				>
+				["at0121"] = <
+					text = <"Service requested">
+					description = <"Identification of the service requested. This is often coded with an external terminology.">
+				>
+				["at0127"] = <
+					text = <"Request status">
+					description = <"The status of the request for service as indicated by the requester. 
+Status is used to denote whether this is the initial request, or a follow-up request to change or provide supplementary information.">
+				>
+				["at0128"] = <
+					text = <"Distribution list for response">
+					description = <"A list of people or organisation who should receive copies of any communication.">
+				>
+				["at0132"] = <
+					text = <"Specific details">
+					description = <"Structured detail defining the service requested eg CLUSTER archetype specifying the specific catheter that is to be inserted.">
+				>
+				["at0135"] = <
+					text = <"Description of service">
+					description = <"A detailed narrative description of the service requested.">
+				>
+				["at0136"] = <
+					text = <"Emergency">
+					description = <"The request is an emergency.">
+				>
+				["at0137"] = <
+					text = <"Urgent">
+					description = <"The request is urgent.">
+				>
+				["at0138"] = <
+					text = <"Routine">
+					description = <"The request is routine.">
+				>
+				["at0141"] = <
+					text = <"Requestor">
+					description = <"Details about the healthcare provider or organisation requesting the service.">
+				>
+				["at0142"] = <
+					text = <"Receiver">
+					description = <"Details about the healthcare provider or organisation receiving the request for service.">
+				>
+				["at0144"] = <
+					text = <"Latest date service required">
+					description = <"The latest date that is acceptable for the service to be completed.">
+				>
+			>
+		>
+	>

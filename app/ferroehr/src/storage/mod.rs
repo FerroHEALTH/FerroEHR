@@ -47,6 +47,10 @@
 //!   and its mark on `vo_head`.
 //! - [`opt_out`] — the EHDS Art. 10 opt-out from access through the access
 //!   services and its mark on `ehr`.
+//! - [`policy_register`] — the versions of the operational-policy admin
+//!   registers.
+//! - [`access_policy`] — the versions of the controller's
+//!   `VERSIONED_ACCESS_POLICY`.
 //! - [`statistics`] — the counts and listings behind the admin statistics.
 //! - [`integrity`] — the reads of the storage-integrity sweep and the node rebuild.
 //! - [`template_repo`] — the OPT 1.4 `template_store` and the `template_ref`
@@ -67,6 +71,7 @@
 //! consuming [`version_repo::read::StoredVersion`] on read.
 
 pub mod access_delay;
+pub mod access_policy;
 pub mod adl2_repo;
 pub mod archetype_repo;
 pub mod blob_ref;
@@ -87,7 +92,9 @@ pub mod marks;
 pub mod node_repo;
 pub mod node_write;
 pub mod opt_out;
+pub mod party_heads;
 pub mod party_reverse;
+pub mod policy_register;
 pub mod promoted;
 pub mod row;
 pub mod slim;

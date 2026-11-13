@@ -22,8 +22,8 @@
 #     for breadth gates over the OPT 1.4 reader / WebTemplate builder.
 #
 # CKM REST PAGINATION GOTCHA (cost an afternoon once — do not relearn it):
-# the list endpoints page with `?size=M&offset=N` (the Swagger 2.0 document at
-# `/rest/v1/swagger.json`, verified on the wire 2026-09-03). `page`, `limit`,
+# the list endpoints page with `?size=M&offset=N` (the OpenAPI document at
+# `/rest/v1/openapi.json`, verified on the wire 2026-11-12). `page`, `limit`,
 # `pageSize`, `maxResults`, `count`, `rows` are all silently IGNORED and you
 # get a 20-row first page, which reads exactly like "CKM only publishes 20
 # templates". Always fetch with size/offset, and assert the count grew.

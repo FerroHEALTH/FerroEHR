@@ -1,0 +1,520 @@
+﻿archetype (adl_version=1.4; uid=9d1f0765-4390-4d1a-949d-00a29bae235b)
+	openEHR-EHR-OBSERVATION.autopsy.v1
+
+concept
+	[at0000]	-- Autopsy examination
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Jasmin Buck, Sebastian Garde">
+				["organisation"] = <"University of Heidelberg, Central Queensland University">
+			>
+		>
+		["ru"] = <
+			language = <[ISO_639-1::ru]>
+			author = <
+				["name"] = <"Igor Lizunov">
+				["email"] = <"i.lizunov@infinnity.ru">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"sam.heard@oceaninformatics.com">
+		["date"] = <"22/03/2006">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Dokumentation von Befunden der Autopsie mittels strukturiertem Text">
+			use = <"">
+			misuse = <"Zur Dokumentation von Diagnosen sollte der EVALUATION.problem-diagnosis Archetyp benutzt werden">
+			copyright = <"© openEHR Foundation">
+		>
+		["ru"] = <
+			language = <[ISO_639-1::ru]>
+			purpose = <"Для записи результатов вскрытия, используя структурированный текст.">
+			use = <"*(en)">
+			misuse = <"Диагноз должен быть записан с использованием the EVALUATION.problem-diagnosis archetype.">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For recording findings at autopsy using structured text.">
+			use = <"">
+			misuse = <"Diagnoses should be recorded using the EVALUATION.problem-diagnosis archetype.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"1F41A29047B8BF562BF8FF0CB70E961C">
+		["build_uid"] = <"f76cb61c-6206-4f67-8d2f-2604c4580a7b">
+	>
+
+definition
+	OBSERVATION[at0000] matches {	-- Autopsy examination
+		data matches {
+			HISTORY[at0001] matches {	-- history
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..*} matches {	-- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {	-- Tree
+								items cardinality matches {0..1; ordered} matches {
+									ELEMENT[at0004] occurrences matches {0..1} matches {	-- Clinical
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0005] occurrences matches {0..1} matches {	-- External examination
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									CLUSTER[at0006] occurrences matches {0..1} matches {	-- Internal examination
+										items cardinality matches {1..*; ordered} matches {
+											ELEMENT[at0007] occurrences matches {0..*} matches {	-- System
+												name matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0008, 	-- Cardiovascular system
+															at0009, 	-- Respiratory system
+															at0010, 	-- Gastro-intestinal system
+															at0011, 	-- Reticulo-Endothelial system
+															at0012, 	-- Genito-urinary system
+															at0013, 	-- Endocrine System
+															at0014, 	-- Central nervous system
+															at0015]	-- Musculoskeletal system
+														}
+													}
+												}
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+										}
+									}
+									CLUSTER[at0016] occurrences matches {0..1} matches {	-- Microscopic examination
+										items cardinality matches {1..*; ordered} matches {
+											ELEMENT[at0017] occurrences matches {0..*} matches {	-- Organ
+												name matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0018, 	-- Adrenals
+															at0019, 	-- Brain
+															at0020, 	-- Heart
+															at0021, 	-- Kidneys
+															at0022, 	-- Liver
+															at0023, 	-- Lungs
+															at0024, 	-- Pancreas
+															at0025, 	-- Pituitary
+															at0026, 	-- Small bowel
+															at0027, 	-- Spleen
+															at0028, 	-- Thyroid
+															at0029]	-- Vertebra
+														}
+													}
+												}
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"Autopsie Untersuchung">
+					description = <"Befunde einer Autopsie">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Klinisch">
+					description = <"Aussagen über klinische Befunde vor dem Tod">
+				>
+				["at0005"] = <
+					text = <"Externe Untersuchung">
+					description = <"Befunde von externen Untersuchungen">
+				>
+				["at0006"] = <
+					text = <"Interne Untersuchung">
+					description = <"Sammlung von Aussagen über bestimmte Systeme">
+				>
+				["at0007"] = <
+					text = <"System">
+					description = <"Befunde bezüglich verschiedener Körpersysteme">
+				>
+				["at0008"] = <
+					text = <"Kardiovaskuläres System">
+					description = <"Befunde des Perikards, des Herzens und der großen Gefäße">
+				>
+				["at0009"] = <
+					text = <"Atmungssystem">
+					description = <"Befunde des Kehlkopf, der Luftröhre, der Bronchien, der Lungen und des Rippenfells">
+				>
+				["at0010"] = <
+					text = <"Magen-Darm-Trakt">
+					description = <"Befunde der Speiseröhre, des Bauchfells, des Darms, der Leber (einschließlich der Gallenblase) und des Omentums">
+				>
+				["at0011"] = <
+					text = <"Retikulohistiozytäres System">
+					description = <"Befunde der Milz, der Lymphknoten und des Knochenmarks">
+				>
+				["at0012"] = <
+					text = <"Urogenital-Trakt">
+					description = <"Befunde der Niere, des Harnleiters, der Blase, der Prostata, der Hoden oder der Gebärmutter und der Eierstöcke">
+				>
+				["at0013"] = <
+					text = <"Hormon-System">
+					description = <"Schilddrüse und Nebennieren">
+				>
+				["at0014"] = <
+					text = <"Zentrales Nerven-System">
+					description = <"Gehirn, Kopfhaut, Hirnhaut, Rückenmark">
+				>
+				["at0015"] = <
+					text = <"Bewegungsapparat">
+					description = <"Gliedmaßen, Wirbelsäule">
+				>
+				["at0016"] = <
+					text = <"Mikroskopische Untersuchung">
+					description = <"Befunde der mikroskopischen Untersuchung der Organe">
+				>
+				["at0017"] = <
+					text = <"Organ">
+					description = <"Befund bezüglich der Biopsie einzelner Organe">
+				>
+				["at0018"] = <
+					text = <"Nebennieren">
+					description = <"Befunde bezüglich der Nebennierendrüsen">
+				>
+				["at0019"] = <
+					text = <"Gehirn">
+					description = <"Befunde bezüglich des Gehirns">
+				>
+				["at0020"] = <
+					text = <"Herz">
+					description = <"Befunde bezüglich des Herzens">
+				>
+				["at0021"] = <
+					text = <"Nieren">
+					description = <"Befunde bezüglich der Nieren">
+				>
+				["at0022"] = <
+					text = <"Leber">
+					description = <"Befunde bezüglich der Leber">
+				>
+				["at0023"] = <
+					text = <"Lungen">
+					description = <"Befunde bezüglich der Lungen">
+				>
+				["at0024"] = <
+					text = <"Bauchspeicheldrüse">
+					description = <"Befunde bezüglich der Bauchspeicheldrüse">
+				>
+				["at0025"] = <
+					text = <"Hypophyse">
+					description = <"Befunde bezüglich der Hypophyse">
+				>
+				["at0026"] = <
+					text = <"Dünndarm">
+					description = <"Befunde bezüglich des Dünndarms">
+				>
+				["at0027"] = <
+					text = <"Milz">
+					description = <"Befunde bezüglich der Milz">
+				>
+				["at0028"] = <
+					text = <"Schilddrüse">
+					description = <"Befunde bezüglich der Schilddrüse">
+				>
+				["at0029"] = <
+					text = <"Wirbel">
+					description = <"Befunde bezüglich der Wirbelsäule">
+				>
+			>
+		>
+		["ru"] = <
+			items = <
+				["at0000"] = <
+					text = <"Вскрытие">
+					description = <"Заключение вскрытия.">
+				>
+				["at0001"] = <
+					text = <"История">
+					description = <"Внутренний элемент.">
+				>
+				["at0002"] = <
+					text = <"Любое событие">
+					description = <"**(ru)">
+				>
+				["at0003"] = <
+					text = <"Дерево">
+					description = <"Внутренний элемент.">
+				>
+				["at0004"] = <
+					text = <"Clinical (en)">
+					description = <"*Statement about the clinical findings prior to death(en)">
+				>
+				["at0005"] = <
+					text = <"Наружный осмотр">
+					description = <"Заключение наружного осмотра.">
+				>
+				["at0006"] = <
+					text = <"Секция">
+					description = <"Заключения по системам органов.">
+				>
+				["at0007"] = <
+					text = <"Система">
+					description = <"Заключение по системе органов.">
+				>
+				["at0008"] = <
+					text = <"Сердечно-сосудистая система">
+					description = <"Заключение по состоянию перикарда, сердца и крупных сосудов.">
+				>
+				["at0009"] = <
+					text = <"Дыхательная система">
+					description = <"Заключение по состоянию гортани, трахеи, бронхов, лёгких и плевры.">
+				>
+				["at0010"] = <
+					text = <"Пищеварительная система">
+					description = <"Заключение по состоянию пищевода, желудка, печени, поджелудочной железы, кишечника, брюшной полости.">
+				>
+				["at0011"] = <
+					text = <"Ретикуло-эндотелиальная система">
+					description = <"Заключение по состоянию селезёнки, лимфоузлов и костного мозга.">
+				>
+				["at0012"] = <
+					text = <"Мочеполовая система">
+					description = <"Заключение по состоянию почек, мочеточников, мочевого пузыря, предстательной железы и яичек, или матки и яичников.">
+				>
+				["at0013"] = <
+					text = <"Эндокринная система">
+					description = <"Щитовидная железа, надпочечники.">
+				>
+				["at0014"] = <
+					text = <"Центральная нервная система">
+					description = <"Головной и спинной мозг, покровы черепа, оболочки мозга.">
+				>
+				["at0015"] = <
+					text = <"Костно-мышечная система">
+					description = <"Конечности, позвоночник.">
+				>
+				["at0016"] = <
+					text = <"Микроскопия">
+					description = <"Заключение о микроскопической структуре органа.">
+				>
+				["at0017"] = <
+					text = <"Орган">
+					description = <"Заключение биопсии отдельных органов.">
+				>
+				["at0018"] = <
+					text = <"Надпочечники">
+					description = <"Заключение относительно надпочечников.">
+				>
+				["at0019"] = <
+					text = <"Головной мозг">
+					description = <"Заключение относительноголовного мозга.">
+				>
+				["at0020"] = <
+					text = <"Сердце">
+					description = <"Заключение относительно сердца.">
+				>
+				["at0021"] = <
+					text = <"Почки">
+					description = <"Заключение относительно почек.">
+				>
+				["at0022"] = <
+					text = <"Печень">
+					description = <"Заключение относительно печени.">
+				>
+				["at0023"] = <
+					text = <"Лёгкие">
+					description = <"Заключение относительно лёгких.">
+				>
+				["at0024"] = <
+					text = <"Поджелудочная железа">
+					description = <"Заключение относительно поджелудочной железы.">
+				>
+				["at0025"] = <
+					text = <"Гипофиз">
+					description = <"Заключение относительно гипофиза.">
+				>
+				["at0026"] = <
+					text = <"Тонкий кишечник">
+					description = <"Заключение относительно тонкого кишечника.">
+				>
+				["at0027"] = <
+					text = <"Селезёнка">
+					description = <"Заключение относительно селезёнки.">
+				>
+				["at0028"] = <
+					text = <"Щитовидная железа">
+					description = <"Заключение относительно щитовидной железы.">
+				>
+				["at0029"] = <
+					text = <"Позвоночник">
+					description = <"Заключение относительно позвоночника(ru)">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Autopsy examination">
+					description = <"Findings at autopsy.">
+				>
+				["at0001"] = <
+					text = <"history">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Clinical">
+					description = <"Statement about the clinical findings prior to death.">
+				>
+				["at0005"] = <
+					text = <"External examination">
+					description = <"Findings on external examination.">
+				>
+				["at0006"] = <
+					text = <"Internal examination">
+					description = <"Collection of statements about particular systems.">
+				>
+				["at0007"] = <
+					text = <"System">
+					description = <"Findings relating to different body systems.">
+				>
+				["at0008"] = <
+					text = <"Cardiovascular system">
+					description = <"Findings of the pericardium, heart and large vessels.">
+				>
+				["at0009"] = <
+					text = <"Respiratory system">
+					description = <"Findings about larynx, trachea, bronchi, lungs and pleura.">
+				>
+				["at0010"] = <
+					text = <"Gastro-intestinal system">
+					description = <"Findings about oesophagus, peritoneum, bowel, liver (including gallbladder) and omentum.">
+				>
+				["at0011"] = <
+					text = <"Reticulo-Endothelial system">
+					description = <"Findings about the spleen, lymphnodes and bone marrow.">
+				>
+				["at0012"] = <
+					text = <"Genito-urinary system">
+					description = <"Findings about the kidneys, ureters, bladders, prostate, testicles or uterus, ovaries.">
+				>
+				["at0013"] = <
+					text = <"Endocrine System">
+					description = <"Thyroid, adrenals.">
+				>
+				["at0014"] = <
+					text = <"Central nervous system">
+					description = <"Brain, scalp, dura, spinal cord.">
+				>
+				["at0015"] = <
+					text = <"Musculoskeletal system">
+					description = <"Limbs, vertebral column.">
+				>
+				["at0016"] = <
+					text = <"Microscopic examination">
+					description = <"Findings on microscopy organised by organ.">
+				>
+				["at0017"] = <
+					text = <"Organ">
+					description = <"Findings relating to biopsies of individual organs.">
+				>
+				["at0018"] = <
+					text = <"Adrenals">
+					description = <"Findings related to the adrenal glands.">
+				>
+				["at0019"] = <
+					text = <"Brain">
+					description = <"Findings related to the brain.">
+				>
+				["at0020"] = <
+					text = <"Heart">
+					description = <"Findings relating to the heart.">
+				>
+				["at0021"] = <
+					text = <"Kidneys">
+					description = <"Findings related to the kidneys.">
+				>
+				["at0022"] = <
+					text = <"Liver">
+					description = <"Findings related to the liver.">
+				>
+				["at0023"] = <
+					text = <"Lungs">
+					description = <"Findings related to the lungs.">
+				>
+				["at0024"] = <
+					text = <"Pancreas">
+					description = <"Findings related to the pancreas.">
+				>
+				["at0025"] = <
+					text = <"Pituitary">
+					description = <"Findings related to the pituitary.">
+				>
+				["at0026"] = <
+					text = <"Small bowel">
+					description = <"Findings related to the small bowel.">
+				>
+				["at0027"] = <
+					text = <"Spleen">
+					description = <"Findings related to the spleen.">
+				>
+				["at0028"] = <
+					text = <"Thyroid">
+					description = <"Findings related to the thyroid.">
+				>
+				["at0029"] = <
+					text = <"Vertebra">
+					description = <"Findings related to the spinal column.">
+				>
+			>
+		>
+	>

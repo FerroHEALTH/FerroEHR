@@ -3,15 +3,14 @@
 
 //! `OpenAPI` document + Swagger UI (discoverability).
 //!
-//! No openEHR spec governs an OAS-serving endpoint — our own surface. The
-//! Swagger UI's spec selector shows only documents this server generates itself,
-//! never a vendored OAS: one filtered document per API family (`FAMILIES`, at
-//! `{api-docs}/ferroehr-{family}.openapi.json`) plus the complete server surface
-//! last, each derived from the single composed document built natively from
-//! every `#[utoipa::path]` handler via `utoipa-axum`'s [`OpenApiRouter`]. Route
-//! and `OpenAPI` path are single-sourced from one handler, so the document
-//! cannot drift from the router. The vendored ITS-REST OAS bundles are codegen
-//! input for the generated group contract only, and are never served.
+//! No openEHR spec governs an OAS-serving endpoint — our own surface. The Swagger UI's spec
+//! selector shows only documents this server generates itself, never a vendored OAS: one filtered
+//! document per API family (`FAMILIES`, at `{api-docs}/ferroehr-{family}.openapi.json`) plus the
+//! complete server surface last, each derived from the single composed document built natively from
+//! every `#[utoipa::path]` handler via `utoipa-axum`'s [`OpenApiRouter`]. Route and `OpenAPI` path
+//! are single-sourced from one handler, so the document cannot drift from the router. The vendored
+//! ITS-REST OAS bundles are codegen input for the generated group contract only, and are never
+//! served.
 //!
 //! Authentication in the document is config-driven: the served document declares
 //! exactly the one scheme in effect per `[auth]` (`openehr_auth`, bearer JWT
@@ -45,8 +44,7 @@ use utoipa_axum::routes;
 use utoipa_swagger_ui::{Config, SwaggerFile, Url};
 
 use crate::config::AppConfig;
-use crate::extensions::health;
-use crate::extensions::management;
+use crate::extensions::{health, management};
 use crate::overview::status;
 use crate::state::AppState;
 use ferroehr::telemetry::provenance;
@@ -127,8 +125,7 @@ const SECURITY_SCHEME: &str = "openehr_auth";
                        outside it — our own design."
     ),
     tags(
-        // One tag per RM resource, exactly as the vendored group OAS documents
-        // categorise them.
+        // One tag per RM resource, as the vendored group OAS documents categorise them.
         (name = "EHR", description = "Management of EHRs — create/retrieve; physical delete (Admin API)."),
         (name = "EHR_STATUS", description = "Management of EHR_STATUS and its VERSIONED_EHR_STATUS reads."),
         (name = "COMPOSITION", description = "Management of COMPOSITION and its VERSIONED_COMPOSITION reads."),
@@ -157,10 +154,13 @@ const SECURITY_SCHEME: &str = "openehr_auth";
         (name = "admin-report", description = "The activity-report calls (contribution/version statistics per platform service). OUR OWN EXTENSION: the released Admin API is the two EHR deletes alone, so no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
         (name = "admin-archive", description = "Move selected EHRs / parties to archival storage, and restore them from it. OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
         (name = "admin-integrity", description = "The storage-parity sweep: every stored version is re-derived from its decomposed node rows and compared with its materialized body, so tampering or corruption of either copy is reported. OUR OWN EXTENSION: no ITS-REST operation governs this route, and no openEHR spec governs storage mechanics (same admin gate + RBAC Admin class)."),
-        (name = "admin-identifiers", description = "The audited read of a party's protected national identifiers: a party version with the identifiers `[privacy.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and `authz.rbac.identifier_reader_role`, and every read is an access record naming the reader, the party and the scheme, never the value."),
+        (name = "admin-access-log", description = "The integrity of the access log: seal its head in a checkpoint signed with the keyring's OpenPGP key, verify the chain and the signatures against a checkpoint, and export one EHR's log with the checkpoint it verifies against for a transfer to another system. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes (same admin gate + RBAC Admin class)."),
+        (name = "admin-identifiers", description = "The audited read of a party's protected national identifiers: a party version with the identifiers `[privacy.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and a `read_identifiers` grant in the CDR, and every read is an access record naming the reader, the party and the scheme, never the value."),
         (name = "admin-marks", description = "The legal marks storage carries beside the clinical content: the GDPR Art. 18 restriction register, the Art. 21(6) research objection, and the Art. 5(1)(e) / Art. 30(1)(f) retention register with its due list. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and nothing here deletes anything (same admin gate + RBAC Admin class)."),
         (name = "admin-dump-load", description = "Export every EHR to a file-system archive, and populate the repository from one. OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
         (name = "message", description = "EHR-Extract export and import. OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no message/extract API at all, so no released operation governs any route here; they carry the ordinary clinical authentication class, not the admin gate."),
+        (name = "admin-access-policy", description = "The controller's ACCESS_POLICY of the draft access control package: read with its version uid as the ETag, committed whole as the next version in its own contribution over the version `If-Match` names (or created with `If-None-Match: *`), and listed by version, by `admin_role` only; a write also needs the `write_access_policy` grant. A change applies on the next request with no restart. OUR OWN EXTENSION: ITS-REST defines no resource for the access policy."),
+        (name = "admin-registers", description = "The operational-policy admin registers: the audit category map, the EHDS Art. 3(3) access delay and the Cedar policy set, each read, replaced whole over the version `If-Match` names and listed by version, by `admin_role` only. Every version keeps its committer, and a change applies on the next request with no restart. OUR OWN EXTENSION: no openEHR spec governs operational policy."),
         (name = "admin-outbox", description = "The commit-event outbox feed: the PHI-free events after a configured reader's cursor, in `seq` order, and the acknowledgement that moves the cursor. OUR OWN EXTENSION: no openEHR spec governs eventing. It needs the `__ferroehr.outbox` scope, and every read is an access record."),
     )
 )]

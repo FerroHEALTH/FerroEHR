@@ -1,0 +1,341 @@
+﻿archetype (adl_version=1.4; uid=b654cdf4-71f2-4f24-a858-a777e991de5f)
+	openEHR-EHR-OBSERVATION.mna_sf.v0
+
+concept
+	[at0000]	-- Mini Nutritional Assessment - Short Form (MNA-SF)
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Priscila Maranhão; Gustavo Bacelar">
+		["organisation"] = <"MEDCIDS-FMUP">
+		["email"] = <"priscilamaranhao@gmail.com; gbacelar@gmail.com">
+		["date"] = <"2017-03-09">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"The MNA®-SF provides a method of identifying elderly persons who are at risk for malnutrition, or who are already malnourished. It identifies the risk of malnutrition before severe changes in weight or serum protein levels occur.
+In 2009 the MNA®-SF was validated as a stand alone screening tool, based on the full MNA®. The MNA®-SF may be completed at regular intervals in the community and in the hospital or long-term care setting. It is recommended to be done annually in the community, and every 3 months in the hospital or long-term care or whenever a change in clinical condition occurs">
+			use = <"To screen individuals aged 65 years and older for malnutrition or risk of malnutrition in community, hospital and long-term care settings. 
+
+The MNA®-SF consists of six scored questions (A–F), with seven question fields available to accommodate alternative anthropometric measurements.
+- Question F1 (BMI): Should be completed when the patient's Body Mass Index (BMI) is available.
+- Question F2 (Calf circumference): Should only be completed when BMI is unavailable and is used as a replacement for question F1.
+- Questions F1 and F2 are mutually exclusive. Do not complete both questions.
+- Only six questions should contribute to the final assessment score.
+
+Suitable for routine nutritional screening and monitoring, including reassessment following changes in clinical condition.">
+			keywords = <"Nutrition assessment, Malnutrition, Screening, MNA-SF, Elderly", ...>
+			misuse = <"The MNA®-SF should not be used:
+- As a diagnostic tool to independently establish malnutrition or determine its underlying cause.
+- As a substitute for a comprehensive nutritional assessment performed by a qualified healthcare professional.
+- For individuals younger than 65 years, as the tool has been validated primarily for geriatric populations.
+- To assess nutritional status in isolation from the patient's clinical context, including acute illness, functional status and relevant comorbidities.
+- As a replacement for ongoing nutritional monitoring or clinical reassessment.
+- To make treatment decisions solely on the basis of the screening score.">
+			copyright = <"While openEHR archetypes are freely available under an open license, the specific content of this Mini Nutritional Assessment – Short Form (MNA-SF) archetype is copyright protected. Any use of the assessment instrument within implementations must comply with the terms and conditions established by the copyright owner. Permission may be required for reproduction, modification, distribution or integration into electronic health records.  Copyright statement: © Société des Produits Nestlé S.A. 1994, Revision 2009. All rights reserved. MNA® and Mini Nutritional Assessment® are registered trademarks of Société des Produits Nestlé S.A., Vevey, Switzerland.  Copyright information: https://www.mna-elderly.com/">
+		>
+	>
+	lifecycle_state = <"in_development">
+	other_contributors = <"Ricardo Cruz-Correia, MEDCIDS-FMUP; Portugal", "Pedro Marques, MEDCIDS-FMUP; Portugal", "Duarte Ferreira, MEDCIDS-FMUP; Portugal", "Vanessa Pereira, openEHR International, Luxembourg">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"Kaiser MJ, Bauer JM, Ramsch C, et al. (2009). Validation of the Mini Nutritional Assessment short-form (MNA®-SF): A practical tool for identification of nutritional status. The Journal of Nutrition, Health & Aging, 13(9), 782–788. https://doi.org/10.1007/s12603-009-0214-7
+
+Rubenstein LZ, Harker JO, Salvà A, Guigoz Y, Vellas B. (2001). Screening for undernutrition in geriatric practice: Developing the short-form mini-nutritional assessment (MNA-SF). The Journals of Gerontology: Series A, 56(6), M366–M372. https://doi.org/10.1093/gerona/56.6.M366
+
+Beghetto, M.G.; Manna, B.; Candal, A.; Mello, E.D; poancz, C.A. Triagem  nutricional em adultos hospitalizados. Rev. Nutr.; Campinas, 21(5):589-601,2008.
+
+Nestlé Nutrition Institute / MNA International. Mini Nutritional Assessment (MNA®): User Guide and instructions for use. - https://www.mna-elderly.com/sites/default/files/2021-10/mna-guide-english-sf.pdf
+">
+		["current_contact"] = <"Vanessa Pereira">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"33997a51947093312b7f565e305bd820">
+		["build_uid"] = <"de6b1322-1949-4d96-8c8b-e2b4e4f2b5a0">
+		["ip_acknowledgements"] = <"The Mini Nutritional Assessment (MNA®) and Mini Nutritional Assessment–Short Form (MNA®-SF) are protected by copyright and are registered trademarks of Société des Produits Nestlé S.A., Vevey, Switzerland. © Société des Produits Nestlé S.A. 1994, Revision 2009. All rights reserved. Used with permission. MNA® is a registered trademark of Société des Produits Nestlé S.A.">
+		["revision"] = <"0.0.1-alpha">
+	>
+
+definition
+	OBSERVATION[at0000] matches {    -- Mini Nutritional Assessment - Short Form (MNA-SF)
+		data matches {
+			HISTORY[at0001] matches {    -- History
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..*} matches {    -- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {    -- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0005] matches {    -- Food intake decline in past 3 months
+										value matches {
+											0|[local::at0006],
+											1|[local::at0007],
+											2|[local::at0008]
+										}
+									}
+									ELEMENT[at0009] matches {    -- Involuntary weight loss in past 3 months
+										value matches {
+											0|[local::at0010],
+											1|[local::at0011],
+											2|[local::at0012],
+											3|[local::at0013]
+										}
+									}
+									ELEMENT[at0014] matches {    -- Mobility
+										value matches {
+											0|[local::at0015],
+											1|[local::at0016],
+											2|[local::at0017]
+										}
+									}
+									ELEMENT[at0018] matches {    -- Psychological stress or acute disease in past 3 months
+										value matches {
+											0|[local::at0019],
+											2|[local::at0020]
+										}
+									}
+									ELEMENT[at0021] matches {    -- Neuropsychological problems
+										value matches {
+											0|[local::at0022],
+											1|[local::at0023],
+											2|[local::at0024]
+										}
+									}
+									ELEMENT[at0025] occurrences matches {0..1} matches {    -- Body Mass Index (BMI)
+										value matches {
+											0|[local::at0026],
+											1|[local::at0027],
+											2|[local::at0028],
+											3|[local::at0029]
+										}
+									}
+									ELEMENT[at0030] occurrences matches {0..1} matches {    -- Calf circumference (CC)
+										value matches {
+											0|[local::at0031],
+											3|[local::at0032]
+										}
+									}
+									ELEMENT[at0033] matches {    -- Screening score
+										value matches {
+											DV_COUNT matches {
+												magnitude matches {|0..14|}
+											}
+										}
+									}
+									ELEMENT[at0034] matches {    -- Screening score interpretation
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0035,    -- Malnourished (0-7 points)
+													at0036,    -- At risk of malnutrition (8-11 points)
+													at0037]    -- Normal nutritional status (12-14 points)
+												}
+											}
+										}
+									}
+									ELEMENT[at0038] occurrences matches {0..1} matches {    -- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0004] matches {    -- Item tree
+				items cardinality matches {0..*; unordered} matches {
+					allow_archetype CLUSTER[at0039] occurrences matches {0..*} matches {    -- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Mini Nutritional Assessment - Short Form (MNA-SF)">
+					description = <"The MNA®-SF is a screening tool to help identify elderly patients who are malnourished or at risk of malnutrition. ">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Food intake decline in past 3 months">
+					description = <"Question A: Has food intake declined over the past three months due to loss of appetite, digestive problems, chewing or swallowing difficulties?">
+					Question = <"A">
+				>
+				["at0006"] = <
+					text = <"Severe decrease in food intake">
+					description = <"">
+				>
+				["at0007"] = <
+					text = <"Moderate decrease in food intake">
+					description = <"">
+				>
+				["at0008"] = <
+					text = <"No decrease in food intake">
+					description = <"">
+				>
+				["at0009"] = <
+					text = <"Involuntary weight loss in past 3 months">
+					description = <"Question B: Involuntary weight loss during the last three months?">
+					Question = <"B">
+				>
+				["at0010"] = <
+					text = <"Weight loss greater than 3 kg (6.6 pounds)">
+					description = <"">
+				>
+				["at0011"] = <
+					text = <"Does not know">
+					description = <"">
+				>
+				["at0012"] = <
+					text = <"Weight loss between 1 and 3 kg (2.2 and 6.6 pounds)">
+					description = <"">
+				>
+				["at0013"] = <
+					text = <"No weight loss">
+					description = <"">
+				>
+				["at0014"] = <
+					text = <"Mobility">
+					description = <"Question C: Mobility?">
+					Question = <"C">
+				>
+				["at0015"] = <
+					text = <"Bed or chair bound">
+					description = <"">
+				>
+				["at0016"] = <
+					text = <"Able to get out of bed/chair, but does not go out">
+					description = <"">
+				>
+				["at0017"] = <
+					text = <"Goes out">
+					description = <"">
+				>
+				["at0018"] = <
+					text = <"Psychological stress or acute disease in past 3 months">
+					description = <"Question D: Has the patient suffered psychological stress or acute disease in the past three months?">
+					Question = <"D">
+				>
+				["at0019"] = <
+					text = <"Yes">
+					description = <"">
+				>
+				["at0020"] = <
+					text = <"No">
+					description = <"">
+				>
+				["at0021"] = <
+					text = <"Neuropsychological problems">
+					description = <"Question E: Neuropsychological problems?">
+					Question = <"E">
+				>
+				["at0022"] = <
+					text = <"Severe dementia or depression">
+					description = <"">
+				>
+				["at0023"] = <
+					text = <"Mild dementia">
+					description = <"">
+				>
+				["at0024"] = <
+					text = <"No psychological problems">
+					description = <"">
+				>
+				["at0025"] = <
+					text = <"Body Mass Index (BMI)">
+					description = <"Question F1: Body mass index (BMI)? (weight in kg / height in m2)">
+					comment = <"IF BMI IS NOT AVAILABLE, REPLACE QUESTION F1 WITH QUESTION F2.
+DO NOT ANSWER QUESTION F2 IF QUESTION F1 IS ALREADY COMPLETED. ">
+					Question = <"F1">
+				>
+				["at0026"] = <
+					text = <"BMI less than 19">
+					description = <"">
+				>
+				["at0027"] = <
+					text = <"BMI 19 to less than 21">
+					description = <"">
+				>
+				["at0028"] = <
+					text = <"BMI 21 to less than 23">
+					description = <"">
+				>
+				["at0029"] = <
+					text = <"BMI 23 or greater">
+					description = <"">
+				>
+				["at0030"] = <
+					text = <"Calf circumference (CC)">
+					description = <"Question F2: Calf circumference (CC) in cm">
+					comment = <"DO NOT ANSWER QUESTION F2 IF QUESTION F1 IS ALREADY COMPLETED.">
+					Question = <"F2">
+				>
+				["at0031"] = <
+					text = <"CC less than 31">
+					description = <"">
+				>
+				["at0032"] = <
+					text = <"CC 31 or greater">
+					description = <"">
+				>
+				["at0033"] = <
+					text = <"Screening score">
+					description = <"The score is calculated by summing the points assigned to each of the six questions (A-F), resulting in a total score between 0 and 14. When BMI is unavailable, calf circumference (F2) replaces the BMI question (F1).">
+				>
+				["at0034"] = <
+					text = <"Screening score interpretation">
+					description = <"The interpretation of the screening score result.">
+				>
+				["at0035"] = <
+					text = <"Malnourished (0-7 points)">
+					description = <"">
+				>
+				["at0036"] = <
+					text = <"At risk of malnutrition (8-11 points)">
+					description = <"">
+				>
+				["at0037"] = <
+					text = <"Normal nutritional status (12-14 points)">
+					description = <"">
+				>
+				["at0038"] = <
+					text = <"Comment">
+					description = <"Additional narrative about the measurement of the scale not captured in other fields.">
+				>
+				["at0039"] = <
+					text = <"Extension">
+					description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+					comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+				>
+			>
+		>
+	>

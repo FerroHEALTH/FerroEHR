@@ -1,0 +1,1 @@
+- A system caller no longer imports with no grant (#5432): before, any `system/` caller could import an EHR or an extract; it now needs a grant of the import operation covering the EHR's subject namespace.

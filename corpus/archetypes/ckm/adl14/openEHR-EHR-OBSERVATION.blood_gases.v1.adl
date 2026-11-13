@@ -1,0 +1,451 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-OBSERVATION.blood_gases.v1
+
+concept
+	[at0000]	-- Blood gas assessment
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Thilo Schuler">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"sam.heard@oceaninformatics.com">
+		["date"] = <"23/04/2006">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"*For recording the arterial or venous blood gases and respiration products.(en)">
+			use = <"">
+			misuse = <"">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For recording the arterial or venous blood gases and respiration products.">
+			use = <"">
+			misuse = <"">
+		>
+	>
+	lifecycle_state = <"AuthorDraft">
+	other_contributors = <>
+
+definition
+	OBSERVATION[at0000] matches {	-- Blutgasbestimmung
+		data matches {
+			HISTORY[at0002] matches {	-- history
+				events cardinality matches {1..*; unordered} matches {
+					EVENT[at0003] occurrences matches {0..*} matches {	-- beliebiges Ereignis
+						data matches {
+							ITEM_TREE[at0001] matches {	-- structure
+								items cardinality matches {0..*; ordered} matches {
+									CLUSTER[at0011] occurrences matches {0..1} matches {	-- Arteriell
+										items cardinality matches {0..8; ordered} matches {
+											ELEMENT[at0004] occurrences matches {0..1} matches {	-- PaO2
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::125]>
+														list = <
+															["1"] = <
+																units = <"kPa">
+																magnitude = <|>=0.0|>
+															>
+														>
+													>
+												}
+											}
+											ELEMENT[at0005] occurrences matches {0..1} matches {	-- PaCO2
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::125]>
+														list = <
+															["1"] = <
+																units = <"kPa">
+																magnitude = <|>=0.0|>
+															>
+														>
+													>
+												}
+											}
+											ELEMENT[at0006] occurrences matches {0..1} matches {	-- pH
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::119]>
+														list = <
+															["1"] = <
+																units = <"[pH]">
+																magnitude = <|0.0..14.0|>
+															>
+														>
+													>
+												}
+											}
+											ELEMENT[at0007] occurrences matches {0..1} matches {	-- BE
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::119]>
+														list = <
+															["1"] = <
+																units = <"mmol/l">
+																magnitude = <|-30.0..30.0|>
+															>
+														>
+													>
+												}
+											}
+											ELEMENT[at0008] occurrences matches {0..1} matches {	-- Alveolär-arterielle pO2 Differenz
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::125]>
+														list = <
+															["1"] = <
+																units = <"kPa">
+																magnitude = <|0.0..1000.0|>
+															>
+														>
+													>
+												}
+											}
+											ELEMENT[at0015] occurrences matches {0..1} matches {	-- SaO2
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::507]>
+														list = <
+															["1"] = <
+																units = <"%">
+																magnitude = <|0.0..100.0|>
+															>
+														>
+													>
+												}
+											}
+											ELEMENT[at0012] occurrences matches {0..1} matches {	-- Ort
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {[ac0000]}		-- Jeder Begriff für den gilt 'is_a' Arterie oder Kavität
+													}
+												}
+											}
+											ELEMENT[at0018] occurrences matches {0..1} matches {	-- CaO2
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::119]>
+														list = <
+															["1"] = <
+																units = <"{VOLUME/VOLUME}">
+																magnitude = <|>=0.0|>
+															>
+														>
+													>
+												}
+											}
+										}
+									}
+									CLUSTER[at0013] occurrences matches {0..1} matches {	-- Venös
+										items cardinality matches {0..4; ordered} matches {
+											ELEMENT[at0016] occurrences matches {0..1} matches {	-- PvO2
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::125]>
+														list = <
+															["1"] = <
+																units = <"kPa">
+																magnitude = <|0.0..1000.0|>
+															>
+														>
+													>
+												}
+											}
+											ELEMENT[at0017] occurrences matches {0..1} matches {	-- PvCO2
+												value matches {
+													C_DV_QUANTITY <
+														property = <[openehr::125]>
+														list = <
+															["1"] = <
+																units = <"kPa">
+																magnitude = <|0.0..1000.0|>
+															>
+														>
+													>
+												}
+											}
+											ELEMENT[at0014] occurrences matches {0..1} matches {	-- Ort
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {[ac0001]}		-- Jeder Begriff für den gilt 'is_a' Vene oder Kavität
+													}
+												}
+											}
+											use_node ELEMENT /data[at0002]/events[at0003]/data[at0001]/items[at0011]/items[at0006]
+										}
+									}
+									CLUSTER[at0019] occurrences matches {0..1} matches {	-- *Capillary(en)
+										items cardinality matches {0..*; unordered} matches {
+											use_node ELEMENT /data[at0002]/events[at0003]/data[at0001]/items[at0011]/items[at0006]
+										}
+									}
+								}
+							}
+						}
+						state matches {
+							ITEM_LIST[at0009] matches {	-- state structure
+								items cardinality matches {0..*; ordered} matches {
+									ELEMENT[at0010] occurrences matches {0..1} matches {	-- FiO2
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::507]>
+												list = <
+													["1"] = <
+														units = <"%">
+														magnitude = <|0.0..100.0|>
+														precision = <|0|>
+													>
+												>
+												assumed_value = <
+													precision = <0>
+													magnitude = <0.0>
+													units = <"%">
+												>
+											>
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_LIST[at0020] matches {	-- *List(en)
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0021] occurrences matches {0..1} matches {	-- *Device(en)
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"Blutgasbestimmung">
+					description = <"Die Bestimmung von Blutgaskonzentrationen und Säure/Basen-Status">
+				>
+				["at0001"] = <
+					text = <"structure">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"history">
+					description = <"@ internal @">
+				>
+				["at0003"] = <
+					text = <"beliebiges Ereignis">
+					description = <"*">
+				>
+				["at0004"] = <
+					text = <"PaO2">
+					description = <"Der Sauerstoffparitialdruck im arteriellen Blut">
+				>
+				["at0005"] = <
+					text = <"PaCO2">
+					description = <"Der Kohlendioxidpartialdruck im arteriellen Blut">
+				>
+				["at0006"] = <
+					text = <"pH">
+					description = <"Der negative 10ner Logarithmus der Hydroniumionenkonzentration im Blut">
+				>
+				["at0007"] = <
+					text = <"BE">
+					description = <"Die relative Basenabweichung">
+				>
+				["at0008"] = <
+					text = <"Alveolär-arterielle pO2 Differenz">
+					description = <"Der Unterschied in Sauerstoffpartialdruck zwischen Alveole und Arterie">
+				>
+				["at0009"] = <
+					text = <"state structure">
+					description = <"@ internal @">
+				>
+				["at0010"] = <
+					text = <"FiO2">
+					description = <"Die Sauerstoff-Fraktion der eingeatmeten Luft - normalerweise 0.21">
+				>
+				["at0011"] = <
+					text = <"Arteriell">
+					description = <"Arterielle Blutgaswerte">
+				>
+				["at0012"] = <
+					text = <"Ort">
+					description = <"Der Ort der Probenentnahme">
+				>
+				["at0013"] = <
+					text = <"Venös">
+					description = <"Venöse Blutgaswerte">
+				>
+				["at0014"] = <
+					text = <"Ort">
+					description = <"Die Vene aus der die Blutprobe entnommen wird">
+				>
+				["at0015"] = <
+					text = <"SaO2">
+					description = <"Die Häm-Sauerstoffsättigung ">
+				>
+				["at0016"] = <
+					text = <"PvO2">
+					description = <"Der Sauerstoffpartialdruck in venösem Blut">
+				>
+				["at0017"] = <
+					text = <"PvCO2">
+					description = <"Der Kohlendioxidpartialdruck in venösem Blut">
+				>
+				["at0018"] = <
+					text = <"CaO2">
+					description = <"Der Sauerstoffgehalt von arteriellem Blut">
+				>
+				["at0019"] = <
+					text = <"*Capillary(en)">
+					description = <"**(en)">
+				>
+				["at0020"] = <
+					text = <"*List(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0021"] = <
+					text = <"*Device(en)">
+					description = <"*The device used to measure the value(en)">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Blood gas assessment">
+					description = <"The assessment of blood gas concentrations and acid-base balance in blood">
+				>
+				["at0001"] = <
+					text = <"structure">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"history">
+					description = <"@ internal @">
+				>
+				["at0003"] = <
+					text = <"Any event">
+					description = <"*">
+				>
+				["at0004"] = <
+					text = <"PaO2">
+					description = <"The oxygen pressure in the arterial blood">
+				>
+				["at0005"] = <
+					text = <"PaCO2">
+					description = <"The carbon dioxide pressure in the arterial blood">
+				>
+				["at0006"] = <
+					text = <"pH">
+					description = <"The negative logarithm of the Hydrogen ion concentration in blood">
+				>
+				["at0007"] = <
+					text = <"Base excess">
+					description = <"The relative excess of alkaline">
+				>
+				["at0008"] = <
+					text = <"Alveolar-arterial pO2 difference">
+					description = <"The difference between the pressure of oxygen in the alveolar and the artery">
+				>
+				["at0009"] = <
+					text = <"state structure">
+					description = <"@ internal @">
+				>
+				["at0010"] = <
+					text = <"FiO2">
+					description = <"The fractional concentration of inspired O2 - normally 21%">
+				>
+				["at0011"] = <
+					text = <"Arterial">
+					description = <"Arterial readings">
+				>
+				["at0012"] = <
+					text = <"Site">
+					description = <"The site of sampling">
+				>
+				["at0013"] = <
+					text = <"Venous">
+					description = <"Venous readings">
+				>
+				["at0014"] = <
+					text = <"Site">
+					description = <"The vein from which the blood is sampled">
+				>
+				["at0015"] = <
+					text = <"SaO2">
+					description = <"The saturation of haem binding with oxygen">
+				>
+				["at0016"] = <
+					text = <"PvO2">
+					description = <"The oxygen pressure in the venous blood">
+				>
+				["at0017"] = <
+					text = <"PvCO2">
+					description = <"The carbon dioxide pressure in the venous blood">
+				>
+				["at0018"] = <
+					text = <"CaO2">
+					description = <"The oxygen content of arterial blood">
+				>
+				["at0019"] = <
+					text = <"Capillary">
+					description = <"*">
+				>
+				["at0020"] = <
+					text = <"List">
+					description = <"@ internal @">
+				>
+				["at0021"] = <
+					text = <"Device">
+					description = <"The device used to measure the value">
+				>
+			>
+		>
+	>
+	constraint_definitions = <
+		["de"] = <
+			items = <
+				["ac0000"] = <
+					text = <"Jeder Begriff für den gilt 'is_a' Arterie oder Kavität">
+					description = <"Jede Arterie oder intravsakuläre Stelle innerhalb der systemischen Blutzirkulation aus der eine Blutprobe entnommen werden können">
+				>
+				["ac0001"] = <
+					text = <"Jeder Begriff für den gilt 'is_a' Vene oder Kavität">
+					description = <"Jede Vene oder Kavität aus der Blutgasproben entnommen werden können">
+				>
+			>
+		>
+		["en"] = <
+			items = <
+				["ac0000"] = <
+					text = <"Any term that 'is_a' artery or cavity">
+					description = <"Any artery or intravascular site within the systemic circulation from which blood can be sampled">
+				>
+				["ac0001"] = <
+					text = <"Any term that 'is_a' vein or cavity">
+					description = <"A vein or cavity from which blood gases can be sampled">
+				>
+			>
+		>
+	>

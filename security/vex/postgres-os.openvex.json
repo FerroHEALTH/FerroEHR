@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/postgres-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-11-11T00:00:00Z",
-  "version": 11,
+  "timestamp": "2026-11-13T00:00:00Z",
+  "version": 12,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -3258,6 +3258,60 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "The ferroehr-postgres image is the official postgres:18 image on Debian trixie with the build-time GnuPG toolchain purged and gosu replaced by a POSIX-sh wrapper; its processes are the PostgreSQL server and its children, started by the upstream docker-entrypoint.sh. The server is built with OpenSSL and maps libssl.so.3 and libcrypto.so.3 from libssl3t64 for TLS on client connections (the ssl settings an operator enables), for SCRAM-SHA-256 and its tls-server-end-point channel binding (a hash of the server certificate), and for its own hashing and random numbers. The image also carries the openssl command-line program and the legacy provider (openssl-provider-legacy), which no process of the image runs or loads: the entrypoint and the server never execute openssl, and the legacy provider is loaded only when an OpenSSL configuration names it, which neither the image nor FerroEHR does. The flaw is in CMS_encrypt() and CMS_encrypt_ex() of OpenSSL 3.5.7 (libcrypto), which loop without end for an EC recipient certificate whose group order is 1; the advisory states that the TLS and QUIC implementations do not use this path (OpenSSL security advisory of 2026-11-10). PostgreSQL writes no CMS message, and the openssl program, whose cms command can, is never run in the image. Debian has no fix for trixie, and the statement goes when the image carries one."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-115819"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-115819, and GLIBC-SA-2026-0027: the wide scanf family (swscanf, fwscanf, wscanf, vswscanf, vfwscanf, vwscanf) writes one null byte past a char array filled by a %s or %[ conversion without the 'l' modifier (trixie: glibc 2.41-12+deb13u4 unfixed, no DSA, minor issue); the advisory states that the narrow scanf functions are not affected. No ELF file in the image imports a function of the wide family under any name (plain, __isoc99_ or __isoc23_): objdump -T over every ELF file of the :main image of 2026-11-13, 897 on amd64 and 896 on arm64, the postgres server, its modules, the client programs, gosu and every shared library included. The only scanf imports in the image are narrow ones. No process in the image reaches the defective code."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-100290"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr-postgres",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc-bin"
+            },
+            {
+              "@id": "pkg:deb/debian/libc-l10n"
+            },
+            {
+              "@id": "pkg:deb/debian/libc6"
+            },
+            {
+              "@id": "pkg:deb/debian/locales"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-100290, and GLIBC-SA-2026-0028: glibc's regcomp and regexec may read freed memory and free a block twice when an allocation fails while a regular expression is compiled or matched; the failure has to hit one specific allocation, so it is reached only under memory pressure (trixie: glibc 2.41-12+deb13u4 unfixed, no DSA, minor issue). PostgreSQL has its own regular-expression engine (src/backend/regex): the postgres binary and every module under /usr/lib/postgresql/18/lib import neither regcomp nor regexec (objdump -T on the :main image of 2026-11-13, both architectures). Of the libraries the server loads, two import them. libnuma carries one pattern, (/devices/pci[0-9a-fA-F:/]+\\.[0-9]+)/, for its device-affinity lookup, and the server imports only numa_available, numa_max_node, numa_move_pages and get_mempolicy from it. libkrb5 compiles the auth_to_local rules of the root-owned krb5.conf, which the image does not configure. The entrypoint scripts use no bash =~ match. The other importers (bash, grep, tar, psql through libedit, apt and util-linux tools) run only when an operator runs them inside the container, with the operator's own patterns. No request a client sends to the database reaches glibc's matcher, so an adversary can neither supply its input nor choose where an allocation fails."
     }
   ]
 }

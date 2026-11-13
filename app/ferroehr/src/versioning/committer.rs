@@ -65,9 +65,8 @@ pub struct CommitterIdentity {
     /// for a subject minted by an identity provider that authority is the
     /// provider, not this CDR, and which concrete string names it is spec-silent.
     pub issuer: Option<String>,
-    /// The client the request came through, which the `[[authz.origin]]` register
-    /// maps to the origin a direct commit is stamped with: the Basic user, or
-    /// an access token's `client_id`, failing that its `azp` (RFC 9068 §2.2).
+    /// The client the request came through: the Basic user, or an access
+    /// token's `client_id`, failing that its `azp` (RFC 9068 §2.2).
     pub client: Option<String>,
     /// Whether the identity is the record's person, or their representative,
     /// writing through a patient-context credential: a commit it makes is
@@ -86,27 +85,27 @@ pub struct CommitterIdentity {
     /// Whether the caller is a system caller (an OAuth client-credentials
     /// client acting for no person).
     pub system: bool,
-    /// The `[[authz.system_client]]` table that declares a system caller's
-    /// client, when one does; a system caller without one commits nothing
-    /// into an EHR.
-    pub system_client: Option<std::sync::Arc<crate::config::clients::SystemClient>>,
+    /// The client `ACTOR` a system caller's issuer and `client_id` name in
+    /// the party store, when one does: the committer a default commit records
+    /// references it, so the commit is attributed to that `AGENT`.
+    pub agent: Option<uuid::Uuid>,
     /// What a verified external caller of a `federation` issuer may commit
     /// under the agreement it was admitted under; `None` for any other caller.
     pub external: Option<ExternalCaller>,
 }
 
-/// What a verified external caller may commit under its
-/// `[[authz.federation.agreement]]`.
+/// What a verified external caller may commit under its federation
+/// agreement ([`crate::party_binding::grants::agreement::Agreement`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExternalCaller {
     /// A verified external person, who commits a COMPOSITION only of a
-    /// template the agreement's `writes` lists.
+    /// template the agreement lists.
     Person {
-        /// The agreement's `writes`.
+        /// The templates the agreement lists.
         writes: Vec<String>,
         /// What the token asserts about the professional and the provider.
         professional: Box<external::ExternalProfessional>,
-        /// The agreement's `discard_window_hours` where it sets `discard`:
+        /// The agreement's discard window in whole hours, where it holds one:
         /// the person may then discard a dispensation of its point of care.
         discard_window_hours: Option<u32>,
     },
@@ -345,7 +344,7 @@ mod tests {
             representative: false,
             bound: None,
             system: false,
-            system_client: None,
+            agent: None,
             external: None,
         }
     }

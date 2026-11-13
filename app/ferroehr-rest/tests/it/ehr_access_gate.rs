@@ -13,12 +13,10 @@
 //! CONTRIBUTION — RM ehr `master04-ehr_package.adoc` §EHR Access), seeded at the
 //! service level before the app is built.
 //!
-//! They assert: default-open admits anonymous-era flows; `restricted` denies a
-//! non-listed principal (403) and admits a listed one; `role:` principals match;
-//! the Composition privacy ceiling blocks a read above `max_level` and admits
-//! one below (the level is drawn from the scheme's `composition_overrides`, so no
-//! real Composition is needed); and the gate-keeper preflight blocks a
-//! non-gate-keeper `EHR_ACCESS` commit (403) while admitting the gate-keeper.
+//! They assert: default-open admits anonymous-era flows; `restricted` and
+//! `consent_required` deny a caller who is no gate-keeper (403) and admit a
+//! gate-keeper; and an `EHR_ACCESS` commit by a caller the current settings do
+//! not name a gate-keeper is refused (403) while the gate-keeper's commits.
 //! `403` follows the ITS-REST 401/403 discipline.
 //!
 //! The concrete scheme is our own design — no openEHR spec governs it.
@@ -52,21 +50,48 @@ fn rest_config(auth_enabled: bool) -> AppConfig {
         },
         ..Default::default()
     };
-    common::with_basic_users(
-        &mut config,
-        &[
-            ("alice", &[]),
-            ("bob", &[]),
-            ("carol", &[]),
-            ("nadia", &["NURSE"]),
-        ],
-    );
+    common::basic_users(&mut config, USERS);
     config.auth.shared.enabled = auth_enabled;
     config
 }
 
-fn committer(name: &str) -> Value {
-    json!({ "_type": "PARTY_IDENTIFIED", "name": name })
+/// The Basic users: three granted no role, a nurse and the administrator.
+const USERS: &[(&str, &[&str])] = &[
+    ("alice", &[]),
+    ("bob", &[]),
+    ("carol", &[]),
+    ("nadia", &["NURSE"]),
+    ("root", &["ADMIN"]),
+];
+
+/// Settings of the `access default` code and the Basic users named their
+/// gate-keepers.
+type Scheme = (&'static str, &'static [&'static str]);
+
+/// The service over `pool`, whose administrator role is `ADMIN`.
+fn service(pool: &sqlx::PgPool) -> FerroEhrService {
+    FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
+        .with_binding_mapping(
+            ferroehr::party_binding::BindingMapping::default().with_admin_role("ADMIN"),
+        )
+}
+
+/// The `access_directives` settings `scheme` names, over the `PERSON`s the
+/// Basic users of `pool` are bound to.
+async fn settings_of(pool: &sqlx::PgPool, (default, keepers): Scheme) -> Value {
+    let mut persons = Vec::new();
+    for user in keepers {
+        persons.push(common::basic_person(pool, user).await);
+    }
+    common::access_settings(default, &persons)
+}
+
+/// The committer a contribution names: the placeholder naming the Basic user
+/// `user` by its login, since a Basic user commits as its bound `PERSON`,
+/// which the server writes.
+fn committer(user: &str) -> Value {
+    json!({ "_type": "PARTY_IDENTIFIED",
+            "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": user }] })
 }
 
 fn coded(code: &str, value: &str) -> Value {
@@ -92,15 +117,21 @@ async fn seed_scheme(svc: &FerroEhrService, ehr_id: ferroehr::ids::EhrId, scheme
 /// The CONTRIBUTION that commits `scheme` as the second `EHR_ACCESS` version of
 /// the EHR `ehr` (its `EHR` object) names.
 fn access_contribution(ehr: &Value, scheme: &Value) -> Value {
+    access_contribution_over(ehr, scheme, 1, "alice")
+}
+
+/// The CONTRIBUTION `user` commits of `scheme` over the `EHR_ACCESS` version
+/// `preceding` of the EHR `ehr` names.
+fn access_contribution_over(ehr: &Value, scheme: &Value, preceding: u32, user: &str) -> Value {
     let access_vo = ehr["ehr_access"]["id"]["value"]
         .as_str()
         .expect("EHR.ehr_access.id.value");
-    let preceding = format!("{access_vo}::{DEFAULT_SYSTEM_ID}::1");
+    let preceding = format!("{access_vo}::{DEFAULT_SYSTEM_ID}::{preceding}");
     json!({
         "_type": "CONTRIBUTION",
         "versions": [ {
             "_type": "ORIGINAL_VERSION",
-            "commit_audit": { "change_type": coded("251", "modification"), "committer": committer("alice") },
+            "commit_audit": { "change_type": coded("251", "modification"), "committer": committer(user) },
             "lifecycle_state": coded("532", "complete"),
             "preceding_version_uid": { "value": preceding },
             "data": {
@@ -117,7 +148,7 @@ fn access_contribution(ehr: &Value, scheme: &Value) -> Value {
                 "settings": scheme
             }
         } ],
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("alice") }
+        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer(user) }
     })
 }
 
@@ -125,24 +156,24 @@ fn access_contribution(ehr: &Value, scheme: &Value) -> Value {
 /// (when `Some`) — otherwise it keeps the default-open `EHR_ACCESS`. `authz` is
 /// `None` throughout, so the `EHR_ACCESS` gate is the only thing that can produce
 /// a 403 (isolating what we assert).
-async fn app(auth_enabled: bool, scheme: Option<Value>) -> (testkit::TestDb, Router) {
+async fn app(auth_enabled: bool, scheme: Option<Scheme>) -> (testkit::TestDb, Router) {
     let (pg, pool) = common::migrated_pool().await;
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let svc = service(&pool);
     let ehr_id: ferroehr::ids::EhrId = EHR_ID.parse().expect("valid ehr uuid");
     Box::pin(svc.create_ehr_with_id_meta(ehr_id, WriteRequest::new(None)))
         .await
         .expect("create ehr");
+    common::grant_basic_users(&svc, &pool, USERS).await;
     if let Some(scheme) = scheme {
-        seed_scheme(&svc, ehr_id, &scheme).await;
+        seed_scheme(&svc, ehr_id, &settings_of(&pool, scheme).await).await;
     }
-    let app = ferroehr_rest::build_full(
+    let app = common::build_full(
         rest_config(auth_enabled),
         Arc::new(svc),
         None,
         Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     (pg, app)
 }
 
@@ -193,179 +224,82 @@ async fn default_open_admits_anonymous() {
     );
 }
 
-/// `restricted` denies a principal absent from the access list (403) and admits
-/// a listed one.
+/// `restricted` denies a caller who is no gate-keeper (403) and admits the
+/// gate-keeper and the administrator.
 #[tokio::test]
-async fn restricted_gates_by_user_principal() {
-    let scheme = json!({
-        "_type": "FERROEHR_ACCESS_CONTROL_V1",
-        "default_access": "restricted",
-        "access_list": [ { "principal": "user:bob", "access": "full" } ]
-    });
-    let (_pg, app) = app(true, Some(scheme)).await;
-
-    let denied = status(
-        &app,
-        req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic("carol")), ""),
-    )
-    .await;
-    assert_eq!(
-        denied,
-        StatusCode::FORBIDDEN,
-        "carol is not on the access list"
-    );
-
-    let allowed = status(
-        &app,
-        req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic("bob")), ""),
-    )
-    .await;
-    assert_ne!(
-        allowed,
-        StatusCode::FORBIDDEN,
-        "bob is listed → gate passes"
-    );
+async fn restricted_admits_its_gate_keeper() {
+    let (_pg, app) = app(true, Some(("restricted", &["bob"]))).await;
+    for (user, admitted) in [("carol", false), ("bob", true), ("root", true)] {
+        let code = status(
+            &app,
+            req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic(user)), ""),
+        )
+        .await;
+        assert_eq!(code == StatusCode::FORBIDDEN, !admitted, "{user}: {code}");
+    }
 }
 
-/// A `role:` access-list entry matches the caller's roles.
+/// `consent_required` holds the same: a role alone admits no one.
 #[tokio::test]
-async fn restricted_gates_by_role_principal() {
-    let scheme = json!({
-        "_type": "FERROEHR_ACCESS_CONTROL_V1",
-        "default_access": "restricted",
-        "access_list": [ { "principal": "role:nurse", "access": "full" } ]
-    });
-    let (_pg, app) = app(true, Some(scheme)).await;
-
+async fn consent_required_admits_its_gate_keeper() {
+    let (_pg, app) = app(true, Some(("consent_required", &["nadia"]))).await;
     let allowed = status(
         &app,
         req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic("nadia")), ""),
     )
     .await;
-    assert_ne!(
-        allowed,
-        StatusCode::FORBIDDEN,
-        "nadia has role NURSE → gate passes"
-    );
-
+    assert_ne!(allowed, StatusCode::FORBIDDEN, "nadia is the gate-keeper");
     let denied = status(
         &app,
         req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic("alice")), ""),
     )
     .await;
-    assert_eq!(denied, StatusCode::FORBIDDEN, "alice has no matching role");
+    assert_eq!(denied, StatusCode::FORBIDDEN, "alice is no gate-keeper");
 }
 
-/// The Composition privacy ceiling blocks a read of a Composition raised above
-/// the caller's `max_level` and admits one at/below it. The level is drawn from
-/// the scheme's `composition_overrides`, so no real Composition is required.
-#[tokio::test]
-async fn privacy_ceiling_gates_composition_reads() {
-    // vo head of the "high" composition uid the override pins to level 3.
-    let high = "8849182c-82ad-4088-a07f-48ead4180515";
-    let low = "11111111-1111-4111-8111-111111111111";
-    let scheme = json!({
-        "_type": "FERROEHR_ACCESS_CONTROL_V1",
-        "default_access": "open",
-        "access_list": [ { "principal": "role:nurse", "access": "restricted_below", "max_level": 2 } ],
-        "privacy": {
-            "default_level": 0,
-            "composition_overrides": [ { "uid": high, "level": 3 } ]
-        }
-    });
-    let (_pg, app) = app(true, Some(scheme)).await;
-
-    // nadia (NURSE, ceiling 2): the level-3 composition is blocked.
-    let blocked = status(
-        &app,
-        req(
-            "GET",
-            &format!("/ehr/{EHR_ID}/composition/{high}::sys::1"),
-            Some(&basic("nadia")),
-            "",
-        ),
-    )
-    .await;
-    assert_eq!(blocked, StatusCode::FORBIDDEN, "level 3 >= ceiling 2");
-
-    // A default-level (0) composition is readable (0 < 2).
-    let readable = status(
-        &app,
-        req(
-            "GET",
-            &format!("/ehr/{EHR_ID}/composition/{low}::sys::1"),
-            Some(&basic("nadia")),
-            "",
-        ),
-    )
-    .await;
-    assert_ne!(
-        readable,
-        StatusCode::FORBIDDEN,
-        "level 0 < ceiling 2 → gate passes"
-    );
-}
-
-/// The gate-keeper preflight: a CONTRIBUTION carrying an `EHR_ACCESS` version is
-/// refused (403) for a non-gate-keeper and admitted for the gate-keeper.
+/// The gate-keeper rule: a CONTRIBUTION carrying an `EHR_ACCESS` version is
+/// refused (403) for a caller the current settings do not name, and commits
+/// for the gate-keeper.
 #[tokio::test]
 async fn gate_keeper_guards_ehr_access_commits() {
-    let scheme = json!({
-        "_type": "FERROEHR_ACCESS_CONTROL_V1",
-        "gate_keeper": "user:alice",
-        "default_access": "open"
-    });
-    let (_pg, app) = app(true, Some(scheme)).await;
-
-    let contribution = json!({
-        "_type": "CONTRIBUTION",
-        "versions": [ {
-            "_type": "ORIGINAL_VERSION",
-            "data": { "_type": "EHR_ACCESS", "archetype_node_id": "openEHR-EHR-EHR_ACCESS.generic.v1" }
-        } ],
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": { "_type": "PARTY_IDENTIFIED", "name": "x" } }
-    })
-    .to_string();
-
-    let denied = status(
+    let (_pg, app) = app(true, Some(("open", &["alice"]))).await;
+    let (code, ehr) = common::send_json(
         &app,
+        req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic("alice")), ""),
+    )
+    .await;
+    assert_eq!(code, StatusCode::OK, "{ehr}");
+    let settings = common::access_settings("open", &[]);
+    let commit = |user: &str| {
         req(
             "POST",
             &format!("/ehr/{EHR_ID}/contribution"),
-            Some(&basic("bob")),
-            &contribution,
-        ),
-    )
-    .await;
-    assert_eq!(denied, StatusCode::FORBIDDEN, "bob is not the gate-keeper");
-
-    let allowed = status(
-        &app,
-        req(
-            "POST",
-            &format!("/ehr/{EHR_ID}/contribution"),
-            Some(&basic("alice")),
-            &contribution,
-        ),
-    )
-    .await;
-    assert_ne!(
-        allowed,
+            Some(&basic(user)),
+            &access_contribution_over(&ehr, &settings, 2, user).to_string(),
+        )
+    };
+    let (code, refusal) = common::send_json(&app, commit("bob")).await;
+    assert_eq!(
+        code,
         StatusCode::FORBIDDEN,
-        "alice is the gate-keeper → gate passes"
+        "bob is not the gate-keeper: {refusal}"
+    );
+    assert!(
+        refusal.to_string().contains("gate-keeper"),
+        "the gate-keeper rule refuses bob: {refusal}"
+    );
+    assert_eq!(
+        status(&app, commit("alice")).await,
+        StatusCode::CREATED,
+        "alice is the gate-keeper"
     );
 }
 
 /// A CONTRIBUTION that does NOT carry an `EHR_ACCESS` version is not gate-kept,
-/// even from a non-gate-keeper (the preflight is scoped to `EHR_ACCESS` writes).
+/// even from a non-gate-keeper (the rule is scoped to `EHR_ACCESS` writes).
 #[tokio::test]
 async fn gate_keeper_ignores_non_ehr_access_contributions() {
-    let scheme = json!({
-        "_type": "FERROEHR_ACCESS_CONTROL_V1",
-        "gate_keeper": "user:alice",
-        "default_access": "open"
-    });
-    let (_pg, app) = app(true, Some(scheme)).await;
+    let (_pg, app) = app(true, Some(("open", &["alice"]))).await;
 
     let contribution = json!({
         "_type": "CONTRIBUTION",
@@ -398,8 +332,8 @@ async fn gate_keeper_ignores_non_ehr_access_contributions() {
 const OPEN_EHR_ID: &str = "7c1b9d3e-2a45-4f6b-9c8d-0e1f2a3b4c5d";
 const STORED_NAME: &str = "org.example.test::ehr_access_population";
 
-/// The router over [`EHR_ID`] (restricted to `user:bob`) and [`OPEN_EHR_ID`]
-/// (default-open), with Basic auth on.
+/// The router over [`EHR_ID`] (restricted, bob its gate-keeper) and
+/// [`OPEN_EHR_ID`] (default-open), with Basic auth on.
 async fn query_app() -> (testkit::TestDb, Router) {
     query_app_with(None).await
 }
@@ -408,13 +342,8 @@ async fn query_app() -> (testkit::TestDb, Router) {
 /// `default_access` of [`EHR_ID`] in storage when it is `Some`: settings that
 /// no longer parse, as only a write before the write-time check could store.
 async fn query_app_with(stored_default_access: Option<&str>) -> (testkit::TestDb, Router) {
-    let scheme = json!({
-        "_type": "FERROEHR_ACCESS_CONTROL_V1",
-        "default_access": "restricted",
-        "access_list": [ { "principal": "user:bob", "access": "full" } ]
-    });
     let (pg, pool) = common::migrated_pool().await;
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let svc = service(&pool);
     let ehr_id: ferroehr::ids::EhrId = EHR_ID.parse().expect("valid ehr uuid");
     let open_id: ferroehr::ids::EhrId = OPEN_EHR_ID.parse().expect("valid ehr uuid");
     Box::pin(svc.create_ehr_with_id_meta(ehr_id, WriteRequest::new(None)))
@@ -423,6 +352,8 @@ async fn query_app_with(stored_default_access: Option<&str>) -> (testkit::TestDb
     Box::pin(svc.create_ehr_with_id_meta(open_id, WriteRequest::new(None)))
         .await
         .expect("create open ehr");
+    common::grant_basic_users(&svc, &pool, USERS).await;
+    let scheme = settings_of(&pool, ("restricted", &["bob"])).await;
     seed_scheme(&svc, ehr_id, &scheme).await;
     if let Some(stored) = stored_default_access {
         sqlx::query(
@@ -435,14 +366,13 @@ async fn query_app_with(stored_default_access: Option<&str>) -> (testkit::TestDb
         .await
         .expect("store settings that do not parse");
     }
-    let app = ferroehr_rest::build_full(
+    let app = common::build_full(
         rest_config(true),
         Arc::new(svc),
         None,
         Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     (pg, app)
 }
 
@@ -471,7 +401,7 @@ fn aql(q: &str, user: &str) -> Request<Body> {
 
 /// An EHR the caller may not read contributes no rows to any AQL form — scoped
 /// by the `WHERE` clause, by the `EHR` predicate, by the `ehr_id` parameter, or
-/// not at all — while the listed principal is served on every one (RM ehr
+/// not at all — while the gate-keeper is served on every one (RM ehr
 /// `ehr_access.adoc` §`EHR_ACCESS` Class).
 #[tokio::test]
 async fn aql_withholds_an_ehr_the_caller_may_not_read() {
@@ -579,6 +509,8 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
     let mut config = rest_config(true);
     common::with_basic_users(
         &mut config,
+        &svc,
+        &pool,
         &[
             ("alice", &[]),
             ("bob", &[]),
@@ -586,7 +518,8 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
             ("nadia", &["NURSE"]),
             ("root", &["SUPERADMIN"]),
         ],
-    );
+    )
+    .await;
     let mut authz = ferroehr::config::authz::AuthzConfig::default();
     authz.rbac.enabled = false;
     authz.rbac.ehr_access_default = ferroehr::config::authz::EhrAccessDefault::Restricted;
@@ -602,9 +535,7 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
         handle.as_ref().is_some_and(|h| !h.rbac_active()),
         "a restricted default is carried with the coarse gate off"
     );
-    let app = ferroehr_rest::build_full(config, Arc::new(svc), handle, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, Arc::new(svc), handle, Observability::default()).await;
 
     assert_eq!(
         status(
@@ -636,10 +567,9 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
     );
 }
 
-/// Settings that carry the scheme's `_type` but do not parse hold the EHR
-/// closed: a read and an export of it are refused with `500`, and no query
-/// reaches it, for the caller its access list would have named too. Before,
-/// the EHR was served as if it carried no settings.
+/// Stored settings that do not read as the scheme hold the EHR closed: a read
+/// and an export of it are refused with `500`, and no query reaches it, for
+/// the gate-keeper they would have named too.
 #[tokio::test]
 async fn unreadable_settings_hold_the_ehr_closed() {
     let (_pg, app) = query_app_with(Some("bogus")).await;
@@ -690,41 +620,42 @@ async fn unreadable_settings_hold_the_ehr_closed() {
     );
 }
 
-/// A CONTRIBUTION that writes settings of the scheme which do not parse is
-/// refused with `400` naming the setting, and nothing is committed; the same
-/// write with settings that parse commits. Stored, the first would hold the
-/// EHR closed.
+/// A CONTRIBUTION by the administrator that writes settings breaking an
+/// invariant, or of the removed scheme, is refused with `400` naming the
+/// defect, and nothing is committed; the same write with settings that hold
+/// commits.
 #[tokio::test]
-async fn a_write_of_settings_that_do_not_parse_is_refused() {
+async fn a_write_of_settings_that_do_not_hold_is_refused() {
     let (_pg, app) = app(true, None).await;
     let (code, ehr) = common::send_json(
         &app,
-        req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic("alice")), ""),
+        req("GET", &format!("/ehr/{EHR_ID}"), Some(&basic("root")), ""),
     )
     .await;
     assert_eq!(code, StatusCode::OK, "{ehr}");
-    let commit = |default_access: &str| {
-        let scheme = json!({
-            "_type": "FERROEHR_ACCESS_CONTROL_V1",
-            "default_access": default_access,
-            "access_list": [ { "principal": "user:alice", "access": "full" } ]
-        });
+    let commit = |scheme: &Value| {
         req(
             "POST",
             &format!("/ehr/{EHR_ID}/contribution"),
-            Some(&basic("alice")),
-            &access_contribution(&ehr, &scheme).to_string(),
+            Some(&basic("root")),
+            &access_contribution_over(&ehr, scheme, 1, "root").to_string(),
         )
     };
-
-    let (code, refusal) = common::send_json(&app, commit("bogus")).await;
-    assert_eq!(code, StatusCode::BAD_REQUEST, "{refusal}");
-    assert!(
-        refusal
-            .to_string()
-            .contains("EHR_ACCESS.settings.default_access"),
-        "the refusal names the setting that does not parse: {refusal}"
-    );
+    let old = json!({ "_type": "FERROEHR_ACCESS_CONTROL_V1", "default_access": "restricted" });
+    for (scheme, defect) in [
+        (
+            common::access_settings("bogus", &[]),
+            "Default_access_valid",
+        ),
+        (old, "FERROEHR_ACCESS_CONTROL_V1"),
+    ] {
+        let (code, refusal) = common::send_json(&app, commit(&scheme)).await;
+        assert_eq!(code, StatusCode::BAD_REQUEST, "{refusal}");
+        assert!(
+            refusal.to_string().contains(defect),
+            "the refusal names {defect}: {refusal}"
+        );
+    }
     assert_eq!(
         status(
             &app,
@@ -736,9 +667,9 @@ async fn a_write_of_settings_that_do_not_parse_is_refused() {
     );
 
     assert_eq!(
-        status(&app, commit("restricted")).await,
+        status(&app, commit(&common::access_settings("restricted", &[]))).await,
         StatusCode::CREATED,
-        "settings that parse commit"
+        "settings that hold commit"
     );
     assert_eq!(
         status(
@@ -780,8 +711,7 @@ fn manifest_of(entities: &[Value], user: &str) -> Request<Body> {
 
 /// Every EHR a manifest export names passes the gate a read of it passes:
 /// one the caller may not reach refuses the whole export with `403`, whatever
-/// else the manifest names, and a caller the access list names is served
-/// every extract. Before, the manifest form passed no `EHR_ACCESS` gate.
+/// else the manifest names, and the gate-keeper is served every extract.
 #[tokio::test]
 async fn a_manifest_export_passes_the_gate_for_every_named_ehr() {
     let (_pg, app) = query_app_with(None).await;
@@ -803,7 +733,7 @@ async fn a_manifest_export_passes_the_gate_for_every_named_ehr() {
     assert_eq!(
         extracts.as_array().map(Vec::len),
         Some(2),
-        "bob is listed: one extract per entity"
+        "bob is the gate-keeper: one extract per entity"
     );
     let (code, extracts) = common::send_json(&app, manifest_export(&[OPEN_EHR_ID], "carol")).await;
     assert_eq!(code, StatusCode::OK, "{extracts}");
@@ -831,8 +761,8 @@ async fn a_manifest_export_naming_a_held_closed_ehr_is_refused() {
 }
 
 /// A manifest entity named by `subject_id` passes the same gate: the EHR the
-/// subject resolves to is refused to a caller off its access list, with `403`
-/// for the whole export, and served to a listed one.
+/// subject resolves to is refused to a caller who is no gate-keeper, with
+/// `403` for the whole export, and served to the gate-keeper.
 #[tokio::test]
 async fn a_manifest_export_by_subject_id_passes_the_gate() {
     const SUBJECT: &str = "subject-4871";
@@ -866,20 +796,16 @@ async fn a_manifest_export_by_subject_id_passes_the_gate() {
     Box::pin(svc.create_ehr_with_id_meta(ehr_id, WriteRequest::new(Some(ehr_status))))
         .await
         .expect("create ehr");
-    let scheme = json!({
-        "_type": "FERROEHR_ACCESS_CONTROL_V1",
-        "default_access": "restricted",
-        "access_list": [ { "principal": "user:bob", "access": "full" } ]
-    });
+    common::grant_basic_users(&svc, &pool, USERS).await;
+    let scheme = settings_of(&pool, ("restricted", &["bob"])).await;
     seed_scheme(&svc, ehr_id, &scheme).await;
-    let app = ferroehr_rest::build_full(
+    let app = common::build_full(
         rest_config(true),
         Arc::new(svc),
         None,
         Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     let by_subject = || {
         vec![json!({
             "_type": "EXTRACT_ENTITY_MANIFEST", "extract_id_key": SUBJECT, "subject_id": SUBJECT
@@ -896,6 +822,6 @@ async fn a_manifest_export_by_subject_id_passes_the_gate() {
     assert_eq!(
         extracts.as_array().map(Vec::len),
         Some(1),
-        "bob is listed: the subject's EHR is exported"
+        "bob is the gate-keeper: the subject's EHR is exported"
     );
 }

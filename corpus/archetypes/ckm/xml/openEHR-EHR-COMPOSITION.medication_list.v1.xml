@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -71,8 +71,7 @@
       <keywords>Arzneimittel</keywords>
       <keywords>aktuell</keywords>
       <keywords>Verschreibung</keywords>
-      <use>	&#xD;
-Zur Repräsentation einer beständigen und geführten Liste von Medikamenten für eine Person, die möglicherweise alle verschriebenen und rezeptfreien Medikamente, Ergänzungsmittel oder Naturheilmittel enthält. Alternativ können positive und explizite Aussagen über bekannte Ausschlüsse oder das Fehlen von Informationen über Medikamente enthalten sein.&#xD;
+      <use>Zur Repräsentation einer beständigen und geführten Liste von Medikamenten für eine Person, die möglicherweise alle verschriebenen und rezeptfreien Medikamente, Ergänzungsmittel oder Naturheilmittel enthält. Alternativ können positive und explizite Aussagen über bekannte Ausschlüsse oder das Fehlen von Informationen über Medikamente enthalten sein.&#xD;
 &#xD;
 Der Zweck dieses Archetyps ist es, einen generischen Container für alle Medikamentenlisten zu bilden, die einen bestimmten Kontext oder eine Einschränkung des Umfangs innerhalb eines Templates haben können. Diese Liste kann als Datenquelle für eine aktive aktuelle Medikationsliste innerhalb eines klinischen Systems, für den Versorgungswechsel, den Datenaustausch oder als Grundlage für die Entscheidungsunterstützung genutzt werden. &#xD;
 &#xD;
@@ -88,10 +87,7 @@ Es kann einen feinen, aber wichtigen Unterschied zwischen den Arten von Medikame
 &#xD;
 Darüber hinaus ist es in der klinischen Praxis üblich, Medikamentenlisten mit zeitlichen Einschränkungen zu erstellen, einschließlich der "Aufnahmemedikation" und der "Entlassmedikation", die erst zu einem bestimmten Zeitpunkt relevant sind. Weitere Beispiele sind "Vergangene Medikamente" oder "Inaktive Medikamente". Dies wird letztendlich eine Implementierungsentscheidung für jedes klinische System sein - ein alternativer Ansatz kann darin bestehen, diese kontextabhängigen klinischen Konstrukte als Ergebnis einer Abfrage oder Verwendung eines anderen, noch zu definierenden COMPOSITION-Archetyps zu erfassen.&#xD;
 &#xD;
-Dieser Archetyp soll als beständige Liste dargestellt und geführt werden, es gibt jedoch Situationen, in denen die Liste innerhalb der episodischen Pflege verwendet werden kann und zusätzliche Attribute wie Kontext usw. benötigt, um eine genaue Aufzeichnung zu ermöglichen. Das openEHR-Referenzmodell erlaubt derzeit nur die Aufzeichnung von Kontexten innerhalb von ereignisbasierten COMPOSITION-Archetypen. Infolgedessen wurde dieser Archetyp als Ereignis und nicht als beständige COMPOSITION modelliert, um Flexibilität zu ermöglichen, so dass einige klinische Systeme Medikamentenlisten für Episoden der Pflege sicher führen können, während andere sich dafür entscheiden werden, diese COMPOSITION zu implementieren, um beständig zu handeln.&#xD;
-&#xD;
-&#xD;
-</use>
+Dieser Archetyp soll als beständige Liste dargestellt und geführt werden, es gibt jedoch Situationen, in denen die Liste innerhalb der episodischen Pflege verwendet werden kann und zusätzliche Attribute wie Kontext usw. benötigt, um eine genaue Aufzeichnung zu ermöglichen. Das openEHR-Referenzmodell erlaubt derzeit nur die Aufzeichnung von Kontexten innerhalb von ereignisbasierten COMPOSITION-Archetypen. Infolgedessen wurde dieser Archetyp als Ereignis und nicht als beständige COMPOSITION modelliert, um Flexibilität zu ermöglichen, so dass einige klinische Systeme Medikamentenlisten für Episoden der Pflege sicher führen können, während andere sich dafür entscheiden werden, diese COMPOSITION zu implementieren, um beständig zu handeln.</use>
       <misuse>Nicht zur Erfassung von Medikamentenlisten verwenden, die nicht für die Beständigkeit und die fortlaufende Überprüfung und Pflege bestimmt sind.&#xD;
 &#xD;
 Nicht zur Erfassung individueller Verschreibungen verwenden - Verwenden Sie für diesen Zweck COMPOSITION.prescription.&#xD;
@@ -136,10 +132,7 @@ I många fall skapas separata läkemedelslistor som bara är giltiga vid en viss
 &#xD;
 Den här arketypen är utformad för att användas som en permanent och uppdaterad lista, men det finns situationer där listan kan användas episodiskt och kräver då att ytterligare attribut såsom sammanhang etc för att möjliggöra korrekt registrering. Referensmodellen i OpenEHR tillåter för närvarande endast att sammanhang registreras i händelsebaserade COMPOSITION-arketyper.&#xD;
 &#xD;
-Som ett resultat av detta har denna arketyp modellerats som en "Event", snarare än en "Persistent" COMPOSITION. Detta gör det möjligt för kliniska system att hantera läkemedelslistor för vårdepisoder, medan andra väljer att implementera denna COMPOSITION-arketyp som ett "beständigt" dokument.&#xD;
-&#xD;
-&#xD;
-</use>
+Som ett resultat av detta har denna arketyp modellerats som en "Event", snarare än en "Persistent" COMPOSITION. Detta gör det möjligt för kliniska system att hantera läkemedelslistor för vårdepisoder, medan andra väljer att implementera denna COMPOSITION-arketyp som ett "beständigt" dokument.</use>
       <misuse>Används inte för att registrera läkemedelslistor som inte är avsedda att vara permanenta och som kan uppdateras kontinuerligt.&#xD;
 &#xD;
 Används inte för att registrera enskilda recept, använd arketypen COMPOSTION.prescription för detta ändamål.&#xD;
@@ -175,8 +168,7 @@ Un "Listado de Medicacion Habitual" puede incluir solamente aquellos medicamento
 &#xD;
 En la práctica clinica es comun crear Listado de Medicamentos que tienen una restriccion contextual o temporal, incluyendo 'Listado de Medicamentos en Admision' y 'Listado de Medicamentos en el Alta', los cuales seran precisos en un punto en el tiempo pero no seran gestionados. Probablemente sea una mejor practica registrar los mismos de manera explicita, por ejemplo como el resultado de un query, registrar y/o intercambiar la data precisa aplicable para esa instancia temporal y lugar y no utilizar este arquetipo en esta situacion.&#xD;
 &#xD;
-Con la finalidad que esta lista sea precisa y segura de usar como base de actividades de apoyo a las decisiones y para intercambio, este Listado de Medicamentos deberia idealmente ser curada por el clinico responsable por el registro de la salud, en ves de ser solamente gestionada automaticamente por el sistema clinico a traves de reglas de negocio.&#xD;
-</use>
+Con la finalidad que esta lista sea precisa y segura de usar como base de actividades de apoyo a las decisiones y para intercambio, este Listado de Medicamentos deberia idealmente ser curada por el clinico responsable por el registro de la salud, en ves de ser solamente gestionada automaticamente por el sistema clinico a traves de reglas de negocio.</use>
       <misuse>No debe ser utilizado para el registro de Listado de Medicamentos no persistentes&#xD;
 &#xD;
 No debe ser utilizado para registrar vacunaciones administradas.</misuse>
@@ -387,9 +379,7 @@ Er kan een subtiel maar belangrijk verschil zijn tussen typen medicatielijsten. 
 &#xD;
 Daarnaast is het gangbaar in de klinische praktijk om een medicatielijst tijdgebonden restricties op te leggen, zoals 'Toelatingsmedicatielijst' en 'Ontslagmedicatielijst', welke alleen op een specifiek moment in tijd relevant zijn. Andere voorbeelden zijn 'Historische medicatie' of 'Niet-actieve medicatie'. Dit is uiteindelijk een implementatiekeuze voor ieder klinisch systeem - een alternatieve aanpak kan zijn om deze context-gebonden informatie op te leveren als het resultaat van een query, of door het gebruik van een ander COMPOSITION archetype, nader te definiëren.&#xD;
 &#xD;
-Dit archetype is bedoeld om weergegeven en beheerd te worden als een persistente lijst, alhoewel er situaties kunnen zijn waarin de lijst gebruikt wordt binnen zorg op basis van episoden waarbij extra attributen toegevoegd moeten worden zoals context etc. om de vastlegging accuraat te maken. Het openEHR referentie model staat momenteel alleen toe om context vast te leggen binnen event-gebasseerde COMPOSITION archetypen. Zodoende is dit archetype als een Event gemodelleerd, en niet als Persistent COMPOSITION. Dit staat flexibiliteit toe waardoor sommige klinische systemen op een veilige manier medicatielijsten kunnen beheren voor zorg op basis van episoden, terwijl anderen zullen kiezen om de COMPOSITION te gebruiken op een peristente manier.&#xD;
-&#xD;
-</use>
+Dit archetype is bedoeld om weergegeven en beheerd te worden als een persistente lijst, alhoewel er situaties kunnen zijn waarin de lijst gebruikt wordt binnen zorg op basis van episoden waarbij extra attributen toegevoegd moeten worden zoals context etc. om de vastlegging accuraat te maken. Het openEHR referentie model staat momenteel alleen toe om context vast te leggen binnen event-gebasseerde COMPOSITION archetypen. Zodoende is dit archetype als een Event gemodelleerd, en niet als Persistent COMPOSITION. Dit staat flexibiliteit toe waardoor sommige klinische systemen op een veilige manier medicatielijsten kunnen beheren voor zorg op basis van episoden, terwijl anderen zullen kiezen om de COMPOSITION te gebruiken op een peristente manier.</use>
       <misuse>Niet te gebruiken voor het vastleggen van medicatie die niet bedoeld is om permanent vastgelegd te worden en revisie en beheer te ondergaan.&#xD;
 &#xD;
 Niet te gebruiken om individuele voorschrijvingen vast te leggen - gebruik hier COMPOSITION.prescription voor.&#xD;
@@ -792,4 +782,3 @@ Niet te gebruiken voor het vastleggen van vaccinatietoediening - gebruik voor di
     </term_definitions>
   </ontology>
 </archetype>
-

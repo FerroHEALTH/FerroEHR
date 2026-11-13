@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -86,9 +86,9 @@ RSNA.org: Proposed Standard Radiology Report Headings. Radiological Society of N
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">B36DCF18E096027C5B1A27F497CE72AA</other_details>
-    <other_details id="build_uid">dccb7af8-6c19-4a35-959b-1b4126cdc9a9</other_details>
-    <other_details id="revision">1.1.2</other_details>
+    <other_details id="MD5-CAM-1.0.1">942BAB212A1811EA866491254FD3FE39</other_details>
+    <other_details id="build_uid">f8729e5d-1312-43ef-9b96-217471876bed</other_details>
+    <other_details id="revision">1.1.3</other_details>
     <details>
       <language>
         <terminology_id>
@@ -126,25 +126,24 @@ Darf nicht verwendet werden, um Fotos oder Videos in der Gesundheitsakte darzust
         </terminology_id>
         <code_string>sv</code_string>
       </language>
-      <purpose>Att, med hjälp av radiologiska tekniker, registrera fynden vid bilddiagnostisk undersökning av en specificerad kroppsstruktur eller region och tolka dessa.</purpose>
+      <purpose>Att registrera fynd och deras tolkning från en bilddiagnostisk undersökning av en specificerad kroppsstruktur eller region med hjälp av radiologiska tekniker.</purpose>
       <keywords>bild, radiologi, modalitet, röntgen, CT, ultraljud, MR, MRT, diagnostisk, skanning, bilddiagnostik, biomagnetisk, densitometri, tomografi, radiografi, magnetisk, resonans, mammografi, nukleär, medicin, positron, PET, angiografi, fluoroskopi</keywords>
-      <use>Används för att registrera fynden vid en bilddiagnostisk undersökning av en specificerad kroppsstruktur eller -region och tolka dem med hjälp av radiologiska tekniker.&#xD;
+      <use>Används för att registrera fynd och deras tolkning vid en bilddiagnostisk undersökning av en specificerad kroppsstruktur eller region med hjälp av radiologiska tekniker.&#xD;
 &#xD;
-Denna arketyp är utformad för att fokusera på rapportering av resultat och tolkning i samband med en enda bilddiagnostisk undersökning (motsvarande en enda DICOM-studie). Referenser till DICOM-relaterade attribut ingår, men fokus ligger på att representera ett kliniskt utlåtande från en bilddiagnostisk undersökning och inte på att representera DICOM-relaterade attribut som kan förväntas i ett radiologiskt informationssystem. Specifika detaljer om DICOM-serien kan registreras med hjälp av CLUSTER.imaging_series som är nästlad i SLOT:en ”Series details”.&#xD;
+Används för att registrera fynd och deras tolkning i samband med en enskild bilddiagnostisk undersökning (motsvarande en enskild DICOM-studie). Referenser till DICOM-relaterade attribut ingår, men fokus ligger på att representera ett kliniskt utlåtande från en bilddiagnostisk undersökning, inte på att representera DICOM-relaterade attribut som kan förväntas i ett radiologiskt informationssystem. Specifika uppgifter om DICOM-serien kan registreras i CLUSTER.imaging_series som kan nästlas i den SLOT för "Seriedetaljer" som finns i denna arketyp.&#xD;
 &#xD;
-Detaljerade fynd som observeras under en bilddiagnostisk undersökning och som är inriktade på en viss struktur eller region kan registreras genom att nästla CLUSTER.imaging_exam eller dess familj av specialiserade arketyper i SLOT:en ”Structured imaging findings”. Avsikten är att de specifika detaljerna i varje specialisering med tiden ska växa till att omfatta fynd under användning av alla bildmodaliteter.&#xD;
+Används för att registrera detaljerade fynd från en bilddiagnostisk undersökning och som avser en specificerad kroppsstruktur eller region kan registreras genom att nästla CLUSTER.imaging_exam eller någon av dess specialiserade arketyper i den SLOT för "Strukturerade bilddiagnostiska fynd" som finns i denna arketyp. Avsikten är att innehållet i respektive specialisering med tiden ska utökas så att det omfattar fynd från samtliga bildmodaliteter.&#xD;
 &#xD;
-Om en bilddiagnostisk undersökning utförs som en del av en mer komplex aktivitet, t.ex. en kirurgisk operation som utförs under bilddiagnostisk vägledning, ska de bilddiagnostiska fynden registreras med hjälp av denna arketyp. &#xD;
-Strukturerade detaljer om det kirurgiska ingreppet och de läkemedel eller kontrastmedel som administrerats ska registreras med hjälp av arketyperna ACTION.procedure eller ACTION.medication. I denna situation rekommenderas att alla relaterade arketyper rapporteras inom samma template.&#xD;
+Används för att registrera bilddiagnostiska fynd när en bilddiagnostisk undersökning utförs som en del av en mer komplex aktivitet, exempelvis ett kirurgiskt ingrepp som utförs med bilddiagnostisk vägledning. Strukturerade uppgifter om det kirurgiska ingreppet samt administrerade läkemedel eller kontrastmedel ska registreras med hjälp av arketyperna ACTION.procedure respektive ACTION.medication. I denna situation rekommenderas att alla relaterade arketyper dokumenteras inom samma template.&#xD;
 &#xD;
-Resultatet kommer vanligtvis att rapporteras tillbaka till den remitterande läkaren som en komponent inom ramen för en övergripande COMPOSITION-baserad utlåtande.</use>
+Används för att rapportera resultatet till den vårdpersonal som begärt undersökningen som en del av en övergripande rapport baserad på en COMPOSITION.</use>
       <misuse>Ska inte användas för att registrera fynd vid fysisk undersökning. Använd CLUSTER.exam eller dess familj av specialiserade arketyper för detta ändamål.&#xD;
 &#xD;
 Ska inte användas för att replikera funktionaliteten eller specifikationerna av ett radiologiskt informations- eller källsystem.&#xD;
 &#xD;
-Ska inte användas för att registrera strukturerade detaljer om en åtgärd som har genomförts. Använd de specifika åtgärdsrelaterade arketyperna, t.ex. arketypen ACTION.procedure, för detta ändamål.&#xD;
+Ska inte användas för att registrera strukturerade detaljer om en åtgärd som har genomförts. Använd de specifika åtgärdsrelaterade arketyperna, exempelvis arketypen ACTION.procedure, för detta ändamål.&#xD;
 &#xD;
-Ska inte användas för att registrera strukturerade detaljer om läkemedel som administreras under bildtagningstestet. Använd specifika läkemedelsrelaterade arketyper, t.ex. arketypen ACTION.medication, för detta ändamål.&#xD;
+Ska inte användas för att registrera strukturerade detaljer om läkemedel som administreras under bildtagningstestet. Använd specifika läkemedelsrelaterade arketyper, exempelvis arketypen ACTION.medication för detta ändamål.&#xD;
 &#xD;
 Ska inte användas för att registrera fotografier eller videor i patientjournalen. Använd arketypen CLUSTER.media_file för detta ändamål.</misuse>
       <copyright />
@@ -232,6 +231,36 @@ Not to be used to record photographs or videos  within the health record. Use th
         <terminology_id>
           <value>ISO_639-1</value>
         </terminology_id>
+        <code_string>fr</code_string>
+      </language>
+      <purpose>Pour enregistrer les résultats des examens d'imagerie d'une structure ou d'une région spécifique du corps ainsi que leur interprétation, à l'aide de techniques radiologiques.</purpose>
+      <keywords>image, radiologie, modalité, rayons X, tomodensitométrie (TDM), échographie, IRM, diagnostic, scan, rayo, imagerie, biomagnétique, densitométrie, tomographie, radiographie, magnétique, résonance, mammographie, médecine nucléaire, positron, TEP, angiographie, fluoroscopie</keywords>
+      <use>À utiliser pour enregistrer les résultats d’un examen d’imagerie portant sur une structure ou une région spécifique du corps, ainsi que leur interprétation, à l’aide de techniques radiologiques.&#xD;
+&#xD;
+Cet archétype a été conçu pour se concentrer sur le rapport des résultats et de l’interprétation associés à un seul examen d’imagerie (équivalent à une seule étude DICOM). Des références aux attributs liés au format DICOM sont incluses, mais l’accent est mis sur la représentation d’un rapport clinique issu d’un examen d’imagerie et non sur la représentation des attributs liés au format DICOM que l’on peut s’attendre à trouver dans un système d’information radiologique. Les détails spécifiques concernant la série DICOM peuvent être enregistrés à l’aide de l’archétype CLUSTER.imaging_series imbriqué dans le SLOT « Détails de la série ».&#xD;
+&#xD;
+Les résultats détaillés observés au cours d’un examen d’imagerie et portant sur une structure ou une région spécifique peuvent être enregistrés en imbriquant le CLUSTER.imaging_exam et/ou sa famille d’archétypes spécialisés au sein du SLOT « Résultats d’imagerie structurés » de cet archétype. Il est prévu qu’au fil du temps, les détails spécifiques de chaque spécialisation s'agrandissent pour finalement inclure des résultats issus de toutes les modalités d’imagerie.&#xD;
+&#xD;
+Si un examen d’imagerie est réalisé dans le cadre d’une activité plus complexe, telle qu’une intervention chirurgicale effectuée sous guidage par imagerie, les résultats d’imagerie doivent être consignés à l’aide de cet archétype. &#xD;
+Les détails structurés concernant la procédure chirurgicale et les médicaments ou produits de contraste administrés doivent être consignés à l’aide des archétypes ACTION.procedure et/ou ACTION.medication, respectivement. Dans ce cas, il est recommandé que tous les archétypes associés soient consignés dans le même template.&#xD;
+&#xD;
+Ce résultat sera normalement communiqué au clinicien demandeur en tant qu’élément constitutif d’un rapport global basé sur l’archétype COMPOSITION.</use>
+      <misuse>À ne pas utiliser pour enregistrer les résultats d’un examen physique. Utilisez à cette fin l’archétype CLUSTER.exam et/ou sa famille d’archétypes spécialisés.&#xD;
+&#xD;
+À ne pas utiliser pour reproduire les fonctionnalités ou les spécifications d’un système d’information radiologique ou d’un système source.&#xD;
+&#xD;
+À ne pas utiliser pour enregistrer des détails structurés concernant une procédure effectuée. Utilisez à cette fin les archétypes spécifiques liés aux procédures, tels que l’archétype ACTION.procedure.&#xD;
+&#xD;
+À ne pas utiliser pour enregistrer des détails structurés concernant les médicaments administrés pendant l’examen d’imagerie. Utilisez à cette fin les archétypes spécifiques liés aux médicaments, tels que l’archétype ACTION.medication.&#xD;
+&#xD;
+À ne pas utiliser pour enregistrer des photographies ou des vidéos dans le dossier médical. Utilisez à cette fin l’archétype CLUSTER.media_file.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
         <code_string>ca</code_string>
       </language>
       <purpose>Registrar les troballes sobre l'examen d'imatges d'una estructura o regió corporal especificada i la seva interpretació, utilitzant tècniques radiològiques.</purpose>
@@ -276,8 +305,7 @@ No s'ha d'utilitzar per registrar detalls estructurats sobre qualsevol procedime
 &#xD;
 No s'ha d'utilitzar per registrar detalls estructurats sobre els medicaments administrats durant la prova d'imatge. Utilitzar arquetips específics relacionats amb la medicació, com l'arquetip ACTION.medication per a aquest propòsit.&#xD;
 &#xD;
-No s'ha d'utilitzar per gravar fotografies o vídeos dins del registre de salut. Utilitzar l'arquetip de fitxer CLUSTER.media_file per a aquest propòsit.&#xD;
-</misuse>
+No s'ha d'utilitzar per gravar fotografies o vídeos dins del registre de salut. Utilitzar l'arquetip de fitxer CLUSTER.media_file per a aquest propòsit.</misuse>
       <copyright />
     </details>
     <details>
@@ -354,9 +382,9 @@ No debe utilizarse para registrar fotografías o vídeos en la historia clínica
       </terminology_id>
       <code_string>sv</code_string>
     </language>
-    <author id="name">Linda Aulin, Claudia Ehrentraut</author>
+    <author id="name">Linda Aulin, Claudia Ehrentraut, Manna Vosta</author>
     <author id="organisation">Region Stockholm, Karolinska University Hospital</author>
-    <author id="email">linda.aulin@sll.se, claudia.ehrentraut@regionstockholm.se</author>
+    <author id="email">linda.aulin@sll.se, claudia.ehrentraut@regionstockholm.se, manna.vosta@regionstockholm.se</author>
   </translations>
   <translations>
     <language>
@@ -368,6 +396,17 @@ No debe utilizarse para registrar fotografías o vídeos en la historia clínica
     <author id="name">Vebjørn Arntzen, Liv Laugen</author>
     <author id="organisation">​Oslo University Hospital, Norway</author>
     <author id="email">varntzen@ous-hf.no, liv.laugen@ous-hf.no</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>fr</code_string>
+    </language>
+    <author id="name">Jonas Bucher</author>
+    <author id="organisation">Cistec AG</author>
+    <author id="email">jonas.bucher@cistec.com</author>
   </translations>
   <translations>
     <language>
@@ -2581,13 +2620,12 @@ No debe utilizarse para registrar fotografías o vídeos en la historia clínica
       <items code="at0062">
         <items id="text">Procedure summary</items>
         <items id="description">Narrative description about the clinical procedure or other clinical considerations used to capture the study.</items>
-        <items id="comment">Use this data element to describe a summary of the clinical procedure, patient positioning, interventions such as Valsalva manoeuvre, and administration of contrast agent, radiopharmaceuticals and/or treatments as part of the imaging study. For example: '80 ml of Isovue-370 was administered intravenously using a bolus-tracking technique centered on the main pulmonary artery'. It can also be used to record an overview of any issues, complications or adverse reactions encountered. </items>
+        <items id="comment">Use this data element to describe a summary of the clinical procedure, patient positioning, interventions such as Valsalva manoeuvre, and administration of contrast agent, radiopharmaceuticals and/or treatments as part of the imaging study. For example: '80 ml of Isovue-370 was administered intravenously using a bolus-tracking technique centered on the main pulmonary artery'. It can also be used to record an overview of any issues, complications or adverse reactions encountered.</items>
       </items>
       <items code="at0063">
         <items id="text">Imaging quality</items>
         <items id="description">Assessment about the quality of the examination.</items>
-        <items id="comment">Coding of the imaging quality with a value set is recommended. For example: 'excellent, good, fair, poor, and non-diagnostic'; or 'adequate, suboptimal and inadequate'.&#xD;
-</items>
+        <items id="comment">Coding of the imaging quality with a value set is recommended. For example: 'excellent, good, fair, poor, and non-diagnostic'; or 'adequate, suboptimal and inadequate'.</items>
       </items>
       <items code="at0065">
         <items id="text">Series details</items>
@@ -2613,7 +2651,7 @@ No debe utilizarse para registrar fotografías o vídeos en la historia clínica
       <items code="at0072">
         <items id="text">Overall result status</items>
         <items id="description">The status of the imaging examination result as a whole.</items>
-        <items id="comment">The values have been aligned with the FHIR Diagnostic report status, with the exception of 'Entered in error' which is relevant only to a messaging-oriented paradigm. Other local codes/terms can be used via the Text 'choice'. In most use cases, only one status is applicable at any time, however this data element allows multiple occurrences for the use cases where there are a variety of types of status that need to be specified, usually within a template. Equivalent to DiagnosticReport.status in FHIR. </items>
+        <items id="comment">The values have been aligned with the FHIR Diagnostic report status, with the exception of 'Entered in error' which is relevant only to a messaging-oriented paradigm. Other local codes/terms can be used via the Text 'choice'. In most use cases, only one status is applicable at any time, however this data element allows multiple occurrences for the use cases where there are a variety of types of status that need to be specified, usually within a template. Equivalent to DiagnosticReport.status in FHIR.</items>
       </items>
       <items code="at0073">
         <items id="text">Registered</items>
@@ -2725,7 +2763,7 @@ No debe utilizarse para registrar fotografías o vídeos en la historia clínica
       <items code="at0104">
         <items id="text">Report identifier</items>
         <items id="description">Unique identifier for the imaging report assigned by the radiology service.</items>
-        <items id="comment">As one instance of this archetype is used per study, this identifier can be used to connect more than one imaging study within a single combined report. Equivalent to DiagnosticReport.identifier in FHIR. </items>
+        <items id="comment">As one instance of this archetype is used per study, this identifier can be used to connect more than one imaging study within a single combined report. Equivalent to DiagnosticReport.identifier in FHIR.</items>
       </items>
       <items code="at0105">
         <items id="text">Study description</items>
@@ -3388,8 +3426,7 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
       </items>
       <items code="at0002">
         <items id="text">Ospecificerad händelse</items>
-        <items id="description">Ospecificerad standardhändelse vid en tidpunkt eller inom ett tidsintervall som explicit kan definieras i en mall eller genereras automatiskt av vissa IT-system.&#xD;
-</items>
+        <items id="description">Ospecificerad standardhändelse vid en tidpunkt eller inom ett tidsintervall som explicit kan definieras i en template eller genereras automatiskt av vissa IT-system.</items>
       </items>
       <items code="at0003">
         <items id="text">Tree</items>
@@ -3398,12 +3435,12 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
       <items code="at0004">
         <items id="text">Undersökningsnamn</items>
         <items id="description">Namnet på den bilddiagnostiska undersökning som har utförts.</items>
-        <items id="comment">Exempel: ”CT buk”, ”Dopplerultraljud av njurartär” eller ”Slätröntgen av torax”. Kodning med en terminologi rekommenderas starkt, helst en term som anger både modalitet och anatomisk plats, där så är möjligt. Exempel på möjliga terminologier är LOINC Imaging Document Codes, RadLex Playbook eller Snomed CT. Motsvarar DiagnosticReport.code i FHIR.</items>
+        <items id="comment">Exempelvis ”CT buk”, ”Dopplerultraljud av njurartär” eller ”Slätröntgen av torax”. Kodning med en terminologi rekommenderas starkt, helst en term som anger både modalitet och anatomisk plats, där så är möjligt. Exempel på möjliga terminologier är LOINC Imaging Document Codes, RadLex Playbook eller Snomed CT. Motsvarar DiagnosticReport.code i FHIR.</items>
       </items>
       <items code="at0006">
-        <items id="text">Strukturerat kroppsställe</items>
-        <items id="description">Strukturerad detalj om kroppsstället eller regionen som är målet för den bilddiagnostiska undersökningen.</items>
-        <items id="comment">Om kroppsstället anges i texten eller koden för ”Undersökningsnamn" kan detta fält vara överflödigt.</items>
+        <items id="text">Strukturerad avsedd kroppslokalisation</items>
+        <items id="description">Strukturerad detalj om kroppslokalisationen eller regionen som den bilddiagnostiska undersökningen avser.</items>
+        <items id="comment">Om kroppslokalisation anges i texten eller koden för ”Undersökningsnamn" kan detta fält vara överflödigt.</items>
       </items>
       <items code="at0008">
         <items id="text">Bilddiagnostiska fynd</items>
@@ -3412,17 +3449,16 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
       <items code="at0014">
         <items id="text">Klinisk sammanfattning</items>
         <items id="description">Beskrivning av relevant klinisk anamnes som ger ett sammanhang för undersökningen och tolkningen av resultaten.</items>
-        <items id="comment">Alternativt kan detta fält inkludera en RM-länk till klinisk information som antingen tillhandahålls i den ursprungliga beställningen av undersökningen eller finns någon annanstans i patientjournalen.</items>
+        <items id="comment">Alternativt kan detta datafält inkludera en RM-länk till klinisk information som antingen tillhandahålls i den ursprungliga beställningen av undersökningen eller finns någon annanstans i patientjournalen.</items>
       </items>
       <items code="at0020">
         <items id="text">Bilddiagnostisk diagnos</items>
         <items id="description">Enstaka ord, fras eller kort beskrivning som representerar det troliga tillståndet eller diagnosen.</items>
-        <items id="comment">Detta fält har flera förekomster för att möjliggöra mer än en diagnos. Kodning med en terminologi som Snomed CT är att föredra, där så är möjligt. Detta fält bör betraktas som ömsesidigt uteslutande i förhållande till ”Bilddiagnostisk differentialdiagnos”, dvs. endast antingen ”Bilddiagnostisk diagnos” eller ”Bilddiagnostisk differentialdiagnos” får förekomma i varje förekomst av arketypen ”Imaging examination result”. Motsvarar DiagnosticReport.conclusionCode i FHIR.</items>
+        <items id="comment">Detta datafält har flera förekomster för att möjliggöra mer än en diagnos. Kodning med en terminologi som Snomed CT är att föredra, där så är möjligt. Detta datafält bör betraktas som ömsesidigt uteslutande i förhållande till ”Bilddiagnostisk differentialdiagnos”, dvs. endast antingen ”Bilddiagnostisk diagnos” eller ”Bilddiagnostisk differentialdiagnos” får förekomma i varje förekomst av arketypen ”Imaging examination result”. Motsvarar DiagnosticReport.conclusionCode i FHIR.</items>
       </items>
       <items code="at0021">
         <items id="text">Slutsats</items>
-        <items id="description">Kortfattad och kliniskt relevant bedömning av alla bilddiagnostiska fynd, inklusive en jämförelse med tidigare undersökningar där så är lämpligt.&#xD;
-</items>
+        <items id="description">Kortfattad och kliniskt relevant bedömning av alla bilddiagnostiska fynd, inklusive en jämförelse med tidigare undersökningar där så är lämpligt.</items>
         <items id="comment">Kallas även "Bedömning". Motsvarar DiagnosticReport.conclusion i FHIR.</items>
       </items>
       <items code="at0023">
@@ -3439,7 +3475,7 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
         <items id="description">Detaljer om den tjänst, organisation eller person som utför den bilddiagnostiska undersökningen.</items>
       </items>
       <items code="at0027">
-        <items id="text">Detaljer om beställt undersökning</items>
+        <items id="text">Detaljer om beställd undersökning</items>
         <items id="description">Detaljer om en enskild bilddiagnostisk undersökning som har beställts.</items>
       </items>
       <items code="at0028">
@@ -3463,8 +3499,8 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
         <items id="comment">Motsvarar HL7 Filler Order Identifier eller DICOM Accession number attributet (0008,0050).</items>
       </items>
       <items code="at0041">
-        <items id="text">Strukturerad teknik/åtgärd</items>
-        <items id="description">Ytterligare strukturerade detaljer om tekniska och kliniska aspekter av att ta bilden/bilderna.</items>
+        <items id="text">Strukturerad teknik eller åtgärd</items>
+        <items id="description">Ytterligare strukturerade detaljer om tekniska och kliniska aspekter av att ta bilden eller bilderna.</items>
       </items>
       <items code="at0044">
         <items id="text">Strukturerade bilddiagnostiska fynd</items>
@@ -3477,9 +3513,8 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
       </items>
       <items code="at0046">
         <items id="text">Ytterligare information</items>
-        <items id="description">Ytterligare information som krävs för att utvidga modellen med lokalt definierat innehåll eller för anpassning till andra referensmodeller.&#xD;
-</items>
-        <items id="comment">Till exempel: lokala informationskrav eller ytterligare metadata för anpassning till FHIR.</items>
+        <items id="description">Ytterligare information som krävs för att utvidga modellen med lokalt definierat innehåll eller för anpassning till andra referensmodeller.</items>
+        <items id="comment">Exempelvis lokala informationskrav eller ytterligare metadata för anpassning till FHIR.</items>
       </items>
       <items code="at0047">
         <items id="text">Tree</items>
@@ -3487,41 +3522,36 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
       </items>
       <items code="at0048">
         <items id="text">Möjliga felkällor</items>
-        <items id="description">Beskrivning av faktorer och felkällor, som inte har registrerats någon annanstans, som kan påverka undersökningsfynden eller -resultaten. &#xD;
-&#xD;
-</items>
+        <items id="description">Beskrivning av faktorer och felkällor, som inte har registrerats någon annanstans, som kan påverka undersökningsfynden eller resultaten.</items>
       </items>
       <items code="at0049">
         <items id="text">Teknik sammanfattning</items>
         <items id="description">Beskrivning av den radiologiska åtgärden som har använts vid undersökningen.</items>
-        <items id="comment">Använd detta fält för att beskriva en sammanfattning av tekniken, inklusive tekniska begränsningar eller avvikelser från normala tekniska åtgärder. Till exempel: "5 mm axiala bilder från lungbaserna genom pubissymfysen togs efter administrering av intravenös och oral kontrast. Koronala och sagittala omformaterade bilder konstruerades från källdata.</items>
+        <items id="comment">Använd detta datafält för att beskriva en sammanfattning av tekniken, inklusive tekniska begränsningar eller avvikelser från normala tekniska åtgärder. Exempelvis "5 mm axiala bilder från lungbaserna genom pubissymfysen togs efter administrering av intravenös och oral kontrast. Koronala och sagittala omformaterade bilder konstruerades från källdata.</items>
       </items>
       <items code="at0055">
-        <items id="text">Kroppsställe</items>
-        <items id="description">Beskrivning av kroppsstället eller regionen som är målet för den bilddiagnostiska undersökningen.&#xD;
-</items>
-        <items id="comment">Om kroppsstället anges i texten eller koden för ”Undersökningsnamn" kan detta fält vara överflödigt. Kodning av ”Kroppsställe” med en terminologi, t.ex. Snomed CT, är önskvärd. Motsvarar ImagingStudy.series.bodySite i FHIR.</items>
+        <items id="text">Avsedd kroppslokalisation</items>
+        <items id="description">Beskrivning av kroppslokalisationen eller regionen som den bilddiagnostiska undersökningen avser.</items>
+        <items id="comment">Om kroppsstället anges i texten eller koden för ”Undersökningsnamn" kan detta fält vara överflödigt. Kodning av ”Avsedd kroppslokalisation” med en terminologi, exempelvis Snomed CT, är önskvärd. Motsvarar ImagingStudy.series.bodySite i FHIR.</items>
       </items>
       <items code="at0056">
         <items id="text">Fynd vid jämförelse</items>
         <items id="description">Beskrivning om jämförelsen av den aktuella undersökningen med tidigare liknande undersökningar.</items>
-        <items id="comment">Använd även detta fält för att ange om inga jämförelsebilder eller -utlåtanden finns tillgängliga. Detaljer om de bilder som använts för jämförelse kan registreras med hjälp av ”Comparison study details” CLUSTER, inom Protocol.</items>
+        <items id="comment">Använd även detta datafält för att ange om inga jämförande bilder eller utlåtanden finns tillgängliga. Detaljer om de bilder som använts för jämförelse kan registreras med hjälp av CLUSTER för ”Detaljer om den jämförande undersökningen”.</items>
       </items>
       <items code="at0057">
         <items id="text">Beskrivning av bildkvalitet</items>
-        <items id="description">Beskrivning av kvaliteten på bilderna som har tagits vid samma undersökning.</items>
-        <items id="comment">Till exempel: eventuella begränsningar och deras inverkan på bedömningen; rekommendation om att undersökningen bör upprepas; eller om en alternativ bedömningsmetod kan vara lämpligare.</items>
+        <items id="description">Beskrivning av kvaliteten på bilderna vid undersökningen.</items>
+        <items id="comment">Exempelvis eventuella begränsningar och deras inverkan på bedömningen, rekommendation om att undersökningen bör upprepas, eller om en alternativ bedömningsmetod kan vara lämpligare.</items>
       </items>
       <items code="at0058">
         <items id="text">Bilddiagnostisk differentialdiagnos</items>
         <items id="description">Enstaka ord, fras eller kort beskrivning som representerar ett möjligt tillstånd eller en diagnos.</items>
-        <items id="comment">Detta fält har flera förekomster för att möjliggöra mer än en differentialdiagnos. Kodning med en terminologi som Snomed CT är att föredra, där så är möjligt. Detta fält bör betraktas som ömsesidigt uteslutande i förhållande till ”Bilddiagnostisk diagnos”, dvs. endast antingen ”Bilddiagnostisk diagnos” eller ”Bilddiagnostisk differentialdiagnos” får förekomma i varje förekomst av arketypen ”Imaging examination result”.</items>
+        <items id="comment">Detta datafält har flera förekomster för att möjliggöra mer än en differentialdiagnos. Kodning med en terminologi som Snomed CT är att föredra, där så är möjligt. Detta datafält bör betraktas som ömsesidigt uteslutande i förhållande till ”Bilddiagnostisk diagnos”, dvs. endast antingen ”Bilddiagnostisk diagnos” eller ”Bilddiagnostisk differentialdiagnos” får förekomma i varje förekomst av arketypen ”Imaging examination result”.</items>
       </items>
       <items code="at0059">
         <items id="text">Rekommendation</items>
-        <items id="description">Förslag på ytterligare bildtagning, undersökningar eller remittering samt motivering till detta.&#xD;
-&#xD;
-</items>
+        <items id="description">Förslag på ytterligare bildtagning, undersökningar eller remittering samt motivering till detta.</items>
         <items id="comment">Detta fält har 0..* förekomster för att möjliggöra mer än en rekommendation. Formella beställningar på ytterligare bilddiagnostisk undersökning eller bedömning bör registreras med hjälp av en INSTRUCTION-arketype, t.ex. INSTRUCTION.service_request.</items>
       </items>
       <items code="at0061">
@@ -3532,15 +3562,15 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
       <items code="at0062">
         <items id="text">Åtgärd sammanfattning</items>
         <items id="description">Beskrivning av den kliniska åtgärden eller andra kliniska överväganden som har tillämpats vid undersökningen.</items>
-        <items id="comment">Använd detta fält för att beskriva en sammanfattning av den kliniska åtgärden, patientpositionering, interventioner som Valsalva-manöver och administrering av kontrastmedel, radioaktiva läkemedel eller behandlingar som har tillämpats vid undersökningen. Till exempel: ”80 ml Isovue-370 administrerades intravenöst med hjälp av en bolusspårningsteknik centrerad på huvudlungartären”. Fältet kan också användas för att registrera en översikt över eventuella problem, komplikationer eller biverkningar som har uppstått.</items>
+        <items id="comment">Använd detta datafält för att beskriva en sammanfattning av den kliniska åtgärden, patientpositionering, interventioner som Valsalva-manöver och administrering av kontrastmedel, radioaktiva läkemedel eller behandlingar som har tillämpats vid undersökningen. Till exempel: ”80 ml Isovue-370 administrerades intravenöst med hjälp av en bolusspårningsteknik centrerad på huvudlungartären”. Datafältet kan också användas för att registrera en översikt över eventuella problem, komplikationer eller biverkningar som har uppstått.</items>
       </items>
       <items code="at0063">
         <items id="text">Bildkvalitet</items>
-        <items id="description">Bedömning av kvaliteten på bilderna som har tagits vid samma undersökning.</items>
-        <items id="comment">Kodning av bildkvaliteten med ett urval rekommenderas. Till exempel: ”utmärkt, bra, rimlig, dålig och icke-diagnostisk”; eller ”adekvat, suboptimal och otillräcklig”.</items>
+        <items id="description">Bedömning av kvaliteten på bilderna vid undersökningen.</items>
+        <items id="comment">Kodning av bildkvaliteten med ett urval rekommenderas. Exempelvis ”utmärkt, bra, rimlig, dålig och icke-diagnostisk”; eller ”adekvat, suboptimal och otillräcklig”.</items>
       </items>
       <items code="at0065">
-        <items id="text">Detaljer om bildserier</items>
+        <items id="text">Seriedetaljer</items>
         <items id="description">Detaljer om bildserier som ingår i detta utlåtande.</items>
       </items>
       <items code="at0067">
@@ -3563,7 +3593,7 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
       <items code="at0072">
         <items id="text">Status undersökningsresultat</items>
         <items id="description">Status för resultatet av den bilddiagnostiska undersökningen som helhet.</items>
-        <items id="comment">Värdena har anpassats till FHIR Diagnostic report status, med undantag för ”Entered in error” som endast är relevant för ett meddelandeorienterat paradigm. Andra lokala koder/termer kan användas via texten ”choice”. I de flesta användningsfall är endast en status tillämplig vid varje tillfälle, men detta fält tillåter flera förekomster för de användningsfall där det finns en mängd olika typer av status som behöver specificeras, vanligtvis inom en template. Motsvarar DiagnosticReport.status i FHIR.</items>
+        <items id="comment">Värdena har anpassats till FHIR Diagnostic report status, med undantag för ”Entered in error” som endast är relevant för ett meddelandeorienterat paradigm. Andra lokala koder/termer kan användas via texten ”choice”. I de flesta användningsfall är endast en status tillämplig vid varje tillfälle, men detta datafält tillåter flera förekomster för de användningsfall där det finns en mängd olika typer av status som behöver specificeras, vanligtvis inom en template. Motsvarar DiagnosticReport.status i FHIR.</items>
       </items>
       <items code="at0073">
         <items id="text">Registrerad</items>
@@ -3595,12 +3625,11 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
       </items>
       <items code="at0080">
         <items id="text">Avbruten</items>
-        <items id="description">Resultatet är inte tillgängligt eftersom undersökningen inte har startats eller inte slutförts.</items>
+        <items id="description">Resultatet är inte tillgängligt eftersom undersökningen har antingen inte påbörjats eller slutförts.</items>
       </items>
       <items code="at0083">
         <items id="text">Distributionslista</items>
-        <items id="description">Detaljer om ytterligare kliniker eller organisationer som behöver en kopia av undersökningsresultatet.&#xD;
-</items>
+        <items id="description">Detaljer om ytterligare kliniker eller organisationer som behöver en kopia av undersökningsresultatet.</items>
         <items id="comment">Personerna eller organisationerna på distributionslistan får endast utlåtandet för information, och det är huvudmottagaren av utlåtandet som förväntas agera på den.</items>
       </items>
       <items code="at0087">
@@ -3619,7 +3648,7 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
       <items code="at0091">
         <items id="text">Modalitet</items>
         <items id="description">Den typ av bilddiagnostisk utrustning, process eller metod som ursprungligen samlade in eller producerade de data som användes för att skapa bilderna i undersökningen.</items>
-        <items id="comment">Exempel: ”röntgen”, ”CT skanning”, ”ultraljud”, ”MR”, ”MRT”, ”bendensitometri”, ”tomografi”, ”mammografi”, ”nukleärmedicin”, ”PET”, ’angiografi’ och ”fluoroskopi”. Detta dataelement kan vara överflödigt om modaliteten är tydligt representerad i ”Undersökningsnamn”. Alternativt kan det också vara möjligt att automatiskt populera ”Modalitet” från ett kodat ”Undersökningsnamn”. Kodning av ”Modalitet” med ett urval rekommenderas, t.ex. DICOM CID 29 Acquisition Modality-urvalet. Motsvarar ImagingStudy.modality i FHIR och Modality (0008, 0060) i DICOM.</items>
+        <items id="comment">Exempel: ”röntgen”, ”CT skanning”, ”ultraljud”, ”MR”, ”MRT”, ”bendensitometri”, ”tomografi”, ”mammografi”, ”nukleärmedicin”, ”PET”, ’angiografi’ och ”fluoroskopi”. Detta datafält kan vara överflödigt om modaliteten är tydligt representerad i ”Undersökningsnamn”. Alternativt kan det också vara möjligt att automatiskt populera ”Modalitet” från ett kodat ”Undersökningsnamn”. Kodning av ”Modalitet” med ett urval rekommenderas, t.ex. DICOM CID 29 Acquisition Modality-urvalet. Motsvarar ImagingStudy.modality i FHIR och Modality (0008, 0060) i DICOM.</items>
       </items>
       <items code="at0092">
         <items id="text">Idenitifierare för undersökningen</items>
@@ -3649,7 +3678,7 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
       </items>
       <items code="at0098">
         <items id="text">Lagringsplats</items>
-        <items id="description">Digital plats för det bilddiagnostiska innehållet och metadata.</items>
+        <items id="description">Digital plats för lagring av det bilddiagnostiska innehållet och metadata.</items>
         <items id="comment">Denna plats identifierar den nätverkstjänst som tillhandahåller åtkomst (för lagring, visning, frågor eller hämtning) för undersökningen. Motsvarar ImagingStudy.endpoint i FHIR.</items>
       </items>
       <items code="at0099">
@@ -3691,12 +3720,12 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
       <items code="at0107">
         <items id="text">Stabiliserande anordning</items>
         <items id="description">Identifiering av en stabiliseringsanordning som används.</items>
-        <items id="comment">Till exempel: tandställning, gips, extern fixering.</items>
+        <items id="comment">Exempelvis tandställning, gips, extern fixering.</items>
       </items>
       <items code="at0108">
         <items id="text">Position</items>
         <items id="description">Individens position under den bilddiagnostisk undersökningen.</items>
-        <items id="comment">Till exempel: stående eller liggande.</items>
+        <items id="comment">Exempelvis stående eller liggande.</items>
       </items>
     </term_definitions>
     <term_definitions language="ca">
@@ -3932,8 +3961,7 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
       <items code="at0091">
         <items id="text">Modalitat</items>
         <items id="description">El tipus de dispositiu d'imatge, procés o mètode que originalment va adquirir o produir les dades utilitzades per crear les imatges en l'estudi.</items>
-        <items id="comment">Per exemple: 'radiografia', 'TAC', 'ultrasò', 'RM', 'densitometria de l'os', 'tomografia', 'mamografia', 'medicina nuclear', 'PET', 'angiografia' i 'fluoroscòpia'. Aquest element pot ser redundant si la modalitat està clarament representada en el "nom de l'estudi". Alternativament, també pot ser possible autopopular la 'Modalitat' d'un 'nom d'estudi' codificat. Es recomana la codificació de la 'Modalitat' amb un conjunt de valors, com el conjunt de valors de Modalitat d'Adquisició DICOM CID 29. Equivalent a ImagingStudy.modality en FHIR i Modality (0008, 0060) en DICOM.&#xD;
-</items>
+        <items id="comment">Per exemple: 'radiografia', 'TAC', 'ultrasò', 'RM', 'densitometria de l'os', 'tomografia', 'mamografia', 'medicina nuclear', 'PET', 'angiografia' i 'fluoroscòpia'. Aquest element pot ser redundant si la modalitat està clarament representada en el "nom de l'estudi". Alternativament, també pot ser possible autopopular la 'Modalitat' d'un 'nom d'estudi' codificat. Es recomana la codificació de la 'Modalitat' amb un conjunt de valors, com el conjunt de valors de Modalitat d'Adquisició DICOM CID 29. Equivalent a ImagingStudy.modality en FHIR i Modality (0008, 0060) en DICOM.</items>
       </items>
       <items code="at0092">
         <items id="text">Identificador d'instància d'estudi</items>
@@ -4326,6 +4354,318 @@ Dette dataelementet kan være overflødig hvis modaliteten er tydelig represente
         <items id="comment">Por ejemplo: de pie o acostado.</items>
       </items>
     </term_definitions>
+    <term_definitions language="fr">
+      <items code="at0000">
+        <items id="text">Résultat d'examen d'imagerie</items>
+        <items id="description">Résultat d'un examen d'imagerie réalisé sur une personne, à l'aide de techniques radiologiques.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Event Series</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Tout événement</items>
+        <items id="description">Par défaut, événement ponctuel ou d’intervalle non spécifié, pouvant être défini explicitement dans un template ou au moment de l’exécution.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Nom de l'étude</items>
+        <items id="description">Nom de l'examen d'imagerie réalisé.</items>
+        <items id="comment">Par exemple : « Scanner abdominal » ; « Échographie Doppler de l’artère rénale » ou « Radiographie thoracique standard ». L’utilisation d’une terminologie pour le codage est fortement recommandée, de préférence un terme précisant à la fois la modalité et la localisation anatomique, dans la mesure du possible. Parmi les terminologies envisageables, on peut citer les codes LOINC Imaging Document Codes, le RadLex Playbook ou SNOMED-CT. Équivalent à DiagnosticReport.code dans FHIR.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Site corporel cible structuré</items>
+        <items id="description">Informations détaillées et structurées concernant la partie ou la région du corps ciblée par l'imagerie.</items>
+        <items id="comment">Si la partie du corps est précisée dans le texte ou le code correspondant au « Nom de l'examen », ce champ peut alors s'avérer redondant.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Résultats d'imagerie</items>
+        <items id="description">Description narrative ou synthèse de l'ensemble des résultats cliniques.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Résumé clinique</items>
+        <items id="description">Description narrative des antécédents cliniques pertinents, fournissant le contexte nécessaire à l'examen et à l'interprétation des résultats.</items>
+        <items id="comment">Cet élément de données peut également inclure un lien RM vers des informations cliniques fournies dans la demande d’examen initiale ou figurant ailleurs dans le dossier médical.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Diagnostic d'imagerie</items>
+        <items id="description">Mot, expression ou brève description représentant l'affection ou le diagnostic probable.</items>
+        <items id="comment">Cet élément de données peut apparaître plusieurs fois afin de permettre plusieurs diagnostics différentiels. Le codage à l’aide d’une terminologie telle que SNOMED CT est privilégié, dans la mesure du possible. Cet élément de données doit être considéré comme mutuellement exclusif de l’élément « Diagnostic différentiel d’imagerie », c’est-à-dire que seul l’un des deux éléments (« Diagnostic par imagerie » ou « Diagnostic différentiel d’imagerie ») doit être présent dans chaque instance de l’archétype « Résultat d’examen d’imagerie ». Équivalent à DiagnosticReport.conclusionCode dans FHIR.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Impression générale</items>
+        <items id="description">Interprétation narrative concise et pertinente sur le plan clinique de tous les résultats d'imagerie, incluant, le cas échéant, une comparaison avec des examens antérieurs.</items>
+        <items id="comment">Également appelé « Avis » ou « Conclusion ». Équivalent à DiagnosticReport.conclusion dans FHIR.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Commentaire</items>
+        <items id="description">Remarques supplémentaires concernant l'examen qui ne figurent pas dans d'autres champs.</items>
+        <items id="comment">Par exemple : une note indiquant que le cliché a été remis au patient. Équivalent à « DiagnosticReport.note » dans FHIR.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Service d'imagerie</items>
+        <items id="description">Informations détaillées concernant le service, l’établissement ou la personne effectuant l’examen d’imagerie.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Détails de la demande d'examen</items>
+        <items id="description">Détails concernant un examen d'imagerie spécifique demandé.</items>
+      </items>
+      <items code="at0028">
+        <items id="text">Identifiant de la demande</items>
+        <items id="description">Identifiant unique de la demande d’examen d’imagerie attribué par le prescripteur.</items>
+        <items id="comment">Équivalent à l'identifiant « Placer Order » de la norme HL7.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">Nom de l'examen demandé</items>
+        <items id="description">Identification de l'examen d'imagerie demandé.</items>
+        <items id="comment">Cela peut s’avérer utile dans les situations où l’examen demandé diffère de l’examen réalisé.</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Demandeur</items>
+        <items id="description">Informations détaillées concernant le clinicien et/ou l'établissement ayant demandé l'examen d'imagerie.</items>
+        <items id="comment">Équivalent au champ « Nom du médecin prescripteur » de la norme DICOM (0008, 0090)</items>
+      </items>
+      <items code="at0031">
+        <items id="text">Identifiant de la commande du destinataire</items>
+        <items id="description">Identifiant unique de la demande d’examen d’imagerie attribué par le service de radiologie.</items>
+        <items id="comment">Équivalent à l’identifiant de commande de produit de remplissage HL7 ou à l’attribut « numéro d’enregistrement » DICOM (0008, 0050).</items>
+      </items>
+      <items code="at0041">
+        <items id="text">Technique/procédure structurée</items>
+        <items id="description">Détails structurés supplémentaires concernant les aspects techniques et cliniques de la capture de la ou des images.</items>
+      </items>
+      <items code="at0044">
+        <items id="text">Résultats d'imagerie structurés</items>
+        <items id="description">Détails structurés concernant les résultats d'un examen d'imagerie ciblant une structure ou une région spécifique.</items>
+      </items>
+      <items code="at0045">
+        <items id="text">Représentation du rapport</items>
+        <items id="description">Représentation numérique du résultat de l'examen.</items>
+        <items id="comment">Plusieurs formats sont autorisés, à condition qu’ils présentent un contenu clinique équivalent. Par exemple, une version PDF du rapport. Équivalent à « DiagnosticReport.presentedForm » dans FHIR.</items>
+      </items>
+      <items code="at0046">
+        <items id="text">Extension</items>
+        <items id="description">Informations supplémentaires nécessaires pour représenter un contenu local ou pour assurer l’alignement avec d’autres modèles de référence ou formalismes.</items>
+        <items id="comment">Par exemple: exigences d’information locales ou métadonnées supplémentaires permettant l’alignement avec des équivalents FHIR.</items>
+      </items>
+      <items code="at0047">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0048">
+        <items id="text">Facteurs de confusion</items>
+        <items id="description">Description narrative des facteurs, non enregistrés ailleurs, susceptibles d’influencer les résultats de l’examen et/ou son issue.</items>
+      </items>
+      <items code="at0049">
+        <items id="text">Résumé de la technique</items>
+        <items id="description">Description narrative de la procédure radiologique utilisée pour réaliser l'examen.</items>
+        <items id="comment">Utiliser cet élément de données pour décrire un résumé de la technique, y compris les limitations techniques ou les écarts par rapport aux procédures techniques habituelles. Par exemple : « Des images axiales de 5 mm, allant des bases pulmonaires jusqu’à la symphyse pubienne, ont été acquises après administration d’un produit de contraste par voie intraveineuse et orale. Des images reformatées en coupes coronales et sagittales ont été construites à partir des données sources. »</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Site corporel ciblé</items>
+        <items id="description">Description de la partie ou de la région du corps ciblée par l'imagerie.</items>
+        <items id="comment">Si la partie du corps est précisée dans le texte ou le code correspondant au « Nom de l'examen », ce champ peut alors s'avérer redondant. Il est recommandé de coder la « Partie du corps ciblée » à l'aide d'une terminologie telle que SNOMED CT. Équivalent à ImagingStudy.series.bodySite dans FHIR.</items>
+      </items>
+      <items code="at0056">
+        <items id="text">Comparaison des résultats</items>
+        <items id="description">Description narrative de la comparaison de cet examen avec des examens similaires antérieurs.</items>
+        <items id="comment">Utilisez également cet élément de données pour indiquer si aucune image de comparaison et/ou aucun rapport n’est disponible. Les détails concernant les images utilisées à des fins de comparaison peuvent être enregistrés à l’aide du CLUSTER « Détails de l’étude comparative », dans la section Protocole.</items>
+      </items>
+      <items code="at0057">
+        <items id="text">Description de la qualité de l'imagerie</items>
+        <items id="description">Description narrative de la qualité de l'examen.</items>
+        <items id="comment">Par exemple : la nature des éventuelles limites et leur incidence sur l’interprétation ; la recommandation de répéter l’examen ; ou la question de savoir si une autre méthode d’évaluation pourrait être plus appropriée.</items>
+      </items>
+      <items code="at0058">
+        <items id="text">Diagnostic différentiel d'imagerie</items>
+        <items id="description">Mot, expression ou brève description représentant une affection ou un diagnostic possible.</items>
+        <items id="comment">Cet élément de données peut apparaître plusieurs fois afin de permettre plusieurs diagnostics différentiels. Le codage à l’aide d’une terminologie telle que SNOMED CT est privilégié, dans la mesure du possible. Cet élément de données doit être considéré comme mutuellement exclusif de « Diagnostic d’imagerie », c’est-à-dire que seul l’un des deux éléments (« Diagnostic d’imagerie » ou « Diagnostic différentiel d’imagerie ») peut être renseigné dans chaque instance de l’archétype « Résultat d’examen d’imagerie ».</items>
+      </items>
+      <items code="at0059">
+        <items id="text">Recommandation</items>
+        <items id="description">Proposition d’examens d’imagerie complémentaires, d’investigations supplémentaires et/ou de recommandation vers un spécialiste, accompagnée d’une justification.</items>
+        <items id="comment">Cet élément de données peut apparaître 0 à * fois afin de permettre l’enregistrement de plusieurs recommandations. Les demandes formelles d’examens d’imagerie ou d’investigations supplémentaires doivent être enregistrées à l’aide d’un archétype INSTRUCTION, tel que INSTRUCTION.service_request.</items>
+      </items>
+      <items code="at0061">
+        <items id="text">Indication clinique</items>
+        <items id="description">Description narrative de la raison pour laquelle l’examen a été initialement demandé.</items>
+        <items id="comment">Également appelé « question clinique » ou « requête clinique ».</items>
+      </items>
+      <items code="at0062">
+        <items id="text">Résumé de la procédure</items>
+        <items id="description">Description narrative de la procédure clinique ou d'autres considérations cliniques utilisées pour réaliser l'examen.</items>
+        <items id="comment">Utiliser cet élément de données pour décrire un résumé de la procédure clinique, du positionnement du patient, des interventions telles que la manœuvre de Valsalva, ainsi que l’administration d’un produit de contraste, de produits radiopharmaceutiques et/ou de traitements dans le cadre de l’examen d’imagerie. Par exemple : « 80 ml d’Isovue-370 ont été administrés par voie intraveineuse à l’aide d’une technique de suivi du bolus centrée sur l’artère pulmonaire principale ». Il peut également être utilisé pour enregistrer un aperçu des problèmes, complications ou effets indésirables rencontrés.</items>
+      </items>
+      <items code="at0063">
+        <items id="text">Qualité de l'imagerie</items>
+        <items id="description">Évaluation de la qualité de l'examen.</items>
+        <items id="comment">Il est recommandé de coder la qualité de l'imagerie à l'aide d'un ensemble de valeurs. Par exemple : « excellente, bonne, passable, médiocre et non diagnostique » ; ou « adéquate, sous-optimale et inadéquate ».</items>
+      </items>
+      <items code="at0065">
+        <items id="text">Détails de la série</items>
+        <items id="description">Détails concernant une série incluse dans ce rapport.</items>
+      </items>
+      <items code="at0067">
+        <items id="text">Détails de la série de comparaison</items>
+        <items id="description">Détails concernant une série d’examens d’imagerie comparée à l’étude faisant l’objet du rapport.</items>
+      </items>
+      <items code="at0069">
+        <items id="text">Dispositif</items>
+        <items id="description">Informations détaillées sur le ou les appareils d'imagerie utilisés pour réaliser l'examen.</items>
+      </items>
+      <items code="at0070">
+        <items id="text">Date de l'étude</items>
+        <items id="description">Date/heure du début de l'examen d'imagerie.</items>
+        <items id="comment">Équivalent à « ImagingStudy.started » dans FHIR.</items>
+      </items>
+      <items code="at0071">
+        <items id="text">Horodatage du statut</items>
+        <items id="description">Date et/ou heure auxquelles le « statut du résultat global » a été attribué.</items>
+      </items>
+      <items code="at0072">
+        <items id="text">Résultat global</items>
+        <items id="description">Statut global du résultat de l'examen d'imagerie.</items>
+        <items id="comment">Les valeurs ont été alignées sur le statut du rapport diagnostique FHIR, à l’exception de « Saisi par erreur », qui ne s’applique qu’à un paradigme orienté messagerie. D’autres codes/termes locaux peuvent être utilisés via l’option « Texte ». Dans la plupart des cas d’utilisation, un seul statut est applicable à un moment donné ; toutefois, cet élément de données autorise plusieurs occurrences pour les cas d’utilisation où divers types de statuts doivent être spécifiés, généralement au sein d’un template. Équivalent à DiagnosticReport.status dans FHIR.</items>
+      </items>
+      <items code="at0073">
+        <items id="text">Enregistré</items>
+        <items id="description">L'existence de l'étude est enregistrée, mais aucun résultat n'est encore disponible.</items>
+      </items>
+      <items code="at0074">
+        <items id="text">Partiel</items>
+        <items id="description">Il s'agit d'un résultat partiel (par exemple, initial, intermédiaire ou préliminaire), mais les données peuvent être incomplètes ou non vérifiées.</items>
+      </items>
+      <items code="at0075">
+        <items id="text">Préliminaire</items>
+        <items id="description">Des résultats préliminaires vérifiés sont disponibles, mais tous les résultats ne sont pas définitifs. Il s'agit d'une sous-catégorie de « Partiel ».</items>
+      </items>
+      <items code="at0076">
+        <items id="text">Final</items>
+        <items id="description">Le résultat est complet et validé par une personne autorisée.</items>
+      </items>
+      <items code="at0077">
+        <items id="text">Modifié</items>
+        <items id="description">Après avoir été considéré comme définitif, le résultat a été modifié.</items>
+      </items>
+      <items code="at0078">
+        <items id="text">Corrigé</items>
+        <items id="description">Après avoir été considéré comme définitif, le résultat a été modifié afin de corriger une erreur. Il s'agit d'une sous-catégorie de « Modifié ».</items>
+      </items>
+      <items code="at0079">
+        <items id="text">Ajouté</items>
+        <items id="description">Après avoir été considéré comme définitif, le résultat a été modifié par l’ajout de nouveaux éléments. Le contenu existant reste inchangé. Il s’agit d’une sous-catégorie de « Modifié ».</items>
+      </items>
+      <items code="at0080">
+        <items id="text">Annulé</items>
+        <items id="description">Le résultat n'est pas disponible car l'examen n'a pas été lancé ou n'a pas été mené à terme (ce que l'on appelle parfois « avorté »).</items>
+      </items>
+      <items code="at0083">
+        <items id="text">Liste de diffusion</items>
+        <items id="description">Coordonnées des autres praticiens ou organisations devant recevoir une copie des résultats de l'examen.</items>
+        <items id="comment">La « liste de diffusion » est fournie à titre indicatif uniquement, et le destinataire principal du rapport est la personne censée donner suite à ces informations.</items>
+      </items>
+      <items code="at0087">
+        <items id="text">Technique</items>
+        <items id="description">Nom de l'examen radiologique utilisé pour réaliser l'étude.</items>
+        <items id="comment">Le codage de la « technique » à l'aide d'une terminologie est autorisé. La possibilité de mentions multiples permet d'identifier une ou plusieurs techniques.</items>
+      </items>
+      <items code="at0088">
+        <items id="text">Procédure</items>
+        <items id="description">Identification de la procédure clinique ou de la prise en charge utilisée pour réaliser l’examen.</items>
+      </items>
+      <items code="at0090">
+        <items id="text">Inconnu</items>
+        <items id="description">Le statut du résultat n'est pas connu.</items>
+      </items>
+      <items code="at0091">
+        <items id="text">Modalité</items>
+        <items id="description">Type d’appareil, de procédé ou de méthode d’imagerie ayant initialement permis d’acquérir ou de produire les données utilisées pour créer les images de l’étude.</items>
+        <items id="comment">Par exemple : « radiographie », « tomodensitométrie », « échographie », « IRM », « ostéodensitométrie », « tomographie », « mammographie », « médecine nucléaire », « TEP », « angiographie » et « fluoroscopie ». Cet élément de données peut être redondant si la modalité est clairement indiquée dans le « Nom de l’étude ». Il est également possible de remplir automatiquement le champ « Modalité » à partir d’un « Nom de l’étude » codé. Il est recommandé de coder la « Modalité » à l’aide d’un ensemble de valeurs, tel que l'ensemble de valeurs DICOM CID 29 « Modalité d’acquisition ». Équivalent à ImagingStudy.modality dans FHIR et à Modality (0008, 0060) dans DICOM.</items>
+      </items>
+      <items code="at0092">
+        <items id="text">Identifiant de l'étude</items>
+        <items id="description">Identifiant unique attribué à l’examen d’imagerie par l’appareil d’imagerie.</items>
+        <items id="comment">Équivalent à « Study Instance UID » (0020,000D) dans DICOM et à « ImagingStudy.identifier » dans FHIR.</items>
+      </items>
+      <items code="at0093">
+        <items id="text">Détails de l'étude comparative</items>
+        <items id="description">Informations détaillées concernant les images issues d’une étude antérieure utilisées à des fins de comparaison avec l’étude faisant l’objet du rapport.</items>
+      </items>
+      <items code="at0094">
+        <items id="text">Nom de l'étude</items>
+        <items id="description">Nom de l'examen d'imagerie de référence réalisé.</items>
+      </items>
+      <items code="at0095">
+        <items id="text">Identifiant de l'étude</items>
+        <items id="description">Identifiant unique de l'examen d'imagerie de référence.</items>
+      </items>
+      <items code="at0096">
+        <items id="text">Date de l'étude</items>
+        <items id="description">Date et heure du début de l'examen de comparaison.</items>
+      </items>
+      <items code="at0097">
+        <items id="text">Critère d'évaluation de l'étude</items>
+        <items id="description">Emplacement numérique du contenu d'imagerie de référence et des métadonnées.</items>
+        <items id="comment">Cet emplacement identifie le service réseau permettant d'accéder (pour le stockage, la visualisation, l'interrogation ou la récupération) à l'étude. Équivalent à ImagingStudy.endpoint dans FHIR.</items>
+      </items>
+      <items code="at0098">
+        <items id="text">Critère d'évaluation de l'étude</items>
+        <items id="description">Emplacement numérique du contenu d'imagerie et des métadonnées.</items>
+        <items id="comment">Cet emplacement identifie le service réseau permettant d'accéder (pour le stockage, la visualisation, l'interrogation ou la récupération) à l'étude. Équivalent à ImagingStudy.endpoint dans FHIR.</items>
+      </items>
+      <items code="at0099">
+        <items id="text">Statut de l'étude</items>
+        <items id="description">État actuel de l'étude d'imagerie.</items>
+        <items id="comment">Équivalent à ImagingStudy.status dans FHIR.</items>
+      </items>
+      <items code="at0100">
+        <items id="text">Enregistré</items>
+        <items id="description">L'existence de l'examen d'imagerie est enregistrée, mais aucun résultat n'est encore disponible.</items>
+      </items>
+      <items code="at0101">
+        <items id="text">Disponible</items>
+        <items id="description">Au moins un cas a été associé à cet examen d'imagerie.</items>
+      </items>
+      <items code="at0102">
+        <items id="text">Annulé</items>
+        <items id="description">L'examen d'imagerie n'est pas disponible car il n'a pas été lancé ou n'a pas été mené à terme.</items>
+      </items>
+      <items code="at0103">
+        <items id="text">Inconnu</items>
+        <items id="description">Le statut n'est pas connu par le système source de radiologie.</items>
+      </items>
+      <items code="at0104">
+        <items id="text">Identifiant du rapport</items>
+        <items id="description">Identifiant unique attribué au rapport d'imagerie par le service de radiologie.</items>
+        <items id="comment">Comme un seul exemplaire de cet archétype est utilisé par examen, cet identifiant peut servir à relier plusieurs examens d'imagerie au sein d'un même rapport combiné. Équivalent à DiagnosticReport.identifier dans FHIR.</items>
+      </items>
+      <items code="at0105">
+        <items id="text">Description de l'étude</items>
+        <items id="description">Description ou classification de l'examen établie par le service de radiologie.</items>
+        <items id="comment">Équivalent à « ImagingStudy.description » dans FHIR et à « Study description » (0008, 1030) dans DICOM. Exemples possibles en DICOM : MR BREAS, UNIT ; NEURO^HEAD ; ou MR BREASTUNI UE.</items>
+      </items>
+      <items code="at0106">
+        <items id="text">Détails de l'image</items>
+        <items id="description">Lien vers les détails complets de tout examen d'imagerie réalisé au cours de l'étude.</items>
+        <items id="comment">Les images de référence proviennent généralement de modalités compatibles DICOM, mais ce champ de données offre une méthode alternative pour accéder aux images. Équivalent à « DiagnosticReport.imagingStudy » dans FHIR.</items>
+      </items>
+      <items code="at0107">
+        <items id="text">Appareil de stabilisation</items>
+        <items id="description">Identification d’un dispositif de stabilisation en cours d’utilisation.</items>
+        <items id="comment">Par exemple : appareils orthopédiques, plâtres, fixations externes.</items>
+      </items>
+      <items code="at0108">
+        <items id="text">Fonction</items>
+        <items id="description">Position de la personne pendant l'examen d'imagerie.</items>
+        <items id="comment">Par exemple : en position debout ou allongée.</items>
+      </items>
+    </term_definitions>
   </ontology>
 </archetype>
-

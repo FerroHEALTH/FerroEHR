@@ -23,7 +23,7 @@ ferrohealth-server.workspace = true
 urlencoding.workspace = true
 # openEHR generated foundation: the domain model + the ITS-REST contract.
 openehr-base = { path = "../../crates/openehr-base" }
-openehr-rm = { path = "../../crates/openehr-rm" }
+openehr-rm = { path = "../../crates/openehr-rm", features = ["draft"] }
 openehr-its = { path = "../../crates/openehr-its" }
 openehr-sdt = { path = "../../crates/openehr-sdt" }
 openehr-query = { path = "../../crates/openehr-query" }
@@ -83,10 +83,9 @@ sha2 = { workspace = true }
 # is base64 (RFC 7643 §2.3.6).
 base64 = { workspace = true }
 
-# The ABAC policy decision: the family's Cedar engine and remote decision
-# point, over the attributes this CDR resolves.
-ferrohealth-authz = { workspace = true, features = ["cedar", "remote"] }
-# The remote decision point takes its server as a parsed URL.
+# The ABAC policy decision: the family's Cedar engine, over the attributes
+# this CDR resolves.
+ferrohealth-authz = { workspace = true, features = ["cedar"] }
 url = { workspace = true }
 reqwest = { workspace = true }
 
@@ -135,8 +134,7 @@ yasna = { workspace = true }
 reqwest = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-# ABAC engine tests (moved from ferroehr-authz): the RemotePdp wire-contract
-# suite + the Cedar/remote differential suite.
+# The outbound HTTP stand-ins of the issuer, terminology and feed tests.
 wiremock = { workspace = true }
 # The SCIM filter grammar properties (`tests/it/scim_protocol/filter_properties.rs`).
 proptest = { workspace = true }

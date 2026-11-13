@@ -359,9 +359,6 @@ endpoint = "https://u2:URL_PW_SENTINEL_2@h2:4317/p2"
 [record.multimedia]
 url = "https://u3:URL_PW_SENTINEL_3@h3:8333/p3"
 
-[authz.abac.remote.endpoint]
-url = "https://u4:URL_PW_SENTINEL_4@h4:3001/p4/"
-
 [terminology.endpoint]
 url = "https://u5:URL_PW_SENTINEL_5@h5:443/p5"
 
@@ -387,7 +384,6 @@ url = "tls://u8:URL_PW_SENTINEL_8@h8:6514/p8"
         (1, 5432),
         (2, 4317),
         (3, 8333),
-        (4, 3001),
         (5, 443),
         (7, 8443),
         (8, 6514),
@@ -405,7 +401,7 @@ issuer = "https://u7:URL_PW_SENTINEL_7@idp.example/realms/r"
 kind = "machines"
 audience = ["ferroehr"]
 
-[auth.smart]
+[server]
 public_base_url = "https://u9:URL_PW_SENTINEL_9@cdr.example"
 
 [terminology.endpoint]
@@ -425,7 +421,7 @@ client_secret = "CLIENT_SECRET_SENTINEL"
         "{text}"
     );
     assert!(text.contains("auth.issuer"), "{text}");
-    assert!(text.contains("auth.smart.public_base_url"), "{text}");
+    assert!(text.contains("server.public_base_url"), "{text}");
 
     // The usage report endpoint is refused when the configuration is read.
     let (ok, text) = config_check(
@@ -540,20 +536,21 @@ identifier_type = "guid"
 [authz.party_binding]
 provider = { issuer = "urn:oid:2.999.1", id = "1" }
 
+[authz.party_binding.person]
+
 [record]
 subject_index = "local"
 
-[auth.scim]
+[server]
 public_base_url = "https://cdr.example.com"
 
-[[auth.scim.client]]
-issuer = "https://as.example"
-client_id = "entra-provisioning"
-scope = "ferroehr/scim"
-binding_issuer = "urn:example:login"
+[auth.scim]
 "#;
     let (ok, text) = config_check(scim);
-    assert!(!ok, "a SCIM endpoint with no person template: {text}");
+    assert!(
+        !ok,
+        "a SCIM endpoint whose person section maps no template: {text}"
+    );
     assert!(
         text.contains("no [[authz.party_binding.person.template]] is declared"),
         "{text}"

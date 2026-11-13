@@ -24,6 +24,7 @@ use crate::db::acquire::acquire;
 use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
+use crate::service::demographic::validate::Container;
 use crate::versioning::Kind;
 use crate::versioning::attestation::PendingAttest;
 use crate::versioning::audit::{AuditInput, validate_commit_audit};
@@ -254,6 +255,16 @@ async fn write_contribution(
         )
         .await?;
     }
+    // NOTE: BASE Architecture Overview, Access control of access settings: the
+    // gate-keeper rule is judged against the settings current in this transaction.
+    if let Some(ehr_id) = ehr_id
+        && write
+            .changes
+            .iter()
+            .any(|(_, c)| c.kind() == Kind::EhrAccess)
+    {
+        cx.check_ehr_access_writer(&mut tx, ehr_id).await?;
+    }
     for (_, change) in &write.changes {
         if let Change::Modify {
             vo_id,
@@ -368,12 +379,16 @@ async fn build_change(
 /// contribution-committed composition must protect its template from physical
 /// deletion too.
 ///
+/// A party version is judged as part of `container`, the version container
+/// the member creates or modifies (RM demographic `party.adoc`
+/// `Relationships_validity`); every other kind needs none.
+///
 /// # Errors
 /// [`ServiceError::Unprocessable`] for a scope-mismatched kind or content that
 /// fails the typed decode or the commit validation.
 async fn accept_content(
     cx: &FerroEhrService,
-    kind: Kind,
+    (kind, container): (Kind, Option<Container>),
     data: &Value,
     incomplete: bool,
     index: usize,
@@ -381,9 +396,14 @@ async fn accept_content(
 ) -> Result<Option<String>, ServiceError> {
     check_kind_scope(kind, party_only).map_err(|e| e.for_version_member(index))?;
     typed_decode_gate(kind, data, incomplete).map_err(|e| e.for_version_member(index))?;
-    cx.validate_for_commit(kind, data, incomplete)
-        .await
-        .map_err(|e| e.for_version_member(index))?;
+    let checked = match container {
+        Some(container) if kind.is_party() => {
+            cx.demographic_commit_check(kind, data, incomplete, Some(container))
+                .await
+        }
+        _ => cx.validate_for_commit(kind, data, incomplete).await,
+    };
+    checked.map_err(|e| e.for_version_member(index))?;
     Ok((kind == Kind::Composition)
         .then(|| crate::validation::versioned::composition_template_id(data).map(str::to_owned))
         .flatten())
@@ -410,12 +430,24 @@ async fn create_change(
         .for_version_member(v.index));
     };
     let kind = data_kind(&data).map_err(|e| e.for_version_member(v.index))?;
-    let template_id = accept_content(cx, kind, &data, v.incomplete, v.index, party_only).await?;
+    // A party's id is allocated before the checks, so it is judged against the
+    // container the commit gives it.
+    let allocated = kind.is_party().then(|| cx.allocate_party_id());
+    let container = allocated.as_ref().map(|id| Container::New(id.id()));
+    let template_id = accept_content(
+        cx,
+        (kind, container),
+        &data,
+        v.incomplete,
+        v.index,
+        party_only,
+    )
+    .await?;
     if let Some(ehr_id) = ehr_id {
         reject_duplicate_singleton(cx, ehr_id, kind, &data).await?;
     }
     Ok(Change::Create {
-        allocated: None,
+        allocated,
         kind,
         canonical: data,
         template_id,
@@ -449,7 +481,15 @@ async fn modify_change(
         ));
     };
     let kind = require_kind(kinds, vo_id).map_err(|e| e.for_version_member(v.index))?;
-    let template_id = accept_content(cx, kind, &data, v.incomplete, v.index, party_only).await?;
+    let template_id = accept_content(
+        cx,
+        (kind, Some(Container::Existing(vo_id))),
+        &data,
+        v.incomplete,
+        v.index,
+        party_only,
+    )
+    .await?;
     Ok(Change::Modify {
         vo_id,
         kind,

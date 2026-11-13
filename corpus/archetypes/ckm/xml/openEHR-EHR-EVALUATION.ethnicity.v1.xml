@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -125,8 +125,7 @@ Darf nicht verwendet werden, um formelle Aufzeichnungen über den ethnischen Hin
       <keywords>nação</keywords>
       <keywords>político</keywords>
       <keywords>familia</keywords>
-      <use>&#xD;
-Usado para registrar a afiliação, parentesco ou conexão de um indivíduo com um ou mais grupos de pessoas, geralmente autoidentificados.&#xD;
+      <use>Usado para registrar a afiliação, parentesco ou conexão de um indivíduo com um ou mais grupos de pessoas, geralmente autoidentificados.&#xD;
 &#xD;
 Etnicidade é um conceito frequentemente utilizado de forma inconsistente, de modo que os dados existentes ou legados podem variar bastante em conteúdo, incluindo, mas não se limitando a:&#xD;
 &#xD;
@@ -981,8 +980,7 @@ A codificação com uma terminologia é preferível, quando possível - por exem
       <items code="at0004">
         <items id="text">Ancestral</items>
         <items id="description">As origens hereditárias ou genéticas do indivíduo.</items>
-        <items id="comment">&#xD;
-Por exemplo: Inglês; Irlandês; Chinês; Italiano; Aborígene; Ilhéu do Estreito de Torres; Maori; Inuit ou Judeu Asquenazi. A codificação com uma terminologia é preferível, quando possível. As ocorrências para este elemento de dados estão definidas como múltiplas para permitir a seleção de mais do que um grupo social.</items>
+        <items id="comment">Por exemplo: Inglês; Irlandês; Chinês; Italiano; Aborígene; Ilhéu do Estreito de Torres; Maori; Inuit ou Judeu Asquenazi. A codificação com uma terminologia é preferível, quando possível. As ocorrências para este elemento de dados estão definidas como múltiplas para permitir a seleção de mais do que um grupo social.</items>
       </items>
       <items code="at0005">
         <items id="text">Comentário</items>
@@ -1117,4 +1115,3 @@ Se prefiere codificar con una terminología, siempre que sea posible; por ejempl
     </term_definitions>
   </ontology>
 </archetype>
-

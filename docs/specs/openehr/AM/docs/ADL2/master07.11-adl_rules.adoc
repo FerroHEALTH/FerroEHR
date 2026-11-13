@@ -134,7 +134,7 @@ rules
     $substance_use_status: Boolean := /data[at0001]/items[at0002]/value[at90001]
     $substance_use_data: Object_ref := /data[at0001]/items[at0007|details of use|]
 
-    Substance_use: $substance_use_status /= [at0016|never used|] implies
+    Substance_use: $substance_use_status != [at0016|never used|] implies
         exists /data[at0001]/items[at0007|details of use|]
 --------
 
@@ -145,7 +145,7 @@ rules
     $substance_use_status: Boolean := /data[id2]/items[id3]/value[id18]
     $substance_use_data: Object_ref := /data[id2]/items[id8|details of use|]
 
-    Substance_use: $substance_use_status /= [at17|never used|] implies
+    Substance_use: $substance_use_status != [at17|never used|] implies
         exists /data[id2]/items[id8|details of use|]
 --------
 ====

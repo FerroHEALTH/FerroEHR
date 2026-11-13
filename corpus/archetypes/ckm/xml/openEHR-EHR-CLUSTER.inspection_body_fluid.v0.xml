@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -62,9 +62,100 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">91ACD3D83FE57B07C01AAA6B8E46B872</other_details>
-    <other_details id="build_uid">b0c76a3b-d9a9-4535-a610-32e3287980f3</other_details>
+    <other_details id="MD5-CAM-1.0.1">F789744DAF63DD3502D3CB124765E833</other_details>
+    <other_details id="build_uid">0181ea17-dc01-4acf-981b-b5ed3bf1f62f</other_details>
     <other_details id="revision">0.0.1-alpha</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sv</code_string>
+      </language>
+      <purpose>Att registrera fynd som observerats vid makroskopisk undersökning av en kroppsvätska, inklusive lukt.</purpose>
+      <keywords>kroppsvätska</keywords>
+      <keywords>kroppsvätskor</keywords>
+      <keywords>fostervatten</keywords>
+      <keywords>cerebrospinalvätska</keywords>
+      <keywords>likvor</keywords>
+      <keywords>sekret</keywords>
+      <keywords>utsöndring</keywords>
+      <keywords>urin</keywords>
+      <keywords>var</keywords>
+      <keywords>saliv</keywords>
+      <keywords>sputum</keywords>
+      <keywords>synovialvätska</keywords>
+      <keywords>ledvätska</keywords>
+      <keywords>svett</keywords>
+      <keywords>kräk</keywords>
+      <keywords>magsaft</keywords>
+      <keywords>magsyra</keywords>
+      <keywords>diarré</keywords>
+      <keywords>slem</keywords>
+      <keywords>galla</keywords>
+      <keywords>bröstmjölk</keywords>
+      <keywords>sädesvätska</keywords>
+      <keywords>sperma</keywords>
+      <keywords>ascites</keywords>
+      <keywords>ascitesvätska</keywords>
+      <keywords>serös vätska</keywords>
+      <keywords>intraokulär vätska</keywords>
+      <keywords>dialysat</keywords>
+      <keywords>perikardvätska</keywords>
+      <keywords>pleuravätska</keywords>
+      <use>Används för att registrera beskrivning, strukturerade uppgifter och klinisk tolkning av fynd som observerats vid undersökning av en kroppsvätska, där även lukt ingår i undersökningen.&#xD;
+&#xD;
+Denna arketyp är utformad som ett generellt ramverk för att registrera uppgifter om undersökning av alla typer av kroppsvätskor. Information om kroppsvätskans anatomiska lokalisation eller ursprung registreras i de arketyper där denna arketyp nästlas, inklusive men inte begränsat till:&#xD;
+- i SLOT "Examination findings" i många av arketyperna inom familjen CLUSTER.exam och relaterade inspektionsarketyper;&#xD;
+- i SLOT "Physical properties" i CLUSTER.specimen; och&#xD;
+- i andra OBSERVATION- eller CLUSTER-arketyper där det är kliniskt lämpligt.&#xD;
+&#xD;
+För att registrera undersökningsfynd för:&#xD;
+- specifika typer av kroppsvätskor med unika egenskaper som behöver registreras kan en specifik CLUSTER-arketyp för detta ändamål nästlas i SLOT "Specifika fynd". Exempelvis kan ytterligare uppgifter som endast är relevanta för klara vätskor registreras i en specifik arketyp som på så sätt utökar denna generella arketyp för kroppsvätskor; och&#xD;
+- kroppsvätskor som består av flera komponenter, exempelvis fostervatten som även kan innehålla synligt blod, mekonium eller var, kan en instans av denna arketyp användas för att beskriva fostervattnet som helhet och ytterligare instanser av samma arketyp nästlas i SLOT "Specifika fynd" för att beskriva blod, mekonium respektive var.&#xD;
+&#xD;
+En kroppsvätska är en vätska som har sitt ursprung i människokroppen. Arketypen används för att registrera detaljerade beskrivningar av:&#xD;
+- normala fysiologiska vätskor;&#xD;
+- fysiologiska vätskor som kan ha förändrats till följd av en patologisk process; och&#xD;
+- vätskor som har bildats som en del av en patologisk process i kroppen.&#xD;
+&#xD;
+Exempel på extracellulära kroppsvätskor inkluderar, men är inte begränsade till:&#xD;
+- fostervatten;&#xD;
+- blod och plasma;&#xD;
+- cerebrospinalvätska;&#xD;
+- sekret;&#xD;
+- urin;&#xD;
+- var;&#xD;
+- saliv;&#xD;
+- sputum;&#xD;
+- synovialvätska;&#xD;
+- svett; och&#xD;
+- kräk.&#xD;
+&#xD;
+CLUSTER.exclusion_exam kan nästlas i SLOT "Undersökning ej utförd" för att vid behov registrera uppgifter om att undersökningen inte har utförts.&#xD;
+&#xD;
+Även om denna arketyp främst är avsedd att användas för levande individer kan den även användas för att registrera obduktionsfynd.&#xD;
+&#xD;
+Används för att överföra beskrivningar av kliniska fynd från befintliga eller äldre vårdinformationssystem till ett arketypbaserat format med hjälp av datafältet "Klinisk kolkning".</use>
+      <misuse>Ska inte användas för att registrera undersökning av urin. Använd i stället specialiseringen CLUSTER.inspection_body_fluid-urine för detta syfte.&#xD;
+&#xD;
+Ska inte användas för att registrera undersökning av sputum. Använd i stället specialiseringen CLUSTER.inspection_body_fluid-sputum för detta syfte.&#xD;
+&#xD;
+Ska inte användas för att registrera undersökning av blod eller blodkoagel, utan endast för att registrera förekomst av blod eller blodkoagel i andra kroppsvätskor.&#xD;
+&#xD;
+Ska inte användas för att registrera mätningar av vätskevolym. Använd i stället OBSERVATION-arketyper för detta syfte, exempelvis OBSERVATION.fluid_output.&#xD;
+&#xD;
+Ska inte användas för att registrera uppgifter om icke-fysiologiska vätskor.&#xD;
+&#xD;
+Ska inte användas för att registrera anamnes. Använd i stället specifika OBSERVATION- och CLUSTER-arketyper för detta syfte, exempelvis OBSERVATION.story och CLUSTER.symptom_sign.&#xD;
+&#xD;
+Ska inte användas för att registrera resultat från urinanalys. Använd i stället OBSERVATION.urinalysis för detta syfte.&#xD;
+&#xD;
+Ska inte användas för att registrera övriga uppgifter om provmaterial som ska användas för laboratorieundersökning. Använd i stället CLUSTER.specimen för detta syfte. Observera: Trots denna begränsning kan denna arketyp användas i CLUSTER.specimen för att beskriva fysikaliska egenskaper hos en kroppsvätska, enligt ovan.&#xD;
+&#xD;
+Ska inte användas för att registrera uppgifter om undersökning av avföring. Använd i stället CLUSTER.examination_faeces för detta syfte.</misuse>
+      <copyright />
+    </details>
     <details>
       <language>
         <terminology_id>
@@ -254,10 +345,22 @@ Not to be used to record the details about examination of faeces - use the CLUST
       <terminology_id>
         <value>ISO_639-1</value>
       </terminology_id>
+      <code_string>sv</code_string>
+    </language>
+    <author id="name">Manna Vosta</author>
+    <author id="organisation">Karolinska University Hospital</author>
+    <author id="email">manna.vosta@regionstockholm.se</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
       <code_string>nb</code_string>
     </language>
-    <author id="name">Kristian Berg, John Tore Valand</author>
-    <author id="organisation">Helse Nord, Helse Vest</author>
+    <author id="name">Kristian Berg, John Tore Valand, Liv Laugen</author>
+    <author id="organisation">Helse Nord, Helse Vest, ​Oslo University Hospital, Norway</author>
+    <author id="email">liv.laugen@ous-hf.no</author>
   </translations>
   <uid>
     <value>7ccea8db-8b05-4507-95bf-f019855f0ec8</value>
@@ -805,30 +908,31 @@ Not to be used to record the details about examination of faeces - use the CLUST
     </term_definitions>
     <term_definitions language="nb">
       <items code="at0000">
-        <items id="text">*Inspection of a body fluid (en)</items>
-        <items id="description">Funn observert under undersøkelse av en kroppsvæske på et kroppssted eller fra en identifisert kroppskilde. Undersøkelsen gjøres vanligvis som en del av en fysisk undersøkelse utført av en kliniker.</items>
+        <items id="text">Undersøkelse av kroppsvæske</items>
+        <items id="description">Funn observert under makroskopisk inspeksjon av en ekstracellulær kroppsvæske.</items>
       </items>
       <items code="at0001">
         <items id="text">Navn på kroppsvæske</items>
-        <items id="description">*The name of the body fluid being examined. (en)</items>
-        <items id="comment">Koding av "Navn på kroppsvæske" med et kodeverk er ønskelig, dersom tilgjengelig.</items>
+        <items id="description">Navnet på kroppsvæsken som er undersøkt.</items>
+        <items id="comment">Bruk relevant kodeverk på "Navn på kroppsvæske" hvis mulig.</items>
       </items>
       <items code="at0003">
-        <items id="text">*Description (en)</items>
+        <items id="text">Beskrivelse</items>
         <items id="description">Fritekstbeskrivelse av kroppsvæsken.</items>
       </items>
       <items code="at0004">
         <items id="text">Spesifikke funn</items>
         <items id="description">Ytterligere strukturerte detaljer om kroppsvæsken.</items>
-        <items id="comment">For eksempel til å legge inn detaljerte CLUSTER-arketyper for spesifikke væsker som for eksempel kroppsvæsker som normalt er klare/gjennomsiktige og som har bunnfall. Eller ved å legge til CLUSTER.exam_body_fluid arketyper for å beskrive komponenter av substanser for for eksempel å kunne beskrive blandinger av blod og mekonium i fostervann.</items>
+        <items id="comment">For eksempel: inkludering av detaljerte CLUSTER-arketyper for å dokumentere at kroppsvæsken er klar/gjennomsiktig eller har bunnfall. Eller ved å inkludere en ytterligere&#xD;
+CLUSTER.exam_body_fluid-arketype som kan dokumentere komponenter av stoffer som kreves for å beskrive en blanding av blod og mekonium i fostervann etter fødselen.</items>
       </items>
       <items code="at0005">
-        <items id="text">Multimedia</items>
+        <items id="text">Multimediafil</items>
         <items id="description">Digitale bilder, video eller diagram som representerer funn ved undersøkelsen.</items>
       </items>
       <items code="at0006">
         <items id="text">Klinisk fortolkning</items>
-        <items id="description">Enkelt ord, frase eller kort beskrivelse som representerer klinisk betydning og signifikans ved funnene.</items>
+        <items id="description">Enkelt ord, frase eller kort beskrivelse som representerer klinisk betydning og signifikans ved undersøkelsesfunnene.</items>
       </items>
       <items code="at0007">
         <items id="text">Kommentar</items>
@@ -840,47 +944,124 @@ Not to be used to record the details about examination of faeces - use the CLUST
       </items>
       <items code="at0017">
         <items id="text">Lukt</items>
-        <items id="description">*The smell of the body fluid. (en)</items>
+        <items id="description">Beskrivelse av kroppsvæskens lukt.</items>
         <items id="comment">Hensikten med dette informasjonselementet er å kunne registrere enten en fritekstbeskrivelse av kroppsvæskens lukt, eller å kode den med et verdisett i en templat.</items>
       </items>
       <items code="at0018">
         <items id="text">Farge</items>
-        <items id="description">*The colour of the body fluid. (en)</items>
-        <items id="comment">*The intent of this data element is to record either a narrative description of the colour or to select one or more codes from a value set, appropriate to the body fluid, in a template. (en)</items>
+        <items id="description">Beskrivelse av fargen på kroppsvæsken.</items>
+        <items id="comment">Hensikten med dette informasjonselementet er å registrere enten en fritekstbeskrivelse av fargen, eller til å legge inn et verdisett i en templat.</items>
       </items>
       <items code="at0021">
-        <items id="text">*Blood clots (en)</items>
-        <items id="description">*</items>
+        <items id="text">Blodkoagler</items>
+        <items id="description">Blodkoagler observert i eller assosiert med kroppsvæsken.</items>
       </items>
       <items code="at0022">
-        <items id="text">*Blood (en)</items>
-        <items id="description">*The qualitative amount of blood observed in the body fluid. (en)</items>
+        <items id="text">Blod</items>
+        <items id="description">Den kvalitative mengden blod observert i kroppsvæsken.</items>
       </items>
       <items code="at0023">
-        <items id="text">*Absent (en)</items>
-        <items id="description">*No blood is observed in the fluid. (en)</items>
+        <items id="text">Fraværende</items>
+        <items id="description">Det er ikke observert noe blod i væsken.</items>
       </items>
       <items code="at0024">
-        <items id="text">*Slight (en)</items>
-        <items id="description">*There is a slight amount of blood observed. (en)</items>
+        <items id="text">Lite</items>
+        <items id="description">En liten mengde blod er observert i væsken.</items>
       </items>
       <items code="at0025">
-        <items id="text">*Moderate (en)</items>
-        <items id="description">*There is a moderate amount of blood observed. (en)</items>
+        <items id="text">Moderat</items>
+        <items id="description">En moderat mengde blod er observert i væsken.</items>
       </items>
       <items code="at0026">
-        <items id="text">*Large (en)</items>
-        <items id="description">*There is a large amount of blood observed. (en)</items>
+        <items id="text">Mye</items>
+        <items id="description">En stor mengde blod er observert i væsken.</items>
       </items>
       <items code="at0027">
-        <items id="text">*Present (en)</items>
-        <items id="description">*Blood clots are present. (en)</items>
+        <items id="text">Tilstede</items>
+        <items id="description">Blodkoagler er tilstede i kroppsvæsken.</items>
       </items>
       <items code="at0028">
-        <items id="text">*Absent (en)</items>
-        <items id="description">*Blood clots are absent. (en)</items>
+        <items id="text">Fraværende</items>
+        <items id="description">Blodkoagler er ikke til stede i kroppsvæsken.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="sv">
+      <items code="at0000">
+        <items id="text">Inspektion av kroppsvätska</items>
+        <items id="description">Fynd som observerats vid makroskopisk undersökning av en extracellulär kroppsvätska.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Namn på kroppsvätskan</items>
+        <items id="description">Namnet på den kroppsvätska som undersöks.</items>
+        <items id="comment">Kodning av "Kroppsvätska" till en terminologi är att föredra i de fall det är möjligt.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Beskrivning</items>
+        <items id="description">Beskrivning om kroppsvätskan.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Specifika fynd</items>
+        <items id="description">Ytterligare strukturerade uppgifter om kroppsvätskan.</items>
+        <items id="comment">Exempelvis kan specifika CLUSTER-arketyper användas för att registrera detaljerade uppgifter om vissa typer av kroppsvätskor, såsom klara vätskor. Ytterligare CLUSTER-arketyper kan användas för att beskriva olika komponenter i en kroppsvätska, exempelvis en blandning av blod och mekonium efter förlossning.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Multimediarepresentation</items>
+        <items id="description">Digital bild, video eller diagram som visar fynd från undersökningen.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Klinisk tolkning</items>
+        <items id="description">Enstaka ord, fras eller kort beskrivning som anger undersökningsfyndens kliniska innebörd och relevans.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Kommentar</items>
+        <items id="description">Kommentarer avseende fynd från undersökningen som inte beskrivs i övriga datafält.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Undersökning ej utförd</items>
+        <items id="description">Uppgifter för att explicit registrera att denna undersökning inte har utförts.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Lukt</items>
+        <items id="description">Kroppsvätskans lukt.</items>
+        <items id="comment">Avsikten med detta datafält är att registrera en beskrivning av lukten eller, i en template, koda den med hjälp av en lämplig värdeuppsättning.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Färg</items>
+        <items id="description">Färgen på kroppsvätskan.</items>
+        <items id="comment">Avsikten med detta datafält är att registrera en beskrivning av färgen eller, i en template, välja en eller flera koder från en värdeuppsättning som är lämplig för kroppsvätskan.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Blodkoagel</items>
+        <items id="description">Förekomst av blodkoagel i eller i anslutning till kroppsvätskan.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Blod</items>
+        <items id="description">Kvalitativ bedömning av mängden blod som observerats i kroppsvätskan.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Frånvarande</items>
+        <items id="description">Inget blod har observerats i kroppsvätskan.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Liten</items>
+        <items id="description">En liten mängd blod har observerats.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Måttlig</items>
+        <items id="description">En måttlig mängd blod har observerats.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Stor</items>
+        <items id="description">En stor mängd blod har observerats.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Förekommer</items>
+        <items id="description">Blodkoagel förekommer.</items>
+      </items>
+      <items code="at0028">
+        <items id="text">Förekommer inte</items>
+        <items id="description">Blodkoagel förekommer inte.</items>
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

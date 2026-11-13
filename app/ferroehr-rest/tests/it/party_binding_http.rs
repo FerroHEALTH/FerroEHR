@@ -47,12 +47,18 @@ const ROLE_TEMPLATE: &str = "FerroEHR professional role";
 const CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1";
 
 pub(crate) fn mapping() -> BindingMapping {
+    professionals(BindingMapping::default())
+}
+
+/// `mapping` binding the professional `PERSON`s of [`professional_of`] by
+/// their key.
+pub(crate) fn professionals(mapping: BindingMapping) -> BindingMapping {
     let key = IdentifierSelector::new(
         format!("/details[at0001]/items[{CLUSTER}]/items[at0001]"),
         "guid",
     )
     .expect("the key selector compiles");
-    BindingMapping::default()
+    mapping
         .with_person(PERSON_TEMPLATE, key)
         .with_professional_role(ROLE_TEMPLATE)
 }
@@ -67,7 +73,7 @@ pub(crate) fn config(person_key: Option<&str>) -> AppConfig {
             ..common::entry(ISSUER, AUDIENCE)
         }],
         party: vec![PartySection {
-            issuer: ISSUER.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
             identifier_issuer: LOGIN.to_owned(),
             identifier_type: "guid".to_owned(),
             group_claim: "groups".to_owned(),
@@ -107,11 +113,13 @@ async fn router_observed(
     source: Arc<dyn BindingSource>,
     observability: Observability,
 ) -> Router {
+    common::first_party(&svc, &config).await;
     let authenticator = Authenticator::new(
         &config,
         None,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        common::standing(&svc),
     )
     .await
     .expect("the binding builds");
@@ -179,7 +187,7 @@ pub(crate) fn person(identifier_issuer: &str, key: &str) -> Value {
     })
 }
 
-fn write<T: serde::de::DeserializeOwned>(
+pub(crate) fn write<T: serde::de::DeserializeOwned>(
     body: &Value,
     lifecycle: &str,
     preceding: Option<&str>,
@@ -191,7 +199,7 @@ fn write<T: serde::de::DeserializeOwned>(
     write
 }
 
-fn uid(response: &ferroehr::service::response::ServiceResponse) -> String {
+pub(crate) fn uid(response: &ferroehr::service::response::ServiceResponse) -> String {
     response.meta.as_ref().expect("a version").uid.clone()
 }
 
@@ -479,11 +487,13 @@ async fn an_overage_the_identity_provider_throttles_is_unavailable_with_its_retr
         },
         ..ferrohealth_smart::idp::entra::GraphSection::default()
     }));
+    common::first_party(&svc, &config).await;
     let authenticator = Authenticator::new(
         &config,
         None,
         Some(Arc::new(svc.party_source("demographic"))),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        common::standing(&svc),
     )
     .await
     .expect("the binding with its adapter builds");

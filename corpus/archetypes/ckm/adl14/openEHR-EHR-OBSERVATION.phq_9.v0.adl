@@ -5,6 +5,24 @@ concept
 	[at0000]	-- Patient health questionnaire-9 (PHQ-9)
 language
 	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Vanessa Pereira">
+				["organisation"] = <"Luxembourg Institute of Health (LIH)">
+				["email"] = <"vanessapereira@protonmail.com">
+			>
+		>
+		["fr"] = <
+			language = <[ISO_639-1::fr]>
+			author = <
+				["name"] = <"Vanessa Pereira">
+				["organisation"] = <"Luxembourg Institute of Health (LIH)">
+				["email"] = <"vanessapereira@protonmail.com">
+			>
+		>
+	>
 description
 	original_author = <
 		["name"] = <"Heather Leslie">
@@ -13,6 +31,17 @@ description
 		["date"] = <"2013-06-14">
 	>
 	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Aufzeichnung der Ergebnisse des Patient Health Questionnaire-9 (PHQ-9) und seiner Subset-Bewertung PHQ-2.">
+			use = <"Zur Aufzeichnung der Ergebnisse des Patient Health Questionnaire-9 (PHQ-9) und seiner Subset-Bewertung PHQ-2.
+
+Der Archetyp ist so konzipiert, dass die eigentlichen PHQ-Fragen als Beschreibung für jedes Datenelement des Fragebogens erfasst werden. Der Name des Datenelements ist eine pragmatische Beschreibung, die auf die Absicht der Frage hinweist.
+
+Das ursprüngliche PHQ-9-Tool wurde von Dr. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke und Kollegen, mit einem Bildungsstipendium von Pfizer Inc. Von der PHQ Screeners-Website (http://www.phqscreeners.com/overview.aspx): „Alle PHQ-, GAD-7-Screener und -Übersetzungen können hier heruntergeladen werden Website und es ist keine Genehmigung erforderlich, um sie zu reproduzieren, zu übersetzen, anzuzeigen oder zu verteilen.\" Und von der PHQ-Webseite (http://www.phqscreeners.com/pdfs/01_PHQ/English.pdf): \"Keine Erlaubnis erforderlich, um zu reproduzieren, zu übersetzen, anzuzeigen oder zu verteilen\".">
+			keywords = <"Screening", "Depression", "Stimmung", "Bewertung", "Psychische Gesundheit">
+			misuse = <"">
+		>
 		["en"] = <
 			language = <[ISO_639-1::en]>
 			purpose = <"To record the results of the Patient Health Questionnaire-9 (PHQ-9) and its subset assessment PHQ-2.">
@@ -27,6 +56,17 @@ The Australian indigenous adaptation for the PHQ-9 subset assessing mood was dev
 			misuse = <"">
 			copyright = <"© Northern Territory Department of Health (Australia), openEHR Foundation">
 		>
+		["fr"] = <
+			language = <[ISO_639-1::fr]>
+			purpose = <"Pour enregistrer les résultats du Questionnaire sur la santé du patient-9 (PHQ-9) et son évaluation de sous-ensemble PHQ-2.">
+			use = <"Utilisez-le pour enregistrer les résultats du Questionnaire sur la santé du patient-9 (PHQ-9) et de son sous-ensemble d'évaluation PHQ-2.
+
+L'archétype a été conçu de telle sorte que les questions réelles du PHQ soient enregistrées comme description pour chaque élément de données du questionnaire. Le nom de l'élément de données est une description pragmatique qui indique l'intention de la question.
+
+L'outil original PHQ‐9 a été développé par les Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke et ses collègues, avec une bourse d'études de Pfizer Inc. Sur le site Web PHQ Screeners (http://www.phqscreeners.com/overview.aspx) : \"Tous les filtres PHQ, GAD-7 et les traductions sont téléchargeables à partir de ce site Web et aucune autorisation n'est requise pour les reproduire, les traduire, les afficher ou les distribuer.\" Et sur la page Web de PHQ (http://www.phqscreeners.com/pdfs/01_PHQ/English.pdf) : \"Aucune autorisation requise pour reproduire, traduire, afficher ou distribuer\".">
+			keywords = <"projection", "dépression", "humeur", "évaluation", "santé mentale">
+			misuse = <"">
+		>
 	>
 	lifecycle_state = <"in_development">
 	other_contributors = <>
@@ -40,8 +80,8 @@ Kroenke K, Spitzer RL, Williams JB. The Patient Health Questionnaire-2: validity
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"5591953BB82BBEFBD0AB521E8EF5DB71">
-		["build_uid"] = <"d6653acb-2695-4c08-8840-30198bbddeff">
+		["MD5-CAM-1.0.1"] = <"3FCD1BF5007BEC7E97A62E070FA10E5C">
+		["build_uid"] = <"4a04d672-3bcd-44c9-88a5-e995ca3030a2">
 		["revision"] = <"0.0.1-alpha">
 	>
 
@@ -172,7 +212,6 @@ definition
 		}
 	}
 
-
 ontology
 	term_definitions = <
 		["en"] = <
@@ -291,6 +330,229 @@ by thoughts that you would be better off dead or of hurting yourself in some way
 					text = <"Extension">
 					description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
 					comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+				>
+			>
+		>
+		["fr"] = <
+			items = <
+				["at0000"] = <
+					text = <"Questionnaire sur la santé du patient-9 (PHQ-9)">
+					description = <"Questionnaire de dépistage de la santé mentale pouvant être utilisé par les professionnels de la santé ou autodéclaré par les particuliers.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Point dans le temps">
+					description = <"Une date et/ou une heure spécifique qui peut être explicitement définie dans un modèle ou au moment de l'exécution.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Intérêt/plaisir">
+					description = <"Au cours des 2 dernières semaines, selon quelle fréquence avez-vous été gêné(e) peu d’intérêt ou de plaisir à faire les choses?">
+				>
+				["at0005"] = <
+					text = <"Jamais">
+					description = <"Le sujet de la question n'a pas du tout affecté le sujet au cours des deux dernières semaines.">
+				>
+				["at0006"] = <
+					text = <"Plusieurs jours">
+					description = <"Le sujet de la question a touché le sujet plusieurs jours au cours des deux dernières semaines.">
+				>
+				["at0007"] = <
+					text = <"Plus de la moitié du temps">
+					description = <"Le sujet de la question a touché le sujet plus de la moitié des jours au cours des deux dernières semaines.">
+				>
+				["at0008"] = <
+					text = <"Presque tous les jours">
+					description = <"Le sujet de la question a touché le sujet presque tous les jours au cours des deux dernières semaines.">
+				>
+				["at0009"] = <
+					text = <"Déprime">
+					description = <"Au cours des 2 dernières semaines, selon quelle fréquence avez-vous être triste, déprimé(e) ou désespéré(e)?">
+				>
+				["at0010"] = <
+					text = <"Note PHQ-2">
+					description = <"Score total pour les deux premières questions sur \"Intérêt/Plaisir\" et \"Déprime\".">
+				>
+				["at0011"] = <
+					text = <"Note PHQ-9">
+					description = <"Score total pour les neuf questions.">
+				>
+				["at0012"] = <
+					text = <"Problèmes de sommeil">
+					description = <"Au cours des 2 dernières semaines, selon quelle fréquence avez-vous difficultés à s’endormir ou à rester endormi(e), ou dormir trop?
+">
+				>
+				["at0013"] = <
+					text = <"Fatigué/peu d'énergie">
+					description = <"Au cours des 2 dernières semaines, selon quelle fréquence avez-vous se sentir fatigué(e) ou manquer d’énergie?">
+				>
+				["at0014"] = <
+					text = <"Appétit">
+					description = <"Au cours des 2 dernières semaines, selon quelle fréquence avez-vous avoir peu d’appétit ou manger trop?">
+				>
+				["at0015"] = <
+					text = <"Se sentir mal dans sa peau">
+					description = <"Au cours des 2 dernières semaines, selon quelle fréquence avez-vous avoir une mauvaise opinion de soi-même, ou avoir le sentiment d’être nul(le), ou d’avoir déçu sa famille ou s’être déçu(e) soi-même?
+">
+				>
+				["at0016"] = <
+					text = <"Problème de concentration">
+					description = <"Au cours des 2 dernières semaines, selon quelle fréquence avez-vous avoir du mal à se concentrer, par exemple, pour lire le journal ou regarder la télévision?
+">
+				>
+				["at0017"] = <
+					text = <"Lent/agité">
+					description = <"Au cours des 2 dernières semaines, selon quelle fréquence avez-vous bouger ou parler si lentement que les autres auraient pu le remarquer. Ou au contraire, être si agité(e) que vous avez eu du mal à tenir en place par rapport à d’habitude?">
+				>
+				["at0018"] = <
+					text = <"Mort/automutilation">
+					description = <"Au cours des 2 dernières semaines, selon quelle fréquence avez-vous penser qu’il vaudrait mieux mourir ou envisager 
+de vous faire du mal d’une manière ou d’une autre?
+">
+				>
+				["at0019"] = <
+					text = <"Difficulté dans les activités de la vie">
+					description = <"Si vous avez coché au moins un des problèmes évoqués, à quel point ce(s) problème(s) a-t-il (ont ils) rendu votre travail, vos tâches à la maison ou votre capacité à vous entendre avec les autres difficile(s) ?
+">
+				>
+				["at0020"] = <
+					text = <"Pas du tout difficile(s)">
+					description = <"L'individu n'a trouvé aucune difficulté à travailler, à s'occuper des choses à la maison ou à s'entendre avec d'autres personnes.">
+				>
+				["at0021"] = <
+					text = <"Assez difficile(s)">
+					description = <"La personne a trouvé quelque peu difficile de travailler, de s'occuper de ses affaires à la maison ou de s'entendre avec d'autres personnes.">
+				>
+				["at0022"] = <
+					text = <"Très difficile(s)">
+					description = <"L'individu trouvait très difficile de travailler, de s'occuper de ses affaires à la maison ou de s'entendre avec d'autres personnes.">
+				>
+				["at0023"] = <
+					text = <"Extrêmement difficile(s)">
+					description = <"L'individu trouvait qu'il était extrêmement difficile de travailler, de s'occuper des choses à la maison ou de s'entendre avec d'autres personnes.">
+				>
+				["at0024"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0025"] = <
+					text = <"Extension">
+					description = <"Informations supplémentaires requises pour capturer le contenu local ou pour s'aligner sur d'autres modèles/formalismes de référence.">
+					comment = <"Par exemple : exigences d'informations locales ou métadonnées supplémentaires pour s'aligner sur les équivalents FHIR ou CIMI.">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"Gesundheitsfragebogen für patienten-9 (PHQ-9)">
+					description = <"Screening-Fragebogen für psychische Gesundheit, der von Angehörigen der Gesundheitsberufe verwendet oder von Einzelpersonen selbst angegeben werden kann.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Jedes Ereignis">
+					description = <"Standard, nicht spezifizierter Zeitpunkt oder Intervallereignis, das explizit in einer Vorlage oder zur Laufzeit definiert werden kann.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Interesse/Freude">
+					description = <"Wie oft hat Sie in den letzten zwei Wochen wenig Interesse oder Freude an Ihren Tätigkeiten?">
+				>
+				["at0005"] = <
+					text = <"Überhaupt nicht">
+					description = <"Das Thema der Frage hat das Thema in den letzten zwei Wochen überhaupt nicht berührt.">
+				>
+				["at0006"] = <
+					text = <"An einzelnen tagen">
+					description = <"Das Thema der Frage hat das Thema in den letzten zwei Wochen an mehreren Tagen berührt.">
+				>
+				["at0007"] = <
+					text = <"An mehr als die Hälfte der Tage">
+					description = <"Das Thema der Frage hat das Thema in den letzten zwei Wochen an mehr als der Hälfte der Tage berührt.">
+				>
+				["at0008"] = <
+					text = <"Beinahe jeden Tag">
+					description = <"Das Thema der Frage hat das Thema in den letzten zwei Wochen fast täglich berührt.">
+				>
+				["at0009"] = <
+					text = <"Niedergeschlagenheit">
+					description = <"Wie oft haben Sie sich in den letzten zwei Wochen Niedergeschlagenheit, Schwermut oder Hoffnungslosigkeit?">
+				>
+				["at0010"] = <
+					text = <"Ergebnis PHQ-2">
+					description = <"Gesamtpunktzahl für die ersten beiden Fragen zu „Interesse/Freude“ und „Niedergeschlagenheit“.">
+				>
+				["at0011"] = <
+					text = <"Ergebnis PHQ-9">
+					description = <"Gesamtpunktzahl für alle neun Fragen.">
+				>
+				["at0012"] = <
+					text = <"Schlafprobleme">
+					description = <"Wie oft wurden Sie in den letzten zwei Wochen von Schwierigkeiten, ein- oder durchzuschlafen, oder vermehrter Schlaf?">
+				>
+				["at0013"] = <
+					text = <"Müde/wenig Energie">
+					description = <"Wie oft fühlten Sie sich in den letzten zwei Wochen Müdigkeit oder Gefühl, keine Energie zu haben?">
+				>
+				["at0014"] = <
+					text = <"Appetit">
+					description = <"Wie oft litten Sie in den letzten zwei Wochen Verminderter Appetit oder übermäßiges Bedürfnis zu essen?">
+				>
+				["at0015"] = <
+					text = <"Sich schlecht fühlen">
+					description = <"Wie oft haben Sie sich in den letzten zwei Wochen darüber geärgert, dass Sie sich schlecht über sich selbst gefühlt haben – oder dass Sie ein Versager sind oder sich selbst oder Ihre Familie im Stich gelassen haben?">
+				>
+				["at0016"] = <
+					text = <"Konzentrationsschwierigkeiten">
+					description = <"Wie oft hatten Sie in den letzten zwei Wochen Probleme, sich auf Dinge wie Zeitunglesen oder Fernsehen zu konzentrieren?">
+				>
+				["at0017"] = <
+					text = <"Langsam/zappelig">
+					description = <"Wie oft haben Sie sich in den letzten zwei Wochen daran gestört, dass Sie sich so langsam bewegten oder sprachen, dass andere Personen es hätten bemerken können? Oder das Gegenteil – so zappelig oder unruhig zu sein, dass Sie sich viel mehr als sonst bewegt haben?">
+				>
+				["at0018"] = <
+					text = <"Tod/Selbstverletzung">
+					description = <"Wie oft wurden Sie in den letzten zwei Wochen von Gedanken geplagt, dass Sie lieber tot wären oder sich auf irgendeine Weise verletzen würden?">
+				>
+				["at0019"] = <
+					text = <"Schwierigkeiten bei Lebensaktivitäten">
+					description = <"Wenn Sie irgendwelche Probleme auf diesem Fragebogen angekreuzt haben, wie schwierig haben diese Probleme es Ihnen gemacht, Ihre Arbeit zu erledigen, Dinge zu Hause zu erledigen oder mit anderen Menschen auszukommen?">
+				>
+				["at0020"] = <
+					text = <"Überhaupt nicht erschwert">
+					description = <"Die Person hatte keine Schwierigkeiten zu arbeiten, sich um Dinge im Haushalt zu kümmern oder mit anderen Menschen auszukommen.">
+				>
+				["at0021"] = <
+					text = <"Etwas erschwert">
+					description = <"Der Einzelne fand es etwas schwierig zu arbeiten, sich um Dinge im Haushalt zu kümmern oder mit anderen Menschen auszukommen.">
+				>
+				["at0022"] = <
+					text = <"Stark erschwert">
+					description = <"Die Person fand es sehr schwierig zu arbeiten, sich um Dinge im Haushalt zu kümmern oder mit anderen Menschen auszukommen.">
+				>
+				["at0023"] = <
+					text = <"Extrem erschwert">
+					description = <"Die Person fand es äußerst schwierig, zu arbeiten, sich um Dinge im Haushalt zu kümmern oder mit anderen Menschen auszukommen.">
+				>
+				["at0024"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0025"] = <
+					text = <"Erweiterung">
+					description = <"Zusätzliche Angaben, die nicht in anderen Feldern erfasst sind.">
 				>
 			>
 		>

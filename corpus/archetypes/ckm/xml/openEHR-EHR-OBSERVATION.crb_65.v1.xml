@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -671,11 +671,11 @@ Lim WS, Baudouin SV, George RC, Hill AT, Jamieson C, Le Jeune I, Macfarlane JT, 
       </items>
       <items code="at0005">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Respiratory rate</items>
@@ -683,11 +683,11 @@ Lim WS, Baudouin SV, George RC, Hill AT, Jamieson C, Le Jeune I, Macfarlane JT, 
       </items>
       <items code="at0008">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Blood pressure</items>
@@ -695,11 +695,11 @@ Lim WS, Baudouin SV, George RC, Hill AT, Jamieson C, Le Jeune I, Macfarlane JT, 
       </items>
       <items code="at0011">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Item tree</items>
@@ -711,11 +711,11 @@ Lim WS, Baudouin SV, George RC, Hill AT, Jamieson C, Le Jeune I, Macfarlane JT, 
       </items>
       <items code="at0015">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Total score</items>
@@ -740,7 +740,7 @@ Lim WS, Baudouin SV, George RC, Hill AT, Jamieson C, Le Jeune I, Macfarlane JT, 
       <items code="at0022">
         <items id="text">Extension SLOT</items>
         <items id="description">Additional information required to extend the model with local content or to align with other reference models or formalisms.</items>
-        <items id="comment">For example: local information requirements; or additional metadata to align with FHIR. </items>
+        <items id="comment">For example: local information requirements; or additional metadata to align with FHIR.</items>
       </items>
     </term_definitions>
     <term_definitions language="nb">
@@ -766,11 +766,11 @@ Lim WS, Baudouin SV, George RC, Hill AT, Jamieson C, Le Jeune I, Macfarlane JT, 
       </items>
       <items code="at0005">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Respirasjonsfrekvens</items>
@@ -778,11 +778,11 @@ Lim WS, Baudouin SV, George RC, Hill AT, Jamieson C, Le Jeune I, Macfarlane JT, 
       </items>
       <items code="at0008">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Blodtrykk</items>
@@ -790,11 +790,11 @@ Lim WS, Baudouin SV, George RC, Hill AT, Jamieson C, Le Jeune I, Macfarlane JT, 
       </items>
       <items code="at0011">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Item tree</items>
@@ -806,11 +806,11 @@ Lim WS, Baudouin SV, George RC, Hill AT, Jamieson C, Le Jeune I, Macfarlane JT, 
       </items>
       <items code="at0015">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Totalskår</items>
@@ -840,4 +840,3 @@ Lim WS, Baudouin SV, George RC, Hill AT, Jamieson C, Le Jeune I, Macfarlane JT, 
     </term_definitions>
   </ontology>
 </archetype>
-

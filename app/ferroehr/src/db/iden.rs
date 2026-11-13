@@ -232,6 +232,9 @@ pub enum VoHead {
     ArchivedAt,
     /// `archive_reason` — the reason the caller gave for archiving.
     ArchiveReason,
+    /// `policy_party_at` — party schema only: when a version of the party
+    /// was first a policy party; `NULL` = never (#5485).
+    PolicyPartyAt,
 }
 
 /// `node` — the decomposed content: one row per RM structure node, per

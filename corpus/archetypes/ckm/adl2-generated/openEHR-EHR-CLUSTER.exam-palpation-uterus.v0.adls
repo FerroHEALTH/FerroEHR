@@ -1,0 +1,469 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=901e9366-1ad0-4689-b19a-2ae771052eb2; build_uid=b67e2d15-d1c8-49df-826f-350f5c5d8fe1)
+    openEHR-EHR-CLUSTER.exam-palpation-uterus.v0.0.1
+
+specialize
+    openEHR-EHR-CLUSTER.exam-palpation.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2007-04-08">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom (openEHR Editor)", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Hilde Hollås, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Lars Morgan Karlsen, DIPS ASA, Norway", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Jussara Rotzsch, UNB, Brazil", "Anoop Shah, University College London, United Kingdom", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia (openEHR Editor)", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Anca Heyd, DIPS ASA, Norway", "Sam Heard, Ocean Health Systems, Australia">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"6EA86C4D78428E2E7AD682659ADCD744">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.">
+            use = <"Brukes til å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et spesifisert organsystem eller anatomisk struktur. Denne arketypen består kun av kjerneelementene av mønsteret for undersøkelser, og kan utvides ved hjelp av andre CLUSTER-arketyper eller brukes som grunnlag for undersøkelsesarketyper for spesifikke kroppssystemer eller anatomiske strukturer. 
+
+Eksempler på detaljer som kan beskrives ved hjelp av dette CLUSTER er inspeksjon, palpasjon, auskultasjon, perkusjon og bevegelser i kroppssystemer eller anatomiske strukturer. Undersøkelsen kan støttes av enkle hjelpemidler som stetoskop, otoskop eller reflekshammer. Også funn ved mer avanserte undersøkelser kan registreres her, som ved endoskopi. I de tilfellene vil informasjon om hvilket hjelpemiddel eller utstyr brukt bli registrert i OBSERVATION.exam, elementet \"Detaljer om medisinsk utstyr\", i ACTION.procedure \"Prosedyredetaljer\" eller tilsvarende i egnet ENTRY- eller ACTION-arketype.
+
+Arketypen er laget spesifikt for å brukes i \"Undersøkelsesdetaljer\"-SLOTet i arketypen OBSERVATION.exam, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende.
+
+Denne arketypen kan benyttes for alle typer undersøkelser, alt fra enkle undersøkelser som undersøkelse av et hudområde, inspeksjon av ører og til artroskopi av et kne.
+
+Kan for eksempel nøstes i SLOTet \"Undersøkelsesdetaljer\" i arketypen OBSERVATION.exam (Norsk Funn ved fysisk undersøkelse) for å registrere ytterligere strukturerte funn ved fysiske undersøkelser.
+
+Arketypen CLUSTER.exclusion_exam kan nøstes i SLOTet \"Undersøkelse ikke utført\" der en har behov for å registrere informasjon om at en undersøkelse ikke ble utført.
+
+Brukes for å videreføre fritekstbeskrivelser av kliniske funn fra tidligere systemer inn i et arketypeformat, ved å bruke elementet \"Klinisk beskrivelse\".">
+            misuse = <"Skal ikke brukes til å ta opp frittstående klinisk observasjoner eller testresultater - bruk spesifikke OBSERVATION arketyper, for eksempel OBSERVATION.head_circumference eller OBSERVATION.glasgow_coma_scale.
+
+Skal ikke brukes til å ta opp anamnese - bruk da spesifikke OBSERVATION og CLUSTER arketyper. For eksempel OBSERVATION.story og CLUSTER.symptom_sign.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a narrative description and clinical interpretation of the findings observed only by palpation of the uterus, either from an abdominal or a vaginal approach.">
+            keywords = <"uterus, fetus, foetus, baby, abdomen, vagina, pregnant, pregnancy", ...>
+            use = <"Use to record a narrative description and clinical interpretation of the findings observed only by palpation of the uterus, either from an abdominal or a vaginal approach and including findings about the pregnant uterus.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the CLUSTER.exam-abdomen, CLUSTER.exam-palpation-vagina or OBSERVATION.exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings - for example, a fetus.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used when multiple modes are used simultaneously to examine a body system or anatomical structure, including inspection or auscultation. Use the CLUSTER.exam family of archetypes for this purpose.
+
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1.1] matches {    -- Palpation of the uterus
+        items matches {
+            ELEMENT[at0001.0.1] matches {    -- System or structure examined
+                value matches {
+                    DV_CODED_TEXT[at0.0.9005] matches {
+                        defining_code matches {[at0.0.1]}    -- Uterus
+                    }
+                }
+            }
+            ELEMENT[at0.0.2] occurrences matches {0..1} matches {    -- Fundal measurement
+                value matches {
+                    DV_QUANTITY[at0.0.9006] matches {
+                        property matches {[at0.0.9000]}    -- Length
+                        units matches {"cm"}
+                    }
+                }
+            }
+            ELEMENT[at0.0.4] occurrences matches {0..1} matches {    -- Size estimation ( weeks of gestation)
+                value matches {
+                    DV_DURATION[at0.0.9007] matches {
+                        value matches {PW/|>=P0D|}
+                    }
+                }
+            }
+            ELEMENT[at0.0.5] occurrences matches {0..1} matches {    -- Size estimation (anatomical)
+                value matches {
+                    DV_CODED_TEXT[at0.0.9008] matches {
+                        defining_code matches {[ac0.0.9001]}    -- Size estimation (anatomical) (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.0.10] occurrences matches {0..1} matches {    -- Position of the uterus
+                value matches {
+                    DV_CODED_TEXT[at0.0.9009] matches {
+                        defining_code matches {[ac0.0.9002]}    -- Position of the uterus (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.0.14] occurrences matches {0..1} matches {    -- Mobility
+                value matches {
+                    DV_CODED_TEXT[at0.0.9010] matches {
+                        defining_code matches {[ac0.0.9003]}    -- Mobility (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.0.17] occurrences matches {0..1} matches {    -- Tenderness
+                value matches {
+                    DV_TEXT[at0.0.9011]
+                }
+            }
+            ELEMENT[at0.0.18] occurrences matches {0..1} matches {    -- Consistency
+                value matches {
+                    DV_TEXT[at0.0.9012]
+                }
+            }
+            ELEMENT[at0.0.19] occurrences matches {0..1} matches {    -- Liquor estimation
+                value matches {
+                    DV_CODED_TEXT[at0.0.9013] matches {
+                        defining_code matches {[ac0.0.9004]}    -- Liquor estimation (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.0.23] occurrences matches {0..1} matches {    -- Number of babies
+                value matches {
+                    DV_CODED_TEXT[at0.0.9014] matches {
+                        defining_code matches {[ac0.0.9013]}    -- Number of babies (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000.1.1"] = <
+                text = <"*Palpation of the uterus (en)">
+                description = <"Funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.">
+            >
+            ["at0001.0.1"] = <
+                text = <"Undersøkt organsystem eller struktur">
+                description = <"Identifisering av det undersøkte organsystemet eller anatomiske strukturen.">
+                comment = <"*Coding of the system or structure examined with a terminology is preferred, where possible. (en)">
+            >
+            ["at0.0.1"] = <
+                text = <"*Uterus (en)">
+                description = <"*The uterus was examined. (en)">
+            >
+            ["at0.0.2"] = <
+                text = <"*Fundal measurement (en)">
+                description = <"*Measured height of the uterus from symphysis pubis to uterine fundus. (en)">
+                comment = <"*Usually only possible in pregnancy after approximately 20 weeks of gestation. (en)">
+            >
+            ["at0.0.4"] = <
+                text = <"*Size estimation (gestation) (en)">
+                description = <"*Size estimation of the uterus, expressed as the equivalent number of weeks of gestation in a typical pregnancy. (en)">
+                comment = <"*For exampe: an 8-week sized uterus; or a 28-week sized uterus. (en)">
+            >
+            ["at0.0.5"] = <
+                text = <"*Size estimation (anatomical) (en)">
+                description = <"*Description of the size of the uterus, relative to anatomical landmarks. (en)">
+            >
+            ["at0.0.6"] = <
+                text = <"*Not palpable (en)">
+                description = <"*Uterus is not palpable in the abdomen. (en)">
+            >
+            ["at0.0.7"] = <
+                text = <"*At pubic symphysis (en)">
+                description = <"*The uterus is just palpable at the level of the symphysis pubis. (en)">
+            >
+            ["at0.0.8"] = <
+                text = <"*At umbilicus (en)">
+                description = <"*The uterus is palpable at, or about, the level of the umbilicus. (en)">
+            >
+            ["at0.0.9"] = <
+                text = <"*At xiphisternum (en)">
+                description = <"*The uterus is palpable at, or about, the level of the xiphisternum. (en)">
+            >
+            ["at0.0.10"] = <
+                text = <"*Position of the uterus (en)">
+                description = <"*The position of the uterus, relative to the cervix. (en)">
+            >
+            ["at0.0.11"] = <
+                text = <"*Anteverted (en)">
+                description = <"*The uterine fundus is tipped forward, towards the abdomen. (en)">
+            >
+            ["at0.0.12"] = <
+                text = <"*Neutral (en)">
+                description = <"*The uterus is in a neutral, upright position. (en)">
+            >
+            ["at0.0.13"] = <
+                text = <"*Retroverted (en)">
+                description = <"*The uterine fundus is tipped backward, towards the back. (en)">
+            >
+            ["at0.0.14"] = <
+                text = <"*Mobility (en)">
+                description = <"*Description about the mobility of the uterus (en)">
+            >
+            ["at0.0.15"] = <
+                text = <"*Mobile (en)">
+                description = <"*The uterus is moveable. (en)">
+            >
+            ["at0.0.16"] = <
+                text = <"*Fixed (en)">
+                description = <"*The uterus is immovable. (en)">
+            >
+            ["at0.0.17"] = <
+                text = <"*Tenderness (en)">
+                description = <"*Narrative description about findings of pain or tenderness of the uterus. (en)">
+            >
+            ["at0.0.18"] = <
+                text = <"*Consistency (en)">
+                description = <"*Narrative description about the texture and firmness of the uterus. (en)">
+            >
+            ["at0.0.19"] = <
+                text = <"*Liquor estimation (en)">
+                description = <"*Estimation of the relative amount of liquor present in advanced pregnancy. (en)">
+            >
+            ["at0.0.20"] = <
+                text = <"*Decreased (en)">
+                description = <"*The amount of liquor appears less than expected, compared to a typical pregnancy at the same gestation. (en)">
+            >
+            ["at0.0.21"] = <
+                text = <"*Normal (en)">
+                description = <"*The amount of liquor is as expected, compared to a typical pregnancy at the same gestation. (en)">
+            >
+            ["at0.0.22"] = <
+                text = <"*Increased (en)">
+                description = <"*The amount of liquor appears more than expected, compared to a typical pregnancy at the same gestation. (en)">
+            >
+            ["at0.0.23"] = <
+                text = <"*Number of babies (en)">
+                description = <"*The number of fetuses identified on palpation. (en)">
+            >
+            ["at0004.0.1"] = <
+                text = <"Spesifikke funn">
+                description = <"Ytterligere strukturerte detaljer om undersøkelsesfunnene.">
+            >
+            ["at0.0.24"] = <
+                text = <"*Single (en)">
+                description = <"*There is one baby present. (en)">
+            >
+            ["at0.0.25"] = <
+                text = <"*Twins (en)">
+                description = <"*There are two babies present. (en)">
+            >
+            ["at0.0.26"] = <
+                text = <"*Multiple (en)">
+                description = <"*There are more than two babies present. (en)">
+            >
+            ["at0.0.9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.0.9001"] = <
+                text = <"*Size estimation (anatomical) (en) (synthesised)">
+                description = <"*Description of the size of the uterus, relative to anatomical landmarks. (en) (synthesised)">
+            >
+            ["ac0.0.9002"] = <
+                text = <"*Position of the uterus (en) (synthesised)">
+                description = <"*The position of the uterus, relative to the cervix. (en) (synthesised)">
+            >
+            ["ac0.0.9003"] = <
+                text = <"*Mobility (en) (synthesised)">
+                description = <"*Description about the mobility of the uterus (en) (synthesised)">
+            >
+            ["ac0.0.9004"] = <
+                text = <"*Liquor estimation (en) (synthesised)">
+                description = <"*Estimation of the relative amount of liquor present in advanced pregnancy. (en) (synthesised)">
+            >
+            ["ac0.0.9013"] = <
+                text = <"*Number of babies (en) (synthesised)">
+                description = <"*The number of fetuses identified on palpation. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1.1"] = <
+                text = <"Palpation of the uterus">
+                description = <"Findings observed by palpation of the uterus.">
+            >
+            ["at0001.0.1"] = <
+                text = <"System or structure examined">
+                description = <"Identification of the examined body system or anatomical structure.">
+                comment = <"Coding of the system or structure examined with a terminology is preferred, where possible.">
+            >
+            ["at0.0.1"] = <
+                text = <"Uterus">
+                description = <"The uterus was examined.">
+            >
+            ["at0.0.2"] = <
+                text = <"Fundal measurement">
+                description = <"Measured height of the uterus from symphysis pubis to uterine fundus.">
+                comment = <"Usually only possible in pregnancy after approximately 20 weeks of gestation.">
+            >
+            ["at0.0.4"] = <
+                text = <"Size estimation ( weeks of gestation)">
+                description = <"Size estimation of the uterus, expressed as the equivalent number of weeks of gestation in a typical pregnancy.">
+                comment = <"For exampe: an 8-week sized uterus; or a 28-week sized uterus.">
+            >
+            ["at0.0.5"] = <
+                text = <"Size estimation (anatomical)">
+                description = <"Description of the size of the uterus, relative to anatomical landmarks.">
+            >
+            ["at0.0.6"] = <
+                text = <"Not palpable">
+                description = <"Uterus is not palpable in the abdomen.">
+            >
+            ["at0.0.7"] = <
+                text = <"At pubic symphysis">
+                description = <"The uterus is just palpable at the level of the symphysis pubis.">
+            >
+            ["at0.0.8"] = <
+                text = <"At umbilicus">
+                description = <"The uterus is palpable at, or about, the level of the umbilicus.">
+            >
+            ["at0.0.9"] = <
+                text = <"At xiphisternum">
+                description = <"The uterus is palpable at, or about, the level of the xiphisternum.">
+            >
+            ["at0.0.10"] = <
+                text = <"Position of the uterus">
+                description = <"The position of the uterus, relative to the cervix.">
+            >
+            ["at0.0.11"] = <
+                text = <"Anteverted">
+                description = <"The uterine fundus is tipped forward, towards the abdomen.">
+            >
+            ["at0.0.12"] = <
+                text = <"Neutral">
+                description = <"The uterus is in a neutral, upright position.">
+            >
+            ["at0.0.13"] = <
+                text = <"Retroverted">
+                description = <"The uterine fundus is tipped backward, towards the back.">
+            >
+            ["at0.0.14"] = <
+                text = <"Mobility">
+                description = <"Description about the mobility of the uterus.">
+            >
+            ["at0.0.15"] = <
+                text = <"Mobile">
+                description = <"The uterus is moveable.">
+            >
+            ["at0.0.16"] = <
+                text = <"Fixed">
+                description = <"The uterus is immovable.">
+            >
+            ["at0.0.17"] = <
+                text = <"Tenderness">
+                description = <"Narrative description about findings of pain or tenderness of the uterus.">
+            >
+            ["at0.0.18"] = <
+                text = <"Consistency">
+                description = <"Narrative description about the texture and firmness of the uterus.">
+            >
+            ["at0.0.19"] = <
+                text = <"Liquor estimation">
+                description = <"Estimation of the relative amount of liquor present in advanced pregnancy.">
+            >
+            ["at0.0.20"] = <
+                text = <"Decreased">
+                description = <"The amount of liquor appears less than expected, compared to a typical pregnancy at the same gestation.">
+            >
+            ["at0.0.21"] = <
+                text = <"Normal">
+                description = <"The amount of liquor is as expected, compared to a typical pregnancy at the same gestation.">
+            >
+            ["at0.0.22"] = <
+                text = <"Increased">
+                description = <"The amount of liquor appears more than expected, compared to a typical pregnancy at the same gestation.">
+            >
+            ["at0.0.23"] = <
+                text = <"Number of babies">
+                description = <"The number of fetuses identified on palpation.">
+            >
+            ["at0004.0.1"] = <
+                text = <"Examination findings">
+                description = <"Structured details about the physical examination findings.">
+            >
+            ["at0.0.24"] = <
+                text = <"Single">
+                description = <"There is one baby present.">
+            >
+            ["at0.0.25"] = <
+                text = <"Twins">
+                description = <"There are two babies present.">
+            >
+            ["at0.0.26"] = <
+                text = <"Multiple">
+                description = <"There are more than two babies present.">
+            >
+            ["at0.0.9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac0.0.9001"] = <
+                text = <"Size estimation (anatomical) (synthesised)">
+                description = <"Description of the size of the uterus, relative to anatomical landmarks. (synthesised)">
+            >
+            ["ac0.0.9002"] = <
+                text = <"Position of the uterus (synthesised)">
+                description = <"The position of the uterus, relative to the cervix. (synthesised)">
+            >
+            ["ac0.0.9003"] = <
+                text = <"Mobility (synthesised)">
+                description = <"Description about the mobility of the uterus. (synthesised)">
+            >
+            ["ac0.0.9004"] = <
+                text = <"Liquor estimation (synthesised)">
+                description = <"Estimation of the relative amount of liquor present in advanced pregnancy. (synthesised)">
+            >
+            ["ac0.0.9013"] = <
+                text = <"Number of babies (synthesised)">
+                description = <"The number of fetuses identified on palpation. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.0.9000"] = <http://openehr.org/id/122>
+        >
+        ["SNOMED-CT"] = <
+            ["at0.0.1"] = <http://snomed.info/id/35039007>
+        >
+    >
+    value_sets = <
+        ["ac0.0.9004"] = <
+            id = <"ac0.0.9004">
+            members = <"at0.0.20", "at0.0.21", "at0.0.22">
+        >
+        ["ac0.0.9003"] = <
+            id = <"ac0.0.9003">
+            members = <"at0.0.15", "at0.0.16">
+        >
+        ["ac0.0.9002"] = <
+            id = <"ac0.0.9002">
+            members = <"at0.0.11", "at0.0.12", "at0.0.13">
+        >
+        ["ac0.0.9013"] = <
+            id = <"ac0.0.9013">
+            members = <"at0.0.24", "at0.0.25", "at0.0.26">
+        >
+        ["ac0.0.9001"] = <
+            id = <"ac0.0.9001">
+            members = <"at0.0.6", "at0.0.7", "at0.0.8", "at0.0.9">
+        >
+    >

@@ -189,9 +189,7 @@ The only allowed elements of the regular expression syntax in character expressi
 
 === Constraints on String
 
-The value of an attribute of type `String` is constrained using a list of one or more Strings, each of which may be a fixed String, or a regular expression. In both cases, comparison to the constraint values is case-sensitive.
-
-Although any mixture of fixed Strings and regular expressions may be used, the most common possibilities are a list of fixed Strings and a single regular expression.
+The value of an attribute of type `String` is constrained either by a list of one or more fixed Strings, or by a single regular expression. Alternatives within a regular expression are expressed with `|`, e.g. `{/platypus|kangaroo/}`. Either form may be followed by an assumed value. In both cases, comparison to the constraint values is case-sensitive.
 
 ==== List of Strings
 

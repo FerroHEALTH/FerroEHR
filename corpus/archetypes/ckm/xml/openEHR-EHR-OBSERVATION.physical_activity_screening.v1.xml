@@ -1,0 +1,1250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2020-03-13</original_author>
+    <original_author id="name">Heather Leslie</original_author>
+    <original_author id="organisation">Atomica Informatics</original_author>
+    <original_author id="email">heather.leslie@atomicainformatics.com</original_author>
+    <other_contributors>Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Astrid Askeland, Dips AS, Norway</other_contributors>
+    <other_contributors>Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>SB Bhattacharyya, Bhattacharyyas Clinical Records Research &amp; Informatics LLP, India</other_contributors>
+    <other_contributors>Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Yexuan Cheng, 浙江大学, China</other_contributors>
+    <other_contributors>Christian Chevalley, ADOC, Thailand</other_contributors>
+    <other_contributors>Giovanni Delussu, crs4, Italy</other_contributors>
+    <other_contributors>Manuela Domingo, hospital general universitario dr. balmis, Spain</other_contributors>
+    <other_contributors>Are Edvardsen, SKDE, Helse Nord RHF, Norway</other_contributors>
+    <other_contributors>Alexander Eikrem-Lüthi, Lovisenberg Diakonale Sykehus, Norway</other_contributors>
+    <other_contributors>Gunn Elin Blakkisrud, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Kåre Flø, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Grant Forrest, Lunaria Ltd, United Kingdom</other_contributors>
+    <other_contributors>Ciprian Gerstenberger, Helse Nord IKT, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Heather Grain, Llewelyn Grain Informatics, Australia</other_contributors>
+    <other_contributors>Marte Vassli Gullesen, Helse Nord IKT, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Anca Heyd, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Joost Holslag, Nedap, Netherlands</other_contributors>
+    <other_contributors>Evelyn Hovenga, EJSH Consulting, Australia</other_contributors>
+    <other_contributors>Gunnar Jårvik, Helse Vest IKT AS, Norway</other_contributors>
+    <other_contributors>Anne K Fossum, OUS, Norway</other_contributors>
+    <other_contributors>Ronald Krawec, Alberta Health Services, Canada</other_contributors>
+    <other_contributors>Elin Kristiansen, Sykehuspartner HF, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Anjali Kulkarni, Karkinos, India</other_contributors>
+    <other_contributors>Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Jörgen Kuylenstierna, eWeave AB, Sweden</other_contributors>
+    <other_contributors>Eli Larsen, UNN, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Øygunn Leite Kallevik, Helse Bergen, Norway</other_contributors>
+    <other_contributors>Heather Leslie, Atomica Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Ian McNicoll, freshEHR Clinical Informatics, United Kingdom</other_contributors>
+    <other_contributors>Hana Medvesek, Slovenia</other_contributors>
+    <other_contributors>Per Meinich, Helse Sør-Øst RHF, Norway</other_contributors>
+    <other_contributors>Martin Milde, Helse Vest IKT, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Olha Nikolaieva, University Hospital Basel, Switzerland</other_contributors>
+    <other_contributors>Mikael Nyström, Cambio Healthcare Systems AB, Sweden</other_contributors>
+    <other_contributors>Marianne Opsahl Bredesen, Helse Nord IKT HF, Norway (openEHR Norway redaktør)</other_contributors>
+    <other_contributors>Vuk Radnić, Better, Slovenia</other_contributors>
+    <other_contributors>Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil</other_contributors>
+    <other_contributors>Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Andre Smitt-Ingebretsen, Sørlandet sykehus HF, Norway</other_contributors>
+    <other_contributors>Natalia Strauch, Medizinische Hochschule Hannover, Germany</other_contributors>
+    <other_contributors>Norwegian Review Summary, Norwegian Public Hospitals, Norway</other_contributors>
+    <other_contributors>Nyree Taylor, CSIRO, Australia</other_contributors>
+    <other_contributors>John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Ina Wille, Helse-Vest RHF, Norway</other_contributors>
+    <other_contributors>Karsten Øvretveit, Helse Vest IKT, Norway (openEHR Editor)</other_contributors>
+    <lifecycle_state>published</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">4895032A0F245BA0C5968C386E972A03</other_details>
+    <other_details id="build_uid">90360241-f6ec-4412-89e0-a25e2f333306</other_details>
+    <other_details id="ip_acknowledgements">This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.</other_details>
+    <other_details id="revision">1.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Schaffung eines Rahmens für die Erfassung von Antworten auf vordefinierte Screening-Fragen zum breiten Spektrum körperlicher Aktivitäten.</purpose>
+      <keywords>Screening, Fragebogen, Bewegung, Aktivität, körperlich, Fitness, sitzende Lebensweise</keywords>
+      <use>Verwenden, um einen Rahmen für die Erfassung von Antworten auf vordefinierte Screening-Fragen zum breiten Spektrum körperlicher Aktivitäten zu schaffen.&#xD;
+&#xD;
+Häufige Anwendungsfälle umfassen unter anderem die systematische Befragung in jedem Beratungsgespräch. Zum Beispiel:&#xD;
+&#xD;
+- Waren Sie jemals körperlich aktiv?&#xD;
+- Sind Sie im organisierten Sport aktiv?&#xD;
+&#xD;
+Die Semantik dieses Archetyps ist bewusst offen gehalten. Abfragen dieses Archetyps sind in der Regel nur im Kontext des jeweiligen spezifischen Templates sinnvoll oder sicher. In einem Template wird jedes Datenelement normalerweise in die jeweils gestellte Frage umbenannt. Wo für häufige Anwendungsfälle Wertesätze vorgeschlagen wurden, können diese für die lokale Verwendung angepasst werden, indem die Datentypauswahl DV_TEXT oder DV_BOOLEAN verwendet wird, um jedem spezifischen Anwendungsfall zu entsprechen.&#xD;
+&#xD;
+Über die EVENT-Struktur aus dem Referenzmodell kann festgelegt werden, ob sich die Fragen auf einen Zeitpunkt oder einen Zeitraum beziehen. Verwenden Sie eine separate Instanz dieses Archetyps, um zwei Arten von Fragebögen zu unterscheiden: solche über körperliche Aktivität, die zu einem beliebigen Zeitpunkt in der Vergangenheit ausgeübt wurde, und solche über körperliche Aktivität innerhalb eines bestimmten Zeitintervalls. Ein Beispiel ist der Unterschied zwischen „Haben Sie jemals regelmässig trainiert?“ und „Haben Sie in den letzten 4 Wochen trainiert?“.&#xD;
+&#xD;
+Die Quelle der Informationen in einer Fragebogenantwort kann je nach Kontext variieren. Sie lässt sich jedoch mithilfe des Elements „Information provider“ im Referenzmodell spezifisch identifizieren.&#xD;
+&#xD;
+Dieser Archetyp wurde als Screening-Instrument oder zur Erfassung einfacher Daten im Fragebogenformat konzipiert, etwa für den Einsatz in einem Krankheitsregister. Wenn der Screening-Fragebogen das Vorhandensein körperlicher Aktivität ergibt, wird empfohlen, dass das klinische System die spezifischen Details zur körperlichen Aktivität mit Archetypen erfasst und dauerhaft speichert, die für den jeweiligen klinischen Zweck spezifisch sind.</use>
+      <misuse>Nicht zur Erfassung eines Trainingstagebuchs verwenden. Verwenden Sie hierfür andere relevante Archetypen.&#xD;
+&#xD;
+Nicht zur Erfassung validierter Fragebögen wie IPAQ oder GPAQ verwenden. Verwenden Sie hierfür einen geeigneten Archetyp.&#xD;
+&#xD;
+Nicht zur Erfassung des tatsächlichen körperlichen Aktivitätsniveaus einer Person zu einem bestimmten Zeitpunkt oder über einen bestimmten Zeitraum verwenden. Verwenden Sie hierfür OBSERVATION.physical_activity.&#xD;
+&#xD;
+Nicht zur Erfassung einer Zusammenfassung der typischen körperlichen Aktivität einer Person verwenden. Verwenden Sie hierfür EVALUATION.physical_activity_summary.&#xD;
+&#xD;
+Nicht zur Erfassung von Aktivitäten des täglichen Lebens (ATL) verwenden. Verwenden Sie hierfür OBSERVATION.functional_ability.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om fysisk aktivitet.</purpose>
+      <keywords>screening, kartlegging, trening, aktivitet, fysisk, stillesittende, mosjon, aktiv, idrett</keywords>
+      <use>Brukes for å lage et rammeverk for registreringen av svar på forhåndsdefinerte spørsmål om fysisk aktivitet.&#xD;
+&#xD;
+Vanlige bruksområder inkluderer, men er ikke begrenset til, systematiske spørsmål ved konsultasjoner. For eksempel:&#xD;
+&#xD;
+- Har du noen gang vært fysisk aktiv?&#xD;
+- Driver du med organisert idrett?&#xD;
+&#xD;
+Semantikken til denne arketypen er med vilje løst definert, og spørringer etter data i denne arketypen vil normalt bare være hensiktsmessig eller sikker i konteksten av det spesifikke templatet. I et templat vil hvert dataelement vanligvis døpes om til det spesifikke spørsmålet man ønsker svar på. Flere steder er det foreslått verdisett som passer til de vanligste bruksområder, men det er allikevel mulig å tilpasse/endre verdisett for lokal bruk ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN for å harmonere verdisettet til hvert enkelt brukstilfelle.&#xD;
+&#xD;
+Bruk egne EVENTer for å skille mellom spørsmål som omhandler et hvilket som helst tidspunkt eller et tidsintervall. For eksempel; "Deltar du i organisert sport nå?" som en tidspunktshendelse (point in time EVENT) sammenlignet med "Har du deltatt i organisert sport i det siste året?" som en intervallhendelse (Interval EVENT)&#xD;
+Kilden til informasjonen i et spørreskjema kan variere i ulike kontekster, men kan identifiseres spesifikt ved å benytte "Information provider"-elementet i openEHR referansemodellen.&#xD;
+&#xD;
+Denne arketypen er laget for å bli brukt i et spørreskjema eller for å registrere enkle strukturerte data til for eksempel et sykdomsregister. Dersom det i spørreskjemaet identifiseres at signifikante helserelaterte forhold er tilstede hos et familiemedlem, anbefales det at disse registreres og lagres i pasientjournalen i persistente arketyper laget spesielt for det formålet.</use>
+      <misuse>Brukes ikke for å føre en treningsdagbok. Bruk andre relevante arketyper for dette formålet.&#xD;
+&#xD;
+Brukes ikke for å registrere validerte spørreskjema, for eksempel IPAQ eller GPAQ. Bruk andre relevante arketyper for dette formålet.&#xD;
+&#xD;
+Brukes ikke for å registrere det faktiske fysiske aktivitetsnivået til en person på et bestemt tidspunkt eller over en bestemt tidsperiode. Bruk arketypen OBSERVATION.physical_activity for dette formålet.&#xD;
+&#xD;
+Brukes ikke for å registrere et sammendrag av en persons typiske fysiske aktivitet. Bruk arketypen EVALUATION.physical_activity_summary for dette formålet.&#xD;
+&#xD;
+Brukes ikke for å registreredagliglivets aktiviteter (ADL). Bruk OBSERVATION.functional_ability (Funksjonell evne) for dette formålet.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To create a framework for recording answers to pre-defined screening questions about the broad range of physical activities.</purpose>
+      <keywords>screening, questionnaire, exercise, activity, physical, fitness, sedentary</keywords>
+      <use>Use to create a framework for recording answers to pre-defined screening questions about the broad range of physical activities.&#xD;
+&#xD;
+Common use cases include, but are not limited to, systematic questioning in any consultation. For example:&#xD;
+- Have you ever been physically active? &#xD;
+- Are you active in organised sports? &#xD;
+&#xD;
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. In a template, each data element would usually be renamed to the specific question asked. Where value sets have been proposed for common use cases, these can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.&#xD;
+&#xD;
+The EVENT structure from the reference model can be used to specify whether the questions relate to point in time or over a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about physical activity that has been performed at any time in the past and information about physical activity performed within a specified time interval - for example the difference between "Have you ever trained regularly?" compared to "Have you been training the past 4 weeks".&#xD;
+&#xD;
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.&#xD;
+&#xD;
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening questionnaire identifies the presence of physical activity, it is recommended that clinical system record and persist the specific details about the physical activity using archetypes specific for the clinical purpose.</use>
+      <misuse>Not to be used to record a training diary, use other relevant archetypes for this purpose.&#xD;
+&#xD;
+Not to be used to record validated questionnaires, such as IPAQ or GPAQ. Use an appropriate archetype for this purpose.&#xD;
+&#xD;
+Not to be used for recording the actual physical activity level of an individual at a specified point in time or over a specified period of time. Use the OBSERVATION.physical_activity for this purpose.&#xD;
+&#xD;
+Not to be used for recording a summary of typical physical activity of an individual. Use EVALUATION.physical_activity_summary for this purpose.&#xD;
+&#xD;
+Not to be used for recording activities of daily living (ADL).  OBSERVATION.functional_ability for this purpose.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Claudia Tesoro Calvo</author>
+    <author id="organisation">University Hospital Basel</author>
+    <author id="email">claudia.tesorocalvo@usb.ch</author>
+    <accreditation>University Hospital Basel</accreditation>
+    <other_details id="other_contributors">Maren Diepenbruck, University Hospital Basel, Switzerland</other_details>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Silje Ljosland Bakke, Marit Alice Venheim, John Tore Valand, Martin Milde</author>
+    <author id="organisation">Helse Vest IKT AS, Helse Bergen</author>
+    <author id="email">silje.ljosland.bakke@helse-vest-ikt.no, marit.alice.venheim@helse-vest-ikt.no, john.tore.valand@helse-bergen.no, john.tore.valand@helse-vest-ikt.no, martin.milde@helse-vest-ikt.no</author>
+  </translations>
+  <uid>
+    <value>059ae212-19c9-47a8-bc0c-47ab023332ef</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-OBSERVATION.physical_activity_screening.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>OBSERVATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>HISTORY</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>events</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>EVENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0002</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>data</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ITEM_TREE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0003</node_id>
+                <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                  <rm_attribute_name>items</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0034</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </occurrences>
+                    <node_id>at0039</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>defining_code</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>1</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_CODE_PHRASE">
+                            <rm_type_name>CODE_PHRASE</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <terminology_id>
+                              <value>local</value>
+                            </terminology_id>
+                            <code_list>at0040</code_list>
+                            <code_list>at0041</code_list>
+                            <code_list>at0042</code_list>
+                            <code_list>at0045</code_list>
+                          </children>
+                        </attributes>
+                      </children>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_BOOLEAN</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>ELEMENT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>0</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id>at0044</node_id>
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>value</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>0</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>DV_TEXT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                      </children>
+                    </attributes>
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>CLUSTER</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </occurrences>
+                    <node_id>at0022</node_id>
+                    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+                      <rm_attribute_name>items</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>1</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>ELEMENT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id>at0004</node_id>
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>value</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>0</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_COMPLEX_OBJECT">
+                            <rm_type_name>DV_TEXT</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                          </children>
+                        </attributes>
+                      </children>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>ELEMENT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>0</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id>at0005</node_id>
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>value</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>0</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_COMPLEX_OBJECT">
+                            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                              <rm_attribute_name>defining_code</rm_attribute_name>
+                              <existence>
+                                <lower_included>true</lower_included>
+                                <upper_included>true</upper_included>
+                                <lower_unbounded>false</lower_unbounded>
+                                <upper_unbounded>false</upper_unbounded>
+                                <lower>1</lower>
+                                <upper>1</upper>
+                              </existence>
+                              <children xsi:type="C_CODE_PHRASE">
+                                <rm_type_name>CODE_PHRASE</rm_type_name>
+                                <occurrences>
+                                  <lower_included>true</lower_included>
+                                  <upper_included>true</upper_included>
+                                  <lower_unbounded>false</lower_unbounded>
+                                  <upper_unbounded>false</upper_unbounded>
+                                  <lower>1</lower>
+                                  <upper>1</upper>
+                                </occurrences>
+                                <node_id />
+                                <terminology_id>
+                                  <value>local</value>
+                                </terminology_id>
+                                <code_list>at0023</code_list>
+                                <code_list>at0024</code_list>
+                                <code_list>at0027</code_list>
+                                <code_list>at0046</code_list>
+                              </children>
+                            </attributes>
+                          </children>
+                          <children xsi:type="C_COMPLEX_OBJECT">
+                            <rm_type_name>DV_TEXT</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                          </children>
+                          <children xsi:type="C_COMPLEX_OBJECT">
+                            <rm_type_name>DV_BOOLEAN</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                          </children>
+                        </attributes>
+                      </children>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>ELEMENT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>true</upper_unbounded>
+                          <lower>0</lower>
+                        </occurrences>
+                        <node_id>at0037</node_id>
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>value</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>0</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_COMPLEX_OBJECT">
+                            <rm_type_name>DV_DATE_TIME</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                          </children>
+                          <children xsi:type="C_COMPLEX_OBJECT">
+                            <rm_type_name>DV_INTERVAL&lt;DV_DATE_TIME&gt;</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                          </children>
+                          <children xsi:type="C_COMPLEX_OBJECT">
+                            <rm_type_name>DV_TEXT</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                          </children>
+                          <children xsi:type="C_COMPLEX_OBJECT">
+                            <rm_type_name>DV_DURATION</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                          </children>
+                          <children xsi:type="C_COMPLEX_OBJECT">
+                            <rm_type_name>DV_INTERVAL&lt;DV_DURATION&gt;</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                          </children>
+                        </attributes>
+                      </children>
+                      <children xsi:type="ARCHETYPE_SLOT">
+                        <rm_type_name>CLUSTER</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>true</upper_unbounded>
+                          <lower>0</lower>
+                        </occurrences>
+                        <node_id>at0036</node_id>
+                        <includes>
+                          <string_expression>archetype_id/value matches {/.*/}</string_expression>
+                          <expression xsi:type="EXPR_BINARY_OPERATOR">
+                            <type>Boolean</type>
+                            <operator>2007</operator>
+                            <precedence_overridden>false</precedence_overridden>
+                            <left_operand xsi:type="EXPR_LEAF">
+                              <type>String</type>
+                              <item xsi:type="xsd:string">archetype_id/value</item>
+                              <reference_type>attribute</reference_type>
+                            </left_operand>
+                            <right_operand xsi:type="EXPR_LEAF">
+                              <type>C_STRING</type>
+                              <item xsi:type="C_STRING">
+                                <pattern>.*</pattern>
+                              </item>
+                              <reference_type>constraint</reference_type>
+                            </right_operand>
+                          </expression>
+                        </includes>
+                      </children>
+                      <children xsi:type="C_COMPLEX_OBJECT">
+                        <rm_type_name>ELEMENT</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>0</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id>at0035</node_id>
+                        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                          <rm_attribute_name>value</rm_attribute_name>
+                          <existence>
+                            <lower_included>true</lower_included>
+                            <upper_included>true</upper_included>
+                            <lower_unbounded>false</lower_unbounded>
+                            <upper_unbounded>false</upper_unbounded>
+                            <lower>0</lower>
+                            <upper>1</upper>
+                          </existence>
+                          <children xsi:type="C_COMPLEX_OBJECT">
+                            <rm_type_name>DV_TEXT</rm_type_name>
+                            <occurrences>
+                              <lower_included>true</lower_included>
+                              <upper_included>true</upper_included>
+                              <lower_unbounded>false</lower_unbounded>
+                              <upper_unbounded>false</upper_unbounded>
+                              <lower>1</lower>
+                              <upper>1</upper>
+                            </occurrences>
+                            <node_id />
+                          </children>
+                        </attributes>
+                      </children>
+                      <cardinality>
+                        <is_ordered>false</is_ordered>
+                        <is_unique>false</is_unique>
+                        <interval>
+                          <lower_included>true</lower_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>true</upper_unbounded>
+                          <lower>1</lower>
+                        </interval>
+                      </cardinality>
+                    </attributes>
+                  </children>
+                  <children xsi:type="ARCHETYPE_SLOT">
+                    <rm_type_name>CLUSTER</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </occurrences>
+                    <node_id>at0043</node_id>
+                    <includes>
+                      <string_expression>archetype_id/value matches {/.*/}</string_expression>
+                      <expression xsi:type="EXPR_BINARY_OPERATOR">
+                        <type>Boolean</type>
+                        <operator>2007</operator>
+                        <precedence_overridden>false</precedence_overridden>
+                        <left_operand xsi:type="EXPR_LEAF">
+                          <type>String</type>
+                          <item xsi:type="xsd:string">archetype_id/value</item>
+                          <reference_type>attribute</reference_type>
+                        </left_operand>
+                        <right_operand xsi:type="EXPR_LEAF">
+                          <type>C_STRING</type>
+                          <item xsi:type="C_STRING">
+                            <pattern>.*</pattern>
+                          </item>
+                          <reference_type>constraint</reference_type>
+                        </right_operand>
+                      </expression>
+                    </includes>
+                  </children>
+                  <cardinality>
+                    <is_ordered>false</is_ordered>
+                    <is_unique>false</is_unique>
+                    <interval>
+                      <lower_included>true</lower_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>true</upper_unbounded>
+                      <lower>0</lower>
+                    </interval>
+                  </cardinality>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>protocol</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0007</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0021</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/.*/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>.*</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Physical activity screening questionnaire</items>
+        <items id="description">Series of questions and associated answers used to screen for physical activity.</items>
+        <items id="comment">The answers may be self-reported.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">History</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Any event</items>
+        <items id="description">Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Physical activity name</items>
+        <items id="description">Name of a specific physical activity or grouping of physical activities.</items>
+        <items id="comment">For example: Plays football, mall walker. Coding of the 'Physical activity name' with a terminology is preferred, where possible.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Specific physical activity?</items>
+        <items id="description">Is there a history of the physical activity?</items>
+        <items id="comment">In a template, the data element would typically be renamed to match the specific question being asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Extension</items>
+        <items id="description">Additional information required to extend the model with local content or to align with other reference models or formalisms.</items>
+        <items id="comment">For example: local information requirements; or additional metadata to align with FHIR.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Physical activity</items>
+        <items id="description">Details about a specific physical activity or grouping of physical activities relevant for the screening purpose.</items>
+        <items id="comment">Use separate instances of this CLUSTER to differentiate between specific activities or groupings of activities.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Yes</items>
+        <items id="description" />
+      </items>
+      <items code="at0024">
+        <items id="text">No</items>
+        <items id="description" />
+      </items>
+      <items code="at0027">
+        <items id="text">Unknown</items>
+        <items id="description" />
+      </items>
+      <items code="at0034">
+        <items id="text">Screening purpose</items>
+        <items id="description">The context or reason for screening.</items>
+        <items id="comment">This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data.&#xD;
+For example: pre-admission screening or the name of the actual questionnaire.</items>
+      </items>
+      <items code="at0035">
+        <items id="text">Comment</items>
+        <items id="description">Additional narrative about a specific physical activity question, not captured in other fields.</items>
+      </items>
+      <items code="at0036">
+        <items id="text">Additional details</items>
+        <items id="description">Additional details or questions about the specific physical activity.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Timing</items>
+        <items id="description">Indication of timing related to the physical activity.</items>
+        <items id="comment">The 'Timing' data element has deliberately been loosely modelled to support the myriad of ways that it can be used in questionnaires to capture when an activity was performed. The specific and intended semantics can be further clarified in a template. For example: the actual date and/or time; the start and stop time for the physical activity; the interval of time during which the physical activity was carried out; the duration of the physical activity; the age of the individual at the time of the physical activity; or the duration of time since it occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year.</items>
+      </items>
+      <items code="at0039">
+        <items id="text">Any physical activity?</items>
+        <items id="description">Is there a history of physical activity relevant for the screening purpose?</items>
+        <items id="comment">In a template, the data element would typically be renamed to match the specific question being asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.</items>
+      </items>
+      <items code="at0040">
+        <items id="text">Yes</items>
+        <items id="description" />
+      </items>
+      <items code="at0041">
+        <items id="text">No</items>
+        <items id="description" />
+      </items>
+      <items code="at0042">
+        <items id="text">Unknown</items>
+        <items id="description" />
+      </items>
+      <items code="at0043">
+        <items id="text">Additional details</items>
+        <items id="description">Structured details or questions about screening for physical activity.</items>
+      </items>
+      <items code="at0044">
+        <items id="text">Description</items>
+        <items id="description">Narrative description about the history of any physical activities relevant for the screening purpose.</items>
+      </items>
+      <items code="at0045">
+        <items id="text">Unsure</items>
+        <items id="description" />
+      </items>
+      <items code="at0046">
+        <items id="text">Unsure</items>
+        <items id="description" />
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Kartleggingsspørsmål om fysisk aktivitet</items>
+        <items id="description">Spørsmål og tilhørende svar som brukes til å kartlegge fysisk aktivitet.</items>
+        <items id="comment">Svarene kan være selvrapporterte.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">History</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Uspesifisert hendelse</items>
+        <items id="description">Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Navn på fysisk aktivitet</items>
+        <items id="description">Navnet på en spesifikk fysisk aktivitet eller gruppe av fysiske aktiviteter.</items>
+        <items id="comment">For eksempel: Spiller fotball, går tur i kjøpesenter. Koding av "Navn på fysisk aktivitet" med en terminologi foretrekkes der det er mulig.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Spesifikk fysisk aktivitet?</items>
+        <items id="description">Har den spesifiserte fysiske aktiviteten funnet sted?</items>
+        <items id="comment">Navnet på dataelementet kan omformuleres til det spesifikke spørsmålet i et templat eller brukergrensesnitt. Det foreslåtte verdisettet kan tilpasses/endres i det enkelte bruksområde ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Tilleggsinformasjon</items>
+        <items id="description">Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.</items>
+        <items id="comment">For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Fysisk aktivitet</items>
+        <items id="description">Detaljer om en spesifikk fysisk aktivitet eller en gruppe av fysiske aktiviteter som er innenfor kartleggingsformålet.</items>
+        <items id="comment">Bruk separate instanser av dette CLUSTER'et for å skille mellom spesifikk fysisk aktivitet eller gruppering av fysiske aktiviteter.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Ja</items>
+        <items id="description" />
+      </items>
+      <items code="at0024">
+        <items id="text">Nei</items>
+        <items id="description" />
+      </items>
+      <items code="at0027">
+        <items id="text">Ukjent</items>
+        <items id="description" />
+      </items>
+      <items code="at0034">
+        <items id="text">Kartleggingsformål</items>
+        <items id="description">Konteksten eller årsaken for kartleggingen.</items>
+        <items id="comment">Dette dataelementet er ment for å sette en kontekst for spørsmålene, dersom man senere ønsker å gjøre spørringer på dataene. Det er ikke forventet at dette dataelementet skal være synlig for en bruker av skjemaet, men kun tilgjengelig i de lagrede dataene. For eksempel: "Preoperativ screening" eller navnet på det faktiske spørreskjemaet.</items>
+      </items>
+      <items code="at0035">
+        <items id="text">Kommentar</items>
+        <items id="description">Ytterligere fritekst om den spesifikke fysiske aktiviteten som ikke er omfattet av andre felt.</items>
+      </items>
+      <items code="at0036">
+        <items id="text">Ytterligere detaljer</items>
+        <items id="description">Strukturerte detaljer eller spørsmål om den spesifikke fysiske aktiviteten.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Tidsangivelse</items>
+        <items id="description">Tidsangivelse for den fysiske aktiviteten.</items>
+        <items id="comment">Elementet "Tidsangivelse" er med hensikt løst modellert for å legge til rette for myriadene av mulighetene det kan brukes i spørreskjemaer for å fange når en undersøkelse ble utført. Den spesifikke og tiltenkte semantikken kan bli ytterligere klargjort i et templat. For eksempel: Den fysiske aktivitetens faktiske dato og/eller klokkeslett, start- og sluttid for den fysiske aktiviteten, et tidsintervall for når den fysiske aktiviteten ble gjort, varigheten av en fysisk aktivitet, individets alder på tidspunktet for den fysiske aktiviteten, eller hvor lenge det siden den ble gjort. Kan være en delvis dato, for eksempel bare år, ved å bruke datatypen DV_DATE_TIME.</items>
+      </items>
+      <items code="at0039">
+        <items id="text">Noen form for fysisk aktivitet?</items>
+        <items id="description">Er det tidligere fysisk aktivitet som er innenfor karleggingsformålet?</items>
+        <items id="comment">Navnet på dataelementet kan omformuleres til det spesifikke spørsmålet i et templat eller brukergrensesnitt. Det foreslåtte verdisettet kan tilpasses/endres i det enkelte bruksområde ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN.</items>
+      </items>
+      <items code="at0040">
+        <items id="text">Ja</items>
+        <items id="description" />
+      </items>
+      <items code="at0041">
+        <items id="text">Nei</items>
+        <items id="description" />
+      </items>
+      <items code="at0042">
+        <items id="text">Ukjent</items>
+        <items id="description" />
+      </items>
+      <items code="at0043">
+        <items id="text">Ytterligere detaljer</items>
+        <items id="description">Strukturerte detaljer eller spørsmål om fysiske aktivitet.</items>
+      </items>
+      <items code="at0044">
+        <items id="text">Beskrivelse</items>
+        <items id="description">Fritekstbeskrivelse av fysisk aktivitet som er innenfor kartleggingsformålet.</items>
+      </items>
+      <items code="at0045">
+        <items id="text">Usikker</items>
+        <items id="description" />
+      </items>
+      <items code="at0046">
+        <items id="text">Usikker</items>
+        <items id="description" />
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Fragebogen zum Screening der körperlichen Aktivität</items>
+        <items id="description">Reihe von Fragen und zugehörigen Antworten zum Screening der körperlichen Aktivität.</items>
+        <items id="comment">Die Antworten können selbstberichtet sein.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">History</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Beliebiges Ereignis</items>
+        <items id="description">Standardmäßiger, nicht näher beschriebener Zeitpunkt oder Intervall Ereignis welches in einem Template oder bei der Anwendung genauer definiert werden kann.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Name der körperlichen Aktivität</items>
+        <items id="description">Name einer bestimmten körperlichen Aktivität oder einer Gruppe körperlicher Aktivitäten.</items>
+        <items id="comment">Zum Beispiel: Spielt Fussball, geht in Einkaufszentren spazieren. Kodierung von ‘Name der körperlichen Aktivität’ mit einer Terminologie wird nach Möglichkeit bevorzugt.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Bestimmte körperliche Aktivität?</items>
+        <items id="description">Gibt es eine Vorgeschichte zu dieser körperlichen Aktivität?</items>
+        <items id="comment">In einem Template würde das Datenelement normalerweise in die spezifische gestellte Frage umbenannt. Der vorgeschlagene Wertesatz kann für die lokale Verwendung angepasst werden, indem die Datentypauswahl DV_TEXT oder DV_BOOLEAN verwendet wird, um jedem spezifischen Anwendungsfall zu entsprechen.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Erweiterung</items>
+        <items id="description">Additional information required to extend the model with local content or to align with other reference models or formalisms.</items>
+        <items id="comment">Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Körperliche Aktivität</items>
+        <items id="description">Details zu einer bestimmten körperlichen Aktivität oder einer Gruppe körperlicher Aktivitäten, die für den Zweck des Screenings relevant sind.</items>
+        <items id="comment">Verwenden Sie separate Instanzen dieses CLUSTER, um zwischen bestimmten Aktivitäten oder Gruppen von Aktivitäten zu unterscheiden.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Ja</items>
+        <items id="description" />
+      </items>
+      <items code="at0024">
+        <items id="text">Nein</items>
+        <items id="description" />
+      </items>
+      <items code="at0027">
+        <items id="text">Unbekannt</items>
+        <items id="description" />
+      </items>
+      <items code="at0034">
+        <items id="text">Zweck des Screenings</items>
+        <items id="description">Der Kontext oder Grund für das Screening.</items>
+        <items id="comment">Dieses Datenelement soll bei einer späteren Abfrage den Erhebungskontext für die Frage/Antwort-Gruppen bereitstellen. Es ist nicht vorgesehen, dass dieses Datenelement der Person angezeigt wird; es wird lediglich in den Daten gespeichert.&#xD;
+Zum Beispiel: Screening vor der Aufnahme oder der Name des eigentlichen Fragebogens.</items>
+      </items>
+      <items code="at0035">
+        <items id="text">Kommentar</items>
+        <items id="description">Zusätzliche Beschreibung zu einer spezifischen Frage zur körperlichen Aktivität, die nicht in den übrigen Feldern abgedeckt wurde.</items>
+      </items>
+      <items code="at0036">
+        <items id="text">Zusätzliche Angaben</items>
+        <items id="description">Zusätzliche Angaben oder Fragen zur spezifischen körperlichen Aktivität.</items>
+      </items>
+      <items code="at0037">
+        <items id="text">Zeitangabe</items>
+        <items id="description">Angabe des Zeitpunkts im Zusammenhang mit der körperlichen Aktivität.</items>
+        <items id="comment">Das Datenelement ‘Zeitangabe’ wurde bewusst locker modelliert, um die unzähligen Möglichkeiten zu unterstützen, mit denen es in Fragebögen verwendet werden kann, um zu erfassen, wann eine Aktivität ausgeübt wurde. Die spezifische und beabsichtigte Semantik kann in einem Template weiter geklärt werden. Zum Beispiel: das tatsächliche Datum und/oder die Uhrzeit; die Start- und Endzeit der körperlichen Aktivität; der Zeitraum, in dem die körperliche Aktivität ausgeübt wurde; die Dauer der körperlichen Aktivität; das Alter der Person zum Zeitpunkt der körperlichen Aktivität; oder die Zeitdauer seit der Ausübung der körperlichen Aktivität. Unter Verwendung des Datentyps DV_DATE_TIME ist ein Teildatum zulässig, um nur ein Jahr zu erfassen.</items>
+      </items>
+      <items code="at0039">
+        <items id="text">Irgendeine körperliche Aktivität?</items>
+        <items id="description">Gibt es eine Vorgeschichte körperlicher Aktivität, die für den Zweck des Screenings relevant ist?</items>
+        <items id="comment">In einem Template würde das Datenelement normalerweise in die spezifische gestellte Frage umbenannt. Der vorgeschlagene Wertesatz kann für die lokale Verwendung angepasst werden, indem die Datentypauswahl DV_TEXT oder DV_BOOLEAN verwendet wird, um jedem spezifischen Anwendungsfall zu entsprechen.</items>
+      </items>
+      <items code="at0040">
+        <items id="text">Ja</items>
+        <items id="description" />
+      </items>
+      <items code="at0041">
+        <items id="text">Nein</items>
+        <items id="description" />
+      </items>
+      <items code="at0042">
+        <items id="text">Unbekannt</items>
+        <items id="description" />
+      </items>
+      <items code="at0043">
+        <items id="text">Zusätzliche Angaben</items>
+        <items id="description">Strukturierte Angaben oder Fragen zum Screening auf körperliche Aktivität.</items>
+      </items>
+      <items code="at0044">
+        <items id="text">Beschreibung</items>
+        <items id="description">Beschreibung der Geschichte von körperlichen Aktivitäten, die für das Screening relevant sind.</items>
+      </items>
+      <items code="at0045">
+        <items id="text">Unsicher</items>
+        <items id="description" />
+      </items>
+      <items code="at0046">
+        <items id="text">Unsicher</items>
+        <items id="description" />
+      </items>
+    </term_definitions>
+    <term_bindings terminology="SNOMED-CT">
+      <items code="at0027">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>261665006</code_string>
+        </value>
+      </items>
+      <items code="at0023">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>373066001</code_string>
+        </value>
+      </items>
+      <items code="at0024">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>373067005</code_string>
+        </value>
+      </items>
+      <items code="at0040">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>373066001</code_string>
+        </value>
+      </items>
+      <items code="at0041">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>373067005</code_string>
+        </value>
+      </items>
+      <items code="at0042">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>261665006</code_string>
+        </value>
+      </items>
+    </term_bindings>
+  </ontology>
+</archetype>

@@ -31,4 +31,5 @@
 pub mod config;
 pub mod key;
 pub mod signer;
+pub mod trust;
 pub mod verify;

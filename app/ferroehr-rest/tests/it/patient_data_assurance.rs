@@ -15,12 +15,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
+use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig};
 use ferroehr::system_log::sender::start;
 use ferrohealth_smart::assurance::{AssuranceLevel, AssuranceSection};
 use ferrohealth_smart::config::IssuerEntry;
-use ferrohealth_smart::profile::Delegate;
 use http::{StatusCode, header};
 use serde_json::{Value, json};
 use sqlx::{PgPool, Row};
@@ -46,18 +46,20 @@ fn assurance() -> AssuranceSection {
     }
 }
 
-/// The app whose issuer lists `delegates`, auditing into the store when
-/// `audited`.
-async fn app(delegates: Vec<Delegate>, audited: bool) -> (testkit::TestDb, PgPool, Router) {
+/// The app whose CDR grants each client of `delegates` `act_for_persons`,
+/// auditing into the store when `audited`.
+async fn app(delegates: &[&str], audited: bool) -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
     let mut config = common::api_config(false);
     config.auth = common::trusting(vec![IssuerEntry {
         jwks_file: common::jwks_file().display().to_string(),
-        delegates: Some(delegates),
         ..common::entry(ISSUER, AUDIENCE)
     }]);
     config.assurance = assurance();
     let mut service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    for client in delegates {
+        common::grant_standing(&service, ISSUER, client, Operation::ActForPersons).await;
+    }
     if audited {
         let audit = AuditConfig {
             enabled: true,
@@ -102,7 +104,7 @@ fn ehr_path() -> String {
 /// `401` and the step-up challenge naming the accepted values.
 #[tokio::test]
 async fn a_token_below_the_minimum_gets_the_step_up_challenge() {
-    let (_db, _pool, app) = app(Vec::new(), false).await;
+    let (_db, _pool, app) = app(&[], false).await;
     for extra in [
         json!({ "sub": "dr-a", "acr": "loa-low" }),
         json!({ "sub": "dr-a", "acr": "not-mapped" }),
@@ -129,7 +131,7 @@ async fn a_token_below_the_minimum_gets_the_step_up_challenge() {
 /// reaches a definition route, which carries no patient data.
 #[tokio::test]
 async fn a_token_at_or_above_the_minimum_passes() {
-    let (_db, _pool, app) = app(Vec::new(), false).await;
+    let (_db, _pool, app) = app(&[], false).await;
     for acr in ["loa-substantial", "loa-high"] {
         let status = common::send_status(
             &app,
@@ -154,7 +156,7 @@ async fn a_token_at_or_above_the_minimum_passes() {
 /// client passes.
 #[tokio::test]
 async fn a_person_token_through_an_unlisted_client_is_refused() {
-    let (_db, _pool, app) = app(Vec::new(), false).await;
+    let (_db, _pool, app) = app(&[], false).await;
     let token = bearer(&json!({ "sub": "dr-a", "client_id": "app-1", "acr": "loa-high" }));
     let (status, _headers, body) =
         common::send(&app, common::get_authorized(&ehr_path(), &token)).await;
@@ -164,12 +166,12 @@ async fn a_person_token_through_an_unlisted_client_is_refused() {
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
-/// A third-party client the issuer lists as a delegate acts for the person
+/// A third-party client the CDR grants `act_for_persons` acts for the person
 /// its token names, and the access record carries the delegated mode, the
 /// professional and the level.
 #[tokio::test]
 async fn a_delegate_acting_for_a_professional_passes_and_is_recorded() {
-    let (_db, pool, app) = app(vec![Delegate::Client("app-1".to_owned())], true).await;
+    let (_db, pool, app) = app(&["app-1"], true).await;
     let token = bearer(&json!({ "sub": "prof-007", "client_id": "app-1", "acr": "loa-high" }));
     let status = common::send_status(&app, common::get_authorized(&ehr_path(), &token)).await;
     assert_eq!(status, StatusCode::NOT_FOUND);

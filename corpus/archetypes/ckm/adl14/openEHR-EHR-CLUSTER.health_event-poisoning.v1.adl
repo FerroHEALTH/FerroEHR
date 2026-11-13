@@ -1,0 +1,494 @@
+﻿archetype (adl_version=1.4; uid=e0e30ded-3afb-446a-ba00-4b26ae30a02d)
+	openEHR-EHR-CLUSTER.health_event-poisoning.v1
+specialise
+	openEHR-EHR-CLUSTER.health_event.v1
+
+concept
+	[at0000.1]	-- Poisoning or overdose
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			author = <
+				["name"] = <"Dr. Leonardo Der Jachadurian">
+				["organisation"] = <"Bitios.com">
+			>
+			accreditation = <"Medical Doctor (Internal Medicine Specialist)">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"unknown">
+		["date"] = <"12/03/2007">
+	>
+	details = <
+		["es-ar"] = <
+			language = <[ISO_639-1::es-ar]>
+			purpose = <"Para registrar detalles de un envenenamiento o sobredosis.">
+			use = <"">
+			keywords = <"sobredosis", "intoxicación", "medicamento", "envenenamiento", "tóxico">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For recording details of a poisoning or overdose.">
+			use = <"">
+			keywords = <"OD", "drug", "overdose", "poisoning">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"لتسجيل تفاصيل التسمم أو فرط الجرعة">
+			use = <"">
+			keywords = <"فرط الجرعة", "الدواء/العقار", "فرط الجرعة", "التسمم">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"C85011C0DB7F2F18DCFAEC47DB2D8D39">
+		["build_uid"] = <"c608b3e1-acd2-477d-92b6-3b71ccc46ed8">
+	>
+
+definition
+	CLUSTER[at0000.1] matches {	-- Poisoning or overdose
+		items cardinality matches {1..*; unordered} matches {
+			ELEMENT[at0001] matches {	-- Event
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0009] occurrences matches {0..1} matches {	-- Clinical description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0.21] occurrences matches {0..1} matches {	-- Details
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0.15] occurrences matches {0..1} matches {	-- Substance
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0.20] occurrences matches {0..1} matches {	-- Amount of substance
+						value matches {
+							C_DV_QUANTITY <
+								property = <[openehr::124]>
+								list = <
+									["1"] = <
+										units = <"mg">
+										magnitude = <|>=0.0|>
+										precision = <|1|>
+									>
+									["2"] = <
+										units = <"gm">
+										magnitude = <|>=0.0|>
+										precision = <|1|>
+									>
+								>
+							>
+						}
+					}
+					ELEMENT[at0.16] occurrences matches {0..1} matches {	-- Route
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0.17, 	-- Inhaled
+									at0.18, 	-- Ingested
+									at0.19, 	-- Injected
+									at0.22]	-- Body surface
+								}
+							}
+						}
+					}
+				}
+			}
+			CLUSTER[at0010] occurrences matches {0..1} matches {	-- Occurrence
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0011] occurrences matches {0..1} matches {	-- How long ago
+						value matches {
+							DV_DURATION matches {*}
+						}
+					}
+				}
+			}
+			CLUSTER[at0004] occurrences matches {0..1} matches {	-- Other parties
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0002] occurrences matches {0..1} matches {	-- Witness
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0003] occurrences matches {0..*} matches {	-- Perpetrator
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+			ELEMENT[at0007] occurrences matches {0..1} matches {	-- Circumstances
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0008] occurrences matches {0..1} matches {	-- Preceding symptoms and events
+				items cardinality matches {1..*; unordered} matches {
+					allow_archetype CLUSTER[at0016] occurrences matches {0..*} matches {	-- Cluster: Preceding symptoms and events
+						include
+							archetype_id/value matches {/openEHR-EHR-CLUSTER\.symptom\.v1|openEHR-EHR-CLUSTER\.health_event\.v1/}
+					}
+				}
+			}
+			CLUSTER[at0012] occurrences matches {0..1} matches {	-- Associated symptoms and events
+				items cardinality matches {1..*; unordered} matches {
+					allow_archetype CLUSTER[at0017] occurrences matches {0..*} matches {	-- Cluster: Preceding and associated symptoms and events
+						include
+							archetype_id/value matches {/openEHR-EHR-CLUSTER\.health_event\.v1|openEHR-EHR-CLUSTER\.symptom-pain\.v1|openEHR-EHR-CLUSTER\.symptom\.v1/}
+					}
+				}
+			}
+			CLUSTER[at0013] occurrences matches {0..1} matches {	-- Contributing factors
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0014] occurrences matches {0..*} matches {	-- Contributing factor
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.15"] = <
+					text = <"Substance">
+					description = <"The substance ingested, injected or inhaled.">
+				>
+				["at0.16"] = <
+					text = <"Route">
+					description = <"The route of administration.">
+				>
+				["at0.17"] = <
+					text = <"Inhaled">
+					description = <"By inhalation.">
+				>
+				["at0.18"] = <
+					text = <"Ingested">
+					description = <"Swallowed or via the oral mucosa.">
+				>
+				["at0.19"] = <
+					text = <"Injected">
+					description = <"Injected into the body.">
+				>
+				["at0.20"] = <
+					text = <"Amount of substance">
+					description = <"The total amount of the substance taken.">
+				>
+				["at0.21"] = <
+					text = <"Details">
+					description = <"Details of the poisoning or overdose.">
+				>
+				["at0.22"] = <
+					text = <"Body surface">
+					description = <"Exposure via the surface of the body.">
+				>
+				["at0000"] = <
+					text = <"Health event">
+					description = <"A recording about a health related event.">
+				>
+				["at0000.1"] = <
+					text = <"Poisoning or overdose">
+					description = <"A recording about a poisoning or overdose.">
+				>
+				["at0001"] = <
+					text = <"Event">
+					description = <"The type of event that has occurred.">
+				>
+				["at0002"] = <
+					text = <"Witness">
+					description = <"Who witnessed the event other than the patient.">
+				>
+				["at0003"] = <
+					text = <"Perpetrator">
+					description = <"Any person involved in causing the event.">
+				>
+				["at0004"] = <
+					text = <"Other parties">
+					description = <"Information about other parties.">
+				>
+				["at0007"] = <
+					text = <"Circumstances">
+					description = <"Information about the circumstances surrounding the event.">
+				>
+				["at0008"] = <
+					text = <"Preceding symptoms and events">
+					description = <"Symptoms and events which preceded the index event.">
+				>
+				["at0009"] = <
+					text = <"Clinical description">
+					description = <"A clinical description of what happenned.">
+				>
+				["at0010"] = <
+					text = <"Occurrence">
+					description = <"The timing of the event in relation to the observation.">
+				>
+				["at0011"] = <
+					text = <"How long ago">
+					description = <"The time between the event and the observation time.">
+				>
+				["at0012"] = <
+					text = <"Associated symptoms and events">
+					description = <"Grouping of associated symptoms and events.">
+				>
+				["at0013"] = <
+					text = <"Contributing factors">
+					description = <"Factors contributing to the event or likelihood of the event.">
+				>
+				["at0014"] = <
+					text = <"Contributing factor">
+					description = <"A factor contributing to the event.">
+				>
+				["at0015"] = <
+					text = <"Event details">
+					description = <"*">
+				>
+				["at0016"] = <
+					text = <"Cluster: Preceding symptoms and events">
+					description = <"Symptoms and events which preceded the index event.">
+				>
+				["at0017"] = <
+					text = <"Cluster: Preceding and associated symptoms and events">
+					description = <"Symptoms and events which preceded the index event.">
+				>
+			>
+		>
+		["es-ar"] = <
+			items = <
+				["at0.15"] = <
+					text = <"Sustancia">
+					description = <"La sustancia ingerida, inyectada o inhalada.">
+				>
+				["at0.16"] = <
+					text = <"Ruta">
+					description = <"La ruta de administración.">
+				>
+				["at0.17"] = <
+					text = <"Inhalada">
+					description = <"Por inhalación.">
+				>
+				["at0.18"] = <
+					text = <"Ingerida">
+					description = <"Deglutida o a través de la mucosa oral.">
+				>
+				["at0.19"] = <
+					text = <"Inyectada">
+					description = <"Inyectado en el organismo.">
+				>
+				["at0.20"] = <
+					text = <"Cantidad de sustancia">
+					description = <"La cantidad total de sustancia ingerida, inyectada o inhalada.">
+				>
+				["at0.21"] = <
+					text = <"Detalles">
+					description = <"Detalles del envenenamiento o sobredosis o intoxicación.">
+				>
+				["at0.22"] = <
+					text = <"Superficie corporal">
+					description = <"Exposición a través de la superficie corporal.">
+				>
+				["at0000"] = <
+					text = <"*Health event(en)">
+					description = <"*A recording about a health related event.(en)">
+				>
+				["at0000.1"] = <
+					text = <"Envenenamiento o Sobredosis o Intoxicación">
+					description = <"Un registro acerca de envenenamiento o sobredosis o intoxicación">
+				>
+				["at0001"] = <
+					text = <"Evento">
+					description = <"El tipo de evento que ha ocurrido.">
+				>
+				["at0002"] = <
+					text = <"Testigo">
+					description = <"Quien/quienes presenciaron el evento, además del paciente.">
+				>
+				["at0003"] = <
+					text = <"Perpetrador">
+					description = <"Cualquier persona involucrada en causar el evento.">
+				>
+				["at0004"] = <
+					text = <"Otros involucrados">
+					description = <"Información acerca de otros involucrados.">
+				>
+				["at0007"] = <
+					text = <"Circunstancias">
+					description = <"Información acerca de las circunstancias relacionadas con el evento.">
+				>
+				["at0008"] = <
+					text = <"Síntomas y eventos precedentes">
+					description = <"Síntomas y eventos que precedieron el evento de referencia.">
+				>
+				["at0009"] = <
+					text = <"Descripción Clínica">
+					description = <"Una descripción clínica de lo que ha ocurrido.">
+				>
+				["at0010"] = <
+					text = <"Ocurrencia">
+					description = <"El tiempo entre el evento y la observación.">
+				>
+				["at0011"] = <
+					text = <"Cuanto tiempo atrás">
+					description = <"El tiempo entre el evento y el tiempo de observación.">
+				>
+				["at0012"] = <
+					text = <"Síntomas y eventos asociados">
+					description = <"Grupo de síntomas y eventos asociados.">
+				>
+				["at0013"] = <
+					text = <"Factores  que contribuyeron">
+					description = <"Factores que contribuyeron con el evento o la probabilidad de que ocurra el evento.">
+				>
+				["at0014"] = <
+					text = <"Factor contribuyente">
+					description = <"Un factor que contribuyó con el evento.">
+				>
+				["at0015"] = <
+					text = <"*Event details(en)">
+					description = <"**(en)">
+				>
+				["at0016"] = <
+					text = <"Grupo: Síntomas y eventos precedentes">
+					description = <"Síntomas y eventos que precedieron el evento de referencia.">
+				>
+				["at0017"] = <
+					text = <"Grupo: Síntomas y eventos asociados precedentes">
+					description = <"Síntomas y eventos asociados que precedieron al evento de referencia.">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0.15"] = <
+					text = <"المادة">
+					description = <"المادة التي تم ابتلاعها, حقنها أو استنشاقها">
+				>
+				["at0.16"] = <
+					text = <"الطريق">
+					description = <"طريقة التناول">
+				>
+				["at0.17"] = <
+					text = <"بالاستنشاق">
+					description = <"بالاستنشاق">
+				>
+				["at0.18"] = <
+					text = <"بالابتلاع">
+					description = <"تم ابتلاعه أو عن طريق النسيج المخاطي الفموي">
+				>
+				["at0.19"] = <
+					text = <"بالحقن">
+					description = <"تم الحقن داخل الجسم">
+				>
+				["at0.20"] = <
+					text = <"كمية المادة">
+					description = <"الكمية الكلية للمادة التي تم تناولها">
+				>
+				["at0.21"] = <
+					text = <"التفاصيل">
+					description = <"تفاصيل التسمم أو فرط الجرعة">
+				>
+				["at0.22"] = <
+					text = <"سطح الجسم">
+					description = <"تم التعرض خلال سطح الجسم">
+				>
+				["at0000"] = <
+					text = <"*Health event(en)">
+					description = <"*A recording about a health related event.(en)">
+				>
+				["at0000.1"] = <
+					text = <"التسمم أو فرط الجرعة">
+					description = <"تسجيل حول التسمم أو فرط الجرعة">
+				>
+				["at0001"] = <
+					text = <"الواقعة">
+					description = <"نوع الواقعة التي حدثت">
+				>
+				["at0002"] = <
+					text = <"الشاهد">
+					description = <"من شهد الواقعة فيما عدا المريض">
+				>
+				["at0003"] = <
+					text = <"المسئول عن إعداد الواقعة">
+					description = <"أي شخص متورط في التسبب في الواقعة">
+				>
+				["at0004"] = <
+					text = <"الأطراف الأخرى">
+					description = <"معلومات حول الأطراف الأخرى">
+				>
+				["at0007"] = <
+					text = <"الظروف/الملابسات">
+					description = <"معلومات حول الظروف/الملابسات المحيطة بالواقعة">
+				>
+				["at0008"] = <
+					text = <"الأعراض أو الواقائع السابقة">
+					description = <"الأعراض و الوقائع التي تسبق الواقعة المَنْسَب">
+				>
+				["at0009"] = <
+					text = <"الوصف السريري">
+					description = <"الوصف السريري لما جرى">
+				>
+				["at0010"] = <
+					text = <"الحدوث">
+					description = <"توقيت الواقعة فيما يتعلق بالملاحظة">
+				>
+				["at0011"] = <
+					text = <"منذ أي فترة زمنية">
+					description = <"الوقت بين الواقعة و توقيت الملاحظة">
+				>
+				["at0012"] = <
+					text = <"الأعراض و الوقائع المصاحبة">
+					description = <"مجموعة من الأعراض و الوقائع المصاحبة">
+				>
+				["at0013"] = <
+					text = <"العوامل المساهمة">
+					description = <"العوامل التي تساهم في الواقعة أو زيادة احتمالية حدوث الواقعة">
+				>
+				["at0014"] = <
+					text = <"عامل مساهم">
+					description = <"العامل الذي يساهم في حدوث الواقعة">
+				>
+				["at0015"] = <
+					text = <"*Event details(en)">
+					description = <"**(en)">
+				>
+				["at0016"] = <
+					text = <"عنقود: الأعراض أو الواقائع السابقة">
+					description = <"الأعراض و الوقائع التي تسبق الواقعة المَنْسَب">
+				>
+				["at0017"] = <
+					text = <"عنقود: الأعراض أو الواقائع السابقة و المصاحبة">
+					description = <"الأعراض و الوقائع التي تسبق الواقعة المَنْسَب">
+				>
+			>
+		>
+	>

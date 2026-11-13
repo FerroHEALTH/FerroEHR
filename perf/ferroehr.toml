@@ -10,9 +10,6 @@
 [deployment]
 profile = "sandbox"
 
-[auth]
-enabled = true
-
 # The issuer the Basic user binds under. It signs nothing: its key set, which
 # every FerroEHR image carries, is the public half of a key pair whose private
 # key was discarded.
@@ -37,15 +34,22 @@ audience = ["ferroehr-scim"]
 token_types = ["at+jwt"]
 jwks_file = "/etc/ferroehr/scim-jwks.json"
 
-# ferroehr / ferroehr (Argon2id), the request set's one caller.
+# ferroehr / ferroehr (Argon2id), the request set's one caller: the first
+# administrator, holding ADMIN and the product scope, whose PERSON
+# scripts/scim-provision.sh grants its other scopes and the USER role.
 [[auth.basic.users]]
 user = "ferroehr"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
-scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
-roles = ["ADMIN", "USER"]
 
 [authz.rbac]
 enabled = false
+first_admin = "ferroehr"
+
+# The operations the gate grants in the CDR: its provisioning client's
+# scim_provision before it provisions the Basic user, then that user's
+# scopes and roles (scripts/scim-provision.sh).
+[authz.grants]
+allowed = ["commit_composition", "scim_provision", "hold_roles", "hold_scopes"]
 
 [authz.party_binding]
 provider = { issuer = "urn:oid:2.999.7.9", id = "perf" }
@@ -55,33 +59,13 @@ user = "ferroehr"
 key_issuer = "urn:ferroehr:basic-user"
 key = "ferroehr"
 
-# The party mapping over the professional PERSON and ROLE pair of
-# deploy/definitions/professional/, which the gate loads with
-# `ferroehr definitions load` before `serve`, as docker/ferroehr.dev.toml maps it.
-[[authz.party_binding.person.template]]
-template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
-default = true
-key = { path = "/details[id2]/items[id3]", type = "login" }
-user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
-external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
-
-[[authz.party_binding.person.attribute]]
-scim = "name.formatted"
-name = true
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
-
-[authz.party_binding.professional_role]
-template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
-
-# The SCIM endpoint the gate provisions the Basic user through.
-[auth.scim]
+# The URL clients reach the server at, which every SCIM location names.
+[server]
 public_base_url = "http://127.0.0.1:58080"
 
-[[auth.scim.client]]
-issuer = "https://scim.ferroehr.invalid"
-client_id = "basic-users"
-scope = "ferroehr/scim"
-binding_issuer = "urn:ferroehr:basic-user"
+# The SCIM endpoint the gate provisions the Basic user through, by the
+# `basic-users` client scripts/scim-provision.sh grants scim_provision first.
+[auth.scim]
 
 [record]
 subject_index = "local"

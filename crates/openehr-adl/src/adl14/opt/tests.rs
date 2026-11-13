@@ -698,3 +698,46 @@ fn every_infix_operator_kind_maps_to_its_textual_rendering() {
     );
     assert_eq!(unary_symbol(opt14::types::OperatorKind::Matches), None);
 }
+
+fn string_node(list: &[&str], pattern: Option<&str>) -> opt14::types::CPrimitiveObject {
+    opt14::types::CPrimitiveObject {
+        rm_type_name: "STRING".to_owned(),
+        occurrences: unbounded_occurrences(),
+        node_id: String::new(),
+        item: Some(Box::new(opt14::types::CPrimitive::CString(
+            opt14::types::CString {
+                pattern: pattern.map(str::to_owned),
+                list: list.iter().map(|s| (*s).to_owned()).collect(),
+                list_open: None,
+                assumed_value: None,
+            },
+        ))),
+    }
+}
+
+/// An AOM 1.4 `pattern` is a bare regex; AOM2 stores it with its delimiters
+/// (`org.openehr.am.aom2.c_string.adoc`), escaping a `/` inside it.
+#[test]
+fn a_string_pattern_is_stored_delimited() {
+    let mut cx = test_cx();
+    let CObject::CString(s) = map_primitive_object(&string_node(&[], Some("km/h|.*")), &mut cx)
+    else {
+        panic!("expected a C_STRING");
+    };
+    assert_eq!(s.constraint, Some(vec![r"/km\/h|.*/".to_owned()]));
+}
+
+/// A list beside a pattern is carried whole, so the validator refuses the
+/// mixture (`C_STRING.constraint`) instead of the pattern being dropped.
+#[test]
+fn a_string_list_beside_a_pattern_is_carried_and_refused() {
+    let mut cx = test_cx();
+    let CObject::CString(s) = map_primitive_object(&string_node(&["a", "b"], Some("c.*")), &mut cx)
+    else {
+        panic!("expected a C_STRING");
+    };
+    assert_eq!(
+        s.constraint,
+        Some(vec!["a".to_owned(), "b".to_owned(), "/c.*/".to_owned()])
+    );
+}

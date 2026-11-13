@@ -59,6 +59,7 @@ fn record(event: &AuditEvent, subject: Option<&str>) -> AuditRecord {
     AuditRecord {
         event: event.clone(),
         subject: subject.map(str::to_owned),
+        entry: None,
     }
 }
 
@@ -854,12 +855,17 @@ fn classifying_policy() -> RenderPolicy {
         emergency_purpose_codes = ["ETREAT"]
         [store]
         retention = "P10Y"
-        [categories.templates]
-        "Lab Report" = ["Laboratory-Reports"]
         "#,
     )
     .expect("parse");
-    RenderPolicy::of(&config)
+    let categories: ferroehr::system_log::categories::CategoryMapConfig = toml::from_str(
+        r#"
+        [templates]
+        "Lab Report" = ["Laboratory-Reports"]
+        "#,
+    )
+    .expect("parse the map");
+    RenderPolicy::of(&config, &categories)
 }
 
 /// One event of every rendering path, each field filled that the path reads.

@@ -263,6 +263,7 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
         .merge(ehr::openapi_routes::extension_routes())
         .merge(ehr::access_delay::routes())
         .merge(demographic::relationship::relationship_routes())
+        .merge(demographic::reverse::reverse_relationship_routes())
         .merge(demographic::versioned_relationship::versioned_relationship_routes())
         .merge(definition::archetype::archetype_routes())
         .merge(definition::conversion::conversion_routes())
@@ -272,14 +273,18 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
         .merge(admin::report::report_routes())
         .merge(admin::dump_load::dump_load_routes())
         .merge(admin::integrity::integrity_routes())
+        .merge(admin::access_log::access_log_routes())
         .merge(admin::marks::marks_routes())
         .merge(admin::access_delay::access_delay_routes())
         .merge(admin::access_restriction::access_restriction_routes())
         .merge(admin::opt_out::opt_out_routes())
         .merge(admin::access_repair::access_repair_routes())
+        .merge(admin::access_log_erasure::access_log_erasure_routes())
         .merge(admin::identifiers::identifier_routes())
         .merge(admin::binding_key::binding_key_routes())
         .merge(admin::outbox::outbox_routes())
+        .merge(admin::registers::register_routes())
+        .merge(admin::access_policy::access_policy_routes())
         .merge(message::extract::extract_routes())
         .merge(terminology::routes())
 }
@@ -341,6 +346,15 @@ where
     H: FnOnce(AppState, RequestParts) -> F + Send,
     F: Future<Output = Result<Response, RestError>> + Send,
 {
+    // NOTE: no specification governs operational policy: our own design; the request reads
+    // the newest version of every policy register and the access policy first, so a change
+    // decides this request.
+    if let Err(error) = refresh_policy(&state, op).await {
+        let mut resp = RestError::from(error).into_response();
+        resp.extensions_mut()
+            .insert(crate::system_log::middleware::AuditOpId(op));
+        return resp;
+    }
     // NOTE: EHDS Art. 8 (`docs/law/eu/ehds/text.html`), restricted data reads as
     // absent to every operation but the controller's own and an emergency access.
     let enforced = restriction::applies(&state, op);
@@ -351,7 +365,7 @@ where
     // an access-service caller unless it declares a vital interest under Art. 10(2).
     let opted_out = opt_out::applies(&state, op);
     let guarded = Box::pin(async move {
-        match ehr_access::enforce(&state, op, &parts).await {
+        match ehr_access::enforce(&state, &parts).await {
             Ok(()) => {
                 if enforced {
                     match restriction::refuse_restricted(&state, op, &parts).await {
@@ -399,6 +413,40 @@ where
     resp.extensions_mut()
         .insert(crate::system_log::middleware::AuditOpId(op));
     resp
+}
+
+/// The operations of the admin group that consult a policy register: the hold
+/// of the access delay, the retention period keyed on a category, and the dump
+/// and load, which classify and commit content. The register routes read and
+/// write the register store themselves.
+const ADMIN_REGISTER_READERS: [&str; 4] = [
+    "admin_delay_access",
+    "admin_dump",
+    "admin_load",
+    "admin_put_retention_policy",
+];
+
+/// Bring the policy `op` reads up to date before it runs: the policy
+/// registers ([`reads_registers`]) and, for every operation outside the admin
+/// group, the controller's access policy.
+async fn refresh_policy(state: &AppState, op: &str) -> Result<(), ferroehr::error::ServiceError> {
+    if reads_registers(state, op) {
+        state.backend().refresh_policy_registers().await?;
+    }
+    if !op.starts_with("admin_") {
+        state.backend().refresh_access_policy().await?;
+    }
+    Ok(())
+}
+
+/// Whether `op` reads the policy registers before it runs: every operation but
+/// those of the admin group that consult none, and none while the admin group
+/// is off, which answers `405` before it touches the backend.
+fn reads_registers(state: &AppState, op: &str) -> bool {
+    if !op.starts_with("admin_") {
+        return true;
+    }
+    state.config().api.admin && ADMIN_REGISTER_READERS.contains(&op)
 }
 
 /// Declares one guarded REST handler: the `#[utoipa::path]` function that

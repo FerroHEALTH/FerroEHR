@@ -1,0 +1,442 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-CLUSTER.anatomical_location-precise.v1
+specialise
+	openEHR-EHR-CLUSTER.anatomical_location.v1
+
+concept
+	[at0000.1]	-- Precise anatomical location
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"10/11/2008">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"Record highly detailed anatomical location.">
+			use = <"Use where highly precise localisation information is required, using co-ordinates.">
+			keywords = <"site", "location">
+			misuse = <"The parent OBSERVATION.anatomical_location archetype is generally sufficient for simple gross/surface anatomical location.">
+			copyright = <"copyright (c) 2010 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <"Ian McNicoll Ocean Informatics", ...>
+	other_details = <
+		["references"] = <"Digital Imaging and Communications in Medicine (DICOM) Supplement 122: Specimen Module and Revised Pathology SOP Classes
+DICOM Standards Committee, Working Groups 26, Pathology.">
+		["MD5-CAM-1.0.1"] = <"0AC45BF7B611B1F3CEE405A38C69A0BB">
+	>
+
+definition
+	CLUSTER[at0000.1] matches {	-- Precise anatomical location of an object
+		items cardinality matches {1..*; unordered} matches {
+			CLUSTER[at0005] occurrences matches {0..1} matches {	-- Specific location
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0001] occurrences matches {0..1} matches {	-- Name of location
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0002] occurrences matches {0..1} matches {	-- Side
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0003, 	-- Left
+									at0004, 	-- Right
+									at0051]	-- Bilateral
+								}
+							}
+						}
+					}
+					ELEMENT[at0028] occurrences matches {0..1} matches {	-- Numerical identifier
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0029, 	-- First
+									at0030, 	-- Second
+									at0031, 	-- Third
+									at0032, 	-- Fourth
+									at0033, 	-- Fifth
+									at0034, 	-- Sixth
+									at0035, 	-- Seventh
+									at0036, 	-- Eighth
+									at0037, 	-- Ninth
+									at0038, 	-- Tenth
+									at0039, 	-- Eleventh
+									at0040, 	-- Twelfth
+									at0041, 	-- Thirteenth
+									at0042, 	-- Fourteenth
+									at0043, 	-- Fifteenth
+									at0044, 	-- Sixteenth
+									at0045, 	-- Seventeenth
+									at0046]	-- Eighteenth
+								}
+							}
+						}
+					}
+					ELEMENT[at0024] occurrences matches {0..1} matches {	-- Anatomical plane
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0011, 	-- Midline
+									at0025, 	-- Midclavicular line
+									at0026, 	-- Midaxillary line
+									at0027]	-- Midscapular line
+								}
+							}
+						}
+					}
+				}
+			}
+			CLUSTER[at0020] occurrences matches {0..*} matches {	-- Relative location
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0021] occurrences matches {0..1} matches {	-- Identified landmark
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0006] occurrences matches {0..1} matches {	-- Aspect
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0015, 	-- Above
+									at0014, 	-- Below
+									at0007, 	-- Medial to
+									at0008, 	-- Lateral to
+									at0009, 	-- Superior to
+									at0010, 	-- Inferior to
+									at0012, 	-- Anterior to
+									at0013, 	-- Posterior to
+									at0016, 	-- Inferolateral to
+									at0017, 	-- Superolateral to
+									at0018, 	-- Inferomedial to
+									at0019]	-- Superomedial to
+								}
+							}
+						}
+					}
+					ELEMENT[at0022] occurrences matches {0..1} matches {	-- Distance from landmark
+						value matches {
+							C_DV_QUANTITY <
+								property = <[openehr::122]>
+								list = <
+									["1"] = <
+										units = <"cm">
+									>
+									["2"] = <
+										units = <"in">
+									>
+									["3"] = <
+										units = <"ft">
+									>
+									["4"] = <
+										units = <"mm">
+									>
+								>
+							>
+						}
+					}
+				}
+			}
+			CLUSTER[at0.51] occurrences matches {0..1} matches {	-- Coordinates
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0.52] occurrences matches {0..1} matches {	-- Position frame of reference
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0.53] occurrences matches {0..1} matches {	-- X offset
+						value matches {
+							C_DV_QUANTITY <
+								property = <[openehr::122]>
+							>
+							DV_COUNT matches {
+								magnitude matches {|>=0|}
+							}
+						}
+					}
+					ELEMENT[at0.54] occurrences matches {0..1} matches {	-- Y offset
+						value matches {
+							C_DV_QUANTITY <
+								property = <[openehr::122]>
+							>
+							DV_COUNT matches {
+								magnitude matches {|>=0|}
+							}
+						}
+					}
+					ELEMENT[at0.56] occurrences matches {0..1} matches {	-- Z offset
+						value matches {
+							C_DV_QUANTITY <
+								property = <[openehr::122]>
+							>
+							DV_COUNT matches {
+								magnitude matches {|>=0|}
+							}
+						}
+					}
+				}
+			}
+			ELEMENT[at0053] occurrences matches {0..*} matches {	-- Visual markings/orientation
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0023] occurrences matches {0..*} matches {	-- Description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0052] occurrences matches {0..*} matches {	-- Image
+				value matches {
+					DV_MULTIMEDIA matches {
+						media_type matches {[openEHR::]}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.51"] = <
+					text = <"Coordinates">
+					description = <"DICOM based coordinate based system for accurate object localisation.">
+				>
+				["at0.52"] = <
+					text = <"Position frame of reference">
+					description = <"Description of coordinate system and origin reference point used for localizing the object.">
+				>
+				["at0.53"] = <
+					text = <"X offset">
+					description = <"Location of object (nominal center) relative to the Position Frame Reference.  Distance can be given in SI units or pixels.
+of ({pixel}, UCUM, “Pixels”).">
+				>
+				["at0.54"] = <
+					text = <"Y offset">
+					description = <"Location of object (nominal center) relative to the Position Frame Reference.  Distance can be given in SI units or pixels.
+of ({pixel}, UCUM, “Pixels”).">
+				>
+				["at0.56"] = <
+					text = <"Z offset">
+					description = <"Location of object (nominal center) relative to the Position Frame Reference.  Distance can be given in SI units or pixels.
+of ({pixel}, UCUM, “Pixels”).">
+				>
+				["at0000"] = <
+					text = <"Anatomical Location">
+					description = <"Record details about an anatomical location.">
+				>
+				["at0000.1"] = <
+					text = <"Precise anatomical location">
+					description = <"Record details about the anatomical location of a specimen or body part, including precise localisation information.">
+				>
+				["at0001"] = <
+					text = <"Name of location">
+					description = <"Named anatomical location - ideally would be coded where possible.">
+				>
+				["at0002"] = <
+					text = <"Side">
+					description = <"Specify lateraility of the anatomical location.">
+				>
+				["at0003"] = <
+					text = <"Left">
+					description = <"Left laterality.">
+				>
+				["at0004"] = <
+					text = <"Right">
+					description = <"Right laterality.">
+				>
+				["at0005"] = <
+					text = <"Specific location">
+					description = <"Specific and identified anatomical location.">
+				>
+				["at0006"] = <
+					text = <"Aspect">
+					description = <"Qualifier to identify which direction the anatomical location is in relation to the identified landmark.">
+				>
+				["at0007"] = <
+					text = <"Medial to">
+					description = <"Relative location medial to the landmark.">
+				>
+				["at0008"] = <
+					text = <"Lateral to">
+					description = <"Relative location lateral to the landmark.">
+				>
+				["at0009"] = <
+					text = <"Superior to">
+					description = <"Relative location superior to the landmark.">
+				>
+				["at0010"] = <
+					text = <"Inferior to">
+					description = <"Relative location inferior to the landmark.">
+				>
+				["at0011"] = <
+					text = <"Midline">
+					description = <"In the sagittal plane passing through the midline of the body.">
+				>
+				["at0012"] = <
+					text = <"Anterior to">
+					description = <"Relative location anterior to the landmark.">
+				>
+				["at0013"] = <
+					text = <"Posterior to">
+					description = <"Relative location posterior to the landmark.">
+				>
+				["at0014"] = <
+					text = <"Below">
+					description = <"Relative location below the landmark.">
+				>
+				["at0015"] = <
+					text = <"Above">
+					description = <"Relative location above the landmark.">
+				>
+				["at0016"] = <
+					text = <"Inferolateral to">
+					description = <"Relative location inferior and medial to the landmark.">
+				>
+				["at0017"] = <
+					text = <"Superolateral to">
+					description = <"Relative location superior and lateral to the landmark.">
+				>
+				["at0018"] = <
+					text = <"Inferomedial to">
+					description = <"Relative location inferior and medial to the landmark.">
+				>
+				["at0019"] = <
+					text = <"Superomedial to">
+					description = <"Relative location superior and medial to the landmark.">
+				>
+				["at0020"] = <
+					text = <"Relative location">
+					description = <"Qualifiers to identify non-specific location eg 5cm (distance) inferior (aspect) to the tibial tuberosity (landmark).  There may be more than one relative location required to provide a cross reference.">
+				>
+				["at0021"] = <
+					text = <"Identified landmark">
+					description = <"Identified anatomical landmark from which to specify relative anatomical location.">
+				>
+				["at0022"] = <
+					text = <"Distance from landmark">
+					description = <"Distance of location from the identified landmark.">
+				>
+				["at0023"] = <
+					text = <"Description">
+					description = <"Description of anatomical location.">
+				>
+				["at0024"] = <
+					text = <"Anatomical plane">
+					description = <"Line describing the position of a vertical anatomical plane in the body.">
+				>
+				["at0025"] = <
+					text = <"Midclavicular line">
+					description = <"In the sagittal plane passing through mid-clavical.">
+				>
+				["at0026"] = <
+					text = <"Midaxillary line">
+					description = <"In the coronal plane passing through mid-axilla.">
+				>
+				["at0027"] = <
+					text = <"Midscapular line">
+					description = <"In the sagittal plane passing through mid-scapula.">
+				>
+				["at0028"] = <
+					text = <"Numerical identifier">
+					description = <"Identify the specific anatomical site out of multiple eg tenth rib; fourth vertebra; second toe.">
+				>
+				["at0029"] = <
+					text = <"First">
+					description = <"Ordinal position 1 of an anatomical location.">
+				>
+				["at0030"] = <
+					text = <"Second">
+					description = <"Ordinal position 2 of an anatomical location.">
+				>
+				["at0031"] = <
+					text = <"Third">
+					description = <"Ordinal position 3 of an anatomical location.">
+				>
+				["at0032"] = <
+					text = <"Fourth">
+					description = <"Ordinal position 4 of an anatomical location.">
+				>
+				["at0033"] = <
+					text = <"Fifth">
+					description = <"Ordinal position 5 of an anatomical location.">
+				>
+				["at0034"] = <
+					text = <"Sixth">
+					description = <"Ordinal position 6 of an anatomical location.">
+				>
+				["at0035"] = <
+					text = <"Seventh">
+					description = <"Ordinal position 7 of an anatomical location.">
+				>
+				["at0036"] = <
+					text = <"Eighth">
+					description = <"Ordinal position 8 of an anatomical location.">
+				>
+				["at0037"] = <
+					text = <"Ninth">
+					description = <"Ordinal position 9 of an anatomical location.">
+				>
+				["at0038"] = <
+					text = <"Tenth">
+					description = <"Ordinal position 10 of an anatomical location.">
+				>
+				["at0039"] = <
+					text = <"Eleventh">
+					description = <"Ordinal position 11 of an anatomical location.">
+				>
+				["at0040"] = <
+					text = <"Twelfth">
+					description = <"Ordinal position 12 of an anatomical location.">
+				>
+				["at0041"] = <
+					text = <"Thirteenth">
+					description = <"Ordinal position 13 of an anatomical location.">
+				>
+				["at0042"] = <
+					text = <"Fourteenth">
+					description = <"Ordinal position 14 of an anatomical location.">
+				>
+				["at0043"] = <
+					text = <"Fifteenth">
+					description = <"Ordinal position 15 of an anatomical location.">
+				>
+				["at0044"] = <
+					text = <"Sixteenth">
+					description = <"Ordinal position 16 of an anatomical location.">
+				>
+				["at0045"] = <
+					text = <"Seventeenth">
+					description = <"Ordinal position 17 of an anatomical location.">
+				>
+				["at0046"] = <
+					text = <"Eighteenth">
+					description = <"Ordinal position 18 of an anatomical location.">
+				>
+				["at0051"] = <
+					text = <"Bilateral">
+					description = <"Both left and right.">
+				>
+				["at0052"] = <
+					text = <"Image">
+					description = <"Image or images used to identify a location.">
+				>
+				["at0053"] = <
+					text = <"Visual markings/orientation">
+					description = <"Description of any visual markings used to orientate the viewer e.g external reference points, special sutures, ink markings.">
+				>
+			>
+		>
+	>

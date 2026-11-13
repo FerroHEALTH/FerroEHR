@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -976,44 +976,44 @@ Liu JY, Briggs M, Closs SJ. The psychometric qualities of four observational pai
       </items>
       <items code="at0004">
         <items id="text">Vocalization</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">For example: whimpering; groaning; crying.</items>
       </items>
       <items code="at0005">
         <items id="text">Facial expression</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">For example: looking tense; frowning; grimacing; looking frightened.</items>
       </items>
       <items code="at0006">
         <items id="text">Change in body language</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">For example: fidgeting; rocking; guarding part of body; withdrawn.</items>
       </items>
       <items code="at0008">
         <items id="text">Physiological change</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">For example: temperature, pulse or blood pressure outside normal limits; perspiring, flushing or pallor.</items>
       </items>
       <items code="at0009">
         <items id="text">Physical changes</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">For example: skin tears; pressure areas; arthritis; contractures; previous injuries.</items>
       </items>
       <items code="at0010">
         <items id="text">Absent</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Moderate</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Severe</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Total pain score</items>
@@ -1030,7 +1030,7 @@ Liu JY, Briggs M, Closs SJ. The psychometric qualities of four observational pai
       </items>
       <items code="at0007">
         <items id="text">Behavioural change</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">For example: increased confusion; refusing to eat,; alteration in usual patterns.</items>
       </items>
       <items code="at0015">
@@ -1055,19 +1055,19 @@ Liu JY, Briggs M, Closs SJ. The psychometric qualities of four observational pai
       </items>
       <items code="at0020">
         <items id="text">Type of pain</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Chronic</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Acute</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Acute on chronic</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="sv">
@@ -1089,27 +1089,27 @@ Liu JY, Briggs M, Closs SJ. The psychometric qualities of four observational pai
       </items>
       <items code="at0004">
         <items id="text">Röstuttryck eller ljud</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Exempelvis gnyr, jämrar sig eller gråter.</items>
       </items>
       <items code="at0005">
         <items id="text">Ansiktsuttryck</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Exempelvis spänd, rynkar näsan, grimaserar eller ser rädd ut.</items>
       </items>
       <items code="at0006">
         <items id="text">Förändrat kroppsspråk</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Exempelvis rastlös, vaggar, skyddar en kroppsdel eller ihopkrupen.</items>
       </items>
       <items code="at0008">
         <items id="text">Fysiologisk förändring</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Exempelvis förändrad kroppstemperatur, puls eller blodtryck, svettningar, rodnad eller blekhet i hyn.</items>
       </items>
       <items code="at0009">
         <items id="text">Kroppsliga förändringar</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Exempelvis rivet skinn, tryckskador, kontrakturer eller andra skador.</items>
       </items>
       <items code="at0010">
@@ -1143,7 +1143,7 @@ Liu JY, Briggs M, Closs SJ. The psychometric qualities of four observational pai
       </items>
       <items code="at0007">
         <items id="text">Förändrat beteende</items>
-        <items id="description"></items>
+        <items id="description" />
         <items id="comment">Exempelvis ökad förvirring, matvägran, ökad eller minskad kroppsaktivitet.</items>
       </items>
       <items code="at0015">
@@ -1168,21 +1168,20 @@ Liu JY, Briggs M, Closs SJ. The psychometric qualities of four observational pai
       </items>
       <items code="at0020">
         <items id="text">Typ av smärta</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Långvarig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Akut</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Blandad</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

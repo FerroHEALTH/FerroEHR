@@ -16,6 +16,7 @@
               (.claude/rules/testing.md §Test-fixture construction)"
 )]
 
+mod adl14_aom14_revision;
 mod adl14_assertions;
 mod adl14_cadl_gates;
 mod adl14_cnf_fixture_slot;
@@ -26,6 +27,7 @@ mod adl14_custom_constraints;
 mod adl14_dadl_breadth;
 mod adl14_header_sections;
 mod assembly;
+mod c_string_constraint;
 mod ckm_adl2_generated;
 mod ckm_archetype_packs;
 mod ckm_conversion_breadth;
@@ -42,6 +44,7 @@ mod corpus_validity_rm;
 mod default_value_intervals;
 mod flattener_spec;
 mod legacy14_corpus;
+mod nested_differential_path;
 mod nesting_bounds;
 mod opt14_conversion;
 mod opt_adl14_specialised;
@@ -59,3 +62,4 @@ mod validation_adl14;
 mod validation_integrity_cases;
 mod vcarm_quantity_property;
 mod vetdf_terminology;
+mod vttbk_use_node;

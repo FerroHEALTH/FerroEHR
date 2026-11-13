@@ -1,0 +1,303 @@
+﻿archetype (adl_version=1.4; uid=5d383746-d7f9-498e-9afe-3762728d7625)
+	openEHR-EHR-OBSERVATION.urine_output.v1
+
+concept
+	[at0000]	-- Urine output
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			author = <
+				["name"] = <"Mona Saleh">
+				["email"] = <"monasaleh01@live.com">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"unknown">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record the measured or estimated urine output.">
+			use = <"Use the HISTORY class to record the period of time and totals if required.">
+			keywords = <"wee", "urine", "production", "output">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+		["ar-sy"] = <
+			language = <[ISO_639-1::ar-sy]>
+			purpose = <"لتسجيل قياس (أو تقدير) النتاج البولي">
+			use = <"استخدم فئة (التاريخ) لتسجيل الفترة الزمنية و إجمالي الكميات عند الحاجة">
+			keywords = <"البول", "الإنتاج", "النتاج">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["references"] = <"">
+		["build_uid"] = <"c038f33b-19e8-4286-b841-5606898640c3">
+		["original_publisher"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"E6A056073949078B363F62A91C54E6AA">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	OBSERVATION[at0000] matches {	-- Urine output
+		data matches {
+			HISTORY[at0001] matches {	-- Event Series
+				events cardinality matches {1..*; unordered} matches {
+					POINT_EVENT[at0002] occurrences matches {0..*} matches {	-- Timing
+						data matches {
+							ITEM_TREE[at0003] matches {	-- List
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0004] matches {	-- Urine output
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::129]>
+												list = <
+													["1"] = <
+														units = <"ml">
+														magnitude = <|>=0.0|>
+														precision = <|0|>
+													>
+												>
+											>
+										}
+									}
+									ELEMENT[at0013] occurrences matches {0..1} matches {	-- Passed urine
+										value matches {
+											DV_BOOLEAN matches {
+												value matches {True, False}
+											}
+										}
+									}
+									ELEMENT[at0014] occurrences matches {0..1} matches {	-- Last void
+										value matches {
+											DV_DATE_TIME matches {
+												value matches {yyyy-??-??T??:??:??}
+											}
+										}
+									}
+									ELEMENT[at0015] occurrences matches {0..1} matches {	-- Time since last void
+										value matches {
+											C_DV_QUANTITY <
+												property = <[openehr::128]>
+												list = <
+													["1"] = <
+														units = <"s">
+													>
+													["2"] = <
+														units = <"min">
+													>
+													["3"] = <
+														units = <"h">
+													>
+													["4"] = <
+														units = <"d">
+													>
+												>
+											>
+										}
+									}
+									allow_archetype CLUSTER[at0016] occurrences matches {0..1} matches {
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.fluid\.v1/}
+										exclude
+											archetype_id/value matches {/.*/}
+									}
+								}
+							}
+						}
+					}
+					INTERVAL_EVENT[at0006] occurrences matches {0..*} matches {	-- Total
+						math_function matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {[openehr::148]}
+							}
+						}
+						data matches {
+							use_node ITEM_TREE /data[at0001]/events[at0002]/data[at0003]	-- /data[Event Series]/events[Timing]/data[List]
+						}
+					}
+					INTERVAL_EVENT[at0007] occurrences matches {0..*} matches {	-- Actual
+						math_function matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {[openehr::640]}
+							}
+						}
+						data matches {
+							use_node ITEM_TREE /data[at0001]/events[at0002]/data[at0003]	-- /data[Event Series]/events[Timing]/data[List]
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_LIST[at0008] matches {	-- List
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0009] occurrences matches {0..1} matches {	-- Method of catchment
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0010, 	-- Catheter and bag
+									at0011, 	-- Urine bottle
+									at0012]	-- No catchment - estimated
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Urine output">
+					description = <"Recording of measurement (or estimation) of urine output.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Timing">
+					description = <"The estimation of urine output without specifying the period of time">
+				>
+				["at0003"] = <
+					text = <"List">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Urine output">
+					description = <"Estimated urine output">
+				>
+				["at0006"] = <
+					text = <"Total">
+					description = <"For recording total urine output over a period (may transcend a number of interval or point in time records)">
+				>
+				["at0007"] = <
+					text = <"Actual">
+					description = <"For recording the urine output over a period of time when this will later be totalled.">
+				>
+				["at0008"] = <
+					text = <"List">
+					description = <"@ internal @">
+				>
+				["at0009"] = <
+					text = <"Method of catchment">
+					description = <"The method of quantifying urine">
+				>
+				["at0010"] = <
+					text = <"Catheter and bag">
+					description = <"Urine has been collected in a bag via an indwelling catheter">
+				>
+				["at0011"] = <
+					text = <"Urine bottle">
+					description = <"A urinary container">
+				>
+				["at0012"] = <
+					text = <"No catchment - estimated">
+					description = <"The urine was not collected and only estimated">
+				>
+				["at0013"] = <
+					text = <"Passed urine">
+					description = <"Record if patient has passed urine or not">
+				>
+				["at0014"] = <
+					text = <"Last void">
+					description = <"Time when person last voided urine">
+				>
+				["at0015"] = <
+					text = <"Time since last void">
+					description = <"*">
+				>
+				["at0016"] = <
+					text = <"Fluid cluster">
+					description = <"*">
+				>
+			>
+		>
+		["ar-sy"] = <
+			items = <
+				["at0000"] = <
+					text = <"النتاج البولي">
+					description = <"لتسجيل قياس (أو تقدير) النتاج البولي">
+				>
+				["at0001"] = <
+					text = <"*Event Series(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0002"] = <
+					text = <"التوقيت">
+					description = <"تقدير للنتاج البولي دون تحديد الفترة الزمنية
+">
+				>
+				["at0003"] = <
+					text = <"*List(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0004"] = <
+					text = <"النتاج البولي">
+					description = <"النتاج البولي التقديري">
+				>
+				["at0006"] = <
+					text = <"الإجمالي ">
+					description = <"لتسجيل إجمالي النتاج البولي خلال فترة ما (قد تتجاوز عددا من الفترات الفاصلة أو سجل للحظة زمنية بعينها
+">
+				>
+				["at0007"] = <
+					text = <"الفعلي ">
+					description = <"تسجيل النتاج البولي عبر فترة زمنية حيث سيتم حساب مجموعه في مرحلة تالية">
+				>
+				["at0008"] = <
+					text = <"*List(en)">
+					description = <"*@ internal @(en)">
+				>
+				["at0009"] = <
+					text = <"طريقة الاستجماع ">
+					description = <"طريقة التقدير الكَمِّي للبول">
+				>
+				["at0010"] = <
+					text = <"قثطار و كيس'">
+					description = <"تم استجماع البول في كيس عن طريق قثطار مستقر">
+				>
+				["at0011"] = <
+					text = <"قارورة بول">
+					description = <"حاوية / إناء بول">
+				>
+				["at0012"] = <
+					text = <"لم يتم الاستجماع - تم التقدير ">
+					description = <"لم يتم تجميع البول و إنما تم فقط تقدير كميته">
+				>
+				["at0013"] = <
+					text = <"هل تم إمرار البول ">
+					description = <"تسجيل ما إذا كان المريض قام بإمرار / إخراج البول أم لا ">
+				>
+				["at0014"] = <
+					text = <"آخر مرة تبول ">
+					description = <"التوقيت الذي قام فيه الشخص بالتبول">
+				>
+				["at0015"] = <
+					text = <"الفترة منذ آخر مرة تبول">
+					description = <"**(en)">
+				>
+				["at0016"] = <
+					text = <"عنقود خاص بالسائل الذي تم تجميعه">
+					description = <"**(en)">
+				>
+			>
+		>
+	>

@@ -29,7 +29,7 @@ use openehr_query::parser::parse_str;
 use crate::aql;
 use crate::aql::error::{AqlError, ExecError};
 use crate::aql::ir::{Params, QueryDomain, QueryIr};
-use crate::aql::sql::SqlCtx;
+use crate::aql::sql::{PolicyParties, SqlCtx};
 use crate::error::refusal::{Missing, Refusal};
 use crate::error::{ErrorChain, ServiceError};
 use crate::service::FerroEhrService;
@@ -127,7 +127,9 @@ impl FerroEhrService {
             Err(failure) => failure.outcome,
         };
         count_query(label);
-        outcome.map_err(|failure| *failure.error)
+        outcome
+            .map(|outcome| outcome.naming(aql, name))
+            .map_err(|failure| *failure.error)
     }
 
     /// Execute a planned single-domain query and assemble its `RESULT_SET`,
@@ -156,6 +158,9 @@ impl FerroEhrService {
         // Multi-EHR scoping (`ehr_ids: List<UUID>`): an absent id raises
         // `ehr_id_does_not_exist`.
         self.check_ehr_ids(&request.ehr_ids).await?;
+        let access_settings = Box::pin(self.ehr_access_readers())
+            .await
+            .map_err(Failure::analysis)?;
         let ctx = SqlCtx {
             system_id: self.effective_system_id(),
             ehr_ids: request.ehr_ids.clone(),
@@ -174,6 +179,8 @@ impl FerroEhrService {
             // §Supporting Archetype-based Querying): resolved here, once per execution,
             // because SQL building is synchronous.
             archetype_lineage: self.archetype_lineage().await,
+            policy_parties: PolicyParties::of_request(&self.binding),
+            access_settings,
         };
 
         let exec_start = Instant::now();
@@ -758,6 +765,8 @@ mod tests {
             limit: None,
             offset: None,
             archetype_lineage: std::sync::Arc::new(crate::aql::lineage::ArchetypeLineage::default()),
+            policy_parties: crate::aql::sql::PolicyParties::Served,
+            access_settings: crate::aql::sql::EhrAccessReaders::Every,
         };
         let pool = closed_pool().await;
         let failure = crate::aql::exec::execute(&pool, &ir, &params, &ctx, profile)

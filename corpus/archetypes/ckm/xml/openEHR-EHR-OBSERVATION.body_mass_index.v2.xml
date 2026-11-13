@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -101,8 +101,7 @@ Bei Kindern und Jugendlichen muss der BMI anhand von altersbezogenen Referenztab
         <code_string>sv</code_string>
       </language>
       <purpose>Att registrera en individs BMI, (body mass index) dvs. kroppsmasseindex.&#xD;
-BMI är ett beräknat relationstal som beskriver hur en individs kroppsvikt relaterar till den vikt som anses normal, eller önskvärd, för individens längd.&#xD;
-</purpose>
+BMI är ett beräknat relationstal som beskriver hur en individs kroppsvikt relaterar till den vikt som anses normal, eller önskvärd, för individens längd.</purpose>
       <keywords>fetma</keywords>
       <keywords>index</keywords>
       <keywords>kroppsmassa</keywords>
@@ -120,8 +119,7 @@ Formel: BMI beräknas vanligen som vikt i kilo delat med höjd i meter i kvadrat
 I vissa situationer är BMI- formeln korrigerad exempelvis för användning i amputeringar. Denna specifika formel kan registreras som en del av protokollet. Alternativt kan den gemensamma BMI-beräkningen användas med amputeringar och liknande skador eller funktionshinder om man använder justerad längd och eller justerad vikt i förekommande fall, snarare än faktisk längd och vikt. Se arketyperna: &#xD;
 openEHR-EHR-OBSERVATION.height-adjusted och openEHR-EHR-OBSERVATION.body_weight-adjusted.&#xD;
 &#xD;
-Se WHO:s-referens angående justeringar av höjd och längd för BMI inom pediatrik. Hos barn och tonåringar måste BMI bedömas med hjälp av åldersrelaterade referensdiagram.&#xD;
-</use>
+Se WHO:s-referens angående justeringar av höjd och längd för BMI inom pediatrik. Hos barn och tonåringar måste BMI bedömas med hjälp av åldersrelaterade referensdiagram.</use>
       <misuse>Ska inte användas för att registrera information om BMI procent. De registreras i separata arketyper.</misuse>
       <copyright />
     </details>
@@ -290,8 +288,7 @@ In children and teens, BMI needs to be assessed using age-related reference char
         </terminology_id>
         <code_string>zh-cn</code_string>
       </language>
-      <purpose>旨在记录个人的体重指数（ Body Mass Index，BMI）。&#xD;
-</purpose>
+      <purpose>旨在记录个人的体重指数（ Body Mass Index，BMI）。</purpose>
       <keywords>体重指数</keywords>
       <keywords>体质指数</keywords>
       <keywords>体质量指数</keywords>
@@ -368,7 +365,7 @@ En niños y adolescentes, el IMC debe evaluarse utilizando tablas de referencia 
         <code_string>es-ar</code_string>
       </language>
       <purpose>Registrar el Índice de Masa Corporal (IMC) de un individuo.&#xD;
-El Índice de Masa Corporal  es una cociente que describe la manera en que el peso de un individuo se considera normal, o deseable, respecto a su altura. </purpose>
+El Índice de Masa Corporal  es una cociente que describe la manera en que el peso de un individuo se considera normal, o deseable, respecto a su altura.</purpose>
       <keywords>obesidad(sp)</keywords>
       <keywords>índice(sp)</keywords>
       <keywords>masa corporal(sp)</keywords>
@@ -442,8 +439,8 @@ For barn og tenåringer vurderes BMI ved hjelp av aldersjusterte referansediagra
         </terminology_id>
         <code_string>fa</code_string>
       </language>
-      <purpose> برای ثبت شاخص توده بدن فرد  بکار می رود &#xD;
-شاخص توده بدن نسبتی است که نحوه ارتباط وزن بدن با وزن طبیعی یا مورد دلخواه، با توجه به قد فرد را محاسبه می کند که بصورت وزن طبیعی یا مطلوب فرد در نظر گرفته می شود     </purpose>
+      <purpose>برای ثبت شاخص توده بدن فرد  بکار می رود &#xD;
+شاخص توده بدن نسبتی است که نحوه ارتباط وزن بدن با وزن طبیعی یا مورد دلخواه، با توجه به قد فرد را محاسبه می کند که بصورت وزن طبیعی یا مطلوب فرد در نظر گرفته می شود</purpose>
       <keywords>چاقی</keywords>
       <keywords>شاخص</keywords>
       <keywords>توده بدن</keywords>
@@ -453,15 +450,14 @@ For barn og tenåringer vurderes BMI ved hjelp av aldersjusterte referansediagra
       <keywords>سو تغذیه</keywords>
       <keywords>اختلال رشد</keywords>
       <keywords>پرخوری</keywords>
-      <use> برای ثبت شاخص توده بدن بزرگسالان و کودکان بکار می رود برای وارد کردن شاخص توده بدن بصورت دستی(توسط افراد بالینی محاسبه و بطور مستقیم ثبت می شود) یا بطور خودکار (محاسبات بطور خودکار توسط نرم افزار و بر اساس اندازه های جداگانه قد و وزن انجام می شود) محاسبه و ثبت می شود.ء&#xD;
+      <use>برای ثبت شاخص توده بدن بزرگسالان و کودکان بکار می رود برای وارد کردن شاخص توده بدن بصورت دستی(توسط افراد بالینی محاسبه و بطور مستقیم ثبت می شود) یا بطور خودکار (محاسبات بطور خودکار توسط نرم افزار و بر اساس اندازه های جداگانه قد و وزن انجام می شود) محاسبه و ثبت می شود.ء&#xD;
 فرمولها : شاخص توده بدن معمولا بصورت وزن بر حسب کیلو گرم تقسیم بر [قد بر حسب متر به توان دو] محاسبه می شود. در محاسبات همیشه فرض بر این فرمول است مگر اینکه عناصر فرمول در پروتکل مدنظر مشخص شوند. همچنین بعنوان فرمولی جایگزین برای تخمین شاخص توده بدن از پوند و اینچ نیز استفاده می شود : وزن بر حسب پوند تقسیم بر [قد بر حسب اینچ به توان دو] ضرب در 703 (مقادیر کسری بصورت اعشاری تغییر می یابند).&#xD;
 شاخص توده بدن برای بکار گیری در شرایطی همچون قطع عضو تصحیح می شود ،این فرمول را می توان بصورت بخشی از پروتکل ثبت نمود. بعنوان فرمولی جایگزین، می توان از فرمول شاخص توده بدن، با تاثیر دادن قد یا وزن معادل (تطبیق یافته) عضو معیوب به جای قد یا وزن واقعی، در موارد قطع عضو و صدمات مشابه یا ناتوانی ها، نیز استفاده کرد.ء&#xD;
 ببینید:ء&#xD;
 openEHR-EHR-OBSERVATION.height-adjusted  وopenEHR-EHR-OBSERVATION.body_weight-adjusted.&#xD;
 مرجع سازمان جهانی بهداشت در مورد استفاده از وزن و یا قد برای شاخص توده بدن در اطفال را بینید.&#xD;
-در بچه ها و نوجوانان لازم است شاخص توده بدن با استفاده از جدول مرجع سن مربوطه محاسبه شود&#xD;
-  </use>
-      <misuse> برای ثبت اطلاعات در مورد شاخص توده بدن به درصد در نظر گرفته نشده است-  این موارد در الگو ساز جداگانه ای ثبت خواهد شد</misuse>
+در بچه ها و نوجوانان لازم است شاخص توده بدن با استفاده از جدول مرجع سن مربوطه محاسبه شود</use>
+      <misuse>برای ثبت اطلاعات در مورد شاخص توده بدن به درصد در نظر گرفته نشده است-  این موارد در الگو ساز جداگانه ای ثبت خواهد شد</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
     <details>
@@ -1201,9 +1197,7 @@ En nens i adolescents, l'IMC ha de ser avaluat utilitzant gràfics de referènci
       </items>
       <items code="at0002">
         <items id="text">Qualquer evento</items>
-        <items id="description">Padrão, ponto não específico no tempo ou evento intervalar que pode ser explicitamente definido em um template ou em tempo de execução. &#xD;
-&#xD;
-</items>
+        <items id="description">Padrão, ponto não específico no tempo ou evento intervalar que pode ser explicitamente definido em um template ou em tempo de execução.</items>
       </items>
       <items code="at0003">
         <items id="text">Single</items>
@@ -1323,8 +1317,7 @@ En nens i adolescents, l'IMC ha de ser avaluat utilitzant gràfics de referènci
     <term_definitions language="fa">
       <items code="at0000">
         <items id="text">شاخص توده بدن</items>
-        <items id="description">اندازه گیری محاسبه شده ای که وزن و قد افراد را مقایسه می کند&#xD;
-</items>
+        <items id="description">اندازه گیری محاسبه شده ای که وزن و قد افراد را مقایسه می کند</items>
       </items>
       <items code="at0001">
         <items id="text">*history(en)</items>
@@ -1352,7 +1345,7 @@ En nens i adolescents, l'IMC ha de ser avaluat utilitzant gràfics de referènci
       </items>
       <items code="at0007">
         <items id="text">ثبت خودکار</items>
-        <items id="description"> شاخص توده بدن بطور خودکار بدون مداخله کاربر محاسبه و ثبت می شود</items>
+        <items id="description">شاخص توده بدن بطور خودکار بدون مداخله کاربر محاسبه و ثبت می شود</items>
       </items>
       <items code="at0008">
         <items id="text">ورود مستقیم داده ها</items>
@@ -2123,4 +2116,3 @@ En nens i adolescents, l'IMC ha de ser avaluat utilitzant gràfics de referènci
     </term_bindings>
   </ontology>
 </archetype>
-

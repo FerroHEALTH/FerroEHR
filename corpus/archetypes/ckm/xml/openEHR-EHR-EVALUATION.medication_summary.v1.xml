@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1236,9 +1236,7 @@ Not to be used to record an observation about the use of a medication - use OBSE
         <items id="text">Cumulative dose</items>
         <items id="description">Total amount of the medication used over the lifetime of the individual.</items>
         <items id="comment">For example: monitoring of the cumulative dose of doxorubicin.&#xD;
-May be manually calculated or derived via the EHR from multiple sources.&#xD;
-&#xD;
-</items>
+May be manually calculated or derived via the EHR from multiple sources.</items>
       </items>
       <items code="at0016">
         <items id="text">Episode amount</items>
@@ -1371,8 +1369,7 @@ Kan regnes ut manuelt eller utledes via ulike kilder, som for eksempel kurvesyst
       <items code="at0018">
         <items id="text">Indikasjon for perioden</items>
         <items id="description">Klinisk indikasjon for bruk av legemiddelet i denne perioden, særlig der dette er mer spesifikt eller skiller seg fra informasjonen i dataelementet 'Klinisk indikasjon'. Kan også brukes der det ikke er noen klinisk indikasjon som gjelder for alle episoder.</items>
-        <items id="comment">Dette dataelementet og dataelementet "Klinisk indikasjon" på arketypens toppnivå, kan potensielt komme i konflikt med hverandre. I disse tilfellene vil dette dataelementet ha forrang over "Klinisk indikasjon". Koding med en terminologi er foretrekkes, der det er mulig. For eksempel: kreftbehandling eller revmatoid artritt ved osteoporose.&#xD;
-</items>
+        <items id="comment">Dette dataelementet og dataelementet "Klinisk indikasjon" på arketypens toppnivå, kan potensielt komme i konflikt med hverandre. I disse tilfellene vil dette dataelementet ha forrang over "Klinisk indikasjon". Koding med en terminologi er foretrekkes, der det er mulig. For eksempel: kreftbehandling eller revmatoid artritt ved osteoporose.</items>
       </items>
       <items code="at0019">
         <items id="text">Tilleggsinformasjon</items>
@@ -1633,10 +1630,7 @@ Wenn möglich, wird die Kodierung mit einer externen Terminologie bevorzugt. Zum
       <items code="at0020">
         <items id="text">Therapeutische Intention</items>
         <items id="description">Die therapeutische Absicht für die Anrwendung des Medikaments in diesem Anwendungszeitraum.</items>
-        <items id="comment">Codierung mit einer externen Terminologie, soweit möglich wird empfohlen. Zum Beispiel: Schmerzlinderung; palliativ oder kurativ; Kurzzeitkurs oder lebenslange Antibiotika.&#xD;
-	&#xD;
-&#xD;
-</items>
+        <items id="comment">Codierung mit einer externen Terminologie, soweit möglich wird empfohlen. Zum Beispiel: Schmerzlinderung; palliativ oder kurativ; Kurzzeitkurs oder lebenslange Antibiotika.</items>
       </items>
       <items code="at0022">
         <items id="text">Therapeutisches Ansprechen</items>
@@ -1675,4 +1669,3 @@ Wenn möglich, wird die Kodierung mit einer externen Terminologie bevorzugt. Zum
     </term_definitions>
   </ontology>
 </archetype>
-

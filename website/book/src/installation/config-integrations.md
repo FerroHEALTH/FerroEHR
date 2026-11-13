@@ -165,13 +165,14 @@ discard, so asking for it breaks data minimisation
 
 ## `[record.change_feed]`
 
-The commit-event outbox and its cursor feed. Off until a reader is named; the
-envelopes are PHI-free by design. The feed, its routes and its scope are on
+The commit-event outbox and its cursor feed. Off until a reader is granted:
+a reader is the `reader` element of a `read_change_feed` grant in the CDR, not
+a key ([Operational policy](../operational-policy.md#what-the-grants-decide)).
+The envelopes are PHI-free by design. The feed, its routes and its scope are on
 [Change events (outbox feed)](../beyond-core/outbox-feed.md).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `readers` | list of strings | `[]` | The readers of the feed, each matching `^[a-z][a-z0-9-]{0,62}$`. With none, no commit writes an outbox row. Boot registers each one and marks every reader the list no longer names inactive, so it holds the prune back no longer. |
 | `retention` | duration | `"7d"` | How long an acknowledged row is kept after its commit; at least a second. |
 | `prune_interval` | duration | `"1h"` | How often the retention prune runs; never `"0s"`. |
 
@@ -215,8 +216,8 @@ decides what the commit does.
 
 ### The endpoint table
 
-Every outbound HTTP integration, `[terminology.endpoint]`, `[pixm.endpoint]`,
-`[audit.fhir_feed.endpoint]` and `[authz.abac.remote.endpoint]`, is the
+Every outbound HTTP integration, `[terminology.endpoint]`, `[pixm.endpoint]` and
+`[audit.fhir_feed.endpoint]`, is the
 FerroHEALTH family's one endpoint
 table, so an operator writes the same keys for each integration of each
 product. Each integration's client is built from it by `ferrohealth-smart`'s

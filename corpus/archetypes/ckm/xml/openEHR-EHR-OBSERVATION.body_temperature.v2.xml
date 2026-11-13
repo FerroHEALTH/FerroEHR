@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -53,10 +53,10 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">no.nasjonalikt</other_details>
-    <other_details id="MD5-CAM-1.0.1">FD63E3431221A1986DD4866DBFB3C3B5</other_details>
-    <other_details id="build_uid">3e41e976-b27e-4891-867c-9373e360473a</other_details>
+    <other_details id="MD5-CAM-1.0.1">DA33968AFF5F8A0CE79B4EBBE43C6334</other_details>
+    <other_details id="build_uid">9f3cec55-e68d-4c7f-8b64-131b7d79254f</other_details>
     <other_details id="ip_acknowledgements">This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.</other_details>
-    <other_details id="revision">2.1.10</other_details>
+    <other_details id="revision">2.1.11</other_details>
     <details>
       <language>
         <terminology_id>
@@ -120,8 +120,7 @@ Dieser Archetyp darf nicht verwendet werden, um die Temperatur eines Körperteil
 &#xD;
 Ytterligare CLUSTER-arketyper kan inkluderas för att beskriva andra omständigheter såsom miljöförhållanden och detaljer om fysiskt ansträngning där det är tillämpligt.&#xD;
 &#xD;
-Observera att mätplatsen och mätmetoden kan behöva visas för slutanvändaren för att underlätta en korrekt tolkning av den registrerade temperaturen. &#xD;
-</use>
+Observera att mätplatsen och mätmetoden kan behöva visas för slutanvändaren för att underlätta en korrekt tolkning av den registrerade temperaturen.</use>
       <misuse>Ska inte användas för att registrera temperaturen av något annat föremål.&#xD;
 &#xD;
 Ska inte användas för att registrera temperaturen av en enskild kroppsdel, exempelvis temperaturen på fotsulan som en del i ett vårdprogram för diabetiker.</misuse>
@@ -246,8 +245,7 @@ This archetype is not to be used to record the temperature of a part of the body
       </language>
       <purpose>Registrare la temperatura misurata di una persona - come surrogato della temperatura del corpo centrale.</purpose>
       <keywords>temperatura, corpo, tronco, febbre, ipotermia, ipertermia</keywords>
-      <use>&#xD;
-Utilizzato per registrare la misurazione della temperatura corporea di un individuo, che è un indicatore della temperatura corporea interna dell'individuo.&#xD;
+      <use>Utilizzato per registrare la misurazione della temperatura corporea di un individuo, che è un indicatore della temperatura corporea interna dell'individuo.&#xD;
 &#xD;
 Possono essere inclusi ulteriori cluster per fornire dati aggiuntivi sullo stato - comprese le condizioni ambientali e i dettagli dello stato di fatica, se del caso.&#xD;
 &#xD;
@@ -332,18 +330,18 @@ Este arquetipo no debe usarse para registrar la temperatura de una parte del cue
         </terminology_id>
         <code_string>ja</code_string>
       </language>
-      <purpose>深部体温の代用として計測された人の体温を記録するため。</purpose>
+      <purpose>深部体温の代用として測定された人の体温を記録するため。</purpose>
       <keywords>体温</keywords>
       <keywords>人体</keywords>
       <keywords>深部体温</keywords>
       <keywords>発熱</keywords>
       <keywords>低体温</keywords>
       <keywords>高体温</keywords>
-      <use>測定対象の個人の深部体温の代用として計測された体温を記録するために用いられる。&#xD;
+      <use>測定対象の個人の深部体温の代用として測定された体温を記録するために用いられる。&#xD;
 さらに状態データを表すために、追加のクラスタを内包することもできる。たとえば、環境条件や、月経周期の詳細、労作についての詳細を必要に応じて内包する。&#xD;
 注意：計測された温度を正確に解釈するためにエンドユーザーに記録方法や部位を示す必要があるかもしれない。</use>
-      <misuse>このアーキタイプは、体温以外を計測するためには用いられない。&#xD;
-このアーキタイプは、身体において独立した一部の温度を記録するためには用いられない。たとえば、糖尿病の慢性期管理の一環として、足底温を計測すること。</misuse>
+      <misuse>このアーキタイプは、体温以外を測定するためには用いられない。&#xD;
+このアーキタイプは、身体において独立した一部の温度を記録するためには用いられない。たとえば、糖尿病の慢性期管理の一環として、足底温を測定すること。</misuse>
       <copyright />
     </details>
     <details>
@@ -353,16 +351,16 @@ Este arquetipo no debe usarse para registrar la temperatura de una parte del cue
         </terminology_id>
         <code_string>sl</code_string>
       </language>
-      <purpose>Za beleženje izmerjene telesne temperature osebe - kot nadomestek za temperaturo jedrnega dela telesa.</purpose>
+      <purpose>Za beleženje izmerjene telesne temperature osebe - kot nadomestek za jedrno telesno temperaturo.</purpose>
       <keywords>temperatura</keywords>
       <keywords>telo</keywords>
       <keywords>jedro</keywords>
       <keywords>vročina</keywords>
       <keywords>hipotermija</keywords>
       <keywords>hipertermija</keywords>
-      <use>Uporabljeno za beleženje meritve telesne temperature posameznika, ki je nadomestek za temperaturo jedrnega dela telesa posameznika.&#xD;
+      <use>Uporabljeno za beleženje meritve telesne temperature posameznika, ki je nadomestek za jedrno telesno temperaturo posameznika.&#xD;
 &#xD;
-Dodatne skupine (clustri) je mogoče vključiti za zagotovitev dodatnih podatkov o stanju - vključno z okoljskimi pogoji in podrobnostmi o naporu, kjer je primerno.&#xD;
+Dodatne sklope je mogoče vključiti za zagotovitev dodatnih podatkov o stanju - vključno z okoljskimi pogoji in podrobnostmi o naporu, kjer je primerno.&#xD;
 &#xD;
 Prosimo, upoštevajte: Morda bo potrebno končnemu uporabniku prikazati mesto in metodo beleženja, da se olajša natančno interpretacijo zabeležene temperature.</use>
       <misuse>Ta arhetip ni namenjen beleženju temperature katerega koli drugega predmeta.&#xD;
@@ -388,8 +386,7 @@ Ta arhetip ni namenjen beleženju temperature izoliranega dela telesa, na primer
 لطفا توجه داشته باشید که برای تسهیل در تفسیر صحیح دما ثبت شده، توسط کاربر نهایی ممکن است که نمایش محل و روش ثبت لازم باشد</use>
       <misuse>این الگو ساز جهت ثبت دما اشیا دیگر بکار نمی رود .&#xD;
 این الگو ساز جهت ثبت دمای بخشهایی از بدن -&#xD;
-به عنوان مثال دمای کف پا به عنوان بخشی از پایش دیابت مزمن- بصورت جداگانه استفاده نمی شود&#xD;
-   </misuse>
+به عنوان مثال دمای کف پا به عنوان بخشی از پایش دیابت مزمن- بصورت جداگانه استفاده نمی شود</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
     <details>
@@ -581,9 +578,9 @@ Heidi Koikkalainen, freshEHR</other_details>
       </terminology_id>
       <code_string>sl</code_string>
     </language>
-    <author id="name">Vanja Maravić, Lara Škufca</author>
+    <author id="name">Vanja Maravić, Lara Škufca, Ana Milošev, Anđela Marjanović</author>
     <author id="organisation">Better Deutschland GmbH, Better d.o.o.</author>
-    <author id="email">vanja.maravic@better.care, laras@better.care</author>
+    <author id="email">vanja.maravic@better.care, laras@better.care, ana.milosev@better.care, andjela.marjanovic@better.care</author>
   </translations>
   <translations>
     <language>
@@ -2014,8 +2011,7 @@ Heidi Koikkalainen, freshEHR</other_details>
       </items>
       <items code="at0031">
         <items id="text">لخت</items>
-        <items id="description">بدون لباس ، ملافه و یا پوشش&#xD;
-</items>
+        <items id="description">بدون لباس ، ملافه و یا پوشش</items>
       </items>
       <items code="at0032">
         <items id="text">لباس و یا ملافه کم</items>
@@ -2055,7 +2051,7 @@ Heidi Koikkalainen, freshEHR</other_details>
       </items>
       <items code="at0057">
         <items id="text">جنب و جوش</items>
-        <items id="description">جزییاتی در مورد جنب و جوش  فرد در زمان اندازه گیری دما </items>
+        <items id="description">جزییاتی در مورد جنب و جوش  فرد در زمان اندازه گیری دما</items>
       </items>
       <items code="at0059">
         <items id="text">تجهیز</items>
@@ -2827,47 +2823,47 @@ Heidi Koikkalainen, freshEHR</other_details>
       </items>
       <items code="at0003">
         <items id="text">任意のイベント</items>
-        <items id="description">デフォルトではテンプレートや実行時に明示的に定義される特定されない時点あるいは一定の間隔のイベント</items>
+        <items id="description">デフォルトではテンプレートや実行時に明示的に定義されるまで、特定されない時点あるいは一定の間隔のイベント</items>
       </items>
       <items code="at0004">
         <items id="text">体温</items>
-        <items id="description">計測された体温</items>
+        <items id="description">測定された体温</items>
       </items>
       <items code="at0020">
         <items id="text">Protocol</items>
         <items id="description">@ internal @</items>
       </items>
       <items code="at0021">
-        <items id="text">計測部位</items>
-        <items id="description">*Simple description about the site of measurement.(en)</items>
+        <items id="text">測定部位</items>
+        <items id="description">測定部位についての簡単な記述。</items>
       </items>
       <items code="at0022">
         <items id="text">口腔</items>
-        <items id="description">口腔内で計測された温度</items>
+        <items id="description">口腔内で測定された温度</items>
       </items>
       <items code="at0023">
         <items id="text">外耳道</items>
-        <items id="description">外耳道内で計測された温度。</items>
+        <items id="description">外耳道内で測定された温度。</items>
       </items>
       <items code="at0024">
         <items id="text">腋窩</items>
-        <items id="description">腕を脇につけた状態で測定された腋窩の皮膚から計測された温度。</items>
+        <items id="description">腕を脇につけた状態で測定された腋窩の皮膚から測定された温度。</items>
       </items>
       <items code="at0025">
         <items id="text">直腸</items>
-        <items id="description">直腸内で計測された温度。</items>
+        <items id="description">直腸内で測定された温度。</items>
       </items>
       <items code="at0026">
         <items id="text">鼻咽頭</items>
-        <items id="description">鼻咽頭内で計測された温度。</items>
+        <items id="description">鼻咽頭内で測定された温度。</items>
       </items>
       <items code="at0027">
         <items id="text">膀胱</items>
-        <items id="description">膀胱内で計測された温度</items>
+        <items id="description">膀胱内で測定された温度</items>
       </items>
       <items code="at0028">
         <items id="text">血管内</items>
-        <items id="description">血管系の内部で計測された温度。</items>
+        <items id="description">血管系の内部で測定された温度。</items>
       </items>
       <items code="at0029">
         <items id="text">状態</items>
@@ -2895,56 +2891,56 @@ Heidi Koikkalainen, freshEHR</other_details>
       </items>
       <items code="at0041">
         <items id="text">熱応力についての記載</items>
-        <items id="description">計測された体温に影響を与えうる対象個人の状況についての叙述的記録</items>
+        <items id="description">測定された体温に影響を与えうる対象個人の状況についての叙述的記録</items>
       </items>
       <items code="at0043">
         <items id="text">皮膚</items>
-        <items id="description">露出された皮膚で計測された温度。</items>
+        <items id="description">露出された皮膚で測定された温度。</items>
       </items>
       <items code="at0051">
         <items id="text">膣</items>
-        <items id="description">膣内で計測された温度。</items>
+        <items id="description">膣内で測定された温度。</items>
       </items>
       <items code="at0054">
         <items id="text">食道</items>
-        <items id="description">食道内で計測された温度。</items>
+        <items id="description">食道内で測定された温度。</items>
       </items>
       <items code="at0055">
-        <items id="text">鼠径ひだ状皮膚</items>
-        <items id="description">歌詞と腹壁の間にある鼠径ひだ状皮膚で計測された温度。</items>
+        <items id="text">鼠径溝</items>
+        <items id="description">下肢と腹壁の間にある鼠径溝で測定された温度。</items>
       </items>
       <items code="at0056">
         <items id="text">環境条件</items>
-        <items id="description">体温を計測した時点での環境条件についての詳細。</items>
+        <items id="description">体温を測定した時点での環境条件についての詳細。</items>
       </items>
       <items code="at0057">
         <items id="text">労作</items>
-        <items id="description">体温を計測した時点での労作状態についての詳細</items>
+        <items id="description">体温を測定した時点での労作状態についての詳細</items>
       </items>
       <items code="at0059">
         <items id="text">機器</items>
-        <items id="description">*Details about the device used to measure body temperature.(en)</items>
+        <items id="description">体温の測定に用いた機器に関する詳細情報。</items>
       </items>
       <items code="at0060">
-        <items id="text">*Temple(en)</items>
-        <items id="description">*Temperature is measured at the temple, over the superficial temporal artery.(en)</items>
+        <items id="text">側頭部</items>
+        <items id="description">側頭部（浅側頭動脈の上）で測定された温度。</items>
       </items>
       <items code="at0061">
-        <items id="text">*Forehead(en)</items>
-        <items id="description">*Temperature is measured on the forehead.(en)</items>
+        <items id="text">前額部</items>
+        <items id="description">前額部で測定された温度。</items>
       </items>
       <items code="at0062">
-        <items id="text">*Extension(en)</items>
-        <items id="description">*Additional information required to extend the model with local content or to align with other reference models or formalisms.(en)</items>
-        <items id="comment">*For example: local information requirements; or additional metadata to align with FHIR.(en)</items>
+        <items id="text">Extension</items>
+        <items id="description">ローカルコンテンツでモデルを拡張するため、あるいは他の参照モデルや形式手法と整合させるために必要な追加情報。</items>
+        <items id="comment">例：ローカルな情報要件や、FHIR に適合させるための追加メタデータ。</items>
       </items>
       <items code="at0063">
         <items id="text">コメント</items>
         <items id="description">他のフィールドで記録されない体温についての追加コメント</items>
       </items>
       <items code="at0064">
-        <items id="text">*Structured measurement location(en)</items>
-        <items id="description">*Structured details about the location of measurement.(en)</items>
+        <items id="text">構造化された測定部位</items>
+        <items id="description">測定部位に関する構造化された詳細情報。</items>
       </items>
       <items code="at0065">
         <items id="text">月経周期の日</items>
@@ -2952,8 +2948,8 @@ Heidi Koikkalainen, freshEHR</other_details>
         <items id="comment">月経初日をそれぞれの月経周期で1日目と考える。</items>
       </items>
       <items code="at0066">
-        <items id="text">*Confounding factors(en)</items>
-        <items id="description">*Additional issues or factors that may impact on the measurement of body temperature, not captured in other fields.(en)</items>
+        <items id="text">交絡因子</items>
+        <items id="description">他の項目には収まらない、体温の測定に影響する可能性のある問題や因子。</items>
       </items>
     </term_definitions>
     <term_definitions language="fi">
@@ -3103,7 +3099,7 @@ Heidi Koikkalainen, freshEHR</other_details>
     <term_definitions language="it">
       <items code="at0000">
         <items id="text">Temperatura corporea</items>
-        <items id="description">Una misura della temperatura corporea, che è un surrogato della temperatura corporea del corpo centrale dell'individuo. </items>
+        <items id="description">Una misura della temperatura corporea, che è un surrogato della temperatura corporea del corpo centrale dell'individuo.</items>
       </items>
       <items code="at0001">
         <items id="text">Tree</items>
@@ -3143,7 +3139,7 @@ Heidi Koikkalainen, freshEHR</other_details>
       </items>
       <items code="at0025">
         <items id="text">Retto</items>
-        <items id="description">Temperatura misurata all'interno del retto. </items>
+        <items id="description">Temperatura misurata all'interno del retto.</items>
       </items>
       <items code="at0026">
         <items id="text">Rinofaringe</items>
@@ -3171,11 +3167,11 @@ Heidi Koikkalainen, freshEHR</other_details>
       </items>
       <items code="at0032">
         <items id="text">Abbigliamento/biancheria da letto ridotta</items>
-        <items id="description">La persona è coperta da una quantità di indumenti o biancheria da letto inferiore a quella ritenuta appropriata per le circostanze ambientali. </items>
+        <items id="description">La persona è coperta da una quantità di indumenti o biancheria da letto inferiore a quella ritenuta appropriata per le circostanze ambientali.</items>
       </items>
       <items code="at0033">
         <items id="text">Abbigliamento/biancheria da letto appropriata</items>
-        <items id="description">La persona è coperta da una quantità di indumenti o biancheria da letto ritenuta adeguata alle circostanze ambientali. </items>
+        <items id="description">La persona è coperta da una quantità di indumenti o biancheria da letto ritenuta adeguata alle circostanze ambientali.</items>
       </items>
       <items code="at0034">
         <items id="text">Abbigliamento/biancheria da letto maggiorata</items>
@@ -3219,7 +3215,7 @@ Heidi Koikkalainen, freshEHR</other_details>
       </items>
       <items code="at0061">
         <items id="text">Fronte</items>
-        <items id="description">La temperatura viene misurata sulla fronte. </items>
+        <items id="description">La temperatura viene misurata sulla fronte.</items>
       </items>
       <items code="at0062">
         <items id="text">Estensione</items>
@@ -3679,7 +3675,7 @@ Heidi Koikkalainen, freshEHR</other_details>
     <term_definitions language="sl">
       <items code="at0000">
         <items id="text">Telesna temperatura</items>
-        <items id="description">Meritev telesne temperature, ki je nadomestek za temperaturo jedrnega dela telesa.</items>
+        <items id="description">Meritev telesne temperature, ki je nadomestek za jedrno telesno temperaturo posameznika.</items>
       </items>
       <items code="at0001">
         <items id="text">Tree</items>
@@ -3691,7 +3687,7 @@ Heidi Koikkalainen, freshEHR</other_details>
       </items>
       <items code="at0003">
         <items id="text">Katerikoli dogodek</items>
-        <items id="description">Privzeta, nedoločena točka v času ali intervalni dogodek, ki je lahko izrecno opredeljen v predlogi ali ob času izvajanja.</items>
+        <items id="description">Privzeta, nedoločena točka v času ali intervalni dogodek, ki je lahko izrecno opredeljen v predlogi ali med izvajanjem.</items>
       </items>
       <items code="at0004">
         <items id="text">Temperatura</items>
@@ -3702,7 +3698,7 @@ Heidi Koikkalainen, freshEHR</other_details>
         <items id="description">@ internal @</items>
       </items>
       <items code="at0021">
-        <items id="text">Mesto merjenja</items>
+        <items id="text">Lokacija meritve</items>
         <items id="description">Preprost opis mesta merjenja.</items>
       </items>
       <items code="at0022">
@@ -3742,11 +3738,11 @@ Heidi Koikkalainen, freshEHR</other_details>
         <items id="description">Stopnja izpostavljenosti posameznika v času merjenja.</items>
       </items>
       <items code="at0031">
-        <items id="text">Nago</items>
-        <items id="description">Brez oblačil, posteljnine ali pokrivala.</items>
+        <items id="text">Nag</items>
+        <items id="description">Brez oblačil ali posteljnine, oseba ni pokrita.</items>
       </items>
       <items code="at0032">
-        <items id="text">Zmanjšana oblačila/posteljnina</items>
+        <items id="text">Skromna oblačila/posteljnina</items>
         <items id="description">Oseba je pokrita z manjšo količino oblačil ali posteljnine, kot je običajno za to okolje.</items>
       </items>
       <items code="at0033">
@@ -3754,12 +3750,12 @@ Heidi Koikkalainen, freshEHR</other_details>
         <items id="description">Oseba je pokrita s količino oblačil ali posteljnine, ki je primerna za to okolje.</items>
       </items>
       <items code="at0034">
-        <items id="text">Povečana oblačila/posteljnina</items>
+        <items id="text">Prekomerna oblačila/posteljnina</items>
         <items id="description">Oseba je pokrita s povečano količino oblačil ali posteljnine, kot je običajno za to okolje.</items>
       </items>
       <items code="at0041">
         <items id="text">Opis toplotnega stresa</items>
-        <items id="description">Pripovedni opis pogojev, ki so bili uporabljeni na subjektu in ki lahko vplivajo na izmerjeno telesno temperaturo.</items>
+        <items id="description">Pripovedni opis pogojev, ki lahko vplivajo na izmerjeno telesno temperaturo osebe.</items>
       </items>
       <items code="at0043">
         <items id="text">Koža</items>
@@ -3799,15 +3795,15 @@ Heidi Koikkalainen, freshEHR</other_details>
       </items>
       <items code="at0062">
         <items id="text">Razširitev</items>
-        <items id="description">Dodatne informacije, potrebne za razširitev modela z lokalnimi vsebinami ali za uskladitev z drugimi referenčnimi modeli ali formalizmi.</items>
-        <items id="comment">Na primer: zahteve lokalnih informacij ali dodatni metapodatki za uskladitev z FHIR ali CIMI ekvivalenti.</items>
+        <items id="description">Dodatne informacije, potrebne za zajemanje lokalnega konteksta ali za uskladitev z drugimi referenčnimi modeli/formalizmi.</items>
+        <items id="comment">Na primer: informacije lokalnega bolnišničnega oddelka ali dodatni metapodatki za uskladitev z ekvivalenti FHIR ali CIMI.</items>
       </items>
       <items code="at0063">
         <items id="text">Komentar</items>
         <items id="description">Dodatni komentar o meritvah telesne temperature, ki ni zajet v drugih poljih.</items>
       </items>
       <items code="at0064">
-        <items id="text">Strukturirano mesto merjenja</items>
+        <items id="text">Strukturirana lokacija meritve</items>
         <items id="description">Strukturirane podrobnosti o mestu merjenja.</items>
       </items>
       <items code="at0065">
@@ -3817,7 +3813,7 @@ Heidi Koikkalainen, freshEHR</other_details>
       </items>
       <items code="at0066">
         <items id="text">Moteči dejavniki</items>
-        <items id="description">Dodatna vprašanja ali dejavniki, ki lahko vplivajo na merjenje telesne temperature.</items>
+        <items id="description">Dodatne težave ali dejavniki, ki lahko vplivajo na merjenje telesne temperature, ki niso zajeti v drugih poljih.</items>
       </items>
     </term_definitions>
     <term_bindings terminology="LNC205">
@@ -3842,4 +3838,3 @@ Heidi Koikkalainen, freshEHR</other_details>
     </term_bindings>
   </ontology>
 </archetype>
-

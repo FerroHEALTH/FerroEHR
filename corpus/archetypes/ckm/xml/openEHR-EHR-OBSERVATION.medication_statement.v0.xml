@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -54,8 +54,7 @@ Für jedes Medikament oder jede Kombinationspackung ist eine Instanz dieses Arch
 &#xD;
 Dieser Archetyp sollte nur zum Zeitpunkt der Erstellung als aktuell betrachtet werden. &#xD;
 &#xD;
-Dieser Archetyp wurde so konzipiert, dass er mit der FHIR-Ressource MedicationStatement übereinstimmt, ist aber absichtlich auf die "aktuelle Verwendung" und nicht auf die vergangene oder zukünftige Verwendung beschränkt.&#xD;
-</use>
+Dieser Archetyp wurde so konzipiert, dass er mit der FHIR-Ressource MedicationStatement übereinstimmt, ist aber absichtlich auf die "aktuelle Verwendung" und nicht auf die vergangene oder zukünftige Verwendung beschränkt.</use>
       <misuse>Nicht für die Aufzeichnung von zusammenfassenden oder dauerhaften Informationen über die frühere Einnahme eines Medikaments zu verwenden - verwenden Sie zu diesem Zweck EVALUATION.medication_summary.&#xD;
 &#xD;
 Nicht zur Aufzeichnung von Details über eine Medikamentenverfügung verwenden - verwenden Sie zu diesem Zweck INSTRUCTION.medication_order.&#xD;
@@ -869,8 +868,7 @@ Not to be used to record information about medical devices that are used or impl
       <items code="at0006">
         <items id="text">Medication name</items>
         <items id="description">Name of the medication.</items>
-        <items id="comment">It is strongly recommended that the 'Medication name' be coded with a terminology capable of triggering decision support, where possible. Free text entry should only be used if there is no appropriate terminology available or for customised extemporaneous preparations. The extent of coding may vary from the simple generic or product name of the medication item through to structured details about the actual medication pack to be used. Free text entry should only be used if there is no appropriate terminology available. For example: 'Plaquenil'; 'Ibrutinib 420 mg tablet'; 'Rectinol ointment, 50 g, tube'; or 'Hydrofibre dressing with silver'.&#xD;
-</items>
+        <items id="comment">It is strongly recommended that the 'Medication name' be coded with a terminology capable of triggering decision support, where possible. Free text entry should only be used if there is no appropriate terminology available or for customised extemporaneous preparations. The extent of coding may vary from the simple generic or product name of the medication item through to structured details about the actual medication pack to be used. Free text entry should only be used if there is no appropriate terminology available. For example: 'Plaquenil'; 'Ibrutinib 420 mg tablet'; 'Rectinol ointment, 50 g, tube'; or 'Hydrofibre dressing with silver'.</items>
       </items>
       <items code="at0023">
         <items id="text">Clinical indication</items>
@@ -1113,8 +1111,7 @@ Not to be used to record information about medical devices that are used or impl
         <items id="text">Legemiddelnavn</items>
         <items id="description">Navnet på legemiddelet.</items>
         <items id="comment">Det anbefales sterkt at "Legemiddel" kodes med en terminologi som understøtter beslutningsstøtte der dette er mulig, f.eks. FEST. Fritekst bør bare brukes om ingen passende terminologi er tilgjengelig, eller for tilpassede tilberedninger på bestilling. Nivå av koding kan variere fra legemiddelnavn til strukturerte detaljer om den aktuelle legemiddelforpakningen som skal brukes.&#xD;
-For eksempel: 'Plaquenil'; 'Ibrutinib 420 mg tablett'; 'Rectinol salve, 50 g, tube'; or 'Hydrofiber bandasje med sølv'.&#xD;
-</items>
+For eksempel: 'Plaquenil'; 'Ibrutinib 420 mg tablett'; 'Rectinol salve, 50 g, tube'; or 'Hydrofiber bandasje med sølv'.</items>
       </items>
       <items code="at0023">
         <items id="text">Klinisk indikasjon</items>
@@ -1167,4 +1164,3 @@ For eksempel: 'Plaquenil'; 'Ibrutinib 420 mg tablett'; 'Rectinol salve, 50 g, tu
     </term_definitions>
   </ontology>
 </archetype>
-

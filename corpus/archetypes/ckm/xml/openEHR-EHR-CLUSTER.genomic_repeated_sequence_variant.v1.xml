@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -53,7 +53,7 @@ Sequence Variant Nomenclature - Repeated sequences Variant [Internet]. Human Gen
         <code_string>de</code_string>
       </language>
       <purpose>Zur Beschreibung der in einer Sequenz beobachteten "Repeated sequence Variante" menschlicher DNA.</purpose>
-      <keywords>Wiederholte Sequenz </keywords>
+      <keywords>Wiederholte Sequenz</keywords>
       <keywords>Variation</keywords>
       <keywords>genetisch</keywords>
       <keywords>genomisch</keywords>
@@ -590,4 +590,3 @@ For eksempel: for en variant, der referansesekvensen er 'GGC[9]GGA[1]GGC[10]' og
     </term_definitions>
   </ontology>
 </archetype>
-

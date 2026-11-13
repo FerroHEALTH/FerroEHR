@@ -1,0 +1,1593 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2019-10-23</original_author>
+    <original_author id="name">Heidi Koikkalainen</original_author>
+    <original_author id="organisation">NES Digital Service, Edinburgh Napier University</original_author>
+    <original_author id="email">hk.koikkalainen@gmail.com</original_author>
+    <other_contributors>Dag Aarhus, Vestre Viken HF, Norway</other_contributors>
+    <other_contributors>Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>steve baguley, NDS, United Kingdom</other_contributors>
+    <other_contributors>Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Marcos Barreto, Universidade Federal da Bahia (UFBA), Brazil</other_contributors>
+    <other_contributors>Ivar Berge, Oslo Universitetssykehus, Norway</other_contributors>
+    <other_contributors>SB Bhattacharyya, Sudisa Consultancy Services, India</other_contributors>
+    <other_contributors>Greg Burch, Tiny Medical Apps, United Kingdom</other_contributors>
+    <other_contributors>Santiago Cammi, Argentina</other_contributors>
+    <other_contributors>Ady Angelica Castro Acosta, CIBERES-Hospital 12 de Octubre, Spain</other_contributors>
+    <other_contributors>Kåre Flø, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Grant Forrest, NHS Scotland, United Kingdom</other_contributors>
+    <other_contributors>Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)</other_contributors>
+    <other_contributors>Anne Grimstvedt Kvalvik, Haraldsplass Diakonale sykehus, Norway</other_contributors>
+    <other_contributors>Joost Holslag, Nedap, Netherlands</other_contributors>
+    <other_contributors>Evelyn Hovenga, EJSH Consulting, Australia</other_contributors>
+    <other_contributors>Keltie Jamieson, NSHA, Canada</other_contributors>
+    <other_contributors>Gorazd Kalan, University Medical Centre Ljubljana, Slovenia</other_contributors>
+    <other_contributors>Lars Morgan Karlsen, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Heidi Koikkalainen, United Kingdom (openEHR Editor)</other_contributors>
+    <other_contributors>Tomi Laptoš, Marand, Slovenia</other_contributors>
+    <other_contributors>Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Heather Leslie, Atomica Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Neranga Liyanaarachchi, Ministry of Health, Postgraduate Institute of Medicine, Sri Lanka</other_contributors>
+    <other_contributors>Manisha Mantri, C-DAC, India</other_contributors>
+    <other_contributors>Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)</other_contributors>
+    <other_contributors>Paul Miller, SCIMP NHS Scotland, United Kingdom</other_contributors>
+    <other_contributors>Bjoern Naess, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Arunakiry Natarajan, management4health, Germany</other_contributors>
+    <other_contributors>Svenne Naumann, Finnmarkssykehuset, Norway</other_contributors>
+    <other_contributors>Andrej Orel, Marand d.o.o., Slovenia</other_contributors>
+    <other_contributors>Jayashree Panickar, Karolinska Institute, Sweden</other_contributors>
+    <other_contributors>Martin Paulson, Sykehuset i Vestfold, Norway</other_contributors>
+    <other_contributors>Vanessa Pereira, Better, Portugal</other_contributors>
+    <other_contributors>SARA PRETE, Abinsula, Italy</other_contributors>
+    <other_contributors>clovis puttini, Core Consulting, Brazil</other_contributors>
+    <other_contributors>Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway</other_contributors>
+    <other_contributors>Line Silsand, Universitetssykehuset i Nord-Norge, Norway</other_contributors>
+    <other_contributors>Laila Storesund, Haraldsplass diakonale sykehus, Norway</other_contributors>
+    <other_contributors>Norwegian Review Summary, Nasjonal IKT HF, Norway</other_contributors>
+    <other_contributors>Carita Teien, Retten til en verdig død, Norge</other_contributors>
+    <other_contributors>Rowan Thomas, St. Vincent's Hospital Melbourne, Australia</other_contributors>
+    <other_contributors>Katrin Troeltzsch, Nationales Centrum für Tumorerkrankungen (NCT); Universitätsklinikum Heidelberg, Germany</other_contributors>
+    <other_contributors>John Tore Valand, Helse Bergen, Norway (openEHR Editor)</other_contributors>
+    <other_contributors>Marit Alice Venheim, Helse Vest IKT, Norway</other_contributors>
+    <other_contributors>Olav Weyergang-Nielsen, Retten til en verdig død, Norge</other_contributors>
+    <other_contributors>Wouter Zanen, Eurotranplant, Netherlands</other_contributors>
+    <other_contributors>Lin Zhang, Taikang Insurance Group, China</other_contributors>
+    <lifecycle_state>deprecated</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Advance Care Planning Australia [Internet]. Melbourne: Austin Health; 2018 [cited 2020 Apr 07]. Available from: https://www.advancecareplanning.org.au/.&#xD;
+&#xD;
+Alberta Health Services [Internet]. Edmonton: Alberta Health Services; 2020. Goals of Care Designation (GCD) Order. 2014 Jan [cited 2020 Feb 17]. Available from: https://www.albertahealthservices.ca/frm-103547.pdf.&#xD;
+&#xD;
+Compassion in Dying [Internet]. London: Compassion in Dying; 2018. Advance Decision (Living Will) pack; 2018 Jul [cited 2019 Nov 28]. Available from: https://compassionindying.org.uk/library/advance-decision-pack/.&#xD;
+&#xD;
+Health and Care information models [Internet]. The Hague: NICTIZ; 2019. AdvanceDirective-v3.1(2019EN); 2020 Feb 03 [cited 2020 Feb 17]. Available from: https://zibs.nl/wiki/AdvanceDirective-v3.1(2019EN).&#xD;
+&#xD;
+health.vic [Internet]. Melbourne: Department of Health &amp; Human Services; 2017-2020. Advance care planning forms [cited 2020 04 07]. Available from: https://www2.health.vic.gov.au/hospitals-and-health-services/patient-care/end-of-life-care/advance-care-planning/acp-forms.&#xD;
+&#xD;
+LeBlanc TW, Tulsky J. Discussing goals of care [Internet]. Wolters Kluwer; 2018 Oct 29 [cited 2020 Feb 17]. Available from: https://www.uptodate.com/contents/discussing-goals-of-care.</other_details>
+    <other_details id="current_contact">Heidi Koikkalainen, hk.koikkalainen@gmail.com</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">79A1A609FF411F07CF4E4358C653BF05</other_details>
+    <other_details id="build_uid">b21c7d32-fb43-4f9a-8dfc-96757f116846</other_details>
+    <other_details id="ip_acknowledgements">This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.</other_details>
+    <other_details id="revision">1.2.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Repräsentation der Präferenzen einer Person für zukünftige medizinische Behandlung und Pflege.</purpose>
+      <keywords>Leben, Testament, Entscheidung, Richtlinie, Verfügung, Recht, Präferenz, EoL, DNR, DNACPR, Reanimation</keywords>
+      <use>Zur Repräsentation der Präferenzen einer Person für zukünftige medizinische Behandlung und Pflege.&#xD;
+&#xD;
+Die Anordnung zur medizinischen Versorgung kann auch als Patientenverfügung, Patientenanordnung, Patientenentscheidung, Patientenverweigerung, persönliche Anordnung, Patientenverfügung zur medizinischen Versorgung oder medizinische Anordnung bezeichnet werden. Eine Patientenverfügung wird üblicherweise verwendet, um eine lebenserhaltende Behandlung zu verweigern, die unter anderem Folgendes umfassen kann: Herz-Lungen-Wiederbelebung (HLW), klinisch unterstützte Ernährung und Flüssigkeitszufuhr, unterstützte Beatmung und Antibiotika bei lebensbedrohlichen Infektionen. Sie könnte auch positive Präferenzen und Anweisungen für zukünftige Prioritäten in der Gesundheitsversorgung, bei den Lebensumständen und in persönlichen Angelegenheiten beinhalten. Eine fähige Person kann eine Richtlinie zur medizinischen Vorabversorgung erstellen, um ihre Präferenzen für die medizinische Versorgung und Behandlung im Voraus festzuhalten, die als Leitfaden für die Entscheidungsfindung in zukünftigen Situationen dienen soll, in denen die Person nicht in der Lage ist, Entscheidungen zu treffen oder mitzuteilen. &#xD;
+&#xD;
+Dieser Archetyp wurde speziell als Rahmen oder Struktur entwickelt, die für die komplexe Vielfalt von Anwendungsfällen und lokalen Anforderungen erweitert werden kann, indem eine Vielzahl möglicher CLUSTER-Archetypen verschachtelt wird, die je nach nationalen oder anderen lokalen Anforderungen spezifische Angaben enthalten. &#xD;
+&#xD;
+In einigen Ländern ist eine Patientenverfügung rechtlich überzeugend, ohne einen offiziellen Rechtsstatus zu haben. In anderen Ländern handelt es sich um ein rechtsverbindliches Dokument und es MUSS sichergestellt werden, dass der Archetyp der Patientenverfügung und alle verschachtelten Archetypen den einschlägigen rechtlichen Anforderungen entsprechen.</use>
+      <misuse>*Not to be used to record organ donation preferences. Use a specific archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record details about a Power of Attorney or other legal representative/proxy. Use a specific archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record anticipatory decisions about CPR decisions, other possible intervention decisions, and intent of care as asserted by a clinician in a health record. Use the EVALUATION.advance_intervention_decisions archetype for this purpose. (en)</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For å registrere et individs viljeserklæring i forbindelse medisinsk fremtidig behandling og omsorg.</purpose>
+      <keywords>livstestament, EoL, End-of-life, R-, Res minus, livsforlengende, behandlingsreservasjon</keywords>
+      <use>Bruk som et rammeverk for å kommunisere et individs vilje i forbindelse med fremtidig medisinsk behandling og omsorg.&#xD;
+&#xD;
+Et individ som har mental kapasitet til det kan lage en viljesrerklæring som uttrykker sine ønsker knyttet til fremtidig medisinsk behandling og omsorg. Dette har til hensikt å veilede beslutninger i fremtidige situasjoner der individet er ute av stand til å gjøre, eller formidle egne valg. Et fremtidig behandlingsvalg blir normalt brukt til å motsette seg livsforlengende behandling som kan, men er ikke begrenset til, hjerte- lungeredning (HLR), kunstig tilført ernæring og væske, invasiv- og non-invasiv ventilasjonsstøtte, og antibiotikabehandling av livstruende infeksjoner. I tillegg kan det inneholde ønsker og instrukser av ikke-restriktiv art for fremtidig behandling, boform eller personlige forhold. For eksempel å prioritere god smertelindring til tross for at dette kan forkorte livet.&#xD;
+&#xD;
+Denne arketypen har blitt designet som et rammeverk for å kunne dekke et vidt spekter av brukssituasjoner ved å nøste inn en eller flere CLUSTER-arketyper med spesifikke detaljer og nasjonale eller lokale krav. &#xD;
+&#xD;
+I noen land er et et fremtidig behandlingsvalg retningsgivende uten å være et offisielt juridisk dokument. I andre land er det juridisk bindende, og det må da sikres at arketypen "Fremtidig behandlingsvalg" og eventuelle arketyper som nøstes inn i denne, tilfredsstiller de juridiske krav som stilles lokalt.</use>
+      <misuse>*Not to be used to record organ donation preferences. Use a specific archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record details about a Power of Attorney or other legal representative/proxy. Use a specific archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record anticipatory decisions about CPR decisions, other possible intervention decisions, and intent of care as asserted by a clinician in a health record. Use the EVALUATION.advance_intervention_decisions archetype for this purpose. (en)</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>pt-br</code_string>
+      </language>
+      <purpose>Para documentar as preferências de um indivíduo para futuros tratamentos e cuidados médicos.</purpose>
+      <keywords>testamento vital</keywords>
+      <keywords>diretivas avançadas</keywords>
+      <keywords>diretrizes avançadas</keywords>
+      <keywords>decisões avançadas</keywords>
+      <keywords>diretivas antecipadas</keywords>
+      <keywords>diretrizes antecipadas</keywords>
+      <keywords>decisões antecipadas</keywords>
+      <keywords>preferências de fim de vida</keywords>
+      <keywords>fim de vida</keywords>
+      <keywords>não ressuscitar</keywords>
+      <keywords>ressucitação</keywords>
+      <use>Usar para documentar as preferências de um indivíduo para tratamento e cuidados médicos futuros.&#xD;
+&#xD;
+A diretriz antecipada de cuidados também pode ser conhecida como testamento vital, diretiva antecipada, decisão antecipada, decisão antecipada de recusa de tratamento, diretiva pessoal, diretiva antecipada de saúde ou diretiva médica. Uma diretriz de cuidado antecipado é comumente usada para recusar o tratamento de suporte à vida que pode incluir, mas não está limitado a: ressuscitação cardiopulmonar (RCP); nutrição e hidratação clinicamente assistida; ventilação assistida; e antibióticos para infecções potencialmente fatais. Também pode incluir preferências e instruções para futuras prioridades de cuidados de saúde, condições de vida e assuntos pessoais. Um indivíduo com capacidade pode criar uma diretriz de atendimento antecipado para registrar suas preferências por atendimento médico e tratamento com antecedência, com o objetivo de orientar a tomada de decisões em situações futuras em que o indivíduo seja incapaz de tomar ou comunicar decisões.&#xD;
+&#xD;
+Esse arquétipo foi projetado especificamente como um framework ou estrutura que pode ser estendida para a gama complexa de casos de uso e requisitos locais, acomodando uma variedade de arquétipos CLUSTER possíveis que conterão detalhes específicos de acordo com os requisitos nacionais ou locais.&#xD;
+&#xD;
+Em alguns países, uma diretiva de atendimento antecipado é legalmente persuasiva mesmo sem ter um status legal oficial. Em outros, é um documento juridicamente vinculativo e DEVE ser garantido que o arquétipo da diretiva de atendimento antecipado e quaisquer arquétipos relacionados cumpram os requisitos legais relevantes.</use>
+      <misuse>Não deve ser usado para documentar preferências de doação de órgãos. Use um arquétipo específico para esse propósito.&#xD;
+&#xD;
+Não deve ser usado para registrar detalhes sobre uma procuração ou outro representante legal / procurador. Use um arquétipo específico para esse propósito.&#xD;
+&#xD;
+Não deve ser usado para registrar decisões antecipatórias sobre decisões de RCP, outras decisões de intervenção possíveis e intenção de cuidado, conforme declarado por um médico em um prontuário de saúde. Use o arquétipo EVALUATION.advance_intervention_decisions para esse propósito.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record the preferences of an individual for future medical treatment and care.</purpose>
+      <keywords>living, will, advance, advanced, directive, decision, legal, preference, EoL, DNR, DNACPR, resuscitation,</keywords>
+      <use>Use to record the preferences of an individual for future medical treatment and care.&#xD;
+&#xD;
+Advance care directive may also be known as living will, advance directive, advance decision, advance decision to refuse treatment, personal directive, advance healthcare directive, or medical directive. An advance care directive is commonly used to refuse life-sustaining treatment which may include, but is not limited to: cardiopulmonary resuscitation (CPR); clinically assisted nutrition and hydration; assisted ventilation; and antibiotics for life-threatening infections. It could also include positive preferences and instructions for future health care priorities, living arrangements and personal matters. An individual with capacity may create an advance care directive to record their preferences for medical care and treatment in advance, which is intended to guide decision-making in future situations in which the individual is unable to make or communicate decisions. &#xD;
+&#xD;
+This archetype has been specifically designed as a framework or structure that can be extended for the complex range of use cases and local requirements by nesting a variety of possible CLUSTER archetypes which will contain specific details as per national or other local requirements. &#xD;
+&#xD;
+In some countries, an advance care directive is legally persuasive without having an official legal status. In others it is a legally-binding document, and it MUST be ensured that the advance care directive archetype and any nested archetypes adhere to relevant legal requirements.</use>
+      <misuse>Not to be used to record organ donation preferences. Use a specific archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record details about a Power of Attorney or other legal representative/proxy. Use a specific archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record anticipatory decisions about CPR decisions, other possible intervention decisions, and intent of care as asserted by a clinician in a health record. Use the EVALUATION.advance_intervention_decisions archetype for this purpose.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nl</code_string>
+      </language>
+      <purpose>Voor het vastleggen van de voorkeuren van een individu voor toekomstige medische zorg en behandeling.</purpose>
+      <keywords>Wilsverklaring, reanimatieverklaring, behandelverbod, beslissing, juridisch, voorkeur, levenseinde, reanimeren, NTBR.</keywords>
+      <use>Te gebruiken voor het vastleggen van de voorkeuren van een individu voor toekomstige medische zorg en behandeling.&#xD;
+&#xD;
+"Advance care directive" kan ook bekend staan als o.a. wilsverklaring of behandelverbod.&#xD;
+Een wilsverklaring wordt vaak gebruikt om levensreddende behandeling te weigeren waaronder, maar niet beperkt tot reanimatie, kunstmatige voeding en vocht toediening, kunstmatige beademing, en antibiotica voor levensbedreigende infecties. Het kan ook positieve voorkeuren of instructies bevatten voor toekomstige prioriteiten van gezondheidszorg, woonsituatie en persoonlijke aangelegenheden. &#xD;
+* (en) &#xD;
+An individual with capacity may create an advance care directive to record their preferences for medical care and treatment in advance, which is intended to guide decision-making in future situations in which the individual is unable to make or communicate decisions. &#xD;
+&#xD;
+This archetype has been specifically designed as a framework or structure that can be extended for the complex range of use cases and local requirements by nesting a variety of possible CLUSTER archetypes which will contain specific details as per national or other local requirements. &#xD;
+&#xD;
+In some countries, an advance care directive is legally persuasive without having an official legal status. In others it is a legally-binding document, and it MUST be ensured that the advance care directive archetype and any nested archetypes adhere to relevant legal requirements.</use>
+      <misuse>*Not to be used to record organ donation preferences. Use a specific archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record details about a Power of Attorney or other legal representative/proxy. Use a specific archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record anticipatory decisions about CPR decisions, other possible intervention decisions, and intent of care as asserted by a clinician in a health record. Use the EVALUATION.advance_intervention_decisions archetype for this purpose.(en)</misuse>
+      <copyright />
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Sarah Ballout</author>
+    <author id="organisation">MHH-Hannover</author>
+    <author id="email">ballout.sarah@mh-hannover.de</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Vebjørn Arntzen, Silje Ljosland Bakke, Liv Laugen</author>
+    <author id="organisation">Oslo University Hospital, Helse Vest IKT AS, ​Oslo University Hospital, Norway</author>
+    <author id="email">varntzen@ous-hf.no, silje.ljosland.bakke@helse-vest-ikt.no, liv.laugen@ous-hf.no</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>pt-br</code_string>
+    </language>
+    <author id="name">Vladimir Pizzo</author>
+    <author id="organisation">Royal Philips</author>
+    <author id="email">vrppizzo@gmail.com</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nl</code_string>
+    </language>
+    <author id="name">Joost Holslag</author>
+    <author id="organisation">Nedap</author>
+    <author id="email">joost.holslag@nedap.com</author>
+  </translations>
+  <uid>
+    <value>43ab1f51-7ffe-4fe8-a3cb-c956f6a31a82</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-EVALUATION.advance_care_directive.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>EVALUATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0005</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0004</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>defining_code</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_CODE_PHRASE">
+                    <rm_type_name>CODE_PHRASE</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <terminology_id>
+                      <value>local</value>
+                    </terminology_id>
+                    <code_list>at0044</code_list>
+                    <code_list>at0045</code_list>
+                    <code_list>at0047</code_list>
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0006</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0007</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0052</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/.*/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>.*</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0038</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>protocol</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0010</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0053</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0054</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0056</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0055</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_DATE_TIME</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0025</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0027</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_URI</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0060</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0058</node_id>
+            <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+              <rm_attribute_name>items</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0030</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_URI</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="ARCHETYPE_SLOT">
+                <rm_type_name>CLUSTER</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0059</node_id>
+                <includes>
+                  <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+                  <expression xsi:type="EXPR_BINARY_OPERATOR">
+                    <type>Boolean</type>
+                    <operator>2007</operator>
+                    <precedence_overridden>false</precedence_overridden>
+                    <left_operand xsi:type="EXPR_LEAF">
+                      <type>String</type>
+                      <item xsi:type="xsd:string">archetype_id/value</item>
+                      <reference_type>attribute</reference_type>
+                    </left_operand>
+                    <right_operand xsi:type="EXPR_LEAF">
+                      <type>C_STRING</type>
+                      <item xsi:type="C_STRING">
+                        <pattern>openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v0|openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1</pattern>
+                      </item>
+                      <reference_type>constraint</reference_type>
+                    </right_operand>
+                  </expression>
+                </includes>
+              </children>
+              <cardinality>
+                <is_ordered>false</is_ordered>
+                <is_unique>false</is_unique>
+                <interval>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>1</lower>
+                </interval>
+              </cardinality>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0061</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/.*/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>.*</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Advance care directive</items>
+        <items id="description">A framework to communicate the preferences of an individual for future medical treatment and care.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Status</items>
+        <items id="description">The status of the advance care directive.</items>
+        <items id="comment">Coding of the advance care directive status with a terminology is preferred, where possible.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Type of directive</items>
+        <items id="description">The type of advance care directive.</items>
+        <items id="comment">A short text description of the nature of the advance care directive. Coding of the type of directive with a terminology is preferred, where possible. It is expected that this is largely localised to reflect local policy and legislation.&#xD;
+&#xD;
+For example, in the Netherlands, advance care directive types include, but are not limited to, 'Treatment prohibition', 'Treatment prohibition with completion of Completed Life', 'Euthanasia request' and 'Declaration of life'.&#xD;
+&#xD;
+In the UK, advance care directive types include 'Advance Decision', 'Advance Directive' and 'Advance Statement'.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Description</items>
+        <items id="description">Narrative description of the overall advance care directive.</items>
+        <items id="comment">May be used to record a narrative overview of the complete advance care directive, which may or may not be supported by structured data. Details of specific structured findings can be included using CLUSTER archetypes in the 'Directive details' slot. This data element may be used to capture legacy data that is not available in a structured format.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Condition</items>
+        <items id="description">The conditions or situations in which the individual wishes the advance care directive to apply.</items>
+        <items id="comment">For example: dementia, brain injury, diseases of the central nervous system, and terminal illness. Coding with a terminology is preferred, where possible.&#xD;
+&#xD;
+The advance care directive applies to all specified conditions if the individual can no longer make or communicate decisions about their medical treatment and is unlikely to regain the ability to make such decisions. Details of specific decisions that apply to different conditions or situations can be included using CLUSTER archetypes in the 'Directive details' slot.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Witness</items>
+        <items id="description">Personal details of a person who witnesses the completion of the advance care directive.</items>
+        <items id="comment">For example, 'John Smith, Lawyer'.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Mandate</items>
+        <items id="description">Description of any legislation or other authoritative guidance that apply.</items>
+        <items id="comment">For example, 'In England and Wales, advance decisions are covered by the Mental Capacity Act.  Mandate: https://www.bma.org.uk/advice/employment/ethics/consent/consent-tool-kit/9-advance-decisions'. &#xD;
+&#xD;
+Or 'Jehovah's Witnesses believe that the Bible prohibits Christians from accepting blood transfusions. Mandate: https://en.wikipedia.org/wiki/Jehovah%27s_Witnesses_and_blood_transfusions'.</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Location</items>
+        <items id="description">Physical or digital location of the Advance care directive.</items>
+      </items>
+      <items code="at0038">
+        <items id="text">Comment</items>
+        <items id="description">Additional narrative about the advance care directive not captured in other fields.</items>
+      </items>
+      <items code="at0044">
+        <items id="text">Present</items>
+        <items id="description">The individual has an advance care directive.</items>
+      </items>
+      <items code="at0045">
+        <items id="text">Absent</items>
+        <items id="description">The individual does not have an advance care directive.</items>
+      </items>
+      <items code="at0047">
+        <items id="text">Unknown</items>
+        <items id="description">It is not known whether the individual has an advance care directive.</items>
+      </items>
+      <items code="at0052">
+        <items id="text">Directive detail</items>
+        <items id="description">Structured details about the advance care directive decisions.</items>
+        <items id="comment">This SLOT should also be used to record details for specific conditions or as per national or other local requirements. For example, in the UK, there may be a specific statement about whether to actively prolong life but only during pregnancy.</items>
+      </items>
+      <items code="at0053">
+        <items id="text">Valid period start</items>
+        <items id="description">The date/time that marks the beginning of the valid period of time for this advance care directive.</items>
+      </items>
+      <items code="at0054">
+        <items id="text">Valid period end</items>
+        <items id="description">The date/time that marks the conclusion of the valid period of time for this advance care directive.</items>
+        <items id="comment">'Valid period end' may often overlap with 'Review due date'. However, they may need to be recorded separately in circumstances where a document has an extended period of validity but requires an interim review. That may be due to changed personal circumstances/events or local policy.</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Last updated</items>
+        <items id="description">The date when this advance directive record was last updated.</items>
+        <items id="comment">This may not be a formal review but e.g. a typo correction.</items>
+      </items>
+      <items code="at0056">
+        <items id="text">Review due date</items>
+        <items id="description">The date at which the advance care directive is due to be reviewed.</items>
+        <items id="comment">'Valid period end' may often overlap with 'Review due date'. However, they may need to be recorded separately in circumstances where a document has an extended period of validity but requires an interim review. That may be due to changed personal circumstances/events or local policy.</items>
+      </items>
+      <items code="at0058">
+        <items id="text">Directive location</items>
+        <items id="description">Information about the physical or digital location of the Advance care directive.</items>
+      </items>
+      <items code="at0059">
+        <items id="text">Copy holder</items>
+        <items id="description">Details of a person who has a copy of the Advance care directive.</items>
+        <items id="comment">For example, 'John Smith, Lawyer'.</items>
+      </items>
+      <items code="at0060">
+        <items id="text">Digital representation</items>
+        <items id="description">Digital document, image or video representing the Advance care directive.</items>
+      </items>
+      <items code="at0061">
+        <items id="text">Extension</items>
+        <items id="description">Additional information required to extend the model with local content or to align with other reference models/formalisms.</items>
+        <items id="comment">For example: local information requirements; or additional metadata to align with FHIR.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Fremtidig behandlingsvalg</items>
+        <items id="description">Et rammeverk for å kommunisere et individs viljeserklæring i forbindelse med fremtidig medisinsk behandling og omsorg.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Status</items>
+        <items id="description">Statusen til det fremtidige behandlingsvalget.</items>
+        <items id="comment">Dersom det er mulig er det foretrukket å kode det fremtidige behandlingsvalgets status med en terminologi.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Type fremtidig behandlingsvalg</items>
+        <items id="description">Type dokument for fremtidig behandling.</items>
+        <items id="comment">En kort fritekstlig beskrivelse av hvilken type dokument for fremtidig behandlingsvalg det er. Dersom det er mulig, anbefales å kode typen dokument med en terminologi. Det er antatt at dette i stor grad blir tilpasset lokale retningslinjer og lovgivning.&#xD;
+&#xD;
+"Mitt livstestament" er en norsk variant. I andre land er det flere typer fremtidige behandlingsvalg, for eksempel finnes det i Nederland fremtidig behandlingsvalg som omfatter "Treatment prohibition" (Avstå fra behandling), "'Treatment prohibition with completion of Completed Life" (Avstå fra livsforlengende behandling) og "Euthanasia request" (Ønske om eutanasi).</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Beskrivelse</items>
+        <items id="description">Fritekstbeskrivelse av det fremtidige behandlingsvalget.</items>
+        <items id="comment">Kan bli brukt til et sammendrag av, eller fullstendig tekst i det fremtidige behandlingsvalget. Dette kan eventuelt være i tillegg til strukturerte data, eller stå for seg selv. Detaljer om spesifikke ønsker kan bli inkludert ved å nøste CLUSTER-arketyper i SLOT'et "Strukturerte detaljer". Dette informasjonselementet kan også bli brukt for å lagre data fra et annet system som ikke er tilgjengelig som strukturerte data.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Betingelse</items>
+        <items id="description">Situasjoner eller tilstander hvor individet ønsker at det fremtidige behandlingsvalget skal tre i kraft.</items>
+        <items id="comment">For eksempel: Demens, hjerneskade, sykdommer i sentralnervesystemet og terminal sykdom. Dersom det er mulig er det foretrukket å kode dette med en terminologi.&#xD;
+&#xD;
+Det fremtidige behandlingsvalget gjøres gjeldende for alle tilstander eller situasjoner som nevnes, dersom individet ikke lenger kan formidle beslutninger om sin medisinske behandling, og det er usannsynlig at individet kan få tilbake evnen til å ta slike beslutninger. Dersom det er nødvendig med detaljerte betingelser, for eksempel om enkelte typer behandling kombinert med en gitt tilstand, kan dette dokumenteres ved å nøste CLUSTER-arketyper i SLOT'et "Detaljerte behandlingsvalg".</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Vitner</items>
+        <items id="description">Detaljer om personer som har vært vitne ved ferdigstillelsen (signering) av det fremtidige behandlingsvalget.</items>
+        <items id="comment">For eksempel "Advokat John Smith".</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Grunnlag</items>
+        <items id="description">Beskrivelse av hvilken lovgivning eller annen autorativ retningslinje som gjelder for det fremtidige behandlingsvalget.</items>
+        <items id="comment">For eksempel "Lov om pasient- og brukerrettigheter (pasient- og brukerrettighetsloven) § 4-9. Pasientens rett til å nekte helsehjelp i særlige situasjoner" eller Jehovas Vitners avvisning av blodtransfusjon: "https://no.wikipedia.org/wiki/Jehovas_vitner#Avvisning_av_blodtransfusjoner".</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Plassering</items>
+        <items id="description">*Physical or digital location of the Advance care directive. (en)</items>
+      </items>
+      <items code="at0038">
+        <items id="text">Kommentar</items>
+        <items id="description">Ytterligere fritekst om det fremtidige behandlingsvalget, som ikke er omfattet av andre elementer.</items>
+      </items>
+      <items code="at0044">
+        <items id="text">Eksisterer</items>
+        <items id="description">Individet har dokumentert en viljeserklæring for fremtidig behandling.</items>
+      </items>
+      <items code="at0045">
+        <items id="text">Eksisterer ikke</items>
+        <items id="description">Individet har ikke dokumentert en viljeserklæring for fremtidig behandling.</items>
+      </items>
+      <items code="at0047">
+        <items id="text">Ukjent</items>
+        <items id="description">Det er ikke kjent om individet har dokumentert en viljeserklæring for fremtidig behandling eller ikke.</items>
+      </items>
+      <items code="at0052">
+        <items id="text">Detaljerte behandlingsvalg</items>
+        <items id="description">Strukturerte detaljer om det fremtidige behandlingsvalget.</items>
+        <items id="comment">Dette SLOT'et kan også bli brukt til å registrere spesielle betingelser i henhold til nasjonale eller lokale krav. For eksempel kan det i Storbritannia være et eget utsagn om individet aktivt ønsker å motta livsforlengende behandling, men bare hvis individet er gravid.</items>
+      </items>
+      <items code="at0053">
+        <items id="text">Gyldighetsperiode start</items>
+        <items id="description">Dato/Tid som markerer når gyldighetsperioden av det fremtidige behandlingsvalget starter.</items>
+      </items>
+      <items code="at0054">
+        <items id="text">Gyldighetsperiode slutt</items>
+        <items id="description">Dato/Tid som markerer når gyldighetsperioden av det fremtidige behandlingsvalget slutter.</items>
+        <items id="comment">"Gyldighetsperiode slutt" vil ofte overlappe med "Dato for fornyelse". Det kan imidlertid være nødvendig å registrere disse separat i tilfelle et fremtidig behandlingsvalg har en forlenget gyldighetsperiode, men trenger en midlertidig gjennomgang. Dette kan skyldes endringer i personlige forhold/hendelser eller lokale retningslinjer.</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Sist oppdatert</items>
+        <items id="description">*The date when this advance directive record was last updated. (en)</items>
+        <items id="comment">*This may not be a formal review but e.g. a typo correction. (en)</items>
+      </items>
+      <items code="at0056">
+        <items id="text">Dato for fornyelse</items>
+        <items id="description">Datoen det fremtidige behandlingsvalget må fornyes.</items>
+        <items id="comment">"Dato for fornyelse" vil ofte overlappe med "Gyldighetsperiode slutt". Det kan imidlertid være nødvendig å registrere disse separat i tilfelle et fremtidig behandlingsvalg har en forlenget gyldighetsperiode, men trenger en midlertidig gjennomgang. Dette kan skyldes endringer i personlige forhold/hendelser eller lokale retningslinjer.</items>
+      </items>
+      <items code="at0058">
+        <items id="text">Plassering og kopiholder</items>
+        <items id="description">*Information about the physical or digital location of the Advance care directive. (en)</items>
+      </items>
+      <items code="at0059">
+        <items id="text">Kopiholder</items>
+        <items id="description">*Details of a person who has a copy of the Advance care directive. (en)</items>
+        <items id="comment">For eksempel "Advokat John Smith".</items>
+      </items>
+      <items code="at0060">
+        <items id="text">Digital representasjon</items>
+        <items id="description">*Digital document, image or video representing the Advance care directive. (en)</items>
+      </items>
+      <items code="at0061">
+        <items id="text">Tilleggsinformasjon</items>
+        <items id="description">Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.</items>
+        <items id="comment">For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Patientenverfügung</items>
+        <items id="description">Ein Framework zur Kommunikation der Präferenzen einer Person für zukünftige medizinische Behandlung und Pflege.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Status</items>
+        <items id="description">Status der Patientenverfügung.</items>
+        <items id="comment">Die Kodierung des Status der Patientenverfügung mit einer Terminologie wird, bevorzugt.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Art der Richtlinie</items>
+        <items id="description">Die Art der Patientenverfügung.</items>
+        <items id="comment">Eine kurze schriftliche Beschreibung der Art der Patientenverfügung. Eine Kodierung mit einer Terminologie wird, bevorzugt. Es wird erwartet, dass diese weitgehend lokalisiert ist, um die lokale Politik und Gesetzgebung widerzuspiegeln.&#xD;
+&#xD;
+In den Niederlanden beispielsweise umfassen die Arten von Patientenverfügungen unter anderem "Behandlungsverbot", " Behandlungsverbot mit Beendigung des abgeschlossenen Lebens", "Euthanasieantrag" und "Lebenserklärung".&#xD;
+&#xD;
+Im Vereinigten Königreich gehören zu den Arten von Patientenverfügungen im Rahmen der medizinischen Versorgung die "Vorabentscheidung", die "Patientenverfügung" und die " Voraberklärung".</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Beschreibung</items>
+        <items id="description">Beschreibung der allgemeinen Patientenverfügung.</items>
+        <items id="comment">Kann verwendet werden, um eine Übersicht über die gesamte Patientenverfügung zu erfassen, die durch strukturierte Daten unterstützt werden kann. Angaben zu bestimmten strukturierten Befunden können unter Verwendung von CLUSTER-Archetypen in den Slot "Einzelheiten zur Richtlinie" aufgenommen werden. Dieses Datenelement kann verwendet werden, um Altdaten zu erfassen, die nicht in einem strukturierten Format verfügbar sind.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Voraussetzung</items>
+        <items id="description">Die Bedingungen oder Situationen, in denen die Person wünscht, dass die Patientenverfügung zur Anwendung kommt.</items>
+        <items id="comment">Zum Beispiel: Demenz, Hirnverletzungen, Erkrankungen des Zentralnervensystems und unheilbare Krankheiten. Die Kodierung mit einer Terminologie wird, bevorzugt.&#xD;
+&#xD;
+Die Patientenverfügung gilt für alle genannten Erkrankungen, wenn die betroffene Person keine Entscheidungen über ihre medizinische Behandlung mehr treffen oder mitteilen kann und es unwahrscheinlich ist, dass sie die Fähigkeit, solche Entscheidungen zu treffen, wiedererlangen wird. Einzelheiten spezifischer Entscheidungen, die für unterschiedliche Bedingungen oder Situationen gelten, können unter Verwendung von CLUSTER-Archetypen in den Slot "Einzelheiten der Richtlinie" aufgenommen werden.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Zeuge</items>
+        <items id="description">Persönliche Angaben zu einer Person, die den Abschluss der Patientenverfügung bezeugt.</items>
+        <items id="comment">Zum Beispiel 'John Smith, Rechtsanwalt'.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Auftrag</items>
+        <items id="description">Beschreibung der anwendbaren Gesetzgebung oder anderer maßgeblicher Richtlinien.</items>
+        <items id="comment">Zum Beispiel: "In England und Wales fallen Vorabentscheidungen unter den Mental Capacity Act. Mandat: https://www.bma.org.uk/advice/employment/ethics/consent/consent-tool-kit/9-advance-decisions". &#xD;
+&#xD;
+Oder: " Zeugen Jehovas glauben, dass die Bibel Christen verbietet, Bluttransfusionen zu akzeptieren. Mandat: https://en.wikipedia.org/wiki/Jehovah%27s_Witnesses_and_blood_transfusions'.</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Standort</items>
+        <items id="description">*Physical or digital location of the Advance care directive. (en)</items>
+      </items>
+      <items code="at0038">
+        <items id="text">Kommentar</items>
+        <items id="description">Zusätzliche Informationen über die Patientenverfügung, die in anderen Bereichen nicht erfasst wurde.</items>
+      </items>
+      <items code="at0044">
+        <items id="text">Vorhanden</items>
+        <items id="description">Die Person hat eine Patientenverfügung.</items>
+      </items>
+      <items code="at0045">
+        <items id="text">Nicht Vorhanden</items>
+        <items id="description">Die Person hat keine Patientenverfügung.</items>
+      </items>
+      <items code="at0047">
+        <items id="text">Unbekannt</items>
+        <items id="description">Es ist nicht bekannt, ob die Person eine Patientenverfügung hat.</items>
+      </items>
+      <items code="at0052">
+        <items id="text">Einzelheiten zur Richtlinie</items>
+        <items id="description">Strukturierte Angaben zu den Entscheidungen der Patientenverfügung.</items>
+        <items id="comment">Dieser SLOT sollte auch dazu verwendet werden, Angaben für spezifische Bedingungen oder gemäß nationalen oder anderen lokalen Anforderungen zu notieren. Zum Beispiel kann es im Vereinigten Königreich eine spezifische Aussage darüber geben, ob das Leben aktiv verlängert werden soll. Dies gilt nur während der Schwangerschaft.</items>
+      </items>
+      <items code="at0053">
+        <items id="text">Beginn der Gültigkeitsdauer</items>
+        <items id="description">Das Datum/die Uhrzeit, die den Beginn des gültigen Zeitraums für diese Patientenverfügung markiert.</items>
+      </items>
+      <items code="at0054">
+        <items id="text">Ende der Gültigkeitsdauer</items>
+        <items id="description">Das Datum/Uhrzeit, das den Abschluss der Gültigkeitsdauer dieser Patientenverfügung markiert.</items>
+        <items id="comment">Das "Ende des Gültigkeitszeitraums" überschneidet sich oft mit dem "Fälligkeitsdatum der Überprüfung". In Fällen, in denen ein Dokument eine längere Gültigkeitsdauer hat, aber eine Zwischenprüfung erforderlich ist, müssen sie jedoch unter Umständen getrennt erfasst werden. Dies kann auf geänderte persönliche Umstände/Ereignisse oder lokale Richtlinien zurückzuführen sein.</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Letzte Aktualisierung</items>
+        <items id="description">*The date when this advance directive record was last updated. (en)</items>
+        <items id="comment">*This may not be a formal review but e.g. a typo correction. (en)</items>
+      </items>
+      <items code="at0056">
+        <items id="text">Überprüfung des Fälligkeitsdatums</items>
+        <items id="description">Das Datum, an dem die Patientenverfügung überprüft werden soll.</items>
+        <items id="comment">Das "Ende des Gültigkeitszeitraums" überschneidet sich oft mit dem "Fälligkeitsdatum der Überprüfung". In Fällen, in denen ein Dokument eine längere Gültigkeitsdauer hat, aber eine Zwischenprüfung erforderlich ist, müssen sie jedoch unter Umständen getrennt erfasst werden. Dies kann auf geänderte persönliche Umstände/Ereignisse oder lokale Richtlinien zurückzuführen sein.</items>
+      </items>
+      <items code="at0058">
+        <items id="text">Standort der Richtlinie</items>
+        <items id="description">*Information about the physical or digital location of the Advance care directive. (en)</items>
+      </items>
+      <items code="at0059">
+        <items id="text">Inhaber der Kopie</items>
+        <items id="description">*Details of a person who has a copy of the Advance care directive. (en)</items>
+        <items id="comment">Zum Beispiel 'John Smith, Rechtsanwalt'.</items>
+      </items>
+      <items code="at0060">
+        <items id="text">Digitale Repräsentation</items>
+        <items id="description">*Digital document, image or video representing the Advance care directive. (en)</items>
+      </items>
+      <items code="at0061">
+        <items id="text">Erweiterung</items>
+        <items id="description">Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.</items>
+        <items id="comment">Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nl">
+      <items code="at0000">
+        <items id="text">Wilsverklaring</items>
+        <items id="description">*A framework to communicate the preferences of an individual for future medical treatment and care.(en)</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Status</items>
+        <items id="description">De status van de wilsverklaring.</items>
+        <items id="comment">* Coding of the advance care directive status with a terminology is preferred, where possible.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Type verklaring</items>
+        <items id="description">Het type wilsverklaring.</items>
+        <items id="comment">* A short text description of the nature of the advance care directive. Coding of the type of directive with a terminology is preferred, where possible. It is expected that this is largely localised to reflect local policy and legislation.&#xD;
+&#xD;
+For example, in the Netherlands, advance care directive types include, but are not limited to, 'Treatment prohibition', 'Treatment prohibition with completion of Completed Life', 'Euthanasia request' and 'Declaration of life'.&#xD;
+&#xD;
+In the UK, advance care directive types include 'Advance Decision', 'Advance Directive' and 'Advance Statement'.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Beschrijving</items>
+        <items id="description">Verhalende beschrijving van de gehele wilsverklaring.</items>
+        <items id="comment">* May be used to record a narrative overview of the complete advance care directive, which may or may not be supported by structured data. Details of specific structured findings can be included using CLUSTER archetypes in the 'Directive details' slot. This data element may be used to capture legacy data that is not available in a structured format.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Conditie</items>
+        <items id="description">De voorwaarde of situatie waarin het individu wil dat de wilsverklaring van toepassing is.</items>
+        <items id="comment">* For example: dementia, brain injury, diseases of the central nervous system, and terminal illness. Coding with a terminology is preferred, where possible.&#xD;
+&#xD;
+The advance care directive applies to all specified conditions if the individual can no longer make or communicate decisions about their medical treatment and is unlikely to regain the ability to make such decisions. Details of specific decisions that apply to different conditions or situations can be included using CLUSTER archetypes in the 'Directive details' slot.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Getuige</items>
+        <items id="description">*Personal details of a person who witnesses the completion of the advance care directive.(en)</items>
+        <items id="comment">* For example, 'John Smith, Lawyer'.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Mandaat</items>
+        <items id="description">*Description of any legislation or other authoritative guidance that apply.(en)</items>
+        <items id="comment">* For example, 'In England and Wales, advance decisions are covered by the Mental Capacity Act. Mandate: https://www.bma.org.uk/advice/employment/ethics/consent/consent-tool-kit/9-advance-decisions'. &#xD;
+&#xD;
+Or 'Jehovah's Witnesses believe that the Bible prohibits Christians from accepting blood transfusions. Mandate: https://en.wikipedia.org/wiki/Jehovah%27s_Witnesses_and_blood_transfusions'.</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Locatie</items>
+        <items id="description">Informatie over waar de wilsverklaring opgeslagen is en hoe toegang verkregen kan worden.</items>
+        <items id="comment">* For example, 'In the top drawer of the bedside table'.</items>
+      </items>
+      <items code="at0038">
+        <items id="text">Opmerking</items>
+        <items id="description">Extra informatie over de wilsverklaring die niet past in andere velden.</items>
+      </items>
+      <items code="at0044">
+        <items id="text">Aanwezig</items>
+        <items id="description">Het individu heeft een wilsverklaring.</items>
+      </items>
+      <items code="at0045">
+        <items id="text">Niet aanwezig</items>
+        <items id="description">Het individu heeft geen wilsverklaring.</items>
+      </items>
+      <items code="at0047">
+        <items id="text">Onbekend</items>
+        <items id="description">Het is niet bekend of het individu een wilsverklaring heeft.</items>
+      </items>
+      <items code="at0052">
+        <items id="text">Verklaring details</items>
+        <items id="description">Gestructureerde details over de wilsverklarings beslissingen.</items>
+        <items id="comment">* This SLOT should also be used to record details for specific conditions or as per national or other local requirements. For example, in the UK, there may be a specific statement about whether to actively prolong life but only during pregnancy.</items>
+      </items>
+      <items code="at0053">
+        <items id="text">Geldigheid start</items>
+        <items id="description">*The date/time that marks the beginning of the valid period of time for this advance care directive.(en)</items>
+      </items>
+      <items code="at0054">
+        <items id="text">Geldigheid eind</items>
+        <items id="description">*The date/time that marks the conclusion of the valid period of time for this advance care directive.(en)</items>
+        <items id="comment">* 'Valid period end' may often overlap with 'Review due date'. However, they may need to be recorded separately in circumstances where a document has an extended period of validity but requires an interim review. That may be due to changed personal circumstances/events or local policy.</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Laatst geüpdatet</items>
+        <items id="description">*The date when this advance directive record was last updated.(en)</items>
+        <items id="comment">* This may not be a formal review but e.g. a typo correction.</items>
+      </items>
+      <items code="at0056">
+        <items id="text">Revisie verloop datum</items>
+        <items id="description">*The date at which the advance care directive is due to be reviewed.(en)</items>
+        <items id="comment">* 'Valid period end' may often overlap with 'Review due date'. However, they may need to be recorded separately in circumstances where a document has an extended period of validity but requires an interim review. That may be due to changed personal circumstances/events or local policy.</items>
+      </items>
+      <items code="at0058">
+        <items id="text">Verklaring locatie</items>
+        <items id="description">Informatie over waar de wilsverklaring opgeslagen is of wie een kopie heeft.</items>
+      </items>
+      <items code="at0059">
+        <items id="text">Kopiehouder</items>
+        <items id="description">Gegevens over de persoon die een kopie van de wilsverklaring heeft.</items>
+        <items id="comment">* For example, 'John Smith, Lawyer'.</items>
+      </items>
+      <items code="at0060">
+        <items id="text">Digitale versie</items>
+        <items id="description">Digitaal document, afbeelding of video die de wilsverklaring weergeeft.</items>
+      </items>
+      <items code="at0061">
+        <items id="text">Uitbreiding</items>
+        <items id="description">*Additional information required to extend the model with local content or to align with other reference models/formalisms.(en)</items>
+        <items id="comment">* For example: local information requirements; or additional metadata to align with FHIR.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="pt-br">
+      <items code="at0000">
+        <items id="text">Diretiva avançada de cuidado</items>
+        <items id="description">Uma estrutura para comunicar as preferências de um indivíduo para futuros cuidados ou tratamentos médicos.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Status</items>
+        <items id="description">O status da diretiva antecipada de cuidado.</items>
+        <items id="comment">A codificação da diretiva antecipada de cuidado com uma terminologia é preferida, sempre que possível.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Tipo de diretiva</items>
+        <items id="description">Tipo de diretiva avançada de cuidado.</items>
+        <items id="comment">Um breve texto descritivo da natureza da diretiva de cuidado antecipado. A codificação do tipo de diretiva com uma terminologia é preferida, quando possível. Espera-se que isso seja amplamente localizado para refletir a política e legislação local.&#xD;
+&#xD;
+Por exemplo, na Holanda, os tipos de diretriz de cuidado antecipado incluem, mas não estão limitados a, 'Proibição de tratamento', 'Proibição de tratamento com conclusão total da vida', 'Pedido de eutanásia' e 'Declaração de vida'.&#xD;
+&#xD;
+No Reino Unido, os tipos de diretiva de cuidado antecipado incluem 'Decisão Antecipada', 'Diretiva Antecipada' e 'Declaração Antecipada'.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Descrição</items>
+        <items id="description">Descrição narrativa da diretiva geral de cuidados antecipados.</items>
+        <items id="comment">Pode ser usado para documentar uma visão narrativa completa da diretriz de cuidados antecipados, que pode ou não ser apoiada por dados estruturados. Os detalhes de achados estruturados específicos podem ser incluídos usando os arquétipos CLUSTER no slot 'Detalhes da diretriz'. Este elemento de dados pode ser usado para capturar dados legados que não estão disponíveis em um formato estruturado.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Condição</items>
+        <items id="description">As condições ou situações em que o indivíduo deseja que as diretivas antecipadas de cuidado sejam aplicadas.</items>
+        <items id="comment">Por exemplo: demência, lesão cerebral, doenças do sistema nervoso central e doenças terminais. A codificação com uma terminologia é preferida, sempre que possível.&#xD;
+&#xD;
+A diretriz de cuidados antecipados se aplica a todas as condições especificadas se o indivíduo não puder mais tomar ou comunicar decisões sobre seu tratamento médico e provavelmente não recuperará a capacidade de tomar tais decisões. Detalhes de decisões específicas que se aplicam a diferentes condições ou situações podem ser incluídos usando os arquétipos CLUSTER no slot 'Detalhes de diretriz'.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Testemunha</items>
+        <items id="description">Detalhes pessoais de quem testemunhou o cumprimento da diretiva de cuidado antecipado.</items>
+        <items id="comment">Por exemplo, 'João Ribeiro, Advogado'.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Mandato</items>
+        <items id="description">Descrição de qualquer legislação ou outra orientação autorizada que se aplique.</items>
+        <items id="comment">Por exemplo, 'Na Inglaterra e no País de Gales, as decisões antecipadas são cobertas pela Lei de Capacidade Mental. Mandato: https://www.bma.org.uk/advice/employment/ethics/consent/consent-tool-kit/9-advance-decisions '.&#xD;
+&#xD;
+Ou 'as Testemunhas de Jeová acreditam que a Bíblia proíbe os cristãos de aceitar transfusões de sangue. Mandato: https://en.wikipedia.org/wiki/Je Jeová%27s_Witnesses_and_blood_transfusions '.</items>
+      </items>
+      <items code="at0030">
+        <items id="text">Localização</items>
+        <items id="description">Informação sobre onde a diretiva de cuidado antecipado está guardada e como conseguir acesso.</items>
+        <items id="comment">Por exemplo, 'na gaveta de cima da mesa de cabeceira'.</items>
+      </items>
+      <items code="at0038">
+        <items id="text">Comentário</items>
+        <items id="description">Narrativa adicional sobre a diretiva antecipada de cuidado não capturada em outros campos.</items>
+      </items>
+      <items code="at0044">
+        <items id="text">Presente</items>
+        <items id="description">O indivíduo tem uma diretiva antecipada de cuidado.</items>
+      </items>
+      <items code="at0045">
+        <items id="text">Ausente</items>
+        <items id="description">O indivíduo não tem uma diretiva antecipada de cuidado.</items>
+      </items>
+      <items code="at0047">
+        <items id="text">Desconhecida</items>
+        <items id="description">Não se sabe se o indivíduo tem uma diretiva antecipada de cuidado.</items>
+      </items>
+      <items code="at0052">
+        <items id="text">Detalhe da diretiva</items>
+        <items id="description">Detalhes estruturados sobre as decisões das diretivas antecipadas de cuidado.</items>
+        <items id="comment">Este SLOT também deve ser usado para documentar detalhes para condições específicas ou de acordo com os requisitos nacionais ou locais. Por exemplo, no Reino Unido, pode haver uma declaração específica sobre se deve prolongar ativamente a vida, mas apenas durante a gravidez.</items>
+      </items>
+      <items code="at0053">
+        <items id="text">Início do período de validade</items>
+        <items id="description">A data/hora que marca o início do período de tempo válido para esta diretiva avançada de cuidado.</items>
+      </items>
+      <items code="at0054">
+        <items id="text">Término do perído de validade</items>
+        <items id="description">A data/hora que marca o término do período de tempo válido para esta diretiva avançada de cuidado.</items>
+        <items id="comment">'Término do período de validade' pode muitas vezes se sobrepor à 'Data de vencimento da revisão'. No entanto, eles podem precisar ser documentados separadamente em circunstâncias em que um documento tem um período de validade estendido, mas requer uma revisão intermediária. Isso pode ser devido a mudanças nas circunstâncias / eventos pessoais ou nas políticas locais.</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Última atualização</items>
+        <items id="description">A data em que esta diretiva antecipada de cuidado foi revisada por último.</items>
+        <items id="comment">Esta pode não ser uma revisão formal mas, por exemplo, uma correção de erro de digitação.</items>
+      </items>
+      <items code="at0056">
+        <items id="text">Data de vencimento da revisão</items>
+        <items id="description">A data em que a diretiva antecipada de cuidado deve ser revisada.</items>
+        <items id="comment">'Término do período de validade' pode muitas vezes se sobrepor à 'Data de vencimento da revisão'. No entanto, eles podem precisar ser documentados separadamente em circunstâncias em que um documento tem um período de validade estendido, mas requer uma revisão intermediária. Isso pode ser devido a mudanças nas circunstâncias / eventos pessoais ou nas políticas locais.</items>
+      </items>
+      <items code="at0058">
+        <items id="text">Localização da diretiva</items>
+        <items id="description">Informação sobre onde a diretiva de cuidados antecipados está guardada e quem tem uma cópia.</items>
+      </items>
+      <items code="at0059">
+        <items id="text">Detentor da cópia</items>
+        <items id="description">Detalhes da pessoa que tem uma cópia da diretiva antecipada de cuidado.</items>
+        <items id="comment">Por exemplo, 'João Ribeiro, Advogado'.</items>
+      </items>
+      <items code="at0060">
+        <items id="text">Representação digital</items>
+        <items id="description">Documento digital, imagem ou vídeo representando a diretiva antecipada de cuidado.</items>
+      </items>
+      <items code="at0061">
+        <items id="text">Extensão</items>
+        <items id="description">Informações adicionais necessárias para estender o modelo com conteúdo local ou para alinhá-lo com outros modelos / formalismos de referência.</items>
+        <items id="comment">Por exemplo: requisitos de informações locais; ou metadados adicionais para alinhar com FHIR.</items>
+      </items>
+    </term_definitions>
+    <term_bindings terminology="SNOMED-CT">
+      <items code="at0044">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>410515003</code_string>
+        </value>
+      </items>
+      <items code="at0045">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>410516002</code_string>
+        </value>
+      </items>
+      <items code="at0047">
+        <value>
+          <terminology_id>
+            <value>SNOMED-CT</value>
+          </terminology_id>
+          <code_string>261665006</code_string>
+        </value>
+      </items>
+    </term_bindings>
+  </ontology>
+</archetype>

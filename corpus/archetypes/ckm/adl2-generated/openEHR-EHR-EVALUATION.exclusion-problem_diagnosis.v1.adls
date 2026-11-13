@@ -1,0 +1,147 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8f45287a-6511-4f92-8faf-f515c13de56a; build_uid=cbcb030e-e7b8-4450-80c4-7689948f11c2)
+    openEHR-EHR-EVALUATION.exclusion-problem_diagnosis.v0.0.1
+
+specialize
+    openEHR-EHR-EVALUATION.exclusion.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Helse Bergen HF">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2010-02-03">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Tomas Alme, DIPS ASA, Norway", "Magnus Alsaker, Helsedirektoratet, Norway", "Nadim Anani, Karolinska Institutet, Sweden", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway", "Koray Atalag, University of Auckland, New Zealand", "Gustavo Bacelar-Silva, Healthcare Designs, Brazil (openEHR Editor)", "Silje Ljosland Bakke, National ICT Norway, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Stephen Chu, NEHTA, Australia", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Sebastian Garde, Ocean Informatics, Germany", "Heather Grain, Llewelyn Grain Informatics, Australia", "Sam Heard, Ocean Informatics, Australia", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Kristian Heldal, Telemark Hospital Trust, Norway", "Andreas Hering, Helse Bergen HF, Haukeland universitetssjukehus, Norway", "Anca Heyd, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Sabine Leh, Helse-Bergen, Norway", "Heather Leslie, Ocean Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Oslo Universitetssykehus HF, Norway", "Luis Marco Ruiz, NST, Spain", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Lars Morgan Karlsen, DIPS ASA, Norway", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Jussara Rotzsch, UNB, Brazil", "Stephen Royce, NEHTA, Australia", "Anoop Shah, University College London, United Kingdom", "Norwegian Review Summary, National ICT Norway, Norway", "Line Sæle, Nasjonal IKT HF, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Richard Townley-O'Neill, NEHTA, Australia", "Jon Tysdahl, Furst medlab AS, Norway">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Exclusion of a Problem/Diagnosis, Draft Archetype [Internet]. NEHTA, Australia, NEHTA Clinical Knowledge Manager [cited: 2015-11-25]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1304">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"5B1458C55CF53CF328ABC32BDF79ACED">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a statement about problems or diagnoses that have never been noted by the individual or recognised by a clinician.">
+            keywords = <"exclusion", "rule out", "rule-out", "r/o">
+            use = <"Use to record a statement about problems or diagnoses that have never been noted by the individual or recognised by a clinician.
+
+This archetype has been specifically designed to make a clear and unambiguous statement of exclusion or rule-out of a problem or diagnosis from the health record. This approach is used in preference to relying on flags or terminology to express negation.
+
+This archetype has been designed to be used in a variety of ways. The primary intent is to:
+- represent multiple 'Exclusion statements' in one archetype instance; and
+- link one 'Exclusion statement' with multiple 'Problem/Diagnosis', for example 'No history of' 'Pneumonia' and 'COPD'.
+
+There is also the possibility to use the archetype for the following purposes, although clear and safe clinical use cases have not yet been identified:
+- to link multiple 'Exclusion statements' with one 'Problem/diagnosis'. 
+
+If the clinical requirement is to link multiple 'Exclusion statements' with multiple 'Problem/diagnosis' then this should be represented using multiple instances of this archetype to ensure correct alignment of each 'Exclusion statement' with each 'Problem/Diagnosis'.
+
+Please note that exclusion statements can only be considered to be current and accurate at the point-in-time of recording. It is possible for a record to be able to state that an individual has NO KNOWN history of XYZ (using an exclusion statement) at the same time as recording the evidence of their first experience of XYZ (using the corresponding archetype that records the first experience eg via an EVALUATION for a problem or adiagnosis). In future record statements, the individual may subsequently have a KNOWN history of XYZ recorded in their problem list.">
+            misuse = <"Not to be used to record the exclusion or absence of clinical information for which there is a different purpose-built specialisation of the EVALUATION.exclusion archetype. This includes, but is not limited to the following:
+- Do not use this archetype to record the exclusion of medication use - use the EVALUATION.exclusion-medication archetype for this purpose.
+- Do not use this archetype to record the exclusion of procedures - use the EVALUATION.exclusion-procedure archetype for this purpose.
+- Do not use this archetype to record the exclusion of family history - use the EVALUATION.exclusion-family_history archetype for this purpose.
+- Do not use this archetype to record the exclusion of an adverse reaction - use the EVALUATION.exclusion-adverse_reaction archetype for this purpose.
+
+Not to be used to record the exclusion of any component of physical examination - use the CLUSTER.exclusion_exam archetype within an appropriate OBSERVATION or CLUSTER archetype.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et utsagn om problemer eller diagnoser som enten ikke er tilstede nå, eller ikke har vært tilstede tidligere.">
+            keywords = <"eksklusjon", "fravær", "utsagn", "ekskludert", "funn", "vurdering", "negasjon", "utelukkelse", "problem", "diagnose">
+            use = <"Brukes for å registrere et utsagn om problemer eller diagnoser som enten ikke er tilstede nå, eller ikke har vært tilstede tidligere.
+
+Denne arketypen er spesifikt utviklet for å gi et tydelig og entydig eksklusjonsutsagn om en klinisk oppføring i journalen. Denne tilnærmingen foretrekkes framfor bruk av flagg eller terminologi for å uttrykke negasjon.
+
+Arketypen er utviklet for å kunne brukes på en rekke ulike måter. Den primære hensikten er å:
+- Representere flere \"Eksklusjonsutsagn\" i en instans av arketypen.
+- Lenke et \"Eksklusjonsutsagn\" med flere \"Problem/diagnose\", for eksempel \"Ingen tidligere forekomst av\" \"pneumoni\" og \"KOLS\".
+
+Det er også mulig å bruke arketypen for følgende bruksområder, selv om gode og trygge kliniske bruksområder ikke er identifisert for dette:
+- Lenke flere \"Eksklusjonsutsagn\" med ett \"Spesifikt objekt\".
+
+Er det klinisk behov for at man lenker flere \"Eksklusjonsutsagn\" med flere \"Problem/diagnose\" bør dette representeres ved flere instanser av denne arketypen for å sikre riktig gruppering av hvert enkelt \"Eksklusjonsutsagn\" med hvert enkelt \"Problem/diagnose\".
+
+Merk at eksklusjonsutsagn kun anses å være oppdaterte og presise på registreringstidspunktet. Det er mulig at en journal fastslår at et individ på et tidspunkt hadde INGEN KJENT historie av XYZ (ved bruk at et eksklusjonsutsagn) samtidig som en senere registrerer evidens for debut av XYZ (ved bruk av en korresponderende arketype hvor en registrerer det første tilfellet, f.eks. ved å bruke EVALUATION.problem_diagnosis). I framtidige journalutsagn kan individet deretter ha en KJENT forekomst av XYZ i problemlisten sin.">
+            misuse = <"Brukes ikke for registrering av eksklusjon eller fravær av klinisk informasjon hvor det finnes en spesialisering av denne arketypen for dette formålet.
+Det kan være, men er ikke begrenset til:
+- Bruk ikke denne arketypen for registrering av eksklusjonsutsagn knyttet til bruk av legemidler - bruk arketypen EVALUATION.exclusion-medication til dette formålet.
+- Bruk ikke denne arketypen for registrering av eksklusjonsutsagn knyttet til prosedyrer - bruk arketypen EVALUATION.exclusion-procedure til dette formålet.
+- Bruk ikke denne arketypen for registrering av eksklusjonsutsagn knyttet til familieanamnese - bruk arketypen EVALUATION.exclusion-family_history til dette formålet.
+- Bruk ikke denne arketypen for registrering av eksklusjonsutsagn knyttet til overfølsomhetsreaksjoner - bruk arketypen EVALUATION.exclusion-adverse_reaction til dette formålet.
+
+Brukes ikke for å registrere en eksklusjon av en del av en fysisk undersøkelse - bruk arketypen CLUSTER.exclusion_exam i den aktuelle OBSERVATION- eller CLUSTER-arketypen.">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- Exclusion of a Problem/Diagnosis
+        /data[at0001]/items matches {
+            ELEMENT[at0002.1] matches {    -- Exclusion statement
+                value matches {
+                    DV_TEXT[at0.9000]
+                }
+            }
+            ELEMENT[at0003.1] matches {    -- Problem/Diagnosis
+                value matches {
+                    DV_TEXT[at0.9001]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"Eksklusjon av problem/diagnose">
+                description = <"Utsagn om problemer eller diagnoser som enten i">
+            >
+            ["at0002.1"] = <
+                text = <"Eksklusjonsutsagn">
+                description = <"Utsagn om eksklusjon av et problem eller en diagnose som enten ikke er tilstede nå, eller ikke har vært tilstede tidligere.">
+                comment = <"Brukes til å fange opp all helseinformasjon som eksplisitt skal registreres som ikke tilstede nå og/eller ikke til stede tidligere. Utsagnet støtter registrering av generelle utsagn som \"Ingen tidligere...\" eller \"Ikke kjent...\". Den kan også støtte mer krevende utsagn om et spesifikt objekt som \"Ingen kjent forekomst av ...\" der \"Problem/diagnose\" identifiserer den aktuelle kliniske tilstanden.">
+            >
+            ["at0003.1"] = <
+                text = <"Problem/diagnose">
+                description = <"Identifikasjon av det problemet eller diagnosen \"Eksklusjonsutsagnet\" gjelder.">
+                comment = <"Dette dataelementet brukes for å gi presise utsagn som f.eks. \"Aldri hatt diabetes\". I dette eksempelet er \"diabetes\" et eksempel på \"Problem/diagnose\", og resten av setningen registreres i \"Eksklusjonsutsagn\". Et annet mulig bruksområde kan være \"Utelukkelse av graviditet\". Merk at om prekoordinerte fraser som \"Ingen kjent pneumoni\" finnes, kan dette brukes som et alternativ i datalemententet \"Eksklusjonsutsagn\".">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Exclusion of a Problem/Diagnosis">
+                description = <"A statement about problems or diagnoses that have never been noted by the individual or recognised by a clinician.">
+            >
+            ["at0002.1"] = <
+                text = <"Exclusion statement">
+                description = <"Statement of exclusion of a problem or diagnosis.">
+                comment = <"Use to record a statement about problems or diagnoses that have never been noted by the individual or recognised by a clinician. This statement can support recording general statements such as \"No previous/past ...\" or \" No known ...\". Or it can support more exacting statements about a specified object such as \"No known history of ...\" where the 'Problem/diagnosis' identifies the precise condition.">
+            >
+            ["at0003.1"] = <
+                text = <"Problem/Diagnosis">
+                description = <"Identification of the specific Problem or Diagnosis to which the 'Exclusion statement' applies.">
+                comment = <"This data element is used to enable exact statements like: 'No past history of diabetes for the individual'. In this example, 'diabetes' would be an example of the 'Problem/Diagnosis' and the rest of the example phrase would be carried in the 'Exclusion statement'. Another possible use case might be 'Exclusion of pregnancy'. Please note: if coordinated phrases such as 'No known pneumonia' is available, then this can be used as an alternative in the 'Exclusion statement' alone.">
+            >
+        >
+    >

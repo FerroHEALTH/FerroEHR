@@ -189,7 +189,9 @@ pub(crate) fn document_tokens(
             });
         }
     }
-    for address in crate::system_log::store::lax_path(document, &["agent", "network", "address"]) {
+    for address in
+        crate::system_log::store::lax::lax_path(document, &["agent", "network", "address"])
+    {
         tokens.insert(SearchToken {
             parameter: ADDRESS,
             system: None,

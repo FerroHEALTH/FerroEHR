@@ -3,8 +3,7 @@
 
 //! The classification of every operation the REST layer dispatches: one row
 //! per operation id, read by the RBAC route map, the ABAC policy-enforcement
-//! point, the SMART on openEHR gates, the `EHR_ACCESS` privacy ceiling and the
-//! ATNA audit trail.
+//! point, the SMART on openEHR gates and the ATNA audit trail.
 //!
 //! Every generated ITS-REST operation has a row, which the completeness tests
 //! of [`crate::extensions::access::authz::classify`] and
@@ -132,13 +131,6 @@ impl Operation {
     pub(crate) fn commits_contribution(&self) -> bool {
         self.kind == Some(ResourceKind::Contribution) && self.verb == Verb::Create
     }
-
-    /// Whether the operation reads a COMPOSITION, the set the `EHR_ACCESS`
-    /// privacy ceiling and the ABAC post-check share.
-    #[must_use]
-    pub(crate) fn reads_composition(&self) -> bool {
-        self.pep == Mode::Post && self.kind == Some(ResourceKind::Composition)
-    }
 }
 
 /// The operation `id`, or `None` for an operation without a row.
@@ -184,8 +176,15 @@ static OPERATIONS: &[Operation] = operations! {
     "admin_ehr_delete_all" => Delete, Admin, None, Skip, Ehr, None;
     "admin_party_delete" => Delete, None, None, Skip, Demographic, None;
     "admin_party_identifiers" => Read, None, None, Skip, Demographic, None;
+    crate::api::admin::access_policy::HISTORY => Read, None, None, Skip, ApplicationActivity, None;
+    crate::api::admin::access_policy::READ => Read, None, None, Skip, ApplicationActivity, None;
+    crate::api::admin::access_policy::VERSIONED => Read, None, None, Skip, ApplicationActivity, None;
+    crate::api::admin::access_policy::WRITE => Update, None, None, Skip, ApplicationActivity, None;
     crate::api::admin::outbox::ACK => Update, None, None, Skip, ApplicationActivity, None;
     crate::api::admin::outbox::READ => Read, None, None, Skip, ApplicationActivity, None;
+    crate::api::admin::registers::HISTORY => Read, None, None, Skip, ApplicationActivity, None;
+    crate::api::admin::registers::READ => Read, None, None, Skip, ApplicationActivity, None;
+    crate::api::admin::registers::WRITE => Update, None, None, Skip, ApplicationActivity, None;
     "agent_create" => Create, Clinical, None, Skip, Demographic, None;
     "agent_delete" => Delete, Clinical, None, Skip, Demographic, None;
     "agent_get" => Read, Clinical, None, Skip, Demographic, None;
@@ -265,6 +264,7 @@ static OPERATIONS: &[Operation] = operations! {
     "organisation_tags_get" => Read, Clinical, None, Skip, Demographic, None;
     "organisation_tags_update" => Update, Clinical, None, Skip, Demographic, None;
     "organisation_update" => Update, Clinical, None, Skip, Demographic, None;
+    "party_reverse_relationships_get" => Read, None, None, Skip, Demographic, None;
     "person_create" => Create, Clinical, None, Skip, Demographic, None;
     "person_delete" => Delete, Clinical, None, Skip, Demographic, None;
     "person_get" => Read, Clinical, None, Skip, Demographic, None;
@@ -374,7 +374,6 @@ mod tests {
             },
             smart_read.to_string(),
             smart_write.to_string(),
-            row.is_some_and(Operation::reads_composition).to_string(),
         ]
         .join("\t")
     }
@@ -433,8 +432,8 @@ mod tests {
         );
     }
 
-    /// The rows the policy-enforcement point and the `EHR_ACCESS` gate-keeper
-    /// select by their fields are exactly the operations they named before.
+    /// The rows the policy-enforcement point selects by their fields are
+    /// exactly the operations it named before.
     #[test]
     fn the_content_and_gate_keeper_selections_name_their_operations() {
         let ids = |keep: fn(&Operation) -> bool| -> Vec<&str> {
@@ -518,7 +517,7 @@ mod tests {
     #[ignore = "the classification writer: run it only for a deliberate change of a classification"]
     fn write_the_operation_classification() {
         let text = std::fs::read_to_string(golden_path()).expect("read the classification");
-        let header = "# op\tgenerated\tclass\tkind\taccess\tis_write\tpep_mode\taudit\tsmart_permission\tsmart_read\tsmart_write\tcomposition_read";
+        let header = "# op\tgenerated\tclass\tkind\taccess\tis_write\tpep_mode\taudit\tsmart_permission\tsmart_read\tsmart_write";
         let mut out = vec![header.to_owned()];
         out.extend(golden_ops(&text).into_iter().map(row));
         out.push(String::new());

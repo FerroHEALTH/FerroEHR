@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2016-01-06</original_author>
+    <original_author id="name">John Tore Valand</original_author>
+    <original_author id="organisation">Helse Bergen HF</original_author>
+    <original_author id="email">john.tore.valand@helse-bergen.no</original_author>
+    <other_contributors>Anne Pauline Anderssen, Helse Nord RHF, Norway</other_contributors>
+    <other_contributors>Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)</other_contributors>
+    <other_contributors>Silje Ljosland Bakke, Nasjonal IKT HF, Norway (Nasjonal IKT redaktør)</other_contributors>
+    <other_contributors>Marcus Baw, openGPSoC / BawMedical Ltd, United Kingdom</other_contributors>
+    <other_contributors>Kristian Berg, Universitetssykehuset Nord Norge, Norway</other_contributors>
+    <other_contributors>Bjørn Christensen, HUS, Norway</other_contributors>
+    <other_contributors>Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway</other_contributors>
+    <other_contributors>Karl Trygve Kalleberg, Oslo Universitetssykehus, Norway</other_contributors>
+    <other_contributors>Lars Morgan Karlsen, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Heather Leslie, Ocean Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Hallvard Lærum, Oslo Universitetssykehus HF, Norway</other_contributors>
+    <other_contributors>Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)</other_contributors>
+    <other_contributors>Bjørn Næss, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Vladimir Pizzo, Hospital Sírio Libanês, Brazil</other_contributors>
+    <other_contributors>Tanja Riise, Nasjonal IKT HF, Norway</other_contributors>
+    <other_contributors>Rowan Thomas, St. Vincent's Hospital Melbourne, Australia</other_contributors>
+    <other_contributors>Jon Tysdahl, Furst medlab AS, Norway</other_contributors>
+    <other_contributors>John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)</other_contributors>
+    <other_contributors>Nils Widnes, Helse-Bergen, Norway</other_contributors>
+    <other_contributors>Thomas Wilson, Finnmarkssykehuset HF Klinikk Hammerfest, Norway</other_contributors>
+    <lifecycle_state>deprecated</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
+    <other_details id="custodian_organisation">Nasjonal IKT</other_details>
+    <other_details id="references">Cormack RS, Lehane J. Difficult tracheal intubation in obstetrics. Anaesthesia 1984; 39: 1105–11.&#xD;
+&#xD;
+Bjerkelund CE, Christensen P, Dragsund S, Aadahl P. [How to secure free airway?]. Tidsskrift for den Norske laegeforening : tidsskrift for praktisk medicin, ny raekke 2010; 130(5): 507-10.&#xD;
+&#xD;
+Yentis SM, Lee DJH. Evaluation of an improved scoring system for the grading of direct laryngoscopy. Anaesthesia 1998; 53(11): 1041-4.&#xD;
+&#xD;
+OpenAirway. Department of Anaesthesia, University of Cape Town. [internet] Accessed 2016-03-31. http://openairway.org/tag/cormack-lehane/</other_details>
+    <other_details id="original_namespace">no.nasjonalikt</other_details>
+    <other_details id="original_publisher">Nasjonal IKT</other_details>
+    <other_details id="custodian_namespace">no.nasjonalikt</other_details>
+    <other_details id="MD5-CAM-1.0.1">D59113D4A90DA114199DE6D2C9949C3F</other_details>
+    <other_details id="build_uid">c46d825c-001c-4db4-86a1-01009dc5679d</other_details>
+    <other_details id="revision">1.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For å beskrive synlige strukturer under direkte laryngoskopi, og indirekte for å indikere en sannsynlig vanskelig intubasjon.</purpose>
+      <keywords>intubasjon</keywords>
+      <keywords>laryngoskopi</keywords>
+      <keywords>larynx</keywords>
+      <keywords>luftvei</keywords>
+      <keywords>innsyn</keywords>
+      <keywords>epiglottis</keywords>
+      <keywords>glottis</keywords>
+      <keywords>vanskelig intubasjon</keywords>
+      <use>Brukes for å beskrive synlige strukturer under direkte laryngoskopi, og indirekte for å indikere en sannsynlig vanskelig intubasjon.&#xD;
+&#xD;
+Denne arketypen er designet for å brukes innen flere forskjellige ENTRY-arketyper, for eksempel en EVALUATION for en oppsummering av intubasjonsproblemer, eller ACTION.procedure for å registrere en utført intubasjon. Hodets posisjon og annen relevant informasjon registreres i ENTRY-arketypen.</use>
+      <misuse>Brukes ikke til å registrere Modifisert Cormack/Lehane-klassifikasjon (Yentis &amp; Lee, 1998). Bruk en spesifikk arketype til dette.</misuse>
+      <copyright>© Nasjonal IKT HF</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To describe the structures visible during direct laryngoscopy and indirectly to indicate the likely difficulty of laryngeal intubation.</purpose>
+      <keywords>intubation</keywords>
+      <keywords>laryngoscopy</keywords>
+      <keywords>grading</keywords>
+      <keywords>airway</keywords>
+      <keywords>glottis</keywords>
+      <keywords>epiglottis</keywords>
+      <keywords>difficult airway</keywords>
+      <use>Use to describe the structures visible during direct laryngoscopy and indirectly to indicate the likely difficulty of laryngeal intubation.&#xD;
+&#xD;
+This archetype has been designed to be used within a variety of ENTRY archetypes - for example an EVALUATION for a summary statement about intubation difficulties, or ACTION.procedure when recording a performed intubation. The position of the head and other relevant information will be carried in the ENTRY archetype.</use>
+      <misuse>Not to be used for recording Modified Cormack-Lehane grading (Yentis &amp; Lee, 1998). Use a specific archetype for this purpose.</misuse>
+      <copyright>© Nasjonal IKT HF</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">John Tore Valand / Silje Ljosland Bakke</author>
+    <author id="organisation">Helse Bergen HF / Nasjonal IKT HF</author>
+  </translations>
+  <uid>
+    <value>556ab863-1668-426c-b47c-73367be84180</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-CLUSTER.cormack_lehane.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_CODE_PHRASE">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <terminology_id>
+                  <value>local</value>
+                </terminology_id>
+                <code_list>at0002</code_list>
+                <code_list>at0003</code_list>
+                <code_list>at0004</code_list>
+                <code_list>at0005</code_list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0006</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>1</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Cormack/Lehane-klassifikasjon</items>
+        <items id="description">Cormack/Lehane-systemet klassifiserer innsynsforhold til larynx ved direkte laryngoskopi, basert på hvilke strukturer som kan ses.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Gradering</items>
+        <items id="description">Gradering av anatomisk synlighet i larynx.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Grad 1: Hele larynx synlig</items>
+        <items id="description">Hele larynx synlig.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Grad 2: Epiglottis og aryregionen synlig</items>
+        <items id="description">Epiglottis og aryregionen synlig.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Grad 3: Bare epiglottis synlig</items>
+        <items id="description">Bare epiglottis synlig.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Grad 4: Epiglottis ikke synlig</items>
+        <items id="description">Epiglottis ikke synlig.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Kommentar</items>
+        <items id="description">Fritekstkommentar til graderingen.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Cormack-Lehane classification</items>
+        <items id="description">The Cormack-Lehane system classifies views obtained by direct laryngoscopy based on the structures seen.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Grading</items>
+        <items id="description">A grading of the laryngeal anatomical visibility.</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Grade 1: Full view of the glottis</items>
+        <items id="description">Full view of the glottis.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Grade 2: Partial view of the glottis or arytenoids</items>
+        <items id="description">Partial view of the glottis or arytenoids.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Grade 3: Only epiglottis visible</items>
+        <items id="description">Only epiglottis visible.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Grade 4: Neither glottis nor epiglottis visible</items>
+        <items id="description">Neither glottis nor epiglottis visible.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Comment</items>
+        <items id="description">Narrative comment about the Cormack-Lehane grading.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

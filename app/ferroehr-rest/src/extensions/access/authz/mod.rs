@@ -16,9 +16,8 @@
 //! 1. RBAC, coarse and always on when auth is enabled: every generated ITS-REST
 //!    operation is classified ([`classify`]) and gated by a role model
 //!    ([`roles`]) driven by `ferroehr::config::authz::AuthzConfig`.
-//! 2. ABAC, fine-grained and opt-in: the policy decision point of
-//!    `ferrohealth-authz`, its embedded Cedar engine or its remote decision
-//!    point, consulted per clinical operation with the attributes the PEP
+//! 2. ABAC, fine-grained and opt-in: the embedded Cedar engine of
+//!    `ferrohealth-authz`, consulted per clinical operation with the attributes the PEP
 //!    resolves ([`request`]).
 //!
 //! This module also carries the per-server authorization handle wired onto
@@ -29,28 +28,30 @@
 //! - `config`: the `ferroehr::config::authz::AuthzConfig` serde struct (the
 //!   `[authz]` section of the one server config tree) and boot validation.
 //! - [`roles`]: the RBAC gate decision over the caller's roles.
+//! - [`content`]: the category and origin rules of the ABAC content
+//!   attributes.
 //! - [`classify`]: `operation_id → OperationClass` / `ResourceKind` /
 //!   `AccessMode` (total-coverage-guarded).
-//! - [`remote`]: the remote decision point `[authz.abac.remote]` describes.
+//! - [`cedar`]: the embedded Cedar engine over the Cedar admin register.
 //! - [`request`]: the ABAC request and the model the Cedar schema is written
 //!   from.
 
+pub mod cedar;
 pub mod classify;
-pub mod remote;
+pub mod content;
 pub mod request;
 pub mod roles;
 
 use crate::api::operation::{Operation, operation};
 use crate::extensions::access::authz::classify::OperationClass;
+use crate::extensions::access::authz::content::ContentRules;
 use crate::extensions::access::authz::roles::{RbacDecision, authorize, authorize_readonly};
 use ferroehr::aql::subject::EhrSubject;
 use ferroehr::config::authz::{
     AbacConfig, AbacEngineKind, AuthzConfig, EhrAccessDefault, RbacConfig,
 };
-use ferroehr::origins::OriginsConfig;
+use ferroehr::policy_register::LiveRegisters;
 use ferroehr::storage::version_repo::meta::VersionContent;
-use ferroehr::system_log::categories::Classifier;
-use ferrohealth_authz::cedar::CedarEngine;
 use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
 
 use std::collections::HashMap;
@@ -58,7 +59,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use ferrohealth_config::units::Duration;
 use http::Method;
 
 /// An attribute-resolution failure (a DB lookup error). Fail-closed at the
@@ -114,32 +114,6 @@ pub type SubjectFn = Arc<dyn Fn(String) -> ResolverFuture<Option<EhrSubject>> + 
 pub type ContentOfVersionFn =
     Arc<dyn Fn(String, Option<String>) -> ResolverFuture<Option<VersionContent>> + Send + Sync>;
 
-/// The deployment's rules for the category and origin attributes (EHDS
-/// Annex II 3.4).
-///
-/// The category map every access is classified through, the origin register
-/// (`[[authz.origin]]`), and the `system_id` a direct commit by an unregistered client is
-/// stamped with.
-#[derive(Debug, Clone)]
-pub struct ContentRules {
-    /// The compiled `[audit.categories]` map.
-    pub categories: Classifier,
-    /// The `[[authz.origin]]` register.
-    pub origins: OriginsConfig,
-    /// The effective openEHR `system_id` (`[api] system_id`).
-    pub system_id: String,
-}
-
-impl Default for ContentRules {
-    fn default() -> Self {
-        Self {
-            categories: Classifier::default(),
-            origins: OriginsConfig::default(),
-            system_id: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
-        }
-    }
-}
-
 /// The DB-backed attribute resolvers the ABAC PEP calls.
 ///
 /// Defined here so the REST layer can hold them; the closures are built in
@@ -164,24 +138,20 @@ impl std::fmt::Debug for AuthzResolvers {
 /// Build the configured ABAC [`PolicyEngine`], or `None` when ABAC
 /// is disabled. Called by the binary at boot after [`AuthzConfig::validate`].
 ///
+/// The embedded Cedar engine takes its policy set from the Cedar register of
+/// `registers` ([`cedar::RegisterCedar`]).
+///
 /// # Errors
-/// [`AuthzError::Load`] if the Cedar policies fail to load or validate, or the
-/// remote decision point's settings or token client cannot be built.
-pub fn build_engine(config: &AbacConfig) -> Result<Option<Arc<dyn PolicyEngine>>, AuthzError> {
+/// [`AuthzError::Load`] if the Cedar register in force does not validate.
+pub fn build_engine(
+    config: &AbacConfig,
+    registers: &Arc<LiveRegisters>,
+) -> Result<Option<Arc<dyn PolicyEngine>>, AuthzError> {
     if !config.enabled {
         return Ok(None);
     }
     let engine: Arc<dyn PolicyEngine> = match config.engine {
-        AbacEngineKind::Cedar => {
-            let dir = config
-                .cedar
-                .policy_dir
-                .as_deref()
-                .ok_or_else(|| AuthzError::Load("abac.cedar.policy_dir is not set".into()))?;
-            let reload = config.cedar.reload_interval.map(Duration::get);
-            Arc::new(CedarEngine::from_directory(request::model(), dir, reload)?)
-        }
-        AbacEngineKind::Remote => Arc::new(remote::remote_pdp(config)?),
+        AbacEngineKind::Cedar => Arc::new(cedar::RegisterCedar::new(Arc::clone(registers))?),
     };
     Ok(Some(engine))
 }
@@ -295,13 +265,9 @@ pub(crate) struct AbacGate {
     /// The subject namespace patient-claim ids are read in
     /// (`abac.patient_namespace`); `None` reads the id alone.
     pub(crate) patient_namespace: Option<String>,
-    /// Whether DIRECTORY (FOLDER) operations reach the PDP — the
-    /// `abac.check_directory` switch, so the opt-in is engine-independent
-    /// rather than inferred from a remote-PDP-shaped policy map.
+    /// Whether DIRECTORY (FOLDER) operations reach the engine, the
+    /// `abac.check_directory` switch.
     pub(crate) directory_checked: bool,
-    /// The configured engine, which decides whether the caller's patient
-    /// travels as a subject attribute and which decision counter moves.
-    pub(crate) engine_kind: AbacEngineKind,
 }
 
 impl std::fmt::Debug for AbacGate {
@@ -324,18 +290,6 @@ impl AbacGate {
             patient_claim: config.patient_claim().map(str::to_owned),
             patient_namespace: config.patient_namespace().map(str::to_owned),
             directory_checked: config.check_directory,
-            engine_kind: config.engine,
-        }
-    }
-
-    /// The caller's patient as the principal's `patient` attribute: the Cedar
-    /// engine reads it there, while the remote decision point reads a
-    /// parameter the resource lacks from the subject, which would put the
-    /// caller's patient on an object whose subject no claim names.
-    pub(crate) fn subject_patient(&self, patient: Option<&String>) -> Option<String> {
-        match self.engine_kind {
-            AbacEngineKind::Cedar => patient.cloned(),
-            AbacEngineKind::Remote => None,
         }
     }
 }
@@ -370,6 +324,10 @@ pub(crate) struct RbacGate {
 ///   nothing and answers identifiers + defect classes only, strictly less
 ///   than the admin read routes already expose. A read-only integrity
 ///   auditor is exactly who runs it (adjudicated on #2692).
+/// - `POST /admin/access-log/verify` — the access log's verification against
+///   its checkpoint (#5129): it recomputes the chain and checks signatures,
+///   answers findings only, and moves no record; the verification cursor it
+///   advances is the one the scheduled chain check moves.
 /// - `POST /query/cohort` — the cohort query: AQL execution over a population
 ///   selected in the demographic domain. It selects and never commits, exactly
 ///   as the released `POST /query/aql` does, and travels as a body because its
@@ -379,6 +337,7 @@ pub(crate) struct RbacGate {
 const EXTENSION_READ_ROUTES: &[(&str, &str)] = &[
     ("POST", "/message/export"),
     ("POST", "/admin/integrity/verify"),
+    ("POST", "/admin/access-log/verify"),
     ("POST", "/query/cohort"),
 ];
 
@@ -489,23 +448,6 @@ impl RbacGate {
     /// Apply the RBAC decision for a class + the caller's roles.
     pub(crate) fn decide(&self, class: OperationClass, principal_roles: &[String]) -> RbacDecision {
         authorize(class, principal_roles, &self.rules)
-    }
-
-    /// Whether the caller holds the configured subject-scoped audit role
-    /// (`authz.rbac.subject_audit_role`), which reads the access log for one
-    /// subject at a time (#3240). `false` when the key is unset. Role matching
-    /// is ASCII-case-insensitive, like every other role here. Consulted by the
-    /// ITI-81 retrieval, which lives in the `fhir` feature.
-    #[cfg(feature = "fhir")]
-    pub(crate) fn holds_subject_audit_role(&self, principal_roles: &[String]) -> bool {
-        self.rules
-            .subject_audit_role
-            .as_deref()
-            .is_some_and(|role| {
-                principal_roles
-                    .iter()
-                    .any(|held| held.eq_ignore_ascii_case(role))
-            })
     }
 
     /// Apply the read-only restriction for a write flag + the caller's roles: a
@@ -688,55 +630,29 @@ mod tests {
         assert_eq!(handle.admin_role(), "SUPERADMIN");
     }
 
-    /// DIRECTORY gating reads `abac.check_directory`, so it works identically
-    /// under both engines and is not inferred from the remote-PDP policy map (a
-    /// Cedar deployment would otherwise need a policy name its engine never
-    /// reads). No openEHR spec governs authorization — our own design.
+    /// DIRECTORY gating reads `abac.check_directory`, off by default. No
+    /// openEHR spec governs authorization — our own design.
     #[test]
-    fn directory_checked_is_engine_independent() {
+    fn directory_checked_follows_its_switch() {
         let engine: Arc<dyn PolicyEngine> = Arc::new(InertEngine);
-
-        for kind in [AbacEngineKind::Cedar, AbacEngineKind::Remote] {
-            let off = AbacConfig {
-                enabled: true,
-                engine: kind,
-                ..AbacConfig::default()
-            };
-            let gate = AbacGate::new(&off, Arc::clone(&engine), inert_resolvers());
-            assert!(
-                !gate.directory_checked,
-                "{kind:?}: DIRECTORY gating is off by default"
-            );
-
-            let on = AbacConfig {
-                check_directory: true,
-                ..off
-            };
-            let gate = AbacGate::new(&on, Arc::clone(&engine), inert_resolvers());
-            assert!(
-                gate.directory_checked,
-                "{kind:?}: check_directory alone enables DIRECTORY gating"
-            );
-        }
-
-        // A `directory` entry in the remote-PDP policy map no longer enables it.
-        let mut policy = std::collections::BTreeMap::new();
-        policy.insert(
-            "directory".to_owned(),
-            ferroehr::config::authz::PolicyRule {
-                name: "directory-access".to_owned(),
-                parameters: vec![],
-            },
-        );
-        let map_only = AbacConfig {
+        let off = AbacConfig {
             enabled: true,
-            policy,
             ..AbacConfig::default()
         };
-        let gate = AbacGate::new(&map_only, engine, inert_resolvers());
+        let gate = AbacGate::new(&off, Arc::clone(&engine), inert_resolvers());
         assert!(
             !gate.directory_checked,
-            "the wire policy map is not the opt-in switch"
+            "DIRECTORY gating is off by default"
+        );
+
+        let on = AbacConfig {
+            check_directory: true,
+            ..off
+        };
+        let gate = AbacGate::new(&on, engine, inert_resolvers());
+        assert!(
+            gate.directory_checked,
+            "check_directory alone enables DIRECTORY gating"
         );
     }
 
@@ -756,31 +672,14 @@ mod tests {
         }
     }
 
-    #[test]
-    fn the_callers_patient_is_a_subject_attribute_for_cedar_only() {
-        let patient = "p-1".to_owned();
-        let cedar = AbacConfig {
-            enabled: true,
-            engine: AbacEngineKind::Cedar,
-            ..AbacConfig::default()
-        };
-        let remote = AbacConfig {
-            engine: AbacEngineKind::Remote,
-            ..cedar.clone()
-        };
-        let gate =
-            |config: &AbacConfig| AbacGate::new(config, Arc::new(InertEngine), inert_resolvers());
-        assert_eq!(
-            gate(&cedar).subject_patient(Some(&patient)),
-            Some(patient.clone())
-        );
-        assert_eq!(gate(&remote).subject_patient(Some(&patient)), None);
-    }
-
-    #[test]
-    fn build_engine_none_when_abac_disabled() {
+    #[tokio::test]
+    async fn build_engine_none_when_abac_disabled() {
         // ABAC off (the default) → no engine, current behaviour preserved.
-        let engine = build_engine(&AbacConfig::default()).expect("build");
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://localhost/unused")
+            .expect("a lazy pool");
+        let registers = Arc::new(LiveRegisters::new(pool));
+        let engine = build_engine(&AbacConfig::default(), &registers).expect("build");
         assert!(engine.is_none());
     }
 

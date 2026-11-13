@@ -1,0 +1,183 @@
+﻿<!DOCTYPE HTML>
+  <!-- template-examples.html --><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>Consent - FHIR v4.0.1</title>
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="http://hl7.org/fhir"/>
+
+  <link rel="stylesheet" href="fhir.css"/>
+  <link rel="Prev" href="http://hl7.org/fhir/consent-examples.html"/>
+
+    <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="./dist/css/bootstrap.css"/>
+  <link rel="stylesheet" href="./assets/css/bootstrap-fhir.css"/>
+
+    <!-- Project extras -->
+  <link rel="stylesheet" href="./assets/css/project.css"/>
+  <link rel="stylesheet" href="fhir-pub.css"/>
+  <link rel="stylesheet" href="./assets/css/pygments-manni.css"/>
+	<link rel="stylesheet" href="jquery-ui.css"/>
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- [if lt IE 9]>
+  <script src="./assets/js/html5shiv.js"></script>
+  <script src="./assets/js/respond.min.js"></script>
+  <![endif] -->
+
+    <!-- Favicons -->
+  <link sizes="144x144" rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-144-precomposed.png"/>
+  <link sizes="114x114" rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-114-precomposed.png"/>
+  <link sizes="72x72" rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-72-precomposed.png"/>
+  <link rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-57-precomposed.png"/>
+  <link rel="shortcut icon" href="./assets/ico/favicon.png"/>
+
+</head>
+<body>
+	<div id="segment-header" class="segment">  <!-- segment-header -->	
+		<div class="container">  <!-- container -->
+			<a no-external="true" id="logo" href="http://hl7.org/fhir"><img src="./assets/images/fhir-logo-www.png" alt="logo fhir" width="249" height="60"/> </a>
+			<div id="hl7-status">
+				<b>Release 4</b>
+			</div>       	
+			
+			<div id="hl7-nav">
+				 <a no-external="true" id="hl7-logo" href="http://www.hl7.org">
+					<img src="./assets/images/hl7-logo.png" width="42" alt="visit the hl7 website" height="50"/>
+				</a> 
+			</div>       	
+			<div id="hl7-nav"><a no-external="true" id="hl7-logo" href="http://hl7.org/fhir/R4/searchform.html"><img src="./assets/images/search.png" alt="Search FHIR"/></a></div> 
+		</div>
+		<div class="container">  <!-- container -->
+	</div></div>  <!-- /segment-header -->	
+
+
+	<div id="segment-navbar" class="segment">  <!-- segment-navbar -->
+		<div id="stripe"> </div>
+		<div class="container">  <!-- container -->
+   <!-- HEADER CONTENT -->
+ 	      		 	      		      		
+			<nav class="navbar navbar-inverse">
+				<div class="container">
+					<button data-target=".navbar-inverse-collapse" data-toggle="collapse" type="button" class="navbar-toggle">
+						<span class="icon-bar"> </span>
+						<span class="icon-bar"> </span>
+						<span class="icon-bar"> </span>
+					</button>
+					<a href="index.html" class="navbar-brand hidden">FHIR</a>
+					<div class="nav-collapse collapse navbar-inverse-collapse">
+						<ul class="nav navbar-nav">
+              <li><a href="./index.html">Home</a></li>
+              <li><a href="./modules.html">Getting Started</a></li>
+              <li><a href="./documentation.html">Documentation</a></li>
+              <li><a href="./resourcelist.html">Resources</a></li>
+              <li><a href="./profilelist.html">Profiles</a></li>
+              <li><a href="./extensibility-registry.html">Extensions</a></li>
+              <li><a href="./operationslist.html">Operations</a></li>
+              <li><a href="./terminologies-systems.html">Terminologies</a></li>
+						</ul>
+					</div>  <!-- /.nav-collapse -->
+				</div>  <!-- /.container -->
+			</nav>  <!-- /.navbar -->
+      		
+  <!-- /HEADER CONTENT -->				
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-navbar -->
+	
+
+	<div id="segment-breadcrumb" class="segment">  <!-- segment-breadcrumb -->
+		<div class="container">  <!-- container -->	
+			<ul class="breadcrumb">
+        <li><a href="secpriv-module.html"><img src="secpriv.jpg"/> Security and Privacy</a></li>        <li><a href="consent.html">Consent</a></li>        <li><b>Examples</b></li>          <!-- consent.html / res-Examples / Resource &lt;%xtitle%&gt; - Examples -->
+
+			</ul>	
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-breadcrumb -->
+	
+
+	<div id="segment-content" class="segment">  <!-- segment-content -->
+	<div class="container">  <!-- container -->
+            <div class="row">
+            	<div class="inner-wrapper">
+  <!-- CONTENT CONTENT -->
+
+
+<div class="col-12">  <!-- ReleaseHeader --><p id="publish-box-past">This page is part of the FHIR Specification (v4.0.1: R4 - Mixed <a href="https://confluence.hl7.org/display/HL7/HL7+Balloting" title="Normative Standard">Normative</a> and <a href="https://confluence.hl7.org/display/HL7/HL7+Balloting" title="Standard for Trial-Use">STU</a>) in it's permanent home (it will always be available at this URL). The current version which supercedes this version is <a href="http://hl7.org/fhir/index.html">5.0.0</a>. For a full list of available versions, see the <a href="http://hl7.org/fhir/directory.html">Directory of published versions <img src="external.png" style="text-align: baseline"></a>. <!--pxl-->Page versions: <a href="http://hl7.org/fhir/R5/consent-examples.html">R5</a> <a href="http://hl7.org/fhir/R4B/consent-examples.html">R4B</a> <b>R4</b> <a href="http://hl7.org/fhir/STU3/consent-examples.html">R3</a></p>  <!-- EndReleaseHeader -->
+
+<ul class="nav nav-tabs"><li><a href="consent.html">Content</a></li><li class="active"><a href="#">Examples</a></li><li><a href="consent-definitions.html">Detailed Descriptions</a></li><li><a href="consent-mappings.html">Mappings</a></li><li><a href="consent-profiles.html">Profiles &amp; Extensions</a></li><li><a href="consent-version-maps.html">R3 Conversions</a></li></ul>
+
+<h2 class="self-link-parent"><span class="sectioncount">6.2.9<a name="6.2.9"> </a></span> Resource Consent - Examples <a href="consent-examples.html#6.2.9" title="link to here" class="self-link"><svg viewBox="0 0 1792 1792" width="20" class="self-link" height="20"><path d="M1520 1216q0-40-28-68l-208-208q-28-28-68-28-42 0-72 32 3 3 19 18.5t21.5 21.5 15 19 13 25.5 3.5 27.5q0 40-28 68t-68 28q-15 0-27.5-3.5t-25.5-13-19-15-21.5-21.5-18.5-19q-33 31-33 73 0 40 28 68l206 207q27 27 68 27 40 0 68-26l147-146q28-28 28-67zm-703-705q0-40-28-68l-206-207q-28-28-68-28-39 0-68 27l-147 146q-28 28-28 67 0 40 28 68l208 208q27 27 68 27 42 0 72-31-3-3-19-18.5t-21.5-21.5-15-19-13-25.5-3.5-27.5q0-40 28-68t68-28q15 0 27.5 3.5t25.5 13 19 15 21.5 21.5 18.5 19q33-31 33-73zm895 705q0 120-85 203l-147 146q-83 83-203 83-121 0-204-85l-206-207q-83-83-83-203 0-123 88-209l-88-88q-86 88-208 88-120 0-204-84l-208-208q-84-84-84-204t85-203l147-146q83-83 203-83 121 0 204 85l206 207q83 83 83 203 0 123-88 209l88 88q86-88 208-88 120 0 204 84l208 208q84 84 84 204z" fill="navy"></path></svg></a></h2>
+<table class="colsi"><tr><td><a href="http://www.hl7.org/Special/committees/homehealth/index.cfm">Community Based Collaborative Care <img src="external.png" style="text-align: baseline"/></a> Work Group</td><td><a href="versions.html#maturity">Maturity Level</a>: N/A</td><td id="ballot"><a href="versions.html#std-process">Standards Status</a>: Informative</td><td><a href="security.html#SecPrivConsiderations">Security Category</a>: Patient</td>  <!-- !ns! --><td><a href="compartmentdefinition.html">Compartments</a>: <a href="compartmentdefinition-patient.html">Patient</a></td></tr></table>
+
+  <!-- content goes here -->
+These are various examples that have been used to drive the creaion of the Consent resource.
+
+<table class="list">
+<tr><td><b>Example Name</b></td><td><b>id</b></td><td colspan="4"><b>Format</b></td></tr>
+<tr><td><a href="consent-example.html">General Consent Example</a></td><td>consent-example-basic</td><td><a href="consent-example.xml.html">XML</a></td><td><a href="consent-example.json.html">JSON</a></td><td><a href="consent-example.ttl.html">Turtle</a></td><td></td></tr><tr><td><a href="consent-example-Out.html">Consent withholding access</a></td><td>consent-example-Out</td><td><a href="consent-example-Out.xml.html">XML</a></td><td><a href="consent-example-Out.json.html">JSON</a></td><td><a href="consent-example-Out.ttl.html">Turtle</a></td><td></td></tr><tr><td><a href="consent-example-Emergency.html">Consent withholding access to data for Treatment exept for Emergency Treatment</a></td><td>consent-example-Emergency</td><td><a href="consent-example-Emergency.xml.html">XML</a></td><td><a href="consent-example-Emergency.json.html">JSON</a></td><td><a href="consent-example-Emergency.ttl.html">Turtle</a></td><td></td></tr><tr><td><a href="consent-example-notThis.html">Withhold or withdraw consent for disclosure of records related to specific domain (e.g. DI, LAB, etc.)</a></td><td>consent-example-notThis</td><td><a href="consent-example-notThis.xml.html">XML</a></td><td><a href="consent-example-notThis.json.html">JSON</a></td><td><a href="consent-example-notThis.ttl.html">Turtle</a></td><td></td></tr><tr><td><a href="consent-example-notTime.html">Withhold or withdraw consent for disclosure of a specific timeframe</a></td><td>consent-example-notTime</td><td><a href="consent-example-notTime.xml.html">XML</a></td><td><a href="consent-example-notTime.json.html">JSON</a></td><td><a href="consent-example-notTime.ttl.html">Turtle</a></td><td></td></tr><tr><td><a href="consent-example-notOrg.html">Withhold or withdraw consent for disclosure to a specific provider organization</a></td><td>consent-example-notOrg</td><td><a href="consent-example-notOrg.xml.html">XML</a></td><td><a href="consent-example-notOrg.json.html">JSON</a></td><td><a href="consent-example-notOrg.ttl.html">Turtle</a></td><td></td></tr><tr><td><a href="consent-example-notThem.html">Withhold or withdraw consent for disclosure to a specific provider agent (an individual within an organization)</a></td><td>consent-example-notThem</td><td><a href="consent-example-notThem.xml.html">XML</a></td><td><a href="consent-example-notThem.json.html">JSON</a></td><td><a href="consent-example-notThem.ttl.html">Turtle</a></td><td></td></tr><tr><td><a href="consent-example-notAuthor.html">Withhold or withdraw consent for disclosure of records that were authored by a specific organization (or service delivery location).</a></td><td>consent-example-notAuthor</td><td><a href="consent-example-notAuthor.xml.html">XML</a></td><td><a href="consent-example-notAuthor.json.html">JSON</a></td><td><a href="consent-example-notAuthor.ttl.html">Turtle</a></td><td></td></tr><tr><td><a href="consent-example-grantor.html">Patient grants access to a specified individual for read-only access</a></td><td>consent-example-grantor</td><td><a href="consent-example-grantor.xml.html">XML</a></td><td><a href="consent-example-grantor.json.html">JSON</a></td><td><a href="consent-example-grantor.ttl.html">Turtle</a></td><td></td></tr><tr><td><a href="consent-example-pkb.html">Example of Patients Know Best Usage</a></td><td>consent-example-pkb</td><td><a href="consent-example-pkb.xml.html">XML</a></td><td><a href="consent-example-pkb.json.html">JSON</a></td><td><a href="consent-example-pkb.ttl.html">Turtle</a></td><td></td></tr><tr><td><a href="consent-example-smartonfhir.html">Template for recording a Smart on FHIR Authorization</a></td><td>consent-example-smartonfhir</td><td><a href="consent-example-smartonfhir.xml.html">XML</a></td><td><a href="consent-example-smartonfhir.json.html">JSON</a></td><td><a href="consent-example-smartonfhir.ttl.html">Turtle</a></td><td></td></tr><tr><td><a href="consent-example-signature.html">Consent Example with a signature</a></td><td>consent-example-signature</td><td><a href="consent-example-signature.xml.html">XML</a></td><td><a href="consent-example-signature.json.html">JSON</a></td><td><a href="consent-example-signature.ttl.html">Turtle</a></td><td></td></tr><tr><td colspan="4">&nbsp;</td></tr></table>
+
+
+
+
+<p>
+Usage note: every effort has been made to ensure that the 
+examples are correct and useful, but they are not a normative part 
+of the specification. 
+</p>
+
+
+</div>
+
+
+				</div>  <!-- /inner-wrapper -->
+            </div>  <!-- /row -->
+        </div>  <!-- /container -->
+        
+    </div>  <!-- /segment-content -->
+
+
+	<div id="segment-footer" class="segment">  <!-- segment-footer -->
+		<div class="container">  <!-- container -->
+			<div class="inner-wrapper">
+				<p>
+        &reg;&copy; HL7.org 2011+. FHIR Release 4 (Technical Correction #1) (v4.0.1) generated on Fri, Nov 1, 2019 09:34+1100. <a style="color: #ffffff" href="qa.html">QA Page</a>
+        <br/>
+        <span style="color: #FFFF77">
+        Links: <a style="color: #b8dcf9" href="http://hl7.org/fhir/search.cfm">Search <img src="external.png" style="text-align: baseline"/></a> | 
+               <a style="color: #b8dcf9" href="history.html">Version History</a> | 
+               <a style="color: #b8dcf9" href="toc.html">Table of Contents</a> | 
+               <a style="color: #b8dcf9" href="credits.html">Credits</a> | 
+               <a style="color: #b8dcf9" href="https://www.fhir.org/perl/htmldiff.pl?oldfile=http%3A%2F%2Fhl7.org%2Ffhir%2FSTU3%2Fconsent-examples.html&amp;newfile=http%3A%2F%2Fhl7.org%2Ffhir%2FR4%2Fconsent-examples.html">Compare to R3 <img src="external.png" style="text-align: baseline"/></a> |                
+               <a rel="license" style="color: #b8dcf9" href="license.html"><img src="cc0.png" alt="CC0" style="border-style: none;"/></a> | 
+               <a style="color: #b8dcf9" href="http://hl7.org/fhir-issues" target="_blank">Propose a change <img src="external.png" style="text-align: baseline"/></a>   
+        </span>
+        </p>
+			</div>  <!-- /inner-wrapper -->
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-footer -->
+  <!-- disqus thread -->
+  <!-- disqus -->
+  <!-- end disqus -->        
+	
+	<div id="segment-post-footer" class="segment hidden">  <!-- segment-post-footer -->
+		<div class="container">  <!-- container -->
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-post-footer -->
+    
+      <!-- JS and analytics only. -->
+      <!-- Bootstrap core JavaScript
+================================================== -->
+  <!-- Placed at the end of the document so the pages load faster -->
+<script src="./assets/js/jquery.js"> </script>     <!-- note keep space here, otherwise it will be transformed to empty tag -> fails -->
+<script src="./dist/js/bootstrap.min.js"> </script>
+<script src="./assets/js/respond.min.js"> </script>
+
+<script src="./assets/js/fhir.js"> </script>
+
+  <!-- Analytics Below
+================================================== -->
+
+    
+</body>
+</html>

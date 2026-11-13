@@ -1404,12 +1404,17 @@ async fn demographic_wave_round_trips_standalone_party_and_relationship() {
     let person_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Wava")))
         .await
         .expect("create_party");
+    // The relationship's target is a party container the source holds too
+    // (RM demographic master02 §Party Relationships).
+    let target_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Wava Target")))
+        .await
+        .expect("create the target party");
     let rel_vo = Box::pin(crate::fixtures::create_relationship(
         &source,
         wave_uv(&wave_relationship(
             "parent-of",
             &person_vo.to_string(),
-            "33333333-3333-4333-8333-333333333333",
+            &target_vo.to_string(),
         )),
     ))
     .await
@@ -1488,12 +1493,17 @@ async fn demographic_wave_round_trips_in_canonical_xml() {
     let person_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Xara")))
         .await
         .expect("create_party");
+    // The relationship's target is a party container the source holds too
+    // (RM demographic master02 §Party Relationships).
+    let target_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Xara Target")))
+        .await
+        .expect("create the target party");
     let rel_vo = Box::pin(crate::fixtures::create_relationship(
         &source,
         wave_uv(&wave_relationship(
             "cares-for",
             &person_vo.to_string(),
-            "44444444-4444-4444-8444-444444444444",
+            &target_vo.to_string(),
         )),
     ))
     .await
@@ -1563,12 +1573,17 @@ async fn demographic_wave_round_trips_inside_a_7z_container() {
     let person_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Zena")))
         .await
         .expect("create_party");
+    // The relationship's target is a party container the source holds too
+    // (RM demographic master02 §Party Relationships).
+    let target_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Zena Target")))
+        .await
+        .expect("create the target party");
     let rel_vo = Box::pin(crate::fixtures::create_relationship(
         &source,
         wave_uv(&wave_relationship(
             "employs",
             &person_vo.to_string(),
-            "55555555-5555-4555-8555-555555555555",
+            &target_vo.to_string(),
         )),
     ))
     .await
@@ -1648,16 +1663,24 @@ fn store_access_settings(dir: &str, settings: &Value) {
     }
 }
 
-/// An archive whose `EHR_ACCESS` settings do not parse is refused with the
-/// `400` a CONTRIBUTION writing them gets, naming the setting and the EHR, and
-/// nothing of it is written; the same archive with settings that parse loads.
+/// An archive whose `EHR_ACCESS` settings break an invariant is refused with
+/// the `400` a CONTRIBUTION writing them gets, naming the invariant and the
+/// EHR, and nothing of it is written; the same archive with settings that
+/// hold loads.
 /// Stored, the first would hold the EHR closed.
 #[tokio::test]
 async fn an_archive_whose_access_settings_do_not_parse_is_refused() {
     let (_src_db, _src_pool, source) = repository().await;
     let (_dst_db, dst_pool, target) = repository().await;
     let (dir, ehr) = exported(&source).await;
-    let settings = |default_access: &str| json!({ "_type": "FERROEHR_ACCESS_CONTROL_V1", "default_access": default_access });
+    let settings = |default_access: &str| {
+        json!({ "_type": "ACCESS_DIRECTIVE_SETTINGS",
+                "default_access": { "_type": "DV_CODED_TEXT", "value": default_access,
+                    "defining_code": { "_type": "CODE_PHRASE",
+                        "terminology_id": { "_type": "TERMINOLOGY_ID",
+                            "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
+                        "code_string": default_access } } })
+    };
 
     store_access_settings(&dir, &settings("bogus"));
     let err = target
@@ -1669,8 +1692,9 @@ async fn an_archive_whose_access_settings_do_not_parse_is_refused() {
         "the write path's refusal, got {err:?}"
     );
     assert!(
-        err.message().contains("EHR_ACCESS.settings.default_access"),
-        "the refusal names the setting, got {err:?}"
+        err.message()
+            .contains("ACCESS_DIRECTIVE_SETTINGS.Default_access_valid"),
+        "the refusal names the invariant, got {err:?}"
     );
     assert!(
         err.message().contains(&ehr.to_string()),

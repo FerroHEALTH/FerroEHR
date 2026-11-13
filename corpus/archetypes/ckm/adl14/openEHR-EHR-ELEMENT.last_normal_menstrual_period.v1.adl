@@ -1,0 +1,57 @@
+﻿archetype (adl_version=1.4; uid=c309cc14-140d-46a6-af21-588dafc0dda1)
+	openEHR-EHR-ELEMENT.last_normal_menstrual_period.v1
+
+concept
+	[at0000]	-- Last Normal Menstrual Period
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"19/07/2008">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record the date of the Last Normal Menstrual Period (LNMP)">
+			use = <"To reuse within multiple archetypes - for example, the cluster recording the details about menstrual cycles, plus use in the temperature observation">
+			keywords = <"menstruation", "woman", "female", "menstrual", "period", "date">
+			misuse = <"">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["references"] = <"">
+		["build_uid"] = <"d2f66ba4-dfa6-4960-98c6-fcc3afff65d2">
+		["original_publisher"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"0316AD7A8489D44408F97DE912DF3EC8">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	ELEMENT[at0000] matches {	-- Last Normal Menstrual Period
+		value matches {
+			DV_DATE_TIME matches {
+				value matches {yyyy-??-??T??:??:??}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Last Normal Menstrual Period">
+					description = <"Record of the date of 1st day of last normal menstrual period">
+				>
+			>
+		>
+	>

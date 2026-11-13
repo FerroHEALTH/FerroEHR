@@ -94,6 +94,35 @@ ever names an identity that did not authenticate.
 > identity provider, so neither mints a per-request login record. Rejections
 > are recorded regardless of this switch.
 
+## The openEHR access-log entry
+
+Beside each record, every access to EHR data also writes an openEHR
+access-log entry: an `ACCESS_LOG_ENTRY` of the draft
+`org.openehr.rm.access_log` 0.1.0 model, FerroEHR's proposal to openEHR,
+which no openEHR release defines yet. Reads, writes, AQL queries, exports,
+refusals and reads of the access log itself each write one. An access that
+reaches several EHRs writes one entry per EHR, and the entries of one request
+share its request id, so a population query writes one entry for each EHR
+that contributed a row.
+
+The entry names who accessed (the bound party, the groups, the provider, the
+binding outcome and the credential by its issuer, subject, client and token
+id), what (the EHR, the version or object, its categories and origins), why
+(the declared purposes), under which authorisation (the agreement, the
+representation, a data permit, the emergency mark), the outcome (`granted`,
+`refused` or `failed`) and the request. It carries no data value of the EHR:
+a query is named by its stored name or the SHA-256 of its text, never the
+text, and a read of the access log through ITI-81 is named by the digest of
+its search.
+
+The entry is written in the same database transaction as the record it
+accompanies, so the store holds both or neither, and an access whose record
+the store cannot take is refused under `fail_mode = "closed"` exactly as
+before. Entries are kept in `audit.access_log_record`, chained with the
+records under one hash chain (see [Tamper evidence](#tamper-evidence)), and
+each states the date it is kept until and why. The store requires
+`[audit.store]`; with the store off no entry is written.
+
 ## Reads are logged too, per record
 
 A write leaves its own trail in openEHR's contribution and audit chain. A read
@@ -174,7 +203,7 @@ the authority and the wording below is a paraphrase.
 |---|---|---|---|---|
 | (a) the healthcare provider or other individuals having accessed | `organisation` | — (no such attribute) | an `agent` whose `who` is a logical reference to an `Organization` | Recorded |
 | (b) the specific natural person or persons having accessed | `principal` (+ `token_id`, `client_ip`), and `professional_id` + `acting_mode` for a caller its issuer classifies as a person or a delegate | `ActiveParticipant/@UserID` (the professional; a client application acting for one is a second, non-requesting participant; the token subject is `@AlternativeUserID` when it differs) | the `agent:user` slice, `who` the token's issuer and subject, the professional's identifier as its `ihe-otherId`, and the client application as an agent of its own (BALP 1.1.4 §3:5.7.5.4) | Recorded |
-| (c) the categories of data accessed | `categories` + `category_basis` + `category_evidence` + `category_map_digest`, classified by `ehds-logging` through the `[audit.categories]` map (beside `resource_class`, `domain` and `result_count`) | none (no such element) | the `entity` named `ehds-categories`, with one `ehds-category` detail per category and its basis, each id the classification read and the map digest; each category is also a `meta.security` label | Recorded |
+| (c) the categories of data accessed | `categories` + `category_basis` + `category_evidence` + `category_map_digest`, classified by `ehds-logging` through the audit category register (beside `resource_class`, `domain` and `result_count`) | none (no such element) | the `entity` named `ehds-categories`, with one `ehds-category` detail per category and its basis, each id the classification read and the map digest; each category is also a `meta.security` label | Recorded |
 | (d) the time and date of access | `recorded_at` | `EventIdentification/@EventDateTime` | `recorded` | Recorded |
 | (e) the origin or origins of data | `origins` + `origin_count` (the `FEEDER_AUDIT` originating systems of the served version bodies, or the server that created them, derived at commit onto `version.origins`) | — (no such element) | one `entity` named `origin` per origin, its `system-id` detail the originating system | Recorded |
 
@@ -226,7 +255,8 @@ dispensations, medical imaging, medical test results and discharge reports,
 plus any category a Member State adds in national law. AQL selects archetypes
 and templates, never categories, and no openEHR specification maps the one
 onto the other, so the deployment declares the mapping in
-[`[audit.categories]`](installation/config-audit.md#auditcategories): a
+[the audit category register](installation/config-audit.md#the-audit-category-register), an
+[admin register](operational-policy.md#the-admin-registers): a
 template id, or failing that the root archetype id, maps to a set of categories
 (a priority category by its code in HL7 Europe's
 `EEHRxFDocumentPriorityCategoryCS`, such as `Patient-Summaries` or
@@ -234,7 +264,7 @@ template id, or failing that the root archetype id, maps to a set of categories
 `none` for content that holds no data of any category. While you declare no
 template and no archetype, the map FerroEHR ships applies: the published CKM
 templates and COMPOSITION archetypes whose data sit in one priority category
-([the shipped map](installation/config-audit.md#auditcategories)). Your own
+([the shipped map](installation/config-audit.md#the-audit-category-register)). Your own
 map replaces it, and `ehds-logging` classifies each access through the map in
 force.
 
@@ -357,7 +387,7 @@ beside it hold what each outcome needs:
 | `provisional` | a person bound to an `incomplete` `PERSON` | `party`, `party_groups`, `provider` |
 | `external` | a verified external person of a `federation` issuer | `external_fields`, `agreement`, `provider` |
 | `organisation` | an organisation under an agreement with `accessor = "organisation"` | `external_fields`, `agreement` (with its legal ground and access class, and for a `chained` request `correlation_id` and `correlation_source`), `provider` |
-| `system` | a client acting for nobody | `provider` of its `[[authz.system_client]]`, `facilities` of the compositions it committed |
+| `system` | a client acting for nobody | `party`, the client's `ACTOR` in the policy parties; `provider`, the identifier of the `ORGANISATION` its acts-for relationship targets; `facilities` of the compositions it committed |
 | `self` | a patient token of a `patients` issuer | the principal |
 | `refused-*` | a refusal of the binding or of a caller kind: `unbound`, `ambiguous`, `inactive`, `abandoned`, `deprovisioned`, `wrong-marker`, `representation-unrecorded`, `key-claim-missing`, `groups-unavailable`, `guest`, `external-incomplete`, `trc-patient-mismatch`, `trc-missing`; and of a caller kind, `system-personal-scope` (a system caller holding a `user/` or `patient/` scope), `no-agreement` (no federation agreement admits the accessor) and `scope-beyond-agreement` (an external caller holding a scope its agreement does not read) and `correlation-missing` (a `chained` organisation request without an attested correlation id) | `party` for a party refused for its state or marker, `binding_detail` for what else the refusal names (`represented`, the subject a representative asserted; `claim`, the name of the key claim a token lacked, never its value) |
 
@@ -518,6 +548,29 @@ same day can end on different dates; every other record ends the day after
 its date of access plus the horizon. A record written before FerroEHR stored
 per-record ends is reaped by the horizon.
 
+**An openEHR access-log entry states its own retention.** Each
+`ACCESS_LOG_ENTRY` carries an `ACCESS_RETENTION` when it is written:
+`retain_until`, the last day it is kept, and `grounds`, the provisions that
+set the period. The period is the one the retention policy above computes from
+the entry's categories and origins, so an entry whose categories call for
+different periods keeps the longest, and an entry kept without end states no
+`retain_until`. The grounds are coded in the `ehds-logging` terminology: the
+legal ground of the floor (`eu-2025-327-art-9-2` for Art. 9(2)) and what called
+for the period (`default`, `category:<system>|<code>` or `origin:<key>`). The
+same hourly worker replaces every entry whose `retain_until` has passed by an
+`ACCESS_LOG_TOMBSTONE` in place, in any order of expiry. The tombstone keeps the
+entry's uid, `system_id`, `time_recorded` and chain link, names the grounds of
+the period that ended, and holds nothing else of the entry, so the chain
+verifies after the content is gone ([Tamper evidence](#tamper-evidence)). A
+tombstone is never replaced again, and the database refuses any other change
+to it. An erasure a law orders before the period ends takes the same path
+through `POST {ext}/admin/access-log/erase`, with the law's provisions as the
+tombstone's grounds; the erasure is an access record of its own
+(`access-log-erasure:<uid>`) naming the administrator
+([Admin APIs](operations-admin-apis.md)). No configuration key decides an
+entry's period beyond `[audit.store] retention`, which stays the floor every
+period is held to.
+
 **The default is deliberate.** An access log is the evidence a data subject's right of access is served from, and a repository that silently
 forgets is worse than one that grows — so the software keeps everything until
 an operator says otherwise, rather than choosing a horizon on their behalf.
@@ -574,8 +627,10 @@ Two routes, and they answer different questions.
 
 There is no patient-facing route in the product: a portal that shows a person
 who accessed their record builds on ITI-81 and authenticates the person itself.
-What the product gives that portal is a grant of its own size:
-`authz.rbac.subject_audit_role` reads the log for one subject at a time, with
+What the product gives that portal is a grant of its own size: a
+`read_subject_audit` grant in the CDR
+([Operational policy](operational-policy.md#what-the-grants-decide)) reads
+the log for one subject at a time, with
 the `patient` parameter required, so the portal never holds an admin credential
 over every patient's log ([GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj)
 Art. 15 with Recital 63, under which the controller "should be able to provide
@@ -600,7 +655,7 @@ Emission never blocks the request path: a record is handed to a bounded queue
 
 ### While a composition is held from the person
 
-With [`[privacy.access_delay]`](security.md#delayed-access-by-the-person-ehds-art-33)
+With [the access-delay register](security.md#delayed-access-by-the-person-ehds-art-33)
 on, a new composition can be held from the person under
 [EHDS](https://eur-lex.europa.eu/eli/reg/2025/327/oj) Art. 3(3) until a
 professional releases it or its period passes. Only one route honours the
@@ -663,7 +718,7 @@ release joins the digest in the same release.
 The store keeps a record's facts in columns and renders its FHIR `AuditEvent`
 from them when the record is read (ITI-81) or delivered (the FHIR feed). What
 the rendering takes from the configuration (`source_id`, `enterprise_site_id`,
-`server_host`, `value_if_missing`, the store horizon, `[audit.categories]` and
+`server_host`, `value_if_missing`, the store horizon, the audit category register and
 `emergency_purpose_codes`) is kept once per distinct configuration in
 `audit.audit_render_policy`, keyed by the SHA-256 of its text, and every record
 names the policy it was written under. A record therefore renders the same
@@ -731,6 +786,54 @@ Four controls sit on top of it, and they are separate on purpose:
 > `[audit.syslog]` or `[audit.fhir_feed]` so records leave the box as they are
 > written, and give the server an app-role-only DSN so it is not that party.
 
+## Checkpoints and the transfer of a log
+
+The records of the openEHR access log (`audit.access_log_record`) are chained
+with the `audit_event` records above. A chain proves order and completeness
+against someone who cannot rewrite its whole tail. A **checkpoint** closes
+that case: an `ACCESS_LOG_CHECKPOINT` names the position and digest of the
+head of the chain and is signed with the deployment's OpenPGP key, in the
+form an openEHR `ATTESTATION` carries its proof (RM common, Generic Package
+§Attestation). A verifier that holds a checkpoint detects any later rewrite
+of the records it covers. No openEHR specification governs log signing; this
+is our own design.
+
+- **The key** is the keyring of [version signing](signing/pgp.md):
+  `[record.signing]` in `pgp` mode, with its `retired_key_files` still
+  verifying what an earlier key signed. `[audit.access_log] checkpoints` or
+  `sign_links` without it is a configuration error.
+- **The schedule.** With `checkpoints = true` the server seals the head every
+  `checkpoint_interval` (one hour by default) when the chain grew since the
+  last checkpoint. `ferroehr access-log checkpoint` and
+  `POST /admin/access-log/checkpoint` seal one on demand. Keep a copy of a
+  checkpoint somewhere the database owner does not control (a ticket, a
+  timestamping service, the data protection officer's mailbox): that copy is
+  what makes a rewrite of the whole tail detectable.
+- **Verification.** `ferroehr access-log verify` and
+  `POST /admin/access-log/verify` recompute the whole chain (an entry
+  replaced by its tombstone verifies through the content digest the
+  tombstone keeps), check the checkpoint's signature and that the link at its
+  position is the one it sealed, and check the signature of every signed
+  link. Each finding is reported; the command exits 1 when the log does not
+  verify, and the route answers `200` with `intact: false`.
+- **Signed links.** `sign_links = true` signs the digest of each new link, as
+  the eHDSI Audit Trail Profile §2.2 asks of a national contact point. It
+  costs one signature per record.
+- **Moving the log with the EHR.** EHDS Annex II 2.6 and Art 9(2) keep the
+  access information available when an EHR moves to another system.
+  `ferroehr access-log export --ehr-id <id>` and
+  `GET /admin/access-log/export?ehr_id=` write the EHR's records with their
+  links, every link from the first of them to the checkpoint they verify
+  against, and that checkpoint, sealing one when none covers them. The
+  receiving system runs `ferroehr access-log import --input <file>`: it
+  verifies the export against its checkpoint and the certificates in
+  `[audit.access_log] trusted_key_files`, keeps the records with their
+  `system_id`, links and `retain_until` apart from its own chain, and records
+  the import as an `import` entry of its own log. An import repeated stores
+  nothing twice. An export whose span holds `audit_event` records is refused,
+  since only the database that wrote those records can recompute their
+  links.
+
 ## Retrieving audit records (ITI-81)
 
 The RESTful-ATNA **ITI-81 Retrieve ATNA Audit Event** transaction is a FHIR
@@ -792,8 +895,8 @@ A malformed value is a `400` carrying a FHIR `OperationOutcome` with
 not ask for, is a `400` with `not-supported`; a parameter the crate does not
 know is ignored
 (§3.81.4.1.3). Under RBAC the
-unscoped retrieval is **admin-only**; a caller holding the configured
-`authz.rbac.subject_audit_role` reads it **scoped to one subject**: one
+unscoped retrieval is **admin-only**; a caller holding a
+`read_subject_audit` grant reads it **scoped to one subject**: one
 `patient` or `patient.identifier` with one value is required, and the caller
 is refused with a `403` that names the parameter when it omits
 it. Reading a subject's log is itself recorded as an access naming that

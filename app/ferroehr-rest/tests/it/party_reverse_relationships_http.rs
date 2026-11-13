@@ -264,3 +264,298 @@ async fn a_development_profile_xml_read_serves_no_reverse_relationships() {
     let xml = read_xml(&app, &target).await;
     assert!(!xml.contains("reverse_relationships"), "{xml}");
 }
+
+// ── Version-addressed and time-travelled reads (#5473) ───────────────────────
+
+/// The `LOCATABLE_REF` a target lists for the `parent-of` relationship the
+/// source container `source_vo` holds.
+fn reference(source_vo: &str) -> Value {
+    json!([{
+        "_type": "LOCATABLE_REF",
+        "namespace": "local",
+        "type": "PARTY_RELATIONSHIP",
+        "id": { "_type": "HIER_OBJECT_ID", "value": source_vo },
+        "path": "/relationships[openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.relationship.v1 \
+                 and name/value='parent-of']"
+    }])
+}
+
+/// Sends a canonical-JSON request and returns the `OBJECT_VERSION_ID` the
+/// response body carries, with the body.
+async fn written(app: &Router, request: http::Request<axum::body::Body>) -> (String, Value) {
+    let (status, text) = send_body(app, request).await;
+    assert!(status.is_success(), "{status}: {text}");
+    let body: Value = serde_json::from_str(&text).expect("a JSON body");
+    let ovid = body
+        .pointer("/uid/value")
+        .and_then(Value::as_str)
+        .expect("uid.value")
+        .to_owned();
+    (ovid, body)
+}
+
+/// Updates the PERSON `previous` names with `body`, asking for its
+/// representation.
+async fn update(app: &Router, previous: &str, body: &Value) -> (String, Value) {
+    written(
+        app,
+        common::req(
+            "PUT",
+            format!("{BASE}/demographic/person/{}", vo_of(previous)),
+        )
+        .accept("application/json")
+        .prefer_representation()
+        .if_match(format!("\"{previous}\""))
+        .json(body.to_string())
+        .build(),
+    )
+    .await
+}
+
+/// A JSON `GET` of `path`, which must answer `200`.
+async fn get_json(app: &Router, path: &str) -> Value {
+    let (status, text) = send_body(
+        app,
+        common::req("GET", path).accept("application/json").build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{text}");
+    serde_json::from_str(&text).expect("a JSON body")
+}
+
+/// The commit instant of the version `ovid`, as its `VERSION` read serves it.
+async fn committed_at(app: &Router, ovid: &str) -> String {
+    let version = get_json(
+        app,
+        &format!(
+            "{BASE}/demographic/versioned_party/{}/version/{ovid}",
+            vo_of(ovid)
+        ),
+    )
+    .await;
+    version
+        .pointer("/commit_audit/time_committed/value")
+        .and_then(Value::as_str)
+        .expect("commit_audit.time_committed")
+        .to_owned()
+}
+
+/// The history every test below reads: the target's version 1, then the
+/// source naming the target, then the target's version 2.
+struct History {
+    /// The source's version that names the target.
+    source: String,
+    /// The target's version 1, committed before the source named it.
+    target_v1: String,
+    /// The target's version 2, committed after.
+    target_v2: String,
+    /// The representation the update to version 2 answered with.
+    target_v2_written: Value,
+}
+
+async fn history(app: &Router) -> History {
+    let target_v1 = create(app, &person("Target", None)).await;
+    let target = vo_of(&target_v1);
+    let first = create(app, &person("Source", None)).await;
+    let container = vo_of(&first);
+    let (source, _) = update(app, &first, &person("Source", Some((&container, &target)))).await;
+    let (target_v2, target_v2_written) = update(app, &target_v1, &person("Target", None)).await;
+    History {
+        source,
+        target_v1,
+        target_v2,
+        target_v2_written,
+    }
+}
+
+#[tokio::test]
+async fn an_old_version_serves_the_relationships_of_its_own_commit() {
+    let db = common::test_db().await;
+    let app = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
+    let h = history(&app).await;
+    let at = |ovid: &str| format!("{BASE}/demographic/person/{ovid}");
+
+    let v1 = get_json(&app, &at(&h.target_v1)).await;
+    assert!(v1.get("reverse_relationships").is_none(), "{v1}");
+    let v2 = get_json(&app, &at(&h.target_v2)).await;
+    assert_eq!(
+        v2["reverse_relationships"],
+        reference(&vo_of(&h.source)),
+        "{v2}"
+    );
+
+    // The source lets go: the live read loses the reference, version 2 keeps
+    // the list it was committed with.
+    update(&app, &h.source, &person("Source", None)).await;
+    let live = read(&app, &vo_of(&h.target_v2)).await;
+    assert!(live.get("reverse_relationships").is_none(), "{live}");
+    let v2 = get_json(&app, &at(&h.target_v2)).await;
+    assert_eq!(
+        v2["reverse_relationships"],
+        reference(&vo_of(&h.source)),
+        "{v2}"
+    );
+}
+
+#[tokio::test]
+async fn a_time_travelled_read_serves_the_relationships_of_the_version_it_finds() {
+    let db = common::test_db().await;
+    let app = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
+    let h = history(&app).await;
+    let target = vo_of(&h.target_v1);
+    let at_time = |instant: &str| {
+        format!(
+            "{BASE}/demographic/person/{target}?version_at_time={}",
+            urlencoding::encode(instant)
+        )
+    };
+
+    // The instant the source named the target finds version 1, committed
+    // before it.
+    let named = committed_at(&app, &h.source).await;
+    let found = get_json(&app, &at_time(&named)).await;
+    assert_eq!(found["uid"]["value"], h.target_v1.as_str(), "{found}");
+    assert!(found.get("reverse_relationships").is_none(), "{found}");
+
+    let later = committed_at(&app, &h.target_v2).await;
+    let found = get_json(&app, &at_time(&later)).await;
+    assert_eq!(
+        found["reverse_relationships"],
+        reference(&vo_of(&h.source)),
+        "{found}"
+    );
+}
+
+#[tokio::test]
+async fn a_version_read_carries_the_reverse_relationships_of_its_commit() {
+    let db = common::test_db().await;
+    let app = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
+    let h = history(&app).await;
+    let target = vo_of(&h.target_v1);
+    let versions = format!("{BASE}/demographic/versioned_party/{target}/version");
+
+    let v2 = get_json(&app, &format!("{versions}/{}", h.target_v2)).await;
+    assert_eq!(
+        v2["data"]["reverse_relationships"],
+        reference(&vo_of(&h.source)),
+        "{v2}"
+    );
+    let latest = get_json(&app, &versions).await;
+    assert_eq!(latest["data"], v2["data"], "{latest}");
+
+    let v1 = get_json(&app, &format!("{versions}/{}", h.target_v1)).await;
+    assert!(v1["data"].get("reverse_relationships").is_none(), "{v1}");
+    let named = committed_at(&app, &h.source).await;
+    let at_time = get_json(
+        &app,
+        &format!("{versions}?version_at_time={}", urlencoding::encode(&named)),
+    )
+    .await;
+    assert_eq!(at_time["data"], v1["data"], "{at_time}");
+}
+
+#[tokio::test]
+async fn the_update_representation_carries_the_reverse_relationships() {
+    let db = common::test_db().await;
+    let app = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
+    let h = history(&app).await;
+
+    assert_eq!(
+        h.target_v2_written["reverse_relationships"],
+        reference(&vo_of(&h.source)),
+        "{}",
+        h.target_v2_written
+    );
+    // The same version read back serves the same document.
+    let v2 = get_json(&app, &format!("{BASE}/demographic/person/{}", h.target_v2)).await;
+    assert_eq!(h.target_v2_written, v2);
+
+    // The XML representation carries the RM 1.1.0 element as well.
+    let (status, xml) = send_body(
+        &app,
+        common::req(
+            "PUT",
+            format!("{BASE}/demographic/person/{}", vo_of(&h.target_v2)),
+        )
+        .header(header::ACCEPT, "application/xml")
+        .prefer_representation()
+        .if_match(format!("\"{}\"", h.target_v2))
+        .json(person("Target", None).to_string())
+        .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{xml}");
+    let reverse = xml
+        .split("<reverse_relationships")
+        .nth(1)
+        .unwrap_or_else(|| panic!("no reverse_relationships element: {xml}"));
+    assert!(reverse.contains(&vo_of(&h.source)), "{xml}");
+}
+
+#[tokio::test]
+async fn the_create_representation_is_the_document_its_version_read_serves() {
+    let db = common::test_db().await;
+    let app = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
+
+    let (created, written) = written(
+        &app,
+        common::req("POST", format!("{BASE}/demographic/person"))
+            .accept("application/json")
+            .prefer_representation()
+            .json(person("Created", None).to_string())
+            .build(),
+    )
+    .await;
+    let read_back = get_json(&app, &format!("{BASE}/demographic/person/{created}")).await;
+    assert_eq!(written, read_back);
+    let version = get_json(
+        &app,
+        &format!(
+            "{BASE}/demographic/versioned_party/{}/version/{created}",
+            vo_of(&created)
+        ),
+    )
+    .await;
+    assert_eq!(written, version["data"]);
+}
+
+/// `reverse_relationships()` evaluated through FerroEHR's own extension
+/// route: our own design, since RM 1.2.0 makes it a function (SPECRM-124)
+/// that no released REST resource serves.
+async fn evaluated(app: &Router, uid_based_id: &str, query: &str) -> Value {
+    get_json(
+        app,
+        &format!(
+            "{}/demographic/party/{uid_based_id}/reverse_relationships{query}",
+            common::EXT
+        ),
+    )
+    .await
+}
+
+#[tokio::test]
+async fn the_development_profile_evaluates_the_function_on_the_extension_route() {
+    let db = common::test_db().await;
+    let development = common::router_for_profile(SpecProfile::Development, &db.pool()).await;
+    let stable = common::router_for_profile(SpecProfile::Stable, &db.pool()).await;
+    let h = history(&development).await;
+    let target = vo_of(&h.target_v1);
+
+    let live = evaluated(&development, &target, "").await;
+    assert_eq!(live, reference(&vo_of(&h.source)), "{live}");
+    assert_eq!(live, read(&stable, &target).await["reverse_relationships"]);
+
+    assert_eq!(evaluated(&development, &h.target_v1, "").await, json!([]));
+    assert_eq!(
+        evaluated(&development, &h.target_v2, "").await,
+        reference(&vo_of(&h.source))
+    );
+    let named = committed_at(&development, &h.source).await;
+    let query = format!("?version_at_time={}", urlencoding::encode(&named));
+    assert_eq!(evaluated(&development, &target, &query).await, json!([]));
+
+    // The party body itself stays the RM 1.2.0 class, which has no such
+    // attribute.
+    let body = read(&development, &target).await;
+    assert!(body.get("reverse_relationships").is_none(), "{body}");
+}

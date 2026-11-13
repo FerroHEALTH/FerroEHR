@@ -10,14 +10,15 @@
 //! of the mapped role template that names it as `performer` (RM demographic
 //! `org.openehr.rm.demographic.actor.adoc`, `org.openehr.rm.demographic.role.adoc`);
 //! a membership and a representation are inline `PARTY_RELATIONSHIP`s of
-//! their source (`master02-demographic_package.adoc` §Party Relationships).
+//! their source (`master02-demographic_package.adoc` §Party Relationships),
+//! a representation recognised by its code in any archetype.
 //! The states are the `version_lifecycle_state` codes of RM common
 //! `master06-change_control_package.adoc` §Version Lifecycle. Resolving a
 //! login to a party is governed by no openEHR spec: our own design.
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::binding::PartyBinding;
 use ferrohealth_smart::party::config::PartySection;
@@ -46,8 +47,9 @@ const ROLE_TEMPLATE: &str = "FerroEHR professional role";
 const GROUP_TEMPLATE: &str = "FerroEHR care team";
 /// The archetype of a membership `PARTY_RELATIONSHIP`.
 const MEMBERSHIP: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1";
-/// The archetype of a representation `PARTY_RELATIONSHIP`.
-const REPRESENTATION: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1";
+/// The archetype of a representation `PARTY_RELATIONSHIP`, which the
+/// representation code makes one, not the archetype.
+const REPRESENTATION: &str = "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.custodian.v2";
 /// The identifier cluster the key selector reads.
 const CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1";
 /// The `identifier_issuer` of the login's `[[auth.party]]` table.
@@ -75,10 +77,6 @@ fn mapping() -> BindingMapping {
         .with_professional_role(ROLE_TEMPLATE)
         .with_group(GROUP_TEMPLATE, external_id)
         .with_membership(MEMBERSHIP)
-        .with_representation(
-            REPRESENTATION,
-            BTreeMap::from([("at0010".to_owned(), "264".to_owned())]),
-        )
 }
 
 /// A service over a fresh database with the mapping installed.
@@ -182,6 +180,29 @@ fn role(template: &str, performer: VoId, validity: Option<Value>) -> Value {
     if let Some(validity) = validity {
         body["time_validity"] = validity;
     }
+    body
+}
+
+/// A representation `PARTY_RELATIONSHIP` of `archetype` from `source` to
+/// `target`: its name the openEHR `subject_relationship` code `code`, and its
+/// details the representation code of FerroEHR's operation terminology.
+fn representation(
+    archetype: &str,
+    source: (&str, VoId),
+    target: (&str, VoId),
+    code: &str,
+    validity: Option<Value>,
+) -> Value {
+    let mut body = relationship(archetype, source, target, code, validity);
+    body["name"]["defining_code"]["terminology_id"]["value"] = json!("openehr");
+    body["details"] = json!({ "_type": "ITEM_TREE", "archetype_node_id": "at0002",
+        "name": text("details"),
+        "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003",
+            "name": text("Representation code"),
+            "value": { "_type": "DV_CODED_TEXT", "value": "represents",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+                    "code_string": "represents" } } }] });
     body
 }
 
@@ -793,7 +814,7 @@ async fn the_source_reports_the_live_groups_a_person_belongs_to() {
     // Through the shared binding, a token naming two of the three groups
     // binds the PERSON with exactly those two.
     let table = PartySection {
-        issuer: "https://login.example".to_owned(),
+        issuer: SecretUrl::new("https://login.example"),
         identifier_issuer: LOGIN.to_owned(),
         identifier_type: GUID.to_owned(),
         group_claim: "groups".to_owned(),
@@ -854,7 +875,7 @@ async fn a_membership_change_writes_one_row() {
 }
 
 /// The live memberships of `group` and the sources the reverse index names
-/// as pointing at it, each sorted.
+/// as pointing at it now (an open interval), each sorted.
 async fn group_rows(pool: &sqlx::PgPool, group: VoId) -> (Vec<VoId>, Vec<VoId>) {
     let members: Vec<VoId> = sqlx::query_scalar(
         "SELECT member_id FROM party.binding_membership \
@@ -866,7 +887,7 @@ async fn group_rows(pool: &sqlx::PgPool, group: VoId) -> (Vec<VoId>, Vec<VoId>) 
     .expect("the memberships read");
     let sources: Vec<VoId> = sqlx::query_scalar(
         "SELECT source_vo_id FROM party.party_relationship_target \
-         WHERE target_party_id = $1 ORDER BY 1",
+         WHERE target_party_id = $1 AND valid_to IS NULL ORDER BY 1",
     )
     .bind(group)
     .fetch_all(pool)
@@ -997,19 +1018,26 @@ async fn a_representative_reports_only_its_live_subjects() {
     let (vo, uid) = create(&svc, PartyKind::Person, &body).await;
     let mut representing = body;
     representing["relationships"] = json!([
-        relationship(
+        representation(
             REPRESENTATION,
             ("PERSON", vo),
             ("PERSON", subject),
-            "at0010",
+            "264",
             None
+        ),
+        representation(
+            REPRESENTATION,
+            ("PERSON", vo),
+            ("PERSON", former),
+            "264",
+            Some(interval(Some("2020-01-01"), Some("2025-12-31"))),
         ),
         relationship(
             REPRESENTATION,
             ("PERSON", vo),
             ("PERSON", former),
             "at0010",
-            Some(interval(Some("2020-01-01"), Some("2025-12-31"))),
+            None
         ),
     ]);
     update(&svc, PartyKind::Person, vo, &uid, &representing, "532").await;
@@ -1203,4 +1231,164 @@ async fn the_lookup_runs_on_the_party_role_only() {
         "the clinical role reads the binding side table: {clinical:?}"
     );
     pools.close().await;
+}
+
+/// The reverse-index intervals naming `target`, in order: source, from, to.
+async fn intervals(pool: &sqlx::PgPool, target: VoId) -> Vec<(VoId, String, Option<String>)> {
+    sqlx::query_as(
+        "SELECT source_vo_id, valid_from::text, valid_to::text \
+         FROM party.party_relationship_target WHERE target_party_id = $1 ORDER BY 1, 2",
+    )
+    .bind(target)
+    .fetch_all(pool)
+    .await
+    .expect("the reverse index reads")
+}
+
+#[tokio::test]
+async fn a_rebuild_from_the_versions_writes_the_intervals_the_commits_wrote() {
+    let (db, svc) = service().await;
+    let pool = db.pool();
+    let (member, _) = create(&svc, PartyKind::Person, &person(OTHER_TEMPLATE, &[])).await;
+    let (vo, _) = create(&svc, PartyKind::Group, &group(GROUP_TEMPLATE, "ward")).await;
+    // Joined, left, joined again: one closed interval and one open.
+    join(&svc, member, vo).await;
+    memberships(&svc, member, &[]).await;
+    join(&svc, member, vo).await;
+    let committed = intervals(&pool, vo).await;
+    assert_eq!(committed.len(), 2, "{committed:?}");
+    assert!(committed.first().is_some_and(|(_, _, to)| to.is_some()));
+    assert!(committed.get(1).is_some_and(|(_, _, to)| to.is_none()));
+
+    let mut tx = pool.begin().await.expect("a transaction");
+    sqlx::query("SET LOCAL search_path = party, ext, public")
+        .execute(&mut *tx)
+        .await
+        .expect("the party search path");
+    ferroehr::storage::party_reverse::rebuild(&mut tx, member)
+        .await
+        .expect("the rebuild");
+    tx.commit().await.expect("the commit");
+    assert_eq!(intervals(&pool, vo).await, committed);
+}
+
+/// A standalone `PARTY_RELATIONSHIP` carrying the representation code makes
+/// its source a representative with a row of its own, its deletion retires
+/// both, and a refill rebuilds the rows the commits wrote.
+#[tokio::test]
+async fn a_standalone_representation_holds_a_row_of_its_own() {
+    let (db, svc) = service().await;
+    let pool = db.pool();
+    let (subject, _) = create(&svc, PartyKind::Person, &person(OTHER_TEMPLATE, &[])).await;
+    let value = "4d5e6f7a-8b9c-4d0e-9f1a-3b4c5d6e7f8a";
+    let (proxy, _) = create(
+        &svc,
+        PartyKind::Person,
+        &person(PERSON_TEMPLATE, &[key(value)]),
+    )
+    .await;
+    assert_eq!(
+        lookup(&svc, value).await,
+        Lookup::Parties(Vec::new()),
+        "no representation yet, so no key row"
+    );
+    let mut body = representation(
+        REPRESENTATION,
+        ("PERSON", proxy),
+        ("PERSON", subject),
+        "253",
+        None,
+    );
+    body["archetype_details"] = json!({ "_type": "ARCHETYPED", "rm_version": "1.1.0",
+        "archetype_id": { "_type": "ARCHETYPE_ID", "value": REPRESENTATION } });
+    let container = Box::pin(crate::fixtures::create_relationship(
+        &svc,
+        version(&body, "532", None),
+    ))
+    .await
+    .expect("the representation commits");
+
+    let found = lookup(&svc, value).await;
+    let Lookup::Parties(records) = &found else {
+        panic!("expected one party, got {found:?}");
+    };
+    assert_eq!(records.len(), 1, "{found:?}");
+    assert_eq!(records[0].markers(), Markers::REPRESENTATIVE);
+    let subjects: Vec<(PartyRef, Option<String>)> = records[0]
+        .represents()
+        .iter()
+        .map(|r| (r.subject().clone(), r.relationship().map(str::to_owned)))
+        .collect();
+    assert_eq!(subjects, [(person_ref(subject), Some("253".to_owned()))]);
+
+    let (rows, keys) = (representation_rows(&pool).await, key_rows(&pool).await);
+    svc.refill_binding_table().await.expect("the refill runs");
+    assert_eq!(representation_rows(&pool).await, rows);
+    assert_eq!(key_rows(&pool).await, keys);
+
+    let head = svc
+        .party_relationship_latest_meta(container)
+        .await
+        .expect("the head reads")
+        .expect("a head")
+        .uid;
+    Box::pin(svc.party_relationship_delete(
+        container,
+        delete_precondition(&head, None),
+        WriteRequest::new(()),
+    ))
+    .await
+    .expect("the representation deletes");
+    assert_eq!(representation_rows(&pool).await, Vec::<String>::new());
+    // NOTE: #5532, a former representative keeps a representative's key row with no
+    // live subject, so the patient portal never takes their login for the patient's.
+    let former = |found: Lookup| match found {
+        Lookup::Parties(records) => records
+            .iter()
+            .map(|r| (r.markers(), r.represents().len()))
+            .collect::<Vec<_>>(),
+        other => panic!("expected one party, got {other:?}"),
+    };
+    assert_eq!(
+        former(lookup(&svc, value).await),
+        [(Markers::REPRESENTATIVE, 0)]
+    );
+    let today = jiff::Timestamp::now()
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .date()
+        .to_string();
+    let representing = || async {
+        let mut conn = pool.acquire().await.expect("a connection");
+        sqlx::query("SET search_path = party, ext, public")
+            .execute(&mut *conn)
+            .await
+            .expect("the party schema");
+        ferroehr::party_binding::lookup::representation_of(&mut conn, proxy.0, subject.0, &today)
+            .await
+            .expect("reads")
+    };
+    assert_eq!(representing().await, Some((false, Some("253".to_owned()))));
+    svc.refill_binding_table().await.expect("the refill runs");
+    assert_eq!(
+        former(lookup(&svc, value).await),
+        [(Markers::REPRESENTATIVE, 0)]
+    );
+    assert_eq!(
+        representing().await,
+        Some((false, Some("253".to_owned()))),
+        "the refill keeps who once represented whom"
+    );
+}
+
+/// The live representation rows, as `(representative, subject, relationship,
+/// container)` text, in a stable order.
+async fn representation_rows(pool: &sqlx::PgPool) -> Vec<String> {
+    sqlx::query_scalar(
+        "SELECT representative_id::text || '|' || subject_id::text || '|' \
+                || coalesce(relationship, '') || '|' || coalesce(relationship_id::text, '') \
+         FROM party.binding_representation WHERE retired_at IS NULL ORDER BY 1",
+    )
+    .fetch_all(pool)
+    .await
+    .expect("the rows read")
 }

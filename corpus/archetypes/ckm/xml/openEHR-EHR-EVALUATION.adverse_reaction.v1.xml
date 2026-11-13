@@ -1,0 +1,1779 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2010-11-08</original_author>
+    <original_author id="name">Heather Leslie</original_author>
+    <original_author id="organisation">Ocean Informatics</original_author>
+    <original_author id="email">heather.leslie@oceaninformatics.com</original_author>
+    <other_contributors>John Bennett, NEHTA, Australia</other_contributors>
+    <other_contributors>Sharmila Biswas, Dr Sharmila Biswas GP, Australia</other_contributors>
+    <other_contributors>Rong Chen, Cambio Healthcare System, Sweden</other_contributors>
+    <other_contributors>Stephen Chu, NEHTA, Australia (Editor)</other_contributors>
+    <other_contributors>Matthew Cordell, NEHTA, Australia</other_contributors>
+    <other_contributors>David Evans, Queensland Health, Australia</other_contributors>
+    <other_contributors>Shahla Foozonkhah, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Joanne Foster, School of Nursing &amp; Midwifery, QLD University of Technology &amp; Nursing Informatics Australia, Australia</other_contributors>
+    <other_contributors>Jacquie Garton-Smith, Royal Perth Hospital and DoHWA, Australia</other_contributors>
+    <other_contributors>Sarah Gaunt, NEHTA, Australia</other_contributors>
+    <other_contributors>Andrew Goodchild, NEHTA, Australia</other_contributors>
+    <other_contributors>Heather Grain, Llewelyn Grain Informatics, Australia</other_contributors>
+    <other_contributors>Trina Gregory, cpc, Australia</other_contributors>
+    <other_contributors>Grahame Grieve, Australia</other_contributors>
+    <other_contributors>Sam Heard, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Andrew James, University of Toronto, Canada</other_contributors>
+    <other_contributors>Julie James, Blue Wave Informatics LLP, United Kingdom</other_contributors>
+    <other_contributors>Ivor Jones, Queensalnd Helath, Australia</other_contributors>
+    <other_contributors>Mary Kelaher, NEHTA, Australia</other_contributors>
+    <other_contributors>Diane Kirkham, NEHTA, Australia</other_contributors>
+    <other_contributors>Robert L'egan, NEHTA, Australia</other_contributors>
+    <other_contributors>Jobst Landgrebe, ii4sm, Switzerland</other_contributors>
+    <other_contributors>Heather Leslie, Ocean Informatics, Australia (Editor)</other_contributors>
+    <other_contributors>Hugh Leslie, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Rikard Lovstrom, Swedish Medical Association, Sweden</other_contributors>
+    <other_contributors>Sarah Mahoney, Australia</other_contributors>
+    <other_contributors>Mike Martyn, The Hobart Anaesthetic Group, Australia</other_contributors>
+    <other_contributors>David McKillop, NEHTA, Australia</other_contributors>
+    <other_contributors>Ian McNicoll, Ocean Informatics, United Kingdom</other_contributors>
+    <other_contributors>Chris Mitchell, RACGP, Australia</other_contributors>
+    <other_contributors>Stewart Morrison, NEHTA, Australia</other_contributors>
+    <other_contributors>Jörg Niggemann, Compugroup, Germany</other_contributors>
+    <other_contributors>Chris Pearce, Melbourne East GP Network, Australia</other_contributors>
+    <other_contributors>General Practice Computing Group, Australia</other_contributors>
+    <other_contributors>Camilla Preeston, Royal Australian College of General Practitioners, Australia</other_contributors>
+    <other_contributors>Margaret Prichard, NEHTA, Australia</other_contributors>
+    <other_contributors>Jodie Pycroft, Adelaide Northern Division of General Practice Ltd, Australia</other_contributors>
+    <other_contributors>Cathy Richardson, NEHTA, Australia</other_contributors>
+    <other_contributors>Robyn Richards, NEHTA - Clinical Terminology, Australia</other_contributors>
+    <other_contributors>Thilo Schuler, Australia</other_contributors>
+    <other_contributors>Peter Scott, Medical Objects, Australia</other_contributors>
+    <other_contributors>Elena Shabanova, UMMSSOft, Russian Federation</other_contributors>
+    <other_contributors>Elizabeth Stanick, Hobart Anaesthetic Group, Australia</other_contributors>
+    <other_contributors>Hwei-Yee Tai, Tan Tock Seng Hospital, Singapore</other_contributors>
+    <other_contributors>John Taylor, NEHTA, Australia</other_contributors>
+    <other_contributors>Gordon Tomes, Australian Institute of Health and Welfare, Australia</other_contributors>
+    <other_contributors>Richard Townley-O'Neill, NEHTA, Australia</other_contributors>
+    <other_contributors>Kylie Young, The Royal Australian College of General Practitioners, Australia</other_contributors>
+    <lifecycle_state>rejected</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Adverse Reaction, draft archetype, National eHealth Transition Authority [Internet]. NEHTA Clinical Knowledge Manager. Authored: 08 Nov 2010. Available at: http://dcm.nehta.org.au/ckm/OKM.html#showarchetype_1013.1.868_7 (accessed Jan 16, 2012).&#xD;
+&#xD;
+Allergy, clinical element model, GE/Intermountain Healthcare. Clinical Element Model Search. Available at: http://intermountainhealthcare.org/cem/Pages/Detail.aspx?NCID=520861661&amp;k=allergy (accessed Jan 16, 2012).&#xD;
+&#xD;
+Edwards IR, Aronson JK. Adverse drug reactions: definitions, diagnosis, and management. Lancet. 2000 Oct 7;356(9237):1255-9. PubMed PMID: 11072960. &#xD;
+&#xD;
+Horsfield P, Sibeko S. Representation in Electronic Patient Records of Allergic Reactions, Adverse Reactions, and Intolerance of Pharmaceutical Products [Internet]. London, UK: National Health Service; 2006 Sep 07 [cited 2011 Jun 21]; Available at https://svn.connectingforhealth.nhs.uk/svn/public/nhscontentmodels/TRUNK/ref/NPfIT/Allergy_ADR_Intolerance%20v%201.2Final.doc.&#xD;
+&#xD;
+Long R, Bentley S. SCG Guidance on the Representation of Allergies and Adverse Reaction Information Using NHS Message Templates [Internet]. London, UK: National Health Service; 2008 Apr 30 [cited 2011 Jun 21]; Available at http://www.connectingforhealth.nhs.uk/systemsandservices/data/scg/scg0001.pdf.&#xD;
+&#xD;
+Microsoft. Design Guidance: Displaying Adverse Drug Reaction Risks [Internet]. 2009 January 28 [cited 2011 Jun 21]; Available at www.mscui.net/DesignGuide/DisplayingAllergies.aspx.&#xD;
+&#xD;
+Microsoft. Design Guidance: Recording Adverse Drug Reaction Risks [Internet]. 2009 March 27 [cited 2011 Jun 21]; Available at www.mscui.net/DesignGuide/RecordingAllergies.aspx.&#xD;
+&#xD;
+Mosby. Mosby's Pocket Dictionary of Medicine, Nursing and Health Professions. 6th Edition. USA: Mosby Elsevier; 2010&#xD;
+&#xD;
+National E-Health Transition Authority. Adverse Reactions (Data Specifications) Version 1.1 [Internet]. Sydney, Australia: NEHTA; 2008 Feb 29 [cited 2011 Jun 21]; Available at http://www.nehta.gov.au/component/docman/doc_download/453-adverse-reaction-data-specification-v11.&#xD;
+&#xD;
+Riedl MA, Casillas AM. Adverse drug reactions: types and treatment options. Am Fam Physician. 2003 Nov 1;68(9):1781-90. Review. PubMed PMID: 14620598.&#xD;
+&#xD;
+Royal Australian College of General Practitioners. Fact Sheet: Allergies &amp; Adverse Reactions (Draft). 2010.&#xD;
+&#xD;
+Thien FC. Drug hypersensitivity. Med J Aust. 2006 Sep 18;185(6):333-8. Review. PubMed PMID: 16999678.</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">FB9E00ED650AFFD43C2CCF538040C2E8</other_details>
+    <other_details id="build_uid">ab5a5cb1-ca65-4fbb-bfe5-12289562a738</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>*To record information about any harmful, desirable or unexpected reaction to a substance or agent, including:&#xD;
+- immune mediated reactions Types I-IV (including true allergic reactions and hypersensitivities), and &#xD;
+- non-immune mediated reactions (including pseudoallergic reactions, side effects, intolerances, drug toxicities (eg Gentamicin), drug-drug interactions, food-drug interactions, drug-disease interactions and idiosyncratic reactions).&#xD;
+&#xD;
+To record information about previous exposures to a substance, allowing a persisting and evolving summary of adverse reaction events to build up over time.&#xD;
+&#xD;
+To record additional information that will support and inform a clinical assessment of the propensity of an individual to experience an adverse reaction if exposed to a specific substance, class of substance or agent in the future.(en)</purpose>
+      <keywords>*reaction(en)</keywords>
+      <keywords>*allergy(en)</keywords>
+      <keywords>*allergic(en)</keywords>
+      <keywords>*adverse(en)</keywords>
+      <keywords>*event(en)</keywords>
+      <keywords>*effect(en)</keywords>
+      <keywords>*sensitivity(en)</keywords>
+      <keywords>*intolerance(en)</keywords>
+      <keywords>*hypersensitivity(en)</keywords>
+      <keywords>*side effect(en)</keywords>
+      <keywords>*toxicity(en)</keywords>
+      <keywords>*interaction(en)</keywords>
+      <keywords>*drug(en)</keywords>
+      <keywords>*food(en)</keywords>
+      <keywords>*medication(en)</keywords>
+      <keywords>*agent(en)</keywords>
+      <keywords>*substance(en)</keywords>
+      <keywords>*immune(en)</keywords>
+      <keywords>*non-immune(en)</keywords>
+      <keywords>*chemical(en)</keywords>
+      <use>*Use to record all information about the presence of adverse reaction/s (including an allergic reaction/s)  to a substance to support direct clinical care of an individual; as part of a managed Adverse Reaction list; to enable safe exchange of information about adverse reactions; and to assist computerised knowledge-based activities such as clinical decision support and alerts.&#xD;
+&#xD;
+Use to provide a single place within the health record to record a range of clinical statements about adverse reactions, including:  &#xD;
+-  record cumulative information about each exposure to a known substance, class of substance or agent; and &#xD;
+-  record a clinician's opinion that administration of, or exposure to, a substance or agent is absolutely contraindicated.&#xD;
+&#xD;
+This archetype has been designed to allow recording of information about a more generic substance, class of substance or agent, and then allow more specific details to be recorded including identification of the specific substance on a per exposure basis, including links to other parts of the health record where further details may be located. Note:  it is possible on second or subsequent exposures to a previously identified substance for a reaction not to occur and this archetype allows for these events to be closely linked in a way that will assist in determining if the adverse reaction has been incorrectly identified.&#xD;
+&#xD;
+Design of this archetype has been deliberatly focused on identifying a pragmatic, core data set that will be suitable for most common use clinical scenarios but permits extension of the model when additional detail is required through incorporation of additional archetypes in the 'Additional Reaction Detail', 'Additional Exposure Detail', and 'Reporting Details' slots. Examples of clinical situations where the extension will be required are for a detailed immunology assessment, for reporting to regulatory bodies or clinical trial use.&#xD;
+&#xD;
+A data element for Substance Category has not been modelled as this should be able to be derived from any coded entry for Substance/Agent and be used in decision support activities. A coded Category is not adequate to support decision support if Substance/Agent is only entered via free text.&#xD;
+&#xD;
+The act of recording an adverse reaction in the health record implies there is a potential hazard for the individual if they are exposed to the same substance/agent in the future - a relative contraindication. If a clinician considers that it is not safe for the individual to be deliberately re-exposed to the substance/agent again, for example, following a manifestation of anaphylaxis, the 'Absolute contraindication' data flag should be recorded as ‘True’. Note: Conversely, a statement about ‘Severity’ of propensity (with possible values such as Mild, Moderate and Severe) has deliberately not been modelled explicitly. Predicting or estimating the grade of possible severity of a future reaction is not safe to record and persist in data, except where it is absolutely clear that the risk of deliberate re-exposure is unacceptable and highly likely to cause significant harm, such as a previous manifestation of anaphylaxis, and in this case the ‘Absolute contraindication’ data flag should be used. &#xD;
+&#xD;
+Valuable first-level information that could be presented to the clinician when they need to assess propensity for future reactions are:&#xD;
+- statements about previous clinical manifestations following exposure,&#xD;
+- source of the information/reporter, and&#xD;
+- a flag for absolute contra-indication. &#xD;
+Second-level information can be drawn from each exposure event and links to additional detailed information such as history, examination and diagnoses stored elsewhere in the record, if it is available.&#xD;
+&#xD;
+A formal Adverse Reaction Report to regulatory bodies is a document that will contain a broad range of information in addition to the specific details of the adverse reaction. The report will be comprised of this Adverse Reaction archetype plus a variable number of others - for example, demographics, weight, medication and problem/diagnosis.(en)</use>
+      <misuse>*Not to be used for recording the absence (or negative presence) of a reaction to 'any substances' or to identified substances – use the EVALUATION.exclusion family of archetypes to express a positive statement of Adverse Reaction exclusion.&#xD;
+&#xD;
+Not to be used for recording that no information was able to be obtained about the Adverse Reaction status of a patient. Use the EVALUATION.absent_information family of archetypes to record that a positive statement that information was not able to be obtained, for example, if a non-cooperative patient refuses to answer questions.&#xD;
+&#xD;
+Not to be used to record adverse events, including failures of clinical process, interventions or products. For example: abnormal use or mistakes/errors made in administration of an agent or substance; mislabelling; harm or injury caused by an intervention or procedure; overdose etc.&#xD;
+&#xD;
+Not to be used for recording alerts.&#xD;
+&#xD;
+Not to be used for recording failed therapy.(en)</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ar-sy</code_string>
+      </language>
+      <purpose>*To record information about any harmful, desirable or unexpected reaction to a substance or agent, including:&#xD;
+- immune mediated reactions Types I-IV (including true allergic reactions and hypersensitivities), and &#xD;
+- non-immune mediated reactions (including pseudoallergic reactions, side effects, intolerances, drug toxicities (eg Gentamicin), drug-drug interactions, food-drug interactions, drug-disease interactions and idiosyncratic reactions).&#xD;
+&#xD;
+To record information about previous exposures to a substance, allowing a persisting and evolving summary of adverse reaction events to build up over time.&#xD;
+&#xD;
+To record additional information that will support and inform a clinical assessment of the propensity of an individual to experience an adverse reaction if exposed to a specific substance, class of substance or agent in the future.(en)</purpose>
+      <keywords>*reaction(en)</keywords>
+      <keywords>*allergy(en)</keywords>
+      <keywords>*allergic(en)</keywords>
+      <keywords>*adverse(en)</keywords>
+      <keywords>*event(en)</keywords>
+      <keywords>*effect(en)</keywords>
+      <keywords>*sensitivity(en)</keywords>
+      <keywords>*intolerance(en)</keywords>
+      <keywords>*hypersensitivity(en)</keywords>
+      <keywords>*side effect(en)</keywords>
+      <keywords>*toxicity(en)</keywords>
+      <keywords>*interaction(en)</keywords>
+      <keywords>*drug(en)</keywords>
+      <keywords>*food(en)</keywords>
+      <keywords>*medication(en)</keywords>
+      <keywords>*agent(en)</keywords>
+      <keywords>*substance(en)</keywords>
+      <keywords>*immune(en)</keywords>
+      <keywords>*non-immune(en)</keywords>
+      <keywords>*chemical(en)</keywords>
+      <use>*Use to record all information about the presence of adverse reaction/s (including an allergic reaction/s)  to a substance to support direct clinical care of an individual; as part of a managed Adverse Reaction list; to enable safe exchange of information about adverse reactions; and to assist computerised knowledge-based activities such as clinical decision support and alerts.&#xD;
+&#xD;
+Use to provide a single place within the health record to record a range of clinical statements about adverse reactions, including:  &#xD;
+-  record cumulative information about each exposure to a known substance, class of substance or agent; and &#xD;
+-  record a clinician's opinion that administration of, or exposure to, a substance or agent is absolutely contraindicated.&#xD;
+&#xD;
+This archetype has been designed to allow recording of information about a more generic substance, class of substance or agent, and then allow more specific details to be recorded including identification of the specific substance on a per exposure basis, including links to other parts of the health record where further details may be located. Note:  it is possible on second or subsequent exposures to a previously identified substance for a reaction not to occur and this archetype allows for these events to be closely linked in a way that will assist in determining if the adverse reaction has been incorrectly identified.&#xD;
+&#xD;
+Design of this archetype has been deliberatly focused on identifying a pragmatic, core data set that will be suitable for most common use clinical scenarios but permits extension of the model when additional detail is required through incorporation of additional archetypes in the 'Additional Reaction Detail', 'Additional Exposure Detail', and 'Reporting Details' slots. Examples of clinical situations where the extension will be required are for a detailed immunology assessment, for reporting to regulatory bodies or clinical trial use.&#xD;
+&#xD;
+A data element for Substance Category has not been modelled as this should be able to be derived from any coded entry for Substance/Agent and be used in decision support activities. A coded Category is not adequate to support decision support if Substance/Agent is only entered via free text.&#xD;
+&#xD;
+The act of recording an adverse reaction in the health record implies there is a potential hazard for the individual if they are exposed to the same substance/agent in the future - a relative contraindication. If a clinician considers that it is not safe for the individual to be deliberately re-exposed to the substance/agent again, for example, following a manifestation of anaphylaxis, the 'Absolute contraindication' data flag should be recorded as ‘True’. Note: Conversely, a statement about ‘Severity’ of propensity (with possible values such as Mild, Moderate and Severe) has deliberately not been modelled explicitly. Predicting or estimating the grade of possible severity of a future reaction is not safe to record and persist in data, except where it is absolutely clear that the risk of deliberate re-exposure is unacceptable and highly likely to cause significant harm, such as a previous manifestation of anaphylaxis, and in this case the ‘Absolute contraindication’ data flag should be used. &#xD;
+&#xD;
+Valuable first-level information that could be presented to the clinician when they need to assess propensity for future reactions are:&#xD;
+- statements about previous clinical manifestations following exposure,&#xD;
+- source of the information/reporter, and&#xD;
+- a flag for absolute contra-indication. &#xD;
+Second-level information can be drawn from each exposure event and links to additional detailed information such as history, examination and diagnoses stored elsewhere in the record, if it is available.&#xD;
+&#xD;
+A formal Adverse Reaction Report to regulatory bodies is a document that will contain a broad range of information in addition to the specific details of the adverse reaction. The report will be comprised of this Adverse Reaction archetype plus a variable number of others - for example, demographics, weight, medication and problem/diagnosis.(en)</use>
+      <misuse>*Not to be used for recording the absence (or negative presence) of a reaction to 'any substances' or to identified substances – use the EVALUATION.exclusion family of archetypes to express a positive statement of Adverse Reaction exclusion.&#xD;
+&#xD;
+Not to be used for recording that no information was able to be obtained about the Adverse Reaction status of a patient. Use the EVALUATION.absent_information family of archetypes to record that a positive statement that information was not able to be obtained, for example, if a non-cooperative patient refuses to answer questions.&#xD;
+&#xD;
+Not to be used to record adverse events, including failures of clinical process, interventions or products. For example: abnormal use or mistakes/errors made in administration of an agent or substance; mislabelling; harm or injury caused by an intervention or procedure; overdose etc.&#xD;
+&#xD;
+Not to be used for recording alerts.&#xD;
+&#xD;
+Not to be used for recording failed therapy.(en)</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record information about any harmful, desirable or unexpected reaction to a substance or agent, including:&#xD;
+- immune mediated reactions Types I-IV (including true allergic reactions and hypersensitivities), and &#xD;
+- non-immune mediated reactions (including pseudoallergic reactions, side effects, intolerances, drug toxicities (eg Gentamicin), drug-drug interactions, food-drug interactions, drug-disease interactions and idiosyncratic reactions).&#xD;
+&#xD;
+To record information about previous exposures to a substance, allowing a persisting and evolving summary of adverse reaction events to build up over time.&#xD;
+&#xD;
+To record additional information that will support and inform a clinical assessment of the propensity of an individual to experience an adverse reaction if exposed to a specific substance, class of substance or agent in the future.</purpose>
+      <keywords>reaction</keywords>
+      <keywords>allergy</keywords>
+      <keywords>allergic</keywords>
+      <keywords>adverse</keywords>
+      <keywords>event</keywords>
+      <keywords>effect</keywords>
+      <keywords>sensitivity</keywords>
+      <keywords>intolerance</keywords>
+      <keywords>hypersensitivity</keywords>
+      <keywords>side effect</keywords>
+      <keywords>toxicity</keywords>
+      <keywords>interaction</keywords>
+      <keywords>drug</keywords>
+      <keywords>food</keywords>
+      <keywords>medication</keywords>
+      <keywords>agent</keywords>
+      <keywords>substance</keywords>
+      <keywords>immune</keywords>
+      <keywords>non-immune</keywords>
+      <keywords>chemical</keywords>
+      <use>Use to record all information about the presence of adverse reaction/s (including an allergic reaction/s)  to a substance to support direct clinical care of an individual; as part of a managed Adverse Reaction list; to enable safe exchange of information about adverse reactions; and to assist computerised knowledge-based activities such as clinical decision support and alerts.&#xD;
+&#xD;
+Use to provide a single place within the health record to record a range of clinical statements about adverse reactions, including:  &#xD;
+-  record cumulative information about each exposure to a known substance, class of substance or agent; and &#xD;
+-  record a clinician's opinion that administration of, or exposure to, a substance or agent is absolutely contraindicated.&#xD;
+&#xD;
+This archetype has been designed to allow recording of information about a more generic substance, class of substance or agent, and then allow more specific details to be recorded including identification of the specific substance on a per exposure basis, including links to other parts of the health record where further details may be located. Note:  it is possible on second or subsequent exposures to a previously identified substance for a reaction not to occur and this archetype allows for these events to be closely linked in a way that will assist in determining if the adverse reaction has been incorrectly identified.&#xD;
+&#xD;
+Design of this archetype has been deliberatly focused on identifying a pragmatic, core data set that will be suitable for most common use clinical scenarios but permits extension of the model when additional detail is required through incorporation of additional archetypes in the 'Additional Reaction Detail', 'Additional Exposure Detail', and 'Reporting Details' slots. Examples of clinical situations where the extension will be required are for a detailed immunology assessment, for reporting to regulatory bodies or clinical trial use.&#xD;
+&#xD;
+A data element for Substance Category has not been modelled as this should be able to be derived from any coded entry for Substance/Agent and be used in decision support activities. A coded Category is not adequate to support decision support if Substance/Agent is only entered via free text.&#xD;
+&#xD;
+The act of recording an adverse reaction in the health record implies there is a potential hazard for the individual if they are exposed to the same substance/agent in the future - a relative contraindication. If a clinician considers that it is not safe for the individual to be deliberately re-exposed to the substance/agent again, for example, following a manifestation of anaphylaxis, the 'Absolute contraindication' data flag should be recorded as ‘True’. Note: Conversely, a statement about ‘Severity’ of propensity (with possible values such as Mild, Moderate and Severe) has deliberately not been modelled explicitly. Predicting or estimating the grade of possible severity of a future reaction is not safe to record and persist in data, except where it is absolutely clear that the risk of deliberate re-exposure is unacceptable and highly likely to cause significant harm, such as a previous manifestation of anaphylaxis, and in this case the ‘Absolute contraindication’ data flag should be used. &#xD;
+&#xD;
+Valuable first-level information that could be presented to the clinician when they need to assess propensity for future reactions are:&#xD;
+- statements about previous clinical manifestations following exposure,&#xD;
+- source of the information/reporter, and&#xD;
+- a flag for absolute contra-indication. &#xD;
+Second-level information can be drawn from each exposure event and links to additional detailed information such as history, examination and diagnoses stored elsewhere in the record, if it is available.&#xD;
+&#xD;
+A formal Adverse Reaction Report to regulatory bodies is a document that will contain a broad range of information in addition to the specific details of the adverse reaction. The report will be comprised of this Adverse Reaction archetype plus a variable number of others - for example, demographics, weight, medication and problem/diagnosis.</use>
+      <misuse>Not to be used for recording the absence (or negative presence) of a reaction to 'any substances' or to identified substances – use the EVALUATION.exclusion family of archetypes to express a positive statement of Adverse Reaction exclusion.&#xD;
+&#xD;
+Not to be used for recording that no information was able to be obtained about the Adverse Reaction status of a patient. Use the EVALUATION.absent_information family of archetypes to record that a positive statement that information was not able to be obtained, for example, if a non-cooperative patient refuses to answer questions.&#xD;
+&#xD;
+Not to be used to record adverse events, including failures of clinical process, interventions or products. For example: abnormal use or mistakes/errors made in administration of an agent or substance; mislabelling; harm or injury caused by an intervention or procedure; overdose etc.&#xD;
+&#xD;
+Not to be used for recording alerts.&#xD;
+&#xD;
+Not to be used for recording failed therapy.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Jasmin Buck, Sebastian Garde</author>
+    <author id="organisation">University of Heidelberg, Central Queensland University</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ar-sy</code_string>
+    </language>
+    <author id="name">Mona Saleh</author>
+    <author id="email">monasaleh01@live.com</author>
+  </translations>
+  <uid>
+    <value>9f8c5a9a-549d-4688-87e0-fcf80749b975</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-EVALUATION.adverse_reaction.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>EVALUATION</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>data</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0002</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0004</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_BOOLEAN</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_PRIMITIVE_OBJECT">
+                    <rm_type_name>BOOLEAN</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <item xsi:type="C_BOOLEAN">
+                      <true_valid>true</true_valid>
+                      <false_valid>false</false_valid>
+                    </item>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0049</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0006</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0009</node_id>
+            <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+              <rm_attribute_name>items</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0010</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>0</lower>
+                </occurrences>
+                <node_id>at0011</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0016</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0021</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>defining_code</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>1</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_CODE_PHRASE">
+                        <rm_type_name>CODE_PHRASE</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <terminology_id>
+                          <value>local</value>
+                        </terminology_id>
+                        <code_list>at0022</code_list>
+                        <code_list>at0023</code_list>
+                        <code_list>at0024</code_list>
+                      </children>
+                    </attributes>
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0012</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0027</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_DATE_TIME</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0028</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_DURATION</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="ARCHETYPE_SLOT">
+                <rm_type_name>CLUSTER</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>0</lower>
+                </occurrences>
+                <node_id>at0029</node_id>
+                <includes>
+                  <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+                  <expression xsi:type="EXPR_BINARY_OPERATOR">
+                    <type>Boolean</type>
+                    <operator>2007</operator>
+                    <precedence_overridden>false</precedence_overridden>
+                    <left_operand xsi:type="EXPR_LEAF">
+                      <type>String</type>
+                      <item xsi:type="xsd:string">archetype_id/value</item>
+                      <reference_type>attribute</reference_type>
+                    </left_operand>
+                    <right_operand xsi:type="EXPR_LEAF">
+                      <type>C_STRING</type>
+                      <item xsi:type="C_STRING">
+                        <pattern>openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1</pattern>
+                      </item>
+                      <reference_type>constraint</reference_type>
+                    </right_operand>
+                  </expression>
+                </includes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0018</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0020</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_DATE_TIME</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0025</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_DURATION</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="ARCHETYPE_SLOT">
+                <rm_type_name>CLUSTER</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>0</lower>
+                </occurrences>
+                <node_id>at0019</node_id>
+                <includes>
+                  <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.amount(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.medication_admin(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.timing(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+                  <expression xsi:type="EXPR_BINARY_OPERATOR">
+                    <type>Boolean</type>
+                    <operator>2007</operator>
+                    <precedence_overridden>false</precedence_overridden>
+                    <left_operand xsi:type="EXPR_LEAF">
+                      <type>String</type>
+                      <item xsi:type="xsd:string">archetype_id/value</item>
+                      <reference_type>attribute</reference_type>
+                    </left_operand>
+                    <right_operand xsi:type="EXPR_LEAF">
+                      <type>C_STRING</type>
+                      <item xsi:type="C_STRING">
+                        <pattern>openEHR-EHR-CLUSTER\.amount(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.medication_admin(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.timing(-[a-zA-Z0-9_]+)*\.v1</pattern>
+                      </item>
+                      <reference_type>constraint</reference_type>
+                    </right_operand>
+                  </expression>
+                </includes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0040</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>0</lower>
+                </occurrences>
+                <node_id>at0031</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_MULTIMEDIA</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                      <rm_attribute_name>media_type</rm_attribute_name>
+                      <existence>
+                        <lower_included>true</lower_included>
+                        <upper_included>true</upper_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>false</upper_unbounded>
+                        <lower>1</lower>
+                        <upper>1</upper>
+                      </existence>
+                      <children xsi:type="C_CODE_PHRASE">
+                        <rm_type_name>CODE_PHRASE</rm_type_name>
+                        <occurrences>
+                          <lower_included>true</lower_included>
+                          <upper_included>true</upper_included>
+                          <lower_unbounded>false</lower_unbounded>
+                          <upper_unbounded>false</upper_unbounded>
+                          <lower>1</lower>
+                          <upper>1</upper>
+                        </occurrences>
+                        <node_id />
+                        <terminology_id>
+                          <value>openEHR</value>
+                        </terminology_id>
+                      </children>
+                    </attributes>
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="ARCHETYPE_SLOT">
+                <rm_type_name>CLUSTER</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>0</lower>
+                </occurrences>
+                <node_id>at0041</node_id>
+                <includes>
+                  <string_expression>archetype_id/value matches {/.*/}</string_expression>
+                  <expression xsi:type="EXPR_BINARY_OPERATOR">
+                    <type>Boolean</type>
+                    <operator>2007</operator>
+                    <precedence_overridden>false</precedence_overridden>
+                    <left_operand xsi:type="EXPR_LEAF">
+                      <type>String</type>
+                      <item xsi:type="xsd:string">archetype_id/value</item>
+                      <reference_type>attribute</reference_type>
+                    </left_operand>
+                    <right_operand xsi:type="EXPR_LEAF">
+                      <type>C_STRING</type>
+                      <item xsi:type="C_STRING">
+                        <pattern>.*</pattern>
+                      </item>
+                      <reference_type>constraint</reference_type>
+                    </right_operand>
+                  </expression>
+                </includes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>ELEMENT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>0</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id>at0032</node_id>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_TEXT</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+              <cardinality>
+                <is_ordered>false</is_ordered>
+                <is_unique>false</is_unique>
+                <interval>
+                  <lower_included>true</lower_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>true</upper_unbounded>
+                  <lower>1</lower>
+                </interval>
+              </cardinality>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+    <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+      <rm_attribute_name>protocol</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>0</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ITEM_TREE</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>1</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0042</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0044</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_BOOLEAN</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>value</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_PRIMITIVE_OBJECT">
+                    <rm_type_name>BOOLEAN</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <item xsi:type="C_BOOLEAN">
+                      <true_valid>true</true_valid>
+                      <false_valid>true</false_valid>
+                    </item>
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0048</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0045</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_URI</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0047</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_EHR_URI</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="ar-sy">
+      <items code="at0000">
+        <items id="text">التفاعل الضائر</items>
+        <items id="description">*A harmful or undesirable, unexpected effect associated with exposure to any substance or agent, including food, plants, animals, venom from animal stings, or a medication at therapeutic or sub-therapeutic doses.(en)</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*Tree(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*Substance/Agent(en)</items>
+        <items id="description">*Identification of a substance, agent, or a class of substance, that is considered to be responsible for the Adverse Reaction.(en)</items>
+        <items id="comment">*Substance/Agent should be coded with a terminology, where possible.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">*Absolute Contraindication?(en)</items>
+        <items id="description">*Is administration of this Substance/Agent absolutely contraindicated in this individual?(en)</items>
+        <items id="comment">*A flag indicating that a clinician has identified a propensity for a serious reaction upon further exposure to the Substance/Agent. Record as True if the clinician recommends that deliberate or voluntary exposure to, or administration of, the Substance/Agent should be prevented in future.(en)</items>
+      </items>
+      <items code="at0006">
+        <items id="text">*Overall Comment(en)</items>
+        <items id="description">*Additional narrative about the Adverse Reaction as a whole, not captured in other fields.(en)</items>
+      </items>
+      <items code="at0009">
+        <items id="text">*Reaction Event(en)</items>
+        <items id="description">*Details about each Adverse Reaction Event.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">*Specific Substance/Agent(en)</items>
+        <items id="description">*Specific identification of the actual Substance/Agent considered to be responsible for the Adverse Reaction event.(en)</items>
+        <items id="comment">*Coding of the specific Substance/Agent with a terminology is preferred, where possible. For example, a medication trade name or identification of a specific food.(en)</items>
+      </items>
+      <items code="at0011">
+        <items id="text">*Manifestation(en)</items>
+        <items id="description">*Clinical manifestation of the Adverse Reaction expressed as a single word, phrase or brief description, e.g. nausea or rash.(en)</items>
+        <items id="comment">*Manifestation should be coded with a terminology, where possible. The values entered here may be used to display on an application screen as part a list of adverse reactions, as recommended in the NHS CUI guidelines.(en)</items>
+      </items>
+      <items code="at0012">
+        <items id="text">*Reaction Description(en)</items>
+        <items id="description">*Narrative description of the Adverse Reaction.(en)</items>
+      </items>
+      <items code="at0016">
+        <items id="text">فئة التفاعل</items>
+        <items id="description">*The type of Adverse Reaction as determined by the clinician.(en)</items>
+      </items>
+      <items code="at0018">
+        <items id="text">*Exposure Description(en)</items>
+        <items id="description">*Description about exposure to the Substance/Agent.(en)</items>
+      </items>
+      <items code="at0019">
+        <items id="text">*Additional Exposure Detail(en)</items>
+        <items id="description">*Additional detail about exposure/s for this Adverse Reaction event, including structured medication amount/frequency/route information.(en)</items>
+      </items>
+      <items code="at0020">
+        <items id="text">*Earliest Exposure(en)</items>
+        <items id="description">*Record of the date and/or time of the earliest or initial exposure to the Substance/Agent.(en)</items>
+      </items>
+      <items code="at0021">
+        <items id="text">*Certainty(en)</items>
+        <items id="description">*Degree of certainty, as assessed by a clinician, that the specific Substance/Agent was the cause of the Adverse Reaction.(en)</items>
+      </items>
+      <items code="at0022">
+        <items id="text">*Suspected(en)</items>
+        <items id="description">*Possibly the causative agent.(en)</items>
+      </items>
+      <items code="at0023">
+        <items id="text">*Probable(en)</items>
+        <items id="description">*Likely to be the causative agent, but not confirmed by testing or rechallenge.(en)</items>
+      </items>
+      <items code="at0024">
+        <items id="text">*Confirmed(en)</items>
+        <items id="description">*Confirmed as the causative agent, by testing or rechallenge.(en)</items>
+      </items>
+      <items code="at0025">
+        <items id="text">مدة التعرض</items>
+        <items id="description">*The amount of time of exposure to the Substance/Agent.(en)</items>
+      </items>
+      <items code="at0027">
+        <items id="text">تاريخ بداية التفاعل</items>
+        <items id="description">التاريخ و الوقت الذي بدأ فيه التفاعل.</items>
+      </items>
+      <items code="at0028">
+        <items id="text">مدة التفاعل</items>
+        <items id="description">مدة التفاعل.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">*Additional Reaction Detail(en)</items>
+        <items id="description">*Additional detail about the Adverse Reaction, including anatomical location.(en)</items>
+      </items>
+      <items code="at0031">
+        <items id="text">*Multimedia(en)</items>
+        <items id="description">*Inclusion of any multimedia file to support the recording of the Adverse Reaction event.(en)</items>
+        <items id="comment">*For example, a photo of a rash or presentation with angioneurotic oedema.(en)</items>
+      </items>
+      <items code="at0032">
+        <items id="text">*Reaction Comment(en)</items>
+        <items id="description">*Additional narrative about the Adverse Reaction event not captured in other fields.(en)</items>
+      </items>
+      <items code="at0040">
+        <items id="text">*Clinical Management Description(en)</items>
+        <items id="description">*Narrative description of the clinical management provided.(en)</items>
+      </items>
+      <items code="at0041">
+        <items id="text">*Reporting Details(en)</items>
+        <items id="description">*Further details required for reporting to regulatory bodies.(en)</items>
+      </items>
+      <items code="at0042">
+        <items id="text">*Tree(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0044">
+        <items id="text">*Reaction Reported?(en)</items>
+        <items id="description">*Was the Adverse Reaction reported to a regulatory body?(en)</items>
+      </items>
+      <items code="at0045">
+        <items id="text">*Adverse Reaction Report(en)</items>
+        <items id="description">*Link to an Adverse Reaction Report sent to a regulatory body.(en)</items>
+      </items>
+      <items code="at0047">
+        <items id="text">*Supporting Clinical Record Information(en)</items>
+        <items id="description">*Link to further information about the presentation and findings that exist elsewhere in the health record, including allergy test reports.(en)</items>
+        <items id="comment">*For example, presenting symptoms, examination findings, diagnosis etc.(en)</items>
+      </items>
+      <items code="at0048">
+        <items id="text">*Report Comment(en)</items>
+        <items id="description">*Additional narrative about the Adverse Reaction Report, including the reason for non-reporting, if required.(en)</items>
+      </items>
+      <items code="at0049">
+        <items id="text">*Future Use(en)</items>
+        <items id="description">*Narrative description of clinician instructions or advice related to future exposure to, or administration of, the Substance/Agent.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Adverse Reaction</items>
+        <items id="description">A harmful or undesirable, unexpected effect associated with exposure to any substance or agent, including food, plants, animals, venom from animal stings, or a medication at therapeutic or sub-therapeutic doses.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Substance/Agent</items>
+        <items id="description">Identification of a substance, agent, or a class of substance, that is considered to be responsible for the Adverse Reaction.</items>
+        <items id="comment">Substance/Agent should be coded with a terminology, where possible.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Absolute Contraindication?</items>
+        <items id="description">Is administration of this Substance/Agent absolutely contraindicated in this individual?</items>
+        <items id="comment">A flag indicating that a clinician has identified a propensity for a serious reaction upon further exposure to the Substance/Agent. Record as True if the clinician recommends that deliberate or voluntary exposure to, or administration of, the Substance/Agent should be prevented in future.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Overall Comment</items>
+        <items id="description">Additional narrative about the Adverse Reaction as a whole, not captured in other fields.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Reaction Event</items>
+        <items id="description">Details about each Adverse Reaction Event.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Specific Substance/Agent</items>
+        <items id="description">Specific identification of the actual Substance/Agent considered to be responsible for the Adverse Reaction event.</items>
+        <items id="comment">Coding of the specific Substance/Agent with a terminology is preferred, where possible. For example, a medication trade name or identification of a specific food.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Manifestation</items>
+        <items id="description">Clinical manifestation of the Adverse Reaction expressed as a single word, phrase or brief description, e.g. nausea or rash.</items>
+        <items id="comment">Manifestation should be coded with a terminology, where possible. The values entered here may be used to display on an application screen as part a list of adverse reactions, as recommended in the NHS CUI guidelines.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Reaction Description</items>
+        <items id="description">Narrative description of the Adverse Reaction.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Reaction Type</items>
+        <items id="description">The type of Adverse Reaction as determined by the clinician.</items>
+        <items id="comment">Coding of the reaction type is preferred, where possible. Examples: Immune mediated - Types I-IV (including allergy and hypersensitivity); Non-immune mediated - including pseudoallergic reaction, side effect, intolerance, drug toxicity, drug-drug interaction, food-drug interaction, drug-disease interaction and idiosyncratic reaction.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Exposure Description</items>
+        <items id="description">Description about exposure to the Substance/Agent.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Additional Exposure Detail</items>
+        <items id="description">Additional detail about exposure/s for this Adverse Reaction event, including structured medication amount/frequency/route information.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Earliest Exposure</items>
+        <items id="description">Record of the date and/or time of the earliest or initial exposure to the Substance/Agent.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Certainty</items>
+        <items id="description">Degree of certainty, as assessed by a clinician, that the specific Substance/Agent was the cause of the Adverse Reaction.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Suspected</items>
+        <items id="description">Possibly the causative agent.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Probable</items>
+        <items id="description">Likely to be the causative agent, but not confirmed by testing or rechallenge.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Confirmed</items>
+        <items id="description">Confirmed as the causative agent, by testing or rechallenge.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Duration of Exposure</items>
+        <items id="description">The amount of time of exposure to the Substance/Agent.</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Onset of Reaction</items>
+        <items id="description">Record of the date and/or time of the onset of the Adverse Reaction.</items>
+      </items>
+      <items code="at0028">
+        <items id="text">Duration of Reaction</items>
+        <items id="description">The amount of time that the Adverse Reaction was present.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">Additional Reaction Detail</items>
+        <items id="description">Additional detail about the Adverse Reaction, including anatomical location.</items>
+      </items>
+      <items code="at0031">
+        <items id="text">Multimedia</items>
+        <items id="description">Inclusion of any multimedia file to support the recording of the Adverse Reaction event.</items>
+        <items id="comment">For example, a photo of a rash or presentation with angioneurotic oedema.</items>
+      </items>
+      <items code="at0032">
+        <items id="text">Reaction Comment</items>
+        <items id="description">Additional narrative about the Adverse Reaction event not captured in other fields.</items>
+      </items>
+      <items code="at0040">
+        <items id="text">Clinical Management Description</items>
+        <items id="description">Narrative description of the clinical management provided.</items>
+      </items>
+      <items code="at0041">
+        <items id="text">Reporting Details</items>
+        <items id="description">Further details required for reporting to regulatory bodies.</items>
+      </items>
+      <items code="at0042">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0044">
+        <items id="text">Reaction Reported?</items>
+        <items id="description">Was the Adverse Reaction reported to a regulatory body?</items>
+      </items>
+      <items code="at0045">
+        <items id="text">Adverse Reaction Report</items>
+        <items id="description">Link to an Adverse Reaction Report sent to a regulatory body.</items>
+      </items>
+      <items code="at0047">
+        <items id="text">Supporting Clinical Record Information</items>
+        <items id="description">Link to further information about the presentation and findings that exist elsewhere in the health record, including allergy test reports.</items>
+        <items id="comment">For example, presenting symptoms, examination findings, diagnosis etc.</items>
+      </items>
+      <items code="at0048">
+        <items id="text">Report Comment</items>
+        <items id="description">Additional narrative about the Adverse Reaction Report, including the reason for non-reporting, if required.</items>
+      </items>
+      <items code="at0049">
+        <items id="text">Future Use</items>
+        <items id="description">Narrative description of clinician instructions or advice related to future exposure to, or administration of, the Substance/Agent.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Nebenwirkung</items>
+        <items id="description">*A harmful or undesirable, unexpected effect associated with exposure to any substance or agent, including food, plants, animals, venom from animal stings, or a medication at therapeutic or sub-therapeutic doses.(en)</items>
+      </items>
+      <items code="at0001">
+        <items id="text">*Tree(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*Substance/Agent(en)</items>
+        <items id="description">*Identification of a substance, agent, or a class of substance, that is considered to be responsible for the Adverse Reaction.(en)</items>
+        <items id="comment">*Substance/Agent should be coded with a terminology, where possible.(en)</items>
+      </items>
+      <items code="at0004">
+        <items id="text">*Absolute Contraindication?(en)</items>
+        <items id="description">*Is administration of this Substance/Agent absolutely contraindicated in this individual?(en)</items>
+        <items id="comment">*A flag indicating that a clinician has identified a propensity for a serious reaction upon further exposure to the Substance/Agent. Record as True if the clinician recommends that deliberate or voluntary exposure to, or administration of, the Substance/Agent should be prevented in future.(en)</items>
+      </items>
+      <items code="at0006">
+        <items id="text">*Overall Comment(en)</items>
+        <items id="description">*Additional narrative about the Adverse Reaction as a whole, not captured in other fields.(en)</items>
+      </items>
+      <items code="at0009">
+        <items id="text">*Reaction Event(en)</items>
+        <items id="description">*Details about each Adverse Reaction Event.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">*Specific Substance/Agent(en)</items>
+        <items id="description">*Specific identification of the actual Substance/Agent considered to be responsible for the Adverse Reaction event.(en)</items>
+        <items id="comment">*Coding of the specific Substance/Agent with a terminology is preferred, where possible. For example, a medication trade name or identification of a specific food.(en)</items>
+      </items>
+      <items code="at0011">
+        <items id="text">*Manifestation(en)</items>
+        <items id="description">*Clinical manifestation of the Adverse Reaction expressed as a single word, phrase or brief description, e.g. nausea or rash.(en)</items>
+        <items id="comment">*Manifestation should be coded with a terminology, where possible. The values entered here may be used to display on an application screen as part a list of adverse reactions, as recommended in the NHS CUI guidelines.(en)</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Beschreibung der Reaktion</items>
+        <items id="description">*Narrative description of the Adverse Reaction.(en)</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Reaktionsart</items>
+        <items id="description">*The type of Adverse Reaction as determined by the clinician.(en)</items>
+      </items>
+      <items code="at0018">
+        <items id="text">*Exposure Description(en)</items>
+        <items id="description">*Description about exposure to the Substance/Agent.(en)</items>
+      </items>
+      <items code="at0019">
+        <items id="text">*Additional Exposure Detail(en)</items>
+        <items id="description">*Additional detail about exposure/s for this Adverse Reaction event, including structured medication amount/frequency/route information.(en)</items>
+      </items>
+      <items code="at0020">
+        <items id="text">*Earliest Exposure(en)</items>
+        <items id="description">*Record of the date and/or time of the earliest or initial exposure to the Substance/Agent.(en)</items>
+      </items>
+      <items code="at0021">
+        <items id="text">*Certainty(en)</items>
+        <items id="description">*Degree of certainty, as assessed by a clinician, that the specific Substance/Agent was the cause of the Adverse Reaction.(en)</items>
+      </items>
+      <items code="at0022">
+        <items id="text">*Suspected(en)</items>
+        <items id="description">*Possibly the causative agent.(en)</items>
+      </items>
+      <items code="at0023">
+        <items id="text">*Probable(en)</items>
+        <items id="description">*Likely to be the causative agent, but not confirmed by testing or rechallenge.(en)</items>
+      </items>
+      <items code="at0024">
+        <items id="text">*Confirmed(en)</items>
+        <items id="description">*Confirmed as the causative agent, by testing or rechallenge.(en)</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Dauer der Exposition</items>
+        <items id="description">*The amount of time of exposure to the Substance/Agent.(en)</items>
+      </items>
+      <items code="at0027">
+        <items id="text">Datum des Beginns der Reaktion</items>
+        <items id="description">Das Datum, an dem die Reaktion eintrat.</items>
+      </items>
+      <items code="at0028">
+        <items id="text">Dauer der Reaktion</items>
+        <items id="description">Die Dauer der Reaktion.</items>
+      </items>
+      <items code="at0029">
+        <items id="text">*Additional Reaction Detail(en)</items>
+        <items id="description">*Additional detail about the Adverse Reaction, including anatomical location.(en)</items>
+      </items>
+      <items code="at0031">
+        <items id="text">*Multimedia(en)</items>
+        <items id="description">*Inclusion of any multimedia file to support the recording of the Adverse Reaction event.(en)</items>
+        <items id="comment">*For example, a photo of a rash or presentation with angioneurotic oedema.(en)</items>
+      </items>
+      <items code="at0032">
+        <items id="text">*Reaction Comment(en)</items>
+        <items id="description">*Additional narrative about the Adverse Reaction event not captured in other fields.(en)</items>
+      </items>
+      <items code="at0040">
+        <items id="text">*Clinical Management Description(en)</items>
+        <items id="description">*Narrative description of the clinical management provided.(en)</items>
+      </items>
+      <items code="at0041">
+        <items id="text">*Reporting Details(en)</items>
+        <items id="description">*Further details required for reporting to regulatory bodies.(en)</items>
+      </items>
+      <items code="at0042">
+        <items id="text">*Tree(en)</items>
+        <items id="description">*@ internal @(en)</items>
+      </items>
+      <items code="at0044">
+        <items id="text">*Reaction Reported?(en)</items>
+        <items id="description">*Was the Adverse Reaction reported to a regulatory body?(en)</items>
+      </items>
+      <items code="at0045">
+        <items id="text">*Adverse Reaction Report(en)</items>
+        <items id="description">*Link to an Adverse Reaction Report sent to a regulatory body.(en)</items>
+      </items>
+      <items code="at0047">
+        <items id="text">*Supporting Clinical Record Information(en)</items>
+        <items id="description">*Link to further information about the presentation and findings that exist elsewhere in the health record, including allergy test reports.(en)</items>
+        <items id="comment">*For example, presenting symptoms, examination findings, diagnosis etc.(en)</items>
+      </items>
+      <items code="at0048">
+        <items id="text">*Report Comment(en)</items>
+        <items id="description">*Additional narrative about the Adverse Reaction Report, including the reason for non-reporting, if required.(en)</items>
+      </items>
+      <items code="at0049">
+        <items id="text">*Future Use(en)</items>
+        <items id="description">*Narrative description of clinician instructions or advice related to future exposure to, or administration of, the Substance/Agent.(en)</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

@@ -251,9 +251,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         rbac: common::rbac_trusting(issuer),
         ..config()
     };
-    let app = ferroehr_rest::build_full(served, Arc::new(svc), authz, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(served, Arc::new(svc), authz, Observability::default()).await;
     (db, pool, app)
 }
 

@@ -1,0 +1,707 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.auscultation-chest.v1.0.0
+
+specialize
+    openEHR-EHR-CLUSTER.auscultation.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"7/04/2007">
+    >
+    other_contributors = <"Heather Leslie", ...>
+    lifecycle_state = <"Rejected">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"3324331C8FE6405B0A545EC8945CFCC5">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record data found on examination of the chest by auscultation/listening.">
+            keywords = <"auscultate", "listen", "auscultation", "listening", "lungs", "chest", "bruit", "heart", "bowel sounds", "breath sounds", "heart sounds">
+            use = <"To be embedded in an openEHR-EHR-OBSERVATION.exam cluster to express findings determined by auscultation of the chest.">
+            misuse = <"Not for use in any other context at present.">
+            copyright = <"copyright (c) 2010 openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Auscultation of the chest
+        items matches {
+            CLUSTER[at0001] matches {
+                /items[at0003]/value[at9002]/defining_code matches {[ac9000.1]}    -- Normal Statement (synthesised)
+            }
+            CLUSTER[at0002] matches {
+                items matches {
+                    CLUSTER[at0009] matches {
+                        items matches {
+                            after [at0074]
+                            use_node ELEMENT[at0.9046] occurrences matches {1} /items[at0004]    -- Bowel sounds (synthesised)
+                        }
+                    }
+                    CLUSTER[at0089] matches {
+                        items matches {
+                            after [at0090]
+                            use_node ELEMENT[at0.9047] occurrences matches {1} /items[at0002]/items[at0010]/items[at0030]    -- Other sounds (synthesised)
+                        }
+                    }
+                    before [at0009]
+                    CLUSTER[at0.15] occurrences matches {0..1} matches {    -- Heart sounds and bruits
+                        items cardinality matches {1..*; unordered} matches {
+                            CLUSTER[at0.16] occurrences matches {0..1} matches {    -- First heart sound
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0.17] occurrences matches {0..1} matches {    -- Volume
+                                        value matches {
+                                            DV_ORDINAL[at0.9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0.18]}],    -- Not heard
+                                                    [{1}, {[at0.19]}],    -- Variable
+                                                    [{2}, {[at0.20]}],    -- Soft
+                                                    [{3}, {[at0.21]}],    -- Normal
+                                                    [{4}, {[at0.22]}]    -- Loud
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0.23] occurrences matches {0..1} matches {    -- Splitting
+                                        value matches {
+                                            DV_CODED_TEXT[at0.9017] matches {
+                                                defining_code matches {[ac0.9001]}    -- Splitting (synthesised)
+                                            }
+                                        }
+                                    }
+                                    use_node ELEMENT[at0.9039] occurrences matches {1} /items[at0004]    -- First heart sound (synthesised)
+                                }
+                            }
+                            CLUSTER[at0.29] occurrences matches {0..1} matches {    -- Second heart sound
+                                items cardinality matches {1..*; unordered} matches {
+                                    use_node ELEMENT[at0.9019] occurrences matches {1} /items[at0002]/items[at0.15]/items[at0.16]/items[at0.17]
+                                    use_node ELEMENT[at0.9040] occurrences matches {1} /items[at0002]/items[at0.15]/items[at0.16]/items[at0.23]    -- Second heart sound (synthesised)
+                                    use_node ELEMENT[at0.9041] occurrences matches {1} /items[at0004]    -- Second heart sound (synthesised)
+                                }
+                            }
+                            CLUSTER[at0.75] matches {    -- Added heart sound
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0.76] matches {    -- Specific sound
+                                        value matches {
+                                            DV_CODED_TEXT[at0.9022] matches {
+                                                defining_code matches {[ac0.9002]}    -- Specific sound (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0.43] matches {    -- Phase of heart cycle
+                                        value matches {
+                                            DV_CODED_TEXT[at0.9023] matches {
+                                                defining_code matches {[ac0.9003]}    -- Phase of heart cycle (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0.59] occurrences matches {0..1} matches {    -- Volume
+                                        value matches {
+                                            DV_ORDINAL[at0.9024] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0.60]}],    -- Not audible
+                                                    [{1}, {[at0.61]}],    -- Variable
+                                                    [{2}, {[at0.62]}],    -- Soft
+                                                    [{3}, {[at0.63]}],    -- Moderate
+                                                    [{4}, {[at0.64]}]    -- Loud
+                                                }
+                                            }
+                                        }
+                                    }
+                                    use_node ELEMENT[at0.9042] occurrences matches {1} /items[at0004]    -- Added heart sound (synthesised)
+                                }
+                            }
+                            CLUSTER[at0.31] matches {    -- Bruits
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0.35] occurrences matches {0..1} matches {    -- Maximal Location
+                                        value matches {
+                                            DV_TEXT[at0.9026]
+                                        }
+                                    }
+                                    ELEMENT[at0.36] matches {    -- Radiation
+                                        value matches {
+                                            DV_TEXT[at0.9027]
+                                        }
+                                    }
+                                    ELEMENT[at0.34] occurrences matches {0..1} matches {    -- Grading
+                                        value matches {
+                                            DV_ORDINAL[at0.9028] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0.37]}],    -- Grade 1
+                                                    [{2}, {[at0.38]}],    -- Grade 2
+                                                    [{3}, {[at0.39]}],    -- Grade 3
+                                                    [{4}, {[at0.40]}],    -- Grade 4
+                                                    [{5}, {[at0.41]}],    -- Grade 5
+                                                    [{6}, {[at0.42]}]    -- Grade 6
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0.55] occurrences matches {0..1} matches {    -- Character
+                                        value matches {
+                                            DV_TEXT[at0.9029]
+                                        }
+                                    }
+                                    ELEMENT[at0.56] occurrences matches {0..1} matches {    -- Pitch
+                                        value matches {
+                                            DV_TEXT[at0.9030]
+                                        }
+                                    }
+                                    use_node ELEMENT[at0.9043] occurrences matches {1} /items[at0002]/items[at0.15]/items[at0.75]/items[at0.43]    -- Bruits (synthesised)
+                                    use_node ELEMENT[at0.9044] occurrences matches {1} /items[at0004]    -- Bruits (synthesised)
+                                }
+                            }
+                            ELEMENT[at0.67] occurrences matches {0..1} matches {    -- Drawing
+                                value matches {
+                                    DV_MULTIMEDIA[at0.9033] matches {
+                                        media_type matches {[ac0.9011]}    -- Drawing (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.68] occurrences matches {0..1} matches {    -- Phonogram
+                                value matches {
+                                    DV_MULTIMEDIA[at0.9034] matches {
+                                        media_type matches {[ac0.9014]}    -- Phonogram (synthesised)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0.69] occurrences matches {0..1} matches {    -- Lung
+                        items cardinality matches {1..*; unordered} matches {
+                            CLUSTER[at0.70] occurrences matches {0..1} matches {    -- Area
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0.83] occurrences matches {0..1} matches {    -- Region
+                                        value matches {
+                                            DV_TEXT[at0.9035]
+                                        }
+                                    }
+                                    ELEMENT[at0.72] occurrences matches {0..1} matches {    -- Phase of respiratory cycle
+                                        value matches {
+                                            DV_CODED_TEXT[at0.9036] matches {
+                                                defining_code matches {[ac0.9015]}    -- Phase of respiratory cycle (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0.81] occurrences matches {0..1} matches {    -- Findings
+                                        value matches {
+                                            DV_TEXT[at0.9037]
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.82] occurrences matches {0..1} matches {    -- Drawing
+                                value matches {
+                                    DV_MULTIMEDIA[at0.9038] matches {
+                                        media_type matches {[ac0.9011]}    -- Drawing (synthesised)
+                                    }
+                                }
+                            }
+                            use_node ELEMENT[at0.9045] occurrences matches {1} /items[at0004]    -- Lung (synthesised)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.1"] = <
+                text = <"Clear">
+                description = <"No abnormal breath sounds.">
+            >
+            ["at0.10"] = <
+                text = <"Normal second heart sound">
+                description = <"*">
+            >
+            ["at0.11"] = <
+                text = <"No Bronchial breathing">
+                description = <"*">
+            >
+            ["at0.12"] = <
+                text = <"No Amphoric breathing">
+                description = <"*">
+            >
+            ["at0.13"] = <
+                text = <"Normal Vocal Resonance">
+                description = <"*">
+            >
+            ["at0.14"] = <
+                text = <"No abnormal added sounds">
+                description = <"*">
+            >
+            ["at0.15"] = <
+                text = <"Heart sounds and bruits">
+                description = <"*">
+            >
+            ["at0.16"] = <
+                text = <"First heart sound">
+                description = <"Findings about the first heart sound.">
+            >
+            ["at0.17"] = <
+                text = <"Volume">
+                description = <"The volume of the first heart sound.">
+            >
+            ["at0.18"] = <
+                text = <"Not heard">
+                description = <"The first heart sound is not heard.">
+            >
+            ["at0.19"] = <
+                text = <"Variable">
+                description = <"The sound is variable in volume.">
+            >
+            ["at0.2"] = <
+                text = <"No rhonchi">
+                description = <"No high or low pitched wheezes.">
+            >
+            ["at0.20"] = <
+                text = <"Soft">
+                description = <"The sound is softer than normal.">
+            >
+            ["at0.21"] = <
+                text = <"Normal">
+                description = <"The sound is of normal volume.">
+            >
+            ["at0.22"] = <
+                text = <"Loud">
+                description = <"The volume is increased.">
+            >
+            ["at0.23"] = <
+                text = <"Splitting">
+                description = <"Splitting of the heart sound.">
+            >
+            ["at0.24"] = <
+                text = <"No splitting">
+                description = <"The heart sound is not split.">
+            >
+            ["at0.25"] = <
+                text = <"Physiological splitting">
+                description = <"The heart sound is split due to physiological changes.">
+            >
+            ["at0.26"] = <
+                text = <"Fixed splitting">
+                description = <"The heart sound is always split.">
+            >
+            ["at0.27"] = <
+                text = <"Paradoxical splitting">
+                description = <"The variable splitting is not physiological.">
+            >
+            ["at0.28"] = <
+                text = <"Exaggerated splitting">
+                description = <"The timing of the splitting is physiological but it is more obvious than normal.">
+            >
+            ["at0.29"] = <
+                text = <"Second heart sound">
+                description = <"Findings about the second heart sound.">
+            >
+            ["at0.3"] = <
+                text = <"No wheeze">
+                description = <"No wheezing noises.">
+            >
+            ["at0.30"] = <
+                text = <"Opening snap">
+                description = <"Opening sound of the mitral valve.">
+            >
+            ["at0.31"] = <
+                text = <"Bruits">
+                description = <"Group of findings about auscultation of the heart.">
+            >
+            ["at0.32"] = <
+                text = <"Ejection click">
+                description = <"Systolic click when the heart contracts.">
+            >
+            ["at0.33"] = <
+                text = <"Pericardial rub">
+                description = <"Rubbing noise during contractions on the pericardium.">
+            >
+            ["at0.34"] = <
+                text = <"Grading">
+                description = <"Grading of the loudness of a heart murmur.">
+            >
+            ["at0.35"] = <
+                text = <"Maximal Location">
+                description = <"Site where finding is heard maximally.">
+            >
+            ["at0.36"] = <
+                text = <"Radiation">
+                description = <"Sites where finding is heard in addition to maximal site.">
+            >
+            ["at0.37"] = <
+                text = <"Grade 1">
+                description = <"very faint to recognize the murmur even after listening for a while.">
+            >
+            ["at0.38"] = <
+                text = <"Grade 2">
+                description = <"faint, but easy to recognize the murmur right after the stethoscope is placed on the chest.">
+            >
+            ["at0.39"] = <
+                text = <"Grade 3">
+                description = <"intermediate loudness between II/VI -IV/VI.">
+            >
+            ["at0.4"] = <
+                text = <"No crepitations">
+                description = <"No high pitched crackling sounds.">
+            >
+            ["at0.40"] = <
+                text = <"Grade 4">
+                description = <"with loud murmur (palpable thrill).">
+            >
+            ["at0.41"] = <
+                text = <"Grade 5">
+                description = <"very loud, but you can not hear the murmur, if the stethoscope is away from the chest wall.">
+            >
+            ["at0.42"] = <
+                text = <"Grade 6">
+                description = <"the loudest murmur you can hear, even if the stethoscope is off the chest wall.">
+            >
+            ["at0.43"] = <
+                text = <"Phase of heart cycle">
+                description = <"The timing in relation to the contraction of the heart.">
+            >
+            ["at0.44"] = <
+                text = <"Continuous">
+                description = <"*">
+            >
+            ["at0.45"] = <
+                text = <"Systolic">
+                description = <"*">
+            >
+            ["at0.46"] = <
+                text = <"Diastolic">
+                description = <"*">
+            >
+            ["at0.47"] = <
+                text = <"Pan-systolic">
+                description = <"*">
+            >
+            ["at0.48"] = <
+                text = <"Pan-diastolic">
+                description = <"*">
+            >
+            ["at0.49"] = <
+                text = <"Early systolic">
+                description = <"*">
+            >
+            ["at0.5"] = <
+                text = <"No crackles">
+                description = <"No high pitched crackling sounds.">
+            >
+            ["at0.50"] = <
+                text = <"Mid-Systolic">
+                description = <"*">
+            >
+            ["at0.51"] = <
+                text = <"Late Systolic">
+                description = <"*">
+            >
+            ["at0.52"] = <
+                text = <"Early Diastolic">
+                description = <"*">
+            >
+            ["at0.53"] = <
+                text = <"Mid-diastolic">
+                description = <"*">
+            >
+            ["at0.54"] = <
+                text = <"Late Diastolic">
+                description = <"*">
+            >
+            ["at0.55"] = <
+                text = <"Character">
+                description = <"The character of the sound.">
+            >
+            ["at0.56"] = <
+                text = <"Pitch">
+                description = <"The pitch of the sound.">
+            >
+            ["at0.57"] = <
+                text = <"Third heart sound">
+                description = <"A heart sound in early diastole.">
+            >
+            ["at0.58"] = <
+                text = <"Fourth heart sound">
+                description = <"A heart sound in late diastole.">
+            >
+            ["at0.59"] = <
+                text = <"Volume">
+                description = <"The volume of the sound.">
+            >
+            ["at0.6"] = <
+                text = <"Two heart sounds, no bruits">
+                description = <"Normal heart sounds.">
+            >
+            ["at0.60"] = <
+                text = <"Not audible">
+                description = <"The sound is not audible.">
+            >
+            ["at0.61"] = <
+                text = <"Variable">
+                description = <"The sound is variable.">
+            >
+            ["at0.62"] = <
+                text = <"Soft">
+                description = <"The sound is soft.">
+            >
+            ["at0.63"] = <
+                text = <"Moderate">
+                description = <"The sound is at about the expected level the first heart sound.">
+            >
+            ["at0.64"] = <
+                text = <"Loud">
+                description = <"The sound is louder than the first heart sound.">
+            >
+            ["at0.65"] = <
+                text = <"Prosthetic valve sound">
+                description = <"Sound due to a prosthetic heart valve.">
+            >
+            ["at0.66"] = <
+                text = <"Gallop rythm">
+                description = <"Audible rythm similar to a horse galloping due to added heart sounds.">
+            >
+            ["at0.67"] = <
+                text = <"Drawing">
+                description = <"Drawing of the sounds of the heart.">
+            >
+            ["at0.68"] = <
+                text = <"Phonogram">
+                description = <"Recording of the heart sounds.">
+            >
+            ["at0.69"] = <
+                text = <"Lung">
+                description = <"Group of findings about auscultation of the lung.">
+            >
+            ["at0.7"] = <
+                text = <"Two heart sounds, no murmurs">
+                description = <"Normal heart sounds.">
+            >
+            ["at0.70"] = <
+                text = <"Area">
+                description = <"*">
+            >
+            ["at0.72"] = <
+                text = <"Phase of respiratory cycle">
+                description = <"The timing of the sounds in relation to breathing.">
+            >
+            ["at0.73"] = <
+                text = <"Inspiratory">
+                description = <"During inspiration.">
+            >
+            ["at0.74"] = <
+                text = <"Expiratory">
+                description = <"During expiration.">
+            >
+            ["at0.75"] = <
+                text = <"Added heart sound">
+                description = <"A grouping of discription of one or more added heart sounds.">
+            >
+            ["at0.76"] = <
+                text = <"Specific sound">
+                description = <"Specific auscultatory findings related to examination of the heart.">
+            >
+            ["at0.77"] = <
+                text = <"Early Inspiratory">
+                description = <"Soon after inspiration begins.">
+            >
+            ["at0.78"] = <
+                text = <"Late inspiratory">
+                description = <"At the final stages of inspiration.">
+            >
+            ["at0.79"] = <
+                text = <"Early expiratory">
+                description = <"Soon after expiration begins.">
+            >
+            ["at0.8"] = <
+                text = <"Two normal heart sounds">
+                description = <"*">
+            >
+            ["at0.80"] = <
+                text = <"Late expiratory">
+                description = <"At the late stages of expiration.">
+            >
+            ["at0.81"] = <
+                text = <"Findings">
+                description = <"Specific auscultatory findings related to examination of the lungs.">
+            >
+            ["at0.82"] = <
+                text = <"Drawing">
+                description = <"Drawing of the breath sounds.">
+            >
+            ["at0.83"] = <
+                text = <"Region">
+                description = <"The region to which the findings relate.">
+            >
+            ["at0.9"] = <
+                text = <"Normal first heart sound">
+                description = <"*">
+            >
+            ["at0000.1"] = <
+                text = <"Auscultation of the chest">
+                description = <"Findings on auscultation of the chest.">
+            >
+            ["at0.9012"] = <
+                text = <"audio/mpeg">
+                description = <"audio/mpeg">
+            >
+            ["at0.9013"] = <
+                text = <"audio/mpeg4-generic">
+                description = <"audio/mpeg4-generic">
+            >
+            ["at0.9006"] = <
+                text = <"image/cgm">
+                description = <"image/cgm">
+            >
+            ["at0.9007"] = <
+                text = <"image/gif">
+                description = <"image/gif">
+            >
+            ["at0.9008"] = <
+                text = <"image/png">
+                description = <"image/png">
+            >
+            ["at0.9009"] = <
+                text = <"image/tiff">
+                description = <"image/tiff">
+            >
+            ["at0.9010"] = <
+                text = <"image/jpeg">
+                description = <"image/jpeg">
+            >
+            ["ac9000.1"] = <
+                text = <"Normal Statement (synthesised)">
+                description = <"Statements about the normality of the auscultation. (synthesised)">
+            >
+            ["ac0.9000"] = <
+                text = <"Volume (synthesised)">
+                description = <"The volume of the first heart sound. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Splitting (synthesised)">
+                description = <"Splitting of the heart sound. (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Specific sound (synthesised)">
+                description = <"Specific auscultatory findings related to examination of the heart. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Phase of heart cycle (synthesised)">
+                description = <"The timing in relation to the contraction of the heart. (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"Volume (synthesised)">
+                description = <"The volume of the sound. (synthesised)">
+            >
+            ["ac0.9005"] = <
+                text = <"Grading (synthesised)">
+                description = <"Grading of the loudness of a heart murmur. (synthesised)">
+            >
+            ["ac0.9011"] = <
+                text = <"Drawing (synthesised)">
+                description = <"Drawing of the sounds of the heart. (synthesised)">
+            >
+            ["ac0.9014"] = <
+                text = <"Phonogram (synthesised)">
+                description = <"Recording of the heart sounds. (synthesised)">
+            >
+            ["ac0.9015"] = <
+                text = <"Phase of respiratory cycle (synthesised)">
+                description = <"The timing of the sounds in relation to breathing. (synthesised)">
+            >
+            ["at0.9039"] = <
+                text = <"First heart sound (synthesised)">
+                description = <"Findings about the first heart sound. (synthesised)">
+            >
+            ["at0.9040"] = <
+                text = <"Second heart sound (synthesised)">
+                description = <"Findings about the second heart sound. (synthesised)">
+            >
+            ["at0.9041"] = <
+                text = <"Second heart sound (synthesised)">
+                description = <"Findings about the second heart sound. (synthesised)">
+            >
+            ["at0.9042"] = <
+                text = <"Added heart sound (synthesised)">
+                description = <"A grouping of discription of one or more added heart sounds. (synthesised)">
+            >
+            ["at0.9043"] = <
+                text = <"Bruits (synthesised)">
+                description = <"Group of findings about auscultation of the heart. (synthesised)">
+            >
+            ["at0.9044"] = <
+                text = <"Bruits (synthesised)">
+                description = <"Group of findings about auscultation of the heart. (synthesised)">
+            >
+            ["at0.9045"] = <
+                text = <"Lung (synthesised)">
+                description = <"Group of findings about auscultation of the lung. (synthesised)">
+            >
+            ["at0.9046"] = <
+                text = <"Bowel sounds (synthesised)">
+                description = <"Group of findings about auscultation of the bowel. (synthesised)">
+            >
+            ["at0.9047"] = <
+                text = <"Other sounds (synthesised)">
+                description = <"Recording of sounds of a different nature. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openEHR"] = <
+            ["at0.9012"] = <http://openehr.org/id/409>
+            ["at0.9013"] = <http://openehr.org/id/410>
+            ["at0.9006"] = <http://openehr.org/id/425>
+            ["at0.9007"] = <http://openehr.org/id/426>
+            ["at0.9008"] = <http://openehr.org/id/427>
+            ["at0.9009"] = <http://openehr.org/id/428>
+            ["at0.9010"] = <http://openehr.org/id/429>
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.18", "at0.19", "at0.20", "at0.21", "at0.22">
+        >
+        ["ac0.9011"] = <
+            id = <"ac0.9011">
+            members = <"at0.9006", "at0.9007", "at0.9008", "at0.9009", "at0.9010">
+        >
+        ["ac9000.1"] = <
+            id = <"ac9000.1">
+            members = <"at0.1", "at0.2", "at0.3", "at0.4", "at0.5", "at0.6", "at0.7", "at0.8", "at0056", "at0057", "at0.9", "at0.10", "at0.11", "at0.12", "at0.13", "at0.14", "at0073", "at0085">
+        >
+        ["ac0.9005"] = <
+            id = <"ac0.9005">
+            members = <"at0.37", "at0.38", "at0.39", "at0.40", "at0.41", "at0.42">
+        >
+        ["ac0.9003"] = <
+            id = <"ac0.9003">
+            members = <"at0.44", "at0.45", "at0.46", "at0.47", "at0.48", "at0.49", "at0.50", "at0.51", "at0.52", "at0.53", "at0.54">
+        >
+        ["ac0.9014"] = <
+            id = <"ac0.9014">
+            members = <"at0.9012", "at0.9013">
+        >
+        ["ac0.9004"] = <
+            id = <"ac0.9004">
+            members = <"at0.60", "at0.61", "at0.62", "at0.63", "at0.64">
+        >
+        ["ac0.9015"] = <
+            id = <"ac0.9015">
+            members = <"at0.73", "at0.74", "at0.77", "at0.78", "at0.79", "at0.80">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.24", "at0.25", "at0.26", "at0.27", "at0.28">
+        >
+        ["ac0.9002"] = <
+            id = <"ac0.9002">
+            members = <"at0.30", "at0.32", "at0.33", "at0.57", "at0.58", "at0.65", "at0.66">
+        >
+    >

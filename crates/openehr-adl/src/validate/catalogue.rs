@@ -233,6 +233,12 @@ pub enum ValidationCode {
     /// VRDLA — resource-description language-code consistency (no openEHR spec
     /// governs this — our own design/extension, NOTE-flagged at its check site).
     Vrdla,
+    /// `C_STRING.constraint` — a string constraint is either a list of fixed
+    /// Strings or a single regular expression, never a mixture of both
+    /// (`ADL2/master04.5-cadl_primitive_types.adoc` §Constraints on String, the
+    /// `C_STRING` class table). The rule is the specification's; no openEHR
+    /// validity code names it, so the code is our own design.
+    CStringConstraint,
     /// WACMCL — cardinality/occurrences lower bound warning (`master04.5`
     /// §`C_ATTRIBUTE`; WARNING).
     Wacmcl,
@@ -456,6 +462,7 @@ impl ValidationCode {
             Self::Vacmco => "VACMCO",
             Self::Vsonif => "VSONIF",
             Self::Vrdla => "VRDLA",
+            Self::CStringConstraint => "C_STRING.constraint",
             Self::Wacmcl => "WACMCL",
             Self::Wouc => "WOUC",
             Self::W14dep => "W14DEP",
@@ -595,6 +602,7 @@ mod tests {
             ValidationCode::Vacmco,
             ValidationCode::Vsonif,
             ValidationCode::Vrdla,
+            ValidationCode::CStringConstraint,
             ValidationCode::Wacmcl,
             ValidationCode::Wouc,
             ValidationCode::Vsance,
@@ -634,6 +642,6 @@ mod tests {
             };
             assert_eq!(c.severity(), expected, "{c} severity");
         }
-        assert_eq!(seen.len(), 91);
+        assert_eq!(seen.len(), 92);
     }
 }

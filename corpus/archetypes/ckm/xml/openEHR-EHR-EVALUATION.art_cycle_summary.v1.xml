@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1689,35 +1689,35 @@ The end of a treatment cycle is triggered by identifying a 'Cycle outcome':&#xD;
       </items>
       <items code="at0013">
         <items id="text">Intrauterine insemination</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Conventional in vitro insemination</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Intracytoplasmatic sperm injection (ICSI)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Frozen-thawed embryo transfer</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Surgical sperm collection</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Pre-implantation genetic testing</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Oocyte aspiration</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Embryo transfer</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Donation received</items>
@@ -1725,7 +1725,7 @@ The end of a treatment cycle is triggered by identifying a 'Cycle outcome':&#xD;
       </items>
       <items code="at0022">
         <items id="text">None</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Sperm</items>
@@ -1745,31 +1745,31 @@ The end of a treatment cycle is triggered by identifying a 'Cycle outcome':&#xD;
       </items>
       <items code="at0027">
         <items id="text">Natural cycle</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Modified natural cycle</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Hormone replacement cycle</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Mild stimulation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Long-term GnRH agonist, conventional simulation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Flare-up GnRH agonist, conventional stimulation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">GnRH antagonist, conventional stimulation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Cycle outcome</items>
@@ -1777,35 +1777,35 @@ The end of a treatment cycle is triggered by identifying a 'Cycle outcome':&#xD;
       </items>
       <items code="at0035">
         <items id="text">Embryo transfer completed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Cycle cancelled before oocyte aspiration</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Cycle cancelled after oocyte aspiration</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">All embryos frozen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">All oocytes frozen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Oocytes donated</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">No embryo is suitable for transfer</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Number of oocytes collected</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Number of mature (M2) oocytes collected</items>
@@ -1873,27 +1873,27 @@ The end of a treatment cycle is triggered by identifying a 'Cycle outcome':&#xD;
       </items>
       <items code="at0059">
         <items id="text">Mild ovarian hyperstimulation syndrome</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Moderate ovarian hyperstimulation syndrome</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Severe ovarian hyperstimulation syndrome</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Infection</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">Bleeding</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">Thrombosis</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Description</items>
@@ -1976,35 +1976,35 @@ The end of a treatment cycle is triggered by identifying a 'Cycle outcome':&#xD;
       </items>
       <items code="at0013">
         <items id="text">Intrauterin inseminasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Konvensjonell in vitro inseminasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Intracytoplasmatisk spermie mikroinjeksjon (ICSI)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Frosset-tint embryotransfer</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Kirurgisk uthenting av sæd</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Preimplantasjonstest (PGT)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Egguttak</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Embryotransfer</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Mottatt donasjon</items>
@@ -2012,7 +2012,7 @@ The end of a treatment cycle is triggered by identifying a 'Cycle outcome':&#xD;
       </items>
       <items code="at0022">
         <items id="text">Ingen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Sædceller</items>
@@ -2032,31 +2032,31 @@ The end of a treatment cycle is triggered by identifying a 'Cycle outcome':&#xD;
       </items>
       <items code="at0027">
         <items id="text">Naturlig syklus</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Modifisert naturlig syklus</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Hormonsubstitusjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0030">
         <items id="text">Mild stimulering</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Langvarig GnRH agonist, standard stimuleringsprotokoll</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Flare-up GnRH agonist, standard stimuleringsprotokoll</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">GnRH antagonist, standard stimuleringsprotokoll</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Utfall av forsøk</items>
@@ -2064,35 +2064,35 @@ The end of a treatment cycle is triggered by identifying a 'Cycle outcome':&#xD;
       </items>
       <items code="at0035">
         <items id="text">Embryotransfer gjennomført</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Kansellert før egguttak</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Kansellert etter egguttak</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Alle embryo frosset</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Alle oocytter frosset</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Oocytter donert</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0041">
         <items id="text">Ingen embryo er egnet for embryotransfer</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0042">
         <items id="text">Antall oocytter ved egguttak</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Antall modne (M2) oocytter ved egguttak</items>
@@ -2160,27 +2160,27 @@ The end of a treatment cycle is triggered by identifying a 'Cycle outcome':&#xD;
       </items>
       <items code="at0059">
         <items id="text">Mild overstimuleringssyndrom</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0060">
         <items id="text">Moderat overstimuleringssyndrom</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0061">
         <items id="text">Alvorlig overstimuleringssyndrom</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0062">
         <items id="text">Infeksjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0063">
         <items id="text">Blødning</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0064">
         <items id="text">Trombose</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0065">
         <items id="text">Beskrivelse</items>
@@ -2226,4 +2226,3 @@ The end of a treatment cycle is triggered by identifying a 'Cycle outcome':&#xD;
     </term_definitions>
   </ontology>
 </archetype>
-

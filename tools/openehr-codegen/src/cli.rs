@@ -6,6 +6,7 @@
 //! RENDER together and write each emit target's files.
 
 use crate::analyze::{augment_with_reemit, cross_schema_reemit, emittable_specs};
+use crate::generated_tree::{declare_hand_written_modules, remove_generated_files_except};
 use crate::load::bmm::BmmSchema;
 use crate::load::impls::SiblingImpls;
 use crate::load::{oas, xsd};
@@ -68,7 +69,8 @@ pub(crate) const EXIT_USAGE: u8 = 2;
 /// cannot drift.
 #[derive(Debug)]
 pub(crate) struct EmittedFile {
-    /// Where the file lands, relative to the workspace `crates/` directory.
+    /// Where the file lands, relative to the root it is written under: the
+    /// workspace `crates/` directory, or the workspace for a draft module.
     pub(crate) path: String,
     /// The crate that owns the file, whose SPDX header it carries.
     pub(crate) crate_name: &'static str,
@@ -88,14 +90,13 @@ pub(crate) struct XsdEmission {
     pub(crate) unmatched: Vec<(String, String)>,
 }
 
-/// Write an emit target's rendered files into the workspace `crates/` tree,
-/// creating each file's parent directories, and return the written paths for
-/// the caller's `rustfmt` pass.
+/// Write an emit target's rendered files under `root` (the workspace `crates/`
+/// tree, or the workspace for a draft module), creating each file's parent
+/// directories, and return the written paths for the caller's `rustfmt` pass.
 ///
 /// # Errors
 /// Returns the underlying filesystem error.
-fn write_emitted(files: &[EmittedFile]) -> std::io::Result<Vec<PathBuf>> {
-    let root = crates_root();
+pub(crate) fn write_emitted(root: &Path, files: &[EmittedFile]) -> std::io::Result<Vec<PathBuf>> {
     let mut written = Vec::with_capacity(files.len());
     for f in files {
         let full = root.join(&f.path);
@@ -218,7 +219,7 @@ fn parse_model_query_args(
 /// for each API group into `openehr-its/src/rest/generated/`.
 pub(crate) fn cmd_emit_rest() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_rest_files()?;
-    let written = write_emitted(&files)?;
+    let written = write_emitted(&crates_root(), &files)?;
     rustfmt(&written)?;
     println!(
         "emitted {} files into {}",
@@ -327,7 +328,7 @@ pub(crate) fn render_rest_files() -> Result<Vec<EmittedFile>, Box<dyn std::error
 /// (`.../v1`, parity target) and v2 (`.../v2`, latest).
 pub(crate) fn cmd_emit_xml() -> Result<(), Box<dyn std::error::Error>> {
     let emission = render_xml_files()?;
-    let written = write_emitted(&emission.files)?;
+    let written = write_emitted(&crates_root(), &emission.files)?;
     rustfmt(&written)?;
     println!(
         "emitted {} files into {} ({} XSD-only elements without a BMM field skipped)",
@@ -420,7 +421,7 @@ pub(crate) fn render_xml_files() -> Result<XsdEmission, Box<dyn std::error::Erro
 /// cross-schema re-emission closure.
 pub(crate) fn cmd_emit_json() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_json_files()?;
-    let mut written = write_emitted(&files)?;
+    let mut written = write_emitted(&crates_root(), &files)?;
     for f in &files {
         if f.path.ends_with(JSON_SERDE_FILE) {
             let lib = crates_root().join(&f.path).with_file_name("lib.rs");
@@ -719,7 +720,7 @@ fn write_xsd_emission(
     target: &str,
     emission: &XsdEmission,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let written = write_emitted(&emission.files)?;
+    let written = write_emitted(&crates_root(), &emission.files)?;
     rustfmt(&written)?;
     println!(
         "{target}: emitted {} files into {} ({} XSD-only elements without a matching field \
@@ -738,7 +739,7 @@ fn write_xsd_emission(
 /// absent, so it is correct run standalone; `emit` produces the identical output.
 pub(crate) fn cmd_emit_rm_model() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_rm_model_files()?;
-    let mut written = write_emitted(&files)?;
+    let mut written = write_emitted(&crates_root(), &files)?;
     let src = crates_root().join(RM_CRATE).join("src");
     for g in &compose("rm")?.generations {
         // `emit` is the usual authority for the generation `mod.rs`, where it
@@ -818,7 +819,7 @@ fn rm_crate_files(files: Vec<GenFile>) -> Vec<EmittedFile> {
 /// produces the identical output (via `inject_validate`).
 pub(crate) fn cmd_emit_validate() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_validate_files()?;
-    let written = write_emitted(&files)?;
+    let written = write_emitted(&crates_root(), &files)?;
     rustfmt(&written)?;
     println!(
         "emitted {} file(s) into {}",
@@ -1178,7 +1179,7 @@ pub(crate) fn generated_bytes(crate_name: &str, body: &str) -> String {
 ///
 /// # Errors
 /// Returns the underlying filesystem error.
-fn write_generated(path: &Path, crate_name: &str, body: &str) -> std::io::Result<()> {
+pub(crate) fn write_generated(path: &Path, crate_name: &str, body: &str) -> std::io::Result<()> {
     std::fs::write(path, generated_bytes(crate_name, body))
 }
 
@@ -1193,8 +1194,10 @@ fn write_crate(crate_name: &str, files: &[&EmittedFile]) -> Result<(), Box<dyn s
     // files, never the hand-written `*_impl.rs` / spec-behaviour modules beside
     // them. (A stale generated file no longer emitted this run is `@generated` →
     // removed; a hand-written sibling is kept.)
+    // The `draft` subtree is `emit-drafts` output, never this target's.
+    let drafts = src.join(crate::plan::drafts::MODULE);
     if src.exists() {
-        remove_generated_files(&src)?;
+        remove_generated_files_except(&src, &drafts)?;
     }
     std::fs::create_dir_all(&src)?;
     let mut written = Vec::with_capacity(files.len());
@@ -1210,7 +1213,7 @@ fn write_crate(crate_name: &str, files: &[&EmittedFile]) -> Result<(), Box<dyn s
     // beside a generated `mod.rs` (or at the crate root beside `lib.rs`) is
     // declared `pub mod <name>;` so the hand-written `*_impl.rs` files compile without the
     // generator owning them. Deterministic (sorted scan) → drift-check-stable.
-    declare_hand_written_modules(&src, &mut written)?;
+    declare_hand_written_modules(&src, "lib.rs", Some(&drafts), &mut written)?;
     rustfmt(&written)?;
     println!("emitted {} files into {}", files.len(), src.display());
     Ok(())
@@ -1230,149 +1233,10 @@ note: `emit` alone leaves the workspace UNBUILDABLE — it removes each crate's
         emit-json emit-xml emit-rest emit-opt emit-aom2 emit-rm-model emit-validate
       or use the /regen-codegen skill, which runs them all plus the drift check.";
 
-/// Whether a file's first line marks it as generated (`// @generated …`).
-fn is_generated_file(path: &Path) -> bool {
-    std::fs::read_to_string(path)
-        .is_ok_and(|s| s.lines().next().is_some_and(|l| l.contains("@generated")))
-}
-
-/// Recursively delete every `@generated` file under `dir` (leaving hand-written
-/// files + their directories in place), then prune directories left empty.
-fn remove_generated_files(dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    for entry in std::fs::read_dir(dir)? {
-        let path = entry?.path();
-        if path.is_dir() {
-            remove_generated_files(&path)?;
-            if std::fs::read_dir(&path)?.next().is_none() {
-                std::fs::remove_dir(&path)?;
-            }
-        } else if is_generated_file(&path) {
-            std::fs::remove_file(&path)?;
-        }
-    }
-    Ok(())
-}
-
-/// For each directory whose module anchor (`lib.rs` at the crate root, else
-/// `mod.rs`) is **generated**, append `pub mod <name>;` for every hand-written
-/// child module not already declared — both hand-written `.rs` files
-/// (`foo_impl.rs`) and hand-written module directories (a subdir whose own
-/// `mod.rs` is hand-written, e.g. `odin/`). A hand-written anchor is left
-/// untouched: it manages its own submodules (so we never duplicate an `odin/`
-/// mod.rs's private `mod lexer;`). Modified anchors are added to `written` for
-/// rustfmt.
-fn declare_hand_written_modules(
-    src: &Path,
-    written: &mut Vec<PathBuf>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    // (dir, module-anchor file) pairs: the root anchors on lib.rs, each subdir on
-    // its mod.rs. Collect all dirs first (sorted) for deterministic output.
-    let mut dirs = vec![src.to_path_buf()];
-    collect_dirs(src, &mut dirs)?;
-    dirs.sort();
-    for dir in dirs {
-        let anchor = if dir == src {
-            dir.join("lib.rs")
-        } else {
-            dir.join("mod.rs")
-        };
-        // Only extend a GENERATED anchor. A hand-written `mod.rs` (a hand-written
-        // module directory) owns its own `mod`/`pub mod` declarations, so
-        // appending here would duplicate them.
-        let anchor_generated = is_generated_file(&anchor);
-        if !anchor.exists() || !anchor_generated {
-            continue;
-        }
-        let hand_written = hand_written_module_stems(&dir)?;
-        if hand_written.is_empty() {
-            continue;
-        }
-        if append_module_declarations(&anchor, &hand_written)? {
-            written.push(anchor);
-        }
-    }
-    Ok(())
-}
-
-/// The module stems in `dir` the generated module tree does not declare,
-/// sorted.
-///
-/// A hand-written module DIRECTORY is one whose own `mod.rs` is not generated;
-/// a fully-generated subpackage's `mod.rs` is already declared by the parent's
-/// generated module tree and is skipped. Template-stamped copies ARE generated
-/// files, but the generated module tree does not know them — they are woven
-/// exactly like the hand-written siblings they replace.
-///
-/// # Errors
-/// A directory that cannot be read.
-fn hand_written_module_stems(dir: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let mut stems: Vec<String> = Vec::new();
-    for entry in std::fs::read_dir(dir)? {
-        let p = entry?.path();
-        let Some(stem) = p.file_stem().and_then(std::ffi::OsStr::to_str) else {
-            continue;
-        };
-        if p.is_dir() {
-            let child_mod = p.join("mod.rs");
-            if child_mod.exists() && !is_generated_file(&child_mod) {
-                stems.push(stem.to_owned());
-            }
-        } else if p.extension().and_then(std::ffi::OsStr::to_str) == Some("rs")
-            && !matches!(stem, "mod" | "lib" | "prelude")
-            && (!is_generated_file(&p) || emit_templates::is_template_stamped(&p))
-        {
-            stems.push(stem.to_owned());
-        }
-    }
-    stems.sort();
-    Ok(stems)
-}
-
-/// Appends the missing `pub mod` declarations to a generated anchor,
-/// reporting whether it was modified.
-///
-/// # Errors
-/// A read or write failure on the anchor.
-fn append_module_declarations(
-    anchor: &Path,
-    stems: &[String],
-) -> Result<bool, Box<dyn std::error::Error>> {
-    let mut body = std::fs::read_to_string(anchor)?;
-    let mut appended = false;
-    for m in stems {
-        let decl = format!("pub mod {m};");
-        if body.contains(&decl) {
-            continue;
-        }
-        if !appended {
-            body.push_str("\n// hand-written modules (spec behaviour), auto-declared:\n");
-            appended = true;
-        }
-        body.push_str(&decl);
-        body.push('\n');
-    }
-    if appended {
-        std::fs::write(anchor, &body)?;
-    }
-    Ok(appended)
-}
-
-/// Recursively collect subdirectories of `dir` into `out`.
-fn collect_dirs(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), Box<dyn std::error::Error>> {
-    for entry in std::fs::read_dir(dir)? {
-        let path = entry?.path();
-        if path.is_dir() {
-            out.push(path.clone());
-            collect_dirs(&path, out)?;
-        }
-    }
-    Ok(())
-}
-
 /// Run `rustfmt` over the generated files so the emitted output is exactly what
 /// `cargo fmt --all --check` expects (line wrapping, empty `{}`, import order,
 /// …), instead of the emitter having to reproduce every rustfmt rule by hand.
-fn rustfmt(files: &[PathBuf]) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn rustfmt(files: &[PathBuf]) -> Result<(), Box<dyn std::error::Error>> {
     if files.is_empty() {
         return Ok(());
     }

@@ -64,7 +64,14 @@ pub(crate) fn refuse_composing_for_others(
 /// "committer is the record subject" (RM common master04 §Audit Details), or
 /// `PARTY_RELATED`, which the server writes for the person's representative
 /// alone; any other committer is held to be someone else, a professional or a
-/// system. Which committers count is our own design: no openEHR spec governs it.
+/// system. A demographic version, which has no record subject, the person
+/// inserted when its committer names their `PERSON`, as the representation that
+/// authorises a proxy does. Which committers count is our own design: no
+/// openEHR spec governs it.
+///
+/// An `EHR_ACCESS` is no health data: it holds the person's own access
+/// choices, and the gate-keeper rule of
+/// [`crate::service::ehr::access_rule`] decides who changes it.
 ///
 /// # Errors
 /// [`ServiceError::Restricted`] (`403`) when a person or their representative
@@ -76,13 +83,22 @@ pub(crate) async fn refuse_altering_others(
     vo_id: VoId,
     preceding: TreeId,
 ) -> Result<(), ServiceError> {
-    if !crate::versioning::committer::inserts_for_the_person() {
+    // NOTE: EHDS Art. 5 and Art. 8, an EHR_ACCESS holds the person's own access
+    // choices, whose writers the gate-keeper rule decides (service::ehr::access_rule).
+    if kind == Kind::EhrAccess || !crate::versioning::committer::inserts_for_the_person() {
         return Ok(());
     }
-    let committer =
-        crate::storage::version_repo::placement::committer_type(tx, vo_id, preceding.columns())
-            .await?;
-    if matches!(committer.as_deref(), Some("PARTY_SELF" | "PARTY_RELATED")) {
+    let (committer, named) =
+        crate::storage::version_repo::placement::committer_of(tx, vo_id, preceding.columns())
+            .await?
+            .unwrap_or_default();
+    let inserted = if kind.is_demographic() {
+        let patient = crate::party_binding::protect::patient_person().map(|p| p.to_string());
+        named.is_some() && named == patient
+    } else {
+        matches!(committer.as_deref(), Some("PARTY_SELF" | "PARTY_RELATED"))
+    };
+    if inserted {
         return Ok(());
     }
     Err(ServiceError::not_permitted(format!(

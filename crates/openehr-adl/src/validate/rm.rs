@@ -40,6 +40,7 @@ use openehr_base::prelude::Interval;
 use openehr_rm::v1_2::model;
 
 use super::catalogue::ValidationCode;
+use super::rm_extended::{class_attribute, class_conforms};
 use super::{ValidationIssue, push_issue};
 use crate::adl14::quantity_property::{ADL2_REFUSAL_ADVICE, is_quantity_property};
 use crate::aom::access::{
@@ -279,25 +280,11 @@ impl RmModel for ProductionRmModel {
     fn conforms(&self, sub: &str, sup: &str) -> Option<bool> {
         let child = production_class(base_type_name(sub))?;
         let ancestor = production_class(base_type_name(sup))?;
-        Some(model::is_a(child.name, ancestor.name))
+        Some(class_conforms(child, ancestor))
     }
 
     fn attribute(&self, rm_type: &str, attr: &str) -> Option<RmAttr> {
-        let class = production_class(base_type_name(rm_type))?;
-        let a = model::attribute(class.name, attr)
-            .or_else(|| model::computed_attribute(class.name, attr))?;
-        let is_multiple = a.container != model::Container::None;
-        Some(RmAttr {
-            declared_type: render_declared_type(a.declared_type, a.type_params),
-            is_multiple,
-            existence: Bounds::new(i32::from(a.is_mandatory), Some(1)),
-            // Real BMM cardinality where recorded; the permissive `{0..*}` only for
-            // a container the BMM leaves un-cardinalitied (`master04.5` VCACA).
-            cardinality: is_multiple.then(|| {
-                a.cardinality
-                    .map_or(Bounds::new(0, None), cardinality_bounds)
-            }),
-        })
+        class_attribute(production_class(base_type_name(rm_type))?, attr)
     }
 
     fn enumeration(&self, rm_type: &str) -> Option<RmEnum> {
@@ -310,7 +297,7 @@ impl RmModel for ProductionRmModel {
 /// Render a generated attribute's declared type into a full RM type-name string
 /// including generic arguments (`"EVENT"` + `[ITEM_STRUCTURE]` →
 /// `"EVENT<ITEM_STRUCTURE>"`), the form [`RmAttr::declared_type`] carries.
-fn render_declared_type(base: &str, params: &[model::RmTypeRef]) -> String {
+pub(super) fn render_declared_type(base: &str, params: &[model::RmTypeRef]) -> String {
     if params.is_empty() {
         return base.to_owned();
     }
@@ -329,7 +316,7 @@ fn render_type_ref(t: &model::RmTypeRef) -> String {
 /// A [`Bounds`] from a generated model [`model::Cardinality`], clamping the
 /// (tiny) container bounds into `i32` (a value beyond `i32` widens to the
 /// permissive default rather than panicking — cardinality bounds are small).
-fn cardinality_bounds(c: model::Cardinality) -> Bounds {
+pub(super) fn cardinality_bounds(c: model::Cardinality) -> Bounds {
     Bounds::new(
         i32::try_from(c.lower).unwrap_or(0),
         c.upper.and_then(|u| i32::try_from(u).ok()),
@@ -361,7 +348,7 @@ fn rm_enum_of(e: &model::RmEnumeration) -> RmEnum {
 /// Look up a class in the generated model by its normalised (case-insensitive)
 /// name. The generated table keys are the exact spec class names (upper-case
 /// `SCREAMING_SNAKE`), so an upper-cased lookup matches them.
-fn production_class(base: &str) -> Option<&'static model::RmClass> {
+pub(super) fn production_class(base: &str) -> Option<&'static model::RmClass> {
     // Fast path: exact spec name; fallback: case-fold to match `Section` etc.
     model::class(base).or_else(|| model::class(&base.to_uppercase()))
 }

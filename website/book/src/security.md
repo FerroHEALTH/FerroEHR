@@ -40,10 +40,12 @@ each by the presence of its configuration. Both are checked by
 shares; FerroEHR checks tokens and never issues them.
 
 - **HTTP Basic** is active when `[[auth.basic.users]]` lists a user. Each user
-  has a user-id, an Argon2id password hash (a PHC string beginning
-  `$argon2id$`) or a `password_hash_file` pointing at one, and the SMART on
-  openEHR `scopes` it holds, and its RBAC `roles` (a user with none holds no
-  role). Because it is
+  has a user-id and an Argon2id password hash (a PHC string beginning
+  `$argon2id$`) or a `password_hash_file` pointing at one, and nothing else:
+  the SMART on openEHR scopes and the RBAC roles it holds are the
+  `hold_scopes` and `hold_roles` grants of its `PERSON` in the CDR, and
+  `[authz.rbac] first_admin` names the one Basic user that holds
+  `admin_role` and the product scope from the configuration. Because it is
   a list of users, the Basic store is normally supplied through the TOML
   configuration file rather than environment variables.
 - **OAuth 2.0 bearer tokens** are active when `[auth]` names an `issuer`. The
@@ -81,8 +83,10 @@ Successfully verified Basic credentials are cached for
 and checks every request) so a busy client pays the deliberately expensive Argon2 verification
 once per TTL instead of on every request. The cache names each entry by a keyed
 hash of the credential, never the password, and an entry exists only after a
-successful verification; the TTL bounds how long a removed user can still
-authenticate, exactly like a session lifetime.
+successful verification. The user list and its password hashes are read at
+boot, so removing a user or changing a password takes effect at the restart
+that loads the new list, and that restart also empties the cache: the TTL never
+keeps a removed user working.
 
 The bearer settings:
 
@@ -92,7 +96,6 @@ The bearer settings:
 | `FERROEHR__AUTH__ISSUER__0__KIND` | **required** | `persons`, `patients`, `machines` or `federation`: whose tokens the issuer signs |
 | `FERROEHR__AUTH__ISSUER__0__PROFILE` | `rfc9068` | the preset of the issuer's token shape: `rfc9068`, `entra`, `keycloak`, `okta` or `nl` |
 | `FERROEHR__AUTH__ISSUER__0__AUDIENCE` | unset (**required with an issuer**) | accepted `aud` values |
-| `FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS` | unset | the deployment's own clients, the only ones a `persons` token is admitted through beside `delegates` |
 | `FERROEHR__AUTH__ISSUER__0__ALGORITHMS` | `RS256,RS384,PS256,PS384,ES256,ES384` | accepted signing algorithms, asymmetric only |
 | `FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW` | `60s` | leeway on `exp`, `nbf` and `iat`; capped at `5min` |
 | `FERROEHR__AUTH__ISSUER__0__JWKS_FILE` | unset | a static JWK Set of public keys, read instead of the issuer's metadata |
@@ -120,8 +123,10 @@ Basic user whose scopes do not grant the operation is refused with `403`. See
 > export FERROEHR__AUTH__ISSUER__0__KIND=persons
 > export FERROEHR__AUTH__ISSUER__0__PROFILE=keycloak
 > export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
-> export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=ferroehr-viewer
 > ```
+>
+> A person signs in through a client the CDR grants `sign_in_persons`, such
+> as the viewer, on the `AGENT` carrying its client id under the realm.
 >
 > Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068 profile the
 > server expects by default, which the `keycloak` profile admits. The client's
@@ -179,10 +184,12 @@ authentication of them; Implementing Regulation (EU) 2026/2099 Art. 6(3) sets
 
 **The natural person** behind a token is the issuer's to say. Each
 `[[auth.issuer]]` declares its `kind`, and `ferrohealth-smart` classifies every
-token by it and by the issuer's profile: a `persons` token through one of the
-issuer's `first_party_clients` is the person, a token through a client the
-issuer lists in `delegates` is that client acting for the person the token
-names, and an app-only token is a system. A `persons` token through any other
+token by it and by the issuer's profile: a `persons` token through a client
+the CDR grants `sign_in_persons` is the person, a token through a client the
+CDR grants `act_for_persons` is that client acting for the person the token
+names, and an app-only token is a system. The server asks the policy grants
+while it classifies the token, from the copy each replica holds, so a grant
+takes effect on the next request. A `persons` token through any other
 client is refused with `401`. The access record names the person by the
 profile's `person_key`, and a delegated token as the client acting for that
 person; see [Audit trail](audit.md#the-ehds-logging-elements-mapped).
@@ -261,76 +268,109 @@ control.
 > outage rather than a control. Bind callers to patients with the ABAC layer
 > below; this key decides only the default disposition.
 
-Committing settings with the `ferroehr.access_control.v1` scheme
-switches that EHR to explicit policy, and those settings **always win over the
-server default**, in both directions:
+Committing settings of the `access_directives` scheme switches that EHR to
+explicit policy, and those settings **always win over the server default**,
+in both directions. The settings are an `ACCESS_DIRECTIVE_SETTINGS`, a class
+of FerroEHR's draft access control package, and every coded value is a code
+of the access control groups of FerroEHR's terminology `ferroehr-operations`:
 
 ```json
 {
   "_type": "EHR_ACCESS",
-  "name": { "_type": "DV_TEXT", "value": "access" },
-  "archetype_node_id": "openEHR-EHR-EHR_ACCESS.generic.v1",
+  "name": { "_type": "DV_TEXT", "value": "EHR Access" },
+  "archetype_node_id": "openEHR-EHR-EHR_ACCESS.access_directives.v1",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": { "_type": "ARCHETYPE_ID",
+                      "value": "openEHR-EHR-EHR_ACCESS.access_directives.v1" },
+    "rm_version": "1.2.0"
+  },
   "settings": {
-    "_type": "FERROEHR_ACCESS_CONTROL_V1",
-    "gate_keeper": "user:alice",
-    "default_access": "restricted",
-    "access_list": [
-      { "principal": "user:bob",   "access": "full" },
-      { "principal": "role:nurse", "access": "restricted_below", "max_level": 2 }
-    ],
-    "privacy": {
-      "default_level": 0,
-      "composition_overrides": [
-        { "uid": "8849182c-82ad-4088-a07f-48ead4180515", "level": 3 }
-      ]
-    }
+    "_type": "ACCESS_DIRECTIVE_SETTINGS",
+    "default_access": {
+      "_type": "DV_CODED_TEXT", "value": "restricted",
+      "defining_code": { "_type": "CODE_PHRASE",
+        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+        "code_string": "restricted" }
+    },
+    "gate_keepers": [
+      { "_type": "PARTY_SELF" },
+      { "_type": "PARTY_RELATED",
+        "external_ref": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+                          "id": { "_type": "HIER_OBJECT_ID",
+                                  "value": "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f80" } },
+        "relationship": { "_type": "DV_CODED_TEXT", "value": "guardian",
+          "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+            "code_string": "10" } } }
+    ]
   }
 }
 ```
 
-- **Access list:** with `default_access: "restricted"`, only listed
-  principals may touch the EHR: `user:<login or OIDC subject>` or
-  `role:<role>` (matched against the caller's roles). Everyone else gets
-  `403`. An EHR Extract export by manifest (`POST /message/export`) passes
-  this gate for every EHR the manifest names before it reads any content,
-  so one EHR the caller may not reach refuses the whole export.
-- **Privacy levels:** integer sensitivity levels with meanings you define
-  for your jurisdiction. A composition's level is its override entry or the
-  default, and a caller may read it only when its level is *strictly below*
-  their ceiling. `full` access has no ceiling; `restricted_below` uses the
-  entry's `max_level`; a caller with **no access-list entry** gets
-  `default_level + 1`, so the default level stays readable and only raised
-  levels are withheld. This gate applies to Composition **read** routes.
-  An override's `uid` is the `VERSIONED_COMPOSITION` uid, or a version uid
-  whose first part is one; a CONTRIBUTION that writes any other `uid` is
-  refused with `400`.
-- **Unreadable settings:** settings that carry the scheme's `_type` but do
-  not parse hold the EHR closed. A request that names the EHR is refused
-  with `500`, no query reaches it, and the server logs an error naming it.
-  A CONTRIBUTION, an EHR Extract import or an admin archive load that
-  carries such settings is refused with `400` naming the setting that does
-  not parse (the load names its EHR too, and writes nothing of the archive),
-  so only settings stored before that check can hold an EHR. An
-  administrator repairs a held EHR with
+- **Default access:** `open` admits any caller the other layers admit.
+  `restricted` and `consent_required` admit the administrator
+  (`authz.rbac.admin_role`), the record's person and the gate-keepers; every
+  other caller gets `403`. An EHR Extract export by manifest
+  (`POST /message/export`) passes this gate for every EHR the manifest names
+  before it reads any content, so one EHR the caller may not reach refuses the
+  whole export. The directives a subject gives (consent, restriction, opt-out
+  and delegation) and the sensitivity labels are stored and checked with the
+  settings; the access evaluator that decides each request by them ships in
+  the same release.
+- **Who writes the settings:** a new `EHR_ACCESS` version is committed by a
+  gate-keeper the current settings name, or by an administrator acting on the
+  person's instruction. `PARTY_SELF` names the record's person; any other
+  gate-keeper names a party of the demographic service by its
+  `external_ref`, matched against the `PERSON` the caller is bound to. With
+  no gate-keeper, only an administrator changes the settings. Every other
+  caller is refused with `403`. Changes are committed with a CONTRIBUTION
+  (there is no dedicated `EHR_ACCESS` endpoint in the openEHR REST API) and
+  are versioned and audited like all record content.
+- **Who reads the settings:** the administrator, the record's person and the
+  gate-keepers. To anyone else the settings are absent, so a restriction stays
+  invisible to a provider (EHDS Art. 8): an AQL query returns no
+  `EHR_ACCESS` row of the EHR, an EHR Extract leaves its `EHR_ACCESS` out,
+  and a CONTRIBUTION that commits an `EHR_ACCESS` version reads as unknown
+  (`404`). One caller more receives the `EHR_ACCESS` in an EHR Extract: the
+  holder of an `export_ehr_extract` grant whose `subject_namespace` covers
+  the EHR, such as a migration client, since the extract transfers the whole
+  EHR and an import elsewhere must keep the person's directives.
+- **Every write is checked:** a CONTRIBUTION, an EHR Extract import and an
+  admin archive load that carry settings are refused whole with `400` naming
+  the first defect: settings of another scheme (the removed
+  `FERROEHR_ACCESS_CONTROL_V1` among them), a member the class does not
+  declare, or a broken invariant of the draft package, named as
+  `CLASS.Invariant`, such as `ACCESS_DIRECTIVE.Restriction_denies`.
+- **Unreadable settings:** stored settings that do not read as the scheme
+  hold the EHR closed. A request that names the EHR is refused with `500`,
+  no query reaches it, and the server logs an error naming it. Only settings
+  stored before the write check can hold an EHR. An administrator repairs a
+  held EHR with
   `POST /ferroehr/rest/extensions/v1/admin/ehr-access/repair`, body
-  `{"ehr_id": "…", "settings": {…}}`: the new settings must parse, the
-  repair commits a new `EHR_ACCESS` version with its own commit audit and
-  contribution, and it writes an access record
+  `{"ehr_id": "…", "settings": {…}}`: the new settings must pass the write
+  check, the repair commits a new `EHR_ACCESS` version with its own commit
+  audit and contribution, and it writes an access record
   (`ehr-access-repair:<versioned object uid>`) naming the administrator. The
   repair is refused with `409` for an EHR that is not held; such an EHR
   changes its settings with a CONTRIBUTION.
-- **Gate-keeper:** once set, only that principal may commit a new
-  `EHR_ACCESS` version (via a CONTRIBUTION; there is no dedicated
-  `EHR_ACCESS` endpoint in the openEHR REST API). Changes are versioned and
-  audited like all record content.
+- **The default definition:** every boot stores the archetype
+  `openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0` when no definition of its
+  id is stored, and never over a stored one. FerroEHR reads the settings by
+  their codes, never by this id, so a deployment may use its own.
 
-The scheme is a FerroEHR extension: openEHR mandates the `EHR_ACCESS`
-object and its change control but publishes no concrete access-control
-scheme. The per-EHR decision also holds for AQL, ad-hoc and stored queries
-alike: an EHR the caller may not read contributes no rows, whether the query
-names it in its `WHERE` clause, in an `EHR` predicate, through the `ehr_id`
-parameter, or not at all, as in a population query. Query results are not
-filtered by privacy level.
+The scheme is a FerroEHR extension: openEHR mandates the `EHR_ACCESS` object
+and its change control but publishes no concrete access-control scheme. The
+per-EHR decision also holds for AQL, ad-hoc and stored queries alike: an EHR
+the caller may not reach contributes no rows, whether the query names it in
+its `WHERE` clause, in an `EHR` predicate, through the `ehr_id` parameter, or
+not at all, as in a population query.
+
+Upgrading drops every stored `EHR_ACCESS` of the removed
+`FERROEHR_ACCESS_CONTROL_V1` scheme, with its history, and the next boot
+gives each such EHR the default `EHR_ACCESS` with no settings, which the
+server default governs. Commit new settings in the `access_directives`
+scheme for the EHRs that had them.
 
 ### Restriction of access by health professionals (EHDS Art. 8)
 
@@ -391,16 +431,18 @@ natural person", even after an opt-out. No openEHR specification governs this;
 it is our own design.
 
 FerroEHR ships the software part: a mark on the whole EHR that the callers you
-declare as the access services read as absent. Whether the right exists, how
+grant as the access services read as absent. Whether the right exists, how
 the person exercises it, and the rules and safeguards of Art. 10(2) are your
 Member State's law and yours to apply. Where the Member State enforces the
 opt-out in its own services, leave the mark unused.
 
-- **Declaring the access services.** `authz.rbac.access_service_roles` lists
-  the roles your Art. 4 access service (the person's) and your Art. 12 health
-  professional access service carry in their tokens or Basic users. It is
-  empty by default, so the opt-out holds for nobody, and recording one is
-  refused with **400**.
+- **Granting the access services.** Your Art. 4 access service (the
+  person's) and your Art. 12 health professional access service each hold an
+  `access_service` grant in the CDR: a capability of a `ROLE` their `ACTOR`
+  or `PERSON` performs ([Operational policy](operational-policy.md#what-the-grants-decide)).
+  `[authz.grants] allowed` does not allow `access_service` by default, so the
+  opt-out holds for nobody, and recording one is refused with **400**. A role
+  a token names grants nothing here.
 - **Recording and reversing it.** The controller records the opt-out on the
   person's instruction with
   `POST /ferroehr/rest/extensions/v1/admin/access-opt-out` and reverses it with
@@ -408,14 +450,14 @@ opt-out in its own services, leave the mark unused.
   ([the routes](operations-admin-apis.md#legal-marks-restriction-objection-and-retention)).
   A reversal keeps the row in the register with its reversal time, and stays
   open whatever the configuration, so an opt-out can always be reversed.
-- **What an access service sees.** A request from a caller holding one of the
-  declared roles reads the EHR as absent: a route that names the EHR or an
+- **What an access service sees.** A request from a caller holding an
+  `access_service` grant reads the EHR as absent: a route that names the EHR or an
   object in it answers **404** as for an unknown EHR, a population query leaves
   its data out, a query scoped to it answers as for an unknown EHR, an export
   and the lookup by subject find no such EHR, and a write to it is refused as a
   write to an unknown EHR.
 - **What it does not change.** Every other caller reads the record as before:
-  your own care, through callers that hold none of the declared roles, and the
+  your own care, through callers that hold no `access_service` grant, and the
   controller's admin routes. Nothing is deleted. It is not the Art. 8
   restriction above, which reaches every professional route and leaves the
   person's own access open.
@@ -432,8 +474,8 @@ opt-out in its own services, leave the mark unused.
   administrator.
 
 ```toml
-[authz.rbac]
-access_service_roles = ["EHDS-ACCESS-SERVICE"]
+[authz.grants]
+allowed = ["commit_composition", "access_service"]
 
 [audit]
 purpose_codes = ["TREAT", "ETREAT"]
@@ -463,7 +505,9 @@ the marker is the RM's own.
   `ferrohealth-smart`; the Art. 3(3) delay below asks its broad one.
 - **Who counts as the representative.** A person bound to their own `PERSON`
   who acts for the patient through a representation relationship FerroEHR has
-  recorded ([how a login is looked up](installation/config-auth.md#how-a-login-is-looked-up)).
+  recorded ([how a login is looked up](installation/config-auth.md#how-a-login-is-looked-up)),
+  through a `persons` issuer or the patient portal
+  ([representatives in the patient portal](operational-policy.md#representatives-in-the-patient-portal)).
   The rules below hold for the representative exactly as for the person.
 - **The marker.** Every version and CONTRIBUTION the person commits records
   `PARTY_SELF` with no `external_ref` as `AUDIT_DETAILS.committer`, the RM's
@@ -509,13 +553,14 @@ specification governs it; it is our own design.
 
 FerroEHR ships the software part. Whether the delay applies, to which data and
 for how long is the Member State's rule, and you configure it in
-[`[privacy.access_delay]`](installation/config-auth.md#privacyaccess_delay). It is off by
+[the access-delay register](installation/config-auth.md#the-access-delay-register), an
+[admin register](operational-policy.md#the-admin-registers). It is off by
 default, so the person's access stays immediate.
 
-- **What is held.** With the section on, every new COMPOSITION whose category
-  (the [`[audit.categories]`](installation/config-audit.md) map, template first,
-  then the root archetype) is listed in `privacy.access_delay.categories` is held from
-  the moment it is committed, for `privacy.access_delay.max_delay`. Only the first version
+- **What is held.** With the register on, every new COMPOSITION whose category
+  (the [audit category register](installation/config-audit.md#the-audit-category-register), template first,
+  then the root archetype) is listed in the register's `categories` is held from
+  the moment it is committed, for the register's `max_delay`. Only the first version
   is held: a composition the person has already seen stays visible when it is
   amended, and a professional holds an amendment by hand if it needs
   explaining. A composition the person commits is never held from them.
@@ -534,13 +579,13 @@ default, so the person's access stays immediate.
 - **Releasing it.** The treating professional releases a composition once it
   has been explained, from the clinical surface with
   `POST /ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release`.
-  The route takes the checks of a write to that EHR: the EHR access list, the
+  The route takes the checks of a write to that EHR: its `EHR_ACCESS` gate, the
   ABAC check of a composition update and the SMART `composition-` update
   grant. A request that may be the person's is refused with **403**. The
   controller releases with
   `POST /ferroehr/rest/extensions/v1/admin/access-delay/release`, and holds
   one by hand with `POST /ferroehr/rest/extensions/v1/admin/access-delay`, for
-  at most `privacy.access_delay.max_delay`
+  at most the access-delay register's `max_delay`
   ([the routes](operations-admin-apis.md#legal-marks-restriction-objection-and-retention)).
 - **The limit.** Every hold ends by itself when its period passes, released or
   not, because Art. 3(3) allows a delay "for a limited period of time" only.
@@ -563,7 +608,9 @@ once: the holds stay in the register, and no new one can be placed.
 
 Every openEHR operation is classified as **Public**, **Clinical**, or
 **Admin**, and a role model gates each class. Roles are plain,
-case-insensitive strings; the defaults are `USER` and `ADMIN`.
+case-insensitive strings. A Clinical operation needs an authenticated caller
+and no role; the configured roles default to `ADMIN` (`admin_role`, every
+Admin operation) and `READONLY` (`readonly_role`, refused on every write).
 
 | Environment variable | Default | Meaning |
 |---|---|---|
@@ -571,8 +618,7 @@ case-insensitive strings; the defaults are `USER` and `ADMIN`.
 | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE` | `ADMIN` | role required for admin operations |
 | `FERROEHR__AUTHZ__RBAC__READONLY_ROLE` | `READONLY` | role marking a principal read-only: refused on every write |
 | `FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS` | `["roles","groups","entitlements"]` | JWT claim paths mined for roles, per issuer; a Keycloak issuer adds `realm_access.roles` |
-| `FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS` | empty | the `persons` issuers whose role claims may grant the administrator, emergency, import and identifier-reader roles; a token of any other issuer never holds them |
-| `FERROEHR__AUTHZ__RBAC__SUBJECT_AUDIT_ROLE` | unset | role that reads the access log for ONE subject at a time (`GET /fhir/r4/AuditEvent` with `patient` required). Unset, that log stays admin-only. See [Audit trail](audit.md#getting-the-log-out) |
+| `FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS` | empty | the `persons` issuers whose role claims may grant the administrator and emergency roles; a token of any other issuer never holds them |
 
 Roles come from the JWT claims listed in `ROLE_CLAIMS`, or from a Basic user's
 configured roles. The defaults are the carriers
@@ -644,32 +690,27 @@ role gate).
 For attribute-level decisions ("may this user touch this patient's data,
 under this organisation, for this template?") enable ABAC. A policy decision
 point is consulted per clinical operation with resolved attributes. An
-enabled ABAC block that cannot be built (a missing or invalid policy
-directory, an unreachable-by-construction PDP client) aborts server startup:
+enabled ABAC block that cannot be built (a Cedar register in force that does
+not validate) aborts server startup:
 a configuration that promises fine-grained authorization never silently runs
 without it.
 
 | Environment variable | Default | Meaning |
 |---|---|---|
 | `FERROEHR__AUTHZ__ABAC__ENABLED` | `false` | master ABAC switch |
-| `FERROEHR__AUTHZ__ABAC__ENGINE` | `cedar` | `cedar` (embedded) or `remote` (external PDP) |
+| `FERROEHR__AUTHZ__ABAC__ENGINE` | `cedar` | `cedar`, the embedded engine and the only value |
 | `FERROEHR__AUTHZ__ABAC__ORGANIZATION_CLAIM` | `organization_id` | JWT claim for the organisation attribute |
 | `FERROEHR__AUTHZ__ABAC__PATIENT_CLAIM` | `patient_id` | JWT claim for the patient attribute (enables the subject gate) |
 | `FERROEHR__AUTHZ__ABAC__CHECK_DIRECTORY` | `false` | also submit DIRECTORY (FOLDER) operations to the policy engine |
-| `FERROEHR__AUTHZ__ABAC__CEDAR__POLICY_DIR` | — (required for `cedar`) | directory of `*.cedar` policy files |
-| `FERROEHR__AUTHZ__ABAC__CEDAR__RELOAD_INTERVAL` | off | optional policy hot-reload interval |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__ENDPOINT__URL` | — (required for `remote`) | PDP base URL (must end with `/`) |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__ENDPOINT__CONNECT_TIMEOUT` | `2s` | PDP connect timeout |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__ENDPOINT__TIMEOUT` | `5s` | PDP request timeout |
 
-Two engines sit behind one interface. **Cedar** is the embedded default:
-policies live in `*.cedar` files, are schema-validated at boot against a
-shipped schema built from the resource-kind and access-mode sets themselves (an
-invalid policy set stops the server rather than silently denying), and need no
-external service. The **remote PDP** option consults an external policy server
-over HTTP for deployments that already run one; it additionally requires an
-`[authz.abac.policy.<kind>]` binding for every resource kind it will be asked
-about, and a missing one is a boot error rather than a first-request surprise.
+The policy engine is the embedded **Cedar** engine. Its policy set is the [Cedar admin register](operational-policy.md#the-cedar-policy-register),
+written through the admin API and validated when it is written against a
+shipped schema built from the resource-kind and access-mode sets themselves (a
+set that does not validate is refused and the set in force keeps deciding), and
+it needs no external service. Until the register is written the set is empty
+and permits nothing. FerroEHR calls no external policy server:
+`[authz.abac.remote]` and `[authz.abac.policy.<kind>]` are unknown tables and
+refuse boot.
 
 A policy sees the **caller**, not just the request: the authenticated subject,
 its roles (as the role layer above resolved them), its scopes, the resolved
@@ -690,7 +731,7 @@ the origins and categories of the data into account). On a composition read,
 write or delete, a contribution and a query, `resource.category` holds each
 EHDS category of the data, spelt as the access record spells it: the
 `<system>|<code>` token of a priority or national category,
-[`[audit.categories]`](installation/config-audit.md#auditcategories) classifying
+[audit category register](installation/config-audit.md#the-audit-category-register) classifying
 the template, then the root archetype; `none`; or `unclassified`.
 `resource.origin` holds each origin the data came from, as the version recorded
 it at commit: a `FEEDER_AUDIT` originating-system id, the registered origin of
@@ -699,8 +740,7 @@ the committing client, or this server's `system_id`
 declares the register). A write is decided on what its body names: its
 template's category and the origin the commit will stamp. A FLAT or STRUCTURED
 write is converted only after the check, so it carries the category its
-template header implies and no origin attribute. A remote PDP receives both as
-the `category` and `origin` parameters of `[authz.abac.policy.<kind>]`.
+template header implies and no origin attribute.
 
 ```cedar
 // Laboratory reports fed by the lab are readable by the lab's own staff only.
@@ -723,17 +763,13 @@ permits vacuously, because there is nothing to decide about.
 > shows up in the status code.
 >
 > Nothing permits by omission: a gate reached without an authenticated caller
-> refuses, an unconfigured resource kind on the remote PDP denies (and the
-> missing rule is a boot error), and Cedar is deny-by-default with `forbid`
-> overriding `permit`. A denied decision is a **`403`**.
+> refuses, and Cedar is deny-by-default with `forbid` overriding `permit`. A denied decision is a **`403`**.
 >
-> And a stage that cannot **decide** is never read as a decision. An
-> unreachable policy engine, a policy server answering `5xx`, or a policy that
-> errors during evaluation is a **`500`**: never a silent permit, and never a
+> And a stage that cannot **decide** is never read as a decision. A policy
+> that errors during evaluation is a **`500`**: never a silent permit, and never a
 > `403`, which would claim a decision was made. (Cedar skips a policy that
 > errors and reports it in its diagnostics; ignoring those would let an erroring
-> `forbid` quietly stop forbidding.) A `4xx` from a remote PDP *is* a decision,
-> so it denies.
+> `forbid` quietly stop forbidding.)
 >
 > When a patient claim is configured, a local subject gate also rejects access to
 > another patient's EHR before any policy call. The EHR Extract import routes

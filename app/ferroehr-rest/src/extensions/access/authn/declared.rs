@@ -1,30 +1,35 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The callers the configuration declares: the system clients that commit
-//! (`[[authz.system_client]]`) and the agreements a verified external person
-//! or organisation of a `federation` issuer is admitted under
-//! (`[[authz.federation.agreement]]`), only within the agreement of its
-//! issuer and accessor, and only with the scopes the agreement reads.
+//! The admission of a verified external person or organisation of a
+//! `federation` issuer: only under the federation agreement its partner holds
+//! in the CDR for its accessor kind
+//! ([`ferroehr::party_binding::grants::agreement`]), and only with the scopes
+//! the agreement reads.
 //!
-//! Its rights come from the agreement and never from a role (GDPR Art. 5(2)
-//! and Art. 30(1)(b); `docs/law/eu/gdpr/text.html`), and its reads are
-//! `patient/` scopes, so the launch-context confinement of SMART on openEHR
-//! `master08-scopes.adoc` §Resource Scopes holds it to its token-bound
-//! patient. What an external caller may do is our own design.
+//! The partner is the `ACTOR` carrying the caller's issuer and `client_id`,
+//! so the agreement is one of the caller's capabilities, read on this request
+//! with no restart. Its rights come from the agreement and never from a role
+//! (GDPR Art. 5(2) and Art. 30(1)(b); `docs/law/eu/gdpr/text.html`), and its
+//! reads are `patient/` scopes, so the launch-context confinement of SMART on
+//! openEHR `master08-scopes.adoc` §Resource Scopes holds it to its
+//! token-bound patient. What an external caller may do is our own design.
 
 use std::collections::BTreeMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, PoisonError};
 
 use axum::response::Response;
-use ferroehr::config::agreement::{AccessClass, Accessor, Agreement};
-use ferroehr::config::clients::SystemClient;
+use ferroehr::party_binding::grants::agreement::{AccessClass, Accessor, Agreement};
+use ferroehr::party_binding::grants::capabilities::Capabilities;
+use ferroehr::party_binding::grants::trust::FederationTrust;
 use ferroehr::versioning::committer::ExternalCaller;
 use ferroehr::versioning::committer::external::ExternalProfessional;
 use ferrohealth_server::caller_rate::{self, CallerKey, CallerLimit};
+use ferrohealth_server::section::CallerRate;
 use ferrohealth_smart::federation::{Attribute, External, Field};
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::resource::{Access, Caller};
+use uuid::Uuid;
 
 use super::AuthError;
 
@@ -33,7 +38,7 @@ use super::AuthError;
 #[derive(Debug, Clone)]
 pub(crate) struct Admitted(Arc<Held>);
 
-/// One agreement as this node holds it: the table, where its issuer reads a
+/// One agreement as the request holds it: its terms, where its issuer reads a
 /// `chained` request's correlation id from, its caller rate, and whether its
 /// issuer is a MyHealth@EU contact point.
 #[derive(Debug)]
@@ -45,83 +50,59 @@ struct Held {
 }
 
 /// The scope tokens an external caller may hold beside the agreement's
-/// `reads`: the OpenID Connect Core §5.4 and SMART launch requests, which
-/// grant no access here.
+/// reads: the OpenID Connect Core §5.4 and SMART launch requests, which grant
+/// no access here.
 const NEUTRAL: [&str; 5] = ["openid", "profile", "fhirUser", "online_access", "launch"];
 
-/// The `[[authz.system_client]]` tables and the
-/// `[[authz.federation.agreement]]` tables, by issuer and accessor.
+/// The caller limit of one agreement's rate, kept while the rate stands.
+type Limits = BTreeMap<(Uuid, Accessor), (CallerRate, CallerLimit)>;
+
+/// The caller limit of each agreement admitted under so far.
 #[derive(Debug, Default)]
 pub(super) struct Declared {
-    /// The system clients.
-    pub(super) system_clients: Vec<Arc<SystemClient>>,
-    /// The agreements, each with the jurisdiction it holds for; boot has
-    /// refused a table without an accessor.
-    agreements: BTreeMap<(String, Accessor), Arc<Held>>,
+    /// The caller limit of each agreement, by its `ROLE` and accessor, so a
+    /// caller's allowance outlives the request.
+    limits: Mutex<Limits>,
 }
 
 impl Declared {
-    /// Returns the tables `config` declares.
-    pub(super) fn of(config: &crate::config::AppConfig) -> Self {
-        Self {
-            system_clients: config
-                .system_clients
-                .iter()
-                .cloned()
-                .map(Arc::new)
-                .collect(),
-            agreements: config
-                .agreements
-                .iter()
-                .filter_map(|table| {
-                    let accessor = table.accessor?;
-                    let agreement = Agreement {
-                        jurisdiction: table.jurisdiction_of(&config.auth.shared),
-                        ..table.clone()
-                    };
-                    let correlation_source = ferroehr::config::agreement::correlation_sources(
-                        &config.auth.shared,
-                        &table.issuer,
-                    )
-                    .map(|sources| {
-                        sources
-                            .iter()
-                            .map(ferroehr::config::agreement::describe_source)
-                            .collect::<Vec<_>>()
-                            .join(" ")
-                    });
-                    let contact_point = config.auth.shared.federation.iter().any(|federation| {
-                        federation.issuer == table.issuer && federation.contact_point == Some(true)
-                    });
-                    let held = Held {
-                        agreement: Arc::new(agreement),
-                        correlation_source,
-                        limit: table.caller_rate.map(CallerLimit::new),
-                        contact_point,
-                    };
-                    Some(((table.issuer.clone(), accessor), Arc::new(held)))
-                })
-                .collect(),
+    /// The caller limit of the agreement of `accessor` the `ROLE` `role`
+    /// grants at `rate`: the one held while its rate stands.
+    fn limit(&self, role: Uuid, accessor: Accessor, rate: CallerRate) -> CallerLimit {
+        let mut limits = self.limits.lock().unwrap_or_else(PoisonError::into_inner);
+        let held = limits
+            .entry((role, accessor))
+            .or_insert_with(|| (rate, CallerLimit::new(rate)));
+        if held.0 != rate {
+            *held = (rate, CallerLimit::new(rate));
         }
+        held.1.clone()
     }
 
     /// Admits the caller of `access`: an external caller only under the
-    /// agreement of its issuer and accessor, holding no scope beyond its
-    /// `reads`, returned carrying [`Admitted`]; any other caller unchanged.
+    /// agreement of its accessor kind among its capabilities `granted`, which
+    /// keeps every rule under `trust`, holding no scope beyond its reads,
+    /// returned carrying [`Admitted`]; any other caller unchanged.
     ///
-    /// A `chained` organisation request carries its correlation id in the field
-    /// its issuer's `[[auth.federation]]` table maps, which the token attests;
-    /// no request header stands in for it. Under an NL agreement, Wabvpz
-    /// Art. 15f admits only a care provider and no occupational or insurance
-    /// physician.
+    /// A `chained` organisation request carries its correlation id in the
+    /// field its issuer's `[[auth.federation]]` table maps, which the token
+    /// attests; no request header stands in for it. Under an agreement whose
+    /// jurisdiction is `NL`, Wabvpz Art. 15f admits only a care provider and
+    /// no occupational or insurance physician.
     ///
     /// # Errors
-    /// [`AuthError::KindRefused`] (`403`) for an external caller without an
-    /// agreement for its accessor kind, or holding a scope the agreement does
-    /// not read, or making a `chained` request without an attested correlation
-    /// id, or under an NL agreement asserting a refused UZI role or no care
-    /// provider type.
-    pub(super) fn admit(&self, access: Access) -> Result<Access, AuthError> {
+    /// [`AuthError::KindRefused`] (`403`) for an external caller whose
+    /// partner holds no agreement for its accessor kind, or one that does not
+    /// read or breaks a rule, or holding a scope the agreement does not read,
+    /// or making a `chained` request without an attested correlation id, or
+    /// under an NL agreement asserting a refused UZI role or no care provider
+    /// type.
+    pub(super) fn admit(
+        &self,
+        access: Access,
+        granted: &Capabilities,
+        trust: &FederationTrust,
+    ) -> Result<Access, AuthError> {
         let Some(caller) = access.caller() else {
             return Ok(access);
         };
@@ -130,21 +111,50 @@ impl Declared {
             CallerKind::ExternalOrganisation(_) => Accessor::Organisation,
             _ => return Ok(access),
         };
-        let held = caller
-            .issuer()
-            .and_then(|issuer| self.agreements.get(&(issuer.to_owned(), accessor)))
-            .ok_or_else(|| AuthError::KindRefused {
-                code: "refused-no-agreement",
-                message: format!(
-                    "no [[authz.federation.agreement]] of this issuer admits the accessor \
-                     {accessor}"
-                ),
-                principal: None,
-            })?;
+        let none = || AuthError::KindRefused {
+            code: "refused-no-agreement",
+            message: format!(
+                "no federation agreement of this issuer and client admits the accessor {accessor}"
+            ),
+            principal: None,
+        };
+        let (Some(issuer), Some(grant)) =
+            (caller.issuer(), granted.of(accessor.operation()).next())
+        else {
+            return Err(none());
+        };
+        let refusals = match Agreement::read(accessor, grant.credentials()) {
+            Ok(agreement) => {
+                let refusals = agreement.refusals(issuer, trust);
+                if refusals.is_empty() {
+                    Ok(agreement)
+                } else {
+                    Err(refusals)
+                }
+            }
+            Err(unread) => Err(unread),
+        };
+        let agreement = match refusals {
+            Ok(agreement) => agreement,
+            Err(refusals) => {
+                tracing::warn!(
+                    role = %grant.role(),
+                    accessor = %accessor,
+                    refusals = %refusals.join("; "),
+                    "a federation agreement that breaks its rules admits no caller"
+                );
+                return Err(none());
+            }
+        };
+        // NOTE: an agreement with no refusal names a trusted issuer, so this
+        // refuses only what `Agreement::refusals` already refused.
+        let Some(partner) = trust.issuer(issuer).cloned() else {
+            return Err(none());
+        };
         let beyond = caller.scope().iter().any(|scope| {
             !NEUTRAL.contains(&scope.as_str())
                 && !scope.starts_with("launch/")
-                && !held.agreement.reads.iter().any(|read| read == scope)
+                && !agreement.reads.iter().any(|read| read == scope)
         });
         if beyond {
             return Err(AuthError::KindRefused {
@@ -154,8 +164,7 @@ impl Declared {
                 principal: None,
             });
         }
-        if held.agreement.access_class == Some(AccessClass::Chained)
-            && caller.correlation_id().is_none()
+        if agreement.access_class == Some(AccessClass::Chained) && caller.correlation_id().is_none()
         {
             return Err(AuthError::KindRefused {
                 code: "refused-correlation-missing",
@@ -164,7 +173,7 @@ impl Declared {
                 principal: None,
             });
         }
-        if held.agreement.jurisdiction == "NL"
+        if agreement.jurisdiction == "NL"
             && let Some((code, message)) = super::wabvpz::refusal(caller.kind().external())
         {
             return Err(AuthError::KindRefused {
@@ -173,8 +182,17 @@ impl Declared {
                 principal: None,
             });
         }
+        let limit = agreement
+            .caller_rate
+            .map(|rate| self.limit(grant.role(), accessor, rate));
+        let held = Held {
+            agreement: Arc::new(agreement),
+            correlation_source: partner.correlation_source,
+            limit,
+            contact_point: partner.contact_point,
+        };
         Ok(Access::Caller(Arc::new(
-            Caller::clone(caller).with_extension(Admitted(Arc::clone(held))),
+            Caller::clone(caller).with_extension(Admitted(Arc::new(held))),
         )))
     }
 }
@@ -213,16 +231,14 @@ pub(super) fn contact_point(access: &Access) -> Option<&Arc<Agreement>> {
 /// from the family's caller limit, carrying the caller and its binding record
 /// for the access log, which counts it into the caller's summary record.
 /// `None` within the rate or for any other caller.
-pub(super) fn over_rate(
-    principal: &super::Principal,
-    clients: &[Arc<SystemClient>],
-) -> Option<Response> {
+pub(super) fn over_rate(principal: &super::Principal) -> Option<Response> {
     let limit = held(&principal.access)?.limit.as_ref()?;
     let caller = CallerKey(Arc::from(principal.subject.as_str()));
     let wait = limit.take(&caller, tokio::time::Instant::now()).err()?;
     let mut refusal = caller_rate::refusal(wait);
-    let committer = super::party::committer_identity(principal, clients);
-    if let Some(mut binding) = super::record::of_request(principal, &committer) {
+    let granted = Capabilities::default();
+    let committer = super::party::committer_identity(principal, &granted);
+    if let Some(mut binding) = super::record::of_request(principal, &committer, &granted, None) {
         binding
             .detail
             .insert("refusal".to_owned(), vec!["caller-rate".to_owned()]);
@@ -244,16 +260,13 @@ pub(super) fn committing(access: &Access) -> Option<ExternalCaller> {
     });
     let contact_point = contact_point(access).is_some();
     Some(match (agreement.accessor, external) {
-        (Some(Accessor::Person), Some(external)) => ExternalCaller::Person {
+        (Accessor::Person, Some(external)) => ExternalCaller::Person {
             writes: agreement.writes.clone(),
             professional: Box::new(ExternalProfessional {
                 contact_point,
                 ..professional(external)
             }),
-            discard_window_hours: agreement
-                .discard
-                .then(|| agreement.discard_window_hours())
-                .flatten(),
+            discard_window_hours: agreement.discard_window_hours,
         },
         _ => ExternalCaller::Organisation,
     })

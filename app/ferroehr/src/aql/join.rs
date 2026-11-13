@@ -14,7 +14,8 @@
 //! FROM PERSON p CONTAINS (<party classes> AND EHR e [CONTAINS <clinical classes>])
 //! ```
 //!
-//! with `ORGANISATION` or `ROLE` as the root too. The parties and the clinical
+//! with any other `PARTY` class as the root too, the abstract `PARTY` and
+//! `ACTOR` included. The parties and the clinical
 //! content each live behind their own pool and role, so no
 //! statement can answer the query; [`split`] cuts it into a party query (the
 //! root, its party classes, the `WHERE` conjuncts and columns that read them)
@@ -40,7 +41,7 @@ use openehr_query::ast::{
 use openehr_query::visit::{Visit, walk_identified_path};
 
 use super::error::{AnalysisError, AqlError, AqlFeatureError};
-use super::lower::{SERVED_PARTY_ROOTS, lower_limit};
+use super::lower::{is_party_class, lower_limit};
 
 /// The variable the party query binds its root to when the query names none.
 const PARTY_VAR: &str = "ferroehr_join_party";
@@ -83,7 +84,7 @@ pub struct JoinOrderKey {
 /// A demographic-to-EHR query cut into its two single-domain halves.
 #[derive(Debug, Clone, PartialEq)]
 pub struct JoinPlan {
-    /// The RM class at the root (`PERSON`, `ORGANISATION` or `ROLE`).
+    /// The RM class at the root: a `PARTY` class, concrete or abstract.
     pub root: String,
     /// The party query: its columns, then the root's `uid/value`, then its
     /// order keys, ordered by those keys.
@@ -183,7 +184,7 @@ struct Cut {
     ehr_var: String,
 }
 
-/// Cuts `from` into its halves when it is a served demographic root whose
+/// Cuts `from` into its halves when it is a `PARTY` class root whose
 /// top-level containment holds an `EHR` operand, or answers `None`.
 ///
 /// # Errors
@@ -202,7 +203,7 @@ fn cut_from(from: &ContainsExpr) -> Result<Option<Cut>, AqlError> {
     else {
         return Ok(None);
     };
-    if !SERVED_PARTY_ROOTS.contains(&rm_type.as_str()) || constraint.negated {
+    if !is_party_class(rm_type) || constraint.negated {
         return Ok(None);
     }
     let mut leaves = Vec::new();

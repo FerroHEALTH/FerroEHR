@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -49,9 +49,9 @@ Clinical Frailty Scale [Internet]. Norsk forening for geriatri. Den norske legef
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">F6634E28D3EA7BFB28AA3177488BA047</other_details>
-    <other_details id="build_uid">0a7a1f2a-70a4-433d-b920-d8ef554c294c</other_details>
-    <other_details id="revision">1.0.0</other_details>
+    <other_details id="MD5-CAM-1.0.1">38477BE944B93CD0F61B76C148A6F724</other_details>
+    <other_details id="build_uid">0c2f2654-f74b-4625-822a-5564d96beb1d</other_details>
+    <other_details id="revision">1.0.1</other_details>
     <details>
       <language>
         <terminology_id>
@@ -90,6 +90,19 @@ For permission: https://www.geriatricmedicineresearch.ca.</use>
       <misuse />
       <copyright>© openEHR Foundation</copyright>
     </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nl</code_string>
+      </language>
+      <purpose>Het vastleggen van de Clinical Frailty Scale (CFS) 2.0</purpose>
+      <use>Gebruik voor het vastleggen van de Clinical Frailty Scale (CFS) 2.0.&#xD;
+In 2020 is de CFS herzien (versie 2.0) met beperkte verduidelijkende aanpassing van de beschrijvingen en kopjes. Meest noemenswaardig zijn, CFS level 2 is aangepast van "Well" naar "Fit" (in Nederlandse vertaling niet van toepassing), level 4 van "vulnerable" (Risico op kwetsbaarheid) naar</use>
+      <misuse />
+      <copyright />
+    </details>
   </description>
   <translations>
     <language>
@@ -98,9 +111,21 @@ For permission: https://www.geriatricmedicineresearch.ca.</use>
       </terminology_id>
       <code_string>nb</code_string>
     </language>
-    <author id="name">Marit Alice Venheim, Silje Ljosland Bakke, John Tore Valand</author>
-    <author id="organisation">Helse Vest IKT, Helse Vest IKT AS, Helse Bergen</author>
-    <author id="email">marit.alice.venheim@helse-vest-ikt.no, silje.ljosland.bakke@helse-vest-ikt.no, john.tore.valand@helse-vest-ikt.no</author>
+    <author id="name">Marit Alice Venheim, Silje Ljosland Bakke, John Tore Valand, Vebjørn Arntzen</author>
+    <author id="organisation">Helse Vest IKT, Helse Vest IKT AS, Helse Bergen, Oslo University Hospital</author>
+    <author id="email">marit.alice.venheim@helse-vest-ikt.no, silje.ljosland.bakke@helse-vest-ikt.no, john.tore.valand@helse-vest-ikt.no, varntzen@ous-hf.no</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nl</code_string>
+    </language>
+    <author id="name">Joost Holslag</author>
+    <author id="organisation">Nedap</author>
+    <author id="email">joost.holslag@nedap.com</author>
+    <accreditation>MD</accreditation>
   </translations>
   <uid>
     <value>793d8a74-be1f-4a25-9799-d8a686e31207</value>
@@ -510,8 +535,7 @@ For permission: https://www.geriatricmedicineresearch.ca.</use>
       <items code="at0000">
         <items id="text">Clinical Frailty Scale (CFS 2.0)</items>
         <items id="description">Clinical Frailty Scale er en vurderingsskala for å gradere skrøpelighet hos de over 65 år ved å kartlegge graden av kondisjon og skrøpelighet.</items>
-        <items id="comment">Også kjent som Rockwood Clinical Frailty Scale.&#xD;
-</items>
+        <items id="comment">Også kjent som "Klinisk skrøpelighetsskala" og "Rockwood Clinical Frailty Scale".</items>
       </items>
       <items code="at0001">
         <items id="text">History</items>
@@ -572,9 +596,74 @@ For permission: https://www.geriatricmedicineresearch.ca.</use>
       </items>
       <items code="at0042">
         <items id="text">Terminalt syk</items>
-        <items id="description">Nærmer seg livets slutt. I denne kategorien inngår personer med en forventet levetid &lt;6 måneder uten at de lever med alvorlig skrøpelighet. (Mange terminalt syke pasienter kan være fysisk aktive inntil de er svært nær døden).</items>
+        <items id="description">Nærmer seg livets slutt. I denne kategorien inngår personer med en forventet levetid &amp;lt;6 måneder uten at de lever med alvorlig skrøpelighet. (Mange terminalt syke pasienter kan være fysisk aktive inntil de er svært nær døden).</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nl">
+      <items code="at0000">
+        <items id="text">*Clinical Frailty Scale (CFS 2.0)(en)</items>
+        <items id="description">*An assessment scale used to screen for frailty and to broadly stratify degrees of fitness and frailty in an individual over the age of 65.(en)</items>
+      </items>
+      <items code="at0001">
+        <items id="text">History</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">*Any point in time event(en)</items>
+        <items id="description">*Default, unspecified point in time event which may be explicitly defined in a template or at run-time.(en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">*Assessment(en)</items>
+        <items id="description">*Assessed level of frailty.(en)</items>
+      </items>
+      <items code="at0014">
+        <items id="text">ItemTree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0015">
+        <items id="text">*Extension(en)</items>
+        <items id="description">*Additional information required to extend the model with local content or to align with other reference models/formalisms.(en)</items>
+      </items>
+      <items code="at0034">
+        <items id="text">*Very fit(en)</items>
+        <items id="description">*People who are robust, active, energetic and motivated. They tend to exercise regularly and are among the fittest for their age.(en)</items>
+      </items>
+      <items code="at0035">
+        <items id="text">*Fit(en)</items>
+        <items id="description">*People who have no active disease symptoms but are less fit than category 1. Often, they exercise or are very active occasionally, e.g., seasonally.(en)</items>
+      </items>
+      <items code="at0036">
+        <items id="text">*Managing well(en)</items>
+        <items id="description">*People whose medical problems are well controlled, even if occasionally symptomatic, but often are not regularly active beyond routine walking.(en)</items>
+      </items>
+      <items code="at0037">
+        <items id="text">*Living with very mild frailty(en)</items>
+        <items id="description">*Previously 'Vulnerable', this category marks early transition from complete independence. While not dependent on others for daily help, often symptoms limit activities. A common complaint is being 'slowed up' and/or being tired during the day.(en)</items>
+      </items>
+      <items code="at0038">
+        <items id="text">*Living with mild frailty(en)</items>
+        <items id="description">*People who often have more evident slowing, and need help with high order instrumental activities of daily living (finances, transportation, heavy housework). Typically, mild frailty progressively impairs shopping and walking outside alone, meal preparation, medications and begins to restrict light housework.(en)</items>
+      </items>
+      <items code="at0039">
+        <items id="text">*Living with moderate frailty(en)</items>
+        <items id="description">*People who need help with all outside activities and with keeping house. Inside, they often have problems with stairs and need help with bathing and might need minimal assistance (cuing, standby) with dressing.(en)</items>
+      </items>
+      <items code="at0040">
+        <items id="text">*Living with severe frailty(en)</items>
+        <items id="description">*Completely dependent for personal care, from whatever cause (physical or cognitive). Even so, they seem stable and not at high risk of dying (within ~6 months).(en)</items>
+      </items>
+      <items code="at0041">
+        <items id="text">*Living with very severe frailty(en)</items>
+        <items id="description">*Completely dependent for personal care and approaching end of life. Typically, they could not recover even from a minor illness.(en)</items>
+      </items>
+      <items code="at0042">
+        <items id="text">*Terminally Ill(en)</items>
+        <items id="description">*Approaching the end of life. This category applies to people with a life expectancy &lt;6 months, who are not otherwise living with severe frailty. (Many terminally ill people can still exercise until very close to death).(en)</items>
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

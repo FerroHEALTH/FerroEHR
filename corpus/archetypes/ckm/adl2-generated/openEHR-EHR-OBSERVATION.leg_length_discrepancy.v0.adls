@@ -1,0 +1,311 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a8b9f3b1-f4db-46b4-8aff-ddeeec16104f; build_uid=def24243-18da-4712-8780-704658b4ca26)
+    openEHR-EHR-OBSERVATION.leg_length_discrepancy.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Haukeland Universitetssjukehus">
+                ["email"] = <"john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"John Tore Valand">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"john.tore.valand@helse-vest-ikt.no">
+        ["date"] = <"2022-02-02">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"https://www.physio-pedia.com/Leg_Length_Discrepancy">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"12A65A5352BB8C9629D8AB427D85DEA1">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å måle ulikhet i lengde mellom underekstremiteter.">
+            use = <"Brukes for å måle ulikhet i lengde mellom underekstremiteter.">
+            misuse = <"
+Brukes ikke for å registrere ulikhet i lengde mellom noen andre kroppsdeler. Bruk en egnet arketype for dette formålet.
+
+Denne arketypen kan også brukes for å registrere et anslag av benlengdeforskjell i et klinisk scenario der det ikke er mulig å få til en nøyaktig måling, f.eks. ved måling av et barn som ikke samarbeider. Dette er ikke modellert eksplisitt inn i arketypen, siden openEHR referansemodellen tillater attributten \"Approksimering\" for datatypen \"Quantity\". Ved implementasjon kan f.eks. et brukergrensesnitt tillate klinikerne å velge en avkrysningsboks ved siden av elementet \"Benlengdeforskjell\" for å indikere at omkretsen er en approksimering heller enn en faktisk måling.">
+            copyright = <"© Nasjonal IKT HF, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the diffence in lenght in the paired lower extremity limbs.">
+            keywords = <"measurement, LLD, anisomelia", ...>
+            use = <"Use to record the diffence in lenght in the paired lower extremity limbs.
+
+https://www.physio-pedia.com/Leg_Length_Discrepancy">
+            misuse = <"Not to be used to record the measurement of difference in lenght of any other body parts. Use an approriate archetype for this purpose.
+
+This archetype can also be used for recording an approximation of the leg length discrepancy in a clinical scenario where it is not possible to measure an accurate leg length discrepancy - for example, measuring an uncooperative child. This is not modelled explicitly in the archetype as the openEHR Reference model allows the attribute of Approximation for any Quantity data type. At implementation, for example, an application user interface could allow clinicians to select an appropriately labelled check box adjacent to theleg length discrepancy data field to indicate that the recorded leg length discrepancy is an approximation, rather than actual.">
+            copyright = <"© Nasjonal IKT HF, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Leg length discrepancy
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Leg length discrepency
+                                        value matches {
+                                            DV_QUANTITY[at9002] matches {
+                                                property matches {[at9000]}    -- Length
+                                                units matches {"cm"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Laterality
+                                        value matches {
+                                            DV_CODED_TEXT[at9003] matches {
+                                                defining_code matches {[ac9001]}    -- Laterality (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0011] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0009] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0012] matches {    -- Device
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Measurement method
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Measurement origin
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0015] occurrences matches {0..1} matches {    -- Structured origin
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Measurement endpoint
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0017] occurrences matches {0..1} matches {    -- Structured endpoint
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0013] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Benlengdeforskjell">
+                description = <"Måling av ulikhet i lengde mellom underekstremiteter.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Benlengdeforskjell">
+                description = <"Måling av lengdeforskjell mellom underekstremiteter.">
+            >
+            ["at0005"] = <
+                text = <"Lateralitet">
+                description = <"Lateralitet av det lengste benet.">
+            >
+            ["at0006"] = <
+                text = <"Høyre">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Venstre">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om benlengdeforskjell som ikke er fanget i andre felt.">
+            >
+            ["at0010"] = <
+                text = <"Konfunderende faktorer">
+                description = <"Forhold eller omstendigheter som kan påvirke målingen av kroppsdelen.">
+                comment = <"For eksempel: et barn som ikke samarbeider, eller pasienter med skoliose/ kyfose.">
+            >
+            ["at0012"] = <
+                text = <"Måleinstrument">
+                description = <"*For example: measurement blocks or palpation meter. (en)">
+            >
+            ["at0013"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0014"] = <
+                text = <"Målemetode">
+                description = <"Fritekstbeskrivelse av metoden som ble benyttet for målingen.">
+                comment = <"For eksempel: Radiologisk, direkte eller indirekte metoder.">
+            >
+            ["at0015"] = <
+                text = <"Strukturert startmålepunkt">
+                description = <"En strukturert anatomisk identifikasjon av stedet på kroppen som er startpunkt for målingen.">
+            >
+            ["at0016"] = <
+                text = <"Sluttmålepunkt">
+                description = <"Stedet på kroppen som er sluttpunkt for målingen.">
+                comment = <"Spesifiser for å sikre at en sekvens av målinger blir gjort på de samme punktene og på samme måte.">
+            >
+            ["at0017"] = <
+                text = <"Strukturert sluttpunkt">
+                description = <"En strukturert anatomisk identifikasjon av stedet på kroppen som er sluttpunkt for målingen.">
+            >
+            ["at0018"] = <
+                text = <"Startmålepunkt">
+                description = <"Stedet på kroppen som er startpunkt for målingen.">
+                comment = <"Spesifiser for å sikre at en sekvens av målinger blir gjort på de samme punktene og på samme måte.">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9001"] = <
+                text = <"Lateralitet (synthesised)">
+                description = <"Lateralitet av det lengste benet. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Leg length discrepancy">
+                description = <"Measurement of the diffence in lenght in the paired lower extremity limbs.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Leg length discrepency">
+                description = <"The measurement of the discrepancy between the paired lower extremity limbs.">
+            >
+            ["at0005"] = <
+                text = <"Laterality">
+                description = <"The laterality of the longest leg.">
+            >
+            ["at0006"] = <
+                text = <"Left">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Right">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the leg length discrepancy not captured in other fields.">
+            >
+            ["at0010"] = <
+                text = <"Confounding factors">
+                description = <"Narrative descripiton of any issues or factors that may impact on the measurement.">
+                comment = <"For example: 'uncooperative child'.">
+            >
+            ["at0012"] = <
+                text = <"Device">
+                description = <"For example: measurement blocks or palpation meter.">
+            >
+            ["at0013"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR.">
+            >
+            ["at0014"] = <
+                text = <"Measurement method">
+                description = <"Narrative description of the method used for measurement. ">
+                comment = <"For example: Radiography, direct or indirect methods.">
+            >
+            ["at0015"] = <
+                text = <"Structured origin">
+                description = <"A structured anatomical location for the starting point of the measurement.">
+            >
+            ["at0016"] = <
+                text = <"Measurement endpoint">
+                description = <"Identification of a simple body site for the location of the ending point of the measurement.">
+                comment = <"Specify in order to ensure that a sequence of measurements are taken at the same point and in the same way.
+">
+            >
+            ["at0017"] = <
+                text = <"Structured endpoint">
+                description = <"A structured anatomical location for the endpoint of the measurement.">
+            >
+            ["at0018"] = <
+                text = <"Measurement origin">
+                description = <"Identification of a simple body site for the location of the starting point of the measurement.">
+                comment = <"Specify in order to ensure that a sequence of measurements are taken at the same point and in the same way.">
+            >
+            ["at9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9001"] = <
+                text = <"Laterality (synthesised)">
+                description = <"The laterality of the longest leg. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/122>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0006", "at0007">
+        >
+    >

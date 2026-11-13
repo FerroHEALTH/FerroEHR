@@ -1,0 +1,112 @@
+archetype (adl_version=2.0.6; rm_release=1.1.0)
+    openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"FerroEHR">
+        ["organisation"] = <"Cadasto B.V.">
+    >
+    lifecycle_state = <"unmanaged">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"The ROLE a system AGENT performs: what it may commit into an EHR, which templates, at which facilities, as a relay of other systems or as a device, and which EHRs it may import or export.">
+            use = <"One CAPABILITY per grant. Each element of the credentials carries, as its name, a DV_CODED_TEXT of FerroEHR's operation terminology ferroehr-operations naming what it holds: the operation (a commit_composition, import_ehr, import_ehr_extract or export_ehr_extract value), the templates written (template), the facilities (facility, a cluster of issuer with identifier or identifier_prefix), the origin (origin, a relay or device value), the issuers of the device identifiers it may name (device_identifier_issuer), the subject namespaces of the EHRs an import or export reaches (subject_namespace) and the not_before and not_after instants; time_validity bounds the grant by day. The ROLE is adapted from the openEHR CKM archetype the derived_from entry names. Its CAPABILITY, whose credentials hold an authorization grant, is FerroEHR's own design: the openEHR RM and CKM use CAPABILITY for the professional qualifications of a performer, and no openEHR specification gives it an authorization meaning.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+    other_details = <
+        ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+        ["derived_from"] = <"openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0 (openEHR CKM 1013.1.482, modified 2019-08-09)">
+    >
+
+definition
+    ROLE[id1] matches {
+        identities matches {
+            PARTY_IDENTITY[id2] matches {
+                details matches {
+                    ITEM_TREE[id3] matches {
+                        items matches {
+                            ELEMENT[id4] occurrences matches {0..1} matches {
+                                value matches { DV_TEXT[id5] }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        capabilities matches {
+            CAPABILITY[id6] occurrences matches {1..*} matches {
+                credentials matches {
+                    ITEM_TREE[id8] matches {
+                        items matches {
+                            ELEMENT[id90] occurrences matches {1..*} matches {
+                                value matches { DV_CODED_TEXT[id91] }
+                            }
+                            ELEMENT[id9] occurrences matches {0..*} matches {
+                                value matches { DV_TEXT[id30] }
+                            }
+                            CLUSTER[id10] occurrences matches {0..*} matches {
+                                items matches {
+                                    ELEMENT[id11] occurrences matches {1} matches {
+                                        value matches { DV_TEXT[id31] }
+                                    }
+                                    ELEMENT[id12] occurrences matches {0..1} matches {
+                                        value matches { DV_TEXT[id32] }
+                                    }
+                                    ELEMENT[id13] occurrences matches {0..1} matches {
+                                        value matches { DV_TEXT[id33] }
+                                    }
+                                }
+                            }
+                            ELEMENT[id14] occurrences matches {0..*} matches {
+                                value matches { DV_TEXT[id34] }
+                            }
+                            ELEMENT[id15] occurrences matches {0..1} matches {
+                                value matches { DV_DATE_TIME[id35] }
+                            }
+                            ELEMENT[id16] occurrences matches {0..1} matches {
+                                value matches { DV_DATE_TIME[id36] }
+                            }
+                            ELEMENT[id17] occurrences matches {0..1} matches {
+                                value matches { DV_TEXT[id37] }
+                            }
+                            ELEMENT[id18] occurrences matches {0..2} matches {
+                                value matches { DV_CODED_TEXT[id38] }
+                            }
+                            ELEMENT[id19] occurrences matches {0..*} matches {
+                                value matches { DV_TEXT[id39] }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["id1"] = <text = <"System client"> description = <"The role of a system that commits into an EHR on its own account, or imports or exports EHRs.">>
+            ["id2"] = <text = <"Role name"> description = <"The name of the role.">>
+            ["id3"] = <text = <"Name"> description = <"The structure of the name.">>
+            ["id4"] = <text = <"Full name"> description = <"The name of the role as it is written in full.">>
+            ["id6"] = <text = <"Grant"> description = <"One operation the system may perform, with its terms.">>
+            ["id8"] = <text = <"Grant"> description = <"What the capability grants, held in its credentials.">>
+            ["id90"] = <text = <"Operation"> description = <"An operation the capability grants, a code of FerroEHR's operation terminology ferroehr-operations.">>
+            ["id9"] = <text = <"Template written"> description = <"The id of a template whose COMPOSITIONs the system may commit.">>
+            ["id10"] = <text = <"Facility"> description = <"A facility the system may commit at, named by an identifier or an identifier prefix of an issuer.">>
+            ["id11"] = <text = <"Issuer"> description = <"The issuer of the facility identifier.">>
+            ["id12"] = <text = <"Identifier"> description = <"The facility identifier.">>
+            ["id13"] = <text = <"Identifier prefix"> description = <"A prefix every facility identifier the grant covers starts with.">>
+            ["id14"] = <text = <"Device identifier issuer"> description = <"The issuer of a device identifier the system may name as the origin of its data.">>
+            ["id15"] = <text = <"Not before"> description = <"The instant before which the grant does not hold, for a bound finer than the day of time_validity.">>
+            ["id16"] = <text = <"Not after"> description = <"The instant after which the grant does not hold, for a bound finer than the day of time_validity.">>
+            ["id17"] = <text = <"Authorisation reference"> description = <"The reference of the decision that authorised the grant, such as a change ticket or a processing agreement.">>
+            ["id18"] = <text = <"Origin"> description = <"Where the data the system commits comes from: ferroehr-operations::relay, data other systems recorded, or ferroehr-operations::device, data a device measured.">>
+            ["id19"] = <text = <"Subject namespace"> description = <"The EHR_STATUS.subject.external_ref.namespace of the EHRs an import or export grant reaches.">>
+        >
+    >

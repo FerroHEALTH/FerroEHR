@@ -1,0 +1,441 @@
+﻿archetype (adl_version=1.4; uid=9553ca99-fa7f-42c6-b143-d754f311954d)
+	openEHR-EHR-OBSERVATION.issue_screening.v0
+
+concept
+	[at0000]	-- Issue screening questionnaire
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Natalia Strauch">
+				["organisation"] = <"Medizinische Hochschule Hannover">
+				["email"] = <"Strauch.Natalia@mh-hannover.de">
+			>
+		>
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			author = <
+				["name"] = <"Marit Alice Venheim, Silje Ljosland Bakke, John Tore Valand">
+				["organisation"] = <"Helse Vest IKT, Helse Vest IKT AS, Helse Bergen">
+				["email"] = <"marit.alice.venheim@helse-vest-ikt.no, silje.ljosland.bakke@helse-vest-ikt.no, john.tore.valand@helse-bergen.no">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Atomica Informatics">
+		["email"] = <"heather.leslie@atomicainformatics.com">
+		["date"] = <"2020-03-13">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"*To record the responses to a screening questionnaire about self-described issues, worries or concerns for an individual. (en)">
+			use = <"*Use to record the responses to a screening questionnaire about self-described issues, worries or concerns for an individual.
+
+Common use cases include, but are not limited to:
+- Systematic questioning in any consultation; or
+- Specific questioning related to aspects of general health and wellbeing, financial and family concerns.
+
+In order to record the response at a specific point in time or within an interval of time, use the EVENT RM attribute.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening process identifies an issue or concern and it is intended that the details are to be recorded and persisted as part of an ongoing health record, any further specific details about the issue should be recorded using the standalone EVALUATION.issue archetype. (en)">
+			misuse = <"*Not to be used to record details about a specific issue as part of a typical clinical consultation. Use EVALUATION.issue for this purpose.
+
+Not to be used to record details about symptoms or signs. Use CLUSTER.symptom_sign for this purpose. (en)">
+		>
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			purpose = <"For å registrere responsen i et spørreskjema for individuelle problemer eller bekymringer som berører et individ.">
+			use = <"Brukes for å registrere responsen i et spørreskjema for individuelle problemer eller bekymringer som berører et individ.
+
+Vanlige bruksområder inkluderer, men er ikke begrenset til:
+- Systematisk spørring i enhver konsultasjon; eller
+- Spesifikk spørring relatert til overvåkning av infeksjonssykdom.
+
+For å registrere responsen på et spesifikt tidspunkt, eller i et tidsintervall bruk referansemodellens EVENT RM attributt.
+
+Denne arketypen er laget for bruk som et screeningverktøy for å registrere enkle data i et spørreskjema, for eksempel til et sykdomsregister. Oppdager man i screeningprosessen at et individuelt problem eller bekymring er tilstede, bør detaljer om problemet eller bekymringen lagres som en del av den løpende journalen. Bruk da arketypen EVALUATION.issue for å registrere spesifikke detaljer om problemet eller bekymringen.">
+			misuse = <"Skal ikke brukes til å registrere detaljer om et spesifikt problem som en del av en typisk klinisk konsultasjon. Bruk arketypen EVALUATION.issue til dette formålet.
+
+Skal ikke brukes til å registrere detaljer om symptomer eller sykdomstegn. Bruk arketypen CLUSTER.symptom_sign til dette formålet.">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record the responses to a screening questionnaire about self-described issues, worries or concerns for an individual.">
+			use = <"Use to record the responses to a screening questionnaire about self-described issues, worries or concerns for an individual.
+
+Common use cases include, but are not limited to:
+- Systematic questioning in any consultation; or
+- Specific questioning related to aspects of general health and wellbeing, financial and family concerns.
+
+In order to record the response at a specific point in time or within an interval of time, use the EVENT RM attribute.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening process identifies an issue or concern and it is intended that the details are to be recorded and persisted as part of an ongoing health record, any further specific details about the issue should be recorded using the standalone EVALUATION.issue archetype.">
+			misuse = <"Not to be used to record details about a specific issue as part of a typical clinical consultation. Use EVALUATION.issue for this purpose.
+
+Not to be used to record details about symptoms or signs. Use CLUSTER.symptom_sign for this purpose.">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, UK", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"889F45A4AC31DB54515B5B9C94B02089">
+		["build_uid"] = <"12e1c213-a90f-4121-9e81-9dec5c754f55">
+		["ip_acknowledgements"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	OBSERVATION[at0000] matches {    -- Issue screening questionnaire
+		data matches {
+			HISTORY[at0001] matches {    -- History
+				events cardinality matches {0..*; unordered} matches {
+					EVENT[at0002] occurrences matches {0..*} matches {    -- Any event
+						data matches {
+							ITEM_TREE[at0003] matches {    -- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0034] occurrences matches {0..1} matches {    -- Screening purpose
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0028] occurrences matches {0..1} matches {    -- Any presence?
+										value matches {
+											DV_CODED_TEXT matches {
+												defining_code matches {
+													[local::
+													at0031,    -- Present
+													at0032,    -- Absent
+													at0033]    -- Unknown
+												}
+											}
+											DV_TEXT matches {*}
+										}
+									}
+									CLUSTER[at0022] occurrences matches {0..*} matches {    -- Specific issue
+										items cardinality matches {1..*; unordered} matches {
+											ELEMENT[at0004] matches {    -- Issue name
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+											ELEMENT[at0005] occurrences matches {0..1} matches {    -- Presence?
+												value matches {
+													DV_CODED_TEXT matches {
+														defining_code matches {
+															[local::
+															at0023,    -- Present
+															at0024,    -- Absent
+															at0027]    -- Unknown
+														}
+													}
+													DV_TEXT matches {*}
+												}
+											}
+											allow_archetype CLUSTER[at0039] occurrences matches {0..*} matches {    -- Screening details
+												include
+													archetype_id/value matches {/.*/}
+											}
+											ELEMENT[at0025] occurrences matches {0..1} matches {    -- Comment
+												value matches {
+													DV_TEXT matches {*}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0007] matches {    -- Item tree
+				items cardinality matches {0..*; unordered} matches {
+					allow_archetype CLUSTER[at0021] occurrences matches {0..*} matches {    -- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	terminologies_available = <"SNOMED-CT", ...>
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Issue screening questionnaire">
+					description = <"An individual- or self-reported questionnaire screening for issues, worries or concerns affecting an individual.">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any event">
+					description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Issue name">
+					description = <"Name of the issue being screened.">
+					comment = <"For example: sleep; mood; diet; or physical activity.">
+				>
+				["at0005"] = <
+					text = <"Presence?">
+					description = <"Presence of the issue.">
+				>
+				["at0007"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0021"] = <
+					text = <"Extension">
+					description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+					comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+				>
+				["at0022"] = <
+					text = <"Specific issue">
+					description = <"Screening details about a specified issue.">
+				>
+				["at0023"] = <
+					text = <"Present">
+					description = <"The specific issue is present.">
+				>
+				["at0024"] = <
+					text = <"Absent">
+					description = <"The specific issue is not present.">
+				>
+				["at0025"] = <
+					text = <"Comment">
+					description = <"Additional narrative about the specified issue, not captured in other fields.">
+				>
+				["at0027"] = <
+					text = <"Unknown">
+					description = <"It is not known whether the issue is present or absent.">
+				>
+				["at0028"] = <
+					text = <"Any presence?">
+					description = <"Presence of any relevant issues.">
+					comment = <"For example: screening if the individual has any issues or concerns about their health and well being.">
+				>
+				["at0031"] = <
+					text = <"Present">
+					description = <"Issues are present.">
+				>
+				["at0032"] = <
+					text = <"Absent">
+					description = <"Issues are not present.">
+				>
+				["at0033"] = <
+					text = <"Unknown">
+					description = <"It is not known whether any issues are present or absent.">
+				>
+				["at0034"] = <
+					text = <"Screening purpose">
+					description = <"The reason for overall screening.">
+					comment = <"For example: the individual's self-perception about their overall wellness.">
+				>
+				["at0039"] = <
+					text = <"Screening details">
+					description = <"Additional details or questions about the specific issue.">
+				>
+			>
+		>
+		["nb"] = <
+			items = <
+				["at0000"] = <
+					text = <"Spørreskjema for problemer">
+					description = <"Et spørreskjema for problemer eller bekymringer som berører en person.">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Uspesifisert hendelse">
+					description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Navn på problem">
+					description = <"Navnet på problemet.">
+					comment = <"For eksempel: søvn, humør, diett eller fysisk aktivitet.">
+				>
+				["at0005"] = <
+					text = <"Tilstede?">
+					description = <"Tilstedeværelse av problemet.">
+				>
+				["at0007"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0021"] = <
+					text = <"Tilleggsinformasjon">
+					description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+					comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+				>
+				["at0022"] = <
+					text = <"Spesifikt problem eller bekymring">
+					description = <"Detaljer om et spesifikt problem.">
+				>
+				["at0023"] = <
+					text = <"Tilstede">
+					description = <"Det spesifikke problemet er tilstede.">
+				>
+				["at0024"] = <
+					text = <"Fraværende">
+					description = <"Det spesifikke problemet er fraværende.">
+				>
+				["at0025"] = <
+					text = <"Kommentar">
+					description = <"Ytterligere fritekst om det spesifikke problemet som ikke er omfattet av andre felt.">
+				>
+				["at0027"] = <
+					text = <"Ukjent">
+					description = <"Det er ukjent om problemet er tilstede eller fraværende.">
+				>
+				["at0028"] = <
+					text = <"Tilstedeværelse?">
+					description = <"Tilstedeværelse av relevante problemer.">
+					comment = <"For eksempel: screening av individets personlige problemer eller bekymringer om helse og velvære.">
+				>
+				["at0031"] = <
+					text = <"Tilstede">
+					description = <"Problemer er tilstede.">
+				>
+				["at0032"] = <
+					text = <"Fraværende">
+					description = <"Problemer er ikke tilstede.">
+				>
+				["at0033"] = <
+					text = <"Ukjent">
+					description = <"Det er ukjent om noen problemer er tilstede eller fraværende.">
+				>
+				["at0034"] = <
+					text = <"Registreringsformål">
+					description = <"Årsaken til registreringen.">
+					comment = <"For eksempel: individets selvoppfatning om deres generelle velvære.">
+				>
+				["at0039"] = <
+					text = <"Screening detaljer">
+					description = <"Ytterligere detaljer eller spørsmål om det spesifikke problemet.">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0000"] = <
+					text = <"*Issue screening questionnaire (en)">
+					description = <"*An individual- or self-reported questionnaire screening for issues, worries or concerns affecting an individual. (en)">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Beliebiges Ereignis">
+					description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Name des Zustands">
+					description = <"Name des geprüften Zustands.">
+					comment = <"*For example: sleep; mood; diet; or physical activity. (en)">
+				>
+				["at0005"] = <
+					text = <"Vorhanden?">
+					description = <"Vorhandensein des Zustands.">
+				>
+				["at0007"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0021"] = <
+					text = <"Erweiterung">
+					description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+					comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+				>
+				["at0022"] = <
+					text = <"Bestimmter Zustand">
+					description = <"*Screening details about a specified issue. (en)">
+				>
+				["at0023"] = <
+					text = <"Vorhanden">
+					description = <"Der spezifische Zustand ist vorhanden.">
+				>
+				["at0024"] = <
+					text = <"Nicht vorhanden">
+					description = <"Der spezifische Zustand ist nicht vorhanden.">
+				>
+				["at0025"] = <
+					text = <"*Comment (en)">
+					description = <"*Additional narrative about the specified issue, not captured in other fields. (en)">
+				>
+				["at0027"] = <
+					text = <"Unbekannt">
+					description = <"Es ist nicht bekannt, ob der spezifische Zustand vorhanden oder nicht vorhanden ist.">
+				>
+				["at0028"] = <
+					text = <"*Any presence? (en)">
+					description = <"Vorhandensein relevanter Zustände.">
+					comment = <"*For example: screening if the individual has any issues or concerns about their health and well being. (en)">
+				>
+				["at0031"] = <
+					text = <"Vorhanden">
+					description = <"Zustände sind vorhanden.">
+				>
+				["at0032"] = <
+					text = <"Nicht vorhanden">
+					description = <"Keine Zustände sind vorhanden.">
+				>
+				["at0033"] = <
+					text = <"Unbekannt">
+					description = <"Es ist nicht bekannt, ob Zustände vorhanden oder nicht vorhanden sind.">
+				>
+				["at0034"] = <
+					text = <"Zweck des Screenings">
+					description = <"Der Grund für das gesamte Screening.">
+					comment = <"*For example: the individual's self-perception about their overall wellness. (en)">
+				>
+				["at0039"] = <
+					text = <"*Screening details (en)">
+					description = <"*Additional details or questions about the specific issue. (en)">
+				>
+			>
+		>
+	>
+	term_bindings = <
+		["SNOMED-CT"] = <
+			items = <
+				["at0023"] = <[SNOMED-CT::410515003]>
+				["at0024"] = <[SNOMED-CT::410516002]>
+				["at0031"] = <[SNOMED-CT::410515003]>
+				["at0032"] = <[SNOMED-CT::410516002]>
+				["at0027"] = <[SNOMED-CT::261665006]>
+				["at0033"] = <[SNOMED-CT::261665006]>
+			>
+		>
+	>

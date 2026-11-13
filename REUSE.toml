@@ -162,15 +162,28 @@ precedence = "override"
 SPDX-FileCopyrightText = ["openEHR Foundation", "Cadasto B.V."]
 SPDX-License-Identifier = "CC-BY-SA-3.0"
 
-# The professional PERSON and ROLE definitions the lanes load before `serve`
-# are repo-authored adaptations of openEHR CKM archetypes (CC-BY-SA 3.0), so
-# they carry that licence and both copyright holders. Their PROVENANCE.md
-# names each source archetype and every change.
+# The default demographic definitions the server stores at boot (the
+# professional PERSON and ROLE, the care-team GROUP, the membership and
+# representation PARTY_RELATIONSHIPs, the patient PERSON and the provider
+# ORGANISATION) and the policy definitions it stores the same way (the
+# AGENT, the policy ROLEs and the acts-for PARTY_RELATIONSHIP), are
+# repo-authored adaptations of openEHR
+# CKM archetypes (CC-BY-SA 3.0), so they carry that licence and both copyright
+# holders. The PROVENANCE.md beside each names every source archetype and
+# every change.
 [[annotations]]
-path = "deploy/definitions/professional/*.adls"
+path = ["deploy/definitions/*/*.adls", "app/ferroehr/assets/definitions/policy/*.adls"]
 precedence = "override"
 SPDX-FileCopyrightText = ["openEHR Foundation", "Cadasto B.V."]
 SPDX-License-Identifier = "CC-BY-SA-3.0"
+
+# The default EHR_ACCESS definition of the access_directives scheme, stored at
+# boot the same way, is FerroEHR's own work, derived from no CKM archetype.
+[[annotations]]
+path = ["app/ferroehr/assets/definitions/access/*.adls"]
+precedence = "override"
+SPDX-FileCopyrightText = "Cadasto B.V."
+SPDX-License-Identifier = "BUSL-1.1"
 
 # Three BMM reference models inside that set are offered by their authors under
 # a Mozilla Public License 1.1 / GPL 2.0 / LGPL 2.1 TRI-LICENCE. This project
@@ -578,6 +591,30 @@ precedence = "override"
 SPDX-FileCopyrightText = "HL7 International"
 SPDX-License-Identifier = "CC0-1.0"
 
+# The FHIR R4 and R5 Consent resource: CC0 1.0, as each release's licence page
+# states.
+[[annotations]]
+path = "docs/specs/fhir-consent/**"
+precedence = "override"
+SPDX-FileCopyrightText = "HL7 International"
+SPDX-License-Identifier = "CC0-1.0"
+
+# IHE BPPC and APPC: the copyright licence of the IHE General Introduction,
+# chapter 9, vendored beside them; the LicenseRef text quotes the grant.
+[[annotations]]
+path = "docs/specs/ihe-consents/**"
+precedence = "override"
+SPDX-FileCopyrightText = "IHE International, Inc."
+SPDX-License-Identifier = "LicenseRef-IHE-Technical-Framework-Copyright"
+
+# The OASIS XACML 2.0 core specification: the document's own notice, a grant
+# to copy and distribute it unmodified with the notice kept.
+[[annotations]]
+path = "docs/specs/xacml/**"
+precedence = "override"
+SPDX-FileCopyrightText = "OASIS Open"
+SPDX-License-Identifier = "LicenseRef-OASIS-Copyright"
+
 # Logius's Logboek Dataverwerkingen NEN7513 Extensie: the W3C notice in its
 # LICENSE file, and CC BY 4.0 as its publication states.
 [[annotations]]
@@ -613,6 +650,9 @@ path = [
   "docs/specs/mitz/PROVENANCE.md",
   "docs/specs/ihe-balp/PROVENANCE.md",
   "docs/specs/fhir-auditevent/PROVENANCE.md",
+  "docs/specs/fhir-consent/PROVENANCE.md",
+  "docs/specs/ihe-consents/PROVENANCE.md",
+  "docs/specs/xacml/PROVENANCE.md",
   "docs/specs/dicom-ps3-15/PROVENANCE.md",
   "docs/specs/rfc-independent/PROVENANCE.md",
   "docs/specs/iso-health-informatics/PROVENANCE.md",

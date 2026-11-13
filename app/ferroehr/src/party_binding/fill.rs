@@ -70,12 +70,6 @@ pub enum FillError {
         /// Each value two or more parties carry.
         duplicates: Vec<Duplicate>,
     },
-    /// No party mapping is configured, so there is nothing to fill.
-    #[error(
-        "no [[authz.party_binding.person.template]] or [authz.party_binding.group] is \
-         configured, so the party binding side table holds no row"
-    )]
-    Unmapped,
     /// The party store failed.
     #[error("the party binding side table could not be filled")]
     Storage(#[from] StorageError),
@@ -227,6 +221,37 @@ pub async fn refill(
         .await?;
     fill(&mut tx, mapping).await?;
     store_digest(&mut tx, &mapping.digest()).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Rebuilds the grant rows from the `AGENT` and `ROLE` versions under the
+/// advisory lock: the refill of a deployment with no party mapping, which
+/// takes no lease and stores no digest.
+///
+/// # Errors
+/// [`FillError::Storage`] when the party store fails, two `AGENT`s naming
+/// one client included.
+pub async fn refill_grants(pool: &PgPool) -> Result<(), FillError> {
+    let mut tx = pool.begin().await?;
+    lock(&mut tx).await?;
+    store::refill_grants(&mut tx).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Fills the grant rows when they were never filled: a store whose grant
+/// revision has not moved since the migration that made them, which a boot
+/// runs so the policy parties committed before it are read.
+///
+/// # Errors
+/// As [`refill_grants`].
+pub async fn fill_grants_once(pool: &PgPool) -> Result<(), FillError> {
+    let mut tx = pool.begin().await?;
+    lock(&mut tx).await?;
+    if crate::party_binding::grants::store::revision(&mut tx).await? == 0 {
+        store::refill_grants(&mut tx).await?;
+    }
     tx.commit().await?;
     Ok(())
 }

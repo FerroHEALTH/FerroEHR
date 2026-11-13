@@ -27,6 +27,7 @@ use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
+use crate::error::refusal::Missing;
 use crate::service::FerroEhrService;
 use crate::service::contribution::commit_version_set;
 use crate::versioning::contribution::{decode_new_contribution, get_contribution};
@@ -89,6 +90,11 @@ impl FerroEhrService {
     /// With `resolve_refs` the version references are resolved into the
     /// versions they name.
     ///
+    /// A CONTRIBUTION that commits an `EHR_ACCESS` version is answered as an
+    /// unknown one to a caller who may not read the EHR's settings
+    /// ([`Self::may_read_ehr_access`]), since a restriction must not be
+    /// visible to a provider (EHDS Art. 8); our own design.
+    ///
     /// # Errors
     /// [`ServiceError`] when the CONTRIBUTION does not exist in this EHR
     /// (404-equivalent) or a read fails.
@@ -98,7 +104,7 @@ impl FerroEhrService {
         contribution_id: Uuid,
         resolve_refs: bool,
     ) -> Result<Value, ServiceError> {
-        get_contribution(
+        let contribution = get_contribution(
             &self.pool,
             self.signer(),
             self.spec_profile,
@@ -106,7 +112,14 @@ impl FerroEhrService {
             contribution_id,
             resolve_refs,
         )
-        .await
+        .await?;
+        if commits_ehr_access(&contribution) && !Box::pin(self.may_read_ehr_access(ehr_id)).await? {
+            return Err(ServiceError::not_found(
+                Missing::Contribution,
+                format!("CONTRIBUTION {contribution_id}"),
+            ));
+        }
+        Ok(contribution)
     }
 }
 
@@ -242,4 +255,18 @@ impl FerroEhrService {
         ids.dedup();
         ids
     }
+}
+
+/// Whether a stored CONTRIBUTION lists an `EHR_ACCESS` version, as an
+/// `OBJECT_REF` of that type or as a resolved version of that data.
+fn commits_ehr_access(contribution: &Value) -> bool {
+    contribution
+        .get("versions")
+        .and_then(Value::as_array)
+        .is_some_and(|versions| {
+            versions.iter().any(|version| {
+                version.get("type").and_then(Value::as_str) == Some("EHR_ACCESS")
+                    || version.pointer("/data/_type").and_then(Value::as_str) == Some("EHR_ACCESS")
+            })
+        })
 }

@@ -6,10 +6,11 @@
 //!
 //! No openEHR spec governs the route — our own extension. The tests drive it
 //! through the assembled router with identifier protection on, the RBAC gate on
-//! and the local audit store recording: an admin without
-//! `authz.rbac.identifier_reader_role` is refused, a reader sees the value each
-//! version committed, and every read leaves an access record naming the
-//! reader, the party and the scheme, never the value.
+//! and the local audit store recording: an admin whose `PERSON` holds no
+//! `read_identifiers` grant in the CDR is refused, and so is a grant holder
+//! outside the Admin class (#5521); a reader sees the value each version
+//! committed, and every read leaves an access record naming the reader, the
+//! party and the scheme, never the value.
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -19,6 +20,7 @@ use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::identifier_protection::config::IdentifierProtectionConfig;
 use ferroehr::identifier_protection::engine::IdentifierProtection;
+use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::sender::start;
 use ferroehr::system_log::store::AuditStore;
@@ -33,9 +35,12 @@ use crate::common;
 use crate::common::BASE;
 use crate::common::EXT;
 
-const ISSUER: &str = "https://issuer.example";
-const AUDIENCE: &str = "ferroehr";
+const ISSUER: &str = crate::party_binding_http::ISSUER;
+const AUDIENCE: &str = crate::party_binding_http::AUDIENCE;
+/// A role a token may name, which grants no identifier read.
 const READER_ROLE: &str = "IDENTIFIER_READER";
+/// The callers whose `PERSON` holds a `read_identifiers` grant.
+const GRANTED: [&str; 3] = ["identifier-clerk", "identifier-reader", "identifier-prober"];
 
 /// A synthetic BSN that passes the eleven-test.
 const FIRST_BSN: &str = "111222333"; // privacy-allow: synthetic
@@ -45,20 +50,12 @@ const SECOND_BSN: &str = "123456782"; // privacy-allow: synthetic
 /// The identifier-protection root key of the test deployment.
 const TEST_ROOT_KEY: &str = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
 
-/// Bearer authentication, the admin group mounted, the identifier reader role
-/// configured.
+/// Bearer authentication whose callers bind to a `PERSON` by their `sub`,
+/// with the admin group mounted.
 fn config() -> AppConfig {
-    let mut config = {
-        let mut c = AppConfig {
-            server: common::server(),
-            auth: common::issuer_auth(ISSUER, AUDIENCE),
-            rbac: common::rbac_trusting(ISSUER),
-            ..Default::default()
-        };
-        c.api.admin = true;
-        c
-    };
-    config.rbac.identifier_reader_role = Some(READER_ROLE.to_owned());
+    let mut config = crate::party_binding_http::config(None);
+    config.rbac = common::rbac_trusting(ISSUER);
+    config.api.admin = true;
     config
 }
 
@@ -85,7 +82,17 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
         .with_identifier_protection(Arc::new(engine))
         .with_audit(sender)
-        .with_audit_store(AuditStore::new(pool.clone()));
+        .with_audit_store(AuditStore::new(pool.clone()))
+        .with_binding_mapping(crate::party_binding_http::mapping())
+        .with_grant_ceiling(GrantCeiling::new([Operation::ReadIdentifiers]));
+    let read = [crate::system_grants::capability("read_identifiers", &[])];
+    for subject in ["identifier-admin"].into_iter().chain(GRANTED) {
+        let (uid, _) = crate::party_binding_http::professional(&svc, subject, "532").await;
+        if GRANTED.contains(&subject) {
+            let person = crate::party_binding_http::vo(&uid);
+            crate::system_grants::performs(&svc, ("PERSON", person), &read).await;
+        }
+    }
     let authz = AuthzHandle::build(
         &AuthzConfig::default(),
         &config().api.base_path,
@@ -93,9 +100,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = ferroehr_rest::build_full(config(), Arc::new(svc), authz, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config(), Arc::new(svc), authz, Observability::default()).await;
     (db, pool, app)
 }
 
@@ -214,12 +219,13 @@ async fn identifier_records(pool: &PgPool, principal: &str, want: usize) -> Vec<
     }
 }
 
-/// An admin without the identifier reader role is refused with `403`, and no
-/// identifier is expanded or recorded as read.
+/// An admin without a `read_identifiers` grant is refused with `403`, a token
+/// naming a reader role grants nothing, and no identifier is expanded or
+/// recorded as read.
 #[tokio::test]
-async fn an_admin_without_the_reader_role_is_refused() {
+async fn an_admin_without_the_read_identifiers_grant_is_refused() {
     let (_db, pool, app) = app().await;
-    let admin = bearer("identifier-admin", &["ADMIN"]);
+    let admin = bearer("identifier-admin", &["ADMIN", READER_ROLE]);
     let (first, _) = two_versions(&app, &admin).await;
 
     let (status, _, body) = call(
@@ -246,7 +252,7 @@ async fn an_admin_without_the_reader_role_is_refused() {
     assert_eq!(
         status,
         StatusCode::FORBIDDEN,
-        "the reader role without the admin class is refused too"
+        "the grant without the admin class is refused too"
     );
     assert!(
         identifier_records(&pool, "identifier-admin", 1)
@@ -262,7 +268,7 @@ async fn an_admin_without_the_reader_role_is_refused() {
 #[tokio::test]
 async fn a_reader_sees_each_versions_value_and_each_read_is_recorded() {
     let (_db, pool, app) = app().await;
-    let reader = bearer("identifier-reader", &["ADMIN", READER_ROLE]);
+    let reader = bearer("identifier-reader", &["ADMIN"]);
     let (first, second) = two_versions(&app, &reader).await;
     let party = first.split("::").next().expect("a versioned-object id");
 
@@ -299,7 +305,7 @@ async fn a_reader_sees_each_versions_value_and_each_read_is_recorded() {
 #[tokio::test]
 async fn a_bad_version_uid_is_400_and_an_unknown_one_404() {
     let (_db, _pool, app) = app().await;
-    let reader = bearer("identifier-prober", &["ADMIN", READER_ROLE]);
+    let reader = bearer("identifier-prober", &["ADMIN"]);
     for (query, want) in [
         ("", StatusCode::BAD_REQUEST),
         ("?version_uid=not-a-version", StatusCode::BAD_REQUEST),

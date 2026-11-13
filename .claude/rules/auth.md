@@ -26,8 +26,9 @@ governs maintenance and extension, not initial build.
 - SMART scope grammar/enforcement: the vendored
   `docs/specs/openehr/ITS-REST/docs/smart_app_launch/` text (master08 is the
   load-bearing scope grammar). EHR-level access: the
-  `ferroehr.access_control.v1` scheme implemented in
-  `app/ferroehr/src/service/ehr/access_types.rs` (no openEHR spec defines a
+  `access_directives` scheme (`ACCESS_DIRECTIVE_SETTINGS` of the draft access
+  control package), checked in `app/ferroehr/src/service/ehr/access_settings.rs`
+  with its writers and readers in `access_rule.rs` (no openEHR spec defines a
   concrete ACCESS_CONTROL_SETTINGS scheme — our own design).
 
 ## Rules
@@ -48,8 +49,8 @@ governs maintenance and extension, not initial build.
   their `kind` and profile, `[[auth.party]]`, `[[auth.federation]]`,
   `[auth.dpop]`, the Basic user store, the product scope), FerroEHR's
   `[auth.idp]` beside it (`config::auth_section`), FerroEHR's `[authz]`
-  (`party_binding`, `system_client`, `federation.agreement`, `import`,
-  `rbac.role_issuers`) and `[smart]`. Every person is bound to a party with
+  (`party_binding`, `federation.agreement`, `import`, `grants`,
+  `rbac.role_issuers`); system clients are policy parties in the CDR and `[smart]`. Every person is bound to a party with
   no switch; a Basic user is a person, mapped by its key. Config changes are
   user-visible → same-PR website-book + changelog entries.
 - **Layer order is load-bearing:** authn → `access` (RBAC/ABAC) → SMART

@@ -22,6 +22,7 @@
 
 mod common;
 
+mod aom14_quantity_item;
 mod aom2_model_xml;
 mod aom2_xml;
 mod attested_version;
@@ -60,4 +61,5 @@ mod xml_released_rm;
 mod xml_roundtrip;
 mod xml_smoke;
 mod xml_string_dictionary_id;
+mod xml_xsd_demographic;
 mod xml_xsd_validity;

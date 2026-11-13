@@ -31,11 +31,6 @@ h|*1..1*
 |*archetype_id*: `link:/releases/BASE/{base_release}/base_types.html#_archetype_id_class[ARCHETYPE_ID^]`
 a|Multi-axial identifier of this archetype in archetype space.
 
-h|*0..1 +
-(redefined)*
-|*uid*: `link:/releases/BASE/{base_release}/base_types.html#_hier_object_id_class[HIER_OBJECT_ID^]`
-a|OID identifier of this archetype.
-
 h|*1..1*
 |*concept*: `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]`
 a|The normative meaning of the archetype as a whole, expressed as a local archetype code, typically “at0000”.

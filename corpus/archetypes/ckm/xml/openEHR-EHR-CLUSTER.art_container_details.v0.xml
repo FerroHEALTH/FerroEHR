@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1036,8 +1036,7 @@ The container may contain sperm, testicular tissue, ovarian tissue, or one or mo
       </items>
       <items code="at0042">
         <items id="text">Embryo preservation day</items>
-        <items id="description">The number of days following insemination on which the embryo was preserved (calendar days).&#xD;
-</items>
+        <items id="description">The number of days following insemination on which the embryo was preserved (calendar days).</items>
       </items>
       <items code="at0043">
         <items id="text">Not specified</items>
@@ -1150,4 +1149,3 @@ The container may contain sperm, testicular tissue, ovarian tissue, or one or mo
     </term_definitions>
   </ontology>
 </archetype>
-

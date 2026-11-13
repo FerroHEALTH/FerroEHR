@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -1370,8 +1370,7 @@ Not to be used for recording non-morphological assessment of single oocyte or em
       <items code="at0024">
         <items id="text">Interpretation</items>
         <items id="description">Clinical interpretation of the morphological and developmental assessment of the oocyte or embryo.</items>
-        <items id="comment">For example: 'Suitable for clinical use'; or 'Unsuitable for clinical use'.&#xD;
-</items>
+        <items id="comment">For example: 'Suitable for clinical use'; or 'Unsuitable for clinical use'.</items>
       </items>
       <items code="at0027">
         <items id="text">Fertilisation assessment</items>
@@ -1445,7 +1444,7 @@ Not to be used for recording non-morphological assessment of single oocyte or em
       <items code="at0044">
         <items id="text">Developmental event</items>
         <items id="description">Recording of a developmental event observed during time-lapse microscopy.</items>
-        <items id="comment">Value set drawn from the Eshre Working Group's 'Nomenclature of morphokinetic parameters'. For example: extrusion of second polar body, appearance and fading of pronuclei, cell divisions, or compaction. </items>
+        <items id="comment">Value set drawn from the Eshre Working Group's 'Nomenclature of morphokinetic parameters'. For example: extrusion of second polar body, appearance and fading of pronuclei, cell divisions, or compaction.</items>
       </items>
       <items code="at0045">
         <items id="text">tPB2 extrusion</items>
@@ -1778,4 +1777,3 @@ Not to be used for recording non-morphological assessment of single oocyte or em
     </term_definitions>
   </ontology>
 </archetype>
-

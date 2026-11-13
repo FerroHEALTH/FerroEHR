@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -58,8 +58,7 @@
       <use>Wird verwendet, um die Messung des Bewegungsumfangs für eine bestimmte einfache oder komplexe Bewegung um ein identifiziertes Gelenk oder einen Abschnitt der Wirbelsäule aufzuzeichnen.&#xD;
 Dieses Archetyp wurde speziell dafür entwickelt, im „Untersuchungsbefunde“ (Examination findings)-SLOT innerhalb des CLUSTER.exam oder einer Spezialisierung von CLUSTER.exam für ein bestimmtes Gelenk verwendet zu werden. Es kann jedoch auch in anderen ENTRY- oder CLUSTER-Archetypen eingesetzt werden, sofern dies klinisch angemessen ist.&#xD;
 Das untersuchte Gelenk wird im Element „System oder Struktur untersucht“ (System or structure examined) des CLUSTER.exam-Archetyps identifiziert, in dem dieses Archetyp eingebettet ist. Um mehrere Bewegungen aufzeichnen zu können, müssen mehrere Instanzen dieses Archetyps verwendet werden.&#xD;
-Häufige Bewegungen um ein Gelenk wurden dem Datentyp DV_CODED_TEXT im Datenelement „Bewegung“ (Movement) hinzugefügt. Wenn im Laufe der Zeit weitere Gelenkbewegungen identifiziert werden, können diese in diese Liste aufgenommen werden.&#xD;
-</use>
+Häufige Bewegungen um ein Gelenk wurden dem Datentyp DV_CODED_TEXT im Datenelement „Bewegung“ (Movement) hinzugefügt. Wenn im Laufe der Zeit weitere Gelenkbewegungen identifiziert werden, können diese in diese Liste aufgenommen werden.</use>
       <misuse>Nicht zur Aufzeichnung der Ergebnisse spezifischer, benannter Tests verwendet werden, die an einem Gelenk durchgeführt wurden. Beispielsweise beim Hüftgelenk der Thomas-Test oder Ortolani-Test. Für diese Zwecke sollte der exam-hip_joint-Archetyp verwendet werden.</misuse>
       <copyright />
     </details>
@@ -549,83 +548,83 @@ Common motions around a joint have been added to the DV_CODED_TEXT data type in 
       </items>
       <items code="at0003">
         <items id="text">Abduction</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0004">
         <items id="text">Adduction</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Extension</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Flexion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Internal rotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">External rotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Inversion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Eversion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Medial rotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Lateral rotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Dorsiflexion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Plantar flexion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Ulnar deviation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Radial deviation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Pronation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Supination</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Reposition</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Opposition</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Radial abduction</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Palmar abduction</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Starting position</items>
@@ -658,19 +657,19 @@ Common motions around a joint have been added to the DV_CODED_TEXT data type in 
       </items>
       <items code="at0030">
         <items id="text">Right lateral flexion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Left lateral flexion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Right rotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Left rotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Active-assisted</items>
@@ -684,51 +683,51 @@ Coding of the 'Interpretation' with a terminology is preferred, where possible.<
       </items>
       <items code="at0042">
         <items id="text">Retraction</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Protraction</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Upward rotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Downward rotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Elavation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Depression</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Opening</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Closing</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Rightward jaw translation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Leftward jaw translation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Protrusion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Retrusion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nb">
@@ -742,83 +741,83 @@ Coding of the 'Interpretation' with a terminology is preferred, where possible.<
       </items>
       <items code="at0003">
         <items id="text">Abduksjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0004">
         <items id="text">Adduksjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Ekstensjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Fleksjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Innadrotasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Utadrotasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Inversjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Eversjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Medial rotasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Lateral rotasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Dorsalfleksjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Plantarfleksjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Ulnar deviasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Radial deviasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Pronasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Supinasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Reposisjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Opposisjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Radial abduksjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Palmar abduksjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Utgangsposisjon</items>
@@ -851,19 +850,19 @@ Coding of the 'Interpretation' with a terminology is preferred, where possible.<
       </items>
       <items code="at0030">
         <items id="text">Høyre lateral fleksjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Venstre lateral fleksjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Høyrerotasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Venstrerotasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Aktiv med assistanse</items>
@@ -876,58 +875,57 @@ Coding of the 'Interpretation' with a terminology is preferred, where possible.<
       </items>
       <items code="at0042">
         <items id="text">Retraksjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Protraksjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Rotasjon oppover</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Rotasjon nedover</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Elevasjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Depresjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Gaping</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Lukking</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Kjevetranslasjon mot høyre</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Kjevetranslasjon mot venstre</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Protrusjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Retrusjon</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="de">
       <items code="at0000">
         <items id="text">Bewegungsumfang eines Gelenks</items>
-        <items id="description">Messung des Bewegungsausmaßes einer bestimmten einfachen oder komplexen Bewegung um ein identifiziertes Gelenk oder einen Abschnitt der Wirbelsäule.&#xD;
-</items>
+        <items id="description">Messung des Bewegungsausmaßes einer bestimmten einfachen oder komplexen Bewegung um ein identifiziertes Gelenk oder einen Abschnitt der Wirbelsäule.</items>
       </items>
       <items code="at0002">
         <items id="text">Bewegung</items>
@@ -935,83 +933,83 @@ Coding of the 'Interpretation' with a terminology is preferred, where possible.<
       </items>
       <items code="at0003">
         <items id="text">Abduktion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0004">
         <items id="text">Adduktion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Streckung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Flexion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Innenrotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Außenrotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Einwärtsdrehung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Auswärtsdrehung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Innenrotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Außenrotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Fußrückenbewegung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Fußsohlenwärtsbewegung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Ulnarabduktion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Radialabduktion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Pronation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Supination</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Zurückführung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Gegenüberstellung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Radialabduktion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Palmarabduktion</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Ausgangsstellung</items>
@@ -1044,19 +1042,19 @@ Coding of the 'Interpretation' with a terminology is preferred, where possible.<
       </items>
       <items code="at0030">
         <items id="text">Rechte Seitneigung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Linke Seitneigung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Rechtsdrehung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Linksdrehung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Aktiv-unterstützt</items>
@@ -1069,53 +1067,52 @@ Coding of the 'Interpretation' with a terminology is preferred, where possible.<
       </items>
       <items code="at0042">
         <items id="text">Zurückziehen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0043">
         <items id="text">Vorschieben</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0044">
         <items id="text">Aufwärtsrotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0045">
         <items id="text">Abwärtsrotation</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0046">
         <items id="text">Anhebung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Senkung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Öffnung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Schließen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Rechte Kieferverschiebung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Linke Kieferverschiebung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Vorschub</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0053">
         <items id="text">Rückführung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

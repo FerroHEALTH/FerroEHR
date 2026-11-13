@@ -1,0 +1,363 @@
+﻿archetype (adl_version=1.4; uid=b59ea28e-6eac-465c-ab52-dd0a4a65b0d8)
+	openEHR-EHR-CLUSTER.inspection-tongue.v1
+specialise
+	openEHR-EHR-CLUSTER.inspection.v1
+
+concept
+	[at0000.1]	-- Inspection of tongue
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"23/05/2007">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For recording the findings on inspection of the tongue.">
+			use = <"For use with the exam clusters for recording findings on inspection">
+			keywords = <"inspect", "visual", "tongue">
+			misuse = <"Should only be used in the exam observation">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["revision"] = <"0.0.1">
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+		["references"] = <"">
+		["build_uid"] = <"8f272d86-4f4e-4f40-986c-8975bf64b905">
+		["original_publisher"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"6FE299546083E889371C45CDA856A05D">
+		["custodian_namespace"] = <"org.openehr">
+		["custodian_organisation"] = <"openEHR Foundation">
+	>
+
+definition
+	CLUSTER[at0000.1] matches {	-- Inspection of tongue
+		items cardinality matches {0..*; unordered} matches {
+			CLUSTER[at0001] occurrences matches {0..1} matches {	-- Normal statements
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0002] occurrences matches {0..*} matches {	-- Normal statement
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {[local::at0.62]}		-- Tongue normal
+							}
+						}
+					}
+				}
+			}
+			ELEMENT[at0048] occurrences matches {0..1} matches {	-- Clinical Description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0006] occurrences matches {0..1} matches {	-- Findings
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0036] occurrences matches {0..1} matches {	-- Colour description
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					CLUSTER[at0005] occurrences matches {0..1} matches {	-- Location of abnormality
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0022] occurrences matches {0..*} matches {	-- Description
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {[local::]}
+									}
+								}
+							}
+						}
+					}
+					CLUSTER[at0018] occurrences matches {0..1} matches {	-- Shape
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0019] occurrences matches {0..1} matches {	-- Description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0020] occurrences matches {0..1} matches {	-- Symmetrical
+								value matches {
+									DV_BOOLEAN matches {
+										value matches {True, False}
+									}
+								}
+							}
+						}
+					}
+					ELEMENT[at0051] occurrences matches {0..1} matches {	-- Contour
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0027] occurrences matches {0..1} matches {	-- Surface
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					ELEMENT[at0024] occurrences matches {0..1} matches {	-- Surrounds
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+					CLUSTER[at0028] occurrences matches {0..1} matches {	-- Edge
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0033] occurrences matches {0..1} matches {	-- Description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0029] occurrences matches {0..1} matches {	-- Definition
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+											[local::
+											at0030, 	-- Well defined
+											at0031, 	-- Moderately defined
+											at0032]	-- Poorly defined
+										}
+									}
+								}
+							}
+						}
+					}
+					ELEMENT[at0034] occurrences matches {0..1} matches {	-- Translucent
+						value matches {
+							DV_BOOLEAN matches {
+								value matches {True, False}
+							}
+						}
+					}
+					CLUSTER[at0.58] occurrences matches {0..1} matches {	-- Size
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0.59] occurrences matches {0..1} matches {	-- Description
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+							ELEMENT[at0.60] occurrences matches {0..1} matches {	-- Presence of atrophy
+								value matches {
+									DV_BOOLEAN matches {
+										value matches {True, False}
+									}
+								}
+							}
+							CLUSTER[at0.61] occurrences matches {0..1} matches {	-- Details
+								items cardinality matches {0..*; unordered} matches {
+									allow_archetype CLUSTER[at0.63] occurrences matches {0..1} matches {
+										include
+											archetype_id/value matches {/openEHR-EHR-CLUSTER\.size\.v1|openEHR-EHR-CLUSTER\.dimensions\.v1/}
+									}
+								}
+							}
+						}
+					}
+					CLUSTER[at0.52] occurrences matches {0..1} matches {	-- Movements
+						items cardinality matches {0..*; unordered} matches {
+							ELEMENT[at0.53] occurrences matches {0..1} matches {	-- Deviation on protrusion
+								value matches {
+									DV_CODED_TEXT matches {
+										defining_code matches {
+											[local::
+											at0.54, 	-- None
+											at0.55, 	-- Deviates to right
+											at0.56]	-- Deviates to left
+										}
+									}
+								}
+							}
+							ELEMENT[at0.57] occurrences matches {0..1} matches {	-- Description of Involuntary movements
+								value matches {
+									DV_TEXT matches {*}
+								}
+							}
+						}
+					}
+					CLUSTER[at0049] occurrences matches {0..1} matches {	-- Detail
+						items cardinality matches {0..*; unordered} matches {
+							allow_archetype CLUSTER[at0052] occurrences matches {0..1} matches {
+								include
+									archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam\.v1/}
+							}
+						}
+					}
+				}
+			}
+			ELEMENT[at0050] occurrences matches {0..1} matches {	-- Drawing
+				value matches {
+					DV_MULTIMEDIA matches {
+						media_type matches {
+							[openEHR::
+							425, 
+							426, 
+							427, 
+							428, 
+							429]
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.52"] = <
+					text = <"Movements">
+					description = <"Movements of the tongue">
+				>
+				["at0.53"] = <
+					text = <"Deviation on protrusion">
+					description = <"Does the tongue deviate on protrusion">
+				>
+				["at0.54"] = <
+					text = <"None">
+					description = <"*">
+				>
+				["at0.55"] = <
+					text = <"Deviates to right">
+					description = <"*">
+				>
+				["at0.56"] = <
+					text = <"Deviates to left">
+					description = <"*">
+				>
+				["at0.57"] = <
+					text = <"Description of Involuntary movements">
+					description = <"Description of any involuntary movements of the tongue">
+				>
+				["at0.58"] = <
+					text = <"Size">
+					description = <"*">
+				>
+				["at0.59"] = <
+					text = <"Description">
+					description = <"Text description of the size of the tongue">
+				>
+				["at0.60"] = <
+					text = <"Presence of atrophy">
+					description = <"Does the tongue show signs of atrophy?">
+				>
+				["at0.61"] = <
+					text = <"Details">
+					description = <"*">
+				>
+				["at0.62"] = <
+					text = <"Tongue normal">
+					description = <"*">
+				>
+				["at0.63"] = <
+					text = <"Cluster: Size and Dimension">
+					description = <"*">
+				>
+				["at0000"] = <
+					text = <"Inspection">
+					description = <"The findings on physical examination by inspection">
+				>
+				["at0000.1"] = <
+					text = <"Inspection of tongue">
+					description = <"The findings on physical examination by inspection of the tongue">
+				>
+				["at0001"] = <
+					text = <"Normal statements">
+					description = <"An optional group of statements about the normality of the inspection">
+				>
+				["at0002"] = <
+					text = <"Normal statement">
+					description = <"A specific statement about the normality of inspection">
+				>
+				["at0005"] = <
+					text = <"Location of abnormality">
+					description = <"The location of any findings">
+				>
+				["at0006"] = <
+					text = <"Findings">
+					description = <"Specific findings on inspection">
+				>
+				["at0018"] = <
+					text = <"Shape">
+					description = <"The shape or distribution of the object inspected">
+				>
+				["at0019"] = <
+					text = <"Description">
+					description = <"Description of the ">
+				>
+				["at0020"] = <
+					text = <"Symmetrical">
+					description = <"Whether the distribution is symmetrical">
+				>
+				["at0022"] = <
+					text = <"Description">
+					description = <"Description of the location of the findings">
+				>
+				["at0024"] = <
+					text = <"Surrounds">
+					description = <"Description of immediate surrounds to object">
+				>
+				["at0027"] = <
+					text = <"Surface">
+					description = <"A description of the surface">
+				>
+				["at0028"] = <
+					text = <"Edge">
+					description = <"Findings about the edge of the object under inspection">
+				>
+				["at0029"] = <
+					text = <"Definition">
+					description = <"The nature of the edge of the object of examination">
+				>
+				["at0030"] = <
+					text = <"Well defined">
+					description = <"The edge is clearly defined">
+				>
+				["at0031"] = <
+					text = <"Moderately defined">
+					description = <"The edge is defined but less clear in places">
+				>
+				["at0032"] = <
+					text = <"Poorly defined">
+					description = <"The edge is not defined clearly in many places">
+				>
+				["at0033"] = <
+					text = <"Description">
+					description = <"Description of the edge or border of the object of inspection">
+				>
+				["at0034"] = <
+					text = <"Translucent">
+					description = <"Is the object of inspection translucent?">
+				>
+				["at0036"] = <
+					text = <"Colour description">
+					description = <"The colour of the object under inspection">
+				>
+				["at0048"] = <
+					text = <"Clinical Description">
+					description = <"Clinical description of the findings on inspection of the tongue">
+				>
+				["at0049"] = <
+					text = <"Detail">
+					description = <"Detailed examination of a finding on inspection">
+				>
+				["at0050"] = <
+					text = <"Drawing">
+					description = <"A drawing of the findings on inspection">
+				>
+				["at0051"] = <
+					text = <"Contour">
+					description = <"The contour of the object of inspection">
+				>
+				["at0052"] = <
+					text = <"Cluster: Exam">
+					description = <"Exam details">
+				>
+			>
+		>
+	>

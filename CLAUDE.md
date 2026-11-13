@@ -26,7 +26,7 @@ Single workspace, `members = ["crates/*", "app/*", "tools/*"]`. **Crate naming:*
 **The openEHR spec crates are GENERATED from the vendored BMM meta-model.** Never hand-transcribe or hand-edit RM/BASE/AM classes. Full rules: `.claude/rules/codegen.md` (incl. the generation-modules design).
 
 - **Pipeline:** vendored `*.bmm.json` (`tools/openehr-codegen/vendor/bmm/`) → `openehr-lang` loader → `openehr-codegen` → the spec crates. Canonical-JSON `_type` (de)serialization is **emitted MANUAL serde impls** (`emit-json` → each crate's `src/json_serde.rs`, over `openehr_base::serde_support`); spec types carry NO serde derives or attributes (strict reader: undeclared/duplicate keys refused). Entry points: `openehr_its::json::{to_canonical_json,from_canonical_json,from_canonical_value}`.
-- **Regenerate:** `cargo run -p openehr-codegen -- emit` · `-- emit-xml` · `-- emit-rest` · `-- check`/`check-xsd`. `/regen-codegen` runs all + the drift check; the `codegen-drift` CI job guards it.
+- **Regenerate:** `cargo run -p openehr-codegen -- emit` · `-- emit-xml` · `-- emit-rest` · `-- emit-drafts` (the FerroEHR-local draft access log in `app/ferroehr`) · `-- check`/`check-xsd`. `/regen-codegen` runs all + the drift check; the `codegen-drift` CI job guards it.
 - Generated type files start with `// @generated … DO NOT EDIT`. To change output, edit the emitter (`tools/openehr-codegen/src/render/emit.rs`) or its override map and regenerate. Hand-written spec behaviour lives in sibling `*_impl.rs` files.
 - **Generation modules:** each generated BMM crate carries its generations as version-named modules (`openehr_base::v1_2`/`v1_3`, `openehr_rm::v1_1`/`v1_2`, `openehr_lang::v1_0`/`v1_1`, `openehr_am::v1_4`/`v2_4`, `openehr_term::v3_1`), driven by `tools/openehr-codegen/src/plan/composition.rs`; an emitted `Generation` enum is the ONLY pin authority; the prelude re-exports the current generation only. Details in `codegen.md`.
 - **Partly generated:** `openehr-its` (`src/xml/generated/` + `src/rest/generated/`). **Hand-written:** `openehr-lang`, `openehr-codegen`, `openehr-term`, `openehr-query`, `openehr-adl`, `openehr-sdt`, all `ferroehr-*`.
@@ -84,7 +84,7 @@ cargo deny check   # subsumes cargo-audit
 bash scripts/conformance.sh   # the Veredictum catalogue against one FerroEHR, in the pinned release image → docs/conformance/ferroehr/ (baseline numbers live ONLY there)
 bash scripts/conformance.sh perf      # the measured lane: veredictum perf over the pinned workload → docs/conformance/ferroehr/perf-result.json, perf-judge, the charts; `perf-aa` adds the A/A noise floor. A published record is measured on the idle reference host only
 # published perf SVGs regenerate from the committed record: bash scripts/render/perf-assets.sh
-bash scripts/perf/gate.sh run <image> <pg-image>   # the performance gate (idle limits + perf/baseline.toml), docs/release.md
+bash scripts/perf/gate.sh ab <image> <pg-image> <base-image> <base-pg-image>   # the performance gate (idle limits + load against the base), docs/release.md
 # CPU profiling: the /flamegraph skill
 # viewer gates: /ui-gates · browser journeys: bash scripts/ui-e2e.sh
 bash scripts/deploy-probe.sh  # deployment conformance at the far end, each integration off/working/broken; its report names what it did NOT exercise (silence is never coverage);
