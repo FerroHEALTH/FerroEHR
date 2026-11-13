@@ -201,7 +201,10 @@ async fn a_granted_origin_stamps_a_direct_commit() {
     granted(
         &svc,
         "lab-gateway",
-        &[capability("data_origin", &[identified("origin", "lab.example")])],
+        &[capability(
+            "data_origin",
+            &[identified("origin", "lab.example")],
+        )],
     )
     .await;
     let committer = |client: &str| ferroehr::versioning::committer::CommitterIdentity {

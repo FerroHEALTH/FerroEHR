@@ -194,6 +194,19 @@ pub(crate) async fn granted(
     (agent, role_uid)
 }
 
+/// Grants `reader` the change feed through a client of its own, as the
+/// operator's first grant does; a reader granted already stays as it is.
+pub(crate) async fn grant_reader(svc: &FerroEhrService, reader: &str) {
+    svc.grant_client(&ferroehr::party_binding::grants::bootstrap::ClientGrant {
+        issuer: ISSUER.to_owned(),
+        client_id: format!("{reader}-client"),
+        operation: Operation::ReadChangeFeed,
+        elements: vec![("reader".to_owned(), reader.to_owned())],
+    })
+    .await
+    .expect("the reader is granted");
+}
+
 /// The grants of the client `client_id` on `svc`, after it read the grant
 /// rows.
 pub(crate) async fn of_client(svc: &FerroEhrService, client_id: &str) -> Arc<Capabilities> {
@@ -209,6 +222,10 @@ pub(crate) async fn of_client(svc: &FerroEhrService, client_id: &str) -> Arc<Cap
 
 /// Runs `fut` as a request of the client `client_id` on `svc`, inside its
 /// grants.
-pub(crate) async fn as_client<F: Future>(svc: &FerroEhrService, client_id: &str, fut: F) -> F::Output {
+pub(crate) async fn as_client<F: Future>(
+    svc: &FerroEhrService,
+    client_id: &str,
+    fut: F,
+) -> F::Output {
     with_capabilities(of_client(svc, client_id).await, fut).await
 }

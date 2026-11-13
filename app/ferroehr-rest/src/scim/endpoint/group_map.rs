@@ -75,18 +75,18 @@ impl GroupMap {
     /// The writer of `client`'s Groups.
     pub(crate) fn writer<'a>(&'a self, client: &'a ScimClient) -> GroupWriter<'a> {
         GroupWriter {
-            client: self.client(client),
+            client: client_of(client),
             namespace: &self.namespace,
             max_members: self.max_members,
         }
     }
+}
 
-    /// Who `client`'s Group queries ask for.
-    pub(crate) fn client<'a>(&self, client: &'a ScimClient) -> GroupClient<'a> {
-        GroupClient {
-            binding_issuer: &client.binding_issuer,
-            group_issuer: &client.group_issuer,
-        }
+/// Who `client`'s Group queries ask for.
+pub(crate) fn client_of(client: &ScimClient) -> GroupClient<'_> {
+    GroupClient {
+        binding_issuer: &client.binding_issuer,
+        group_issuer: &client.group_issuer,
     }
 }
 

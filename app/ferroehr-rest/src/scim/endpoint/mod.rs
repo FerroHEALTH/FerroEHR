@@ -265,18 +265,21 @@ async fn admit(State(gate): State<Gate>, request: Request, next: Next) -> Respon
     };
     let client = match provisioning_client(&gate, &principal, &capabilities) {
         Ok(client) => client,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let mut request = Request::from_parts(parts, body);
     request
         .extensions_mut()
         .insert(ScimCaller(Arc::new(client)));
     request.extensions_mut().insert(principal.clone());
-    authn::grants::scoped(
+    Box::pin(authn::grants::scoped(
         grants,
         capabilities,
-        gate.authenticator.run_admitted(principal, next.run(request)),
-    )
+        Box::pin(
+            gate.authenticator
+                .run_admitted(principal, next.run(request)),
+        ),
+    ))
     .await
 }
 
@@ -286,8 +289,9 @@ fn provisioning_client(
     gate: &Gate,
     principal: &authn::Principal,
     capabilities: &Capabilities,
-) -> Result<ScimClient, Response> {
-    let forbidden = |message: String| refusal(&ScimError::new(StatusCode::FORBIDDEN, message));
+) -> Result<ScimClient, Box<Response>> {
+    let forbidden =
+        |message: String| Box::new(refusal(&ScimError::new(StatusCode::FORBIDDEN, message)));
     let issuer = principal
         .access
         .caller()

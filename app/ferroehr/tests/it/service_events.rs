@@ -19,7 +19,7 @@ use sqlx::{PgPool, Row};
 use crate::fixtures::commit_audit;
 use crate::fixtures::{committer, composition_by, uv};
 use crate::typed_body::typed;
-use ferroehr::extensions::outbox::{OutboxDomain, OutboxGate, reconcile};
+use ferroehr::extensions::outbox::{OutboxDomain, OutboxGate};
 use ferroehr::service::FerroEhrService;
 
 // ── fixtures ─────────────────────────────────────────────────────────────────
@@ -322,10 +322,11 @@ async fn rolled_back_commit_writes_no_outbox_row() {
 async fn the_feed_serves_every_committed_row_in_seq_order_until_acknowledged() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    reconcile(&pool, &["ferrobridge".to_owned()])
-        .await
-        .expect("register the reader");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let svc = crate::policy_fixtures::granting(FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    ))
+    .await;
+    crate::policy_fixtures::grant_reader(&svc, "ferrobridge").await;
 
     // Commit some work: an EHR + two compositions ⇒ three outbox rows.
     let ehr = crate::fixtures::create_ehr(&svc).await;

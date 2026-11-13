@@ -471,7 +471,10 @@ async fn an_import_needs_the_role_and_refuses_a_local_login_from_an_untrusted_sy
     );
     let own_node = capability(
         "import_ehr",
-        &[scope("creating_system", ferroehr::service::DEFAULT_SYSTEM_ID)],
+        &[scope(
+            "creating_system",
+            ferroehr::service::DEFAULT_SYSTEM_ID,
+        )],
     );
     granted(&strict, "extract-importer", &[extract_only, own_node]).await;
     let refused = as_client(

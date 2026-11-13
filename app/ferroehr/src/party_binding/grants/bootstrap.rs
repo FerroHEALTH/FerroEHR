@@ -16,14 +16,13 @@
 //! alone, and one that holds the operation already gets nothing. No openEHR
 //! spec governs who grants a capability: our own design.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 1): the canonical AGENT and ROLE \
-              bodies the grant commits"
-)]
-
+use openehr_base::containers::NonEmptyVec;
+use openehr_base::prelude::{ArchetypeId, HierObjectId, ObjectId, PartyRef, TerminologyId};
+use openehr_rm::prelude::{
+    Agent, Archetyped, Capability, CodePhrase, DataValue, DvCodedText, DvIdentifier, DvText,
+    Element, Item, ItemStructure, ItemTree, Party, PartyIdentity, Role,
+};
 use serde::Serialize;
-use serde_json::{Value, json};
 use uuid::Uuid;
 
 use crate::error::ServiceError;
@@ -109,12 +108,18 @@ impl FerroEhrService {
         }
         let (agent, created) = match held.client() {
             Some(client) => (VoId(client.party), false),
-            None => (self.commit_party(PartyKind::Agent, &agent(grant)).await?, true),
+            None => (
+                self.commit_party(PartyKind::Agent, agent(grant)).await?,
+                true,
+            ),
         };
         let role = self
-            .commit_party(PartyKind::Role, &role(agent, grant))
+            .commit_party(PartyKind::Role, role(agent, grant))
             .await?;
-        self.grants().refresh().await.map_err(|error| ServiceError::from(error.into_inner()))?;
+        self.grants()
+            .refresh()
+            .await
+            .map_err(|error| ServiceError::from(error.into_inner()))?;
         Ok(if created {
             Granted::Created {
                 agent: agent.0,
@@ -128,11 +133,8 @@ impl FerroEhrService {
         })
     }
 
-    /// Commits `body` as a new party of `kind`; its container.
-    async fn commit_party(&self, kind: PartyKind, body: &Value) -> Result<VoId, ServiceError> {
-        let party = openehr_its::json::from_canonical_value(body).map_err(|error| {
-            ServiceError::bad_request(format!("the {kind:?} of the grant does not decode"), error)
-        })?;
+    /// Commits `party` as a new party of `kind`; its container.
+    async fn commit_party(&self, kind: PartyKind, party: Party) -> Result<VoId, ServiceError> {
         let created = Box::pin(self.party_create(kind, WriteRequest::new(party))).await?;
         let Some(meta) = created.meta else {
             return Err(ServiceError::Internal(Refusal::new(
@@ -140,68 +142,167 @@ impl FerroEhrService {
                 "a created party answered no version",
             )));
         };
-        VoId::from_uid_head(&meta.uid).map_err(|error| ServiceError::internal("reading the created party's container", error))
+        VoId::from_uid_head(&meta.uid)
+            .map_err(|error| ServiceError::internal("reading the created party's container", error))
     }
 }
 
-fn text(value: &str) -> Value {
-    json!({ "_type": "DV_TEXT", "value": value })
+fn text(value: &str) -> DvText {
+    crate::service::version_update::plain_text(value)
 }
 
-fn coded(code: &str) -> Value {
-    json!({ "_type": "DV_CODED_TEXT", "value": code,
-            "defining_code": { "_type": "CODE_PHRASE",
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY },
-                "code_string": code } })
+fn coded(code: &str) -> DvCodedText {
+    DvCodedText {
+        value: code.to_owned(),
+        hyperlink: None,
+        formatting: None,
+        mappings: None,
+        language: None,
+        encoding: None,
+        defining_code: CodePhrase {
+            terminology_id: TerminologyId {
+                value: TERMINOLOGY.to_owned(),
+            },
+            code_string: code.to_owned(),
+            preferred_term: None,
+        },
+    }
 }
 
-fn archetyped(archetype: &str) -> Value {
-    json!({ "_type": "ARCHETYPED",
-            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
-            "rm_version": "1.1.0" })
+fn archetyped(archetype: &str) -> Archetyped {
+    Archetyped {
+        archetype_id: ArchetypeId {
+            value: archetype.to_owned(),
+        },
+        template_id: None,
+        rm_version: openehr_rm::Generation::default().spec_version().to_owned(),
+    }
 }
 
-fn identities(name: &str) -> Value {
-    json!([{ "_type": "PARTY_IDENTITY", "archetype_node_id": "at0001", "name": text("name"),
-        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": text("details"),
-            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003", "name": text("name"),
-                        "value": text(name) }] } }])
+/// An `ELEMENT` at `node`, named `name`, holding `value`.
+fn element(node: &str, name: DvText, value: DataValue) -> Item {
+    Item::Element(Element {
+        name,
+        archetype_node_id: node.to_owned(),
+        uid: None,
+        links: None,
+        archetype_details: None,
+        feeder_audit: None,
+        null_flavour: None,
+        value: Some(value),
+        null_reason: None,
+    })
+}
+
+/// An `ITEM_TREE` at `node`, named `name`, holding `items`.
+fn tree(node: &str, name: &str, items: Vec<Item>) -> ItemStructure {
+    ItemStructure::ItemTree(Box::new(ItemTree {
+        name: text(name),
+        archetype_node_id: node.to_owned(),
+        uid: None,
+        links: None,
+        archetype_details: None,
+        feeder_audit: None,
+        items: Some(items),
+    }))
+}
+
+/// The one name identity of a party named `name`.
+fn identities(name: &str) -> NonEmptyVec<PartyIdentity> {
+    NonEmptyVec::of(PartyIdentity {
+        name: text("name"),
+        archetype_node_id: "at0001".to_owned(),
+        uid: None,
+        links: None,
+        archetype_details: None,
+        feeder_audit: None,
+        details: tree(
+            "at0002",
+            "details",
+            vec![element(
+                "at0003",
+                text("name"),
+                DataValue::DvText(text(name)),
+            )],
+        ),
+    })
 }
 
 /// The `AGENT` carrying `grant`'s client identifier.
-fn agent(grant: &ClientGrant) -> Value {
-    json!({
-        "_type": "AGENT", "archetype_node_id": AGENT_ARCHETYPE,
-        "archetype_details": archetyped(AGENT_ARCHETYPE), "name": text(&grant.client_id),
-        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0010", "name": text("details"),
-            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0011", "name": text("client"),
-                "value": { "_type": "DV_IDENTIFIER", "issuer": grant.issuer,
-                           "id": grant.client_id, "type": CLIENT_ID } }] },
-        "identities": identities(&grant.client_id)
+fn agent(grant: &ClientGrant) -> Party {
+    let client = DvIdentifier {
+        issuer: Some(grant.issuer.clone()),
+        assigner: None,
+        id: grant.client_id.clone(),
+        r#type: Some(CLIENT_ID.to_owned()),
+    };
+    Party::Agent(Agent {
+        name: text(&grant.client_id),
+        archetype_node_id: AGENT_ARCHETYPE.to_owned(),
+        uid: None,
+        links: None,
+        archetype_details: Some(archetyped(AGENT_ARCHETYPE)),
+        feeder_audit: None,
+        identities: identities(&grant.client_id),
+        contacts: None,
+        details: Some(tree(
+            "at0010",
+            "details",
+            vec![element(
+                "at0011",
+                text("client"),
+                DataValue::DvIdentifier(client),
+            )],
+        )),
+        relationships: None,
+        languages: None,
+        roles: None,
     })
 }
 
 /// The `ROLE` `agent` performs whose capability grants `grant`'s operation
 /// with its scope elements.
-fn role(agent: VoId, grant: &ClientGrant) -> Value {
-    let mut items = vec![json!({ "_type": "ELEMENT", "archetype_node_id": "at0021",
-        "name": text("operation"), "value": coded(grant.operation.code()) })];
-    items.extend(grant.elements.iter().map(|(code, value)| {
-        json!({ "_type": "ELEMENT", "archetype_node_id": "at0022", "name": coded(code),
-                "value": text(value) })
+fn role(agent: VoId, grant: &ClientGrant) -> Party {
+    let code = grant.operation.code();
+    let mut items = vec![element(
+        "at0021",
+        text("operation"),
+        DataValue::DvText(DvText::DvCodedText(coded(code))),
+    )];
+    items.extend(grant.elements.iter().map(|(name, value)| {
+        element(
+            "at0022",
+            DvText::DvCodedText(coded(name)),
+            DataValue::DvText(text(value)),
+        )
     }));
-    json!({
-        "_type": "ROLE", "archetype_node_id": ROLE_ARCHETYPE,
-        "archetype_details": archetyped(ROLE_ARCHETYPE),
-        "name": text(grant.operation.code()),
-        "identities": identities(grant.operation.code()),
-        "performer": { "_type": "PARTY_REF", "namespace": "demographic", "type": "AGENT",
-                       "id": { "_type": "HIER_OBJECT_ID", "value": agent.to_string() } },
-        "capabilities": [{
-            "_type": "CAPABILITY", "archetype_node_id": "at0020", "name": text("grant"),
-            "credentials": { "_type": "ITEM_TREE", "archetype_node_id": "at0023",
-                             "name": text("terms"), "items": items }
-        }]
+    Party::Role(Role {
+        name: text(code),
+        archetype_node_id: ROLE_ARCHETYPE.to_owned(),
+        uid: None,
+        links: None,
+        archetype_details: Some(archetyped(ROLE_ARCHETYPE)),
+        feeder_audit: None,
+        identities: identities(code),
+        contacts: None,
+        details: None,
+        relationships: None,
+        time_validity: None,
+        performer: PartyRef {
+            namespace: "demographic".to_owned(),
+            r#type: "AGENT".to_owned(),
+            id: ObjectId::HierObjectId(HierObjectId::from(agent.0)),
+        },
+        capabilities: Some(NonEmptyVec::of(Capability {
+            name: text("grant"),
+            archetype_node_id: "at0020".to_owned(),
+            uid: None,
+            links: None,
+            archetype_details: None,
+            feeder_audit: None,
+            credentials: tree("at0023", "terms", items),
+            time_validity: None,
+        })),
     })
 }
 
@@ -222,7 +323,7 @@ mod tests {
                 (TOKEN_SCOPE.to_owned(), "ferroehr/scim".to_owned()),
             ],
         };
-        let body = role(VoId(Uuid::nil()), &grant);
+        let body = openehr_its::json::to_canonical_value(&role(VoId(Uuid::nil()), &grant));
         let credentials = Credentials::of(body.pointer("/capabilities/0/credentials"));
         assert_eq!(
             credentials.identified(BINDING_ISSUER),
@@ -231,11 +332,12 @@ mod tests {
         assert_eq!(credentials.identified(TOKEN_SCOPE), ["ferroehr/scim"]);
         assert_eq!(
             body.pointer("/capabilities/0/credentials/items/0/value/defining_code/code_string"),
-            Some(&json!("scim_provision"))
+            Some(&serde_json::json!("scim_provision"))
         );
         assert_eq!(
-            agent(&grant).pointer("/details/items/0/value/type"),
-            Some(&json!(CLIENT_ID))
+            openehr_its::json::to_canonical_value(&agent(&grant))
+                .pointer("/details/items/0/value/type"),
+            Some(&serde_json::json!(CLIENT_ID))
         );
     }
 }

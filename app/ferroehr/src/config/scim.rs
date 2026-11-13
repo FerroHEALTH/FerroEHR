@@ -70,10 +70,11 @@ impl Default for ScimConfig {
     }
 }
 
-/// The issuer a SCIM client's Groups' `externalId`s are written under: the
-/// `group_identifier_issuer` of the `[[auth.party]]` table of `party` whose
-/// `identifier_issuer` is the client's `binding_issuer`, and when that table
-/// sets none, the `binding_issuer` with `/groups` appended.
+/// The issuer a SCIM client's Groups' `externalId`s are written under.
+///
+/// It is the `group_identifier_issuer` of the `[[auth.party]]` table of
+/// `party` whose `identifier_issuer` is the client's `binding_issuer`, and
+/// when that table sets none, the `binding_issuer` with `/groups` appended.
 #[must_use]
 pub fn group_issuer(binding_issuer: &str, party: &[PartySection]) -> String {
     party
@@ -231,7 +232,9 @@ mod tests {
         };
         let errors = config.errors();
         assert!(
-            errors.iter().any(|e| e.contains("auth.scim.public_base_url")),
+            errors
+                .iter()
+                .any(|e| e.contains("auth.scim.public_base_url")),
             "{errors:?}"
         );
     }

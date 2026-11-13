@@ -22,10 +22,9 @@
 
 use ferroehr::error::refusal::{Malformed, Missing};
 use serde_json::json;
-use sqlx::PgPool;
 
 use ferroehr::error::ServiceError;
-use ferroehr::extensions::outbox::{OutboxDomain, reconcile};
+use ferroehr::extensions::outbox::OutboxDomain;
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::policy_register::Register;
 use ferroehr::service::FerroEhrService;
@@ -110,10 +109,8 @@ async fn scoped_rows(svc: &FerroEhrService, ehr_id: EhrId) -> usize {
 
 /// The outbox feed's events of one EHR, for a reader that has acknowledged
 /// nothing.
-async fn feed_rows(svc: &FerroEhrService, pool: &PgPool, ehr_id: EhrId) -> usize {
-    reconcile(pool, &["legal-marks".to_owned()])
-        .await
-        .expect("register the reader");
+async fn feed_rows(svc: &FerroEhrService, ehr_id: EhrId) -> usize {
+    crate::policy_fixtures::grant_reader(svc, "legal-marks").await;
     let ehr = ehr_id.to_string();
     svc.outbox_events(OutboxDomain::Clinical, "legal-marks", 1000)
         .await
@@ -222,7 +219,10 @@ async fn a_restricted_object_is_refused_on_every_read_and_write_path() {
 async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let svc = crate::policy_fixtures::granting(FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    ))
+    .await;
     let (ehr_id, _status_vo) = seed(&svc).await;
 
     svc.restrict_processing(ehr_id, None, "gdpr-18-1-b", Some("under review"))
@@ -254,7 +254,7 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
         .expect_err("an Extract of a restricted EHR is refused");
     assert!(matches!(&extract, ServiceError::Restricted(_)));
     assert_eq!(
-        feed_rows(&svc, &pool, ehr_id).await,
+        feed_rows(&svc, ehr_id).await,
         0,
         "no event of a restricted EHR is in the feed"
     );
@@ -267,7 +267,7 @@ async fn a_whole_ehr_restriction_reaches_every_object_and_the_event_stream() {
         .expect("the status reads again");
     assert_eq!(population_rows(&svc).await, 1);
     assert!(
-        feed_rows(&svc, &pool, ehr_id).await > 0,
+        feed_rows(&svc, ehr_id).await > 0,
         "the withheld events are served once the restriction is lifted"
     );
 }
@@ -341,7 +341,10 @@ async fn an_unknown_target_or_ground_is_refused_before_anything_is_recorded() {
 async fn a_research_objection_leaves_the_population_and_the_care_record_alone() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let svc = crate::policy_fixtures::granting(FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    ))
+    .await;
     let (ehr_id, _status_vo) = seed(&svc).await;
 
     assert_eq!(population_rows(&svc).await, 1);
@@ -375,7 +378,7 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
         extract.message()
     );
     assert_eq!(
-        feed_rows(&svc, &pool, ehr_id).await,
+        feed_rows(&svc, ehr_id).await,
         0,
         "no event of an objected EHR is in the feed"
     );
@@ -389,7 +392,7 @@ async fn a_research_objection_leaves_the_population_and_the_care_record_alone() 
     svc.extract_ehrs(ehr_id)
         .await
         .expect("an overridden objection exports again");
-    assert!(feed_rows(&svc, &pool, ehr_id).await > 0);
+    assert!(feed_rows(&svc, ehr_id).await > 0);
 
     // Withdrawing carries no ground: there is nothing left to override.
     let bad = svc

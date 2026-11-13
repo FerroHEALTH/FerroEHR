@@ -277,12 +277,18 @@ async fn a_missing_scope_an_undeclared_client_and_a_person_are_refused() {
 }
 
 /// A grant naming a `binding_issuer` no `[[auth.party]]` table issues, one
-/// another client's grant names too, or two of them admits nothing, and a
-/// grant committed to the CDR admits its client on the next request.
+/// another client's grant names too, two of them, or no grant at all admits
+/// nothing.
 #[tokio::test]
-async fn a_grant_that_cannot_own_its_users_is_refused_and_a_new_one_admits() {
+async fn a_grant_that_cannot_own_its_users_is_refused() {
     let (_db, service) = crate::policy_fixture::granting_service().await;
-    grant(&service, MACHINES, "unbound", &[provisioning("urn:example:other")]).await;
+    grant(
+        &service,
+        MACHINES,
+        "unbound",
+        &[provisioning("urn:example:other")],
+    )
+    .await;
     grant(&service, MACHINES, CLIENT, &[provisioning(LOGIN)]).await;
     grant(&service, MACHINES, "second", &[provisioning(LOGIN)]).await;
     grant(
@@ -292,20 +298,13 @@ async fn a_grant_that_cannot_own_its_users_is_refused_and_a_new_one_admits() {
         &[provisioning(LOGIN), provisioning("urn:example:other")],
     )
     .await;
-    let mut with_late = config(None);
-    with_late.auth.shared.party.push(PartySection {
-        issuer: ferrohealth_secret::secret_url::SecretUrl::new(PERSONS),
-        identifier_issuer: "urn:example:late".to_owned(),
-        identifier_type: "guid".to_owned(),
-        ..PartySection::default()
-    });
-    let app = common::router_with(with_late, std::sync::Arc::clone(&service)).await;
+    let app = common::router_with(config(None), service).await;
     for (client, refusal) in [
         ("unbound", "identifier_issuer of no [[auth.party]] table"),
         (CLIENT, "another client's scim_provision grant"),
         ("second", "another client's scim_provision grant"),
         ("split", "name 2 binding issuers"),
-        ("late", "holds no scim_provision grant"),
+        ("stranger", "holds no scim_provision grant"),
     ] {
         let (status, headers, body) =
             get(&app, "/Schemas", Some(&client_token(client, SCOPE))).await;
@@ -315,9 +314,24 @@ async fn a_grant_that_cannot_own_its_users_is_refused_and_a_new_one_admits() {
             "{client}: {body}"
         );
     }
-    grant(&service, MACHINES, "late", &[provisioning("urn:example:late")]).await;
-    let (status, _, body) = get(&app, "/Schemas", Some(&client_token("late", SCOPE))).await;
-    assert_eq!(status, StatusCode::OK, "the grant admits the next request: {body}");
+}
+
+/// A grant committed to the CDR admits its client on the next request, with
+/// no restart.
+#[tokio::test]
+async fn a_grant_committed_later_admits_the_next_request() {
+    let (_db, service) = crate::policy_fixture::granting_service().await;
+    let app = common::router_with(config(None), std::sync::Arc::clone(&service)).await;
+    let token = client_token(CLIENT, SCOPE);
+    let (status, headers, body) = get(&app, "/Schemas", Some(&token)).await;
+    assert_error(status, &headers, &body, StatusCode::FORBIDDEN);
+    grant(&service, MACHINES, CLIENT, &[provisioning(LOGIN)]).await;
+    let (status, _, body) = get(&app, "/Schemas", Some(&token)).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "the grant admits the next request: {body}"
+    );
 }
 
 #[tokio::test]

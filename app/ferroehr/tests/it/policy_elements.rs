@@ -72,7 +72,10 @@ async fn a_grant_read_by_one_element_names_it_once() {
         let ServiceError::BadRequest(refusal) = &error else {
             panic!("{element}: {error:?}");
         };
-        assert!(refusal.to_string().contains(element), "{element}: {refusal}");
+        assert!(
+            refusal.to_string().contains(element),
+            "{element}: {refusal}"
+        );
     }
     create(
         &svc,

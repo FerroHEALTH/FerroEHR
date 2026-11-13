@@ -328,7 +328,10 @@ async fn the_change_feed_grants_name_the_readers_and_who_reads_them() {
         .outbox_events(OutboxDomain::Clinical, READER, 10)
         .await
         .expect_err("no grant names the reader");
-    assert!(matches!(ungranted, ServiceError::NotFound(_)), "{ungranted:?}");
+    assert!(
+        matches!(ungranted, ServiceError::NotFound(_)),
+        "{ungranted:?}"
+    );
 
     let (_, omop_role) = granted(
         &svc,
@@ -366,10 +369,7 @@ async fn the_change_feed_grants_name_the_readers_and_who_reads_them() {
     assert!(matches!(foreign, ServiceError::Forbidden(_)), "{foreign:?}");
     assert_eq!(
         registry(&pool).await,
-        vec![
-            (READER.to_owned(), 0, true),
-            ("other".to_owned(), 0, true)
-        ],
+        vec![(READER.to_owned(), 0, true), ("other".to_owned(), 0, true)],
         "the read registered every granted reader"
     );
 
@@ -382,10 +382,7 @@ async fn the_change_feed_grants_name_the_readers_and_who_reads_them() {
     svc.reconcile_change_feed().await.expect("reconciled");
     assert_eq!(
         registry(&pool).await,
-        vec![
-            (READER.to_owned(), 0, false),
-            ("other".to_owned(), 0, true)
-        ],
+        vec![(READER.to_owned(), 0, false), ("other".to_owned(), 0, true)],
         "the reader no grant names any more is inactive"
     );
 }

@@ -219,7 +219,9 @@ impl FerroEhrService {
                 format!("no EHR with id {an_ehr_id}"),
             ));
         }
-        let (containers, parties) = self.admitted(&an_extract, Operation::ImportEhrExtract).await?;
+        let (containers, parties) = self
+            .admitted(&an_extract, Operation::ImportEhrExtract)
+            .await?;
         reject_duplicate_singleton_containers(&containers)?;
 
         let mut conn = acquire(&self.pool).await?;

@@ -640,7 +640,11 @@ pub(crate) async fn middleware(
                             binding,
                             ferroehr::versioning::committer::with_committer(
                                 Some(committer),
-                                Box::pin(grants::scoped(layer.service.grants(), granted, next.run(req))),
+                                Box::pin(grants::scoped(
+                                    layer.service.grants(),
+                                    granted,
+                                    next.run(req),
+                                )),
                             ),
                         ),
                     ),

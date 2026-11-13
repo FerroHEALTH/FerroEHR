@@ -25,9 +25,9 @@ use ferroehr::config::FerroEhrConfig;
 use ferroehr::db::domain::DomainPools;
 use ferroehr::ids::VoId;
 use ferroehr::party_binding::check::{Administrator, BasicUser, CheckInput, Expected, Report};
+use ferroehr::party_binding::fill::{LEASE_RENEWAL, LEASE_TTL, Lease};
 use ferroehr::party_binding::grants::bootstrap::{ClientGrant, Granted};
 use ferroehr::party_binding::grants::operation::Operation;
-use ferroehr::party_binding::fill::{LEASE_RENEWAL, LEASE_TTL, Lease};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::adopt::{AdoptInput, AdoptReport};
 use ferroehr::service::message::import_policy::ImportPolicy;
@@ -439,9 +439,7 @@ pub async fn grant(args: &GrantArgs, config: &FerroEhrConfig) -> anyhow::Result<
 ///
 /// # Errors
 /// The party store fails.
-async fn scim_clients(
-    pools: &DomainPools,
-) -> anyhow::Result<Vec<(String, String)>> {
+async fn scim_clients(pools: &DomainPools) -> anyhow::Result<Vec<(String, String)>> {
     ferroehr::party_binding::grants::store::provisioning_clients(&pools.party)
         .await
         .context("reading the SCIM clients from the scim_provision grants")

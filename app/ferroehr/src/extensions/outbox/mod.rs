@@ -464,7 +464,10 @@ impl FerroEhrService {
     pub async fn reconcile_change_feed(&self) -> Result<(), ServiceError> {
         let readers = self.change_feed_readers().await?;
         for domain in OutboxDomain::ALL {
-            log_reconciled(domain, &reconcile(self.outbox_pool(domain), &readers).await?);
+            log_reconciled(
+                domain,
+                &reconcile(self.outbox_pool(domain), &readers).await?,
+            );
         }
         Ok(())
     }

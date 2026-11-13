@@ -664,9 +664,15 @@ fn a_namespace_outside_the_object_ref_pattern_is_refused() {
 #[test]
 fn the_keys_the_cdr_now_holds_are_refused_as_unknown() {
     for (removed, key) in [
-        ("[authz.import]\ntrusted_systems = [\"legacy.example\"]\n", "import"),
+        (
+            "[authz.import]\ntrusted_systems = [\"legacy.example\"]\n",
+            "import",
+        ),
         ("[[authz.origin]]\nid = \"lab.example\"\n", "origin"),
-        ("[record.change_feed]\nreaders = [\"ferrobridge\"]\n", "readers"),
+        (
+            "[record.change_feed]\nreaders = [\"ferrobridge\"]\n",
+            "readers",
+        ),
         (
             "[auth.scim]\npublic_base_url = \"https://cdr.example.com\"\n\
              [[auth.scim.client]]\nclient_id = \"entra\"\n",

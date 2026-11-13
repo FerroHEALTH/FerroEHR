@@ -534,27 +534,12 @@ async fn stored_content(
     }))
 }
 
-/// The origins a body committed by the running request's caller is stamped
-/// with: its feeder origins, or the origin of the caller's `data_origin`
-/// grant, or this server; each candidate when the caller's grants name
-/// several, which the commit then refuses.
-fn stamped_origins(rules: &ContentRules, canonical: &serde_json::Value) -> Vec<String> {
-    let fed = ferroehr::versioning::origins::fed(canonical);
-    if !fed.is_empty() {
-        return fed.into_iter().collect();
-    }
-    ferroehr::origins::DirectOrigin::current(&rules.system_id).candidates()
-}
-
 /// The attributes of a COMPOSITION write, read off its body the way the commit
 /// will: the template, the root archetype, and the `FEEDER_AUDIT` origins or
 /// the caller's direct origin. A simplified-format body names its template in
 /// a header and is converted only at the commit seam, so it carries the
 /// template and the category it implies and no origin attribute.
-fn composition_content(
-    rules: &ContentRules,
-    parts: &RequestParts,
-) -> ContentAttrs {
+fn composition_content(rules: &ContentRules, parts: &RequestParts) -> ContentAttrs {
     let h = &parts.headers;
     if crate::formats::dispatch::is_simplified_body(h) {
         let template = crate::formats::dispatch::header_template_id(h);
@@ -583,12 +568,17 @@ fn composition_content(
 }
 
 /// The attributes of one decoded COMPOSITION a write carries.
-fn composition_attrs(
-    rules: &ContentRules,
-    composition: &Composition,
-) -> ContentAttrs {
-    let canonical = openehr_its::json::to_canonical_value(composition);
-    let origins = stamped_origins(rules, &canonical);
+fn composition_attrs(rules: &ContentRules, composition: &Composition) -> ContentAttrs {
+    // The feeder origins of the body, or the caller's direct origin: each
+    // candidate when the caller's grants name several, which the commit then
+    // refuses.
+    let fed =
+        ferroehr::versioning::origins::fed(&openehr_its::json::to_canonical_value(composition));
+    let origins = if fed.is_empty() {
+        ferroehr::origins::DirectOrigin::current(&rules.system_id).candidates()
+    } else {
+        fed.into_iter().collect()
+    };
     let details = composition.archetype_details.as_ref();
     let template = details
         .and_then(|a| a.template_id.as_ref())

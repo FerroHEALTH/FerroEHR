@@ -291,7 +291,11 @@ impl LiveGrants {
             .map(|(performer, row)| {
                 (
                     performer,
-                    Grant::new(operation, row.role_id, row.credentials.clone().map(Arc::new)),
+                    Grant::new(
+                        operation,
+                        row.role_id,
+                        row.credentials.clone().map(Arc::new),
+                    ),
                 )
             })
             .collect()
@@ -308,7 +312,13 @@ impl LiveGrants {
             .values()
             .flatten()
             .filter(|row| Operation::of(&row.operation) == Some(operation))
-            .map(|row| Grant::new(operation, row.role_id, row.credentials.clone().map(Arc::new)))
+            .map(|row| {
+                Grant::new(
+                    operation,
+                    row.role_id,
+                    row.credentials.clone().map(Arc::new),
+                )
+            })
             .collect()
     }
 }

@@ -20,6 +20,12 @@
 //!
 //! **No openEHR spec governs this — our own design/extension.**
 
+#![expect(
+    clippy::disallowed_types,
+    reason = "owner-approved 2026-08-03 (#1694 family 1): the canonical version body a \
+              direct origin is stamped on, as the commit holds it"
+)]
+
 use std::collections::BTreeSet;
 
 use serde_json::Value;
@@ -163,6 +169,9 @@ mod tests {
         ));
         let fed = json!({"_type": "COMPOSITION", "feeder_audit": {"_type": "FEEDER_AUDIT",
             "originating_system_audit": {"system_id": "ris.example"}}});
-        assert_eq!(direct.stamp(&fed).ok(), Some(vec!["ris.example".to_owned()]));
+        assert_eq!(
+            direct.stamp(&fed).ok(),
+            Some(vec!["ris.example".to_owned()])
+        );
     }
 }

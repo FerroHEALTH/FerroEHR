@@ -27,6 +27,12 @@ const ADMIN: &str = "ADMIN";
 pub(crate) async fn granting_service() -> (testkit::TestDb, Arc<FerroEhrService>) {
     let (db, pool) = crate::common::migrated_pool().await;
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    (db, Arc::new(granting(svc).await))
+}
+
+/// `svc` holding the policy definitions under an empty party mapping, as the
+/// server installs it, honouring every operation.
+pub(crate) async fn granting(svc: FerroEhrService) -> FerroEhrService {
     svc.seed_default_definitions()
         .await
         .expect("the policy definitions are seeded");
@@ -35,11 +41,9 @@ pub(crate) async fn granting_service() -> (testkit::TestDb, Arc<FerroEhrService>
     let mapping = sections
         .binding_mapping(&[], ADMIN)
         .expect("the mapping compiles");
-    let svc = svc
-        .with_mapped_party_templates(sections.mapped_templates())
+    svc.with_mapped_party_templates(sections.mapped_templates())
         .with_binding_mapping(mapping)
-        .with_grant_ceiling(GrantCeiling::new(Operation::ALL));
-    (db, Arc::new(svc))
+        .with_grant_ceiling(GrantCeiling::new(Operation::ALL))
 }
 
 fn text(value: &str) -> Value {
