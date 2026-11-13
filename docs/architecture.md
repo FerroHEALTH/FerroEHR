@@ -299,8 +299,10 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   differ), and the audit store's hourly worker replaces every entry past its
   `retain_until` by its tombstone, in any order of expiry
   (`access_log::expiry`); an erasure a law orders takes the same path through
-  `POST /admin/access-log/erase`, which writes an access record. `access_log_checkpoint` keeps the
-  signed `ACCESS_LOG_CHECKPOINT`s of the head, signed with the version-signing
+  `POST /admin/access-log/erase`, which writes the access-log entry recording
+  the erasure in the tombstone's own transaction, after the audit sender has
+  said it would take the record, so the log holds both or neither.
+  `access_log_checkpoint` keeps the signed `ACCESS_LOG_CHECKPOINT`s of the head, signed with the version-signing
   keyring's OpenPGP key; a link's `signature` may be set once, after the
   insert that computed its digest. `access_log::checkpoint` seals and verifies
   (the chain through `audit.verify_audit_chain()`, the checkpoint and the link
@@ -308,8 +310,13 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   from the database (an export), and `access_log::transfer` exports one EHR's
   records with the span and checkpoint and imports another system's into
   `access_log_imported_*`, outside this system's chain
-  (`audit/0028_access_log_checkpoint.sql`). No openEHR spec governs audit
-  storage: our own design.
+  (`audit/0028_access_log_checkpoint.sql`).
+  Every access to EHR data writes one entry per EHR it
+  reached, refusals and reads of the log included: the drain builds it from
+  the access's `AuditEvent` (`access_log::entry`) and `AuditStore::insert_batch`
+  appends it in the transaction that stores the batch's records, so an access
+  adds no transaction and the store holds a record and its entry or neither.
+  No openEHR spec governs audit storage: our own design.
 - **One pool and one DSN per storage domain.** `[database.clinical]`,
   `[database.party]` and `[database.audit]` each carry a
   `url`/`url_file`, defaulting to the shared `[database].url`, and
@@ -429,7 +436,10 @@ which is what makes an optional stage safe to disable:
    access control package, refused whole with `400` at every write unless the
    draft BMM's invariants and the terminology groups hold (RM EHR IM
    §`ACCESS_CONTROL_SETTINGS` leaves the class "Currently implementation
-   dependent": the scheme is our own design). A new version is committed by a
+   dependent": the scheme is our own design). The default archetype
+   `access_directives.v1.1.0` constrains the settings to that class, which the
+   ADL 2 validator reads from the draft class tables beside RM 1.2.0
+   (`draft_model`, AOM2 master11 RM adaptation). A new version is committed by a
    gate-keeper the current settings name or by `admin_role` on the subject's
    instruction (BASE Architecture Overview §Security Policy, "Access control of
    access settings"); the settings are read only by those callers and the

@@ -94,6 +94,35 @@ ever names an identity that did not authenticate.
 > identity provider, so neither mints a per-request login record. Rejections
 > are recorded regardless of this switch.
 
+## The openEHR access-log entry
+
+Beside each record, every access to EHR data also writes an openEHR
+access-log entry: an `ACCESS_LOG_ENTRY` of the draft
+`org.openehr.rm.access_log` 0.1.0 model, FerroEHR's proposal to openEHR,
+which no openEHR release defines yet. Reads, writes, AQL queries, exports,
+refusals and reads of the access log itself each write one. An access that
+reaches several EHRs writes one entry per EHR, and the entries of one request
+share its request id, so a population query writes one entry for each EHR
+that contributed a row.
+
+The entry names who accessed (the bound party, the groups, the provider, the
+binding outcome and the credential by its issuer, subject, client and token
+id), what (the EHR, the version or object, its categories and origins), why
+(the declared purposes), under which authorisation (the agreement, the
+representation, a data permit, the emergency mark), the outcome (`granted`,
+`refused` or `failed`) and the request. It carries no data value of the EHR:
+a query is named by its stored name or the SHA-256 of its text, never the
+text, and a read of the access log through ITI-81 is named by the digest of
+its search.
+
+The entry is written in the same database transaction as the record it
+accompanies, so the store holds both or neither, and an access whose record
+the store cannot take is refused under `fail_mode = "closed"` exactly as
+before. Entries are kept in `audit.access_log_record`, chained with the
+records under one hash chain (see [Tamper evidence](#tamper-evidence)), and
+each states the date it is kept until and why. The store requires
+`[audit.store]`; with the store off no entry is written.
+
 ## Reads are logged too, per record
 
 A write leaves its own trail in openEHR's contribution and audit chain. A read

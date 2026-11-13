@@ -102,6 +102,7 @@ pub(crate) fn set_versioning_headers(resp: &mut Response, meta: &ResourceMeta, t
             content: (!meta.content.is_empty()).then(|| {
                 ferroehr::system_log::categories::AccessedContent::Objects(meta.content.clone())
             }),
+            ..crate::system_log::middleware::AuditObject::default()
         });
 }
 
