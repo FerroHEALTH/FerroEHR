@@ -156,6 +156,7 @@ mod tests {
             position: 3,
             name_unique: unique.0,
             uid_unique: unique.1,
+            standalone: false,
         }
     }
 
