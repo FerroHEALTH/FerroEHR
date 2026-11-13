@@ -146,7 +146,7 @@ pub async fn run(
                 .with_context(|| format!("reading the export {}", input.display()))?;
             let export: LogExport =
                 serde_json::from_str(&text).context("the export does not read")?;
-            let record = ImportRecord::by_operator(checkpoints.system_id(), today_utc())?;
+            let record = ImportRecord::by_operator(checkpoints.system_id(), today_utc());
             let imported = checkpoints.import(&export, record).await?;
             println!(
                 "imported {} records of {} for the EHR {}, recorded as the entry {}",

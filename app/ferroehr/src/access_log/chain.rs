@@ -20,10 +20,10 @@
 //! governs log integrity: our own design.
 
 use crate::access_log::store::{AccessLogError, canonical_form};
-use crate::access_log_draft::access_log::access_log_checkpoint::AccessLogCheckpoint;
-use crate::access_log_draft::access_log::access_log_link::AccessLogLink;
-use crate::access_log_draft::access_log::access_log_record::AccessLogRecord;
 use crate::digest::sha256_hex;
+use openehr_rm::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
+use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
+use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
 /// The one digest algorithm of the chain, as a link names it.
 pub const ALGORITHM: &str = "SHA-256";

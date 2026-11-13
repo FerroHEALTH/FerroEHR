@@ -39,9 +39,6 @@ pub mod store;
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::access_terminology::{
-    CareRelationship, ForeignCode, ForeignKind, PermittedPurpose, SensitivityClearance, Term,
-};
 use crate::error::{ServiceError, Violation};
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::{Facts, container};
@@ -51,6 +48,9 @@ use crate::party_binding::grants::operation::Operation;
 use crate::party_binding::grants::store::Dates;
 use crate::party_binding::policy_mark::{TERMINOLOGY, carries, coded};
 use crate::versioning::Kind;
+use openehr_rm::draft::access_control::terminology::{
+    CareRelationship, ForeignCode, ForeignKind, PermittedPurpose, SensitivityClearance, Term,
+};
 
 /// What a caller fact is, by the code it is read by.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

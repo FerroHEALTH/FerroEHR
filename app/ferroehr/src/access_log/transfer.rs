@@ -15,27 +15,30 @@
 //! entry of its own log. No openEHR spec governs the transfer: our own
 //! design (`docs/plans/access-log.md` §Moving the log with the EHR).
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "the import entry is built from its ITS-JSON form (#1694 boundary class: canonical \
-              form)"
-)]
-
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sqlx::{Connection, Row};
 
 use crate::access_log::chain::{self, ChainFinding, Span};
 use crate::access_log::checkpoint::Checkpoints;
 use crate::access_log::store::{AccessLogError, canonical_form};
-use crate::access_log_draft::access_log::access_log_checkpoint::AccessLogCheckpoint;
-use crate::access_log_draft::access_log::access_log_entry::AccessLogEntry;
-use crate::access_log_draft::access_log::access_log_link::AccessLogLink;
-use crate::access_log_draft::access_log::access_log_record::AccessLogRecord;
-use crate::access_log_draft::access_log::access_retention::AccessRetention;
-use crate::access_log_draft::access_log::accessor::Accessor;
 use crate::db::acquire::acquire;
+use crate::versioning::audit::dv_date_time;
+use openehr_base::containers::NonEmptyVec;
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
+use openehr_base::v1_3::base_types::identification::terminology_id::TerminologyId;
+use openehr_rm::draft::access_log::access_log::access_channel::AccessChannel;
+use openehr_rm::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
+use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
+use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
+use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
+use openehr_rm::draft::access_log::access_log::access_outcome::AccessOutcome;
+use openehr_rm::draft::access_log::access_log::access_retention::AccessRetention;
+use openehr_rm::draft::access_log::access_log::accessor::Accessor;
+use openehr_rm::v1_2::common::generic::party_identified::{PartyIdentified, PartyIdentifiedData};
+use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
+use openehr_rm::v1_2::data_types::quantity::date_time::dv_date::DvDate;
+use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
 /// One EHR's access log as one system exports it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -86,23 +89,33 @@ impl ImportRecord {
     /// console and presents no credential; its ground is a `local` code,
     /// since the retention codes are the retention register's (our own
     /// design).
-    ///
-    /// # Errors
-    /// [`AccessLogError::Canonical`] when the date has no RM form, which a
-    /// civil date always has.
-    pub fn by_operator(system_id: &str, today: jiff::civil::Date) -> Result<Self, AccessLogError> {
+    #[must_use]
+    pub fn by_operator(system_id: &str, today: jiff::civil::Date) -> Self {
         let retain_until = today.saturating_add(jiff::Span::new().years(3));
-        let accessor = json!({ "_type": "ACCESSOR",
-            "kind": coded("openehr", "system"),
-            "party": { "_type": "PARTY_IDENTIFIED", "name": system_id } });
-        let retention = json!({ "_type": "ACCESS_RETENTION",
-            "retain_until": { "_type": "DV_DATE", "value": retain_until.to_string() },
-            "grounds": [coded("local", "ehds-art-9-2")] });
-        Ok(Self {
-            accessor: serde_json::from_value(accessor).map_err(AccessLogError::Canonical)?,
-            retention: serde_json::from_value(retention).map_err(AccessLogError::Canonical)?,
+        Self {
+            accessor: Accessor {
+                kind: coded("openehr", "system"),
+                party: named_party(system_id),
+                provider: None,
+                roles: None,
+                groups: None,
+                binding: None,
+                credential: None,
+                delegation: None,
+            },
+            retention: AccessRetention {
+                retain_until: Some(DvDate {
+                    normal_status: None,
+                    normal_range: None,
+                    other_reference_ranges: None,
+                    magnitude_status: None,
+                    accuracy: None,
+                    value: retain_until.to_string(),
+                }),
+                grounds: NonEmptyVec::of(coded("local", "ehds-art-9-2")),
+            },
             request_id: None,
-        })
+        }
     }
 }
 
@@ -356,13 +369,32 @@ async fn store_records(
     Ok(())
 }
 
-/// A term of `terminology` whose code and rubric are `value`, in its ITS-JSON
-/// form.
-fn coded(terminology: &str, value: &str) -> serde_json::Value {
-    json!({ "_type": "DV_CODED_TEXT", "value": value,
-            "defining_code": { "_type": "CODE_PHRASE",
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
-                "code_string": value } })
+/// A term of `terminology` whose code and rubric are `value`.
+fn coded(terminology: &str, value: &str) -> DvCodedText {
+    DvCodedText {
+        value: value.to_owned(),
+        hyperlink: None,
+        formatting: None,
+        mappings: None,
+        language: None,
+        encoding: None,
+        defining_code: CodePhrase {
+            terminology_id: TerminologyId {
+                value: terminology.to_owned(),
+            },
+            code_string: value.to_owned(),
+            preferred_term: None,
+        },
+    }
+}
+
+/// A party named `name` and identified no further, such as a system.
+pub(crate) fn named_party(name: &str) -> PartyProxy {
+    PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(PartyIdentifiedData {
+        external_ref: None,
+        name: Some(name.to_owned()),
+        identifiers: None,
+    }))
 }
 
 /// The entry of this system's log that records the import of `ehr_id`'s log.
@@ -371,27 +403,47 @@ fn import_entry(
     ehr_id: &str,
     record: ImportRecord,
 ) -> Result<AccessLogEntry, AccessLogError> {
-    let mut entry = json!({
-        "_type": "ACCESS_LOG_ENTRY",
-        "uid": { "_type": "HIER_OBJECT_ID", "value": uuid::Uuid::now_v7().to_string() },
-        "system_id": system_id,
-        "time_recorded": { "_type": "DV_DATE_TIME", "value": jiff::Timestamp::now().to_string() },
-        "action": coded("openehr", "import"),
-        "outcome": { "_type": "ACCESS_OUTCOME", "result": coded("openehr", "granted") },
-        "accessor": serde_json::to_value(&record.accessor).map_err(AccessLogError::Canonical)?,
-        "ehr_id": { "_type": "HIER_OBJECT_ID", "value": ehr_id },
-        "is_emergency": false,
-        "retention": serde_json::to_value(&record.retention).map_err(AccessLogError::Canonical)?,
-        "link": { "_type": "ACCESS_LOG_LINK", "sequence": 1, "algorithm": chain::ALGORITHM,
-            "previous_digest": "", "content_digest": "", "digest": "" }
-    });
-    if let Some(request_id) = record.request_id
-        && let Some(members) = entry.as_object_mut()
-    {
-        members.insert(
-            "channel".to_owned(),
-            json!({ "_type": "ACCESS_CHANNEL", "request_id": request_id }),
-        );
-    }
-    serde_json::from_value(entry).map_err(AccessLogError::Canonical)
+    let id = |value: String| {
+        HierObjectId::new(value.clone())
+            .map_err(|source| AccessLogError::Identifier { value, source })
+    };
+    Ok(AccessLogEntry {
+        uid: id(uuid::Uuid::now_v7().to_string())?,
+        system_id: system_id.to_owned(),
+        time_recorded: dv_date_time(&jiff::Timestamp::now()),
+        // NOTE: the chain gives the link when the entry is appended; this one is replaced.
+        link: AccessLogLink {
+            sequence: 1,
+            algorithm: chain::ALGORITHM.to_owned(),
+            previous_digest: String::new(),
+            content_digest: String::new(),
+            digest: String::new(),
+            signature: None,
+        },
+        occurred: None,
+        action: coded("openehr", "import"),
+        operation: None,
+        outcome: AccessOutcome {
+            result: coded("openehr", "granted"),
+            reason: None,
+            description: None,
+            delivered: None,
+        },
+        accessor: record.accessor,
+        ehr_id: Some(id(ehr_id.to_owned())?),
+        items: None,
+        query: None,
+        purposes: None,
+        authorisations: None,
+        is_emergency: false,
+        channel: record.request_id.map(|request_id| AccessChannel {
+            interface: None,
+            request_id: Some(request_id),
+            correlation_id: None,
+            client_address: None,
+        }),
+        security_labels: None,
+        retention: record.retention,
+        other_details: None,
+    })
 }

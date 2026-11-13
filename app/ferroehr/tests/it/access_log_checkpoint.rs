@@ -23,11 +23,11 @@ use ferroehr::access_log::chain::{self, ChainFinding};
 use ferroehr::access_log::checkpoint::Checkpoints;
 use ferroehr::access_log::store::AccessLogError;
 use ferroehr::access_log::transfer::{ImportRecord, LogExport, TransferError};
-use ferroehr::access_log_draft::access_log::access_log_entry::AccessLogEntry;
-use ferroehr::access_log_draft::access_log::access_log_record::AccessLogRecord;
 use ferroehr::versioning::signature::config::{Mode, SigningConfig};
 use ferroehr::versioning::signature::signer::{AttestError, Signer};
 use ferroehr::versioning::signature::trust::TrustedCertificates;
+use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
+use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
 /// The system the exporting database records as.
 const SYSTEM_A: &str = "cdr-a.example.org";
@@ -91,7 +91,7 @@ fn checkpoints(pool: &PgPool, system_id: &str, signer: Arc<Signer>) -> Checkpoin
 
 /// The proposal's example entry, number `n`, of `system_id` about `ehr_id`.
 fn entry(n: u32, system_id: &str, ehr_id: &str) -> AccessLogEntry {
-    let mut value = crate::access_log_draft::example();
+    let mut value = crate::access_log_store::example();
     value["uid"]["value"] = json!(format!("0193f1a2-7c1e-7b4a-9f00-{n:012x}"));
     value["system_id"] = json!(system_id);
     value["ehr_id"]["value"] = json!(ehr_id);

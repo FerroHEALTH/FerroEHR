@@ -39,14 +39,14 @@ use serde_json::Value;
 use sqlx::postgres::PgRow;
 use sqlx::{Connection, PgConnection, PgPool, Row};
 
-use crate::access_log_draft::access_log::access_log_entry::AccessLogEntry;
-use crate::access_log_draft::access_log::access_log_link::AccessLogLink;
-use crate::access_log_draft::access_log::access_log_record::AccessLogRecord;
-use crate::access_log_draft::access_log::access_log_tombstone::AccessLogTombstone;
-use crate::access_log_invariants::{check_entry, check_tombstone};
 use crate::db::acquire::{AcquireError, acquire};
-use crate::draft_invariants::Violations;
 use crate::versioning::signature::signer::{AttestError, Signer};
+use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
+use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
+use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
+use openehr_rm::draft::access_log::access_log::access_log_tombstone::AccessLogTombstone;
+use openehr_rm::draft::access_log::invariants::{check_entry, check_tombstone};
+use openehr_rm::draft::invariants::Violations;
 
 /// The member of a record's ITS-JSON form its canonical form leaves out.
 const LINK: &str = "link";
@@ -82,6 +82,15 @@ pub enum AccessLogError {
     /// written.
     #[error(transparent)]
     Invalid(#[from] Violations),
+    /// An identifier the log writes is not a valid `HIER_OBJECT_ID`.
+    #[error("{value:?} is not a valid HIER_OBJECT_ID")]
+    Identifier {
+        /// The text.
+        value: String,
+        /// Why it is not one.
+        #[source]
+        source: openehr_base::v1_3::base_types::identification::lexical::IdError,
+    },
     /// The audit chain's verifier failed.
     #[error("the audit chain could not be verified")]
     Chain(#[source] Box<crate::system_log::AuditError>),

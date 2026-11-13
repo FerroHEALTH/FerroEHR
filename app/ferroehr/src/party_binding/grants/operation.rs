@@ -27,11 +27,13 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::access_terminology::{CareRelationship, PermittedPurpose, SensitivityClearance, Term};
 use crate::party_binding::grants::admission::{
     ADMIT_ASSURANCE, ADMIT_GROUP, ADMIT_GUESTS, ADMIT_IDP, ADMIT_ROLE, LOGIN_ISSUER,
 };
 use crate::party_binding::policy_mark::{ACTS_FOR, REPRESENTS};
+use openehr_rm::draft::access_control::terminology::{
+    CareRelationship, PermittedPurpose, SensitivityClearance, Term,
+};
 
 /// The code naming the credentials element whose `DV_DATE_TIME` is the
 /// instant before which a grant does not hold.
@@ -235,7 +237,7 @@ pub enum Operation {
     /// scope, to every SMART on openEHR requirement.
     AccessWithoutScope,
     /// Write the `member_of` and `under_care_of` relationships of
-    /// [`crate::access_terminology::CareRelationship`] through the
+    /// [`openehr_rm::draft::access_control::terminology::CareRelationship`] through the
     /// Demographic API, as a hospital's ADT system does.
     WriteCareRelationship,
     /// Write the controller's `ACCESS_POLICY`.
@@ -388,7 +390,23 @@ impl Default for GrantCeiling {
 
 #[cfg(test)]
 mod tests {
+    use openehr_rm::draft::access_control::terminology::Group;
+
     use super::*;
+
+    #[test]
+    fn no_access_control_code_is_a_grant() {
+        let grants = Operation::ALL.map(Operation::code);
+        for group in Group::ALL {
+            for code in group.codes() {
+                // NOTE: own design: an access service caller kind is the caller holding that grant.
+                assert!(
+                    *code == "access_service" || !grants.contains(code),
+                    "{code}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn every_operation_reads_back_from_its_code() {

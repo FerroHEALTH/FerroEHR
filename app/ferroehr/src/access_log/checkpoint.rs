@@ -17,26 +17,21 @@
 //! No openEHR spec governs log signing: our own design
 //! (`docs/plans/access-log.md` §Integrity).
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "the checkpoint's signer is built from its ITS-JSON form (#1694 boundary class: \
-              canonical form)"
-)]
-
 use std::sync::Arc;
 
 use jiff::Timestamp;
-use serde_json::json;
 use sqlx::{PgPool, Row};
 
 use crate::access_log::chain::{ALGORITHM, ChainFinding};
 use crate::access_log::store::{AccessLogError, AccessLogStore, canonical_form};
-use crate::access_log_draft::access_log::access_log_checkpoint::AccessLogCheckpoint;
-use crate::access_log_invariants::check_checkpoint;
+use crate::access_log::transfer::named_party;
 use crate::db::acquire::acquire;
 use crate::system_log::store::{AuditChainFinding, AuditStore, VerifyScope};
+use crate::versioning::audit::dv_date_time;
 use crate::versioning::signature::signer::Signer;
 use crate::versioning::signature::trust::TrustedCertificates;
+use openehr_rm::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
+use openehr_rm::draft::access_log::invariants::check_checkpoint;
 
 /// How many signed links one page of the signature check reads.
 const SIGNATURE_PAGE: i64 = 1000;
@@ -149,7 +144,7 @@ impl Checkpoints {
         if let Some(sealed) = self.at(sequence).await? {
             return Ok(Some(sealed));
         }
-        let mut checkpoint = self.unsigned(sequence, head.try_get("digest")?)?;
+        let mut checkpoint = self.unsigned(sequence, head.try_get("digest")?);
         checkpoint.proof = self
             .signer
             .attest(canonical_form(&checkpoint)?.as_bytes())?;
@@ -169,23 +164,18 @@ impl Checkpoints {
     }
 
     /// The checkpoint at `sequence` with an empty proof.
-    fn unsigned(
-        &self,
-        sequence: i64,
-        digest: String,
-    ) -> Result<AccessLogCheckpoint, AccessLogError> {
+    #[must_use]
+    fn unsigned(&self, sequence: i64, digest: String) -> AccessLogCheckpoint {
         // NOTE: the signer is the organisation responsible for the system, named by its system_id (our own design).
-        let signer = json!({ "_type": "PARTY_IDENTIFIED", "name": self.system_id });
-        let time_sealed = json!({ "_type": "DV_DATE_TIME", "value": Timestamp::now().to_string() });
-        Ok(AccessLogCheckpoint {
+        AccessLogCheckpoint {
             system_id: self.system_id.clone(),
             sequence,
             digest,
             algorithm: ALGORITHM.to_owned(),
-            time_sealed: serde_json::from_value(time_sealed).map_err(AccessLogError::Canonical)?,
-            signer: serde_json::from_value(signer).map_err(AccessLogError::Canonical)?,
+            time_sealed: dv_date_time(&Timestamp::now()),
+            signer: named_party(&self.system_id),
             proof: String::new(),
-        })
+        }
     }
 
     /// The stored checkpoint at `sequence`.

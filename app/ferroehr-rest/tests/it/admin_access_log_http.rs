@@ -16,9 +16,9 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 
 use ferroehr::access_log::checkpoint::Checkpoints;
-use ferroehr::access_log_draft::access_log::access_log_entry::AccessLogEntry;
 use ferroehr::versioning::signature::signer::Signer;
 use ferroehr::versioning::signature::trust::TrustedCertificates;
+use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 
 use crate::common;
 use crate::common::EXT;

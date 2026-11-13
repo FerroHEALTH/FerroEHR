@@ -42,6 +42,12 @@ serde_path_to_error.workspace = true
 thiserror.workspace = true
 uuid.workspace = true
 
+[features]
+# The FerroEHR-local draft packages under `draft` (access log, access control):
+# openEHR change proposals generated from their draft BMM, no openEHR release.
+# Off by default, so a consumer meets no draft type unless it asks for one.
+draft = []
+
 [dev-dependencies]
 # The canonical-JSON codec lives in `openehr-its` (the spec types no longer
 # carry serde derives); the dispatch tests exercise it directly. This is a
