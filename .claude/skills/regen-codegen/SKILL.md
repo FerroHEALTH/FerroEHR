@@ -28,6 +28,7 @@ files — that is what this regenerates.
    cargo run -p openehr-codegen -- emit-aom2       # openehr-its aom2 + aom2_model (both AOM2 archetype XML serializations)
    cargo run -p openehr-codegen -- emit-rm-model   # openehr-rm src/model (static RM attribute/type model)
    cargo run -p openehr-codegen -- emit-validate   # openehr-rm src/validate/generated.rs (RM invariant cores)
+   cargo run -p openehr-codegen -- emit-drafts     # app/ferroehr/src/access_log_draft (the draft access log)
    ```
    (`emit` already emits `openehr-rm/src/model`; `emit-rm-model` refreshes just
    that subtree and is byte-identical, so run order does not matter.)

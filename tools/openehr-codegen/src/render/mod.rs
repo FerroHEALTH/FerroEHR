@@ -16,9 +16,12 @@
 //! out of this repository. [`model_query`] renders the read-only
 //! `model-query` report (BMM facts beside the current field-shape decisions) —
 //! a text producer over the same stages, never generated code.
+//! [`emit_drafts`] renders the FerroEHR-local draft schemas into the
+//! application modules `plan::drafts` names.
 
 pub(crate) mod bound_presence;
 pub(crate) mod emit;
+pub(crate) mod emit_drafts;
 pub(crate) mod emit_json;
 pub(crate) mod emit_opt;
 pub(crate) mod emit_rest;
