@@ -556,12 +556,14 @@ its `credentials` hold, at any depth, an element whose value is a
 (`commit_composition`, `import_ehr`, `import_ehr_extract`,
 `export_ehr_extract`, `federated_person_access`,
 `federated_organisation_access`, `read_subject_audit`, `access_service`,
-`read_identifiers`); elements named by the qualifier codes `not_before` and
-`not_after` bound it finer than a day, and `template`, `facility` (an
-element of a `DV_IDENTIFIER`, or a cluster of `issuer` with `identifier` or
-`identifier_prefix`) and `subject_namespace` scope it; `origin` (a value of
-`relay` or `device`) and `device_identifier_issuer` qualify a
-`commit_composition` grant; `acts_for` codes the acts-for relationship.
+`read_identifiers`, `hold_roles`, `hold_scopes`); elements named by the
+qualifier codes `not_before` and `not_after` bound it finer than a day,
+`template`, `facility` (an element of a `DV_IDENTIFIER`, or a cluster of
+`issuer` with `identifier` or `identifier_prefix`) and `subject_namespace`
+scope it, `origin` (a value of `relay` or `device`) and
+`device_identifier_issuer` qualify a `commit_composition` grant, and `role`
+and `scope` name what a `hold_roles` or `hold_scopes` grant gives; `acts_for`
+codes the acts-for relationship.
 That is the RM's `ITEM_STRUCTURE` with a terminology binding, which any
 modeller produces (RM `data_types` `DV_CODED_TEXT`, `CODE_PHRASE`). A client
 is any `ACTOR` carrying a `DV_IDENTIFIER` of type `client_id` in its
@@ -602,10 +604,11 @@ listener is not connected every request that resolves a caller reads the
 revision. A request resolves its caller after authentication: a system
 client (`CallerKind::System`) by its token's issuer and `client_id`, a
 caller the login binding bound by its party, anyone else to no grants and no
-read; a copy that must be read and cannot be is `503`. The consumers read
-`Capabilities::current()`, which holds the caller's grants for the duration
-of the request, each an `Operation` with its `ROLE` and credentials read by
-the codes of their elements' names. A per-request read without a cache,
+read; a copy that must be read and cannot be is `503`. The caller is
+resolved before any gate runs, and a check reads `Capabilities::current()`,
+which holds the caller's grants for the duration of the request, each an
+`Operation` with its `ROLE` and credentials read by the codes of their
+elements' names. A per-request read without a cache,
 which the program first named, would add a transaction to every request,
 which the performance gate's transactions-per-request measure refuses
 (#5459).
@@ -622,6 +625,24 @@ export, a federation agreement and every privilege reach beyond one system's
 own writes, so the operator admits each by name. It is the one key this
 program adds. **Our own design.**
 
+**Basic users' roles and scopes, and the privileged grants** (#5438). A
+Basic user bound to a `PERSON` holds, beside its `[[auth.basic.users]]`
+table, the roles and SMART scopes its `hold_roles` and `hold_scopes` grants
+name (`ferroehr-rest` `authn::grants::basic`), which every gate then reads.
+A token's roles and scopes stay the token's: its issuer is their authority,
+and a SMART scope is what the user consented to (SMART App Launch 2.2.0,
+Scopes and Launch Context). A policy grant is the second source of the
+privileged permissions beside `role_issuers`: `import_ehr` and
+`import_ehr_extract` admit the matching import, `read_identifiers` the
+protected-identifier read. The privileged roles of `[authz.rbac]`
+(`admin_role`, `emergency_access_role`, `import_role`,
+`identifier_reader_role`) are reserved: a `hold_roles` grant naming one is
+`403` at commit (`GrantCeiling::with_reserved_roles`) and never honoured, so
+the administrator authority and break-glass never come from the party
+store. The keys `[[auth.basic.users]] roles` and `scopes` belong to
+`ferrohealth-smart`, so they leave the schema with that crate. **Our own
+design.**
+
 **System clients from the CDR** (#5436, #5432). The
 `[[authz.system_client]]` table is gone: a system caller
 (`CallerKind::System`) is what the policy parties say. Its commit into an EHR
@@ -634,10 +655,12 @@ composer identifier of a `device_identifier_issuer` equal to
 `relay`, naming the professional) and covers the facility it names (EHDS
 Art. 13(4)). A `ROLE` whose grant lacks the terms its operation is checked by
 is `422` at its commit (`party_binding::grants::check_terms`), the boot
-refusals the table had. Import (`message_import_ehr`,
-`message_import_ehr_extract`) needs `[authz.rbac] import_role` or a grant of
-the operation whose `subject_namespace` names the subject namespace of every
-`EHR_STATUS` the extract carries and of the target EHR; a system caller's
+refusals the table had. The import grant of #5438 is held to its scope:
+`message_import_ehr` needs `[authz.rbac] import_role` or an `import_ehr`
+grant whose `subject_namespace` names the subject namespace of the
+`EHR_STATUS` the extract carries, and `message_import_ehr_extract` one of
+`import_ehr_extract` naming that of the target EHR and of any `EHR_STATUS`
+the extract carries; a system caller no longer imports without a grant; a system caller's
 export needs an `export_ehr_extract` grant covering the EHR the same way
 (`service::message::import_policy`). A grant names its namespaces, so there
 is no grant of every EHR. FerroEHR's own extracts rewrite every reference

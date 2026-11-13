@@ -474,7 +474,7 @@ async fn an_import_needs_the_role_and_refuses_a_local_login_from_an_untrusted_sy
 }
 
 /// The `creating_system_id` of the first wrapped version of `extract`.
-fn source_system_id(extract: &Value) -> String {
+pub(crate) fn source_system_id(extract: &Value) -> String {
     let text = extract.to_string();
     let marker = "::";
     // NOTE: every wrapped version uid of the fixture is `{vo}::{system}::{tree}`.
