@@ -560,5 +560,24 @@ pub(super) fn nonempty(value: &str, fallback: &str) -> String {
     }
 }
 
+/// The FHIR R4 `AuditEvent` document for one resolved record, or `None` when
+/// the rendering failed (metered + logged, never silent).
+pub(crate) fn render_audit_event(
+    event: &AuditEvent,
+    ctx: &AuditContext,
+    subject: Option<&str>,
+) -> Option<serde_json::Value> {
+    match to_fhir(event, ctx, subject) {
+        Ok(document) => Some(document),
+        Err(e) => {
+            crate::telemetry::metrics::metrics()
+                .atna_audit_serialize_failed
+                .add(1, &[]);
+            tracing::warn!("ATNA audit FHIR rendering failed: {e}");
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests;

@@ -66,6 +66,7 @@ use crate::system_log::render::{CompiledPolicy, RenderPolicy};
 use crate::system_log::store::{AuditRecord, AuditStore, RecordEnd};
 use crate::system_log::syslog::SyslogRoute;
 
+mod admission;
 mod categories;
 
 /// The patient subject of an EHR: `EHR_STATUS.subject.external_ref`'s id and
@@ -139,6 +140,11 @@ pub struct AuditSender {
 #[derive(Debug)]
 struct SenderInner {
     tx: mpsc::Sender<AuditEvent>,
+    #[cfg_attr(
+        not(feature = "fhir"),
+        expect(dead_code, reason = "the drain's, for entries")
+    )]
+    context: AuditContext,
     enabled: bool,
     suppress_login_events: bool,
     fail_mode: FailMode,
@@ -564,7 +570,7 @@ pub async fn start(
     let join = tokio::spawn(drain(
         rx,
         sinks,
-        ctx,
+        ctx.clone(),
         resolver,
         config.resolve_subject,
         Arc::clone(&store_healthy),
@@ -573,6 +579,7 @@ pub async fn start(
     let sender = AuditSender {
         inner: Arc::new(SenderInner {
             tx,
+            context: ctx,
             enabled: config.enabled,
             suppress_login_events: config.suppress_login_events,
             purpose_header: config.purpose_header.to_ascii_lowercase(),
@@ -798,7 +805,9 @@ async fn render_batch(
         #[cfg(feature = "fhir")]
         rendered.push(
             render_fhir
-                .then(|| render_audit_event(&event, ctx, subject.as_deref()))
+                .then(|| {
+                    crate::system_log::fhir::render_audit_event(&event, ctx, subject.as_deref())
+                })
                 .flatten(),
         );
         #[cfg(feature = "fhir")]
@@ -954,27 +963,7 @@ async fn submit_to_feed_spool(
     }
 }
 
-/// The FHIR R4 `AuditEvent` document for one resolved record, or `None` when
-/// the rendering failed (metered + logged, never silent).
-#[cfg(feature = "fhir")]
-fn render_audit_event(
-    event: &AuditEvent,
-    ctx: &AuditContext,
-    subject: Option<&str>,
-) -> Option<serde_json::Value> {
-    match crate::system_log::fhir::to_fhir(event, ctx, subject) {
-        Ok(document) => Some(document),
-        Err(e) => {
-            crate::telemetry::metrics::metrics()
-                .atna_audit_serialize_failed
-                .add(1, &[]);
-            tracing::warn!("ATNA audit FHIR rendering failed: {e}");
-            None
-        }
-    }
-}
-
-/// The hourly retention reaper, for a horizon in days or in calendar years.
+/// The hourly retention reaper, which also tombstones the expired access-log entries.
 #[expect(
     clippy::infinite_loop,
     reason = "the retention reaper is a detached background task with no \
@@ -983,13 +972,13 @@ fn render_audit_event(
               then need the never type as a type argument, which is unstable"
 )]
 async fn reaper(store: AuditStore, retention: Retention) {
+    let access_log = crate::access_log::store::AccessLogStore::new(store.pool.clone());
     loop {
         tokio::time::sleep(REAP_INTERVAL).await;
-        let today = jiff::Timestamp::now()
-            .to_zoned(jiff::tz::TimeZone::UTC)
-            .date();
-        let reaped = store.reap_due(today, retention).await;
-        match reaped {
+        let now = jiff::Timestamp::now();
+        let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
+        crate::access_log::expiry::scheduled(&access_log, now).await;
+        match store.reap_due(today, retention).await {
             Ok(0) => {}
             Ok(n) => {
                 crate::telemetry::metrics::metrics()
@@ -1092,6 +1081,7 @@ mod tests {
             .push(rx);
         AuditSender {
             inner: Arc::new(SenderInner {
+                context: AuditContext::default(),
                 tx,
                 enabled: true,
                 suppress_login_events: true,

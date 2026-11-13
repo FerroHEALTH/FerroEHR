@@ -69,41 +69,11 @@ pub const BINDING_TERMINOLOGY: &str = "ferroehr-party-binding";
 pub const RETENTION_TERMINOLOGY: &str = "ferroehr-access-log-retention";
 /// The terminology of a code a caller declared with no system.
 const LOCAL: &str = "local";
+/// The class an entry that changes the access log names the entry it changed
+/// by.
+const LOG_ENTRY: &str = "ACCESS_LOG_ENTRY";
 /// The `ACCESS_QUERY.language` of a read of the access log through ITI-81.
 pub const LOG_SEARCH: &str = "FHIR search";
-
-/// Why an entry is kept until the date it states.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RetentionGround {
-    /// The periods of the categories and origins of the data the access
-    /// reached (EHDS Annex II 3.4, `docs/law/eu/ehds/text.html`).
-    CategoriesAndOrigins,
-    /// The deployment's retention horizon of its audit store.
-    StoreHorizon,
-}
-
-impl RetentionGround {
-    /// The ground's code in [`RETENTION_TERMINOLOGY`] and its rubric.
-    const fn term(self) -> (&'static str, &'static str) {
-        match self {
-            Self::CategoriesAndOrigins => (
-                "categories-and-origins",
-                "the retention periods of the categories and origins of the data",
-            ),
-            Self::StoreHorizon => ("store-horizon", "the retention horizon of the audit store"),
-        }
-    }
-}
-
-/// How long an entry is kept: until the day before `end`, the first date it
-/// may be removed on, or without end when `end` is `None`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Retention {
-    /// The first date the entry may be removed on.
-    pub end: Option<Date>,
-    /// Why.
-    pub ground: RetentionGround,
-}
 
 /// Whether `event` writes an access-log entry: an access to EHR data, a
 /// refusal no operation record of its request covers, or a read of the log.
@@ -111,7 +81,8 @@ pub struct Retention {
 pub fn writes_entry(event: &AuditEvent) -> bool {
     match event.entry {
         EntryScope::ByDomain => event.domain == AccessDomain::Ehr,
-        EntryScope::Refusal | EntryScope::LogRead => true,
+        EntryScope::Refusal | EntryScope::LogRead | EntryScope::LogChange => true,
+        EntryScope::Written => false,
     }
 }
 
@@ -124,7 +95,7 @@ pub fn writes_entry(event: &AuditEvent) -> bool {
 pub fn entry_of(
     event: &AuditEvent,
     system_id: &str,
-    retention: Retention,
+    retention: AccessRetention,
 ) -> Option<AccessLogEntry> {
     if !writes_entry(event) {
         return None;
@@ -168,29 +139,35 @@ pub fn entry_of(
         is_emergency: event.emergency_access,
         channel: channel(event),
         security_labels: None,
-        retention: retention_of(retention),
+        retention,
         other_details: None,
     })
 }
 
-/// The access-log entry `event` writes beside its record in the store,
-/// recorded by the audit source and kept until the end its record has
-/// ([`crate::system_log::fhir::record_end`]).
+/// The access-log entry `event` writes beside its record in the store.
+///
+/// The audit source records it. A classified access is kept for the period
+/// its categories and origins call for
+/// ([`crate::access_log::retention::retention`]), any other until the end its
+/// record has ([`crate::system_log::fhir::record_end`]).
 #[must_use]
 pub fn for_store(event: &AuditEvent, ctx: &AuditContext) -> Option<Box<AccessLogEntry>> {
     if !writes_entry(event) {
         return None;
     }
-    let end = match crate::system_log::fhir::record_end(event, ctx) {
-        RecordEnd::On(date) => Some(date),
-        RecordEnd::Never => None,
+    let retention = match &event.category {
+        Some(category) => crate::access_log::retention::retention(
+            &ctx.recording.retention,
+            event.timestamp,
+            &category.classification,
+            event.origins.iter().map(String::as_str),
+        ),
+        None => horizon_retention(match crate::system_log::fhir::record_end(event, ctx) {
+            RecordEnd::On(date) => Some(date),
+            RecordEnd::Never => None,
+        }),
     };
-    let ground = if event.category.is_some() {
-        RetentionGround::CategoriesAndOrigins
-    } else {
-        RetentionGround::StoreHorizon
-    };
-    entry_of(event, &ctx.source_id, Retention { end, ground }).map(Box::new)
+    entry_of(event, &ctx.source_id, retention).map(Box::new)
 }
 
 /// A `DV_CODED_TEXT` of `code` in `terminology`, displayed as `rubric`.
@@ -475,7 +452,11 @@ fn credential(event: &AuditEvent) -> Option<AccessCredential> {
 /// The object the access addressed in its EHR, with its categories and
 /// origins; `None` when the record names nothing the draft can name.
 fn item(event: &AuditEvent) -> Option<AccessedItem> {
-    let rm_type = rm_type(event.object);
+    let rm_type = if event.entry == EntryScope::LogChange {
+        Some(LOG_ENTRY)
+    } else {
+        rm_type(event.object)
+    };
     let addressed = event.object_id.as_deref();
     // NOTE: BASE `OBJECT_VERSION_ID`, an id outside its form names a versioned
     // object, which is legitimately no version.
@@ -628,23 +609,25 @@ fn channel(event: &AuditEvent) -> Option<AccessChannel> {
     })
 }
 
-/// The entry's `ACCESS_RETENTION`: kept through the day before the end, on
-/// its ground.
-fn retention_of(retention: Retention) -> AccessRetention {
-    let (code, rubric) = retention.ground.term();
+/// The `ACCESS_RETENTION` of an entry the audit store's horizon keeps: kept
+/// through the day before `end`, the first date it may be removed on, or
+/// without end when `end` is `None`.
+#[must_use]
+pub fn horizon_retention(end: Option<Date>) -> AccessRetention {
     AccessRetention {
-        retain_until: retention
-            .end
-            .and_then(|end| end.yesterday().ok())
-            .map(|last| DvDate {
-                normal_status: None,
-                normal_range: None,
-                other_reference_ranges: None,
-                magnitude_status: None,
-                accuracy: None,
-                value: last.to_string(),
-            }),
-        grounds: NonEmptyVec::of(coded(RETENTION_TERMINOLOGY, code, rubric)),
+        retain_until: end.and_then(|end| end.yesterday().ok()).map(|last| DvDate {
+            normal_status: None,
+            normal_range: None,
+            other_reference_ranges: None,
+            magnitude_status: None,
+            accuracy: None,
+            value: last.to_string(),
+        }),
+        grounds: NonEmptyVec::of(coded(
+            RETENTION_TERMINOLOGY,
+            "store-horizon",
+            "the retention horizon of the audit store",
+        )),
     }
 }
 

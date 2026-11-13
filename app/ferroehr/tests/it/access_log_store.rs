@@ -25,7 +25,7 @@ use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecor
 
 /// The example entry of the access-log proposal, the fixture the draft's own
 /// tests in `openehr-rm` read.
-fn example() -> Value {
+pub(crate) fn example() -> Value {
     serde_json::from_str(include_str!(
         "../../../../crates/openehr-rm/tests/fixtures/draft/access_log_entry.json"
     ))
@@ -50,7 +50,7 @@ fn hex(bytes: &[u8]) -> String {
 }
 
 /// The SHA-256 of `text`'s UTF-8 octets in lower-case hexadecimal.
-fn sha256_hex(text: &str) -> String {
+pub(crate) fn sha256_hex(text: &str) -> String {
     hex(&Sha256::digest(text.as_bytes()))
 }
 
@@ -357,7 +357,12 @@ async fn a_tombstone_replaces_an_entry_and_the_chain_stays_intact() {
     let middle = written.get(1).expect("the second entry");
 
     let tombstone = store
-        .tombstone(middle.uid.value(), at("2031-11-08T00:00:00Z"), expiry())
+        .tombstone(
+            middle.uid.value(),
+            at("2031-11-08T00:00:00Z"),
+            expiry(),
+            None,
+        )
         .await
         .expect("the tombstone is written")
         .expect("the entry is there");
@@ -392,7 +397,12 @@ async fn a_tombstone_replaces_an_entry_and_the_chain_stays_intact() {
     );
     assert_eq!(
         store
-            .tombstone(middle.uid.value(), at("2031-11-09T00:00:00Z"), expiry())
+            .tombstone(
+                middle.uid.value(),
+                at("2031-11-09T00:00:00Z"),
+                expiry(),
+                None
+            )
             .await
             .expect("a second removal answers"),
         None,
@@ -466,7 +476,12 @@ async fn the_table_admits_the_tombstone_replacement_and_nothing_else() {
     }
 
     store
-        .tombstone(first.uid.value(), at("2031-11-08T00:00:00Z"), expiry())
+        .tombstone(
+            first.uid.value(),
+            at("2031-11-08T00:00:00Z"),
+            expiry(),
+            None,
+        )
         .await
         .expect("the tombstone replacement is admitted")
         .expect("the entry is there");
@@ -608,7 +623,12 @@ async fn the_application_role_appends_and_replaces_by_a_tombstone_only() {
     let written = append(&store, 1..=2).await;
     let first = written.first().expect("the first entry");
     store
-        .tombstone(first.uid.value(), at("2031-11-08T00:00:00Z"), expiry())
+        .tombstone(
+            first.uid.value(),
+            at("2031-11-08T00:00:00Z"),
+            expiry(),
+            None,
+        )
         .await
         .expect("the app role replaces an entry by its tombstone")
         .expect("the entry is there");

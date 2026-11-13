@@ -293,7 +293,16 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   walk both in position order. An entry changes only by its replacement with
   its own tombstone, which keeps its uid, time and link, so the chain verifies
   after its content is gone (`audit/0027_access_log_record.sql`,
-  `access_log::store`). Every access to EHR data writes one entry per EHR it
+  `access_log::store`). Each entry states its retention when it is written
+  (`access_log::retention`: `retain_until` and the grounds `ehds-logging`'s
+  policy computes from its categories and origins, the longest when they
+  differ), and the audit store's hourly worker replaces every entry past its
+  `retain_until` by its tombstone, in any order of expiry
+  (`access_log::expiry`); an erasure a law orders takes the same path through
+  `POST /admin/access-log/erase`, which writes the access-log entry recording
+  the erasure in the tombstone's own transaction, after the audit sender has
+  said it would take the record, so the log holds both or neither.
+  Every access to EHR data writes one entry per EHR it
   reached, refusals and reads of the log included: the drain builds it from
   the access's `AuditEvent` (`access_log::entry`) and `AuditStore::insert_batch`
   appends it in the transaction that stores the batch's records, so an access

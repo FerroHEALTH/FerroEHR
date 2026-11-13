@@ -530,8 +530,14 @@ pub enum EntryScope {
     ByDomain,
     /// An entry for a refusal no operation record of its request covers.
     Refusal,
-    /// An entry for a read of the access log itself (rule 4).
+    /// An entry for a read of the access log itself.
     LogRead,
+    /// An entry for a change to the access log, such as an erasure, naming
+    /// the entry it changed.
+    LogChange,
+    /// No entry: the caller wrote the record's entry itself, in the
+    /// transaction of the act it records.
+    Written,
 }
 
 /// The query an access ran, named by its stored name or by the SHA-256 of its

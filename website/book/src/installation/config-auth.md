@@ -333,7 +333,7 @@ display_name = "/identities[id4]/details[id5]/items[id6]"
 archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1"
 
 [authz.party_binding.patient]
-template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0"
+template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0"
 identifier = "/details[id2]/items[id3]"
 name = "/identities[id6]/details[id7]/items[id8]"
 ```

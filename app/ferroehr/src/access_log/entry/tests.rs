@@ -4,7 +4,7 @@
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
 use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 
-use super::{Retention, RetentionGround, entry_of, writes_entry};
+use super::{entry_of, horizon_retention, writes_entry};
 use crate::access_log::store::canonical_form;
 use crate::system_log::binding::{BindingRecord, Identified, PartyTriple};
 use crate::system_log::event::{
@@ -13,17 +13,15 @@ use crate::system_log::event::{
 };
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
+use openehr_rm::draft::access_log::access_log::access_retention::AccessRetention;
 use openehr_rm::draft::access_log::invariants::check_entry;
 
 const EHR: &str = "7d44b88c-4199-4bad-97dc-d78268e01398";
 const VERSION: &str = "8849182c-82ad-4088-a07f-48ead4180515::cdr.example.org::1";
 const PARTY: &str = "6f1c2d3e-4b5a-4c6d-8e7f-90a1b2c3d4e5";
 
-fn retention() -> Retention {
-    Retention {
-        end: Some(jiff::civil::date(2031, 11, 8)),
-        ground: RetentionGround::StoreHorizon,
-    }
+fn retention() -> AccessRetention {
+    horizon_retention(Some(jiff::civil::date(2031, 11, 8)))
 }
 
 /// `entry` with the link a chain would give it, checked against every

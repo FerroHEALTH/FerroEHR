@@ -219,7 +219,7 @@ type LearnedSets = ();
 /// The PG-backed Audit Record Repository (the `store` sink).
 #[derive(Debug, Clone)]
 pub struct AuditStore {
-    pub(super) pool: PgPool,
+    pub(crate) pool: PgPool,
     /// Whether the FHIR Feed delivers from this store, so each record written
     /// is owed to it.
     fhir_feed: bool,

@@ -268,6 +268,12 @@ ago. A day count cannot: three calendar years span 1095 or 1096 days, so a
 floor in days has to be 1096 and a ceiling 1095, and with
 `sgb_v_309_controller = true` the server refuses every `retention` value
 and names `retention = 3` as the fix.
+An openEHR access-log entry carries its own end: it states `retain_until`
+and the grounds of its period when it is written, and once that day has passed
+the server replaces it by a tombstone that keeps the hash chain whole. The
+registers on this page never shorten or lengthen that period, and none of them
+removes an entry. An erasure a law orders before the end takes the same
+tombstone path through an administrator operation that is itself recorded.
 Retention of the trail itself is described in
 [Audit](../audit.md#retention-and-who-chooses-it).
 
