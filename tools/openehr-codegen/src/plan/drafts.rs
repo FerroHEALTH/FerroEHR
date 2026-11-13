@@ -200,6 +200,21 @@ mod tests {
     }
 
     #[test]
+    fn every_draft_module_is_named_as_a_draft() {
+        // The drift check, `.gitattributes` and the Sonar scope find the draft
+        // modules by the glob `app/*/src/*_draft`.
+        for d in DRAFTS {
+            assert!(
+                d.module.ends_with("_draft") && d.crate_dir.starts_with("app/"),
+                "{}: module {} in {} must match app/*/src/*_draft",
+                d.file,
+                d.module,
+                d.crate_dir
+            );
+        }
+    }
+
+    #[test]
     fn a_type_no_schema_defines_is_refused() {
         let d = &DRAFTS[0];
         let composed = compose_draft(d).expect("the access log draft composes");

@@ -25,6 +25,9 @@ The single deterministic generator behind the whole spec layer. Lives under
   application crate: the access log draft into `app/ferroehr/src/access_log_draft`.
   A draft's `includes` must equal the table's, and a type it names that
   neither it nor its dependency generations define is refused.
+  Every draft module is named `*_draft` under `app/*/src/`, the glob the
+  drift check, `.gitattributes` and the Sonar scope read, so a new row needs
+  no change outside the table.
 - `model-query` — read-only report: what the vendored BMM states about every
   class attribute (declared type, existence, container + cardinality, class
   abstractness) beside the field shape the emitter currently emits for it;
