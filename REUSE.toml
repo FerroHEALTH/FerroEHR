@@ -599,6 +599,14 @@ precedence = "override"
 SPDX-FileCopyrightText = "IHE International, Inc."
 SPDX-License-Identifier = "LicenseRef-IHE-Technical-Framework-Copyright"
 
+# The OASIS XACML 2.0 core specification: the document's own notice, a grant
+# to copy and distribute it unmodified with the notice kept.
+[[annotations]]
+path = "docs/specs/xacml/**"
+precedence = "override"
+SPDX-FileCopyrightText = "OASIS Open"
+SPDX-License-Identifier = "LicenseRef-OASIS-Copyright"
+
 # Logius's Logboek Dataverwerkingen NEN7513 Extensie: the W3C notice in its
 # LICENSE file, and CC BY 4.0 as its publication states.
 [[annotations]]
@@ -636,6 +644,7 @@ path = [
   "docs/specs/fhir-auditevent/PROVENANCE.md",
   "docs/specs/fhir-consent/PROVENANCE.md",
   "docs/specs/ihe-consents/PROVENANCE.md",
+  "docs/specs/xacml/PROVENANCE.md",
   "docs/specs/dicom-ps3-15/PROVENANCE.md",
   "docs/specs/rfc-independent/PROVENANCE.md",
   "docs/specs/iso-health-informatics/PROVENANCE.md",
