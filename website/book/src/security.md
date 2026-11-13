@@ -40,10 +40,12 @@ each by the presence of its configuration. Both are checked by
 shares; FerroEHR checks tokens and never issues them.
 
 - **HTTP Basic** is active when `[[auth.basic.users]]` lists a user. Each user
-  has a user-id, an Argon2id password hash (a PHC string beginning
-  `$argon2id$`) or a `password_hash_file` pointing at one, and the SMART on
-  openEHR `scopes` it holds, and its RBAC `roles` (a user with none holds no
-  role). Because it is
+  has a user-id and an Argon2id password hash (a PHC string beginning
+  `$argon2id$`) or a `password_hash_file` pointing at one, and nothing else:
+  the SMART on openEHR scopes and the RBAC roles it holds are the
+  `hold_scopes` and `hold_roles` grants of its `PERSON` in the CDR, and
+  `[authz.rbac] first_admin` names the one Basic user that holds
+  `admin_role` and the product scope from the configuration. Because it is
   a list of users, the Basic store is normally supplied through the TOML
   configuration file rather than environment variables.
 - **OAuth 2.0 bearer tokens** are active when `[auth]` names an `issuer`. The
@@ -94,7 +96,6 @@ The bearer settings:
 | `FERROEHR__AUTH__ISSUER__0__KIND` | **required** | `persons`, `patients`, `machines` or `federation`: whose tokens the issuer signs |
 | `FERROEHR__AUTH__ISSUER__0__PROFILE` | `rfc9068` | the preset of the issuer's token shape: `rfc9068`, `entra`, `keycloak`, `okta` or `nl` |
 | `FERROEHR__AUTH__ISSUER__0__AUDIENCE` | unset (**required with an issuer**) | accepted `aud` values |
-| `FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS` | unset | the deployment's own clients, the only ones a `persons` token is admitted through beside `delegates` |
 | `FERROEHR__AUTH__ISSUER__0__ALGORITHMS` | `RS256,RS384,PS256,PS384,ES256,ES384` | accepted signing algorithms, asymmetric only |
 | `FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW` | `60s` | leeway on `exp`, `nbf` and `iat`; capped at `5min` |
 | `FERROEHR__AUTH__ISSUER__0__JWKS_FILE` | unset | a static JWK Set of public keys, read instead of the issuer's metadata |
@@ -122,8 +123,10 @@ Basic user whose scopes do not grant the operation is refused with `403`. See
 > export FERROEHR__AUTH__ISSUER__0__KIND=persons
 > export FERROEHR__AUTH__ISSUER__0__PROFILE=keycloak
 > export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
-> export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=ferroehr-viewer
 > ```
+>
+> A person signs in through a client the CDR grants `sign_in_persons`, such
+> as the viewer, on the `AGENT` carrying its client id under the realm.
 >
 > Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068 profile the
 > server expects by default, which the `keycloak` profile admits. The client's
@@ -181,10 +184,12 @@ authentication of them; Implementing Regulation (EU) 2026/2099 Art. 6(3) sets
 
 **The natural person** behind a token is the issuer's to say. Each
 `[[auth.issuer]]` declares its `kind`, and `ferrohealth-smart` classifies every
-token by it and by the issuer's profile: a `persons` token through one of the
-issuer's `first_party_clients` is the person, a token through a client the
-issuer lists in `delegates` is that client acting for the person the token
-names, and an app-only token is a system. A `persons` token through any other
+token by it and by the issuer's profile: a `persons` token through a client
+the CDR grants `sign_in_persons` is the person, a token through a client the
+CDR grants `act_for_persons` is that client acting for the person the token
+names, and an app-only token is a system. The server asks the policy grants
+while it classifies the token, from the copy each replica holds, so a grant
+takes effect on the next request. A `persons` token through any other
 client is refused with `401`. The access record names the person by the
 profile's `person_key`, and a delegated token as the client acting for that
 person; see [Audit trail](audit.md#the-ehds-logging-elements-mapped).

@@ -119,7 +119,6 @@ fn config(mapping: &str) -> FerroEhrConfig {
 issuer = "https://idp.example/realms/staff"
 kind = "persons"
 audience = ["ferroehr"]
-first_party_clients = ["ferroehr-viewer"]
 
 [[auth.party]]
 issuer = "https://idp.example/realms/staff"

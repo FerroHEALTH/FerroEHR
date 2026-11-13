@@ -105,12 +105,11 @@ config:
     # at boot (RFC 8414 §3, OpenID Connect Discovery 1.0 §4).
     issuer:
       # One table per issuer: `kind` says whose tokens it signs, and a
-      # persons token is admitted only through a client in
-      # `first_party_clients`.
+      # persons token is admitted only through a client the CDR
+      # grants `sign_in_persons`.
       - issuer: https://idp.example.com/realms/ferroehr
         kind: persons
         audience: [ferroehr]
-        first_party_clients: [ferroehr-viewer]
     # The issuer's logins bind to the PERSON carrying their `sub` under this
     # identifier issuer.
     party:

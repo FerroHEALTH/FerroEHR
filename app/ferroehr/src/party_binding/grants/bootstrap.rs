@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! `ferroehr party-binding grant`: the operator's grant of an operation to a
-//! client, before any administrator can log in.
+//! client or to the `PERSON` of a Basic user, before any administrator can
+//! log in.
 //!
 //! An administrator writes a policy party through the Demographic API, but an
 //! administrator is a person bound to a `PERSON`, and the `PERSON`s of a new
@@ -13,8 +14,10 @@
 //! whose capability grants the operation with the scope elements given, each
 //! validated, checked against `[authz.grants] allowed` and recorded with the
 //! server's own committer. A client an `ACTOR` names already gets the `ROLE`
-//! alone, and one that holds the operation already gets nothing. No openEHR
-//! spec governs who grants a capability: our own design.
+//! alone, and one that holds the operation already gets nothing. A Basic
+//! user's `PERSON`, which its provisioning created, gets a `ROLE` it performs
+//! the same way, such as the `hold_scopes` a Basic user's scopes come from.
+//! No openEHR spec governs who grants a capability: our own design.
 
 use openehr_base::containers::NonEmptyVec;
 use openehr_base::prelude::{HierObjectId, ObjectId, PartyRef, TerminologyId};
@@ -58,6 +61,18 @@ pub struct ClientGrant {
     pub elements: Vec<(String, String)>,
 }
 
+/// The grant of one operation to the `PERSON` a Basic user binds to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PersonGrant {
+    /// The `PERSON`'s container.
+    pub person: Uuid,
+    /// The operation granted.
+    pub operation: Operation,
+    /// The scope elements, each a code of the operation terminology and the
+    /// text it names.
+    pub elements: Vec<(String, String)>,
+}
+
 /// What a grant committed.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case", tag = "outcome")]
@@ -69,16 +84,17 @@ pub enum Granted {
         /// The new `ROLE`.
         role: Uuid,
     },
-    /// The `ROLE` granting the operation to the `ACTOR` naming the client.
+    /// The `ROLE` granting the operation to the `ACTOR` naming the client,
+    /// or to the Basic user's `PERSON`.
     Added {
-        /// The `ACTOR` naming the client.
+        /// The `ACTOR` naming the client, or the `PERSON`.
         agent: Uuid,
         /// The new `ROLE`.
         role: Uuid,
     },
-    /// Nothing: the client holds the operation already.
+    /// Nothing: the client or the `PERSON` holds the operation already.
     Already {
-        /// The `ACTOR` naming the client.
+        /// The `ACTOR` naming the client, or the `PERSON`.
         agent: Uuid,
     },
 }
@@ -115,7 +131,10 @@ impl FerroEhrService {
             ),
         };
         let role = self
-            .commit_party(PartyKind::Role, role(agent, grant))
+            .commit_party(
+                PartyKind::Role,
+                role(("AGENT", agent), grant.operation, &grant.elements),
+            )
             .await?;
         self.grants()
             .refresh()
@@ -131,6 +150,41 @@ impl FerroEhrService {
                 agent: agent.0,
                 role: role.0,
             }
+        })
+    }
+
+    /// Grants `grant`'s operation to its `PERSON` through a `ROLE` it
+    /// performs, on the operator's authority; nothing when the `PERSON`
+    /// holds the operation already.
+    ///
+    /// # Errors
+    /// The refusals of the commit, as [`Self::grant_client`]'s, and the
+    /// refusal of a `ROLE` whose performer is no `PERSON` of this store.
+    pub async fn grant_person(&self, grant: &PersonGrant) -> Result<Granted, ServiceError> {
+        let grants = self.fresh_grants().await?;
+        let held = grants.capabilities(Actor::Party(grant.person), jiff::Timestamp::now());
+        if held.holds(grant.operation) {
+            return Ok(Granted::Already {
+                agent: grant.person,
+            });
+        }
+        let role = self
+            .commit_party(
+                PartyKind::Role,
+                role(
+                    ("PERSON", VoId(grant.person)),
+                    grant.operation,
+                    &grant.elements,
+                ),
+            )
+            .await?;
+        self.grants()
+            .refresh()
+            .await
+            .map_err(|error| ServiceError::from(error.into_inner()))?;
+        Ok(Granted::Added {
+            agent: grant.person,
+            role: role.0,
         })
     }
 
@@ -247,16 +301,16 @@ fn agent(grant: &ClientGrant) -> Party {
     })
 }
 
-/// The `ROLE` `agent` performs whose capability grants `grant`'s operation
-/// with its scope elements.
-fn role(agent: VoId, grant: &ClientGrant) -> Party {
-    let code = grant.operation.code();
+/// The `ROLE` the party `performer` (its RM type and container) performs,
+/// whose capability grants `operation` with the scope `elements`.
+fn role(performer: (&str, VoId), operation: Operation, elements: &[(String, String)]) -> Party {
+    let code = operation.code();
     let mut items = vec![element(
         "at0021",
         plain_text("operation"),
         DataValue::DvText(DvText::DvCodedText(coded(code))),
     )];
-    items.extend(grant.elements.iter().map(|(name, value)| {
+    items.extend(elements.iter().map(|(name, value)| {
         element(
             "at0022",
             DvText::DvCodedText(coded(name)),
@@ -277,8 +331,8 @@ fn role(agent: VoId, grant: &ClientGrant) -> Party {
         time_validity: None,
         performer: PartyRef {
             namespace: "demographic".to_owned(),
-            r#type: "AGENT".to_owned(),
-            id: ObjectId::HierObjectId(HierObjectId::from(agent.0)),
+            r#type: performer.0.to_owned(),
+            id: ObjectId::HierObjectId(HierObjectId::from(performer.1.0)),
         },
         capabilities: Some(NonEmptyVec::of(Capability {
             name: plain_text("grant"),
@@ -310,7 +364,11 @@ mod tests {
                 (TOKEN_SCOPE.to_owned(), "ferroehr/scim".to_owned()),
             ],
         };
-        let body = openehr_its::json::to_canonical_value(&role(VoId(Uuid::nil()), &grant));
+        let body = openehr_its::json::to_canonical_value(&role(
+            ("AGENT", VoId(Uuid::nil())),
+            grant.operation,
+            &grant.elements,
+        ));
         let credentials = Credentials::of(body.pointer("/capabilities/0/credentials"));
         assert_eq!(
             credentials.identified(BINDING_ISSUER),

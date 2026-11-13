@@ -34,14 +34,13 @@ async fn app(pool: &PgPool) -> Router {
         ..AppConfig::default()
     };
     config.auth.shared.enabled = false;
-    ferroehr_rest::build_with(
+    common::build_with(
         config,
         std::sync::Arc::new(FerroEhrService::new(
             &ferroehr::db::domain::DomainPools::from_shared(pool),
         )),
     )
     .await
-    .expect("router builds")
 }
 
 async fn put(app: Router, uri: &str, body: &str) -> (StatusCode, http::HeaderMap, String) {

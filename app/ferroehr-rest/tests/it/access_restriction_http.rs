@@ -21,7 +21,6 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::AuditStore;
@@ -42,8 +41,22 @@ const UNKNOWN_VO: &str = "11111111-2222-4333-8444-555555555555";
 /// An EHR id no EHR holds.
 const UNKNOWN_EHR: &str = "66666666-7777-4888-9999-000000000000";
 
+/// The `persons` issuer of the medic, whose role claims may grant the
+/// emergency access role: no policy grant gives a privileged role, so the
+/// break-glass role comes from the identity provider.
+const MEDICS: &str = "https://medics.example";
+
+/// The credential of `name`: the medic's token of [`MEDICS`], holding the
+/// emergency role, or a Basic user's.
 fn basic(name: &str) -> String {
     use base64::Engine;
+    if name == "medic" {
+        let exp = jiff::Timestamp::now().as_second() + 3600;
+        return common::bearer(&json!({
+            "sub": "medic", "iss": MEDICS, "aud": "ferroehr", "exp": exp,
+            "roles": ["USER", "EMERGENCY"],
+        }));
+    }
     format!(
         "Basic {}",
         base64::engine::general_purpose::STANDARD.encode(format!("{name}:pw").as_bytes())
@@ -52,8 +65,8 @@ fn basic(name: &str) -> String {
 
 /// An audited app with `ETREAT` agreed as an emergency purpose, the
 /// `EMERGENCY` role configured as the emergency access role, Basic users for
-/// an administrator, a clinician and a medic holding the emergency role, and
-/// the IPS template uploaded.
+/// an administrator and a clinician, a medic whose token holds the emergency
+/// role, and the IPS template uploaded.
 async fn app() -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
     let audit = AuditConfig {
@@ -65,19 +78,29 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         .await
         .expect("the audit sender");
     let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        common::binding_service(&pool)
             .with_audit(sender)
             .with_audit_store(AuditStore::new(pool.clone())),
     );
     let mut config = common::api_config(true);
     common::with_basic_users(
         &mut config,
-        &[
-            ("root", &["ADMIN"]),
-            ("clinician", &["USER"]),
-            ("medic", &["USER", "EMERGENCY"]),
-        ],
-    );
+        &svc,
+        &pool,
+        &[("root", &["ADMIN"]), ("clinician", &["USER"])],
+    )
+    .await;
+    config
+        .auth
+        .shared
+        .issuer
+        .push(ferrohealth_smart::config::IssuerEntry {
+            jwks_file: common::jwks_file().display().to_string(),
+            ..common::entry(MEDICS, "ferroehr")
+        });
+    common::bind_issuer(&mut config, MEDICS);
+    common::bind_subjects(&pool, &[(MEDICS, "medic")]).await;
+    config.rbac.role_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(MEDICS)];
     config.rbac.emergency_access_role = Some("EMERGENCY".to_owned());
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
@@ -88,9 +111,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = ferroehr_rest::build_full(config, svc, authz, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, svc, authz, Observability::default()).await;
     let (status, body) = send(
         &app,
         "POST",

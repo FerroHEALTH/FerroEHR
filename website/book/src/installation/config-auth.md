@@ -25,7 +25,6 @@ issuer = "https://keycloak.example.com/realms/staff"
 kind = "persons"
 profile = "keycloak"
 audience = ["ferroehr"]
-first_party_clients = ["ferroehr-viewer"]
 
 [[auth.party]]
 issuer = "https://keycloak.example.com/realms/staff"
@@ -35,8 +34,22 @@ identifier_type = "uuid"
 [[auth.basic.users]]
 user = "clinician"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$…$…"   # never a plaintext password
-scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds"]
+
+[authz.rbac]
+first_admin = "clinician"
 ```
+
+A Basic user is a credential alone: `user` and its Argon2id hash
+(`password_hash` or `password_hash_file`). What it may do is policy in the
+CDR: the roles and scopes the `hold_roles` and `hold_scopes` grants of its
+`PERSON` name ([Operational policy](../operational-policy.md)).
+`[authz.rbac] first_admin` names the one Basic user that holds `admin_role`
+and the product scope from the configuration: the administrator who writes
+the first policy parties. Which clients a person signs in through, which
+clients and RFC 8693 actors act for a person, and which system clients need
+no scope are grants on the client's `AGENT` (`sign_in_persons`,
+`act_for_persons`, `access_without_scope`), so the clients from the example
+above sign in only once an administrator grants them.
 
 The section keys:
 
@@ -46,7 +59,6 @@ The section keys:
 | `issuer` | `[[auth.issuer]]` tables | none | The trusted issuers, one table each; see below. A flat `issuer = "…"` string is a type error at boot. |
 | `tls` | table | platform roots | `[auth.tls]`, the family's outbound TLS table: `trust_roots_file`, a PEM bundle of certificate authorities trusted in addition to the platform roots for an issuer behind a private PKI (every issuer's metadata and key set are read trusting it), `client_identity_file` (one PEM holding a client certificate chain and its key) and `min_version` (`"1.3"` by default). An introspection grant's calls use the grant's own `tls` table. A file that cannot be read, holds no certificate, or does not parse refuses the start. |
 | `realm` | string | `""` ⇒ `ferroehr` | The realm every `WWW-Authenticate` challenge names. |
-| `scopeless_subjects` | list of `{ issuer, sub }` | `[]` | The subjects whose token, when it carries no resource scope of either the SMART on openEHR or the SMART on FHIR grammar, meets every SMART on openEHR requirement. Only a system (app-only) caller of that issuer is admitted by an entry. A token that carries resource scopes gets only its scopes, and the allowlist reaches neither the ADMIN API nor the DEMOGRAPHIC API, which need the product scope. A string entry refuses the start. |
 | `capabilities` | list of string | `[]` | SMART capabilities the discovery document adds: one SMART App Launch or the SMART on openEHR draft lists, or a full URI. |
 | `scopes_supported` | list of string | `[]` | The scopes the discovery document lists. Empty, it lists the scopes the route table honours. |
 | `described_issuer` | string | unset | The issuer the discovery document describes: one of kind `persons`, `patients` or `federation` whose metadata FerroEHR has, read from it, introspected, or supplied by [`[auth.smart] issuer_metadata_file`](#authsmart). Read only with `[auth.smart] discovery = true`, where naming an unknown issuer, a `machines` issuer or one without metadata is a boot error. Required with discovery when more than one issuer could be described. It renders with any userinfo masked. See [the described issuer](#the-described-issuer). |
@@ -87,8 +99,6 @@ operator rule boot cannot see.
 | `sender_constraint` | `none` or `required` | `none` | `required` admits only a token bound to a DPoP key (RFC 9449) or to the client certificate of a mutual-TLS connection (RFC 8705 §3). A token carrying `cnf` is held to it under either value. |
 | `assurance` | table | unset | The assurance level the issuer's tokens carry, in the shape of [`[authz.assurance]`](#authzassurance-the-assurance-level-patient-data-requires). |
 | `person_key` | string | `sub` (preset) | The claim a person is bound by. `email`, `phone_number`, `preferred_username` and `name` are never accepted as a key (OpenID Connect Core 1.0 §5.7). |
-| `first_party_clients` | list of string | `[]` | The deployment's own clients. **A `persons` token is admitted only through a client listed here or in `delegates`.** |
-| `delegates` | list of `{ client }` or `{ sub, issuer }` | `[]` | Third-party clients or RFC 8693 actors that act for a person; their tokens are recorded as the client acting for the person the token names. |
 | `act_represents_patient` | bool | unset | On a `patients` issuer, read a token whose `sub` is the patient and whose top-level `act` (RFC 8693 §4.1) names someone else as that person acting for the patient. FerroEHR binds the actor by their login to a representative's `PERSON` and admits them while that `PERSON` holds a live representation of the patient ([Representatives in the patient portal](../operational-policy.md#representatives-in-the-patient-portal)); otherwise it refuses the token with `403` (`refused-representation-unrecorded`). Without the key, `ferrohealth-smart` refuses a `patients` token that carries `act` with `401`. |
 | `token_types`, `required_claims`, `scope_claim`, `app_only_scope_claim` | | preset | The token shape that replaces `token_profile`: the accepted `typ` values, the claims every token carries, and where its scopes are read. For an issuer that minted under `token_profile = "jwt"`, set `token_types = ["JWT"]` and the `required_claims` its tokens carry. |
 | `client_claims`, `app_only`, `guest`, `impersonation_marker`, `expect`, `user_claims`, `person_equality`, `unstable_claims`, `max_actor_chain`, `representation`, `tenant_claim`, `adapter`, `onward_*` | | preset | The other profile keys of `ferrohealth-smart`: which claim names the client, what marks an app-only token or a guest, what refuses an impersonation, the claims a token must carry exactly, how a representative names whom it acts for, the claim naming the tenant, the vendor adapter (`idp-entra`) and the onward grants. |
@@ -233,8 +243,8 @@ and a Basic user is mapped in `[[authz.party_binding.basic_user]]`, boot logs a
 The access record carries the acting mode and the professional the caller
 classification names; see [Audit trail](../audit.md#the-ehds-logging-elements-mapped).
 `[authz.professional]` is refused at boot: the issuer's `kind` and profile
-classify the caller, and a client acting for a person is one the issuer lists
-in `delegates`.
+classify the caller, and a client acting for a person is one the CDR grants
+`act_for_persons`.
 
 ### `[authz.party_binding]`
 

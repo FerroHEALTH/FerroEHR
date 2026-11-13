@@ -218,11 +218,22 @@ pub enum Operation {
     /// Reach the DEMOGRAPHIC API, which no SMART on openEHR resource family
     /// covers.
     AccessDemographic,
+    /// Be a client the persons of its token issuer sign in through: a
+    /// person's token through it is the person's own, or their
+    /// representative's.
+    SignInPersons,
+    /// Act for the persons of its token issuer as a third-party client, or
+    /// as the RFC 8693 actor a person's token names in `act`: the request is
+    /// the client acting for the person, with no representation.
+    ActForPersons,
+    /// Be admitted, as a system caller whose token carries no resource
+    /// scope, to every SMART on openEHR requirement.
+    AccessWithoutScope,
 }
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 17] = [
+    pub const ALL: [Self; 20] = [
         Self::CommitComposition,
         Self::ImportEhr,
         Self::ImportEhrExtract,
@@ -240,6 +251,9 @@ impl Operation {
         Self::CreateAtLogin,
         Self::QuerySystemWide,
         Self::AccessDemographic,
+        Self::SignInPersons,
+        Self::ActForPersons,
+        Self::AccessWithoutScope,
     ];
 
     /// The operation's code in [`crate::party_binding::policy_mark::TERMINOLOGY`].
@@ -263,6 +277,9 @@ impl Operation {
             Self::CreateAtLogin => "create_at_login",
             Self::QuerySystemWide => "query_system_wide",
             Self::AccessDemographic => "access_demographic",
+            Self::SignInPersons => "sign_in_persons",
+            Self::ActForPersons => "act_for_persons",
+            Self::AccessWithoutScope => "access_without_scope",
         }
     }
 

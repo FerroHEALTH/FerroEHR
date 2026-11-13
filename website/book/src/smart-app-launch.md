@@ -18,7 +18,9 @@ and a credential whose scopes do not meet it is refused with `403` and the
 `insufficient_scope` challenge (RFC 6750 §3.1). There is no switch: a route the
 table does not know is refused too, so a route can never answer to a token
 that carries no grant for it. A bearer token's scopes come from its `scope`
-claim; a Basic user's from its `scopes` in `[[auth.basic.users]]`. With
+claim; a Basic user's from the `hold_scopes` grants of its `PERSON`
+([Operational policy](operational-policy.md)), and the first administrator's
+`[auth] product_scope` from `[authz.rbac] first_admin`. With
 authentication off nothing is checked.
 
 The scopes and the RBAC and ABAC layers are all checked: SMART only narrows,
@@ -145,12 +147,15 @@ it, `enabled = true` refuses the start.
 export FERROEHR__AUTH__ISSUER__0__ISSUER=https://as.example/realms/ferroehr
 export FERROEHR__AUTH__ISSUER__0__KIND=persons
 export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
-export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=my-smart-app
 export FERROEHR__AUTH__SMART__DISCOVERY=true
 # The URL clients reach the server at, which the absolute service URLs hang
 # off; required.
 export FERROEHR__SERVER__PUBLIC_BASE_URL=https://cdr.example.com
 ```
+
+The app signs persons in once the CDR grants it `sign_in_persons`, on the
+`AGENT` carrying `my-smart-app` under the issuer
+([Operational policy](operational-policy.md)).
 
 A document looks like:
 

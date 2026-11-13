@@ -97,11 +97,13 @@ fn two_issuers() -> AppConfig {
 /// party source.
 async fn router(svc: Arc<FerroEhrService>, config: AppConfig) -> Router {
     let source = Arc::new(svc.party_source("demographic"));
+    common::first_party(&svc, &config).await;
     let authenticator = Authenticator::new(
         &config,
         None,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        common::standing(&svc),
     )
     .await
     .expect("the authenticator builds");

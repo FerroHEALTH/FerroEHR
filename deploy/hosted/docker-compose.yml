@@ -180,6 +180,46 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  # Grants the PERSON of the demo user `ferroehr` the SMART on openEHR scopes
+  # of every resource family in the CDR (hold_scopes), on the operator's
+  # authority (`ferroehr party-binding grant --basic-user`): a Basic user is a
+  # credential alone. It fails until ferroehr-provision has created that
+  # PERSON and runs again until it has; a PERSON that holds the grant already
+  # gets nothing, and the deploy after the nightly wipe starts it again.
+  ferroehr-hold:
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:latest}
+    container_name: ferroehr-sandbox-hold
+    restart: on-failure
+    depends_on:
+      ferroehr-grant:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    environment:
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set in /opt/ferroehr-sandbox/.env}
+      FERROEHR__USAGE_REPORT__ENABLED: "false"
+    volumes:
+      - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
+    command:
+      - party-binding
+      - grant
+      - --basic-user
+      - ferroehr
+      - --operation
+      - hold_scopes
+      - --element
+      - scope=user/composition-*.cruds
+      - --element
+      - scope=user/template-*.cruds
+      - --element
+      - scope=user/aql-*.cruds
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
   # Provisions the demo user `ferroehr` as a professional PERSON through the
   # CDR's SCIM endpoint (RFC 7644 §3.3), the way an identity provider
   # provisions people, so the Basic login is bound to the PERSON FerroEHR

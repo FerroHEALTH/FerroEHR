@@ -456,14 +456,13 @@ async fn rbac_app(issuer: &str) -> (testkit::TestDb, Router) {
         common::null_resolvers(),
     )
     .map(std::sync::Arc::new);
-    let app = ferroehr_rest::build_full(
+    let app = common::build_full(
         cfg,
         service,
         authz,
         ferroehr_rest::extensions::management::Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     (pg, app)
 }
 

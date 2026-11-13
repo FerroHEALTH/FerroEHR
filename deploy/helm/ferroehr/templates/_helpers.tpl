@@ -308,7 +308,7 @@ The `secrets:` key that carries a routed secret, keyed on its leaf name.
   "key_passphrase" "set `secrets.signingKeyPassphrase` instead"
   "secret_access_key" "set `secrets.multimediaSecretAccessKey` instead"
   "client_secret" "set `secrets.terminologyClientSecret` (for [terminology.endpoint.credentials.oauth]) or `secrets.ehrIndexClientSecret` (for [pixm.endpoint.credentials.oauth]) instead"
-  "password_hash" "set `secrets.basicUserPasswordHashes.<user>` instead, and leave only `user`/`scopes` under `config:` (the chart mounts the hash and injects password_hash_file)"
+  "password_hash" "set `secrets.basicUserPasswordHashes.<user>` instead, and leave only `user` under `config:` (the chart mounts the hash and injects password_hash_file)"
 -}}
 {{- get $routes . | default "no `secrets:` route exists for this key" -}}
 {{- end }}
@@ -362,7 +362,7 @@ secret VALUE refused outright.
 {{- end -}}
 {{- end -}}
 {{- if not $matched -}}
-{{- fail (printf "secrets.basicUserPasswordHashes.%s has no matching entry at config.auth.basic.users[] with user: %s (declare the user, its scopes and its roles there; only the hash belongs in secrets:)" $user $user) -}}
+{{- fail (printf "secrets.basicUserPasswordHashes.%s has no matching entry at config.auth.basic.users[] with user: %s (declare the user there; only the hash belongs in secrets:)" $user $user) -}}
 {{- end -}}
 {{- end -}}
 {{- if .Values.secrets.terminologyClientSecret -}}

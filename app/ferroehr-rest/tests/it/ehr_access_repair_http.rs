@@ -18,7 +18,6 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::service::FerroEhrService;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::AuditStore;
@@ -62,7 +61,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         start(common::local_audit(), None, Some(pool.clone()))
             .await
             .expect("the audit sender");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+    let svc = common::binding_service(&pool)
         .with_audit(sender)
         .with_audit_store(AuditStore::new(pool.clone()));
     for id in [HELD, OPEN] {
@@ -89,12 +88,15 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     let mut config = common::api_config(true);
     common::with_basic_users(
         &mut config,
+        &svc,
+        &pool,
         &[
             ("root", &["ADMIN"]),
             ("bob", &["USER"]),
             ("carol", &["USER"]),
         ],
-    );
+    )
+    .await;
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
     let authz = AuthzHandle::build(
@@ -104,9 +106,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = ferroehr_rest::build_full(config, Arc::new(svc), authz, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, Arc::new(svc), authz, Observability::default()).await;
     (db, pool, app)
 }
 

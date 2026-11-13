@@ -222,10 +222,12 @@ fi
 # ── 0. the demo PERSON ───────────────────────────────────────────────────────
 
 # The Basic user is a person bound by its key (#5009): every request is
-# refused `refused-unbound` until a PERSON carries it. The box's
-# ferroehr-provision service creates that PERSON through /scim/v2/ as the
-# `sandbox-scim` client after the wipe (deploy/hosted/docker-compose.yml), so
-# the seed waits for the login to bind before it commits anything.
+# refused `refused-unbound` until a PERSON carries it, and refused for its
+# scope until that PERSON holds them (#5438). The box's ferroehr-provision
+# service creates that PERSON through /scim/v2/ as the `sandbox-scim` client
+# after the wipe, and its ferroehr-hold service then grants it the scopes
+# (deploy/hosted/docker-compose.yml), so the seed waits for the login to bind
+# and hold them before it commits anything.
 echo "==> seeding $BASE"
 bound=""
 for attempt in $(seq 1 "$ATTEMPTS"); do
@@ -239,10 +241,15 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
     sleep "$RETRY_DELAY"
     continue
   fi
+  if [[ "$code" == 403 ]]; then
+    echo "  the demo PERSON holds no scopes yet (attempt $attempt/$ATTEMPTS); waiting for its grant" >&2
+    sleep "$RETRY_DELAY"
+    continue
+  fi
   expect "binding probe" "$code" 200
 done
 [[ -n "$bound" ]] || {
-  echo "::error::the demo login never bound a PERSON: read the box's ferroehr-provision log" >&2
+  echo "::error::the demo login never bound a PERSON holding its scopes: read the box's ferroehr-provision and ferroehr-hold logs" >&2
   exit 1
 }
 

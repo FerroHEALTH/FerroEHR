@@ -26,7 +26,6 @@ use ferroehr::service::demographic::types::PartyKind;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::{Authenticator, Principal};
 use ferrohealth_smart::assurance::{AssuranceLevel, AssuranceSection};
-use ferrohealth_smart::config::{BasicSection, BasicUser};
 use http::{StatusCode, header};
 use serde_json::Value;
 
@@ -42,22 +41,11 @@ const KEY: &str = "7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d";
 /// The binding configuration of `party_binding_http` with the Basic user
 /// [`USER`] mapped by [`KEY`] when `mapped`.
 fn deployment(mapped: bool) -> AppConfig {
-    deployment_scoped(mapped, common::FULL_SCOPES)
-}
-
-/// [`deployment`] with the Basic user's own table granting `scopes`.
-fn deployment_scoped(mapped: bool, scopes: &str) -> AppConfig {
     let mut config = config(None);
-    config.auth.shared.basic = Some(BasicSection {
-        users: vec![BasicUser {
-            user: USER.to_owned(),
-            password_hash: Some(secrecy::SecretString::from(common::hash_password("pw"))),
-            password_hash_file: None,
-            scopes: scopes.split_whitespace().map(str::to_owned).collect(),
-            roles: Vec::new(),
-        }],
-        cache_ttl: ferrohealth_config::units::Duration::from_secs(60),
-    });
+    config.auth.shared.basic = Some(common::basic_section(&[(
+        USER,
+        common::hash_password("pw").as_str(),
+    )]));
     if mapped {
         config.party_binding.basic_user = vec![BasicUserKey {
             user: USER.to_owned(),
@@ -66,6 +54,22 @@ fn deployment_scoped(mapped: bool, scopes: &str) -> AppConfig {
         }];
     }
     config
+}
+
+/// Grants the `PERSON` at `person_uid` the [`common::FULL_SCOPES`] a Basic
+/// user holds through `hold_scopes`.
+async fn scoped(svc: &FerroEhrService, person_uid: &str) {
+    common::allowing(svc, &[Operation::HoldScopes]);
+    svc.grant_person(&ferroehr::party_binding::grants::bootstrap::PersonGrant {
+        person: vo(person_uid).0,
+        operation: Operation::HoldScopes,
+        elements: common::FULL_SCOPES
+            .split_whitespace()
+            .map(|scope| ("scope".to_owned(), scope.to_owned()))
+            .collect(),
+    })
+    .await
+    .expect("the PERSON holds the scopes");
 }
 
 /// The router over `svc` under `config`.
@@ -83,6 +87,7 @@ async fn a_basic_user_with_no_mapping_builds_no_authenticator() {
         None,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        common::standing(&svc),
     )
     .await;
     let Err(refused) = built else {
@@ -103,6 +108,7 @@ async fn a_mapped_basic_user_commits_as_the_person_carrying_its_key() {
     assert!(body.contains("refused-unbound"), "{body}");
 
     let (person_uid, _) = professional(&svc, KEY, "532").await;
+    scoped(&svc, &person_uid).await;
     let ehr = ehr(&app, &credential).await;
     let (_, body) = answered(
         &app,
@@ -146,7 +152,8 @@ async fn a_mapped_basic_user_commits_as_the_person_carrying_its_key() {
 #[tokio::test]
 async fn a_mapped_basic_user_stays_below_an_assurance_minimum() {
     let (_db, svc) = service().await;
-    professional(&svc, KEY, "532").await;
+    let (person_uid, _) = professional(&svc, KEY, "532").await;
+    scoped(&svc, &person_uid).await;
     let mut config = deployment(true);
     config.assurance = AssuranceSection {
         levels: [("loa-low".to_owned(), AssuranceLevel::Low)]
@@ -261,7 +268,7 @@ async fn a_bound_basic_user_holds_the_roles_and_scopes_its_grants_name() {
                 Operation::HoldScopes,
             ])),
     );
-    let app = app(&svc, deployment_scoped(true, "")).await;
+    let app = app(&svc, deployment(true)).await;
     let credential = common::basic_credential(USER);
     let (person_uid, _) = professional(&svc, KEY, "532").await;
     let person = vo(&person_uid).0.to_string();

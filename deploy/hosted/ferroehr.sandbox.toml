@@ -51,12 +51,13 @@ group_identifier_issuer = "urn:ferroehr:groups"
 # The demo user: ferroehr / ferroehr (the hash is Argon2id of "ferroehr").
 # Public by design; the sandbox holds demo data only and is wiped on a
 # schedule.
-# Its scopes grant every SMART on openEHR resource family, and the product
-# scope admits the ADMIN and DEMOGRAPHIC APIs.
+# A Basic user is a credential alone. As the first administrator below it
+# holds ADMIN and the product scope, which admits the ADMIN and DEMOGRAPHIC
+# APIs, and the ferroehr-hold service of the box's compose file grants its
+# PERSON the scopes of every SMART on openEHR resource family in the CDR.
 [[auth.basic.users]]
 user = "ferroehr"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
-scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
 
 # The healthcare provider the sandbox acts for (an example id under the OID
 # arc 2.999), and the binding key of the demo user.
@@ -89,14 +90,18 @@ public_base_url = "https://sandbox.ferroehr.eu"
 [auth.scim]
 
 # The operations the party store may grant: beside a system client's commit,
-# the scim_provision the ferroehr-grant service grants `sandbox-scim`.
+# the scim_provision the ferroehr-grant service grants `sandbox-scim` and the
+# demo user's scopes the ferroehr-hold service grants.
 [authz.grants]
-allowed = ["commit_composition", "scim_provision"]
+allowed = ["commit_composition", "scim_provision", "hold_scopes"]
 
 # Authentication only, no role gate — the one demo user deliberately reaches
-# every enabled surface, the admin group included (#2965).
+# every enabled surface, the admin group included (#2965). It is the first
+# administrator, the Basic user holding ADMIN before any policy party grants
+# anything.
 [authz.rbac]
 enabled = false
+first_admin = "ferroehr"
 
 # FerroTERM beside the CDR (#3304). The read-only /terminology/* routes are on so
 # the viewer's terminology browser and code picker work; the terminology server

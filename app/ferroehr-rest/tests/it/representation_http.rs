@@ -77,11 +77,13 @@ fn config() -> AppConfig {
 /// The router over `svc`, looking every caller up in `source`.
 async fn router(svc: Arc<FerroEhrService>, source: Arc<dyn BindingSource>) -> Router {
     let config = config();
+    common::first_party(&svc, &config).await;
     let authenticator = Authenticator::new(
         &config,
         None,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        common::standing(&svc),
     )
     .await
     .expect("the binding builds");

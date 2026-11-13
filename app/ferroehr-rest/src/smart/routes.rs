@@ -623,9 +623,9 @@ mod tests {
         assert!(check(&ehr_data(Permission::Read), &both, Some("ehr-2")).is_ok());
     }
 
-    /// A subject on `[auth] scopeless_subjects` whose token carries no resource
-    /// scope meets every SMART on openEHR requirement; one off the list, or one
-    /// whose token carries resource scopes, gets only its scopes.
+    /// A subject granted `access_without_scope` whose token carries no
+    /// resource scope meets every SMART on openEHR requirement; one without
+    /// it, or one whose token carries resource scopes, gets only its scopes.
     #[test]
     fn a_scopeless_subject_meets_an_openehr_requirement_only_without_scopes() {
         let caller = |scope: &str, scopeless: bool| {

@@ -19,6 +19,7 @@
 use std::sync::Arc;
 
 use axum::Router;
+use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
@@ -27,7 +28,7 @@ use ferroehr_rest::state::AppState;
 use ferrohealth_smart::config::{AuthSection, IssuerEntry};
 use ferrohealth_smart::kind::IssuerKind;
 use ferrohealth_smart::party::config::PartySection;
-use ferrohealth_smart::profile::{Delegate, Marker, Preset};
+use ferrohealth_smart::profile::{Marker, Preset};
 use http::StatusCode;
 use serde_json::{Value, json};
 
@@ -79,20 +80,15 @@ pub(crate) fn machines(issuer: &str, profile: Preset) -> IssuerEntry {
     }
 }
 
-/// The Keycloak `persons` issuer whose staff log in through [`VIEWER`],
-/// declaring [`SUPPORT_ADMIN`] an actor, with `impersonation_marker` set
-/// over the profile.
+/// The Keycloak `persons` issuer whose staff log in through [`VIEWER`], with
+/// `impersonation_marker` set over the profile; [`router`] grants the viewer
+/// and [`SUPPORT_ADMIN`] their standing.
 fn keycloak_staff(impersonation_marker: Option<&str>) -> IssuerEntry {
     IssuerEntry {
         kind: Some(IssuerKind::Persons),
-        first_party_clients: Some(vec![VIEWER.to_owned()]),
         app_only: Some(vec![Marker::Subjects(vec![
             "service-account-viewer".to_owned(),
         ])]),
-        delegates: Some(vec![Delegate::Actor {
-            issuer: None,
-            sub: SUPPORT_ADMIN.to_owned(),
-        }]),
         impersonation_marker: impersonation_marker.map(str::to_owned),
         ..machines(KEYCLOAK_STAFF, Preset::Keycloak)
     }
@@ -112,10 +108,6 @@ fn config_marked(guests: bool, impersonation_marker: Option<&str>) -> AppConfig 
         guest: Some(vec![Marker::Claim {
             claim: "acct".to_owned(),
             value: "1".to_owned(),
-        }]),
-        delegates: Some(vec![Delegate::Actor {
-            issuer: None,
-            sub: GATEWAY.to_owned(),
         }]),
         ..common::entry(ISSUER, AUDIENCE)
     };
@@ -156,14 +148,25 @@ fn config_marked(guests: bool, impersonation_marker: Option<&str>) -> AppConfig 
     }
 }
 
-/// The router over `svc` under `config`.
+/// The router over `svc` under `config`, with the standing the CDR grants:
+/// the test client and the staff realm's [`VIEWER`] are first party, and the
+/// RFC 8693 actors [`GATEWAY`] and [`SUPPORT_ADMIN`] act for persons.
 async fn router(svc: Arc<FerroEhrService>, config: AppConfig) -> Router {
+    for (issuer, client, operation) in [
+        (ISSUER, common::TEST_CLIENT, Operation::SignInPersons),
+        (ISSUER, GATEWAY, Operation::ActForPersons),
+        (KEYCLOAK_STAFF, VIEWER, Operation::SignInPersons),
+        (KEYCLOAK_STAFF, SUPPORT_ADMIN, Operation::ActForPersons),
+    ] {
+        common::grant_standing(&svc, issuer, client, operation).await;
+    }
     let source = Arc::new(svc.party_source("demographic"));
     let authenticator = Authenticator::new(
         &config,
         None,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        common::standing(&svc),
     )
     .await
     .expect("the authenticator builds");
@@ -381,8 +384,8 @@ async fn delegated_rows(
 /// Keycloak 26.8.2 names the impersonator of an impersonation session in an
 /// RFC 8693 §4.1 `act` claim, "always present and cannot be disabled"
 /// (Keycloak 26.8.0 release notes, "Track impersonation across token
-/// lifecycle and downstream services"). An impersonator the realm declares
-/// in `delegates` acts as a delegate: the request is bound to the
+/// lifecycle and downstream services"). An impersonator the CDR grants
+/// `act_for_persons` acts as a delegate: the request is bound to the
 /// impersonated person, commits as that person, and the access record names
 /// the impersonator as the actor, whether or not the `impersonator` claim
 /// rides along.
@@ -443,7 +446,7 @@ async fn a_keycloak_impersonation_is_recorded_with_the_impersonator_as_actor() {
     }
 }
 
-/// An impersonation by a user the realm does not declare in `delegates` is
+/// An impersonation by a user the CDR does not grant `act_for_persons` is
 /// refused as any undeclared actor is, and a realm that names Keycloak's
 /// `impersonator` claim in `impersonation_marker` refuses every
 /// impersonation that carries it, a declared impersonator's included.
@@ -602,7 +605,7 @@ async fn a_system_callers_records_carry_its_client_and_provider() {
 
 /// An RFC 7523 JWT-bearer onward token names the person in `sub` and the
 /// middle-tier client in its client claim, with no `act`: the client the
-/// issuer lists in `delegates` acts for the person, who is bound and commits
+/// CDR grants `act_for_persons` acts for the person, who is bound and commits
 /// as their own `PERSON`, and the record carries the delegated mode and the
 /// client (#5008).
 #[tokio::test]
@@ -610,11 +613,8 @@ async fn a_jwt_bearer_onward_token_commits_as_the_person_and_records_its_client(
     let (db, _audit, svc) = audited_service().await;
     let key = "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e";
     professional(&svc, key, "532").await;
-    let mut config = config(false);
-    if let Some(persons) = config.auth.shared.issuer.first_mut() {
-        persons.delegates = Some(vec![Delegate::Client("bridge".to_owned())]);
-    }
-    let app = router(Arc::clone(&svc), config).await;
+    common::grant_standing(&svc, ISSUER, "bridge", Operation::ActForPersons).await;
+    let app = router(Arc::clone(&svc), config(false)).await;
     let onward = bearer(
         ISSUER,
         AUDIENCE,

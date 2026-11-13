@@ -24,7 +24,6 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
-use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::AuditStore;
@@ -75,7 +74,7 @@ async fn app(declared: bool) -> (testkit::TestDb, PgPool, Router) {
         Vec::new()
     };
     let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        common::binding_service(&pool)
             .with_audit(sender)
             .with_audit_store(AuditStore::new(pool.clone()))
             .with_binding_mapping(crate::party_binding_http::mapping())
@@ -84,17 +83,19 @@ async fn app(declared: bool) -> (testkit::TestDb, PgPool, Router) {
     let mut config = common::api_config(true);
     common::with_basic_users(
         &mut config,
+        &svc,
+        &pool,
         &[
             ("root", &["ADMIN"]),
             ("clinician", &["USER"]),
             ("service", &["USER"]),
             ("named", &["USER", ACCESS_SERVICE]),
         ],
-    );
-    crate::system_grants::bind_basic_users(&mut config);
-    let grant = [crate::system_grants::capability("access_service", &[])];
-    let granted: &[Value] = if declared { &grant } else { &[] };
-    crate::system_grants::bound_persons(&svc, &config, ("service", granted)).await;
+    )
+    .await;
+    if declared {
+        common::grant_to(&svc, &pool, "service", Operation::AccessService).await;
+    }
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
     let authz = AuthzHandle::build(
@@ -104,9 +105,7 @@ async fn app(declared: bool) -> (testkit::TestDb, PgPool, Router) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = ferroehr_rest::build_full(config, svc, authz, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, svc, authz, Observability::default()).await;
     let (status, body) = send(
         &app,
         "POST",

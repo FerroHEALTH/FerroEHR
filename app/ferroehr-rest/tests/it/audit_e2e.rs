@@ -106,9 +106,12 @@ fn rest_config() -> AppConfig {
         },
         ..Default::default()
     };
-    common::with_basic_users(&mut config, &[("alice", &["USER"])]);
+    common::basic_users(&mut config, USERS);
     config
 }
+
+/// The Basic user: a clinician.
+const USERS: &[(&str, &[&str])] = &[("alice", &["USER"])];
 
 fn auth_off_config() -> AppConfig {
     AppConfig {
@@ -279,12 +282,8 @@ async fn audit_app(sender: AuditSender) -> (testkit::TestDb, Router) {
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
-    (
-        pg,
-        ferroehr_rest::build_with(rest_config(), svc)
-            .await
-            .expect("build app"),
-    )
+    common::grant_basic_users(&svc, &pool, USERS).await;
+    (pg, common::build_with(rest_config(), svc).await)
 }
 
 /// An audited app over a DB pre-seeded with an EHR (`EHR`) and one committed
@@ -297,9 +296,7 @@ async fn audit_app_with_composition(sender: AuditSender) -> (testkit::TestDb, Ro
     let seed_svc = Arc::new(FerroEhrService::new(
         &ferroehr::db::domain::DomainPools::from_shared(&pool),
     ));
-    let seed_app = ferroehr_rest::build_with(auth_off_config(), seed_svc)
-        .await
-        .expect("seed app");
+    let seed_app = common::build_with(auth_off_config(), seed_svc).await;
     let put = common::req("PUT", format!("{BASE}/ehr/{EHR}")).build();
     assert_eq!(
         seed_app.clone().oneshot(put).await.unwrap().status(),
@@ -324,9 +321,8 @@ async fn audit_app_with_composition(sender: AuditSender) -> (testkit::TestDb, Ro
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
-    let app = ferroehr_rest::build_with(rest_config(), svc)
-        .await
-        .expect("build app");
+    common::grant_basic_users(&svc, &pool, USERS).await;
+    let app = common::build_with(rest_config(), svc).await;
     (pg, app, uid)
 }
 
@@ -854,9 +850,7 @@ async fn composition_get_records_the_origins_of_the_served_data() {
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),
     );
-    let app = ferroehr_rest::build_with(auth_off_config(), svc)
-        .await
-        .expect("build app");
+    let app = common::build_with(auth_off_config(), svc).await;
 
     let put = common::req("PUT", format!("{BASE}/ehr/{EHR}")).build();
     assert_eq!(

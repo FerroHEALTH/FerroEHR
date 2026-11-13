@@ -72,9 +72,7 @@ async fn app(delayed: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrService>, R
         ferrohealth_secret::secret_url::SecretUrl::new(ISSUER),
         ferrohealth_secret::secret_url::SecretUrl::new(PATIENTS),
     ];
-    let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, Arc::clone(&svc), None, Observability::default()).await;
     let (status, body) = send(
         &app,
         "POST",

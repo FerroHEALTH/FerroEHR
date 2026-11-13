@@ -26,7 +26,7 @@ use ferroehr::db::domain::DomainPools;
 use ferroehr::ids::VoId;
 use ferroehr::party_binding::check::{Administrator, BasicUser, CheckInput, Expected, Report};
 use ferroehr::party_binding::fill::{LEASE_RENEWAL, LEASE_TTL, Lease};
-use ferroehr::party_binding::grants::bootstrap::{ClientGrant, Granted};
+use ferroehr::party_binding::grants::bootstrap::{ClientGrant, Granted, PersonGrant};
 use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::adopt::{AdoptInput, AdoptReport};
@@ -63,7 +63,9 @@ pub enum PartyBindingCmd {
     /// `scim_provision` of the client that provisions the administrators;
     /// every later grant is an administrator's write through the
     /// Demographic API. A client that holds the operation already gets
-    /// nothing.
+    /// nothing. With `--basic-user`, the `ROLE` is performed by the `PERSON`
+    /// the Basic user binds to, such as the `hold_scopes` of a development
+    /// lane's users.
     Grant(GrantArgs),
 }
 
@@ -71,11 +73,26 @@ pub enum PartyBindingCmd {
 #[derive(Debug, Clone, clap::Args)]
 pub struct GrantArgs {
     /// The issuer of the client's tokens.
-    #[arg(long, value_name = "ISSUER")]
-    pub issuer: String,
+    #[arg(
+        long,
+        value_name = "ISSUER",
+        required_unless_present = "basic_user",
+        requires = "client_id"
+    )]
+    pub issuer: Option<String>,
     /// The client's OAuth 2.0 `client_id`.
-    #[arg(long, value_name = "CLIENT_ID")]
-    pub client_id: String,
+    #[arg(
+        long,
+        value_name = "CLIENT_ID",
+        required_unless_present = "basic_user",
+        requires = "issuer"
+    )]
+    pub client_id: Option<String>,
+    /// The Basic user of `[[auth.basic.users]]` whose `PERSON` is granted
+    /// the operation, found by the binding key
+    /// `[[authz.party_binding.basic_user]]` maps it by, in place of a client.
+    #[arg(long, value_name = "USER", conflicts_with_all = ["issuer", "client_id"])]
+    pub basic_user: Option<String>,
     /// The operation's code, such as `scim_provision`.
     #[arg(long, value_name = "CODE")]
     pub operation: String,
@@ -378,11 +395,7 @@ pub async fn adopt(args: &AdoptArgs, config: &FerroEhrConfig) -> anyhow::Result<
     };
     let pools = crate::connect_pool(config).await?;
     input.check.scim_clients = scim_clients(&pools).await?;
-    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await;
-    let mut service = judged(&pools, config).await?;
-    if let Some(sender) = sender {
-        service = service.with_audit(sender);
-    }
+    let (service, handle) = audited(&pools, config).await?;
     let adopted = service
         .adopt_persons(&input)
         .await
@@ -418,27 +431,103 @@ pub async fn grant(args: &GrantArgs, config: &FerroEhrConfig) -> anyhow::Result<
                 .with_context(|| format!("--element {element:?} is not CODE=TEXT"))
         })
         .collect::<anyhow::Result<Vec<_>>>()?;
-    let request = ClientGrant {
-        issuer: args.issuer.clone(),
-        client_id: args.client_id.clone(),
-        operation,
-        elements,
-    };
     let pools = crate::connect_pool(config).await?;
-    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await;
-    let mut service = judged(&pools, config).await?;
-    if let Some(sender) = sender {
-        service = service.with_audit(sender);
-    }
-    let granted = service
-        .grant_client(&request)
-        .await
-        .context("granting the operation to the client");
+    let (service, handle) = audited(&pools, config).await?;
+    let granted = match (&args.basic_user, &args.issuer, &args.client_id) {
+        (Some(user), _, _) => match basic_user_person(user, config, &pools).await {
+            Ok(person) => service
+                .grant_person(&PersonGrant {
+                    person,
+                    operation,
+                    elements,
+                })
+                .await
+                .with_context(|| format!("granting the operation to the PERSON of {user:?}")),
+            Err(error) => Err(error),
+        },
+        (None, Some(issuer), Some(client_id)) => service
+            .grant_client(&ClientGrant {
+                issuer: issuer.clone(),
+                client_id: client_id.clone(),
+                operation,
+                elements,
+            })
+            .await
+            .context("granting the operation to the client"),
+        _ => Err(anyhow::anyhow!(
+            "name a client with --issuer and --client-id, or a Basic user with --basic-user"
+        )),
+    };
     drop(service);
     if let Some(handle) = handle {
         handle.shutdown(crate::AUDIT_DRAIN_TIMEOUT).await;
     }
     granted
+}
+
+/// The `PERSON` the Basic user `user` binds to: the one live `PERSON`
+/// carrying the binding key `[[authz.party_binding.basic_user]]` maps it by,
+/// read from the binding side table of `pools`.
+///
+/// # Errors
+/// No mapping names `user`, no `[[auth.party]]` table names the key's
+/// issuer, no live `PERSON` or more than one carries the key, or the party
+/// store fails.
+async fn basic_user_person(
+    user: &str,
+    config: &FerroEhrConfig,
+    pools: &DomainPools,
+) -> anyhow::Result<uuid::Uuid> {
+    let mapped = config
+        .authz
+        .party_binding
+        .basic_user
+        .iter()
+        .find(|mapped| mapped.user == user)
+        .with_context(|| format!("no [[authz.party_binding.basic_user]] maps {user:?}"))?;
+    let resolved = ferroehr::config::auth::resolve(&config.auth.shared)
+        .context("resolving [auth] for the binding key")?;
+    let identifier_type = resolved
+        .party
+        .iter()
+        .find(|table| table.identifier_issuer == mapped.key_issuer)
+        .map(|table| table.identifier_type.clone())
+        .with_context(|| {
+            format!(
+                "no [[auth.party]] table names the identifier issuer {:?} of {user:?}",
+                mapped.key_issuer
+            )
+        })?;
+    let today = jiff::Zoned::now()
+        .with_time_zone(jiff::tz::TimeZone::UTC)
+        .date()
+        .to_string();
+    let mut conn = pools
+        .party
+        .acquire()
+        .await
+        .context("connecting to the party store")?;
+    let rows = ferroehr::party_binding::lookup::key_rows(
+        &mut conn,
+        &mapped.key_issuer,
+        &identifier_type,
+        &mapped.key,
+        &today,
+    )
+    .await
+    .context("reading the binding key")?;
+    let live: Vec<uuid::Uuid> = rows
+        .iter()
+        .filter(|row| row.live)
+        .map(|row| row.party_id)
+        .collect();
+    match live.as_slice() {
+        [person] => Ok(*person),
+        [] => {
+            anyhow::bail!("no PERSON carries the binding key of {user:?} yet: provision it first")
+        }
+        _ => anyhow::bail!("more than one PERSON carries the binding key of {user:?}"),
+    }
 }
 
 /// The SCIM clients the provenance rule names, read from the `scim_provision`
@@ -510,6 +599,26 @@ fn provenance_input(args: &ProvenanceArgs, config: &FerroEhrConfig) -> anyhow::R
 /// # Errors
 /// A selector path that does not compile, a template the mapping cannot
 /// use, or a definition store failure.
+/// The service [`judged`] over `pools`, its commits recorded by the
+/// configured audit trail, and the handle that drains the trail.
+///
+/// # Errors
+/// As [`judged`].
+async fn audited(
+    pools: &DomainPools,
+    config: &FerroEhrConfig,
+) -> anyhow::Result<(
+    FerroEhrService,
+    Option<ferroehr::system_log::sender::AuditHandle>,
+)> {
+    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await;
+    let mut service = judged(pools, config).await?;
+    if let Some(sender) = sender {
+        service = service.with_audit(sender);
+    }
+    Ok((service, handle))
+}
+
 async fn judged(pools: &DomainPools, config: &FerroEhrConfig) -> anyhow::Result<FerroEhrService> {
     let service = install(FerroEhrService::new(pools), config)?;
     let errors = service

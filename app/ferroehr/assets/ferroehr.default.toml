@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 862 keys. A deployment that holds real data sets the 10
+# This file lists 855 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
@@ -278,8 +278,10 @@ profile = "sandbox"
 #? person_equality = []
 # `ProfileKeys::unstable_claims`. Optional, unset by default (trust).
 #? unstable_claims = []
-# `ProfileKeys::first_party_clients`. Optional, unset by default (trust).
-#? first_party_clients = []
+# `ProfileKeys::onward_preview`. Optional, unset by default (trust).
+#? onward_preview = []
+# `ProfileKeys::onward_subject_audience`. Optional, unset by default (trust).
+#? onward_subject_audience = false
 # `ProfileKeys::max_actor_chain`. Optional, unset by default (trust).
 #? max_actor_chain = 0
 # `ProfileKeys::act_represents_patient`. Optional, unset by default (trust).
@@ -300,10 +302,6 @@ profile = "sandbox"
 #? onward_parameters = {}
 # `ProfileKeys::onward_client_id`. Optional, unset by default (trust).
 #? onward_client_id = false
-# `ProfileKeys::onward_subject_audience`. Optional, unset by default (trust).
-#? onward_subject_audience = false
-# `ProfileKeys::onward_preview`. Optional, unset by default (trust).
-#? onward_preview = []
 
 # The introspection check, under `mode = "introspection"`.
 #? [auth.issuer.introspection]
@@ -524,15 +522,6 @@ profile = "sandbox"
 # The claim of `{ differs_from_iss }`. Optional, unset by default (trust).
 #? differs_from_iss = ""
 
-# `ProfileKeys::delegates`.
-#? [[auth.issuer.delegates]]
-# The actor's issuer. Optional, unset by default (trust).
-#? issuer = ""
-# The actor's `sub`. Optional, unset by default (trust).
-#? sub = ""
-# The client. Optional, unset by default (trust).
-#? client = ""
-
 # `ProfileKeys::representation`.
 #? [auth.issuer.representation]
 # The claim naming the subject the person represents. Required in its table
@@ -556,15 +545,115 @@ profile = "sandbox"
 # Its JSON form. Optional (trust).
 #? form = "string"
 
-# The subjects granted system-wide access without a scope, each `{ issuer, sub
-# }`; only a `CallerKind::System` caller of a `persons` or `machines` issuer is
-# ever admitted by an entry.
-#? [[auth.scopeless_subjects]]
-# The issuer. It renders with any userinfo masked, as `SecretUrl` renders
-# itself. Required in its table (trust).
+# The `[auth.idp]` table: the vendor adapters a profile may name, each read in
+# a build that compiles it in.
+#? [auth.idp]
+
+# The Microsoft Graph access of the `idp-entra` adapter (`[auth.idp.entra]`),
+# which resolves an Entra ID groups overage.
+#? [auth.idp.entra]
+# The Microsoft Graph root every URL is built from, `https` without a query or
+# a fragment. Optional (infrastructure).
+#? base_url = "https://graph.microsoft.com/v1.0"
+# The adapter's budget for one call, the token fetch and the Graph round trip
+# together; never zero. Optional (infrastructure).
+#? timeout = "2s"
+# The largest Graph answer read; never zero. Optional (infrastructure).
+#? max_response_size = "1MiB"
+# The `securityEnabledOnly` parameter of `getMemberObjects`: `false` reads
+# every group, administrative unit and directory role, `true` only the security
+# groups. Optional (infrastructure).
+#? security_enabled_only = false
+
+# The client credentials grant the Graph token is obtained with, under the
+# Graph permission the deployment grants.
+#? [auth.idp.entra.credentials]
+# The issuer whose metadata names the token endpoint; exclusive with
+# `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
+# itself. Optional (infrastructure).
 #? issuer = ""
-# The `sub`. Required in its table (trust).
-#? sub = ""
+# The token endpoint itself; exclusive with `issuer`. It renders with its
+# userinfo and its query masked. Optional (infrastructure).
+#? token_endpoint = ""
+# The client identifier. Optional (infrastructure).
+#? client_id = ""
+# How the client authenticates. Optional (infrastructure).
+#? client_auth = "client_secret_basic"
+# The client secret, rendered redacted. Optional, unset by default
+# (infrastructure).
+#? client_secret = ""
+# The file holding the client secret. Optional, unset by default
+# (infrastructure).
+#? client_secret_file = ""
+# The PEM file holding the private key of the client assertion under
+# `private_key_jwt`, and of the actor assertion of an onward exchange
+# (`credentials.onward.actor_assertion`) whatever the client authentication.
+# Optional, unset by default (infrastructure).
+#? private_key_file = ""
+# The `kid` the assertion names; the RFC 7638 thumbprint when empty. Optional
+# (infrastructure).
+#? kid = ""
+# The algorithm the assertion is signed with; when unset, by key type, an EC
+# key by its curve (P-256 ES256, P-384 ES384). Optional, unset by default
+# (infrastructure).
+#? assertion_alg = ""
+# The `scope` request parameter; empty for none. Optional (infrastructure).
+#? scope = ""
+# The RFC 8707 resource indicator; empty for none. Optional (infrastructure).
+#? resource = ""
+# The `audience` request parameter; empty for none. Optional (infrastructure).
+#? audience = ""
+# How long before the token expires a new one is fetched. Optional
+# (infrastructure).
+#? refresh_margin = "30s"
+# How long one call to the authorization server may take. Optional
+# (infrastructure).
+#? timeout = "10s"
+# The `aud` of a `private_key_jwt` assertion: `token_endpoint` (the default) or
+# `issuer`, which needs `issuer` set. Optional (infrastructure).
+#? assertion_audience = "token_endpoint"
+# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449). Optional,
+# unset by default (infrastructure).
+#? dpop_key_file = ""
+# Whether the tokens are bound to the client certificate (RFC 8705 §3).
+# Optional (infrastructure).
+#? certificate_bound = false
+# The security profile: `oauth2` (the default) or `fapi2`. Optional
+# (infrastructure).
+#? security_profile = "oauth2"
+# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5). Optional
+# (infrastructure).
+#? mtls_alias_hosts = []
+# The PEM file of the previous assertion key, published, never signing.
+# Optional, unset by default (infrastructure).
+#? previous_private_key_file = ""
+# How long the previous key stays published; `0s` for as long as it is set.
+# Optional (infrastructure).
+#? previous_key_overlap = "0s"
+# The PEM file of the next assertion key, published and never signing.
+# Optional, unset by default (infrastructure).
+#? next_private_key_file = ""
+# The RFC 9396 `authorization_details` JSON text; empty for none. Optional
+# (infrastructure).
+#? authorization_details = ""
+
+# The TLS of the token endpoint connection: trust roots beside the platform's,
+# the client identity presented over mutual TLS (RFC 8705 §2) and the minimum
+# version. The crate reads none of it: a table that names material resolves
+# through the product's `TlsBuilder`.
+#? [auth.idp.entra.credentials.tls]
+# The client certificate chain and its private key, in one PEM. Optional, unset
+# by default (infrastructure).
+#? client_identity = ""
+# A file holding `client_identity`. Optional, unset by default
+# (infrastructure).
+#? client_identity_file = ""
+# A PEM bundle of trust roots beside the platform's. Optional, unset by default
+# (infrastructure).
+#? trust_roots_file = ""
+# The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
+# as for the listener. Optional (infrastructure).
+#? min_version = "1.3"
 
 # The Basic users of the surface; absent for no Basic.
 #? [auth.basic]
@@ -581,10 +670,6 @@ profile = "sandbox"
 #? password_hash = ""
 # The file holding that PHC string. Optional, unset by default (trust).
 #? password_hash_file = ""
-# The scopes the user is granted. Optional (trust).
-#? scopes = []
-# The roles the user is granted (`crate::roles`). Optional (trust).
-#? roles = []
 
 # The `DPoP` proof check of the surface; absent for none, so a `DPoP` request
 # is refused as carrying no admitted credential.
@@ -703,116 +788,6 @@ profile = "sandbox"
 # Optional (trust).
 #? guests = false
 
-# The `[auth.idp]` table: the vendor adapters a profile may name, each read in
-# a build that compiles it in.
-#? [auth.idp]
-
-# The Microsoft Graph access of the `idp-entra` adapter (`[auth.idp.entra]`),
-# which resolves an Entra ID groups overage.
-#? [auth.idp.entra]
-# The Microsoft Graph root every URL is built from, `https` without a query or
-# a fragment. Optional (infrastructure).
-#? base_url = "https://graph.microsoft.com/v1.0"
-# The adapter's budget for one call, the token fetch and the Graph round trip
-# together; never zero. Optional (infrastructure).
-#? timeout = "2s"
-# The largest Graph answer read; never zero. Optional (infrastructure).
-#? max_response_size = "1MiB"
-# The `securityEnabledOnly` parameter of `getMemberObjects`: `false` reads
-# every group, administrative unit and directory role, `true` only the security
-# groups. Optional (infrastructure).
-#? security_enabled_only = false
-
-# The client credentials grant the Graph token is obtained with, under the
-# Graph permission the deployment grants.
-#? [auth.idp.entra.credentials]
-# The issuer whose metadata names the token endpoint; exclusive with
-# `token_endpoint`. It renders with any userinfo masked, as `SecretUrl` renders
-# itself. Optional (infrastructure).
-#? issuer = ""
-# The token endpoint itself; exclusive with `issuer`. It renders with its
-# userinfo and its query masked. Optional (infrastructure).
-#? token_endpoint = ""
-# The client identifier. Optional (infrastructure).
-#? client_id = ""
-# How the client authenticates. Optional (infrastructure).
-#? client_auth = "client_secret_basic"
-# The client secret, rendered redacted. Optional, unset by default
-# (infrastructure).
-#? client_secret = ""
-# The file holding the client secret. Optional, unset by default
-# (infrastructure).
-#? client_secret_file = ""
-# The PEM file holding the private key of the client assertion under
-# `private_key_jwt`, and of the actor assertion of an onward exchange
-# (`credentials.onward.actor_assertion`) whatever the client authentication.
-# Optional, unset by default (infrastructure).
-#? private_key_file = ""
-# The `kid` the assertion names; the RFC 7638 thumbprint when empty. Optional
-# (infrastructure).
-#? kid = ""
-# The algorithm the assertion is signed with; when unset, by key type, an EC
-# key by its curve (P-256 ES256, P-384 ES384). Optional, unset by default
-# (infrastructure).
-#? assertion_alg = ""
-# The `scope` request parameter; empty for none. Optional (infrastructure).
-#? scope = ""
-# The RFC 8707 resource indicator; empty for none. Optional (infrastructure).
-#? resource = ""
-# The `audience` request parameter; empty for none. Optional (infrastructure).
-#? audience = ""
-# How long before the token expires a new one is fetched. Optional
-# (infrastructure).
-#? refresh_margin = "30s"
-# How long one call to the authorization server may take. Optional
-# (infrastructure).
-#? timeout = "10s"
-# The `aud` of a `private_key_jwt` assertion: `token_endpoint` (the default) or
-# `issuer`, which needs `issuer` set. Optional (infrastructure).
-#? assertion_audience = "token_endpoint"
-# The PEM file of the `DPoP` key the tokens are bound to (RFC 9449). Optional,
-# unset by default (infrastructure).
-#? dpop_key_file = ""
-# Whether the tokens are bound to the client certificate (RFC 8705 §3).
-# Optional (infrastructure).
-#? certificate_bound = false
-# The security profile: `oauth2` (the default) or `fapi2`. Optional
-# (infrastructure).
-#? security_profile = "oauth2"
-# The hosts a FAPI 2.0 mutual-TLS alias may be on (RFC 8705 §5). Optional
-# (infrastructure).
-#? mtls_alias_hosts = []
-# The PEM file of the previous assertion key, published, never signing.
-# Optional, unset by default (infrastructure).
-#? previous_private_key_file = ""
-# How long the previous key stays published; `0s` for as long as it is set.
-# Optional (infrastructure).
-#? previous_key_overlap = "0s"
-# The PEM file of the next assertion key, published and never signing.
-# Optional, unset by default (infrastructure).
-#? next_private_key_file = ""
-# The RFC 9396 `authorization_details` JSON text; empty for none. Optional
-# (infrastructure).
-#? authorization_details = ""
-
-# The TLS of the token endpoint connection: trust roots beside the platform's,
-# the client identity presented over mutual TLS (RFC 8705 §2) and the minimum
-# version. The crate reads none of it: a table that names material resolves
-# through the product's `TlsBuilder`.
-#? [auth.idp.entra.credentials.tls]
-# The client certificate chain and its private key, in one PEM. Optional, unset
-# by default (infrastructure).
-#? client_identity = ""
-# A file holding `client_identity`. Optional, unset by default
-# (infrastructure).
-#? client_identity_file = ""
-# A PEM bundle of trust roots beside the platform's. Optional, unset by default
-# (infrastructure).
-#? trust_roots_file = ""
-# The oldest TLS version the client speaks: `"1.3"` unless lowered to `"1.2"`,
-# as for the listener. Optional (infrastructure).
-#? min_version = "1.3"
-
 # The SMART App Launch resource-server posture.
 #? [auth.smart]
 # Serve the `/.well-known/smart-configuration` discovery document (SMART App
@@ -895,6 +870,10 @@ profile = "sandbox"
 # `emergency_access_role`, each a `persons` issuer; empty, the default, lets no
 # token grant them. Each renders with any userinfo masked. Optional (trust).
 #? role_issuers = []
+# The Basic user of `[auth.basic.users]` that holds `admin_role` and `[auth]
+# product_scope` from this file (`FERROEHR__AUTHZ__RBAC__FIRST_ADMIN`, default
+# unset). Optional, unset by default (trust).
+#? first_admin = ""
 # What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default `open`).
 # Optional (trust).
 #? ehr_access_default = "open"

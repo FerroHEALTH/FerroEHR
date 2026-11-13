@@ -84,6 +84,14 @@ pub struct RbacConfig {
     /// `emergency_access_role`, each a `persons` issuer; empty, the default,
     /// lets no token grant them. Each renders with any userinfo masked.
     pub role_issuers: Vec<SecretUrl>,
+    /// The Basic user of `[[auth.basic.users]]` that holds `admin_role` and
+    /// `[auth] product_scope` from this file
+    /// (`FERROEHR__AUTHZ__RBAC__FIRST_ADMIN`, default unset).
+    ///
+    /// No policy grant gives `admin_role`, so this user is the administrator
+    /// who writes the first policy parties through the Demographic API.
+    /// Unset, no Basic user holds `admin_role`. Our own design.
+    pub first_admin: Option<String>,
     /// What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default
     /// `open`).
     ///
@@ -109,6 +117,7 @@ impl Default for RbacConfig {
             readonly_role: "READONLY".to_owned(),
             emergency_access_role: None,
             role_issuers: Vec::new(),
+            first_admin: None,
             ehr_access_default: EhrAccessDefault::Open,
         }
     }

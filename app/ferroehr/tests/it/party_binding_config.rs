@@ -29,7 +29,6 @@ subject_index = "local"
 issuer = "https://idp.example/realms/staff"
 kind = "persons"
 audience = ["ferroehr"]
-first_party_clients = ["ferroehr-viewer"]
 
 [[auth.issuer]]
 issuer = "https://idp.example/realms/patients"
@@ -66,7 +65,6 @@ identifier_type = "guid"
 [[auth.basic.users]]
 user = "alice"
 password_hash = "{HASH}"
-scopes = ["user/composition-*.cruds"]
 
 [authz.rbac]
 role_issuers = ["https://idp.example/realms/staff"]
@@ -315,8 +313,8 @@ fn a_removed_key_is_refused_as_unknown() {
         ("client_tokens = \"claim_absent\"", "client_tokens"),
     ] {
         let text = refusal(&with(
-            "first_party_clients = [\"ferroehr-viewer\"]",
-            &format!("first_party_clients = [\"ferroehr-viewer\"]\n{key}"),
+            "audience = [\"ferroehr\"]",
+            &format!("audience = [\"ferroehr\"]\n{key}"),
         ));
         assert!(
             text.contains(&format!("unknown field `{name}`")),
@@ -388,8 +386,8 @@ fn a_party_claim_and_a_token_profile_are_refused() {
     ));
     assert!(text.contains("unknown field `claim`"), "{text}");
     let text = refusal(&with(
-        "first_party_clients = [\"ferroehr-viewer\"]",
-        "first_party_clients = [\"ferroehr-viewer\"]\ntoken_profile = \"jwt\"",
+        "audience = [\"ferroehr\"]",
+        "audience = [\"ferroehr\"]\ntoken_profile = \"jwt\"",
     ));
     assert!(text.contains("unknown field `token_profile`"), "{text}");
 }
@@ -411,6 +409,46 @@ fn a_system_client_table_is_refused_as_unknown() {
             text.contains("unknown field `system_client`"),
             "{table}: {text}"
         );
+    }
+}
+
+/// The client lists the policy grants answer (#5437) and a Basic user's
+/// roles and scopes, which its PERSON's grants carry (#5438), are unknown
+/// keys, refused like any other.
+#[test]
+fn the_client_lists_and_basic_roles_are_refused_as_unknown() {
+    for (old, key, name) in [
+        (
+            "audience = [\"ferroehr\"]",
+            "first_party_clients = [\"ferroehr-viewer\"]",
+            "first_party_clients",
+        ),
+        (
+            "audience = [\"ferroehr\"]",
+            "delegates = [{ client = \"ferrobridge\" }]",
+            "delegates",
+        ),
+    ] {
+        let text = refusal(&with(old, &format!("{old}\n{key}")));
+        assert!(
+            text.contains(&format!("unknown field `{name}`")),
+            "{key}: {text}"
+        );
+    }
+    let text = refusal(&with(
+        "[[auth.issuer]]\n",
+        "[auth]\nscopeless_subjects = []\n\n[[auth.issuer]]\n",
+    ));
+    assert!(
+        text.contains("unknown field `scopeless_subjects`"),
+        "{text}"
+    );
+    for key in ["roles = [\"USER\"]", "scopes = [\"user/aql-*.cruds\"]"] {
+        let text = refusal(&with(
+            "[[auth.basic.users]]\n",
+            &format!("[[auth.basic.users]]\n{key}\n"),
+        ));
+        assert!(text.contains("unknown field"), "{key}: {text}");
     }
 }
 

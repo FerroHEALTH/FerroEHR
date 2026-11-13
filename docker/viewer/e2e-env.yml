@@ -38,7 +38,8 @@ services:
       FERROEHR__AUTH__ISSUER__2__KIND: persons
       FERROEHR__AUTH__ISSUER__2__PROFILE: keycloak
       FERROEHR__AUTH__ISSUER__2__AUDIENCE: ferroehr
-      FERROEHR__AUTH__ISSUER__2__FIRST_PARTY_CLIENTS: ferroehr-viewer
+      # A person signs in through the viewer, the client scripts/ui-e2e.sh
+      # grants sign_in_persons in the CDR.
       FERROEHR__AUTH__ISSUER__2__APP_ONLY__0__CLAIM: client_id
       FERROEHR__AUTH__ISSUER__2__APP_ONLY__0__VALUE: ferroehr-service
       FERROEHR__AUTH__ISSUER__2__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles

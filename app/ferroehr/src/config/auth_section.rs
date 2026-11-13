@@ -6,12 +6,15 @@
 //!
 //! `ferrohealth-smart` owns every other key of `[auth]`, `[auth.idp.entra]`
 //! included, and reads it with `deny_unknown_fields`; `config::beside` reads the
-//! two tables beside it. No openEHR spec governs configuration: our own
-//! design.
+//! two tables beside it. The section is read as the crate's
+//! `ProductStandingSection`, without the client lists the policy grants
+//! answer (`party_binding::grants::standing`), so `scopeless_subjects` and an
+//! issuer's `first_party_clients` and `delegates` are unknown keys. No
+//! openEHR spec governs configuration: our own design.
 
 use std::fmt;
 
-use ferrohealth_smart::config::AuthSection;
+use ferrohealth_smart::config::{AuthSection, ProductStandingSection};
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -27,13 +30,14 @@ const SCIM: &str = "scim";
 /// The `[auth]` table.
 #[derive(Debug, Clone, Default, Serialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = {"enabled": "trust", "realm": "optional", "capabilities": "optional", "scopes_supported": "optional", "product_scope": "trust", "described_issuer": "trust", "issuer": "trust", "scopeless_subjects": "trust", "basic": "trust", "basic.cache_ttl": "optional", "dpop": "trust", "tls": "trust", "federation": "trust", "attributes": "trust", "party": "trust", "idp": "infrastructure"})))]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = {"enabled": "trust", "realm": "optional", "capabilities": "optional", "scopes_supported": "optional", "product_scope": "trust", "described_issuer": "trust", "issuer": "trust", "basic": "trust", "basic.cache_ttl": "optional", "dpop": "trust", "tls": "trust", "federation": "trust", "attributes": "trust", "party": "trust", "idp": "infrastructure"})))]
 #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = ["issuer.issuer", "issuer.kind", "issuer.audience"])))]
 pub struct AuthConfig {
     /// Every key `ferrohealth-smart` reads: the issuers, the party and
     /// federation tables, the vendor adapter tables (`[auth.idp]`), the Basic
     /// users, `[auth.dpop]` and the discovery options.
     #[serde(flatten)]
+    #[cfg_attr(feature = "schema", schemars(with = "ProductStandingSection"))]
     pub shared: Box<AuthSection>,
     /// `[auth.smart]` — the SMART App Launch resource-server posture.
     pub smart: SmartConfig,
@@ -60,9 +64,9 @@ impl<'de> Visitor<'de> for AuthVisitor {
     }
 
     fn visit_map<A: MapAccess<'de>>(self, map: A) -> Result<AuthConfig, A::Error> {
-        let (shared, own) = split::<AuthSection, Own, A>(map)?;
+        let (shared, own) = split::<ProductStandingSection, Own, A>(map)?;
         Ok(AuthConfig {
-            shared: Box::new(shared),
+            shared: Box::new(shared.0),
             smart: own.smart.unwrap_or_default(),
             scim: own.scim,
         })
@@ -135,6 +139,18 @@ mod tests {
         assert!(text.contains("`issuer`"), "{text}");
         let err = toml::from_str::<AuthConfig>("[idp.okta]\n").expect_err("unknown adapter");
         assert!(err.to_string().contains("unknown field `okta`"), "{err}");
+    }
+
+    #[test]
+    fn the_client_lists_the_policy_grants_answer_are_unknown_keys() {
+        for body in [
+            "scopeless_subjects = []\n",
+            "[[issuer]]\nissuer = \"https://idp.example\"\nfirst_party_clients = [\"portal\"]\n",
+            "[[issuer]]\nissuer = \"https://idp.example\"\ndelegates = [{ client = \"bridge\" }]\n",
+        ] {
+            let err = toml::from_str::<AuthConfig>(body).expect_err("a removed key");
+            assert!(err.to_string().contains("unknown field"), "{body}: {err}");
+        }
     }
 
     #[test]

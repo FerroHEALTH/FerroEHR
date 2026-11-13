@@ -25,7 +25,6 @@ use axum::body::Body;
 use ehds_logging::balp::{EMERGENCY_DESCRIPTION, EMERGENCY_ENTITY};
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
-use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::sender::{
     AuditHandle, ResolvedSubject, SubjectLookup, SubjectResolver, start,
@@ -78,7 +77,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
         .await
         .expect("the audit sender");
     let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        common::binding_service(&pool)
             .with_audit(sender)
             .with_audit_store(AuditStore::new(pool.clone()))
             .with_binding_mapping(crate::party_binding_http::mapping())
@@ -87,22 +86,16 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
     let mut config = common::api_config(true);
     common::with_basic_users(
         &mut config,
+        &svc,
+        &pool,
         &[
             ("root", &["ADMIN"]),
             ("clinician", &["USER"]),
             ("portal", &["PORTAL"]),
         ],
-    );
-    crate::system_grants::bind_basic_users(&mut config);
-    crate::system_grants::bound_persons(
-        &svc,
-        &config,
-        (
-            "portal",
-            &[crate::system_grants::capability("read_subject_audit", &[])],
-        ),
     )
     .await;
+    common::grant_to(&svc, &pool, "portal", Operation::ReadSubjectAudit).await;
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
     let authz = AuthzHandle::build(
@@ -112,9 +105,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = ferroehr_rest::build_full(config, svc, authz, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, svc, authz, Observability::default()).await;
 
     let (status, body) = common::send_body(
         &app,

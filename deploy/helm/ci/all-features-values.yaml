@@ -67,12 +67,11 @@ config:
     # its metadata and key set at boot and accepts asymmetric algorithms only.
     issuer:
       # One table per issuer: `kind` says whose tokens it signs, and a
-      # persons token is admitted only through a client in
-      # `first_party_clients`.
+      # persons token is admitted only through a client the CDR
+      # grants `sign_in_persons`.
       - issuer: https://keycloak.example.com/realms/ferroehr
         kind: persons
         audience: [ferroehr]
-        first_party_clients: [ferroehr-viewer]
       # The machines issuer FerroBRIDGE's client credentials tokens come from
       # (RFC 6749 §4.4): the CDR trusts its tokens, and bridge.cdr.oauth
       # names FerroBRIDGE's client at it.

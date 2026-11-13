@@ -57,16 +57,16 @@ fn rest_config() -> AppConfig {
         c.api.admin = true;
         c
     };
-    common::with_basic_users(
-        &mut config,
-        &[("user", &["USER"]), ("root", &["ADMIN"]), ("noroles", &[])],
-    );
-    let basic = config.auth.shared.basic.take();
     config.auth = common::issuer_auth(ISSUER, AUDIENCE);
-    config.auth.shared.basic = basic;
+    common::bind_issuer(&mut config, ISSUER);
+    common::basic_users(&mut config, USERS);
     config.rbac.role_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(ISSUER)];
     config
 }
+
+/// The Basic users: a clinician, an administrator and a user granted no
+/// role.
+const USERS: &[(&str, &[&str])] = &[("user", &["USER"]), ("root", &["ADMIN"]), ("noroles", &[])];
 
 fn authz(enabled: bool) -> Option<Arc<AuthzHandle>> {
     let mut cfg = AuthzConfig::default();
@@ -87,19 +87,20 @@ async fn service(audit: Option<AuditSender>) -> (testkit::TestDb, Arc<FerroEhrSe
     if let Some(sender) = audit {
         svc = svc.with_audit(sender);
     }
+    common::grant_basic_users(&svc, &pool, USERS).await;
+    common::bind_subjects(&pool, &[(ISSUER, "svc")]).await;
     (pg, Arc::new(svc))
 }
 
 async fn app(rbac_enabled: bool, audit: Option<AuditSender>) -> (testkit::TestDb, Router) {
     let (pg, svc) = service(audit).await;
-    let app = ferroehr_rest::build_full(
+    let app = common::build_full(
         rest_config(),
         svc,
         authz(rbac_enabled),
         ferroehr_rest::extensions::management::Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     (pg, app)
 }
 
@@ -483,7 +484,10 @@ async fn default_committer_names_the_callers_issuer_on_both_paths() {
         );
         for audit in audits {
             let identifier = &audit["committer"]["identifiers"][0];
-            assert_eq!(audit["committer"]["name"], subject, "{id_type}: {history}");
+            assert_eq!(
+                audit["committer"]["external_ref"]["type"], "PERSON",
+                "{id_type}: the bound PERSON commits: {history}"
+            );
             assert_eq!(identifier["id"], subject, "{id_type}: {history}");
             assert_eq!(identifier["type"], id_type, "{id_type}: {history}");
             assert_eq!(identifier["issuer"], issuer, "{id_type}: {history}");
@@ -540,9 +544,7 @@ async fn app_with_config_snapshot(snapshot: Value) -> (testkit::TestDb, Router) 
         env_snapshot: Arc::new(snapshot),
         ..Default::default()
     };
-    let app = ferroehr_rest::build_full(rest_config(), svc, authz(true), obs)
-        .await
-        .expect("build app");
+    let app = common::build_full(rest_config(), svc, authz(true), obs).await;
     (pg, app)
 }
 
@@ -669,9 +671,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
         env_snapshot: Arc::new(snapshot),
         ..Default::default()
     };
-    let app = ferroehr_rest::build_full(rest_config(), svc, authz(true), obs)
-        .await
-        .expect("build app");
+    let app = common::build_full(rest_config(), svc, authz(true), obs).await;
     for uri in [format!("{EXT}/admin/config"), "/management/env".to_owned()] {
         let request = common::req("GET", &uri).auth(basic("root")).build();
         let resp = app.clone().oneshot(request).await.expect("oneshot");

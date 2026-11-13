@@ -62,8 +62,6 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
             user: "reporter".to_owned(),
             password_hash: Some(secrecy::SecretString::from(BASIC_HASH)),
             password_hash_file: None,
-            scopes: Vec::new(),
-            roles: Vec::new(),
         }],
         cache_ttl: ferrohealth_config::units::Duration::ZERO,
     });

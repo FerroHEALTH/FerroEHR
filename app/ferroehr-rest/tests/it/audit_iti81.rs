@@ -41,17 +41,17 @@ fn rest_config() -> AppConfig {
         server: common::server(),
         ..AppConfig::default()
     };
-    common::with_basic_users(
-        &mut config,
-        &[
-            ("root", &["ADMIN"]),
-            ("user", &["USER"]),
-            ("portal", &["PORTAL"]),
-        ],
-    );
-    crate::system_grants::bind_basic_users(&mut config);
+    common::basic_users(&mut config, USERS);
     config
 }
+
+/// The Basic users: an administrator, a clinician and a portal holding the
+/// subject-scoped audit role.
+const USERS: &[(&str, &[&str])] = &[
+    ("root", &["ADMIN"]),
+    ("user", &["USER"]),
+    ("portal", &["PORTAL"]),
+];
 
 fn authz(enabled: bool) -> Option<Arc<AuthzHandle>> {
     let mut cfg = AuthzConfig::default();
@@ -111,26 +111,15 @@ async fn app(with_store: bool, rbac: bool) -> (testkit::TestDb, Router, AuditSto
     if with_store {
         svc = svc.with_audit_store(store.clone());
     }
-    let svc = Arc::new(svc);
-    // NOTE: the portal reads one subject's log by its grant in the CDR, the
-    // read_subject_audit capability of a ROLE its PERSON performs (#5521).
-    crate::system_grants::bound_persons(
-        &svc,
-        &rest_config(),
-        (
-            "portal",
-            &[crate::system_grants::capability("read_subject_audit", &[])],
-        ),
-    )
-    .await;
-    let app = ferroehr_rest::build_full(
+    common::grant_basic_users(&svc, &pool, USERS).await;
+    common::grant_to(&svc, &pool, "portal", Operation::ReadSubjectAudit).await;
+    let app = common::build_full(
         rest_config(),
-        svc,
+        Arc::new(svc),
         authz(rbac),
         ferroehr_rest::extensions::management::Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     (pg, app, store)
 }
 

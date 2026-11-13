@@ -110,39 +110,44 @@ status = "admin_only"
 # url = "http://terminology:8080/r4b"
 # on_error = "accept"
 
+# The Basic users are credentials alone: what each may do is a grant on its
+# PERSON in the CDR. scripts/scim-provision.sh provisions the three PERSONs
+# and grants each the scopes of every SMART on openEHR resource family with
+# the product scope (hold_scopes) and its roles (hold_roles):
+# `ferroehr` USER, `ferroehr-readonly` READONLY, `ferroehr-admin` USER.
+# Argon2id hash of the password "ferroehr" for all three; dev only, do NOT
+# use in production.
 [[auth.basic.users]]
 user = "ferroehr"
-scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
-# IMPORTER: the EHR Extract import routes need the import role (#5005).
-roles = ["USER", "IMPORTER"]
-# Argon2id hash of the password "ferroehr".
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 
-# Dev-only ADMIN account for the admin API (`DELETE /admin/...`) and the
+# The ADMIN account for the admin API (`DELETE /admin/...`) and the
 # conformance catalogue's administrative workflows (scripts/conformance.sh
-# logs its admin principal in as this user by default). Same dev password "ferroehr" (same hash); ADMIN + USER
-# roles. Do NOT use in production.
+# logs its admin principal in as this user by default): the first
+# administrator below, which holds ADMIN and the product scope from this file.
 [[auth.basic.users]]
 user = "ferroehr-admin"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
-scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
-roles = ["ADMIN", "USER"]
 
-# Dev-only READ-ONLY account for the conformance suite's authorization-
-# separation cases: authenticated, but every write operation is
-# refused by the RBAC read-only gate. Do NOT use in production.
+# The READ-ONLY account for the conformance suite's authorization-separation
+# cases: authenticated, but every write operation is refused by the RBAC
+# read-only gate.
 [[auth.basic.users]]
 user = "ferroehr-readonly"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
-scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
-roles = ["READONLY"]
+
+# The first administrator: the one Basic user holding ADMIN before any policy
+# party grants anything.
+[authz.rbac]
+first_admin = "ferroehr-admin"
 
 # The operations the party store may grant: beside a system client's commit,
 # the SCIM provisioning each lane's client is granted in the CDR before it
-# provisions (scripts/scim-provision.sh) and the change feed a lane may grant
-# a reader.
+# provisions (scripts/scim-provision.sh), the scopes and roles of the Basic
+# users it provisions, the clients persons sign in through and the change
+# feed a lane may grant a reader.
 [authz.grants]
-allowed = ["commit_composition", "read_change_feed", "scim_provision"]
+allowed = ["commit_composition", "read_change_feed", "scim_provision", "hold_roles", "hold_scopes", "sign_in_persons"]
 
 # The healthcare provider the dev lanes act for (an example id under the OID
 # arc 2.999), and the binding key of each Basic user.

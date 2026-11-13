@@ -357,8 +357,6 @@ fn redacted_json_masks_every_secret_field() {
             user: "alice".to_owned(),
             password_hash: Some(secrecy::SecretString::from(BASIC_HASH)),
             password_hash_file: None,
-            scopes: vec!["user/composition-*.r".to_owned()],
-            roles: Vec::new(),
         }],
         cache_ttl: ferrohealth_config::units::Duration::ZERO,
     });
@@ -388,10 +386,6 @@ fn redacted_json_masks_every_secret_field() {
 
     // Non-secret identifiers stay visible (they are not credentials).
     assert_eq!(value["auth"]["basic"]["users"][0]["user"], "alice");
-    assert_eq!(
-        value["auth"]["basic"]["users"][0]["scopes"][0],
-        "user/composition-*.r"
-    );
     assert_eq!(value["auth"]["issuer"][0]["issuer"], "https://idp.example");
     assert_eq!(
         value["record"]["multimedia"]["access_key_id"],
@@ -470,15 +464,19 @@ fn a_party_issuer_never_renders_its_userinfo() {
     );
 }
 
-/// An `auth.scopeless_subjects` issuer renders and refuses with its
-/// userinfo masked.
+/// The removed `[[auth.scopeless_subjects]]` table, whose subjects are now
+/// `access_without_scope` grants in the CDR, is refused as an unknown key,
+/// and the refusal never renders the password of the issuer it held (#5437).
 #[test]
-fn a_scopeless_subject_issuer_never_renders_its_userinfo() {
-    assert_table_issuer_masked(
-        "[[auth.scopeless_subjects]]\nissuer = \"https://u:SCOPELESS_PW_SENTINEL@scopeless.example/realms/ferroehr\"\nsub = \"svc\"\n",
-        "SCOPELESS_PW_SENTINEL",
-        "scopeless.example",
-    );
+fn a_removed_scopeless_subject_table_is_refused_without_rendering_its_userinfo() {
+    let file = toml_file(&format!(
+        "{NAMED_ISSUER}\n[[auth.scopeless_subjects]]\nissuer = \"https://u:SCOPELESS_PW_SENTINEL@scopeless.example/realms/ferroehr\"\nsub = \"svc\"\n"
+    ));
+    let refused = assemble(Some(file.path()), &env(&[]), &[])
+        .expect_err("the removed table is an unknown key")
+        .to_string();
+    assert!(refused.contains("scopeless_subjects"), "{refused}");
+    assert!(!refused.contains("SCOPELESS_PW_SENTINEL"), "{refused}");
 }
 
 /// The removed `[[authz.federation.agreement]]` table, whose agreements are

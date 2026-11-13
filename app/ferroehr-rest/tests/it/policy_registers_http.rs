@@ -37,7 +37,13 @@ async fn replica(pool: &PgPool, abac: bool) -> (Arc<FerroEhrService>, Router) {
     svc.policy_registers()
         .set_cedar_check(ferroehr_rest::extensions::access::authz::cedar::check());
     let mut config = common::api_config(true);
-    common::with_basic_users(&mut config, &[("dr", &["USER"]), ("root", &["ADMIN"])]);
+    common::with_basic_users(
+        &mut config,
+        &svc,
+        pool,
+        &[("dr", &["USER"]), ("root", &["ADMIN"])],
+    )
+    .await;
     let mut authz = AuthzConfig::default();
     authz.abac.enabled = abac;
     // No patient claim, so the Cedar policy set alone decides a request.
@@ -51,9 +57,7 @@ async fn replica(pool: &PgPool, abac: bool) -> (Arc<FerroEhrService>, Router) {
     )
     .map(Arc::new);
     listening(&svc).await;
-    let app = ferroehr_rest::build_full(config, Arc::clone(&svc), handle, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, Arc::clone(&svc), handle, Observability::default()).await;
     (svc, app)
 }
 

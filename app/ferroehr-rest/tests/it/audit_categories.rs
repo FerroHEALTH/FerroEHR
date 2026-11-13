@@ -154,9 +154,7 @@ async fn app(
     )
     .await
     .expect("the category register takes the map");
-    let app = ferroehr_rest::build_full(config(), svc, None, observability)
-        .await
-        .expect("build app");
+    let app = common::build_full(config(), svc, None, observability).await;
     let (status, _, body) = send(
         &app,
         Request::post(format!("{BASE}/definition/template/adl1.4"))

@@ -220,9 +220,7 @@ async fn serve_observed(
         ferroehr::config::server::PublicRoot::new("https://ehr.example", "")
             .expect("a public root"),
     );
-    let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, observability)
-        .await
-        .expect("build app");
+    let app = common::build_full(config, Arc::clone(&svc), None, observability).await;
     (db, svc, app)
 }
 

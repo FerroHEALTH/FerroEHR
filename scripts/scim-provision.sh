@@ -15,11 +15,18 @@
 # (docs/conformance/party/scim/README.md: TEST MATERIAL, never production)
 # using openssl alone, and creates each User with POST /scim/v2/Users. A User
 # whose userName exists already (409 `uniqueness`) is taken as provisioned, so
-# the step runs again on a kept volume. No openEHR spec governs provisioning a
-# lane: our own design.
+# the step runs again on a kept volume.
+#
+# A Basic user is a credential alone: what it may do is a grant on its
+# PERSON. With SCIM_GRANT set and the Basic users' binding issuer
+# (urn:ferroehr:basic-user), each user is then granted, through
+# `ferroehr party-binding grant --basic-user`, the scopes of every SMART on
+# openEHR resource family with the product scope (`hold_scopes`) and its
+# roles (`hold_roles`); a PERSON that holds the operation already gets
+# nothing. No openEHR spec governs provisioning a lane: our own design.
 #
 # Usage:
-#   scripts/scim-provision.sh <base-url> <client-id> <binding-issuer> [--name <formatted>] <user>[=<login-key>]...
+#   scripts/scim-provision.sh <base-url> <client-id> <binding-issuer> [--name <formatted>] [--roles <roles>] <user>[=<login-key>]...
 #
 #   <base-url>   the server origin, such as http://localhost:8080
 #   <client-id>  the client the token names
@@ -32,6 +39,9 @@
 #                writes as the committer it records (RFC 7643 §4.1.1); it
 #                applies to every <user> after it, and a User without one has
 #                no name
+#   --roles      the space-separated roles each Basic user after it holds
+#                (`hold_roles`), USER until it is given; an empty value
+#                grants none
 #
 # Environment (each defaults to the dev lanes' SCIM issuer):
 #   SCIM_KEY_FILE   the RS256 private key (docs/conformance/party/scim/scim-test.key.pem)
@@ -45,7 +55,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: scim-provision.sh <base-url> <client-id> <binding-issuer> [--name <formatted>] <user>[=<login-key>]..." >&2
+  echo "usage: scim-provision.sh <base-url> <client-id> <binding-issuer> [--name <formatted>] [--roles <roles>] <user>[=<login-key>]..." >&2
   exit 2
 }
 [[ $# -ge 4 ]] || usage
@@ -85,11 +95,38 @@ token="$header.$payload.$signature"
 body_file="$(mktemp)"
 trap 'rm -f "$body_file"' EXIT
 
+# The Basic users' binding issuer, whose users the script grants.
+basic_users_issuer="urn:ferroehr:basic-user"
+scopes="user/composition-*.cruds user/template-*.cruds user/aql-*.cruds __ferroehr.platform"
+
+# hold <user> <roles>: grants the Basic user's PERSON the scopes and <roles>.
+hold() {
+  local user="$1" roles="$2" scope role
+  local -a elements=()
+  for scope in $scopes; do elements+=(--element "scope=$scope"); done
+  "${grant[@]}" party-binding grant --basic-user "$user" --operation hold_scopes \
+    "${elements[@]}" >/dev/null
+  elements=()
+  for role in $roles; do elements+=(--element "role=$role"); done
+  if [[ ${#elements[@]} -gt 0 ]]; then
+    "${grant[@]}" party-binding grant --basic-user "$user" --operation hold_roles \
+      "${elements[@]}" >/dev/null
+  fi
+  echo "scim-provision: $user holds its scopes${roles:+ and $roles}"
+}
+
 formatted=""
+roles="USER"
 while [[ $# -gt 0 ]]; do
   if [[ "$1" == --name ]]; then
     [[ $# -ge 3 ]] || usage
     formatted="$2"
+    shift 2
+    continue
+  fi
+  if [[ "$1" == --roles ]]; then
+    [[ $# -ge 3 ]] || usage
+    roles="$2"
     shift 2
     continue
   fi
@@ -126,4 +163,7 @@ while [[ $# -gt 0 ]]; do
       exit 1
       ;;
   esac
+  if [[ -n "${SCIM_GRANT:-}" && "$binding_issuer" == "$basic_users_issuer" ]]; then
+    hold "$user" "$roles"
+  fi
 done

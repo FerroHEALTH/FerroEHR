@@ -19,7 +19,8 @@
 # The server stores its default demographic definitions at boot (a base tree
 # that predates that has them loaded before serve), and once it is ready the
 # Basic user is bound to a PERSON through SCIM (scripts/scim-provision.sh, which grants
-# the client scim_provision through the server first). The seed writes one EHR the reads use and
+# the client scim_provision through the server first, and the PERSON its
+# scopes and role after). The seed writes one EHR the reads use and
 # never changes, one EHR the commits write into, the lab-results template with
 # a result, and a PERSON, and the plan is rendered with their ids
 # (perf/plan.toml, `@NAME@`).

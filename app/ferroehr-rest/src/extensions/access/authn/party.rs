@@ -750,7 +750,14 @@ mod tests {
         *config.auth.shared = bound_section();
         let replay: Arc<dyn ferrohealth_smart::sender::replay::ReplayStore> =
             Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new());
-        let Err(message) = super::super::Authenticator::new(&config, None, None, replay).await
+        let Err(message) = super::super::Authenticator::new(
+            &config,
+            None,
+            None,
+            replay,
+            crate::test_support::standing(),
+        )
+        .await
         else {
             panic!("[[auth.party]] without a party source builds no authenticator");
         };
