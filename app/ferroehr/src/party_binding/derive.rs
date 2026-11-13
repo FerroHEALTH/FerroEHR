@@ -59,13 +59,14 @@ impl Identifier {
     }
 }
 
-/// One inline representation relationship of a `PERSON`: the subject it
-/// targets, its type code and its `time_validity`.
+/// One representation relationship: the subject it targets, the openEHR
+/// `subject_relationship` code it names and its `time_validity`.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Representation {
     /// The subject's container.
     pub(crate) subject: Uuid,
-    /// `name/defining_code/code_string`, when the name is coded.
+    /// The openEHR `subject_relationship` code, when the relationship names
+    /// one ([`crate::party_binding::policy_mark::subject_relationship`]).
     pub(crate) code: Option<String>,
     /// `time_validity`, when the relationship carries one.
     pub(crate) validity: Option<Value>,
@@ -87,10 +88,14 @@ pub(crate) struct Facts {
     /// The containers the membership relationships of a `PERSON` target,
     /// sorted and distinct: the `GROUP`s it is a member of.
     pub(crate) groups: Vec<Uuid>,
-    /// Whether an inline relationship is of the representation archetype.
+    /// Whether an inline relationship carries the representation code.
     pub(crate) represents: bool,
-    /// The representation relationships with a container target.
+    /// The representation relationships with a container target: the inline
+    /// ones of a party, or the one a standalone `PARTY_RELATIONSHIP` is.
     pub(crate) representations: Vec<Representation>,
+    /// The container of a standalone representation's source, the
+    /// representative.
+    pub(crate) representative: Option<Uuid>,
     /// The selector identifiers of a `PERSON` of a mapped template, distinct
     /// by selector, issuer and compared value, in document order.
     pub(crate) identifiers: Selected,
@@ -143,11 +148,27 @@ impl Facts {
             // NOTE: a standalone relationship container is listed at its target
             // like an inline one (RM demographic master02 §Party Relationships): our own design.
             Kind::PartyRelationship => {
-                facts.targets.extend(
-                    body.pointer("/target/id/value")
+                let target = body
+                    .pointer("/target/id/value")
+                    .and_then(Value::as_str)
+                    .and_then(container);
+                facts.targets.extend(target);
+                if crate::party_binding::policy_mark::carries(
+                    body,
+                    crate::party_binding::policy_mark::REPRESENTS,
+                ) {
+                    facts.representative = body
+                        .pointer("/source/id/value")
                         .and_then(Value::as_str)
-                        .and_then(container),
-                );
+                        .and_then(container);
+                    facts
+                        .representations
+                        .extend(target.map(|subject| Representation {
+                            subject,
+                            code: crate::party_binding::policy_mark::subject_relationship(body),
+                            validity: body.get("time_validity").cloned(),
+                        }));
+                }
             }
             _ => {}
         }
@@ -173,17 +194,15 @@ impl Facts {
                 .and_then(Value::as_str)
                 .map(str::to_lowercase);
             let is = |of: Option<&String>| of.is_some() && of == archetype.as_ref();
-            if is(mapping.representation.as_ref()) {
+            if crate::party_binding::policy_mark::carries(
+                relationship,
+                crate::party_binding::policy_mark::REPRESENTS,
+            ) {
                 self.represents = true;
                 if let Some(subject) = target {
                     self.representations.push(Representation {
                         subject,
-                        code: relationship
-                            .get("name")
-                            .and_then(|name| name.get("defining_code"))
-                            .and_then(|code| code.get("code_string"))
-                            .and_then(Value::as_str)
-                            .map(str::to_owned),
+                        code: crate::party_binding::policy_mark::subject_relationship(relationship),
                         validity: relationship.get("time_validity").cloned(),
                     });
                 }
@@ -393,10 +412,6 @@ mod tests {
                 NameSelector::new("/identities[id4]/details[id5]/items[id6]").expect("parses"),
             )
             .with_membership("openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1")
-            .with_representation(
-                "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1",
-                std::collections::BTreeMap::new(),
-            )
     }
 
     fn relationship(archetype: &str, target: &str) -> Value {
@@ -508,21 +523,84 @@ mod tests {
         assert_eq!(facts.targets.len(), 2);
     }
 
+    /// A relationship of the deployment's own `archetype` to `target`, whose
+    /// name is the openEHR `subject_relationship` code `kind` and whose
+    /// details hold the representation code when `coded`.
+    fn representation(archetype: &str, target: &str, kind: &str, coded: bool) -> Value {
+        let mut relationship = relationship(archetype, target);
+        relationship["name"] = json!({"_type": "DV_CODED_TEXT", "value": "parent",
+            "defining_code": {"_type": "CODE_PHRASE",
+                "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"},
+                "code_string": kind}});
+        if coded {
+            relationship["details"] = json!({"_type": "ITEM_TREE", "archetype_node_id": "id3",
+                "items": [{"_type": "ELEMENT", "archetype_node_id": "id4",
+                    "name": {"_type": "DV_TEXT", "value": "Representation code"},
+                    "value": {"_type": "DV_CODED_TEXT", "value": "represents",
+                        "defining_code": {"_type": "CODE_PHRASE",
+                            "terminology_id": {"_type": "TERMINOLOGY_ID",
+                                "value": "ferroehr-operations"},
+                            "code_string": "represents"}}}]});
+        }
+        relationship
+    }
+
     #[test]
-    fn a_representation_is_read_with_its_code_and_marks_the_person() {
+    fn a_representation_is_read_by_its_code_in_any_archetype() {
+        let subject = "0190a1bc-3a1e-72e4-b7c5-f78a24c01308";
         let body = json!({
             "_type": "PERSON",
             "relationships": [
-                relationship(
-                    "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1",
-                    "0190a1bc-3a1e-72e4-b7c5-f78a24c01308"
-                ),
-                relationship("openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1", "x")
+                representation("org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.custodian.v3",
+                    subject, "254", true),
+                representation("openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1",
+                    "0190a1bc-3a1e-72e4-b7c5-f78a24c01309", "264", false),
+                representation("org.example::rel.v1", "x", "264", true)
             ]
         });
         let facts = Facts::of(Kind::Person, &body, &mapping());
         assert!(facts.represents);
+        assert_eq!(
+            facts.representations.len(),
+            1,
+            "{:?}",
+            facts.representations
+        );
+        assert_eq!(facts.representations[0].subject.to_string(), subject);
+        assert_eq!(facts.representations[0].code.as_deref(), Some("254"));
+    }
+
+    #[test]
+    fn a_relationship_without_the_code_represents_no_one() {
+        let body = json!({
+            "_type": "PERSON",
+            "relationships": [representation(
+                "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1",
+                "0190a1bc-3a1e-72e4-b7c5-f78a24c01308", "254", false)]
+        });
+        let facts = Facts::of(Kind::Person, &body, &mapping());
+        assert!(!facts.represents);
+        assert_eq!(facts.representations, Vec::<Representation>::new());
+    }
+
+    #[test]
+    fn a_standalone_representation_names_its_source_and_subject() {
+        let (source, subject) = (
+            "0190a1bc-3a1e-72e4-b7c5-f78a24c01310",
+            "0190a1bc-3a1e-72e4-b7c5-f78a24c01308",
+        );
+        let mut body = representation("org.example::proxy.v1", subject, "253", true);
+        body["source"] = json!({"id": {"_type": "HIER_OBJECT_ID", "value": source}});
+        let facts = Facts::of(Kind::PartyRelationship, &body, &mapping());
+        assert_eq!(
+            facts.representative.map(|id| id.to_string()).as_deref(),
+            Some(source)
+        );
         assert_eq!(facts.representations.len(), 1);
-        assert_eq!(facts.representations[0].code.as_deref(), Some("MTH"));
+        assert_eq!(facts.representations[0].code.as_deref(), Some("253"));
+        body["details"] = Value::Null;
+        let plain = Facts::of(Kind::PartyRelationship, &body, &mapping());
+        assert_eq!(plain.representative, None);
+        assert_eq!(plain.representations, Vec::<Representation>::new());
     }
 }

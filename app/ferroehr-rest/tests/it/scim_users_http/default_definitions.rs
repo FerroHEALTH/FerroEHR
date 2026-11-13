@@ -160,7 +160,8 @@ fn person_ref(id: &str) -> Value {
 /// A representation of the type `code` (`at10` parent, `at11` guardian) from
 /// `representative` to `subject`, as the default representation archetype
 /// describes it: its name is its type (RM `PARTY_RELATIONSHIP`
-/// `Type_validity`).
+/// `Type_validity`), and its details carry the representation code and the
+/// openEHR `subject_relationship` code `254|parent|`.
 fn representation(code: &str, label: &str, representative: &str, subject: &str) -> Value {
     json!({
         "_type": "PARTY_RELATIONSHIP",
@@ -172,9 +173,27 @@ fn representation(code: &str, label: &str, representative: &str, subject: &str) 
             "defining_code": { "_type": "CODE_PHRASE",
                 "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
                 "code_string": code } },
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "id3",
+            "name": { "_type": "DV_TEXT", "value": "Details" },
+            "items": [
+                { "_type": "ELEMENT", "archetype_node_id": "id4",
+                    "name": { "_type": "DV_TEXT", "value": "Representation code" },
+                    "value": coded("ferroehr-operations", "represents", "represents") },
+                { "_type": "ELEMENT", "archetype_node_id": "id6",
+                    "name": { "_type": "DV_TEXT", "value": "Relationship" },
+                    "value": coded("openehr", "254", "parent") }
+            ] },
         "source": person_ref(representative),
         "target": person_ref(subject)
     })
+}
+
+/// A `DV_CODED_TEXT` of `code` in `terminology`, reading `value`.
+fn coded(terminology: &str, code: &str, value: &str) -> Value {
+    json!({ "_type": "DV_CODED_TEXT", "value": value,
+        "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
+            "code_string": code } })
 }
 
 /// A SCIM User of the default `PERSON` performing the default `ROLE`, with
@@ -346,7 +365,6 @@ fn the_book_prints_the_default_mapping() {
             &printed.professional_role,
             &printed.group,
             &printed.membership,
-            &printed.representation,
             &printed.patient,
         ),
         (
@@ -354,7 +372,6 @@ fn the_book_prints_the_default_mapping() {
             &empty.professional_role,
             &empty.group,
             &empty.membership,
-            &empty.representation,
             &empty.patient,
         )
     );

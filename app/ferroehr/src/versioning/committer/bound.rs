@@ -45,6 +45,26 @@ pub struct BoundDetails {
     pub provider: Option<(String, String)>,
     /// The `PARTY_REF.namespace` a bound party is written under.
     pub namespace: String,
+    /// The `PERSON` the server itself binds a `patients` issuer's login to: the
+    /// representative the token admits for its patient, or the patient
+    /// writing the representation that authorises a proxy; `None` for any
+    /// other caller.
+    pub portal: Option<PortalParty>,
+}
+
+/// The `PERSON` of a patient-context login the server binds itself, the
+/// openEHR `subject_relationship` code of a representative's representation
+/// and the login.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PortalParty {
+    /// The representative's `PERSON` container.
+    pub person: uuid::Uuid,
+    /// The openEHR `subject_relationship` code the relationship names.
+    pub relationship: Option<String>,
+    /// The issuer of the representative's login.
+    pub login_issuer: String,
+    /// The representative's login under that issuer.
+    pub login: String,
 }
 
 /// The `DV_IDENTIFIER.type` of the client identifier a system caller's
@@ -97,6 +117,9 @@ pub fn server_committer(identity: &CommitterIdentity) -> Option<PartyProxy> {
             }),
         ));
     }
+    if let Some(portal) = identity.bound.as_ref().and_then(|d| d.portal.as_ref()) {
+        return Some(portal_committer(identity, portal));
+    }
     if identity.person && !identity.representative {
         // NOTE: RM common master04 §PARTY_SELF and Referring to the Patient, the
         // first scheme ("the most secure approach"): no external_ref.
@@ -118,18 +141,7 @@ pub fn server_committer(identity: &CommitterIdentity) -> Option<PartyProxy> {
             .iter()
             .find_map(ferrohealth_smart::party::Represented::relationship)
             .unwrap_or(UNKNOWN_RELATIONSHIP);
-        let rubric = openehr_term::bundle::openehr()
-            .rubric("subject_relationship", code, "en")
-            .unwrap_or("unknown")
-            .to_owned();
-        return Some(PartyProxy::PartyIdentified(PartyIdentified::PartyRelated(
-            PartyRelated {
-                external_ref,
-                name: details.name,
-                identifiers: Some(openehr_base::containers::NonEmptyVec::of(login)),
-                relationship: crate::versioning::audit::openehr_coded_text(code, rubric),
-            },
-        )));
+        return Some(related(external_ref, details.name, login, code));
     }
     Some(professional(
         external_ref,
@@ -137,6 +149,68 @@ pub fn server_committer(identity: &CommitterIdentity) -> Option<PartyProxy> {
         login,
         details.provider,
     ))
+}
+
+/// The committer of the person `portal` names: a representative's
+/// `PARTY_RELATED`, or the patient's own `PARTY_IDENTIFIED` on a write of
+/// demographic data, naming their `PERSON` in `external_ref`, with their
+/// login.
+fn portal_committer(identity: &CommitterIdentity, portal: &PortalParty) -> PartyProxy {
+    let namespace = identity
+        .bound
+        .as_ref()
+        .map_or_else(String::new, |details| details.namespace.clone());
+    let external_ref = HierObjectId::new(portal.person.to_string())
+        .ok()
+        .map(|id| PartyRef {
+            namespace,
+            r#type: "PERSON".to_owned(),
+            id: ObjectId::HierObjectId(id),
+        });
+    let login = DvIdentifier {
+        issuer: Some(portal.login_issuer.clone()),
+        assigner: None,
+        id: portal.login.clone(),
+        r#type: Some(identity.id_type.to_owned()),
+    };
+    if !identity.representative {
+        return PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(
+            PartyIdentifiedData {
+                external_ref,
+                name: None,
+                identifiers: Some(openehr_base::containers::NonEmptyVec::of(login)),
+            },
+        ));
+    }
+    related(
+        external_ref,
+        None,
+        login,
+        portal
+            .relationship
+            .as_deref()
+            .unwrap_or(UNKNOWN_RELATIONSHIP),
+    )
+}
+
+/// A representative's `PARTY_RELATED`: their `PERSON` in `external_ref`,
+/// their `name` and `login`, and the openEHR `subject_relationship` `code`.
+fn related(
+    external_ref: Option<PartyRef>,
+    name: Option<String>,
+    login: DvIdentifier,
+    code: &str,
+) -> PartyProxy {
+    let rubric = openehr_term::bundle::openehr()
+        .rubric("subject_relationship", code, "en")
+        .unwrap_or("unknown")
+        .to_owned();
+    PartyProxy::PartyIdentified(PartyIdentified::PartyRelated(PartyRelated {
+        external_ref,
+        name,
+        identifiers: Some(openehr_base::containers::NonEmptyVec::of(login)),
+        relationship: crate::versioning::audit::openehr_coded_text(code, rubric),
+    }))
 }
 
 /// The committer of a professional: a `PARTY_IDENTIFIED` naming their

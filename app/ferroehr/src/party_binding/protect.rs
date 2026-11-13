@@ -16,7 +16,10 @@
 //! terminology, an acts-for relationship, inline or of its own, or a client
 //! identifier. Once a version is one, the party is marked for good, and
 //! only an administrator writes or reads it, never a SCIM client, so no
-//! other caller can grant itself or anyone a capability. A SCIM client
+//! other caller can grant itself or anyone a capability. A standalone
+//! representation, a `PARTY_RELATIONSHIP` carrying the representation code,
+//! is written by an administrator or by the patient it represents, which is
+//! how a patient authorises a proxy. A SCIM client
 //! writes the ones it owns: a `PERSON` whose binding keys its
 //! `binding_issuer` issues, a professional `ROLE` that `PERSON` performs, and
 //! a `GROUP` it created (RFC 7644 §3: a client manages its own resources). A present
@@ -47,6 +50,9 @@ task_local! {
     static REKEY: Rekey;
     /// The `binding_issuer` of the SCIM client the running request is of.
     static PROVISIONER: String;
+    /// The `PERSON` the running request's patient is: the subject of the EHR
+    /// of its launch context.
+    static PATIENT: Uuid;
 }
 
 /// One key change an administrator re-key makes: on the `PERSON` `party`,
@@ -73,6 +79,19 @@ pub async fn rekey<F: Future>(change: Rekey, fut: F) -> F::Output {
 /// client owns.
 pub async fn provisioning<F: Future>(binding_issuer: String, fut: F) -> F::Output {
     PROVISIONER.scope(binding_issuer, fut).await
+}
+
+/// Runs `fut` as a request of the patient whose `PERSON` is `subject`: a
+/// commit inside it may write a standalone representation of that `PERSON`,
+/// the authorisation of a proxy, and no other relationship.
+pub async fn patient<F: Future>(subject: Uuid, fut: F) -> F::Output {
+    PATIENT.scope(subject, fut).await
+}
+
+/// The `PERSON` the running request's patient is ([`patient`]), `None`
+/// outside such a request.
+pub(crate) fn patient_person() -> Option<Uuid> {
+    PATIENT.try_with(|subject| *subject).ok()
 }
 
 /// One selector identifier of a body: which selector, its issuer and type,
@@ -234,6 +253,77 @@ pub(crate) async fn check(
         ));
     }
     Ok(())
+}
+
+/// Judges the write of the standalone `PARTY_RELATIONSHIP` `vo_id`, whose
+/// new head the commit transaction `tx` has just written holding `facts`
+/// (`None` for a logical delete), beside [`check`].
+///
+/// A representation, before or after the write, is written by an
+/// administrator, or by the patient whose `PERSON` it targets before and
+/// after ([`patient`]); a patient writes no other relationship. No openEHR
+/// spec governs who may write a relationship: our own design.
+///
+/// # Errors
+/// [`ServiceError::Forbidden`] (`403`) for a write no rule admits; a storage
+/// error when the versions cannot be read.
+pub(crate) async fn representation(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    vo_id: VoId,
+    facts: Option<&Facts>,
+) -> Result<(), ServiceError> {
+    let (current, previous) = versions(tx, vo_id).await?;
+    let subjects =
+        |facts: &Facts| -> Vec<Uuid> { facts.representations.iter().map(|r| r.subject).collect() };
+    let mut held = Vec::new();
+    match (current, facts) {
+        (Some(_), Some(facts)) => held.push(subjects(facts)),
+        (Some(sys_version), None) => held.push(standalone(tx, mapping, vo_id, sys_version).await?),
+        (None, _) => {}
+    }
+    if let Some(sys_version) = previous {
+        held.push(standalone(tx, mapping, vo_id, sys_version).await?);
+    }
+    let represents = held.iter().any(|subjects| !subjects.is_empty());
+    let patient = patient_person();
+    if patient.is_none() && (!represents || administrator(mapping)) {
+        return Ok(());
+    }
+    let own = patient.is_some_and(|person| {
+        represents
+            && held
+                .iter()
+                .all(|subjects| subjects.iter().all(|subject| *subject == person))
+    });
+    if own {
+        return Ok(());
+    }
+    Err(ServiceError::not_permitted(format!(
+        "the PARTY_RELATIONSHIP {vo_id} is a representation ({}::{}): only an \
+         administrator, or the patient it represents, writes it",
+        policy_mark::TERMINOLOGY,
+        policy_mark::REPRESENTS
+    )))
+}
+
+/// The subjects the stored version `sys_version` of the standalone
+/// `PARTY_RELATIONSHIP` `vo_id` represents; none for a version without a
+/// body or without the representation code.
+async fn standalone(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    vo_id: VoId,
+    sys_version: i32,
+) -> Result<Vec<Uuid>, ServiceError> {
+    Ok(match body(tx, vo_id, sys_version).await? {
+        Some(body) => parsed(Kind::PartyRelationship, &body, mapping)?
+            .representations
+            .iter()
+            .map(|r| r.subject)
+            .collect(),
+        None => Vec::new(),
+    })
 }
 
 /// Whether the SCIM client of the binding issuer `issuer` owns the party

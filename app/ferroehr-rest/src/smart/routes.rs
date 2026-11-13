@@ -23,7 +23,9 @@
 //!   the EHR's data and is held to every template.
 //! - The DEMOGRAPHIC API has no family: a client whose `ACTOR` the CDR grants
 //!   `access_demographic` ([`Need::Demographic`]), or a caller holding the
-//!   product scope, reaches it. The ADMIN API needs the product scope, except the outbox
+//!   product scope, reaches it. A patient's own credential also writes a
+//!   standalone `PARTY_RELATIONSHIP` ([`Need::Representation`]), which the
+//!   party protection holds to a representation of the patient. The ADMIN API needs the product scope, except the outbox
 //!   feed, which needs [`OUTBOX_SCOPE`] alone, so a feed reader reaches no
 //!   other admin route and no admin caller reads the feed by default.
 //! - A `patient/` grant reaches only the EHR of the token's launch context
@@ -61,6 +63,11 @@ pub(crate) enum Need {
     /// `access_demographic`, read from the caller's grants, and otherwise by
     /// the requirement held, the product scope.
     Demographic(Requirement),
+    /// A write of a standalone `PARTY_RELATIONSHIP`: met as
+    /// [`Need::Demographic`] is, and by the patient's own credential, whose
+    /// write the party protection holds to a representation of the patient,
+    /// the authorisation of a proxy.
+    Representation(Requirement),
 }
 
 /// The generated ITS-REST group an operation belongs to.
@@ -135,6 +142,9 @@ impl SmartRoutes {
             return self.need_of_op(op, *group, matched, path);
         }
         let relative = self.namespaces.relative(matched).unwrap_or(matched);
+        if is_under(relative, "/demographic/party_relationship") && method != Method::GET {
+            return Need::Representation(self.product());
+        }
         if is_under(relative, "/demographic") {
             return self.demographic();
         }
@@ -686,6 +696,31 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// A write of a standalone relationship is the patient's to make as well,
+    /// held by the party protection; reading one is the DEMOGRAPHIC API's.
+    #[test]
+    fn a_patient_writes_a_standalone_relationship_and_reads_none() {
+        let table = routes();
+        let ext = "/ferroehr/rest/extensions/v1";
+        let one = format!("{ext}/demographic/party_relationship/{{uid_based_id}}");
+        let create = format!("{ext}/demographic/party_relationship");
+        for (method, template) in [
+            (Method::POST, &create),
+            (Method::PUT, &one),
+            (Method::DELETE, &one),
+        ] {
+            assert_eq!(
+                table.need(&method, Some(template), template),
+                Need::Representation(table.product()),
+                "{method} {template}"
+            );
+        }
+        assert!(matches!(
+            table.need(&Method::GET, Some(&one), &one),
+            Need::Demographic(_)
+        ));
     }
 
     /// The outbox feed needs its own scope: the product scope does not reach it,

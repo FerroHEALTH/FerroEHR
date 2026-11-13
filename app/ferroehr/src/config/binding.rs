@@ -62,8 +62,6 @@ pub struct PartyBindingConfig {
     pub group: Option<person::GroupSection>,
     /// The membership `PARTY_RELATIONSHIP` archetype.
     pub membership: Option<person::MembershipSection>,
-    /// The representation `PARTY_RELATIONSHIP` archetype.
-    pub representation: Option<person::RepresentationSection>,
     /// The patient's `PERSON` template.
     pub patient: Option<person::PatientSection>,
     /// How FerroEHR reads each `persons` issuer's tokens when it creates a
@@ -91,7 +89,6 @@ impl PartyBindingConfig {
             professional_role: self.professional_role.as_ref(),
             group: self.group.as_ref(),
             membership: self.membership.as_ref(),
-            representation: self.representation.as_ref(),
             patient: self.patient.as_ref(),
         }
     }
@@ -148,13 +145,6 @@ impl Default for PartyBindingConfig {
             }),
             membership: Some(person::MembershipSection {
                 archetype_id: shipped::MEMBERSHIP.to_owned(),
-            }),
-            representation: Some(person::RepresentationSection {
-                archetype_id: shipped::REPRESENTATION.to_owned(),
-                relationship_codes: BTreeMap::from([
-                    ("at10".to_owned(), "254".to_owned()),
-                    ("at11".to_owned(), "264".to_owned()),
-                ]),
             }),
             patient: Some(person::PatientSection {
                 template_id: shipped::PATIENT.to_owned(),

@@ -6,14 +6,14 @@
 //!
 //! Its sections are `[authz.party_binding.person]`,
 //! `[authz.party_binding.professional_role]`, `[authz.party_binding.group]`,
-//! `[authz.party_binding.membership]`, `[authz.party_binding.representation]`
-//! and `[authz.party_binding.patient]`.
+//! `[authz.party_binding.membership]` and `[authz.party_binding.patient]`.
 //!
 //! It names the templates a professional's `PERSON`, the professional `ROLE`,
 //! a group's `GROUP` and a patient's `PERSON` are valid against, the identifier selectors of the
 //! binding key, `userName` and `externalId`, which SCIM attribute and which
-//! OpenID Connect claim goes to which path, and the representation
-//! relationship a representative acts through. Names go in `identities` and
+//! OpenID Connect claim goes to which path. A representation needs no
+//! section: it is recognised by its code in any archetype
+//! ([`crate::party_binding::policy_mark::REPRESENTS`]). Names go in `identities` and
 //! identifiers in `details` (RM demographic `master02-demographic_package.adoc`
 //! §Names and Addresses, §Party Identification). This module holds the
 //! rules a configuration can be judged by alone; the rules that read the
@@ -226,20 +226,6 @@ pub struct MembershipSection {
     pub archetype_id: String,
 }
 
-/// `[authz.party_binding.representation]`.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(default, deny_unknown_fields)]
-#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
-pub struct RepresentationSection {
-    /// A `PARTY_RELATIONSHIP` archetype whose `source` is the representative
-    /// and whose `target` is the subject.
-    pub archetype_id: String,
-    /// Each relationship type code of the archetype, mapped to a code of the
-    /// openEHR `subject_relationship` group.
-    pub relationship_codes: BTreeMap<String, String>,
-}
-
 /// `[authz.party_binding.patient]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
@@ -267,8 +253,6 @@ pub struct Sections<'a> {
     pub group: Option<&'a GroupSection>,
     /// `membership`.
     pub membership: Option<&'a MembershipSection>,
-    /// `representation`.
-    pub representation: Option<&'a RepresentationSection>,
     /// `patient`.
     pub patient: Option<&'a PatientSection>,
 }
@@ -282,7 +266,6 @@ impl Sections<'_> {
             && self.professional_role.is_none()
             && self.group.is_none()
             && self.membership.is_none()
-            && self.representation.is_none()
             && self.patient.is_none()
     }
 
@@ -323,9 +306,6 @@ impl Sections<'_> {
             && membership.archetype_id.trim().is_empty()
         {
             errors.push("authz.party_binding.membership.archetype_id is empty".to_owned());
-        }
-        if let Some(representation) = self.representation {
-            representation_errors(representation, &mut errors);
         }
         if let Some(patient) = self.patient {
             patient_errors(patient, &mut errors);
@@ -513,12 +493,6 @@ impl Sections<'_> {
         if let Some(membership) = self.membership {
             mapping = mapping.with_membership(&membership.archetype_id);
         }
-        if let Some(representation) = self.representation {
-            mapping = mapping.with_representation(
-                &representation.archetype_id,
-                representation.relationship_codes.clone(),
-            );
-        }
         Ok(mapping.with_policy())
     }
 
@@ -597,22 +571,6 @@ fn placement_errors(
             "{label} maps {template:?} to {path:?}: its value goes in PARTY.{wanted} (RM \
              demographic §Names and Addresses, §Party Identification)"
         ));
-    }
-}
-
-/// The refusals of the representation section.
-fn representation_errors(representation: &RepresentationSection, errors: &mut Vec<String>) {
-    if representation.archetype_id.trim().is_empty() {
-        errors.push("authz.party_binding.representation.archetype_id is empty".to_owned());
-    }
-    let terminology = openehr_term::bundle::openehr();
-    for (code, mapped) in &representation.relationship_codes {
-        if !terminology.is_valid_code("subject_relationship", mapped) {
-            errors.push(format!(
-                "authz.party_binding.representation.relationship_codes maps {code:?} to \
-                 {mapped:?}, which is no code of the openEHR subject_relationship group"
-            ));
-        }
     }
 }
 

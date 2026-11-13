@@ -14,7 +14,7 @@ description
         ["en"] = <
             language = <[ISO_639-1::en]>
             purpose = <"The relationship a representative acts through: a PARTY_RELATIONSHIP from the representative's PERSON, its source, to the PERSON of the subject they act for, its target.">
-            use = <"Held in the representative's PERSON.relationships, with time_validity bounding when it holds. Its name is its type, coded from the value set ac1, and each type maps to a code of the openEHR subject_relationship group. Adapted from the person-to-person PARTY_RELATIONSHIP the openEHR CKM archetypes the derived_from entry names constrain inline (person.v0 at0004, personal relationships, and person-patient.v0 at0004.1, personal relationship): its type of relationship, coded.">
+            use = <"Held in the representative's PERSON.relationships, or committed as a PARTY_RELATIONSHIP of its own when the subject authorises a proxy, with time_validity bounding when it holds: the date from which a minor decides alone, under the law of the deployment, ends it. Its name is its type, coded from the value set ac1. Its details hold the code that makes it a representation, represents of FerroEHR's operation terminology ferroehr-operations, and the code of the openEHR subject_relationship group the relationship is. Adapted from the person-to-person PARTY_RELATIONSHIP the openEHR CKM archetypes the derived_from entry names constrain inline (person.v0 at0004, personal relationships, and person-patient.v0 at0004.1, personal relationship): its type of relationship, coded.">
             copyright = <"© openEHR Foundation">
         >
     >
@@ -30,6 +30,18 @@ definition
                 defining_code matches {[ac1]}
             }
         }
+        details matches {
+            ITEM_TREE[id3] matches {
+                items matches {
+                    ELEMENT[id4] occurrences matches {1} matches {
+                        value matches { DV_CODED_TEXT[id5] }
+                    }
+                    ELEMENT[id6] occurrences matches {0..1} matches {
+                        value matches { DV_CODED_TEXT[id7] }
+                    }
+                }
+            }
+        }
     }
 
 terminology
@@ -37,14 +49,18 @@ terminology
         ["en"] = <
             ["id1"] = <text = <"Representation"> description = <"The relationship of a representative to the subject they act for.">>
             ["id2"] = <text = <"Type of representation"> description = <"The type of the relationship, which is its name.">>
+            ["id3"] = <text = <"Details"> description = <"The details of the representation.">>
+            ["id4"] = <text = <"Representation code"> description = <"The code that makes the relationship a representation: represents of FerroEHR's operation terminology ferroehr-operations.">>
+            ["id6"] = <text = <"Relationship"> description = <"The relationship of the representative to the subject, a code of the openEHR subject_relationship group.">>
             ["ac1"] = <text = <"Types of representation"> description = <"The types of relationship a representative acts through.">>
             ["at10"] = <text = <"Parent"> description = <"The representative is a parent of the subject.">>
             ["at11"] = <text = <"Guardian"> description = <"The representative is a legal guardian of the subject.">>
+            ["at12"] = <text = <"Authorised proxy"> description = <"The subject authorised the representative to act for them.">>
         >
     >
     value_sets = <
         ["ac1"] = <
             id = <"ac1">
-            members = <"at10", "at11">
+            members = <"at10", "at11", "at12">
         >
     >

@@ -13,7 +13,6 @@
 //! are committed through the demographic service calls the REST routes make.
 //! No openEHR spec governs the mapping: our own design.
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use ferrohealth_secret::secret_url::SecretUrl;
@@ -45,8 +44,9 @@ const ROLE_TEMPLATE: &str = "FerroEHR professional role";
 const GROUP_TEMPLATE: &str = "FerroEHR care team";
 /// The archetype of a membership `PARTY_RELATIONSHIP`.
 const MEMBERSHIP: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1";
-/// The archetype of a representation `PARTY_RELATIONSHIP`.
-const REPRESENTATION: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1";
+/// The archetype of a representation `PARTY_RELATIONSHIP`, which the
+/// representation code makes one, not the archetype.
+const REPRESENTATION: &str = "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.custodian.v2";
 /// The identifier cluster every person selector reads.
 const CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1";
 /// The `identifier_issuer` of the login's `[[auth.party]]` table.
@@ -91,10 +91,6 @@ fn mapping() -> BindingMapping {
                 .expect("compiles"),
         )
         .with_membership(MEMBERSHIP)
-        .with_representation(
-            REPRESENTATION,
-            BTreeMap::from([("at0010".to_owned(), "254".to_owned())]),
-        )
         .with_admin_role(ADMIN)
 }
 
@@ -604,14 +600,23 @@ async fn only_an_administrator_writes_a_protected_party() {
     .expect_err("a provisioned GROUP is protected");
     assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
 
-    // Nor adds a representation relationship.
+    // Nor adds a representation relationship, which its code makes one.
     let mut represents = person(&[]);
     represents["relationships"] = json!([{
         "_type": "PARTY_RELATIONSHIP", "archetype_node_id": REPRESENTATION,
         "name": { "_type": "DV_CODED_TEXT", "value": "parent",
             "defining_code": { "_type": "CODE_PHRASE",
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" },
-                "code_string": "at0010" } },
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": "254" } },
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002",
+            "name": { "_type": "DV_TEXT", "value": "details" },
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003",
+                "name": { "_type": "DV_TEXT", "value": "Representation code" },
+                "value": { "_type": "DV_CODED_TEXT", "value": "represents",
+                    "defining_code": { "_type": "CODE_PHRASE",
+                        "terminology_id": { "_type": "TERMINOLOGY_ID",
+                            "value": "ferroehr-operations" },
+                        "code_string": "represents" } } }] },
         "source": party_ref("PERSON", plain),
         "target": party_ref("PERSON", plain)
     }]);

@@ -132,28 +132,6 @@ impl FerroEhrService {
             )
             .await?;
         }
-        if let Some(representation) = sections.representation {
-            let at = "authz.party_binding.representation";
-            if let Some(wt) = self
-                .mapped_definition_of(
-                    at,
-                    &representation.archetype_id,
-                    "PARTY_RELATIONSHIP",
-                    &mut errors,
-                )
-                .await?
-            {
-                for code in relationship_codes(&wt) {
-                    if !representation.relationship_codes.contains_key(&code) {
-                        errors.push(format!(
-                            "{at}.relationship_codes maps no subject_relationship code to the \
-                             relationship type {code:?} of {:?}",
-                            representation.archetype_id
-                        ));
-                    }
-                }
-            }
-        }
         if let Some(patient) = sections.patient {
             self.patient_errors(patient, &mut errors).await?;
         }
@@ -302,19 +280,6 @@ pub(super) fn plain(path: &str) -> String {
 /// `rm_type` without its generic parameters.
 fn base_type(rm_type: &str) -> String {
     rm_type.split('<').next().unwrap_or(rm_type).to_owned()
-}
-
-/// The codes the root `name` of a relationship archetype is constrained to:
-/// its relationship types.
-fn relationship_codes(wt: &WebTemplate) -> Vec<String> {
-    wt.tree
-        .children
-        .iter()
-        .filter(|child| child.id == "name" || child.aql_path == "/name")
-        .flat_map(|name| name.inputs.iter())
-        .flat_map(|input| input.list.iter())
-        .map(|coded| coded.value.clone())
-        .collect()
 }
 
 impl FerroEhrService {

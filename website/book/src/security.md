@@ -465,7 +465,9 @@ the marker is the RM's own.
   `ferrohealth-smart`; the Art. 3(3) delay below asks its broad one.
 - **Who counts as the representative.** A person bound to their own `PERSON`
   who acts for the patient through a representation relationship FerroEHR has
-  recorded ([how a login is looked up](installation/config-auth.md#how-a-login-is-looked-up)).
+  recorded ([how a login is looked up](installation/config-auth.md#how-a-login-is-looked-up)),
+  through a `persons` issuer or the patient portal
+  ([representatives in the patient portal](operational-policy.md#representatives-in-the-patient-portal)).
   The rules below hold for the representative exactly as for the person.
 - **The marker.** Every version and CONTRIBUTION the person commits records
   `PARTY_SELF` with no `external_ref` as `AUDIT_DETAILS.committer`, the RM's

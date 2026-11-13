@@ -251,7 +251,6 @@ fn an_explicit_section_overrides_its_default_and_leaves_the_others() {
         Some("FerroEHR professional role")
     );
     assert_eq!(binding.membership, default.membership);
-    assert_eq!(binding.representation, default.representation);
     assert_eq!(binding.patient, default.patient);
     assert_ne!(binding.group, default.group);
 }
@@ -478,10 +477,6 @@ display_name = "/identities[id4]/details[id5]/items[id6]"
 
 [authz.party_binding.membership]
 archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0"
-
-[authz.party_binding.representation]
-archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0"
-relationship_codes = { at0010 = "254", at0011 = "264" }
 "#;
 
 /// [`full`] with [`MAPPING`], `old` replaced by `new` in the mapping.
@@ -516,14 +511,25 @@ fn an_unknown_key_in_a_mapping_section_is_refused() {
             "template_id = \"FerroEHR professional role\"\nscope = \"x\"",
         ),
         (
-            "relationship_codes",
-            "archetype = \"x\"\nrelationship_codes",
+            "archetype_id = \"openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership",
+            "archetype = \"x\"\narchetype_id = \"openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership",
         ),
         ("type = \"guid\" }", "type = \"guid\", issuer = \"x\" }"),
     ] {
         let text = refusal(&mapped(old, new));
         assert!(text.contains("unknown field"), "{old}: {text}");
     }
+}
+
+/// A representation is recognised by its code, so the representation
+/// section is gone and refused as any unknown key is.
+#[test]
+fn the_representation_section_is_an_unknown_key() {
+    let text = refusal(&format!(
+        "{}{MAPPING}\n[authz.party_binding.representation]\narchetype_id = \"x\"\n",
+        full()
+    ));
+    assert!(text.contains("unknown field `representation`"), "{text}");
 }
 
 /// Asserts the mapping with `old` replaced by `new` is refused with a
@@ -609,15 +615,6 @@ fn a_key_fed_by_an_email_address_is_refused() {
         "scim = \"name.formatted\"\noidc = \"name\"\njit = true\nname = true\npath = { \"FerroEHR professional\" = \"/identities[id4]/details[id5]/items[id6]\" }",
         "oidc = \"email\"\npath = { \"FerroEHR professional\" = \"/details[id2]/items[id3]\" }",
         "never fed by an email address",
-    );
-}
-
-#[test]
-fn a_relationship_code_outside_subject_relationship_is_refused() {
-    refused_with(
-        "at0011 = \"264\"",
-        "at0011 = \"9999\"",
-        "subject_relationship group",
     );
 }
 

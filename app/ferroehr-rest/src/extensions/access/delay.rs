@@ -38,13 +38,18 @@ pub(crate) fn applies(state: &AppState, op: &str) -> bool {
 
 /// Whether `principal` may be the person's own access: a caller
 /// `ferrohealth-smart` classifies as the patient, or one representing the
-/// person.
+/// person, through a `persons` or a `patients` issuer.
 pub(crate) fn acts_for_the_person(principal: &Principal) -> bool {
     // NOTE: EHDS Art. 3(3), the owner's ruling of 2026-10-31: a mixed token is withheld
     // from, so the person never reads held data early; the rule is the family crate's.
-    principal.access.caller().is_some_and(|caller| {
-        caller.is_the_person() || matches!(caller.kind(), CallerKind::Representative { .. })
-    })
+    let portal = principal
+        .represented
+        .as_ref()
+        .is_some_and(|represented| represented.portal.is_some());
+    portal
+        || principal.access.caller().is_some_and(|caller| {
+            caller.is_the_person() || matches!(caller.kind(), CallerKind::Representative { .. })
+        })
 }
 
 /// Answer, as an unknown object would be answered, a request whose path names

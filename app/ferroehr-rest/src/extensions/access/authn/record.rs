@@ -61,6 +61,13 @@ pub(super) fn refused(
     if let Some(CallerKind::Representative { represented, .. }) = inner {
         detail.insert("represented".to_owned(), vec![represented.clone()]);
     }
+    // NOTE: master07 §Context Selection, a `patients` token names its patient by the EHR
+    // of its launch context, which a refused patient-portal representative asserted.
+    if let Some(CallerKind::PatientRepresentative { .. } | CallerKind::Patient) = inner
+        && let Some(ehr) = principal.and_then(|principal| principal.access.ehr_id())
+    {
+        detail.insert("represented".to_owned(), vec![ehr.to_owned()]);
+    }
     let mut record = BindingRecord::refused(code, detail);
     record.party = party.cloned();
     Some(record)
@@ -73,13 +80,22 @@ pub(super) fn refused(
 ///
 /// A system caller's record names its client `ACTOR` as the party, and the
 /// identifier of the provider its acts-for relationship targets or, when it
-/// names none, the deployment's provider (EHDS Annex II 3.2(a)).
+/// names none, the deployment's provider (EHDS Annex II 3.2(a)). A
+/// patient-portal representative's record names their `PERSON` as the party
+/// and the subject they represent.
 pub(super) fn of_request(
     principal: &super::Principal,
     committer: &ferroehr::versioning::committer::CommitterIdentity,
     granted: &Capabilities,
     auth: Option<&super::Authenticator>,
 ) -> Option<BindingRecord> {
+    if let Some(portal) = principal
+        .represented
+        .as_ref()
+        .and_then(|represented| represented.portal.as_ref())
+    {
+        return Some(portal_record(portal));
+    }
     let client = granted.client().filter(|_| committer.system);
     let deployment = auth
         .and_then(|auth| auth.party.as_deref())
@@ -185,6 +201,28 @@ fn of(
             Some(record)
         }
     }
+}
+
+/// The record of the patient-portal representative `portal`: bound to their
+/// `PERSON`, representing the subject's `PERSON` (EHDS Annex II 3.2(a)).
+fn portal_record(portal: &super::PortalRepresentative) -> BindingRecord {
+    let mut record = BindingRecord::bound(
+        PartyTriple {
+            namespace: portal.namespace.clone(),
+            class: "PERSON".to_owned(),
+            id: portal.person.to_string(),
+        },
+        false,
+        Vec::new(),
+        None,
+        false,
+    );
+    record.representation = Some(Representation {
+        represented: portal.subject.to_string(),
+        ground: None,
+        relationship: portal.relationship.clone(),
+    });
+    record
 }
 
 /// The `PARTY_REF` triple of `party`.
