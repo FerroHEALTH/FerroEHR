@@ -72,8 +72,8 @@ pub enum EhrAccessSettings {
 
 /// Stored settings that do not read as the `access_directives` scheme.
 #[derive(Debug, thiserror::Error)]
-#[error("the EHR_ACCESS settings do not read as the {SCHEME} scheme: {0}")]
-pub struct UnreadableSettings(String);
+#[error("the EHR_ACCESS settings do not read as the {SCHEME} scheme")]
+pub struct UnreadableSettings(#[source] Defect);
 
 impl EhrAccessSettings {
     /// Reads the settings of an `EHR_ACCESS` canonical-JSON object; `None`
@@ -89,7 +89,7 @@ impl EhrAccessSettings {
         };
         read_settings(settings)
             .map(|read| Some(Self::Directives(Box::new(read))))
-            .map_err(|refusal| UnreadableSettings(refusal.to_string()))
+            .map_err(UnreadableSettings)
     }
 
     /// The settings `access` carries, or [`Self::HeldClosed`] for settings
@@ -147,7 +147,7 @@ enum Defect {
     )]
     NoScheme,
     /// The settings do not decode as the class.
-    #[error("EHR_ACCESS.settings do not read as an {SETTINGS_TYPE}: {0}")]
+    #[error("EHR_ACCESS.settings do not read as an {SETTINGS_TYPE}")]
     Decode(#[source] serde_json::Error),
     /// A coded value is outside the terminology its attribute is bound to.
     #[error("EHR_ACCESS.settings.{path}: {reason}")]
@@ -291,9 +291,13 @@ fn foreign(path: &str, kind: ForeignKind, codes: &[DvCodedText]) -> Result<(), D
 /// scheme's `_type`, a member that does not decode, or the first broken
 /// invariant as `CLASS.Invariant`.
 pub fn check_written_settings(settings: &Value) -> Result<(), ServiceError> {
-    read_settings(settings)
-        .map(drop)
-        .map_err(|defect| ServiceError::bad_request(defect.to_string(), defect))
+    read_settings(settings).map(drop).map_err(|defect| {
+        let detail = match std::error::Error::source(&defect) {
+            Some(cause) => format!("{defect}: {cause}"),
+            None => defect.to_string(),
+        };
+        ServiceError::bad_request(detail, defect)
+    })
 }
 
 #[cfg(test)]
