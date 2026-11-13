@@ -221,7 +221,7 @@ pub(super) fn patient_details(
 /// The committer identity of `principal`, holding `granted`, with what
 /// the server knows of the person beyond the binding: the bound party's
 /// details, or the `PERSON` of the patient writing the representation
-/// that authorises a proxy, as [`gates::patient_person`] read it
+/// that authorises a proxy, as [`super::gates::patient_person`] read it
 /// (`patient`).
 ///
 /// Returns it with that patient's `PERSON`.
