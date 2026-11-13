@@ -40,16 +40,17 @@ fn rest_config() -> AppConfig {
         server: common::server(),
         ..AppConfig::default()
     };
-    common::with_basic_users(
-        &mut config,
-        &[
-            ("root", &["ADMIN"]),
-            ("user", &["USER"]),
-            ("portal", &["PORTAL"]),
-        ],
-    );
+    common::basic_users(&mut config, USERS);
     config
 }
+
+/// The Basic users: an administrator, a clinician and a portal holding the
+/// subject-scoped audit role.
+const USERS: &[(&str, &[&str])] = &[
+    ("root", &["ADMIN"]),
+    ("user", &["USER"]),
+    ("portal", &["PORTAL"]),
+];
 
 fn authz(enabled: bool) -> Option<Arc<AuthzHandle>> {
     let mut cfg = AuthzConfig::default();
@@ -108,14 +109,14 @@ async fn app(with_store: bool, rbac: bool) -> (testkit::TestDb, Router, AuditSto
     if with_store {
         svc = svc.with_audit_store(store.clone());
     }
-    let app = ferroehr_rest::build_full(
+    common::grant_basic_users(&svc, &pool, USERS).await;
+    let app = common::build_full(
         rest_config(),
         Arc::new(svc),
         authz(rbac),
         ferroehr_rest::extensions::management::Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     (pg, app, store)
 }
 

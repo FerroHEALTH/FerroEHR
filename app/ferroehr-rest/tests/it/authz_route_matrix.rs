@@ -584,14 +584,13 @@ async fn app() -> (testkit::TestDb, Router) {
         &ferroehr::db::domain::DomainPools::from_shared(&pool),
     )
     .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool));
-    let app = ferroehr_rest::build_full(
+    let app = common::build_full(
         served_config().await,
         Arc::new(svc),
         authz(),
         ferroehr_rest::extensions::management::Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     (pg, app)
 }
 
@@ -930,7 +929,7 @@ async fn the_swagger_surface_honours_its_access_level() {
             c.auth.smart.discovery = smart;
             c
         };
-        let app = ferroehr_rest::build_full(
+        let app = common::build_full(
             cfg,
             Arc::new(ferroehr::service::FerroEhrService::new(
                 &ferroehr::db::domain::DomainPools::from_shared(&pool),
@@ -938,8 +937,7 @@ async fn the_swagger_surface_honours_its_access_level() {
             authz(),
             ferroehr_rest::extensions::management::Observability::default(),
         )
-        .await
-        .expect("build app");
+        .await;
         (pg, app)
     }
     let ui = "/ferroehr/rest/swagger-ui";

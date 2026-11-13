@@ -23,7 +23,6 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
-use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::AuditStore;
@@ -67,19 +66,22 @@ async fn app(declared: bool) -> (testkit::TestDb, PgPool, Router) {
         .await
         .expect("the audit sender");
     let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        common::binding_service(&pool)
             .with_audit(sender)
             .with_audit_store(AuditStore::new(pool.clone())),
     );
     let mut config = common::api_config(true);
     common::with_basic_users(
         &mut config,
+        &svc,
+        &pool,
         &[
             ("root", &["ADMIN"]),
             ("clinician", &["USER"]),
             ("service", &["USER", ACCESS_SERVICE]),
         ],
-    );
+    )
+    .await;
     if declared {
         config.rbac.access_service_roles = vec![ACCESS_SERVICE.to_owned()];
     }
@@ -92,9 +94,7 @@ async fn app(declared: bool) -> (testkit::TestDb, PgPool, Router) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = ferroehr_rest::build_full(config, svc, authz, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, svc, authz, Observability::default()).await;
     let (status, body) = send(
         &app,
         "POST",

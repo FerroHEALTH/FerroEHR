@@ -509,6 +509,7 @@ impl FerroEhrConfig {
                 .flat_map(crate::config::scim::ScimConfig::errors)
                 .map(ConfigError::semantic),
         );
+        errors.extend(self.first_admin_error().map(ConfigError::semantic));
         if self.auth.smart.discovery
             && let Some(resolved) = &resolved
             && let Some(named) = &resolved.described_issuer
@@ -523,6 +524,24 @@ impl FerroEhrConfig {
                     .to_owned(),
             ));
         }
+    }
+
+    /// `[authz.rbac] first_admin` names a user of `[[auth.basic.users]]`,
+    /// since only a Basic user holds the role from this file.
+    fn first_admin_error(&self) -> Option<String> {
+        let named = self.authz.rbac.first_admin.as_deref()?;
+        let listed = self
+            .auth
+            .shared
+            .basic
+            .as_ref()
+            .is_some_and(|basic| basic.users.iter().any(|user| user.user == named));
+        (!listed).then(|| {
+            format!(
+                "authz.rbac.first_admin names {named:?}, which is no user of \
+                 [[auth.basic.users]]: the first administrator is a Basic user"
+            )
+        })
     }
 
     /// `[server] public_base_url` holds its rule when set, and is set when a
@@ -697,5 +716,26 @@ mod tests {
             described_issuer_error(&SecretUrl::new("https://as.example/persons"), &resolved)
                 .is_none()
         );
+    }
+
+    /// `[authz.rbac] first_admin` names a user of `[[auth.basic.users]]`:
+    /// another name is refused at boot, and an unset key asks nothing.
+    #[test]
+    fn the_first_admin_names_a_basic_user() {
+        let mut config = FerroEhrConfig::default();
+        assert_eq!(config.first_admin_error(), None);
+        config.auth.shared.basic = Some(ferrohealth_smart::config::BasicSection {
+            users: vec![ferrohealth_smart::config::BasicUser {
+                user: "root".to_owned(),
+                password_hash: None,
+                password_hash_file: None,
+            }],
+            ..ferrohealth_smart::config::BasicSection::default()
+        });
+        config.authz.rbac.first_admin = Some("root".to_owned());
+        assert_eq!(config.first_admin_error(), None);
+        config.authz.rbac.first_admin = Some("admin".to_owned());
+        let refused = config.first_admin_error().expect("an unknown user is refused");
+        assert!(refused.contains("\"admin\""), "{refused}");
     }
 }

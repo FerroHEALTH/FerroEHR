@@ -608,8 +608,9 @@ services:
   # a demographic party: the development issuer signs the `quickstart-scim`
   # client a token for the scope ferroehr/scim, and the User is created with
   # the binding key `ferroehr`. A User that exists already (409) is kept. It
-  # then stays up and reports healthy, so `up --wait` returns once the login
-  # is bound.
+  # then waits until the login reads a template, which it does once
+  # ferroehr-hold has granted its scopes, and stays up and reports healthy,
+  # so `up --wait` returns once the login is bound and granted.
   ferroehr-provision:
     image: ${FERROEHR_CURL_IMAGE:-curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777}
     network_mode: service:identity-issuer
@@ -631,12 +632,16 @@ services:
         --data '{"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User"],"userName":"ferroehr","urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User":{"loginIdentifier":"ferroehr"}}'
         http://localhost:8080/scim/v2/Users);
         case $$status in 201|409) ;; *) echo "provisioning ferroehr answered $$status" >&2; cat /tmp/answer >&2; exit 1;; esac;
-        touch /tmp/provisioned; echo 'ferroehr is provisioned'; exec sleep infinity
+        tries=0;
+        until curl -fsS -o /dev/null -u ferroehr:ferroehr
+        http://localhost:8080/ferroehr/rest/openehr/v1/definition/template/adl1.4; do
+        tries=$$((tries + 1)); if [ $$tries -ge 60 ]; then echo 'ferroehr holds no scopes' >&2; exit 1; fi; sleep 2; done;
+        touch /tmp/provisioned; echo 'ferroehr is provisioned and granted'; exec sleep infinity
     healthcheck:
       test: ["CMD", "test", "-f", "/tmp/provisioned"]
       interval: 2s
       timeout: 2s
-      retries: 30
+      retries: 90
     read_only: true
     tmpfs:
       - /tmp
@@ -644,6 +649,46 @@ services:
     security_opt:
       - no-new-privileges:true
     restart: "no"
+
+  # Grants the PERSON of the quickstart user `ferroehr` the SMART on openEHR
+  # scopes of every resource family in the CDR (hold_scopes), on the
+  # operator's authority (`ferroehr party-binding grant --basic-user`): a
+  # Basic user is a credential alone, and what it may do is a grant on its
+  # PERSON. It fails until ferroehr-provision has created that PERSON and
+  # runs again until it has, and a PERSON that holds the grant already gets
+  # nothing, so it runs again on a kept volume.
+  ferroehr-hold:
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:main}
+    network_mode: service:identity-issuer
+    depends_on:
+      ferroehr-grant:
+        condition: service_completed_successfully
+    environment:
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
+      FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
+      FERROEHR__USAGE_REPORT__ENABLED: "false"
+    configs:
+      - source: ferroehr-config${FERROEHR_EHR_INDEX:+-${FERROEHR_EHR_INDEX}}
+        target: /etc/ferroehr/ferroehr.toml
+    command:
+      - party-binding
+      - grant
+      - --basic-user
+      - ferroehr
+      - --operation
+      - hold_scopes
+      - --element
+      - scope=user/composition-*.cruds
+      - --element
+      - scope=user/template-*.cruds
+      - --element
+      - scope=user/aql-*.cruds
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: on-failure
 
   # The viewer (ferroehr-viewer): a standalone server-rendered web app +
   # BFF that consumes the CDR strictly over ITS-REST — never the database.
@@ -852,14 +897,14 @@ configs:
 
       # The quickstart user: ferroehr / ferroehr (the hash is Argon2id of
       # "ferroehr"). Replace with your own users — or an [auth] issuer — before
-      # exposing the server to anything real. Every route checks the SMART on
-      # openEHR scopes a user holds: these grant every resource family, and
-      # the product scope admits the ADMIN and DEMOGRAPHIC APIs.
+      # exposing the server to anything real. A Basic user is a credential
+      # alone: as the first administrator below it holds ADMIN and the product
+      # scope, which admits the ADMIN and DEMOGRAPHIC APIs, and the
+      # ferroehr-hold one-shot grants its PERSON the SMART on openEHR scopes of
+      # every resource family in the CDR (hold_scopes).
       [[auth.basic.users]]
       user = "ferroehr"
       password_hash = "$$argon2id$$v=19$$m=19456,t=2,p=1$$ZmVycm9laHJEZXZTYWx0$$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
-      scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
-      roles = ["ADMIN", "USER"]
 
       # The healthcare provider the quickstart acts for (an example id under
       # the OID arc 2.999, which ITU-T X.660 reserves for examples), and the
@@ -889,14 +934,18 @@ configs:
       [auth.scim]
 
       # The ferroehr-grant one-shot grants that client scim_provision in the
-      # CDR, which the grant ceiling admits beside a system client's commit.
+      # CDR, and ferroehr-hold the quickstart user its scopes, which the grant
+      # ceiling admits beside a system client's commit.
       [authz.grants]
-      allowed = ["commit_composition", "scim_provision"]
+      allowed = ["commit_composition", "scim_provision", "hold_scopes"]
 
       # Quickstart: authentication only, no role gate — the one user above can
-      # use the clinical API, the admin API and the management endpoints.
+      # use the clinical API, the admin API and the management endpoints. It is
+      # the first administrator, the Basic user holding ADMIN before any
+      # policy party grants anything.
       [authz.rbac]
       enabled = false
+      first_admin = "ferroehr"
 
       # The admin API (DELETE /admin/...) — on for the quickstart so the
       # optional viewer's panels work; keep off in production unless
@@ -987,14 +1036,14 @@ configs:
 
       # The quickstart user: ferroehr / ferroehr (the hash is Argon2id of
       # "ferroehr"). Replace with your own users — or an [auth] issuer — before
-      # exposing the server to anything real. Every route checks the SMART on
-      # openEHR scopes a user holds: these grant every resource family, and
-      # the product scope admits the ADMIN and DEMOGRAPHIC APIs.
+      # exposing the server to anything real. A Basic user is a credential
+      # alone: as the first administrator below it holds ADMIN and the product
+      # scope, which admits the ADMIN and DEMOGRAPHIC APIs, and the
+      # ferroehr-hold one-shot grants its PERSON the SMART on openEHR scopes of
+      # every resource family in the CDR (hold_scopes).
       [[auth.basic.users]]
       user = "ferroehr"
       password_hash = "$$argon2id$$v=19$$m=19456,t=2,p=1$$ZmVycm9laHJEZXZTYWx0$$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
-      scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
-      roles = ["ADMIN", "USER"]
 
       # The healthcare provider the quickstart acts for (an example id under
       # the OID arc 2.999, which ITU-T X.660 reserves for examples), and the
@@ -1024,14 +1073,18 @@ configs:
       [auth.scim]
 
       # The ferroehr-grant one-shot grants that client scim_provision in the
-      # CDR, which the grant ceiling admits beside a system client's commit.
+      # CDR, and ferroehr-hold the quickstart user its scopes, which the grant
+      # ceiling admits beside a system client's commit.
       [authz.grants]
-      allowed = ["commit_composition", "scim_provision"]
+      allowed = ["commit_composition", "scim_provision", "hold_scopes"]
 
       # Quickstart: authentication only, no role gate — the one user above can
-      # use the clinical API, the admin API and the management endpoints.
+      # use the clinical API, the admin API and the management endpoints. It is
+      # the first administrator, the Basic user holding ADMIN before any
+      # policy party grants anything.
       [authz.rbac]
       enabled = false
+      first_admin = "ferroehr"
 
       # The admin API (DELETE /admin/...) — on for the quickstart so the
       # optional viewer's panels work; keep off in production unless

@@ -34,7 +34,7 @@ const ADMIN_BASIC: &str = "Basic YWRtaW46cHc=";
 /// holding `roles`.
 fn admin_config(roles: &[&str]) -> AppConfig {
     let mut config = base_config(ferroehr::config::auth_section::AuthConfig::default());
-    common::with_basic_users(&mut config, &[("admin", roles)]);
+    common::basic_users(&mut config, &[("admin", roles)]);
     config
 }
 
@@ -75,13 +75,36 @@ async fn build_app(
     authz: Option<Arc<AuthzHandle>>,
     observability: Observability,
 ) -> (testkit::TestDb, Router) {
-    let (pg, service) = common::test_service().await;
+    let (pg, pool) = common::migrated_pool().await;
+    let service = Arc::new(common::binding_service(&pool));
+    granted(&service, &pool, &config).await;
     (
         pg,
-        ferroehr_rest::build_full(config, service, authz, observability)
-            .await
-            .expect("build"),
+        common::build_full(config, service, authz, observability).await,
     )
+}
+
+/// Commits the `PERSON` of the Basic user of [`admin_config`] on `service`:
+/// `ADMIN` when it is the first administrator, else `USER`.
+async fn granted(
+    service: &ferroehr::service::FerroEhrService,
+    pool: &sqlx::PgPool,
+    config: &AppConfig,
+) {
+    for user in config
+        .auth
+        .shared
+        .basic
+        .iter()
+        .flat_map(|basic| &basic.users)
+    {
+        let roles: &[&str] = if config.rbac.first_admin.as_deref() == Some(user.user.as_str()) {
+            &["ADMIN"]
+        } else {
+            &["USER"]
+        };
+        common::grant_basic_users(service, pool, &[(user.user.as_str(), roles)]).await;
+    }
 }
 
 /// One management endpoint mounted at `level`, everything else at its default.
@@ -739,21 +762,15 @@ async fn a_management_request_is_recorded_in_the_audit_trail() {
     let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
         .await
         .expect("the audit sender");
-    let service = Arc::new(
-        ferroehr::service::FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(
-            &pool,
-        ))
-        .with_audit(sender),
-    );
+    let service = Arc::new(common::binding_service(&pool).with_audit(sender));
     let config = admin_config(&["ADMIN"]);
+    granted(&service, &pool, &config).await;
     let authz = authz_for(&config, true);
     let observability = one_endpoint(EndpointLevels {
         info: AccessLevel::AdminOnly,
         ..EndpointLevels::default()
     });
-    let app = ferroehr_rest::build_full(config, service, authz, observability)
-        .await
-        .expect("build");
+    let app = common::build_full(config, service, authz, observability).await;
     assert_eq!(
         status_of(app, get_auth("/management/info")).await,
         StatusCode::OK

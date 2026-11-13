@@ -182,7 +182,12 @@ wait_http "$CDR_URL/ferroehr/rest/status" 150
 # first (docs/conformance/party/scim/README.md).
 export SCIM_GRANT="${UI_E2E_SCIM_GRANT:-docker compose ${COMPOSE_FILES[*]} exec -T ferroehr ferroehr}"
 bash scripts/scim-provision.sh "$CDR_URL" basic-users urn:ferroehr:basic-user \
-  ferroehr ferroehr-admin ferroehr-readonly
+  ferroehr ferroehr-admin --roles READONLY ferroehr-readonly
+# The viewer is the client the dev realm's persons sign in through
+# (docker/viewer/e2e-env.yml), once the CDR grants it sign_in_persons.
+read -ra cdr_cli <<<"$SCIM_GRANT"
+"${cdr_cli[@]}" party-binding grant --issuer https://keycloak:8443/auth/realms/ferroehr \
+  --client-id ferroehr-viewer --operation sign_in_persons >/dev/null
 bash scripts/scim-provision.sh "$CDR_URL" keycloak-dev urn:ferroehr:keycloak-dev-login \
   keycloak-ferroehr-admin=d06b336b-8343-4253-b5e5-e6dace5cff0c \
   keycloak-ferroehr-user=aca7c611-779e-4f68-99fb-06cc57e7ed26

@@ -139,9 +139,7 @@ async fn serve(agreement: Terms) -> (testkit::TestDb, Arc<FerroEhrService>, Rout
         ferroehr::config::server::PublicRoot::new("https://ehr.example", "")
             .expect("a public root"),
     );
-    let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, Arc::clone(&svc), None, Observability::default()).await;
     svc.template_adl14_upload(&common::ips_opt_xml())
         .await
         .expect("upload the IPS template");

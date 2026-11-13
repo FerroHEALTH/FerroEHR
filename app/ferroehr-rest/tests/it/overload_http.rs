@@ -64,12 +64,7 @@ fn config(max_in_flight: usize) -> AppConfig {
 
 async fn app(max_in_flight: usize) -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
-    (
-        pg,
-        ferroehr_rest::build_with(config(max_in_flight), service)
-            .await
-            .expect("router builds"),
-    )
+    (pg, common::build_with(config(max_in_flight), service).await)
 }
 
 /// A request whose handler parks holding its API permit: a composition create

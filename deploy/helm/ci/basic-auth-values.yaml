@@ -55,11 +55,11 @@ config:
         identifier_type: login
     basic:
       users:
-        # No password_hash here — only the identity and the scopes. The hash is
-        # a secret and lives in `secrets:` above.
+        # No password_hash here — only the identity. The hash is a secret and
+        # lives in `secrets:` above; the scopes and the USER role are grants on
+        # the user's PERSON (hold_scopes, hold_roles), which the deploy probe's
+        # provisioning writes (scripts/scim-provision.sh).
         - user: clinician
-          scopes: [user/composition-*.cruds, user/template-*.cruds, user/aql-*.cruds, __ferroehr.platform]
-          roles: [USER]
     scim: {}
   authz:
     party_binding:
@@ -71,9 +71,10 @@ config:
           key_issuer: urn:ferroehr:basic-user
           key: clinician
     # The SCIM client that provisions `clinician` is granted scim_provision in
-    # the CDR by the deploy probe (scripts/deploy-probes/kubernetes.sh).
+    # the CDR by the deploy probe (scripts/deploy-probes/kubernetes.sh), and
+    # `clinician`'s PERSON its scopes and role.
     grants:
-      allowed: [commit_composition, scim_provision]
+      allowed: [commit_composition, scim_provision, hold_roles, hold_scopes]
   # The SCIM endpoint `clinician` is provisioned through before the deploy
   # probe logs in (scripts/deploy-probes/kubernetes.sh).
   files:

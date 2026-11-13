@@ -495,9 +495,9 @@ secrets:
   # -- Argon2id password hashes for [[auth.basic.users]], keyed by user-id. Each
   # is MOUNTED as /etc/ferroehr-secrets/auth.basic.users.<user>.password_hash
   # and the chart injects the matching `password_hash_file` into the rendered TOML.
-  # Declare the user itself — `user`, `scopes`, `roles` — under
-  # config.auth.basic.users; a user-id with no matching entry is a render error. A hash under `config:` is refused: it
-  # would reach the ConfigMap.
+  # Declare the user itself — `user` — under config.auth.basic.users; a
+  # user-id with no matching entry is a render error. A hash under `config:` is
+  # refused: it would reach the ConfigMap.
   basicUserPasswordHashes: {}
   # -- FHIR base URL of the external Audit Record Repository for
   # [audit.fhir_feed.endpoint] (may carry basic-auth credentials in its
@@ -679,8 +679,10 @@ config:
   # `issuer` is a list of tables, one per trusted issuer, each stating its
   # `kind` (persons | patients | machines | federation) and its `profile`
   # (rfc9068 | entra | keycloak | okta | nl) beside its `audience`; a persons
-  # issuer lists its own clients in `first_party_clients` and has its
-  # `party` table, the identifier issuer its logins bind under. Every Basic
+  # issuer has its `party` table, the identifier issuer its logins bind under,
+  # and its people sign in through the clients the CDR grants
+  # `sign_in_persons` (a client's `AGENT`, written through the Demographic
+  # API; book: Operational policy). Every Basic
   # user is a person, mapped by authz.party_binding.basic_user to the binding
   # key its PERSON carries, so a Basic user needs a persons issuer too. The
   # issuer is an https URL with no query/fragment, only asymmetric algorithms
@@ -693,15 +695,18 @@ config:
   #       kind: persons
   #       profile: keycloak
   #       audience: [ferroehr]
-  #       first_party_clients: [ferroehr-viewer]
   #   party:
   #     - issuer: https://idp.example.com/realms/staff
   #       identifier_issuer: urn:example:staff-login
   #       identifier_type: uuid
-  # Every route enforces SMART on openEHR scopes: a Basic user's `scopes` and a
-  # token's `scope` claim must grant what it calls; a subject listed in
-  # `scopeless_subjects` whose token carries no resource scope meets every
-  # SMART on openEHR requirement. `basic.cache_ttl` (default "5min") keeps a
+  # Every route enforces SMART on openEHR scopes: the scopes a Basic user's
+  # PERSON is granted (`hold_scopes`) and a token's `scope` claim must grant
+  # what it calls; a system client the CDR grants `access_without_scope` whose
+  # token carries no resource scope meets every SMART on openEHR requirement.
+  # A Basic user is a credential alone: `user` and its hash. Its roles are
+  # `hold_roles` grants, and authz.rbac.first_admin names the one Basic user
+  # that holds `admin_role` and the product scope from the configuration, the
+  # administrator who writes the first grants. `basic.cache_ttl` (default "5min") keeps a
   # verified Basic credential for that long, so a repeat request skips the
   # Argon2id derivation; 0 checks every request.
   # `mode: introspection` checks opaque tokens at the issuer's RFC 7662

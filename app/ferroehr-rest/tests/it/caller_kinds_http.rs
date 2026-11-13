@@ -164,6 +164,7 @@ async fn router(svc: Arc<FerroEhrService>, config: AppConfig) -> Router {
         None,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        common::standing(&svc),
     )
     .await
     .expect("the authenticator builds");

@@ -54,7 +54,7 @@ async fn replica(
         .expect("the mapping compiles");
     svc = svc
         .with_mapped_party_templates(sections.mapped_templates())
-        .with_binding_mapping(mapping)
+        .with_binding_mapping(crate::party_binding_http::professionals(mapping))
         .with_grant_ceiling(ceiling);
     if let Some(party) = party {
         svc = svc.with_demographic_pool(party);
@@ -73,7 +73,7 @@ async fn replica(
         }
     }
     let mut app = common::api_config(true);
-    common::with_basic_users(&mut app, &[("root", &["ADMIN"])]);
+    common::with_basic_users(&mut app, &svc, pool, &[("root", &["ADMIN"])]).await;
     app.auth
         .shared
         .issuer

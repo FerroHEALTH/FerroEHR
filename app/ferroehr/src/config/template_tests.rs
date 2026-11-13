@@ -163,7 +163,7 @@ fn template_declares_every_optional_field_of_the_secret_bearing_sections() {
     let sections = [
         (
             "auth",
-            accepted_fields::<ferrohealth_smart::config::AuthSection>("auth"),
+            accepted_fields::<ferrohealth_smart::config::ProductStandingSection>("auth"),
         ),
         (
             "authz.assurance",

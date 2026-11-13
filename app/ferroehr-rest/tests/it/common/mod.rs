@@ -19,6 +19,9 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::config::auth_section::AuthConfig;
 use ferroehr::config::rest::ApiConfig;
+use ferroehr::party_binding::grants::bootstrap::{ClientGrant, PersonGrant};
+use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
+use ferroehr::party_binding::grants::standing::GrantStanding;
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
@@ -26,6 +29,7 @@ use ferroehr_rest::extensions::access::authz::{AuthzResolvers, ResolveError};
 use ferroehr_rest::state::AppState;
 use ferrohealth_smart::config::{AuthSection, BasicSection, BasicUser, IssuerEntry};
 use ferrohealth_smart::kind::IssuerKind;
+use ferrohealth_smart::kind::standing::Standing;
 use http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
 use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
@@ -149,11 +153,13 @@ pub(crate) async fn router_with(config: AppConfig, service: Arc<FerroEhrService>
     let source = service
         .party_source(config.party_binding.namespace.clone())
         .with_creator(Arc::clone(&service));
+    first_party(&service, &config).await;
     let authenticator = Authenticator::new(
         &config,
         None,
         Some(Arc::new(source)),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        standing(&service),
     )
     .await
     .expect("test auth config is valid");
@@ -245,15 +251,81 @@ pub(crate) fn jwks_file() -> PathBuf {
 pub(crate) const TEST_CLIENT: &str = "ferroehr-test-client";
 
 /// The `[[auth.issuer]]` table of a `persons` issuer at `issuer` for
-/// `audience`, whose first-party client is [`TEST_CLIENT`].
+/// `audience`, whose first-party client [`TEST_CLIENT`] is a grant in the
+/// CDR ([`first_party`]).
 pub(crate) fn entry(issuer: &str, audience: &str) -> IssuerEntry {
     IssuerEntry {
         issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
         kind: Some(IssuerKind::Persons),
         audience: vec![audience.to_owned()],
-        first_party_clients: Some(vec![TEST_CLIENT.to_owned()]),
         ..IssuerEntry::default()
     }
+}
+
+/// The standing the server asks while it classifies a token: the policy
+/// grants of `service`.
+pub(crate) fn standing(service: &FerroEhrService) -> Arc<dyn Standing> {
+    Arc::new(GrantStanding::new(Arc::clone(service.grants())))
+}
+
+/// `service` with `operations` allowed beside the operations its ceiling
+/// allows already.
+pub(crate) fn allowing(service: &FerroEhrService, operations: &[Operation]) {
+    let held = service.grants().ceiling();
+    service.grants().set_ceiling(GrantCeiling::new(
+        held.allowed().chain(operations.iter().copied()),
+    ));
+}
+
+/// Grants [`TEST_CLIENT`] `sign_in_persons` under every `persons` issuer of
+/// `config` but the Basic users' own, as a deployment grants the client its
+/// persons sign in through: a person's test token comes through it.
+pub(crate) async fn first_party(service: &FerroEhrService, config: &AppConfig) {
+    let issuers: Vec<String> = config
+        .auth
+        .shared
+        .issuer
+        .iter()
+        .filter(|entry| entry.kind == Some(IssuerKind::Persons))
+        .map(|entry| entry.issuer.expose().to_owned())
+        .filter(|issuer| issuer != BASIC_ISSUER)
+        .collect();
+    if issuers.is_empty() {
+        return;
+    }
+    allowing(service, &[Operation::SignInPersons]);
+    for issuer in issuers {
+        service
+            .grant_client(&ClientGrant {
+                issuer,
+                client_id: TEST_CLIENT.to_owned(),
+                operation: Operation::SignInPersons,
+                elements: Vec::new(),
+            })
+            .await
+            .expect("the test client is granted sign_in_persons");
+    }
+}
+
+/// [`ferroehr_rest::build_with`] after [`first_party`].
+pub(crate) async fn build_with(config: AppConfig, service: Arc<FerroEhrService>) -> Router {
+    first_party(&service, &config).await;
+    ferroehr_rest::build_with(config, service)
+        .await
+        .expect("the router builds")
+}
+
+/// [`ferroehr_rest::build_full`] after [`first_party`].
+pub(crate) async fn build_full(
+    config: AppConfig,
+    service: Arc<FerroEhrService>,
+    authz: Option<Arc<ferroehr_rest::extensions::access::authz::AuthzHandle>>,
+    observability: ferroehr_rest::extensions::management::Observability,
+) -> Router {
+    first_party(&service, &config).await;
+    ferroehr_rest::build_full(config, service, authz, observability)
+        .await
+        .expect("the router builds")
 }
 
 /// The `[auth]` table of `section`, with no vendor adapter table.
@@ -364,24 +436,19 @@ pub(crate) fn rbac_trusting(issuer: &str) -> ferroehr::config::authz::RbacConfig
     }
 }
 
-/// Basic authentication admitting each `(user, Argon2id PHC hash, scopes)`.
-pub(crate) fn basic_auth(users: &[(&str, &str, &str)]) -> AuthConfig {
-    auth(AuthSection {
-        basic: Some(BasicSection {
-            users: users
-                .iter()
-                .map(|(user, hash, scopes)| BasicUser {
-                    user: (*user).to_owned(),
-                    password_hash: Some(secrecy::SecretString::from((*hash).to_owned())),
-                    password_hash_file: None,
-                    scopes: scopes.split_whitespace().map(str::to_owned).collect(),
-                    roles: Vec::new(),
-                })
-                .collect(),
-            cache_ttl: ferrohealth_config::units::Duration::from_secs(60),
-        }),
-        ..AuthSection::default()
-    })
+/// The Basic users `(user, Argon2id PHC hash)`, each a credential alone.
+pub(crate) fn basic_section(users: &[(&str, &str)]) -> BasicSection {
+    BasicSection {
+        users: users
+            .iter()
+            .map(|(user, hash)| BasicUser {
+                user: (*user).to_owned(),
+                password_hash: Some(secrecy::SecretString::from((*hash).to_owned())),
+                password_hash_file: None,
+            })
+            .collect(),
+        cache_ttl: ferrohealth_config::units::Duration::from_secs(60),
+    }
 }
 
 /// The Argon2id PHC hash of `password`, under a fixed salt so the fixtures
@@ -394,23 +461,143 @@ pub(crate) fn hash_password(password: &str) -> String {
         .to_string()
 }
 
+/// The `persons` issuer the test Basic users bind under; it signs nothing.
+pub(crate) const BASIC_ISSUER: &str = "https://basic-users.ferroehr.invalid";
+
+/// The identifier issuer of the test Basic users' binding keys.
+pub(crate) const BASIC_LOGIN: &str = "urn:ferroehr:basic-user";
+
+/// Turns Basic authentication on in `config` for each `(user, roles)` and
+/// commits each user's `PERSON` with its grants into `pool`, which `service`
+/// honours ([`basic_users`], [`grant_basic_users`]).
+pub(crate) async fn with_basic_users(
+    config: &mut AppConfig,
+    service: &FerroEhrService,
+    pool: &PgPool,
+    users: &[(&str, &[&str])],
+) {
+    basic_users(config, users);
+    grant_basic_users(service, pool, users).await;
+}
+
 /// Turns Basic authentication on in `config` for each `(user, roles)`, every
-/// user with the password `pw` and [`FULL_SCOPES`]; the roles go to the
-/// user's `[[auth.basic.users]] roles`.
-pub(crate) fn with_basic_users(config: &mut AppConfig, users: &[(&str, &[&str])]) {
+/// user with the password `pw`, beside the issuers `config` trusts already.
+///
+/// Each user is a person bound to the `PERSON` carrying its own name as its
+/// key under [`BASIC_LOGIN`], which [`grant_basic_users`] commits with the
+/// grants of [`FULL_SCOPES`] and the roles; the user holding `admin_role` is
+/// `[authz.rbac] first_admin`, since no grant gives the admin role.
+pub(crate) fn basic_users(config: &mut AppConfig, users: &[(&str, &[&str])]) {
     let hash = hash_password("pw");
-    let entries: Vec<(&str, &str, &str)> = users
+    let entries: Vec<(&str, &str)> = users
         .iter()
-        .map(|(user, _roles)| (*user, hash.as_str(), FULL_SCOPES))
+        .map(|(user, _)| (*user, hash.as_str()))
         .collect();
-    config.auth = basic_auth(&entries);
-    if let Some(basic) = config.auth.shared.basic.as_mut() {
-        for entry in &mut basic.users {
-            if let Some((_, roles)) = users.iter().find(|(user, _)| *user == entry.user) {
-                entry.roles = roles.iter().map(|role| (*role).to_owned()).collect();
-            }
+    let shared = &mut config.auth.shared;
+    shared.enabled = true;
+    shared.basic = Some(basic_section(&entries));
+    shared
+        .issuer
+        .retain(|entry| entry.issuer.expose() != BASIC_ISSUER);
+    shared
+        .party
+        .retain(|table| table.issuer.expose() != BASIC_ISSUER);
+    shared.issuer.push(IssuerEntry {
+        jwks_file: jwks_file().display().to_string(),
+        audience: vec!["ferroehr-basic-users".to_owned()],
+        ..entry(BASIC_ISSUER, "ferroehr-basic-users")
+    });
+    shared
+        .party
+        .push(ferrohealth_smart::party::config::PartySection {
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(BASIC_ISSUER),
+            identifier_issuer: BASIC_LOGIN.to_owned(),
+            identifier_type: "guid".to_owned(),
+            group_claim: "groups".to_owned(),
+            group_identifier_issuer: "urn:ferroehr:groups".to_owned(),
+            ..ferrohealth_smart::party::config::PartySection::default()
+        });
+    config.party_binding.basic_user = users
+        .iter()
+        .map(|(user, _)| ferroehr::config::binding::BasicUserKey {
+            user: (*user).to_owned(),
+            key_issuer: BASIC_LOGIN.to_owned(),
+            key: (*user).to_owned(),
+        })
+        .collect();
+    let admin = config.rbac.admin_role.clone();
+    config.rbac.first_admin = users
+        .iter()
+        .find(|(_, roles)| roles.iter().any(|role| role.eq_ignore_ascii_case(&admin)))
+        .map(|(user, _)| (*user).to_owned());
+}
+
+/// Commits the `PERSON` of each Basic user `(user, roles)` of
+/// [`basic_users`] into `pool`, with a `ROLE` granting it [`FULL_SCOPES`] and
+/// its roles, and lets `service` honour both grants; the server never
+/// honours a grant of a privileged role.
+///
+/// The commits go through a service of their own, which records no access,
+/// so a test of what `service` records sees only its own requests; a user
+/// whose `PERSON` exists already is left as it is, so every replica of a
+/// test may call it.
+pub(crate) async fn grant_basic_users(
+    service: &FerroEhrService,
+    pool: &PgPool,
+    users: &[(&str, &[&str])],
+) {
+    let honoured = [Operation::HoldRoles, Operation::HoldScopes];
+    allowing(service, &honoured);
+    let committer = binding_service(pool);
+    allowing(&committer, &honoured);
+    let today = jiff::Zoned::now()
+        .with_time_zone(jiff::tz::TimeZone::UTC)
+        .date()
+        .to_string();
+    for (user, roles) in users {
+        let mut conn = pool.acquire().await.expect("a connection");
+        let rows =
+            ferroehr::party_binding::lookup::key_rows(&mut conn, BASIC_LOGIN, "guid", user, &today)
+                .await
+                .expect("the binding key reads");
+        drop(conn);
+        if rows.iter().any(|row| row.live) {
+            continue;
+        }
+        let (uid, _) =
+            crate::party_binding_http::professional_of(&committer, BASIC_LOGIN, user, "532").await;
+        let person = crate::party_binding_http::vo(&uid).0;
+        let scopes = FULL_SCOPES
+            .split_whitespace()
+            .map(|scope| ("scope".to_owned(), scope.to_owned()))
+            .collect();
+        let held = roles
+            .iter()
+            .map(|role| ("role".to_owned(), (*role).to_owned()))
+            .collect::<Vec<_>>();
+        let mut grants = vec![(Operation::HoldScopes, scopes)];
+        if !held.is_empty() {
+            grants.push((Operation::HoldRoles, held));
+        }
+        for (operation, elements) in grants {
+            committer
+                .grant_person(&PersonGrant {
+                    person,
+                    operation,
+                    elements,
+                })
+                .await
+                .expect("the Basic user's PERSON is granted");
         }
     }
+}
+
+/// A service over `pool` binding by the mapping of
+/// [`crate::party_binding_http::mapping`], as a Basic user of
+/// [`with_basic_users`] needs.
+pub(crate) fn binding_service(pool: &PgPool) -> FerroEhrService {
+    FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
+        .with_binding_mapping(crate::party_binding_http::mapping())
 }
 
 /// A Basic `Authorization` field value for `user`, with the password
@@ -447,20 +634,19 @@ pub(crate) async fn audited_app(
         .await
         .expect("the audit sender");
     let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        binding_service(&pool)
             .with_audit(sender)
             .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone())),
     );
     let mut config = api_config(true);
-    with_basic_users(&mut config, &[(user, &["ADMIN"])]);
-    let app = ferroehr_rest::build_full(
+    with_basic_users(&mut config, &svc, &pool, &[(user, &["ADMIN"])]).await;
+    let app = build_full(
         config,
         svc,
         None,
         ferroehr_rest::extensions::management::Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     let req = Request::post(format!("{BASE}/ehr"))
         .header(header::AUTHORIZATION, basic_credential(user))
         .header("Prefer", "return=representation")
@@ -539,6 +725,20 @@ pub(crate) fn local_audit() -> ferroehr::system_log::config::AuditConfig {
 /// database guard for the test's lifetime.
 pub(crate) async fn app(config: AppConfig) -> (testkit::TestDb, Router) {
     let (db, service) = test_service().await;
+    (db, router_with(config, service).await)
+}
+
+/// [`app`] with the `PERSON`s of the Basic users `users` of [`basic_users`]
+/// committed with their grants ([`grant_basic_users`]).
+pub(crate) async fn app_granting(
+    config: AppConfig,
+    users: &[(&str, &[&str])],
+) -> (testkit::TestDb, Router) {
+    let (db, pool) = migrated_pool().await;
+    let service = Arc::new(FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    ));
+    grant_basic_users(&service, &pool, users).await;
     (db, router_with(config, service).await)
 }
 

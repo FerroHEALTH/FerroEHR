@@ -630,10 +630,22 @@ through that client holds the person's grants. `[auth.smart]
 patient_issuers` stays in the file: it is trust, the issuers whose `ehrId`
 claim names an EHR of this platform (master07 §Context Selection), which the
 server needs before it believes a `patient/` token. The person-token client
-lists (`[[auth.issuer]] first_party_clients` and `delegates`) and
-`[auth] scopeless_subjects` are read inside `ferrohealth-smart`'s token
-classification, before any FerroEHR code sees the caller, so they move once
-the crate takes the decision from the product. **Our own design.**
+lists are answered the same way inside `ferrohealth-smart`'s token
+classification, through the crate's `kind::standing::Standing` seam:
+`party_binding::grants::standing::GrantStanding` reads the grants of the
+`ACTOR` carrying the client identifier under the token's issuer from the
+replica's `LiveGrants` copy (no transaction), so a client granted
+`sign_in_persons` is first party, one granted `act_for_persons` a delegate
+(and an RFC 8693 actor by its `sub` the same way), and a system caller granted
+`access_without_scope` meets every SMART on openEHR requirement without a
+resource scope. `[auth]` is read as the crate's `ProductStandingSection`, so
+`first_party_clients`, `delegates` and `scopeless_subjects` are unknown keys.
+A Basic user is a credential alone: its roles and scopes are the `hold_roles`
+and `hold_scopes` grants of its `PERSON`, granted onto the caller with
+`Caller::with_granted_scope` and `with_granted_roles`, and `[authz.rbac]
+first_admin` names the one Basic user holding `admin_role` and the product
+scope from the file, the trust anchor that writes the first policy parties.
+**Our own design.**
 
 **The grant ceiling.** `[authz.grants] allowed` bounds the operations the
 party store may grant, so a compromised administrator account cannot grant

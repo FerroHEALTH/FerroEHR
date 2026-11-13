@@ -38,9 +38,11 @@ config:
     basic:
       users:
         - user: clinician
-          scopes: [user/composition-*.cruds, user/template-*.cruds, user/aql-*.cruds, __ferroehr.platform]
-          roles: [ADMIN]
   authz:
+    # The first administrator: `clinician` holds ADMIN and the product scope
+    # from the configuration; any other scope is a grant on its PERSON.
+    rbac:
+      first_admin: clinician
     party_binding:
       # The healthcare provider this deployment acts for (an example id
       # under the OID arc 2.999).

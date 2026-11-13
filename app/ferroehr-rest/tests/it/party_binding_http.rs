@@ -47,12 +47,18 @@ const ROLE_TEMPLATE: &str = "FerroEHR professional role";
 const CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1";
 
 pub(crate) fn mapping() -> BindingMapping {
+    professionals(BindingMapping::default())
+}
+
+/// `mapping` binding the professional `PERSON`s of [`professional_of`] by
+/// their key.
+pub(crate) fn professionals(mapping: BindingMapping) -> BindingMapping {
     let key = IdentifierSelector::new(
         format!("/details[at0001]/items[{CLUSTER}]/items[at0001]"),
         "guid",
     )
     .expect("the key selector compiles");
-    BindingMapping::default()
+    mapping
         .with_person(PERSON_TEMPLATE, key)
         .with_professional_role(ROLE_TEMPLATE)
 }
@@ -107,11 +113,13 @@ async fn router_observed(
     source: Arc<dyn BindingSource>,
     observability: Observability,
 ) -> Router {
+    common::first_party(&svc, &config).await;
     let authenticator = Authenticator::new(
         &config,
         None,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        common::standing(&svc),
     )
     .await
     .expect("the binding builds");
@@ -479,11 +487,13 @@ async fn an_overage_the_identity_provider_throttles_is_unavailable_with_its_retr
         },
         ..ferrohealth_smart::idp::entra::GraphSection::default()
     }));
+    common::first_party(&svc, &config).await;
     let authenticator = Authenticator::new(
         &config,
         None,
         Some(Arc::new(svc.party_source("demographic"))),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        common::standing(&svc),
     )
     .await
     .expect("the binding with its adapter builds");

@@ -41,7 +41,7 @@ then writes the committer from the bound party:
 | Caller | Committer the server writes |
 |---|---|
 | A person, at a `persons` issuer through a first-party client | `PARTY_IDENTIFIED` with the `PERSON`'s name, an `external_ref` to the `PERSON`, the login identifier `{issuer = <token iss>, id = <person_key value>, type = "oauth2"}` and the provider identifier `{issuer, id, type = "healthcare-provider"}` |
-| A delegated person (a client or RFC 8693 actor in the issuer's `delegates`) | the person's own committer, as above; the client and the actor go into the access record, never into the committer |
+| A delegated person (a client or RFC 8693 actor the CDR grants `act_for_persons`) | the person's own committer, as above; the client and the actor go into the access record, never into the committer |
 | A Basic user | the committer of the `PERSON` its `[[authz.party_binding.basic_user]]` table maps it to, with the login identifier `{issuer = "ferroehr", id = <user>, type = "basic"}` |
 | A representative | `PARTY_RELATED` naming the representative's own `PERSON` in `external_ref`, their login identifier, and the coded `relationship` from the openEHR `subject_relationship` group (`253\|unknown\|` when no code fits) |
 | A patient of a `patients` issuer | `PARTY_SELF` with no `external_ref` (RM common master04, the first scheme of §Referring to the Patient) |

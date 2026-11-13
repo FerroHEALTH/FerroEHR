@@ -80,7 +80,7 @@ async fn authenticator(
         ..AppConfig::default()
     };
     config.auth.smart.discovery = served;
-    Authenticator::new(&config, None, None, memory()).await
+    Authenticator::new(&config, None, None, memory(), test_support::standing()).await
 }
 
 /// The `token_endpoint` and `authorization_endpoint` of the document.

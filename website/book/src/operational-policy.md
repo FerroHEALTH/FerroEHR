@@ -52,8 +52,13 @@ store, or before it can trust anything:
 - break-glass: `[authz.rbac] emergency_access_role` and
   `[audit] emergency_purpose_codes`, which must work as configured when the
   party store does not answer;
-- the password hashes of the Basic users, since a secret never becomes
-  versioned openEHR data;
+- the Basic users as credentials alone, `user` with its password hash, since
+  a secret never becomes versioned openEHR data, and `[authz.rbac]
+  first_admin`, the one Basic user that holds `admin_role` and the product
+  scope from the file: the first administrator, who writes the first policy
+  parties;
+- `[auth.smart] patient_issuers`, the issuers whose `ehrId` claim the server
+  believes, which is issuer trust;
 - the grant ceiling, `[authz.grants] allowed`: the operations the party store
   may grant at all, so a compromised administrator account cannot grant
   more than the operator allows ([The grant ceiling](#the-grant-ceiling)).
@@ -210,6 +215,9 @@ client identifier type are the stable contract.
 | `create_at_login` | Create a provisional `PERSON` at the first login of a person no party carries, under the admission conditions the grant names ([Just-in-time admission](#just-in-time-admission)) |
 | `query_system_wide` | Count the client's `system/aql-*` scope, which reaches every query over every EHR (SMART on openEHR, master08 §Resource Scopes) |
 | `access_demographic` | Reach the DEMOGRAPHIC API, which no SMART on openEHR scope covers |
+| `sign_in_persons` | Be a client the persons of its token issuer sign in through: a person's token through it is the person's own, or their representative's |
+| `act_for_persons` | Act for the persons of its token issuer, as a third-party client or as the RFC 8693 actor a person's token names in `act` |
+| `access_without_scope` | Be admitted, as a system caller whose token carries no resource scope, to every SMART on openEHR requirement |
 
 The same terminology names the elements that qualify a grant, by the code
 in the element's `name`:
@@ -386,7 +394,19 @@ ferroehr party-binding grant --issuer https://login.example.org/machines \
   --element binding_issuer=urn:example:login --element token_scope=ferroehr/scim
 ```
 
+With `--basic-user <user>` in place of `--issuer` and `--client-id`, the
+`ROLE` is performed by the `PERSON` the Basic user binds to, which must exist
+already, for example the scopes a development lane's users hold:
+
+```console
+ferroehr party-binding grant --basic-user clinician --operation hold_scopes \
+  --element 'scope=user/composition-*.cruds' --element 'scope=user/aql-*.cruds'
+```
+
 Every later grant is an administrator's write through the Demographic API.
+`[authz.rbac] first_admin` is that administrator in a deployment whose people
+sign in with HTTP Basic: it holds `admin_role` and the product scope before
+any policy party exists.
 
 ### The grant ceiling
 
@@ -417,13 +437,27 @@ grants.
 Each check below reads the grants of the request's caller, beside what the
 configuration grants:
 
-- **A Basic user's roles and scopes.** A Basic user bound to a `PERSON`
-  holds, beside the roles and scopes of its `[[auth.basic.users]]` table,
-  the roles the `role` elements of its `hold_roles` grants name and the
-  scopes the `scope` elements of its `hold_scopes` grants name. Every gate
-  reads them: the role gate, the SMART on openEHR scopes, ABAC and the
-  access record. A token's roles and scopes come from the token alone, since
-  its issuer is their authority.
+- **A Basic user's roles and scopes.** A Basic user is a credential alone.
+  Bound to a `PERSON`, it holds the roles the `role` elements of its
+  `hold_roles` grants name and the scopes the `scope` elements of its
+  `hold_scopes` grants name; a privileged role is never held this way. The
+  one exception is `[authz.rbac] first_admin`, which holds `admin_role` and
+  the product scope from the configuration. Every gate reads them: the role
+  gate, the SMART on openEHR scopes, ABAC and the access record. A token's
+  roles and scopes come from the token alone, since its issuer is their
+  authority.
+- **Which clients a person's token comes through.** While `ferrohealth-smart`
+  classifies a token, it asks the grants of the `ACTOR` carrying the client
+  identifier under the token's issuer: a person's token through a client
+  granted `sign_in_persons` is the person's, one through a client granted
+  `act_for_persons` is that client acting for the person, and one through
+  any other client is refused with `401`. An RFC 8693 actor a person's token
+  names is a delegate when the `ACTOR` carrying its `sub` under its issuer is
+  granted `act_for_persons`, and a system caller whose token carries no
+  resource scope meets every SMART on openEHR requirement when its `ACTOR`
+  is granted `access_without_scope`. The answer comes from the copy each
+  replica holds, so it adds no transaction, and a party store that cannot
+  answer refuses the token with `503`.
 - **Importing.** `message_import_ehr` admits a caller holding
   `[authz.rbac] import_role`, or one with an `import_ehr` grant whose
   `subject_namespace` names the EHR's subject namespace;

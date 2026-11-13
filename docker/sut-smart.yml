@@ -48,7 +48,8 @@ services:
       # SCIM client's issuer. The
       # runner mints plain RS256 JWTs (`typ` JWT, no `client_id` or `jti`), so
       # the issuer accepts that type and those claims, and its audience stands
-      # in for the client the tokens do not name.
+      # in for the client the tokens do not name; scripts/conformance.sh grants
+      # that client sign_in_persons in the CDR.
       FERROEHR__AUTH__ISSUER__2__ISSUER: "https://as.cnf.test"
       FERROEHR__AUTH__ISSUER__2__KIND: "persons"
       FERROEHR__AUTH__ISSUER__2__AUDIENCE: "cnf-smart-sut"
@@ -56,7 +57,6 @@ services:
       FERROEHR__AUTH__ISSUER__2__TOKEN_TYPES: "JWT"
       FERROEHR__AUTH__ISSUER__2__REQUIRED_CLAIMS: "iss,exp,aud,sub"
       FERROEHR__AUTH__ISSUER__2__CLIENT_CLAIMS: "client_id,azp,aud"
-      FERROEHR__AUTH__ISSUER__2__FIRST_PARTY_CLIENTS: "cnf-smart-sut"
       FERROEHR__AUTH__ISSUER__2__JWKS_FILE: /etc/ferroehr/cnf-smart-jwks.json
       FERROEHR__AUTH__PARTY__1__ISSUER: "https://as.cnf.test"
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: "urn:ferroehr:cnf-smart-login"

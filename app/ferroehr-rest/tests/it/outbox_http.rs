@@ -69,14 +69,12 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     svc.grants().refresh().await.expect("the grants read");
     let svc = Arc::new(svc);
     let mut config = common::api_config(true);
-    common::with_basic_users(&mut config, &[("root", &[])]);
+    common::with_basic_users(&mut config, &svc, &pool, &[("root", &[])]).await;
     config.auth.shared.issuer.push(machines(
         MACHINES,
         ferrohealth_smart::profile::Preset::Rfc9068,
     ));
-    let app = ferroehr_rest::build_full(config, svc, None, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, svc, None, Observability::default()).await;
     (db, pool, app)
 }
 

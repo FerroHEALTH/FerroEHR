@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DATABASE__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 31.0.0 -n ferroehr \
+  --version 32.0.0 -n ferroehr \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.7.0 \
@@ -68,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 31.0.0
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 32.0.0
 ```
 
 ### Pin two versions, not one
@@ -81,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 31.0.0` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 32.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.7.0` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -181,7 +181,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 31.0.0 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 32.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -326,7 +326,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 31.0.0 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 32.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -502,7 +502,7 @@ not propagate.
 > [!NOTE]
 > A Basic user's Argon2id hash is delivered as a mounted file like the others: put
 > it in `secrets.basicUserPasswordHashes` under the user-id, declare only the
-> `user`, its `scopes` and its `roles` under `config.auth.basic.users`.
+> `user` under `config.auth.basic.users`.
 > Setting `password_hash`
 > under `config:` is refused, and the error names the key that carries it. An
 > Argon2id hash is not a plaintext password, but it is an offline cracking target,
@@ -769,7 +769,6 @@ config:
         kind: persons
         profile: keycloak
         audience: [ferroehr]
-        first_party_clients: [ferroehr-viewer]
     party:
       - issuer: https://keycloak.example.org/realms/ferroehr
         identifier_issuer: urn:example:staff-login
@@ -782,7 +781,11 @@ config:
 ```
 
 or Basic auth, whose password hashes go in `secrets.basicUserPasswordHashes`
-while the user, its scopes and its roles stay under `config.auth.basic.users`.
+while the user stays under `config.auth.basic.users`; its scopes and roles
+are grants on its `PERSON`, and `config.authz.rbac.first_admin` names the
+Basic user that holds `admin_role`. A person's token is admitted only through
+a client the CDR grants `sign_in_persons`
+([Operational policy](../operational-policy.md)).
 A Basic user is a person: each maps to the binding key of its `PERSON` under
 `config.authz.party_binding.basic_user`, under the identifier issuer of a
 `config.auth.party` table (see `deploy/helm/ci/basic-auth-values.yaml`).
@@ -833,7 +836,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 31.0.0 -n ferroehr --reuse-values \
+  --version 32.0.0 -n ferroehr --reuse-values \
   --set config.record.query.plan_cache_capacity=512
 ```
 
@@ -1013,7 +1016,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 31.0.0 -n ferroehr --reuse-values \
+  --version 32.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1384,7 +1387,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 31.0.0 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 32.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

@@ -605,7 +605,5 @@ async fn full_app() -> Router {
         ..Observability::default()
     };
     let (_pg, service) = common::test_service().await;
-    ferroehr_rest::build_full(config, service, None, observability)
-        .await
-        .expect("build")
+    common::build_full(config, service, None, observability).await
 }

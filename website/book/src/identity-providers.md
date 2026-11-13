@@ -72,10 +72,10 @@ Everything below is those three pointed at a different issuer.
 profile, and the server acts on the kind:
 
 - **A person** signs in at a `persons` issuer through a first-party client,
-  or with HTTP Basic. The login is bound to the `PERSON` carrying its key,
+  a client the CDR grants `sign_in_persons`, or with HTTP Basic. The login is bound to the `PERSON` carrying its key,
   and the person commits under that `PERSON`.
 - **A delegated person** reaches the server through a client or an RFC 8693
-  actor that the issuer's profile lists in `delegates`. The token's subject is
+  actor the CDR grants `act_for_persons`. The token's subject is
   the person, so the request is bound and committed exactly as the person's
   own; the client and the actor do not change who committed. The access
   record carries `acting_mode = delegated`, the client and the actor chain.
@@ -85,8 +85,9 @@ profile, and the server acts on the kind:
   id>, "preferred_username": …}`, which "is always present and cannot be
   disabled" (Keycloak 26.8.0 release notes, *Track impersonation across
   token lifecycle and downstream services*). An impersonation is therefore
-  refused like any undeclared actor, unless the issuer's `delegates` lists
-  the administrator as an actor (`{ sub = "<user id>" }`). Then the request is
+  refused like any undeclared actor, unless the CDR grants the administrator
+  `act_for_persons` on an `ACTOR` carrying its user id as a `client_id`
+  identifier under the issuer. Then the request is
   bound to the impersonated user and commits as that user, and the access
   record names the administrator as the actor (EHDS Annex II 3.2(b) asks
   for the natural person who accessed). Keycloak's `act` names no issuer,
@@ -268,8 +269,12 @@ the issuer table, which wins over the preset.
    issuer = "https://as.example.com"
    kind = "persons"
    audience = ["ferroehr"]
-   first_party_clients = ["ferroehr-viewer"]
    ```
+
+   A person's token is admitted only through a client the CDR grants
+   `sign_in_persons`: an administrator writes the client's `AGENT`, carrying
+   its `client_id` under the issuer, and a `ROLE` granting the operation
+   ([Operational policy](operational-policy.md)).
 
 2. **The binding, on `sub`.** OpenID Connect Core 1.0 §5.7 names `iss` with
    `sub` as the only stable identifier of an end-user, so the `rfc9068`
@@ -294,10 +299,10 @@ the issuer table, which wins over the preset.
    (RFC 7644).
 4. **An onward caller.** A service that calls FerroEHR for a signed-in
    professional, such as FerroBRIDGE, exchanges the professional's token at
-   the authorization server by RFC 8693 token exchange. List the service in
-   the issuer's `delegates` (`{ client = "<its client id>" }`, or `{ sub }` for
-   an RFC 8693 actor): the request is bound to the professional, and the
-   access record names the service.
+   the authorization server by RFC 8693 token exchange. Grant the service
+   `act_for_persons` on the `AGENT` carrying its client id (or, for an RFC
+   8693 actor, its `sub`) under the issuer: the request is bound to the
+   professional, and the access record names the service.
 
 [Who is the committer](security/committer.md) shows what the server records
 for each of these callers.
@@ -492,7 +497,6 @@ kind = "persons"
 profile = "okta"
 token_types = ["<the typ header your server writes>"]
 audience = ["api://ferroehr"]
-first_party_clients = ["<the viewer's client id>"]
 ```
 
 Read the `typ` header of one of your server's access tokens and set it in
@@ -524,7 +528,6 @@ binding as follows.
    kind = "persons"
    profile = "keycloak"
    audience = ["ferroehr"]
-   first_party_clients = ["ferroehr-viewer"]
    app_only = [{ subjects = ["<the sub of service-account-lab>"] }]
    ```
 
@@ -533,8 +536,8 @@ binding as follows.
    the subject token (*Securing applications*, token exchange). Add an
    audience mapper to the client scope your professionals' tokens carry that
    puts the bridge's or gateway's client in `aud`, and let the onward caller
-   name FerroEHR's client id in the `audience` parameter. List the onward
-   client in `delegates`.
+   name FerroEHR's client id in the `audience` parameter. Grant the onward
+   client `act_for_persons` in the CDR.
 5. **No impersonation on a binding realm.** "Any user with the
    `impersonation` role in the realm can impersonate a user" (*Impersonating
    users*). Check that no user or group holds the realm `impersonation` role,
@@ -546,8 +549,8 @@ binding as follows.
    `impersonation_marker = "impersonator"`, so every impersonation is
    refused. Whether Keycloak 26.8 adds those mappers by default is not
    verified here; check the client scope. Keycloak 26.8 also writes an RFC
-   8693 `act` claim into every impersonation token, so an impersonator your
-   `delegates` does not list is refused even without the marker
+   8693 `act` claim into every impersonation token, so an impersonator the
+   CDR does not grant `act_for_persons` is refused even without the marker
    ([Who the caller is](#who-the-caller-is)).
 6. **Realm hardening.** On a binding or just-in-time realm: no
    self-registration, no social or other brokered identity provider without

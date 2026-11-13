@@ -32,6 +32,7 @@ pub mod capabilities;
 pub(crate) mod derive;
 pub mod live;
 pub mod operation;
+pub mod standing;
 pub mod store;
 pub mod trust;
 

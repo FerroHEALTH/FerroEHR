@@ -21,7 +21,6 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::policy_register::Register;
-use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::sender::{
     AuditHandle, ResolvedSubject, SubjectLookup, SubjectResolver, start,
 };
@@ -57,7 +56,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         .await
         .expect("the audit sender");
     let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        common::binding_service(&pool)
             .with_audit(sender)
             .with_audit_store(AuditStore::new(pool.clone())),
     );
@@ -74,12 +73,15 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     let mut config = common::api_config(true);
     common::with_basic_users(
         &mut config,
+        &svc,
+        &pool,
         &[
             ("dr", &["USER"]),
             ("root", &["ADMIN"]),
             ("portal", &["PORTAL"]),
         ],
-    );
+    )
+    .await;
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
     authz.rbac.subject_audit_role = Some("PORTAL".to_owned());
@@ -90,9 +92,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = ferroehr_rest::build_full(config, svc, handle, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, svc, handle, Observability::default()).await;
     let (status, body) = send(
         &app,
         "POST",

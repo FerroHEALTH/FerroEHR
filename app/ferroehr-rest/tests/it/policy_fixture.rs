@@ -42,7 +42,7 @@ pub(crate) async fn granting(svc: FerroEhrService) -> FerroEhrService {
         .binding_mapping(&[], ADMIN)
         .expect("the mapping compiles");
     svc.with_mapped_party_templates(sections.mapped_templates())
-        .with_binding_mapping(mapping)
+        .with_binding_mapping(crate::party_binding_http::professionals(mapping))
         .with_grant_ceiling(GrantCeiling::new(Operation::ALL))
 }
 

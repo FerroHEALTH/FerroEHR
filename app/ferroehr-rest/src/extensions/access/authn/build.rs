@@ -2,18 +2,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Building the [`Authenticator`]: the issuers of `[auth]`, read at start,
-//! the `DPoP` proof check of `[auth.dpop]`, the Basic store, and the issuers
-//! whose role claims may grant a privileged role (`[authz.rbac]
-//! role_issuers`). No openEHR spec governs authentication mechanics: our own
-//! design.
+//! each asking the policy grants for a client's standing, the `DPoP` proof
+//! check of `[auth.dpop]`, the Basic store, the issuers whose role claims may
+//! grant a privileged role (`[authz.rbac] role_issuers`) and the first
+//! administrator (`[authz.rbac] first_admin`). No openEHR spec governs
+//! authentication mechanics: our own design.
 
 use std::sync::Arc;
 
 use ferroehr::party_binding::source::BindingSource;
 use ferrohealth_smart::guard::Gate;
+use ferrohealth_smart::kind::standing::Standing;
 use ferrohealth_smart::resource::described::{Candidate, DescribeError, describe};
 use ferrohealth_smart::resource::introspection::{IntrospectionSettings, Introspector};
-use ferrohealth_smart::resource::{Caller, Honoured, IssuerSet, PatientClaim, ResourceServer};
+use ferrohealth_smart::resource::{Caller, Honoured, IssuerSet, PatientClaim, ResourceServer, Via};
 use ferrohealth_smart::sender::proof::ProofCheck;
 use ferrohealth_smart::sender::replay::ReplayStore;
 
@@ -31,8 +33,8 @@ pub(super) enum Primary {
     Introspection(Arc<Introspector>),
 }
 
-/// The privileged roles of `[authz.rbac]` and the issuers whose tokens may
-/// grant them.
+/// The privileged roles of `[authz.rbac]`, the issuers whose tokens may
+/// grant them and the first administrator.
 #[derive(Debug, Default)]
 pub(super) struct RoleIssuers {
     /// `admin_role`, `emergency_access_role`, `import_role` and
@@ -40,6 +42,20 @@ pub(super) struct RoleIssuers {
     privileged: Vec<String>,
     /// `role_issuers`.
     issuers: Vec<SecretUrl>,
+    /// `first_admin`, with what it holds.
+    first_admin: Option<FirstAdmin>,
+}
+
+/// The Basic user `[authz.rbac] first_admin` names, and what it holds from
+/// the configuration.
+#[derive(Debug)]
+pub(super) struct FirstAdmin {
+    /// The Basic user.
+    user: String,
+    /// `admin_role`, upper-cased.
+    pub(super) role: String,
+    /// `[auth] product_scope`.
+    pub(super) scope: String,
 }
 
 impl RoleIssuers {
@@ -48,7 +64,19 @@ impl RoleIssuers {
         Self {
             privileged: config.rbac.privileged_roles(),
             issuers: config.rbac.role_issuers.clone(),
+            first_admin: config.rbac.first_admin.clone().map(|user| FirstAdmin {
+                user,
+                role: config.rbac.admin_role.trim().to_ascii_uppercase(),
+                scope: ferroehr::config::auth::product_scope(&config.auth.shared).to_owned(),
+            }),
         }
+    }
+
+    /// The first administrator, when `caller` is that Basic user.
+    pub(super) fn first_admin(&self, caller: &Caller) -> Option<&FirstAdmin> {
+        self.first_admin
+            .as_ref()
+            .filter(|admin| caller.via() == Via::Basic && caller.subject() == admin.user)
     }
 
     /// Whether `role`, upper-cased, is a privileged role.
@@ -57,14 +85,19 @@ impl RoleIssuers {
     }
 
     /// Returns the upper-cased roles `caller` holds: a token of an issuer
-    /// `role_issuers` does not list grants no privileged role, while a Basic
-    /// user keeps the roles its own table grants.
+    /// `role_issuers` does not list grants no privileged role, and the first
+    /// administrator holds `admin_role`.
     pub(super) fn roles(&self, caller: &Caller) -> Vec<String> {
         let mut roles = upper_cased(caller.roles());
         if let Some(issuer) = caller.issuer()
             && !self.issuers.iter().any(|listed| listed.expose() == issuer)
         {
             roles.retain(|role| !self.privileged.contains(role));
+        }
+        if let Some(admin) = self.first_admin(caller)
+            && !roles.contains(&admin.role)
+        {
+            roles.push(admin.role.clone());
         }
         roles
     }
@@ -90,7 +123,9 @@ impl Authenticator {
     ///
     /// With a party `source` and an `[[auth.party]]` table, every caller is
     /// looked up in the party binding the tables and `[authz.party_binding]`
-    /// describe, on every request.
+    /// describe, on every request. `standing` answers which clients a
+    /// person's token comes through, which actors are delegates and which
+    /// system subjects need no scope, as the token is classified.
     ///
     /// # Errors
     /// A message naming the refused setting, the issuer that could not be
@@ -107,8 +142,9 @@ impl Authenticator {
         patient_claim: Option<&str>,
         source: Option<Arc<dyn BindingSource>>,
         replay: Arc<dyn ReplayStore>,
+        standing: Arc<dyn Standing>,
     ) -> Result<Arc<Self>, String> {
-        let resolved = ferroehr::config::auth::resolve(&config.auth.shared)
+        let resolved = ferroehr::config::auth::resolve_with(&config.auth.shared, standing)
             .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
         let party = super::party::binding(config, &resolved, source)
             .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;

@@ -240,9 +240,16 @@ provision() {
   local grant="${COMPOSE[*]} exec -T ferroehr ferroehr"
   echo "==> Provisioning the catalogue's logins through /scim/v2/Users"
   (cd "$REPO_ROOT" && SCIM_GRANT="$grant" bash scripts/scim-provision.sh "$origin" basic-users \
-    urn:ferroehr:basic-user --name Veredictum ferroehr ferroehr-admin ferroehr-readonly)
+    urn:ferroehr:basic-user --name Veredictum ferroehr ferroehr-admin \
+    --roles READONLY ferroehr-readonly)
   (cd "$REPO_ROOT" && SCIM_GRANT="$grant" bash scripts/scim-provision.sh "$origin" cnf-smart \
     urn:ferroehr:cnf-smart-login --name Veredictum cnf-smart-app)
+  # The runner's tokens come through the client docker/sut-smart.yml names,
+  # which persons sign in through once the CDR grants it sign_in_persons.
+  local -a cli
+  read -ra cli <<<"$grant"
+  (cd "$REPO_ROOT" && "${cli[@]}" party-binding grant --issuer https://as.cnf.test \
+    --client-id cnf-smart-sut --operation sign_in_persons >/dev/null)
 }
 
 # Writes the JUnit, CTRF and Markdown views beside the results in $1.

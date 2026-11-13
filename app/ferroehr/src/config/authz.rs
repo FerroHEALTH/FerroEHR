@@ -116,6 +116,17 @@ pub struct RbacConfig {
     /// `read_identifiers` is a second source. Each renders with any userinfo
     /// masked.
     pub role_issuers: Vec<SecretUrl>,
+    /// The Basic user of `[[auth.basic.users]]` that holds `admin_role` and
+    /// `[auth] product_scope` from this file
+    /// (`FERROEHR__AUTHZ__RBAC__FIRST_ADMIN`, default unset).
+    ///
+    /// A Basic user holds only the roles and scopes its `PERSON`'s policy
+    /// grants name, and `admin_role` is never one of them, so a new
+    /// deployment has no administrator to write the first policy party. This
+    /// user is that administrator: it writes the grants of every other
+    /// person through the Demographic API. Unset, no Basic user holds
+    /// `admin_role`. No openEHR spec governs this: our own design.
+    pub first_admin: Option<String>,
     /// What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default
     /// `open`).
     ///
@@ -145,6 +156,7 @@ impl Default for RbacConfig {
             identifier_reader_role: None,
             import_role: None,
             role_issuers: Vec::new(),
+            first_admin: None,
             ehr_access_default: EhrAccessDefault::Open,
         }
     }
