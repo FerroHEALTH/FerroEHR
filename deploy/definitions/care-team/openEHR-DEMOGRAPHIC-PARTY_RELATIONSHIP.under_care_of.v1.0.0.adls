@@ -1,0 +1,50 @@
+archetype (adl_version=2.0.6; rm_release=1.1.0)
+    openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"FerroEHR">
+        ["organisation"] = <"Cadasto B.V.">
+    >
+    lifecycle_state = <"unmanaged">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"The care of a patient by a care team or an organisational unit, such as a ward during an admission: a PARTY_RELATIONSHIP from the patient's PERSON, its source, to the team's GROUP or the unit, its target.">
+            use = <"Held in the patient's PERSON.relationships, written by the care delivery environment, such as a hospital's ADT system, under a write_care_relationship grant, with time_validity from the admission to the discharge. Its details hold the code that makes it a care relationship, under_care_of of FerroEHR's terminology ferroehr-operations, and the optional time of the discharge when a bound finer than a day is needed. Adapted from the person-to-provider PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+    other_details = <
+        ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+        ["derived_from"] = <"openEHR-DEMOGRAPHIC-PERSON.person-patient.v0 (openEHR CKM 1013.1.821, modified 2019-08-09)">
+    >
+
+definition
+    PARTY_RELATIONSHIP[id1] matches {
+        details matches {
+            ITEM_TREE[id2] matches {
+                items matches {
+                    ELEMENT[id3] occurrences matches {1} matches {
+                        value matches { DV_CODED_TEXT[id4] }
+                    }
+                    ELEMENT[id6] occurrences matches {0..1} matches {
+                        value matches { DV_DATE_TIME[id7] }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["id1"] = <text = <"Under care of"> description = <"The care of a patient by a care team or an organisational unit.">>
+            ["id2"] = <text = <"Details"> description = <"The details of the care relationship.">>
+            ["id3"] = <text = <"Care relationship code"> description = <"The code that makes the relationship a care relationship: under_care_of of FerroEHR's terminology ferroehr-operations.">>
+            ["id6"] = <text = <"Discharge time"> description = <"The time the patient left the care of the team or unit, when a bound finer than the date of time_validity is needed.">>
+        >
+    >

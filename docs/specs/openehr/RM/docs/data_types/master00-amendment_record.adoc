@@ -5,10 +5,16 @@
 |Issue|Details|Raiser, Implementer|Completed
 
 |[[latest_issue]]
+|{spec_tickets}/SPECPR-386[SPECPR-386^]: Clarify that `DV_DURATION._magnitude()_` is computed via `Iso8601_duration._to_seconds()_`, and add a cross-reference link from `_magnitude()_` to the `Iso8601_duration` class in the BASE Foundation Types specification.
+|P Pazos, +
+ S Iancu
+|[[latest_issue_date]]24 Jul 2026
+
+|
 |{spec_tickets}/SPECRM-101[SPECRM-101^]: Correct error in `_less_than()_` description in various `DV_ORDERED` descendants: `DV_QUANTIFIED`, `DV_COUNT`, `DV_QUANTITY`, and the DV date/time types to indicate that the result is 'this object < other'.
 |B Verhees, +
  T Beale
-|[[latest_issue_date]]26 Dec 2020
+|26 Dec 2020
 
 4+^h|*RM Release 1.1.0*
 
