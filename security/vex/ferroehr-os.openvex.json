@@ -3,8 +3,8 @@
   "@id": "https://ferroehr.eu/vex/distroless-os-packages",
   "author": "Cadasto B.V.",
   "role": "vendor",
-  "timestamp": "2026-11-11T00:00:00Z",
-  "version": 9,
+  "timestamp": "2026-11-13T00:00:00Z",
+  "version": 10,
   "tooling": "hand-authored; see security/vex/README.md",
   "statements": [
     {
@@ -1757,6 +1757,118 @@
         "forbidden_imports": [
           "dlmopen",
           "dlopen"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-115819"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc6"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-115819, and GLIBC-SA-2026-0027: the wide scanf family (swscanf, fwscanf, wscanf, vswscanf, vfwscanf, vwscanf) writes one null byte past a char array filled by a %s or %[ conversion without the 'l' modifier (trixie: glibc 2.41-12+deb13u4 unfixed, no DSA, minor issue). The advisory states that the narrow scanf functions are not affected. Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image. On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports no dlopen; the one name it resolves at run time through dlsym is __pthread_get_minstack (Rust std). Every libc function it calls, its statically linked C code included, is an undefined dynamic symbol, so the import table is the complete list of glibc entry points it reaches. That table holds no function of the wide scanf family under any name (plain, __isoc99_ or __isoc23_); its one scanf import is the narrow __isoc23_sscanf (objdump -T on the ferroehr and ferroehr-viewer binaries of the :main images of 2026-11-13, both architectures). No process in either image reaches the defective code.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen",
+          "__isoc23_fwscanf",
+          "__isoc23_swscanf",
+          "__isoc23_vfwscanf",
+          "__isoc23_vswscanf",
+          "__isoc23_vwscanf",
+          "__isoc23_wscanf",
+          "__isoc99_fwscanf",
+          "__isoc99_swscanf",
+          "__isoc99_vfwscanf",
+          "__isoc99_vswscanf",
+          "__isoc99_vwscanf",
+          "__isoc99_wscanf",
+          "fwscanf",
+          "swscanf",
+          "vfwscanf",
+          "vswscanf",
+          "vwscanf",
+          "wscanf"
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-100290"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc6"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:deb/debian/libc6"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Debian security tracker, https://security-tracker.debian.org/tracker/CVE-2026-100290, and GLIBC-SA-2026-0028: glibc's regcomp and regexec may read freed memory and free a block twice when an allocation fails while a regular expression is compiled or matched (trixie: glibc 2.41-12+deb13u4 unfixed, no DSA, minor issue). Both images are gcr.io/distroless/cc-debian13:nonroot plus one program: /usr/local/bin/ferroehr in ferroehr, /usr/local/bin/ferroehr-viewer in ferroehr-viewer, the only ELF executable in each image. On amd64 and arm64 alike its DT_NEEDED list is libgcc_s.so.1, libm.so.6, libc.so.6 and the dynamic loader, with no RPATH or RUNPATH, and it imports no dlopen; the one name it resolves at run time through dlsym is __pthread_get_minstack (Rust std). Every libc function it calls, its statically linked C code included, is an undefined dynamic symbol, so the import table is the complete list of glibc entry points it reaches, and it imports neither regcomp nor regexec (objdump -T on the binaries of the :main images of 2026-11-13, both architectures): its regular expressions are Rust's own engine. No process in either image reaches glibc's matcher.",
+      "ferroehr:linkage": {
+        "binaries": [
+          "ferroehr",
+          "ferroehr-viewer"
+        ],
+        "needed": [
+          "libc.so.6",
+          "libgcc_s.so.1",
+          "libm.so.6"
+        ],
+        "loader": {
+          "amd64": "ld-linux-x86-64.so.2",
+          "arm64": "ld-linux-aarch64.so.1"
+        },
+        "rpath": false,
+        "forbidden_imports": [
+          "dlmopen",
+          "dlopen",
+          "regcomp",
+          "regexec"
         ]
       }
     }
