@@ -44,6 +44,7 @@ mod gates;
 pub(crate) mod grants;
 mod issuer;
 mod party;
+pub(crate) mod portal;
 pub(crate) mod purpose;
 pub(crate) mod record;
 pub(crate) mod refusal;
@@ -123,7 +124,7 @@ pub struct Principal {
     pub honoured: Honoured,
     /// The EHR a bound representative is confined to, `None` for every other
     /// caller (#5086).
-    pub represented: Option<RepresentedEhr>,
+    pub represented: Option<portal::RepresentedEhr>,
 }
 
 impl Principal {
@@ -162,18 +163,6 @@ impl Principal {
             represented: None,
         }
     }
-}
-
-/// The EHR a bound representative is confined to: the one whose
-/// `EHR_STATUS.subject.external_ref` names the subject the token asserts and the
-/// party source records a live representation of.
-///
-/// No openEHR spec governs resolving a login to a party: our own design.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RepresentedEhr {
-    /// That EHR's id, or `None` when no EHR names the subject, so the
-    /// representative reaches no EHR.
-    pub ehr_id: Option<String>,
 }
 
 /// The mechanism that authenticated a [`Principal`].
@@ -398,6 +387,9 @@ pub struct Authenticator {
     party: Option<Arc<party::Binding>>,
     /// The federation agreements' caller limits.
     declared: declared::Declared,
+    /// `[authz.party_binding] namespace`, under which a patient-portal
+    /// representative's `PERSON` is named.
+    namespace: String,
 }
 
 impl std::fmt::Debug for Authenticator {
@@ -622,15 +614,14 @@ pub(crate) async fn middleware(
                 refusal.extensions_mut().insert(actor);
                 return refusal;
             }
+            let patient = gates::patient_person(&layer, &req, &principal).await;
             req.extensions_mut().insert(principal.clone());
             let for_audit = principal.clone();
-            let mut committer = party::committer_identity(&for_audit, &granted);
-            if let Some(binding) = auth.party.as_deref() {
-                match binding.details(&for_audit).await {
-                    Ok(details) => committer.bound = details,
+            let (committer, patient) =
+                match portal::committer(auth, &for_audit, &granted, patient).await {
+                    Ok(committer) => committer,
                     Err(e) => return refusal::response(auth, req.headers(), &e),
-                }
-            }
+                };
             // The roles ride beside the committer identity for the request
             // scope, so a record the service layer emits by itself carries
             // them too (#3239).
@@ -645,7 +636,10 @@ pub(crate) async fn middleware(
                             binding,
                             ferroehr::versioning::committer::with_committer(
                                 Some(committer),
-                                Box::pin(grants::scoped(live, granted, next.run(req))),
+                                Box::pin(portal::as_patient(
+                                    patient,
+                                    grants::scoped(live, granted, next.run(req)),
+                                )),
                             ),
                         ),
                     ),

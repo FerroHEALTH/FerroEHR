@@ -384,8 +384,9 @@ fn node_id_text(node_id: &str) -> bool {
 ///
 /// It names the templates a professional's `PERSON` may use with the key
 /// selector of each, the professional `ROLE` template, the group template
-/// with its `externalId` selector, and the membership and representation
-/// archetypes.
+/// with its `externalId` selector, and the membership archetype. A
+/// representation is recognised by its code
+/// ([`policy_mark::REPRESENTS`]) in any archetype, so the mapping names none.
 ///
 /// Empty by default, which derives no row, so every login is unbound until a
 /// deployment installs its mapping. Template and archetype ids compare in
@@ -401,11 +402,6 @@ pub struct BindingMapping {
     group: Option<GroupSelectors>,
     /// The canonical archetype id of a membership `PARTY_RELATIONSHIP`.
     membership: Option<String>,
-    /// The canonical archetype id of a representation `PARTY_RELATIONSHIP`.
-    representation: Option<String>,
-    /// Each representation type code, mapped to its openEHR
-    /// `subject_relationship` code.
-    relationship_codes: BTreeMap<String, String>,
     /// The role whose holder may write a protected party
     /// ([`protect`]), compared case-insensitively.
     admin_role: Option<String>,
@@ -463,20 +459,6 @@ impl BindingMapping {
     #[must_use]
     pub fn with_membership(mut self, archetype_id: &str) -> Self {
         self.membership = Some(canonical_key(archetype_id));
-        self
-    }
-
-    /// Returns this mapping reading a representative's subjects from the
-    /// inline `PARTY_RELATIONSHIP`s of `archetype_id`, each type code mapped
-    /// by `codes` to an openEHR `subject_relationship` code.
-    #[must_use]
-    pub fn with_representation(
-        mut self,
-        archetype_id: &str,
-        codes: BTreeMap<String, String>,
-    ) -> Self {
-        self.representation = Some(canonical_key(archetype_id));
-        self.relationship_codes = codes;
         self
     }
 
@@ -594,12 +576,6 @@ impl BindingMapping {
         }
         if let Some(membership) = &self.membership {
             line(&["membership", membership]);
-        }
-        if let Some(representation) = &self.representation {
-            line(&["representation", representation]);
-        }
-        for (code, mapped) in &self.relationship_codes {
-            line(&["relationship", code, mapped]);
         }
         sha2::Sha256::digest(text.as_bytes()).iter().fold(
             String::with_capacity(64),

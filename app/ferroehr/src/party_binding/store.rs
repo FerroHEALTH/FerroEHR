@@ -50,6 +50,8 @@ use crate::storage::party_reverse;
 use crate::versioning::change::Committed;
 use crate::versioning::{Kind, SigningCtx};
 
+mod standalone;
+
 /// The `version_lifecycle_state` code of a logically deleted head.
 const DELETED: &str = "523";
 /// The parties one refill page derives.
@@ -126,8 +128,8 @@ pub(crate) fn selector_in_use(e: StorageError) -> ServiceError {
 /// Judges the party commit `committed` against the protection rules
 /// ([`crate::party_binding::protect`]), then brings its reverse-relationship
 /// index and side-table rows to its new head, on its commit transaction `tx`.
-/// A `PARTY_RELATIONSHIP` of its own is judged only: it is no party, so it has
-/// no rows.
+/// A `PARTY_RELATIONSHIP` of its own holds the one representation row it is,
+/// when it carries the representation code ([`standalone::reindex`]).
 ///
 /// `facts` is what the committed body holds, `None` for a logical delete: the
 /// hooks read it and never the stored body (#5220).
@@ -142,10 +144,7 @@ pub(crate) async fn reindex_committed(
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
     if committed.kind == Kind::PartyRelationship {
-        crate::party_binding::protect::check(tx, ctx.binding, committed, facts).await?;
-        let targets = facts.map_or(&[][..], |f| f.targets.as_slice());
-        party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
-        return Ok(());
+        return standalone::committed(tx, ctx.binding, committed, facts).await;
     }
     if crate::versioning::committer::person_commits() {
         // NOTE: RM common master04 §Audit Details, PARTY_SELF names the record
@@ -211,6 +210,10 @@ pub(crate) async fn reindex_stored(
     let Some(head) = heads.pop() else {
         return Ok(());
     };
+    if kind == Kind::PartyRelationship {
+        let facts = head.facts.filter(|_| head.lifecycle_state != DELETED);
+        return standalone::reindex(tx, mapping, vo_id.0, facts.as_ref()).await;
+    }
     let head = with_last(tx, mapping, kind, head).await?;
     reindex_heads(tx, mapping, kind, vec![head]).await
 }
@@ -314,6 +317,7 @@ pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(
         sqlx::query(statement).execute(&mut *tx).await?;
     }
     refill_grants(tx).await?;
+    standalone::refill(tx).await?;
     for kind in [Kind::Person, Kind::Group] {
         let mut after = None;
         loop {
@@ -472,7 +476,8 @@ async fn fold(
 /// A key row is written for a `PERSON` that performs a professional `ROLE`
 /// (RM demographic `role.adoc`: a `ROLE` listed in `roles`, whose
 /// `performer` names the `PERSON` and whose head is `complete` or
-/// `incomplete`) or is the source of a representation relationship.
+/// `incomplete`) or is the source of a representation relationship, inline
+/// or of its own.
 async fn write_persons(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
@@ -484,6 +489,7 @@ async fn write_persons(
     let mut representations = Vec::new();
     let mut memberships = Vec::new();
     let mut listed = Vec::new();
+    let standalone = rows::standalone_representatives(tx, &parties).await?;
     for head in heads {
         if mapping.membership.is_some()
             && head.lifecycle_state != DELETED
@@ -498,14 +504,12 @@ async fn write_persons(
         else {
             continue;
         };
-        if mapping.representation.is_some() {
-            representations.extend(facts.representations.iter().map(|r| RepresentationRow {
-                representative: head.vo_id,
-                subject: r.subject,
-                code: r.code.clone(),
-                validity: r.validity.clone(),
-            }));
-        }
+        representations.extend(facts.representations.iter().map(|r| RepresentationRow {
+            representative: head.vo_id,
+            subject: r.subject,
+            code: r.code.clone(),
+            validity: r.validity.clone(),
+        }));
         for (selector, identifier) in &facts.identifiers {
             identifiers.push(IdentifierRow {
                 party: head.vo_id,
@@ -518,18 +522,14 @@ async fn write_persons(
                     identifier.id.clone()
                 },
                 lifecycle_state: head.lifecycle_state.clone(),
-                representative: !facts.representations.is_empty(),
+                representative: !facts.representations.is_empty()
+                    || standalone.contains(&head.vo_id),
             });
         }
         listed.extend(facts.roles.iter().map(|role| (*role, head.vo_id)));
     }
     let professional = professional(tx, mapping, &listed).await?;
-    let (codes, mapped): (Vec<&str>, Vec<&str>) = mapping
-        .relationship_codes
-        .iter()
-        .map(|(code, mapped)| (code.as_str(), mapped.as_str()))
-        .unzip();
-    rows::write_representations(tx, &parties, &representations, (&codes, &mapped)).await?;
+    rows::write_representations(tx, &parties, &representations).await?;
     write_identifiers(
         tx,
         &parties,

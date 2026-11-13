@@ -469,11 +469,12 @@ async fn an_undeclared_or_marked_keycloak_impersonation_is_refused() {
 }
 
 /// Someone acting for a patient (RFC 8693 §4.1 `act` on a `patients` token)
-/// is refused `403` where the issuer sets `act_represents_patient`, since
-/// FerroEHR binds the representative to no party, and such a token is refused
-/// `401` by `ferrohealth-smart` on an issuer that does not set it.
+/// whom no representation binds is refused `403`
+/// (`refused-representation-unrecorded`) where the issuer sets
+/// `act_represents_patient`, and such a token is refused `401` by
+/// `ferrohealth-smart` on an issuer that does not set it.
 #[tokio::test]
-async fn a_token_acting_for_a_patient_is_refused() {
+async fn a_token_acting_for_a_patient_without_a_representation_is_refused() {
     const PATIENTS: &str = "https://patients.example";
     let (_db, svc) = service().await;
     for (represents, expected) in [
@@ -499,7 +500,7 @@ async fn a_token_acting_for_a_patient_is_refused() {
             "act_represents_patient {represents:?}: {body}"
         );
         if represents.is_some() {
-            assert!(body.contains("acting for a patient"), "{body}");
+            assert!(body.contains("refused-representation-unrecorded"), "{body}");
         }
     }
 }

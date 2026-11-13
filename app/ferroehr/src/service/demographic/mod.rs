@@ -70,6 +70,7 @@ pub mod jit;
 pub mod mapped_write;
 pub mod mapping;
 pub mod party_set;
+pub mod portal;
 pub mod precondition;
 pub mod provision;
 pub mod rekey;

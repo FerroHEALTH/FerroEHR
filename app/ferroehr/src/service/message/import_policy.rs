@@ -16,9 +16,11 @@
 //! [`crate::party_binding::policy_mark::TERMINOLOGY`], read per request from
 //! [`Capabilities::current`], and never this node's own system id. Importing
 //! needs a grant of the import's operation (`import_ehr`,
-//! `import_ehr_extract`) covering the subject namespace of the EHR it touches; exporting by a system caller needs an `export_ehr_extract`
-//! grant covering the EHR the same way. No openEHR spec governs who may
-//! import or export: our own design (#5005, #5432, #5438, #5439, #5521).
+//! `import_ehr_extract`) covering the subject namespace of the EHR it
+//! touches, or holding `no_subject_namespace` for a subject with none;
+//! exporting by a system caller needs an `export_ehr_extract` grant covering
+//! the EHR the same way. No openEHR spec governs who may import or export:
+//! our own design (#5005, #5432, #5438, #5439, #5521, #5530).
 
 #![expect(
     clippy::disallowed_types,
@@ -102,8 +104,8 @@ impl FerroEhrService {
 
     /// Admits an import of `containers` and `parties`, the operation
     /// `operation`, by the request's caller: one holding a grant of
-    /// `operation` naming the subject namespace of each
-    /// `EHR_STATUS` the import carries. An `import_ehr` must carry one; an
+    /// `operation` covering the subject of each `EHR_STATUS` the import
+    /// carries ([`Capabilities::covers`]). An `import_ehr` must carry one; an
     /// `import_ehr_extract` carrying none is held to its target EHR by
     /// [`Self::admit_import_target`].
     ///
@@ -123,13 +125,13 @@ impl FerroEhrService {
             return Ok(());
         }
         if crate::versioning::committer::current_committer().is_some() {
-            let namespaces = imported_namespaces(containers);
-            let namespaces: Vec<&str> = namespaces.iter().map(String::as_str).collect();
+            let subjects = imported_subjects(containers);
+            let subjects: Vec<Option<&str>> = subjects.iter().map(Option::as_deref).collect();
             let capabilities = Capabilities::current();
-            let granted = if namespaces.is_empty() && operation == Operation::ImportEhrExtract {
+            let granted = if subjects.is_empty() && operation == Operation::ImportEhrExtract {
                 capabilities.holds(operation)
             } else {
-                capabilities.covers(operation, &namespaces)
+                capabilities.covers(operation, &subjects)
             };
             if !granted {
                 return Err(refused_import(operation));
@@ -179,8 +181,7 @@ impl FerroEhrService {
         {
             return Ok(());
         }
-        let namespaces: Vec<&str> = namespace.iter().map(String::as_str).collect();
-        if Capabilities::current().covers(Operation::ImportEhrExtract, &namespaces) {
+        if Capabilities::current().covers(Operation::ImportEhrExtract, &[namespace.as_deref()]) {
             return Ok(());
         }
         Err(refused_import(Operation::ImportEhrExtract))
@@ -200,14 +201,13 @@ impl FerroEhrService {
             return self.refuse_objected_export(ehr_id).await;
         }
         let namespace = self.subject_namespace(ehr_id).await?;
-        let namespaces: Vec<&str> = namespace.iter().map(String::as_str).collect();
-        if Capabilities::current().covers(Operation::ExportEhrExtract, &namespaces) {
+        if Capabilities::current().covers(Operation::ExportEhrExtract, &[namespace.as_deref()]) {
             return self.refuse_objected_export(ehr_id).await;
         }
         Err(ServiceError::not_permitted(
             "a system caller exports an EHR only under a grant of \
              ferroehr-operations::export_ehr_extract whose subject_namespace elements name the \
-             subject namespace of the EHR",
+             subject namespace of the EHR, or hold no_subject_namespace for a subject with none",
         ))
     }
 
@@ -264,14 +264,15 @@ impl FerroEhrService {
     }
 }
 
-/// The subject namespaces the `EHR_STATUS` versions among `containers` name,
-/// `EHR_STATUS.subject.external_ref.namespace`, distinct.
-fn imported_namespaces(containers: &[ImportContainer]) -> BTreeSet<String> {
+/// The subjects of the `EHR_STATUS` versions among `containers`, distinct:
+/// each `EHR_STATUS.subject.external_ref.namespace`, `None` for a subject
+/// with no `external_ref`, such as an anonymous record's `PARTY_SELF`.
+fn imported_subjects(containers: &[ImportContainer]) -> BTreeSet<Option<String>> {
     containers
         .iter()
         .filter(|container| container.kind == Kind::EhrStatus)
         .flat_map(|container| &container.versions)
-        .filter_map(|version| {
+        .map(|version| {
             version
                 .data
                 .pointer("/subject/external_ref/namespace")
@@ -286,6 +287,7 @@ fn imported_namespaces(containers: &[ImportContainer]) -> BTreeSet<String> {
 fn refused_import(operation: Operation) -> ServiceError {
     ServiceError::not_permitted(format!(
         "importing needs a grant of ferroehr-operations::{operation} whose subject_namespace \
-         elements name the subject namespace of the EHR"
+         elements name the subject namespace of the EHR, or hold no_subject_namespace for a \
+         subject with none"
     ))
 }

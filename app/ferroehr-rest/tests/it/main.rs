@@ -108,6 +108,7 @@ mod patient_data_assurance;
 mod policy_fixture;
 mod policy_grants_http;
 mod policy_registers_http;
+mod portal_representatives_http;
 mod protocol_tail;
 mod query_ehr_id_header;
 mod query_refusals_http;

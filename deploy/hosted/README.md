@@ -206,8 +206,13 @@ the scope `ferroehr/scim` from the development issuer, it asks
 `/scim/v2/Users` for `userName eq "ferroehr"` every 30 seconds and creates the
 User when it is missing (RFC 7644 §3.3). FerroEHR creates the `PERSON` and its
 professional `ROLE` and issues the `PERSON`'s id, so no party id is fixed
-anywhere, and no Basic machine user or administrator role seeds it.
-`reseed.sh` waits for the login to bind before it commits anything, so every
+anywhere, and no Basic machine user or administrator role seeds it. A Basic
+user is a credential alone, so the `ferroehr-hold` service then grants that
+`PERSON` the SMART on openEHR scopes of every resource family
+(`ferroehr party-binding grant --basic-user ferroehr --operation hold_scopes`),
+running again until the `PERSON` exists; the demo user holds ADMIN and the
+product scope as `[authz.rbac] first_admin`.
+`reseed.sh` waits for the login to bind and hold its scopes before it commits anything, so every
 seeded version names the demo `PERSON`, and it reads the marker's
 `EHR_STATUS` version back to check that its committer references a `PERSON`.
 

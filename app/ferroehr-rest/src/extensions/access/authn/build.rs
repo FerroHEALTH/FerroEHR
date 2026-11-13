@@ -235,6 +235,7 @@ impl Authenticator {
             role_issuers: RoleIssuers::of(config),
             party,
             declared: super::declared::Declared::default(),
+            namespace: config.party_binding.namespace.clone(),
         }))
     }
 }

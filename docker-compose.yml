@@ -619,6 +619,10 @@ services:
         condition: service_healthy
       ferroehr-grant:
         condition: service_completed_successfully
+      # Started beside it, so the scopes the login waits for are granted
+      # whichever services a caller names.
+      ferroehr-hold:
+        condition: service_started
     entrypoint:
       - sh
       - -c

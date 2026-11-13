@@ -99,7 +99,7 @@ operator rule boot cannot see.
 | `sender_constraint` | `none` or `required` | `none` | `required` admits only a token bound to a DPoP key (RFC 9449) or to the client certificate of a mutual-TLS connection (RFC 8705 §3). A token carrying `cnf` is held to it under either value. |
 | `assurance` | table | unset | The assurance level the issuer's tokens carry, in the shape of [`[authz.assurance]`](#authzassurance-the-assurance-level-patient-data-requires). |
 | `person_key` | string | `sub` (preset) | The claim a person is bound by. `email`, `phone_number`, `preferred_username` and `name` are never accepted as a key (OpenID Connect Core 1.0 §5.7). |
-| `act_represents_patient` | bool | unset | On a `patients` issuer, read a token whose `sub` is the patient and whose top-level `act` (RFC 8693 §4.1) names someone else as that person acting for the patient. FerroEHR binds no party to such a representative, so it refuses the token with `403` (`refused-patient-representative`). Without the key, `ferrohealth-smart` refuses a `patients` token that carries `act` with `401`. |
+| `act_represents_patient` | bool | unset | On a `patients` issuer, read a token whose `sub` is the patient and whose top-level `act` (RFC 8693 §4.1) names someone else as that person acting for the patient. FerroEHR binds the actor by their login to a representative's `PERSON` and admits them while that `PERSON` holds a live representation of the patient ([Representatives in the patient portal](../operational-policy.md#representatives-in-the-patient-portal)); otherwise it refuses the token with `403` (`refused-representation-unrecorded`). Without the key, `ferrohealth-smart` refuses a `patients` token that carries `act` with `401`. |
 | `token_types`, `required_claims`, `scope_claim`, `app_only_scope_claim` | | preset | The token shape that replaces `token_profile`: the accepted `typ` values, the claims every token carries, and where its scopes are read. For an issuer that minted under `token_profile = "jwt"`, set `token_types = ["JWT"]` and the `required_claims` its tokens carry. |
 | `client_claims`, `app_only`, `guest`, `impersonation_marker`, `expect`, `user_claims`, `person_equality`, `unstable_claims`, `max_actor_chain`, `representation`, `tenant_claim`, `adapter`, `onward_*` | | preset | The other profile keys of `ferrohealth-smart`: which claim names the client, what marks an app-only token or a guest, what refuses an impersonation, the claims a token must carry exactly, how a representative names whom it acts for, the claim naming the tenant, the vendor adapter (`idp-entra`) and the onward grants. |
 
@@ -289,7 +289,6 @@ paths.
 | `[authz.party_binding.professional_role]` | `template_id` | The template of the professional `ROLE`, rooted at `ROLE`. A `PERSON` is a professional while it lists a `ROLE` of this template that names it as `performer`, is `complete` or `incomplete`, and whose `time_validity` holds today. |
 | `[authz.party_binding.group]` | `template_id`, `external_id`, `display_name` | The template of a SCIM Group's `GROUP`, its `externalId` selector and the path of its `displayName`. |
 | `[authz.party_binding.membership]` | `archetype_id` | The `PARTY_RELATIONSHIP` archetype of a group membership, as each membership's `archetype_node_id` carries it (the interface form of an ADL 2 id, `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1`). SCIM serves `/Groups` when the group table names a `display_name` and this table is set. |
-| `[authz.party_binding.representation]` | `archetype_id`, `relationship_codes` | The `PARTY_RELATIONSHIP` archetype a representative acts through, from the representative's `PERSON` to the subject's, and the code of the openEHR `subject_relationship` group each of its relationship types maps to. |
 | `[authz.party_binding.patient]` | `template_id`, `identifier`, `name` | The template of a patient's `PERSON`, the subject of an EHR and the target of a representation: the path of the `ELEMENT` holding its identifiers (each a `DV_IDENTIFIER` of any type and issuer) and the path of its name. A `PERSON` written under this template is validated against it. |
 
 With no mapping key set, every section maps FerroEHR's [default
@@ -333,21 +332,17 @@ display_name = "/identities[id4]/details[id5]/items[id6]"
 [authz.party_binding.membership]
 archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1"
 
-[authz.party_binding.representation]
-archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1"
-relationship_codes = { at10 = "254", at11 = "264" }
-
 [authz.party_binding.patient]
 template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0"
 identifier = "/details[id2]/items[id3]"
 name = "/identities[id6]/details[id7]/items[id8]"
 ```
 
-The template ids are the ADL 2 ids of the stored archetypes, and the two
-relationship archetypes are named in the interface form each relationship's
-`archetype_node_id` carries. The representation archetype's types are
-`at10` (parent) and `at11` (guardian), mapped to `254|parent|` and
-`264|guardian|` of the openEHR `subject_relationship` group. The default
+The template ids are the ADL 2 ids of the stored archetypes, and the
+membership archetype is named in the interface form each membership's
+`archetype_node_id` carries. A representation needs no section: FerroEHR
+recognises it by the code it carries, in any archetype (see
+[Representatives in the patient portal](../operational-policy.md#representatives-in-the-patient-portal)). The default
 key is of the type `login`, so an `[[auth.party]]` table whose
 `identifier_type` is `login` needs no mapping key.
 
@@ -389,15 +384,16 @@ that does not compile; two equal selectors; a key whose scheme
 BSN namespace (OID `2.16.840.1.113883.2.4.6.3`); a key fed by an email
 address, a phone number, `preferred_username`, `name`, `upn` or
 `unique_name`; a template that is absent, rooted at another class or lacks
-a mapped path; a path whose type cannot carry its source; and a
-representation type with no `subject_relationship` code. Deleting a template
+a mapped path; and a path whose type cannot carry its source. Deleting a template
 the mapping names is refused with `409`.
 
 The parties the binding relies on are protected: a `PERSON` of a mapped
 template carrying a selector identifier, its professional `ROLE`, a
-representation relationship, and a `GROUP` of the group template. Only an
+representation relationship (one carrying `ferroehr-operations::represents`),
+and a `GROUP` of the group template. Only an
 administrator (`authz.rbac.admin_role`) writes one through the demographic
-API, including the creation of a party that carries a selector identifier.
+API, including the creation of a party that carries a selector identifier;
+the patient a representation of its own targets writes that one too.
 The policy parties (a party holding a capability coded in
 `ferroehr-operations`, an acts-for relationship or a `client_id` identifier)
 are recognised by what they hold and take no key of this mapping; they are an administrator's to write and to read,
@@ -438,7 +434,7 @@ the binding key of each `PERSON` of a mapped template that performs a
 professional `ROLE` (a `ROLE` of the mapped role template that its `roles`
 list, that names it as `performer`, whose state is `complete` or
 `incomplete` and whose `time_validity` holds today's date in UTC) or that
-is the source of a representation relationship. A key of type `guid` or
+is the source of a representation relationship, inline or of its own. A key of type `guid` or
 `uuid` is compared in lower case. The table is written in each party
 commit's transaction and can be rebuilt from the party versions alone.
 
@@ -477,7 +473,9 @@ composition, `EHR_STATUS`, directory, contribution and query request is held
 to that EHR, whatever the token's scopes cover; a query must name it with
 `ehr_id`. Templates stay readable. A `persons` token whose only clinical scopes
 are `patient/` is a professional confined to its launch EHR, and its commits
-record the professional, never `PARTY_SELF`.
+record the professional, never `PARTY_SELF`. A representative signing in
+through a `patients` issuer is bound by FerroEHR itself, with no
+`[[auth.party]]` table: see [Representatives in the patient portal](../operational-policy.md#representatives-in-the-patient-portal).
 
 #### Just-in-time creation
 

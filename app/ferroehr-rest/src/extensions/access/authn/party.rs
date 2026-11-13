@@ -33,7 +33,7 @@ use ferrohealth_smart::party::binding::PartyBinding;
 use ferrohealth_smart::party::{GroupsCause, Outcome, PartyRef, Represented};
 use ferrohealth_smart::resource::{Access, Caller};
 
-use super::{AuthError, RepresentedEhr};
+use super::AuthError;
 
 mod jit;
 
@@ -194,6 +194,7 @@ impl Binding {
             name,
             provider: self.provider_of(caller),
             namespace: self.namespace.clone(),
+            portal: None,
         }))
     }
 
@@ -425,7 +426,10 @@ pub(super) const fn unrecorded() -> AuthError {
 /// `represented` claim names, matched on the party id without regard to case.
 // NOTE: no openEHR spec governs resolving a login to a party, our own design: the
 // claim is a bare string, and the source names a subject by its container id.
-fn represented_subject<'a>(outcome: &'a Outcome, represented: &str) -> Option<&'a PartyRef> {
+pub(super) fn represented_subject<'a>(
+    outcome: &'a Outcome,
+    represented: &str,
+) -> Option<&'a PartyRef> {
     let represented = represented.trim();
     outcome
         .bound()?
@@ -433,43 +437,6 @@ fn represented_subject<'a>(outcome: &'a Outcome, represented: &str) -> Option<&'
         .iter()
         .map(Represented::subject)
         .find(|subject| subject.id().eq_ignore_ascii_case(represented))
-}
-
-/// The EHR the representative of `access` is confined to, `None` for any
-/// other caller: the EHR whose `EHR_STATUS.subject.external_ref` names the
-/// represented subject (#5086), looked up through `service`, which records the
-/// resolution on the access log.
-///
-/// # Errors
-/// [`AuthError::PartyRefused`] when the bound party represents no such
-/// subject, and [`AuthError::PartyUnavailable`] when the store cannot answer.
-pub(super) async fn represented_ehr(
-    service: &ferroehr::service::FerroEhrService,
-    access: &Access,
-) -> Result<Option<RepresentedEhr>, AuthError> {
-    let Some(caller) = access.caller() else {
-        return Ok(None);
-    };
-    let CallerKind::Representative { represented, .. } = caller.kind() else {
-        return Ok(None);
-    };
-    let subject = caller
-        .party()
-        .and_then(|outcome| represented_subject(outcome, represented))
-        .ok_or_else(unrecorded)?;
-    let found = service
-        .ehr_id_for_subject(subject.id(), subject.namespace())
-        .await
-        .map_err(|error| {
-            tracing::warn!(
-                error = %ferroehr::error::ErrorChain::new(&error),
-                "the EHR of the represented subject could not be read"
-            );
-            AuthError::PartyUnavailable { retry_after: None }
-        })?;
-    Ok(Some(RepresentedEhr {
-        ehr_id: found.map(|ehr| ehr.to_string()),
-    }))
 }
 
 /// The refusal `outcome` answers, or `None` for an outcome the request
@@ -559,24 +526,9 @@ pub(super) fn detail(code: &str, named: Option<&Named>) -> String {
 /// Returns the refusal of a caller its kind does not admit to the request
 /// at all: a system caller holding a `user/` or `patient/` scope, which names
 /// a person the token does not carry (SMART on openEHR `master08-scopes`
-/// §Resource Scopes; RFC 9068 §2.2), and someone acting for a patient on a
-/// `patients` issuer (RFC 8693 §4.1 `act`), whom FerroEHR binds to no party
-/// of its own. No openEHR spec governs what a caller kind may do: our own
-/// design.
+/// §Resource Scopes; RFC 9068 §2.2). No openEHR spec governs what a caller
+/// kind may do: our own design.
 pub(super) fn kind_refusal(caller: &Caller) -> Option<AuthError> {
-    let inner = match caller.kind() {
-        CallerKind::Guest(inner) => inner.as_ref(),
-        kind => kind,
-    };
-    if matches!(inner, CallerKind::PatientRepresentative { .. }) {
-        return Some(AuthError::KindRefused {
-            code: "refused-patient-representative",
-            message: "a token acting for a patient is not admitted: the representative is bound \
-                      to no party of this deployment"
-                .to_owned(),
-            principal: None,
-        });
-    }
     let personal = caller
         .scope()
         .iter()
@@ -596,7 +548,9 @@ pub(super) fn kind_refusal(caller: &Caller) -> Option<AuthError> {
 /// Bearer subject was minted by the identity provider, so the audit records the
 /// validated token issuer; Basic credentials are local and carry none. A
 /// system caller's client `ACTOR` is `granted`'s client, the party its issuer
-/// and `client_id` name in the policy parties, when one does.
+/// and `client_id` name in the policy parties, when one does. A patient-portal
+/// representative commits as the representative, writing through a
+/// patient-context credential, their `PERSON` in the details.
 pub(super) fn committer_identity(
     principal: &super::Principal,
     granted: &Capabilities,
@@ -604,6 +558,10 @@ pub(super) fn committer_identity(
     let caller = principal.access.caller();
     let system = caller.is_some_and(|caller| matches!(caller.kind(), CallerKind::System));
     let client = super::client_of(principal);
+    let portal = principal
+        .represented
+        .as_ref()
+        .and_then(|represented| represented.portal.as_ref());
     ferroehr::versioning::committer::CommitterIdentity {
         subject: principal.subject.clone(),
         id_type: match principal.method {
@@ -619,16 +577,26 @@ pub(super) fn committer_identity(
                 .map(str::to_owned),
         },
         client,
-        person: crate::smart::acts_as_person(principal),
+        person: crate::smart::acts_as_person(principal) || portal.is_some(),
         party: principal
             .access
             .caller()
             .and_then(Caller::party)
             .and_then(Outcome::bound)
             .cloned(),
-        representative: caller
-            .is_some_and(|caller| matches!(caller.kind(), CallerKind::Representative { .. })),
-        bound: None,
+        representative: portal.is_some()
+            || caller
+                .is_some_and(|caller| matches!(caller.kind(), CallerKind::Representative { .. })),
+        bound: portal.map(|portal| BoundDetails {
+            namespace: portal.namespace.clone(),
+            portal: Some(ferroehr::versioning::committer::bound::PortalParty {
+                person: portal.person,
+                relationship: portal.relationship.clone(),
+                login_issuer: portal.login_issuer.clone(),
+                login: portal.login.clone(),
+            }),
+            ..BoundDetails::default()
+        }),
         system,
         agent: granted
             .client()
