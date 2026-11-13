@@ -8,7 +8,8 @@
 
 use ferroehr::access_log_draft::access_log::access_log_checkpoint::AccessLogCheckpoint;
 use ferroehr::access_log_draft::access_log::access_log_record::AccessLogRecord;
-use ferroehr::access_log_invariants::{Violation, check_checkpoint, check_record};
+use ferroehr::access_log_invariants::{check_checkpoint, check_record};
+use ferroehr::draft_invariants::{Violation, Violations};
 use serde_json::{Value, json};
 
 /// A coded value of `terminology` with the rubric `value`.
@@ -203,7 +204,7 @@ fn each_checkpoint_invariant_refuses_a_checkpoint_that_breaks_it() {
         .expect("the checkpoint reads")
     };
     assert_eq!(check_checkpoint(&checkpoint(48213, "<jws>")), Ok(()));
-    let named = |result: Result<(), ferroehr::access_log_invariants::Violations>| {
+    let named = |result: Result<(), Violations>| {
         result.err().map(|violations| {
             violations
                 .0

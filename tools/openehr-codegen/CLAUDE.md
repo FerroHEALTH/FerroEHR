@@ -22,9 +22,15 @@ The single deterministic generator behind the whole spec layer. Lives under
 - `emit-validate` — the machine-classified RM invariant cores.
 - `emit-drafts` — the FerroEHR-local draft BMM schemas of `plan::drafts`
   (`draft/bmm/`, no openEHR release) into a generated module of their
-  application crate: the access log draft into `app/ferroehr/src/access_log_draft`.
+  application crate: the access log draft into `app/ferroehr/src/access_log_draft`
+  and the access control draft into `app/ferroehr/src/access_control_draft`.
   A draft's `includes` must equal the table's, and a type it names that
-  neither it nor its dependency generations define is refused.
+  neither it nor its dependency generations define is refused. A draft class
+  that specializes a spec-declared open extension point
+  (`plan::overrides::open_extension_point`, `ACCESS_CONTROL_SETTINGS`) gets
+  the two `TryFrom` conversions to and from the published carrier in the
+  module's `open_seam.rs`; the RM classes that hold the carrier are not
+  re-emitted.
   Every draft module is named `*_draft` under `app/*/src/`, the glob the
   drift check, `.gitattributes` and the Sonar scope read, so a new row needs
   no change outside the table.

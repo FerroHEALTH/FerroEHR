@@ -11,7 +11,7 @@ written for submission to openEHR; nothing here has been submitted.
 
 | Here | In `specifications-RM` |
 |---|---|
-| `computable/BMM/openehr_access_control_0.1.0.bmm.json` | `computable/BMM/` beside `openehr_rm_1.2.0.bmm.json` |
+| `tools/openehr-codegen/draft/bmm/openehr_access_control_0.1.0.bmm.json`, the generator's input (#5506) | `computable/BMM/` beside `openehr_rm_1.2.0.bmm.json` |
 | `manifest-entry.json` | one more entry in the `specifications` array of `manifest.json` |
 
 The specification pages (`modules/access_control/`) and the class partials

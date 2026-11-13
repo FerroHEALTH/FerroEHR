@@ -22,8 +22,9 @@ This plan is the design and its rationale. Beside it,
 openEHR change, laid out as the access log draft is
 (`docs/plans/access-log/antora/`):
 
-- `antora/computable/BMM/openehr_access_control_0.1.0.bmm.json`: the draft
-  package `org.openehr.rm.access_control` as a BMM 2.4 schema that includes
+- `tools/openehr-codegen/draft/bmm/openehr_access_control_0.1.0.bmm.json`
+  (moved there as the generator's input, #5506; on submission it goes to the
+  RM repository's `computable/BMM/`): the draft package `org.openehr.rm.access_control` as a BMM 2.4 schema that includes
   `openehr_rm_1.2.0`, in the P_BMM JSON form of the vendored schemas under
   `tools/openehr-codegen/vendor/bmm/`;
 - `antora/manifest-entry.json`: its entry for the RM component's
@@ -619,7 +620,7 @@ directives, not the number of EHRs.
 
 ## The BMM
 
-`docs/plans/abac-openehr/antora/computable/BMM/openehr_access_control_0.1.0.bmm.json`:
+`tools/openehr-codegen/draft/bmm/openehr_access_control_0.1.0.bmm.json`:
 
 - **Schema:** `schema_name` `access_control`, `rm_release` `0.1.0`, lifecycle
   `draft`, includes `openehr_rm_1.2.0`, author FerroEHR (#5487), the same
@@ -658,6 +659,19 @@ with this schema added as a second draft row:
   the generator's documented behaviour; the build issue decides whether the
   draft module keeps those re-emitted classes or the RM generation gains an
   extension point for draft subtypes of `ACCESS_CONTROL_SETTINGS`.
+
+**Decided in #5506.** The RM generation already has that extension point:
+it types `EHR_ACCESS.settings` with the verbatim `OpenSubtype` carrier
+(`plan::overrides::open_extension_point`), so no RM class that holds the
+settings is re-emitted. The draft module keeps the classes re-emitted for
+`LOCATABLE` and `VERSIONED_OBJECT`: `LOCATABLE`, `VERSIONED_OBJECT` and the
+EHR Extract classes down to `GENERIC_CONTENT_ITEM`, whose `item` is any
+`LOCATABLE` (RM EHR Extract IM). They are the downstream seam the codegen
+rule asks for, and an upstream crate never gains a downstream variant. The
+generator also opens the settings seam: for a draft subtype of an open
+extension point, `emit-drafts` writes `open_seam.rs` with the two `TryFrom`
+conversions between `ACCESS_DIRECTIVE_SETTINGS` and the carrier, through the
+canonical-JSON codec, which refuses a carrier of another scheme.
 
 ## Mappings
 

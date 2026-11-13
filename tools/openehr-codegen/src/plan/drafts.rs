@@ -47,35 +47,37 @@ pub(crate) struct DraftModule {
     pub doc: &'static str,
 }
 
-/// The draft access log of `docs/plans/access-log.md`, emitted into
-/// `app/ferroehr` until openEHR adopts the package.
-pub(crate) const DRAFTS: &[DraftModule] = &[DraftModule {
-    file: "openehr_access_log_0.1.0.bmm.json",
-    crate_name: "ferroehr",
-    crate_dir: "app/ferroehr",
-    module: "access_log_draft",
-    includes: &["openehr_rm_1.2.0"],
-    model_deps: &[
-        DepGeneration {
-            key: "base",
-            generation: "v1_3",
-        },
-        DepGeneration {
-            key: "rm",
-            generation: "v1_2",
-        },
-    ],
-    prelude_deps: &[
-        DepGeneration {
-            key: "rm",
-            generation: "v1_2",
-        },
-        DepGeneration {
-            key: "base",
-            generation: "v1_3",
-        },
-    ],
-    doc: "The draft openEHR access log (`org.openehr.rm.access_log` 0.1.0), generated from its \
+/// The draft access log of `docs/plans/access-log.md` and the draft access
+/// control of `docs/plans/abac-openehr.md`, emitted into `app/ferroehr` until
+/// openEHR adopts the packages.
+pub(crate) const DRAFTS: &[DraftModule] = &[
+    DraftModule {
+        file: "openehr_access_log_0.1.0.bmm.json",
+        crate_name: "ferroehr",
+        crate_dir: "app/ferroehr",
+        module: "access_log_draft",
+        includes: &["openehr_rm_1.2.0"],
+        model_deps: &[
+            DepGeneration {
+                key: "base",
+                generation: "v1_3",
+            },
+            DepGeneration {
+                key: "rm",
+                generation: "v1_2",
+            },
+        ],
+        prelude_deps: &[
+            DepGeneration {
+                key: "rm",
+                generation: "v1_2",
+            },
+            DepGeneration {
+                key: "base",
+                generation: "v1_3",
+            },
+        ],
+        doc: "The draft openEHR access log (`org.openehr.rm.access_log` 0.1.0), generated from its \
           FerroEHR-local BMM `tools/openehr-codegen/draft/bmm/openehr_access_log_0.1.0.bmm.json`.\n\
           \n\
           The package is a draft change proposal and no openEHR release, so it is emitted here \
@@ -83,7 +85,44 @@ pub(crate) const DRAFTS: &[DraftModule] = &[DraftModule {
           generation of the RM. Its classes resolve against RM 1.2.0 and BASE 1.3.0, the \
           schemas the draft includes, and read and write the canonical JSON form with `_type` \
           through the same strict runtime as the spec crates.",
-}];
+    },
+    DraftModule {
+        file: "openehr_access_control_0.1.0.bmm.json",
+        crate_name: "ferroehr",
+        crate_dir: "app/ferroehr",
+        module: "access_control_draft",
+        includes: &["openehr_rm_1.2.0"],
+        model_deps: &[
+            DepGeneration {
+                key: "base",
+                generation: "v1_3",
+            },
+            DepGeneration {
+                key: "rm",
+                generation: "v1_2",
+            },
+        ],
+        prelude_deps: &[
+            DepGeneration {
+                key: "rm",
+                generation: "v1_2",
+            },
+            DepGeneration {
+                key: "base",
+                generation: "v1_3",
+            },
+        ],
+        doc: "The draft openEHR access control (`org.openehr.rm.access_control` 0.1.0), generated \
+              from its FerroEHR-local BMM \
+              `tools/openehr-codegen/draft/bmm/openehr_access_control_0.1.0.bmm.json`.\n\
+              \n\
+              The package is a draft change proposal and no openEHR release, so it is emitted here \
+              rather than in `openehr-rm`; if openEHR adopts it, it moves to `openehr-rm` as a \
+              generation of the RM. Its classes resolve against RM 1.2.0 and BASE 1.3.0, the \
+              schemas the draft includes, and read and write the canonical JSON form with `_type` \
+              through the same strict runtime as the spec crates.",
+    },
+];
 
 /// A draft resolved into its schema, resolution model and reference index.
 pub(crate) struct ComposedDraft {

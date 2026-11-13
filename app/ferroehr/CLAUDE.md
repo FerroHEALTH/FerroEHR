@@ -1,14 +1,20 @@
 # `ferroehr` — the platform library
 
-**One generated module lives here: `access_log_draft`.** `openehr-codegen
-emit-drafts` emits it from the FerroEHR-local draft BMM
-`tools/openehr-codegen/draft/bmm/openehr_access_log_0.1.0.bmm.json`
-(`org.openehr.rm.access_log` 0.1.0, our change proposal, no openEHR release),
-with the canonical-JSON serde the spec crates get. Never hand-edit it: change
-the draft BMM or the emitter and regenerate (`codegen-drift` checks it). Its
-class invariants are hand-written in `access_log_invariants`. If openEHR adopts
-the package, it moves to `openehr-rm` as a generation of the RM and leaves
-this crate.
+**Two generated modules live here: `access_log_draft` and
+`access_control_draft`.** `openehr-codegen emit-drafts` emits each from its
+FerroEHR-local draft BMM under `tools/openehr-codegen/draft/bmm/`
+(`org.openehr.rm.access_log` and `org.openehr.rm.access_control` 0.1.0, our
+change proposals, no openEHR release), with the canonical-JSON serde the spec
+crates get. Never hand-edit them: change the draft BMM or the emitter and
+regenerate (`codegen-drift` checks them). Their class invariants are
+hand-written in `access_log_invariants` and `access_control_invariants`, over
+the shared report of `draft_invariants`. `access_control_draft` re-emits the
+RM polymorphic parents its `LOCATABLE` and `VERSIONED_OBJECT` subtypes join
+(`LOCATABLE`, `VERSIONED_OBJECT` and the EHR Extract classes that hold a
+`LOCATABLE`), and its `open_seam` converts `ACCESS_DIRECTIVE_SETTINGS` to and
+from the `OpenSubtype` carrier of `EHR_ACCESS.settings`. If openEHR adopts a
+package, it moves to `openehr-rm` as a generation of the RM and leaves this
+crate.
 
 The application core (five app crates, zero re-exports). Top-level modules
 (`src/lib.rs`): `service` (the service layer), `storage`, `aql` (the query
