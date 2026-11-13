@@ -49,6 +49,7 @@
 #![doc(test(attr(deny(warnings))))]
 pub mod access_control_draft;
 pub mod access_control_invariants;
+pub mod access_log;
 pub mod access_log_draft;
 pub mod access_log_invariants;
 pub mod aql;

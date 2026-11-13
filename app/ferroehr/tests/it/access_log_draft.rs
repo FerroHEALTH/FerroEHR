@@ -20,7 +20,7 @@ fn coded(terminology: &str, value: &str, code: &str) -> Value {
 
 /// The example entry of the proposal's appendix, its `<...>` placeholders
 /// standing for the codes the terminology editors assign and the digests.
-fn example() -> Value {
+pub(crate) fn example() -> Value {
     json!({
         "_type": "ACCESS_LOG_ENTRY",
         "uid": { "_type": "HIER_OBJECT_ID", "value": "0193f1a2-7c1e-7b4a-9f00-2c6d1e8b5a01" },
