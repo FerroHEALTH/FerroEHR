@@ -4271,11 +4271,23 @@ impl ::serde::Serialize
         if self.units.is_some() {
             __n += 1;
         }
+        if self.units_system.is_some() {
+            __n += 1;
+        }
+        if self.units_display_name.is_some() {
+            __n += 1;
+        }
         let mut __st = ::serde::Serializer::serialize_struct(__serializer, "C_QUANTITY_ITEM", __n)?;
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "_type", "C_QUANTITY_ITEM")?;
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "magnitude", &self.magnitude)?;
         if let Some(__v) = &self.units {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "units", __v)?;
+        }
+        if let Some(__v) = &self.units_system {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "units_system", __v)?;
+        }
+        if let Some(__v) = &self.units_display_name {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "units_display_name", __v)?;
         }
         ::serde::ser::SerializeStruct::end(__st)
     }
@@ -4287,11 +4299,13 @@ impl<'de> ::serde::Deserialize<'de>
     fn deserialize<__D: ::serde::Deserializer<'de>>(
         __deserializer: __D,
     ) -> ::core::result::Result<Self, __D::Error> {
-        const __FIELDS: &[&str] = &["magnitude", "units"];
+        const __FIELDS: &[&str] = &["magnitude", "units", "units_display_name", "units_system"];
         enum __Field {
             __Type,
             __F0,
             __F1,
+            __F2,
+            __F3,
         }
         impl<'de> ::serde::Deserialize<'de> for __Field {
             fn deserialize<__D: ::serde::Deserializer<'de>>(
@@ -4314,6 +4328,8 @@ impl<'de> ::serde::Deserialize<'de>
                             "_type" => ::core::result::Result::Ok(__Field::__Type),
                             "magnitude" => ::core::result::Result::Ok(__Field::__F0),
                             "units" => ::core::result::Result::Ok(__Field::__F1),
+                            "units_system" => ::core::result::Result::Ok(__Field::__F2),
+                            "units_display_name" => ::core::result::Result::Ok(__Field::__F3),
                             _ => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unknown_field(
                                     __v,
@@ -4341,6 +4357,8 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s3: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -4371,6 +4389,22 @@ impl<'de> ::serde::Deserialize<'de>
                             }
                             __s1 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
                         }
+                        __Field::__F2 => {
+                            if __s2.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("units_system"),
+                                );
+                            }
+                            __s2 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F3 => {
+                            if __s3.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("units_display_name"),
+                                );
+                            }
+                            __s3 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
                     }
                 }
                 ::core::result::Result::Ok(
@@ -4379,6 +4413,8 @@ impl<'de> ::serde::Deserialize<'de>
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("magnitude"))?,
                         units: __s1.flatten(),
+                        units_system: __s2.flatten(),
+                        units_display_name: __s3.flatten(),
                     },
                 )
             }

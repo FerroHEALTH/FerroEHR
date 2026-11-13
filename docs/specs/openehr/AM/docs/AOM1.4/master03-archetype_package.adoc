@@ -8,6 +8,12 @@ The model of an archetype, illustrated in the following figure, is straightforwa
 .am.aom14.archetype Package
 image::{uml_diagrams_uri}/AM-aom14.archetype.svg[id=archetype_package, align="center"]
 
+=== Machine Identifier
+
+The machine identifier of an archetype is the `_uid_` attribute inherited from {openehr_resource}#_authored_resource_class[`AUTHORED_RESOURCE`^] in the BASE component, and is of type {openehr_base_types}#_uuid_class[`UUID`^]. An archetype machine identifier is therefore always a UUID, also known as a GUID, written as hexadecimal integers separated by hyphens in the 8-4-4-4-12 pattern. ISO OIDs, internet identifiers and extended (`root::extension`) forms of `HIER_OBJECT_ID` are not used.
+
+NOTE: earlier releases of this specification redefined `ARCHETYPE._uid_` as a `HIER_OBJECT_ID` documented as an "OID identifier". The archetypes in use, including those published in the openEHR CKM, carry UUIDs, so the redefinition has been removed and existing identifier values remain valid.
+
 == Class Descriptions
 
 include::{uml_export_dir}/classes/{pkg}archetype.adoc[]

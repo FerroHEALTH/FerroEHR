@@ -576,9 +576,9 @@ definition
 		}
 		context existence matches {0}
 		content matches {
-			SECTION[id0.1, openEHR-EHR-SECTION.t_patient_event_info_ds_sf.v1.0.0] occurrences matches {1} matches {	-- Event start
+			use_archetype SECTION[id0.1, openEHR-EHR-SECTION.t_patient_event_info_ds_sf.v1.0.0] occurrences matches {1} matches {	-- Event start
 				items matches {
-					ADMIN_ENTRY[id0.1, openEHR-EHR-ADMIN_ENTRY.t_patient_event_info_ds_sf-1.v1.0.0] occurrences matches {1} matches {
+					use_archetype ADMIN_ENTRY[id0.1, openEHR-EHR-ADMIN_ENTRY.t_patient_event_info_ds_sf-1.v1.0.0] occurrences matches {1} matches {
 						other_participations existence matches {0}
                     }
                     --- etc ---

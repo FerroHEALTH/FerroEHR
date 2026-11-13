@@ -12,7 +12,7 @@ use crate::v1_4::aom14::archetype::constraint_model::c_complex_object::CComplexO
 use crate::v1_4::aom14::archetype::ontology::archetype_ontology::ArchetypeOntology;
 use crate::v1_4::resource::resource_description::ResourceDescription;
 use openehr_base::v1_3::base_types::identification::archetype_id::ArchetypeId;
-use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
+use openehr_base::v1_3::base_types::identification::uuid::Uuid;
 use openehr_base::v1_3::foundation_types::terminology::terminology_code::TerminologyCode;
 use openehr_base::v1_3::resource::resource_annotations::ResourceAnnotations;
 use openehr_base::v1_3::resource::translation_details::TranslationDetails;
@@ -21,10 +21,9 @@ use openehr_base::v1_3::resource::translation_details::TranslationDetails;
 #[doc(alias = "ARCHETYPE")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Archetype {
-    /// OID identifier of this archetype.
-    pub uid: Option<HierObjectId>,
-
     // inherited: AUTHORED_RESOURCE
+    /// Unique identifier of the family of archetypes having the same interface identifier (same major version).
+    pub uid: Option<Uuid>,
     /// Language in which this resource was initially authored.
     ///
     /// Although there is no language primacy of resources overall, the language of original authoring is required to ensure natural language translations can preserve quality. Language is relevant in both the description and ontology sections.

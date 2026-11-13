@@ -16,6 +16,7 @@
               (.claude/rules/testing.md §Test-fixture construction)"
 )]
 
+mod adl14_aom14_revision;
 mod adl14_assertions;
 mod adl14_cadl_gates;
 mod adl14_cnf_fixture_slot;
