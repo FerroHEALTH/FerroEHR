@@ -201,6 +201,7 @@ client identifier type are the stable contract.
 | `read_identifiers` | Read a party's protected national identifiers |
 | `hold_roles` | Hold, as a Basic user, the roles its `role` elements name |
 | `hold_scopes` | Hold, as a Basic user, the SMART scopes its `scope` elements name |
+| `create_at_login` | Create a provisional `PERSON` at the first login of a person no party carries, under the admission conditions the grant names ([Just-in-time admission](#just-in-time-admission)) |
 
 The same terminology names the elements that qualify a grant, by the code
 in the element's `name`:
@@ -215,6 +216,12 @@ in the element's `name`:
 | `acts_for` | On a `PARTY_RELATIONSHIP`: the source acts for the target |
 | `role` | A `DV_TEXT`: a role a `hold_roles` grant gives |
 | `scope` | A `DV_TEXT`: a SMART scope a `hold_scopes` grant gives |
+| `login_issuer` | A text or `DV_URI`: a token issuer whose first logins a `create_at_login` grant admits |
+| `admit_idp` | A text: an identity provider an admitted login comes from |
+| `admit_group` | A text: a group an admitted login holds |
+| `admit_role` | A text: a role an admitted login holds |
+| `admit_assurance` | A text, `low`, `substantial` or `high`: the lowest assurance level an admitted login carries |
+| `admit_guests` | A `DV_BOOLEAN`: whether a guest is admitted too |
 
 The terms of a federation agreement are named by codes of the same
 terminology ([Federation agreements](#federation-agreements)), and the value of
@@ -1020,6 +1027,120 @@ configuration grant those.
 }
 ```
 
+#### Just-in-time admission
+
+A first login of a person no party carries creates a provisional `PERSON`
+only when a `create_at_login` grant admits it. The grant is a `ROLE` like
+any other, and FerroEHR reads it on every first login, whoever performs the
+`ROLE`: here the provider `ORGANISATION` performs it, which reads as "the
+hospital admits its own staff". Its capability names the issuer by
+`login_issuer` and declares the admission conditions:
+
+- `admit_idp`: the identity providers whose logins are created, read from
+  the issuer's `[[authz.party_binding.issuer]] idp_claim` (`idp` by
+  default);
+- `admit_group`: the groups, read from the issuer's `[[auth.party]]
+  group_claim`, one of which an admitted login holds;
+- `admit_role`: the roles, read from `[auth] role_claims`, one of which an
+  admitted login holds;
+- `admit_assurance`: the lowest `[authz.assurance]` level an admitted login
+  carries;
+- `admit_guests`: true to admit a guest the issuer's `[[auth.party]]`
+  table admits.
+
+A login is admitted when it meets every condition the grant declares; each
+list admits any one of its values. Several grants in force admit a login
+when any one of them does. A grant names at least one `login_issuer` and
+at least one of `admit_idp`, `admit_group`, `admit_role` and
+`admit_assurance`, so no grant admits every login of an issuer: a grant
+without a condition is refused with `422`, as is an element whose value
+does not read. `[authz.grants] allowed` must list `create_at_login`, which
+the default does not.
+
+The provider admits the logins of its Microsoft Entra tenant from members of
+one group at assurance substantial or above, from 1 December 2026,
+`POST /demographic/role`:
+
+<!-- policy-example: login-admission -->
+```json
+{
+  "_type": "ROLE",
+  "archetype_node_id": "openEHR-DEMOGRAPHIC-ROLE.login_admission.v1",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-ROLE.login_admission.v1" },
+    "rm_version": "1.1.0"
+  },
+  "name": { "_type": "DV_TEXT", "value": "Login admission" },
+  "identities": [{
+    "_type": "PARTY_IDENTITY", "archetype_node_id": "at0001", "name": { "_type": "DV_TEXT", "value": "Role name" },
+    "details": {
+      "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": { "_type": "DV_TEXT", "value": "Name" },
+      "items": [{
+        "_type": "ELEMENT", "archetype_node_id": "at0003", "name": { "_type": "DV_TEXT", "value": "Full name" },
+        "value": { "_type": "DV_TEXT", "value": "Staff first login" }
+      }]
+    }
+  }],
+  "performer": {
+    "_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
+    "id": { "_type": "HIER_OBJECT_ID", "value": "9d2f4a7e-3c1b-4e8a-9f60-2b7d5c8e1a40" }
+  },
+  "time_validity": {
+    "_type": "DV_INTERVAL",
+    "lower": { "_type": "DV_DATE", "value": "2026-12-01" },
+    "lower_unbounded": false, "upper_unbounded": true,
+    "lower_included": true, "upper_included": false
+  },
+  "capabilities": [{
+    "_type": "CAPABILITY", "archetype_node_id": "at0010", "name": { "_type": "DV_TEXT", "value": "Admission" },
+    "credentials": {
+      "_type": "ITEM_TREE", "archetype_node_id": "at0011", "name": { "_type": "DV_TEXT", "value": "Terms" },
+      "items": [
+        {
+          "_type": "ELEMENT", "archetype_node_id": "at0012", "name": { "_type": "DV_TEXT", "value": "Operation" },
+          "value": {
+            "_type": "DV_CODED_TEXT", "value": "Create at login",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "create_at_login" }
+          }
+        },
+        {
+          "_type": "ELEMENT", "archetype_node_id": "at0013",
+          "name": {
+            "_type": "DV_CODED_TEXT", "value": "Login issuer",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "login_issuer" }
+          },
+          "value": { "_type": "DV_URI", "value": "https://login.microsoftonline.com/0f1e2d3c-4b5a-4968-8776-655443322110/v2.0" }
+        },
+        {
+          "_type": "ELEMENT", "archetype_node_id": "at0014",
+          "name": {
+            "_type": "DV_CODED_TEXT", "value": "Admitted group",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "admit_group" }
+          },
+          "value": { "_type": "DV_TEXT", "value": "5f2a9c1e-0000-4000-8000-00000000c11a" }
+        },
+        {
+          "_type": "ELEMENT", "archetype_node_id": "at0015",
+          "name": {
+            "_type": "DV_CODED_TEXT", "value": "Admitted assurance",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "admit_assurance" }
+          },
+          "value": { "_type": "DV_TEXT", "value": "substantial" }
+        }
+      ]
+    }
+  }]
+}
+```
+
+The `ROLE` is a policy party, so only an administrator writes or reads it.
+The next first login of that tenant that meets both conditions creates its
+`PERSON`, on every replica and with no restart. To stop creating, end the
+`ROLE` as below; a `PERSON` already created stays. The configuration keeps
+only how the issuer's tokens are read
+([Just-in-time creation](installation/config-auth.md#just-in-time-creation)).
+
 #### Ending a grant
 
 To end a grant, an administrator commits a new version of the `ROLE` whose
@@ -1055,6 +1176,10 @@ design:
   `roles` list need not name the `ROLE`.
 - **Break-glass stays in the configuration**, so emergency access works when
   the party store does not answer.
+- **A `create_at_login` grant admits logins by its credentials, whoever
+  performs its `ROLE`,** and must declare a condition: the RM and the
+  Demographic API say nothing about creating a party at a login.
+
 - **A federation agreement is a grant on the partner**, keyed by its client
   identifiers, and its rules are judged when it is written.
 

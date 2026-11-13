@@ -409,14 +409,7 @@ fn provenance_input(args: &ProvenanceArgs, config: &FerroEhrConfig) -> anyhow::R
         migrations: args.migrations.clone(),
         expected: None,
         provisional_report_after: config.authz.party_binding.provisional_report_after,
-        jit_issuers: config
-            .authz
-            .party_binding
-            .issuer
-            .iter()
-            .filter(|table| table.jit)
-            .map(|table| table.issuer.clone())
-            .collect(),
+        jit_issuers: ferroehr::config::binding::jit::login_issuers(&resolved),
         today: ferroehr::support::today_utc().to_string(),
     })
 }

@@ -25,6 +25,7 @@
 //! No openEHR spec gives a capability an authorization meaning, or governs
 //! the side table: our own design.
 
+pub mod admission;
 pub mod agreement;
 pub mod capabilities;
 pub(crate) mod derive;
@@ -42,33 +43,26 @@ use crate::error::{ServiceError, Violation};
 use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
 use crate::party_binding::grants::capabilities::{Credentials, Grant};
-use crate::party_binding::grants::operation::{GrantCeiling, Operation, ROLE};
+use crate::party_binding::grants::operation::{Operation, ROLE};
 use crate::party_binding::grants::trust::FederationTrust;
 
-/// Judges the committed body `facts` of the `ROLE` `role` by the grants
-/// `grants` holds: the ceiling ([`check_ceiling`]) and the federation
-/// agreements ([`check_agreements`]).
+/// Refuses the committed body `facts` of the `ROLE` `role` when it grants an
+/// operation the ceiling of `grants` does not admit, a `hold_roles` grant
+/// names a role the ceiling reserves, a `create_at_login` grant admits
+/// nothing ([`admission::check`]), or a federation agreement breaks its rules
+/// ([`check_agreements`]).
 ///
 /// # Errors
-/// The refusals of both, and a storage failure.
+/// [`ServiceError::Forbidden`] (`403`) naming the first such capability and
+/// the configuration key, the `422` of [`admission::check`] and of
+/// [`check_agreements`], and a storage failure.
 pub(crate) async fn check_role(
     tx: &mut PgConnection,
     role: Uuid,
     facts: &Facts,
     grants: &live::LiveGrants,
 ) -> Result<(), ServiceError> {
-    check_ceiling(facts, &grants.ceiling())?;
-    check_agreements(tx, role, facts, &grants.federation()).await
-}
-
-/// Refuses the committed body `facts` of a `ROLE` when it grants an
-/// operation `ceiling` does not admit, or a `hold_roles` grant names a role
-/// the ceiling reserves.
-///
-/// # Errors
-/// [`ServiceError::Forbidden`] (`403`) naming the first such capability and
-/// the configuration key.
-pub(crate) fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
+    let ceiling = grants.ceiling();
     let reserved = facts
         .grants
         .capabilities
@@ -89,7 +83,8 @@ pub(crate) fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(),
         .iter()
         .find(|capability| !ceiling.allows_code(&capability.code))
     else {
-        return Ok(());
+        admission::check(facts)?;
+        return check_agreements(tx, role, facts, &grants.federation()).await;
     };
     let allowed: Vec<&str> = ceiling.allowed().map(Operation::code).collect();
     Err(ServiceError::not_permitted(format!(
@@ -117,7 +112,7 @@ pub(crate) fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(),
 /// # Errors
 /// [`ServiceError::Unprocessable`] (`422`) naming every rule broken, and a
 /// storage failure.
-pub(crate) async fn check_agreements(
+async fn check_agreements(
     tx: &mut PgConnection,
     role: Uuid,
     facts: &Facts,
