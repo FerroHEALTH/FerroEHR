@@ -13,8 +13,9 @@
 //! Gating: mounted under `/admin/`, so the route inherits the group's RBAC
 //! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
 //! (`405` with an empty `Allow` when off). Beside that it needs its own
-//! permission, `[authz.rbac] identifier_reader_role`, so holding the admin role
-//! alone reveals no national identifier. Every read writes an access record
+//! permission, `[authz.rbac] identifier_reader_role` or a policy grant of
+//! `read_identifiers`, so holding the admin role alone reveals no national
+//! identifier. Every read writes an access record
 //! per scheme expanded, naming the reader, the party and the scheme, never the
 //! value (`ferroehr::service::demographic::identifier`).
 
@@ -33,6 +34,8 @@ use utoipa_axum::routes;
 use openehr_its::rest::runtime::ApiError;
 
 use ferroehr::error::ServiceError;
+use ferroehr::party_binding::grants::capabilities::Capabilities;
+use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::versioning::object_version_id::parse_version_uid;
 
 use crate::api::{RequestParts, guarded_handler};
@@ -73,9 +76,10 @@ guarded_handler! {
                                           configures no identifier protection.",
              body = serde_json::Value),
             (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-            (status = 403, description = "Not in the Admin class, or not holding \
+            (status = 403, description = "Not in the Admin class, or holding neither \
                                           `authz.rbac.identifier_reader_role` (unset: \
-                                          nobody holds it).",
+                                          nobody holds it) nor a policy grant of \
+                                          `read_identifiers`.",
              body = serde_json::Value),
             (status = 404, description = "No party holds that version.",
              body = serde_json::Value),
@@ -100,10 +104,11 @@ async fn party_identifiers(state: AppState, parts: RequestParts) -> Result<Respo
     if !holds_identifier_reader_role(
         state.config().rbac.identifier_reader_role.as_deref(),
         &roles,
-    ) {
+    ) && !Capabilities::current().holds(Operation::ReadIdentifiers)
+    {
         return Err(RestError::from(ApiError::Forbidden(
             "reading a party's protected identifiers needs the role \
-             `authz.rbac.identifier_reader_role` names"
+             `authz.rbac.identifier_reader_role` names or a policy grant of read_identifiers"
                 .to_owned(),
         )));
     }

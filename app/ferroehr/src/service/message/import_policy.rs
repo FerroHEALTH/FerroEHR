@@ -12,8 +12,9 @@
 //! committer naming a local `VERSIONED_PARTY`, or carrying a login identifier
 //! of this deployment's issuers, is refused unless the version's
 //! `creating_system_id` is a system the deployment declares trusted. Importing
-//! needs the declared import role or a `system/` caller. No openEHR spec
-//! governs who may import: our own design (#5005).
+//! needs the declared import role, a policy grant of the import's operation,
+//! or a `system/` caller. No openEHR spec governs who may import: our own
+//! design (#5005, #5438).
 
 #![expect(
     clippy::disallowed_types,
@@ -27,6 +28,8 @@ use serde_json::Value;
 
 use crate::error::ServiceError;
 use crate::ids::VoId;
+use crate::party_binding::grants::capabilities::Capabilities;
+use crate::party_binding::grants::operation::Operation;
 use crate::service::FerroEhrService;
 use crate::versioning::import::ImportContainer;
 
@@ -73,30 +76,35 @@ impl FerroEhrService {
         self
     }
 
-    /// The containers and parties of `extract`, once their import by the
-    /// request's caller is admitted ([`Self::admit_import`]).
+    /// The containers and parties of `extract`, once their import as
+    /// `operation` by the request's caller is admitted
+    /// ([`Self::admit_import`]).
     ///
     /// # Errors
     /// The parse refusals of an extract and the [`Self::admit_import`] ones.
     pub(super) async fn admitted(
         &self,
         extract: &openehr_rm::prelude::Extract,
+        operation: Operation,
     ) -> Result<(Vec<ImportContainer>, Vec<ImportContainer>), ServiceError> {
         let (containers, parties) = super::import::parse_import_containers(extract)?;
-        self.admit_import(&containers, &parties).await?;
+        self.admit_import(&containers, &parties, operation).await?;
         Ok((containers, parties))
     }
 
-    /// Admits an import of `containers` and `parties` by the request's caller.
+    /// Admits an import of `containers` and `parties`, the operation
+    /// `operation`, by the request's caller.
     ///
     /// # Errors
     /// [`ServiceError::Forbidden`] (`403`) when the caller holds neither the
-    /// import role nor a `system/` grant, or a wrapped committer names a local
-    /// party or login from an untrusted system; a storage failure.
+    /// import role, a policy grant of `operation`, nor a `system/` grant, or a
+    /// wrapped committer names a local party or login from an untrusted
+    /// system; a storage failure.
     pub(super) async fn admit_import(
         &self,
         containers: &[ImportContainer],
         parties: &[ImportContainer],
+        operation: Operation,
     ) -> Result<(), ServiceError> {
         let policy = &self.import_policy;
         if !policy.enforced {
@@ -108,10 +116,12 @@ impl FerroEhrService {
                     .iter()
                     .any(|held| held.eq_ignore_ascii_case(role))
             });
-            if !(role || identity.system) {
-                return Err(ServiceError::not_permitted(
-                    "importing needs the role [authz.rbac] import_role names, or a system/ caller",
-                ));
+            let granted = Capabilities::current().holds(operation);
+            if !(role || granted || identity.system) {
+                return Err(ServiceError::not_permitted(format!(
+                    "importing needs the role [authz.rbac] import_role names, a policy grant \
+                     of {operation}, or a system/ caller"
+                )));
             }
         }
         let mut committers: Vec<&Value> = Vec::new();
