@@ -36,19 +36,20 @@ use crate::party_binding::derive::Facts;
 use crate::party_binding::grants::operation::GrantCeiling;
 
 /// Refuses the committed body `facts` of a `ROLE` when it grants an
-/// operation `ceiling` does not admit.
+/// operation `ceiling` does not admit, or holds a `create_at_login` grant
+/// that admits nothing ([`admission::check`]).
 ///
 /// # Errors
-/// [`ServiceError::Forbidden`] (`403`) naming the first such capability and
-/// the configuration key.
-pub(crate) fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
+/// [`ServiceError::Forbidden`] (`403`) naming the first capability above the
+/// ceiling and the configuration key, and the `422` of [`admission::check`].
+pub(crate) fn check_role(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
     let Some(above) = facts
         .grants
         .capabilities
         .iter()
         .find(|capability| !ceiling.allows_code(&capability.code))
     else {
-        return Ok(());
+        return admission::check(facts);
     };
     let allowed: Vec<&str> = ceiling.allowed().map(operation::Operation::code).collect();
     Err(ServiceError::not_permitted(format!(
