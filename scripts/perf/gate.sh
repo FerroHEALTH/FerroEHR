@@ -78,7 +78,7 @@ OUT="${PERF_OUT:-$ROOT/target/perf}"
 readonly OUT
 
 usage() {
-  sed -n '27,37p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+  sed -n '/^# Usage:$/,/^#$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 
