@@ -557,7 +557,8 @@ its `credentials` hold, at any depth, an element whose value is a
 `export_ehr_extract`, `federated_person_access`,
 `federated_organisation_access`, `read_subject_audit`, `access_service`,
 `read_identifiers`, `data_origin`, `read_change_feed`, `scim_provision`,
-`hold_roles`, `hold_scopes`, `create_at_login`); elements named by the
+`hold_roles`, `hold_scopes`, `create_at_login`, `query_system_wide`,
+`access_demographic`); elements named by the
 qualifier codes `not_before` and `not_after` bound it finer than a day,
 `template`, `facility`, `subject_namespace`, `creating_system`, `origin`,
 `reader`, `binding_issuer` and `token_scope` scope it, and `role` and `scope`
@@ -611,6 +612,25 @@ elements' names. A per-request read without a cache,
 which the program first named, would add a transaction to every request,
 which the performance gate's transactions-per-request measure refuses
 (#5459).
+
+**The client lists are grants** (#5437). A backend client, whose
+`system/aql-*` scope "would grant access to all registered and ad-hoc AQL
+queries system-wide" (SMART on openEHR `master08-scopes.adoc` §Resource
+Scopes), is a client whose `ACTOR` holds `query_system_wide`; a client that
+reaches the DEMOGRAPHIC API, which no SMART on openEHR resource family
+covers, holds `access_demographic`. The middleware resolves the caller's
+grants before the RBAC and SMART gates and reads both from them
+(`authn::grants::client_holds`), so `[auth.smart] backend_clients` and
+`demographic_clients` are gone. A grant counts only for a caller resolved as
+a client, the app-only token of a `machines` issuer; a person signed in
+through that client holds the person's grants. `[auth.smart]
+patient_issuers` stays in the file: it is trust, the issuers whose `ehrId`
+claim names an EHR of this platform (master07 §Context Selection), which the
+server needs before it believes a `patient/` token. The person-token client
+lists (`[[auth.issuer]] first_party_clients` and `delegates`) and
+`[auth] scopeless_subjects` are read inside `ferrohealth-smart`'s token
+classification, before any FerroEHR code sees the caller, so they move once
+the crate takes the decision from the product. **Our own design.**
 
 **The grant ceiling.** `[authz.grants] allowed` bounds the operations the
 party store may grant, so a compromised administrator account cannot grant

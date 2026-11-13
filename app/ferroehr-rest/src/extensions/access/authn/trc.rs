@@ -57,7 +57,7 @@ impl Shape {
     pub(super) fn of(layer: &AuthLayer, req: &Request) -> Self {
         let (matched, uri) = super::gates::route(req);
         let requirement = match layer.smart.need(req.method(), matched, uri.path()) {
-            Need::Now(requirement) => requirement,
+            Need::Now(requirement) | Need::Demographic(requirement) => requirement,
             Need::Composition(_) => Requirement::Caller,
         };
         Self {

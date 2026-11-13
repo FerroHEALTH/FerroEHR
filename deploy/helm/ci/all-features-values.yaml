@@ -91,7 +91,6 @@ config:
       # Serves the discovery document, built at boot from the [auth] issuer's
       # metadata, so it needs no endpoint list of its own.
       discovery: true
-      demographic_clients: [ferroehr-mpi]
       patient_issuers: [https://keycloak.example.com/realms/ferroehr]
     # Who provisions is a scim_provision grant in the CDR, written through the
     # Demographic API; the table only serves the endpoint.

@@ -51,9 +51,6 @@ services:
       FERROEHR__AUTH__PARTY__1__GROUP_IDENTIFIER_ISSUER: urn:ferroehr:keycloak-dev-groups
       FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: https://keycloak:8443/auth/realms/ferroehr
       FERROEHR__AUTH__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
-      # The realm's service client, whose system/aql-* grant counts only when
-      # it is named here (SMART on openEHR §Resource Scopes).
-      FERROEHR__AUTH__SMART__BACKEND_CLIENTS: ferroehr-service
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 

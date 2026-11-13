@@ -661,7 +661,6 @@ data:
         issuer = "https://keycloak.example.com/realms/ferroehr"
       [auth.scim]
       [auth.smart]
-        demographic_clients = ["ferroehr-mpi"]
         discovery = true
         patient_issuers = ["https://keycloak.example.com/realms/ferroehr"]
     
@@ -1588,7 +1587,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 986872ffd94037c33fc83a035ed64de74941a933ca274bd15b73ffb4cb580eb1
+        checksum/config: bd767e5addacac30c4bc8cbbbea22f1597943c1b0cc1ca9b1471f11f47e953f0
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
         prometheus.io/path: "/management/prometheus"

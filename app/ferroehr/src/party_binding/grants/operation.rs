@@ -156,11 +156,18 @@ pub enum Operation {
     /// carries, under the admission conditions the grant's credentials name
     /// ([`crate::party_binding::grants::admission`]).
     CreateAtLogin,
+    /// Count a `system/aql-*` grant of the client's token, which "would
+    /// grant access to all registered and ad-hoc AQL queries system-wide"
+    /// (SMART on openEHR, `master08-scopes.adoc` §Resource Scopes).
+    QuerySystemWide,
+    /// Reach the DEMOGRAPHIC API, which no SMART on openEHR resource family
+    /// covers.
+    AccessDemographic,
 }
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 15] = [
+    pub const ALL: [Self; 17] = [
         Self::CommitComposition,
         Self::ImportEhr,
         Self::ImportEhrExtract,
@@ -176,6 +183,8 @@ impl Operation {
         Self::HoldRoles,
         Self::HoldScopes,
         Self::CreateAtLogin,
+        Self::QuerySystemWide,
+        Self::AccessDemographic,
     ];
 
     /// The operation's code in [`crate::party_binding::policy_mark::TERMINOLOGY`].
@@ -197,6 +206,8 @@ impl Operation {
             Self::HoldRoles => "hold_roles",
             Self::HoldScopes => "hold_scopes",
             Self::CreateAtLogin => "create_at_login",
+            Self::QuerySystemWide => "query_system_wide",
+            Self::AccessDemographic => "access_demographic",
         }
     }
 

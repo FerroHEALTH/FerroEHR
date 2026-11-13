@@ -69,6 +69,14 @@ pub(crate) async fn resolve(
     Ok(Arc::new(grants.capabilities(actor, jiff::Timestamp::now())))
 }
 
+/// Whether the caller of `granted` is a client whose `ACTOR` holds a grant of
+/// `operation`, as a backend client's `query_system_wide` or the
+/// DEMOGRAPHIC API's `access_demographic`: a grant to a party the login is
+/// bound to is no client's.
+pub(super) fn client_holds(granted: &Capabilities, operation: Operation) -> bool {
+    granted.client().is_some() && granted.holds(operation)
+}
+
 /// Runs `request` inside the caller's capabilities `granted`, reads the grant
 /// rows again when its own commit changed one, and carries `granted` on the
 /// response.
