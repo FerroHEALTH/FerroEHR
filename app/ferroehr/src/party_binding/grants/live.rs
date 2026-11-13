@@ -134,6 +134,15 @@ impl LiveGrants {
         &self.listened
     }
 
+    /// Read the copy again in a detached task whenever a notification marks
+    /// it stale, and at least every `every` while the listener is down, so a
+    /// commit of a request that resolves no caller, or of no request at all,
+    /// decides under the grants in force (whether it writes its outbox row)
+    /// without a read on its own path.
+    pub fn spawn_refresher(self: &Arc<Self>, every: std::time::Duration) {
+        tokio::spawn(refresher(Arc::clone(self), every));
+    }
+
     /// The revision this replica holds; `None` before its first read.
     #[must_use]
     pub fn revision(&self) -> Option<i64> {
@@ -320,6 +329,24 @@ impl LiveGrants {
                 )
             })
             .collect()
+    }
+}
+
+/// The refresher loop of [`LiveGrants::spawn_refresher`].
+#[expect(
+    clippy::infinite_loop,
+    reason = "a detached task that lives as long as the runtime"
+)]
+async fn refresher(grants: Arc<LiveGrants>, every: std::time::Duration) {
+    loop {
+        let seen = grants.listened.notifications();
+        let _notified = grants.listened.notified_after(seen, every).await;
+        if let Err(error) = grants.refresh_if_stale().await {
+            tracing::warn!(
+                error = %crate::error::ErrorChain::new(&error),
+                "the policy grants could not be read; the next notification reads them again"
+            );
+        }
     }
 }
 

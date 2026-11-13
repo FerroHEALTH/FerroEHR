@@ -557,9 +557,6 @@ pub(crate) async fn middleware(
 ) -> Response {
     let auth = &layer.authenticator;
     if !auth.enabled() {
-        if let Err(e) = grants::fresh(layer.service.grants()).await {
-            return refusal::response(auth, req.headers(), &e);
-        }
         return REQUEST_PRINCIPAL.scope(None, next.run(req)).await;
     }
     let (parts, body) = req.into_parts();

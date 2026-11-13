@@ -8,10 +8,11 @@
 //! A system client is resolved by the issuer of its token and its
 //! `client_id` to the `ACTOR` carrying that client identifier, and a
 //! caller the login binding bound to a party by that party; every other
-//! caller has none. The copy is read only when a notification or a lost
-//! listener asks for it, on every request, so a request adds no transaction
-//! and every commit sees the change-feed grants in force; a store that cannot
-//! answer is the server's failure and answers `503`. A request whose own
+//! caller has none and reads nothing. The copy is read only when a
+//! notification or a lost listener asks for it, so a request adds no
+//! transaction, and the replica's refresher reads it on each notification for
+//! the commits of every other request; a store that cannot answer is the
+//! server's failure and answers `503`. A request whose own
 //! commit changed a grant reads the copy again before it answers, so the
 //! caller's next request runs under the change. A check reads the
 //! capabilities through [`Capabilities::current`]. No openEHR spec gives a
@@ -38,7 +39,6 @@ pub(crate) async fn resolve(
     grants: &LiveGrants,
     principal: &Principal,
 ) -> Result<Arc<Capabilities>, AuthError> {
-    fresh(grants).await?;
     let Some(caller) = principal.access.caller() else {
         return Ok(Arc::default());
     };
@@ -55,17 +55,6 @@ pub(crate) async fn resolve(
         (_, _, _, Some(party)) => Actor::Party(party),
         _ => return Ok(Arc::default()),
     };
-    Ok(Arc::new(grants.capabilities(actor, jiff::Timestamp::now())))
-}
-
-/// Reads the grant rows when this replica's copy is stale, so every request,
-/// a caller's with no grant included, commits under the grants in force: the
-/// change-feed grants decide whether a commit writes its outbox row.
-///
-/// # Errors
-/// [`AuthError::PartyUnavailable`] when the copy is stale and the party store
-/// cannot answer.
-pub(crate) async fn fresh(grants: &LiveGrants) -> Result<(), AuthError> {
     if let Err(error) = grants.refresh_if_stale().await {
         tracing::warn!(
             error = %ferroehr::error::ErrorChain::new(&error),
@@ -73,7 +62,7 @@ pub(crate) async fn fresh(grants: &LiveGrants) -> Result<(), AuthError> {
         );
         return Err(AuthError::PartyUnavailable { retry_after: None });
     }
-    Ok(())
+    Ok(Arc::new(grants.capabilities(actor, jiff::Timestamp::now())))
 }
 
 /// Runs `request` inside the caller's capabilities `granted`, reads the grant

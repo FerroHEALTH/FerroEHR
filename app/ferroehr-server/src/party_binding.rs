@@ -192,6 +192,9 @@ pub async fn prepare(
         .await
         .context("reading the policy grants")?;
     service.grants().listened().spawn_listener();
+    service
+        .grants()
+        .spawn_refresher(std::time::Duration::from_secs(60));
     let errors = service
         .party_mapping_errors(&config.authz.party_binding.sections())
         .await?;

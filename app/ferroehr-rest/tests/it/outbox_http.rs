@@ -65,6 +65,8 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         let reads = capability("read_change_feed", &[scope("reader", reader)]);
         grant(&svc, MACHINES, client, &[reads]).await;
     }
+    // The replica's refresher reads the grants on the commits' notification.
+    svc.grants().refresh().await.expect("the grants read");
     let svc = Arc::new(svc);
     let mut config = common::api_config(true);
     common::with_basic_users(&mut config, &[("root", &[])]);
