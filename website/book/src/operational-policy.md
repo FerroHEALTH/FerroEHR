@@ -132,7 +132,7 @@ other caller is answered `403`, and the answer names what makes it one, for
 example `the ROLE … is a policy party, as it holds a capability granting
 ferroehr-operations::import_ehr: only an administrator writes it`. A
 SCIM client never writes one, even for a `PERSON` it provisioned, and
-neither does a holder of a `demographic_clients` grant, so no client grants
+neither does a holder of an `access_demographic` grant, so no client grants
 itself a capability. The rule judges the version before the write as well
 as the new one, so a non-administrator can neither change nor delete a
 policy party, nor turn one into an ordinary party. Once a version of a party
@@ -202,6 +202,8 @@ client identifier type are the stable contract.
 | `hold_roles` | Hold, as a Basic user, the roles its `role` elements name |
 | `hold_scopes` | Hold, as a Basic user, the SMART scopes its `scope` elements name |
 | `create_at_login` | Create a provisional `PERSON` at the first login of a person no party carries, under the admission conditions the grant names ([Just-in-time admission](#just-in-time-admission)) |
+| `query_system_wide` | Count the client's `system/aql-*` scope, which reaches every query over every EHR (SMART on openEHR, master08 §Resource Scopes) |
+| `access_demographic` | Reach the DEMOGRAPHIC API, which no SMART on openEHR scope covers |
 
 The same terminology names the elements that qualify a grant, by the code
 in the element's `name`:
@@ -636,6 +638,93 @@ relationship goes in this second version.
   }]
 }
 ```
+
+#### A backend client and a demographic client
+
+A reporting job queries every EHR with a `system/aql-*` scope, and a master
+patient index reads and writes persons through the DEMOGRAPHIC API. Neither
+is a key in `ferroehr.toml`: each is a grant of the client's `AGENT`, read on
+every request. A `system/aql-*` scope "would grant access to all registered
+and ad-hoc AQL queries system-wide" (SMART on openEHR, master08 §Resource
+Scopes), so it counts only for a client granted `query_system_wide`; no
+SMART on openEHR scope covers demographic data, so the DEMOGRAPHIC API admits
+a client granted `access_demographic`, or a caller holding the
+`[auth] product_scope`.
+
+Both operations reach beyond one system's own writes, so the ceiling admits
+each by name:
+
+```toml
+[authz.grants]
+allowed = ["commit_composition", "query_system_wide", "access_demographic"]
+```
+
+The client's `AGENT` is written as above, and its grant is a `ROLE` it
+performs, `POST /demographic/role`. One `ROLE` can carry both operations; a
+deployment that runs the two as separate clients gives each its own `AGENT`
+and `ROLE`.
+
+<!-- policy-example: backend-client-role -->
+```json
+{
+  "_type": "ROLE",
+  "archetype_node_id": "openEHR-DEMOGRAPHIC-ROLE.system_client.v1",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-ROLE.system_client.v1" },
+    "template_id": { "_type": "TEMPLATE_ID", "value": "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0" },
+    "rm_version": "1.1.0"
+  },
+  "name": { "_type": "DV_TEXT", "value": "System client" },
+  "identities": [{
+    "_type": "PARTY_IDENTITY", "archetype_node_id": "id2", "name": { "_type": "DV_TEXT", "value": "Role name" },
+    "details": {
+      "_type": "ITEM_TREE", "archetype_node_id": "id3", "name": { "_type": "DV_TEXT", "value": "Name" },
+      "items": [{
+        "_type": "ELEMENT", "archetype_node_id": "id4", "name": { "_type": "DV_TEXT", "value": "Full name" },
+        "value": { "_type": "DV_TEXT", "value": "Reporting and patient index" }
+      }]
+    }
+  }],
+  "performer": {
+    "_type": "PARTY_REF", "namespace": "demographic", "type": "AGENT",
+    "id": { "_type": "HIER_OBJECT_ID", "value": "5b8e2c91-7d4a-4f3e-8a1c-6e9f0b2d4c73" }
+  },
+  "capabilities": [{
+    "_type": "CAPABILITY", "archetype_node_id": "id6",
+    "name": {
+      "_type": "DV_CODED_TEXT", "value": "Relay",
+      "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" }, "code_string": "at10" }
+    },
+    "credentials": {
+      "_type": "ITEM_TREE", "archetype_node_id": "id8", "name": { "_type": "DV_TEXT", "value": "Grant" },
+      "items": [
+        {
+          "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
+          "value": {
+            "_type": "DV_CODED_TEXT", "value": "Query system-wide",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "query_system_wide" }
+          }
+        },
+        {
+          "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
+          "value": {
+            "_type": "DV_CODED_TEXT", "value": "Access demographic",
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "access_demographic" }
+          }
+        }
+      ]
+    }
+  }]
+}
+```
+
+The client's next request runs under the grant, on every replica, with no
+restart. The grant counts for the client's own app-only token, a token of a
+`machines` issuer whose `client_id` the `AGENT` carries. A person signed in
+through the same client holds the person's own grants, never the client's.
+To withdraw it, end the `ROLE`'s `time_validity` or delete the `ROLE`
+([Ending a grant](#ending-a-grant)).
 
 #### A data migration
 

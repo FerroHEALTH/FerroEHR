@@ -359,6 +359,10 @@ async fn each_worked_example_fits_its_definition() {
             "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0",
         ),
         (
+            "backend-client-role",
+            "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0",
+        ),
+        (
             "data-migration-role",
             "openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0",
         ),
