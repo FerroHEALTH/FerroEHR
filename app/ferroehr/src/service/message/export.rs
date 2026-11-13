@@ -42,7 +42,7 @@ use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::storage::ehr_repo;
-use crate::storage::extract_repo::{self, Enforced};
+use crate::storage::extract_repo;
 use crate::storage::version_repo::read::VersionAt;
 use crate::system_log::categories::{AccessedContent, ContentIds, ResourceKind};
 use crate::system_log::event::EventActionCode;
@@ -472,31 +472,6 @@ impl FerroEhrService {
             return Err(ServiceError::research_objected(&format!("EHR {ehr_id}")));
         }
         Ok(())
-    }
-
-    /// Every version container of an EHR, restricted objects omitted.
-    ///
-    /// An Extract is a disclosure GDPR Art. 18(2) does not admit for a
-    /// restricted object (`docs/law/eu/gdpr/text.html`), so the object is
-    /// absent rather than failing the export, as in the AQL result set. An
-    /// object under an EHDS Art. 8 restriction, or withheld from the person
-    /// under Art. 3(3), is absent while the request enforces it
-    /// (`docs/law/eu/ehds/text.html`). No openEHR spec governs either: our own
-    /// design/extension.
-    async fn ehr_versioned_objects(
-        &self,
-        ehr_id: EhrId,
-    ) -> Result<Vec<(VoId, String)>, ServiceError> {
-        Ok(extract_repo::ehr_objects(&self.pool, ehr_id, enforced()).await?)
-    }
-
-    /// The kind of a version container of `ehr_id` (an `EXTRACT_ENTITY_MANIFEST.item_list` entry).
-    async fn ehr_vo_kind(
-        &self,
-        ehr_id: EhrId,
-        vo_id: VoId,
-    ) -> Result<Option<String>, ServiceError> {
-        Ok(extract_repo::ehr_object_kind(&self.pool, ehr_id, vo_id, enforced()).await?)
     }
 
     /// The stored-version counts of a set of parties, in ONE statement — the
@@ -1050,13 +1025,4 @@ async fn resolve_entity_ehr(
         Some(_) => ServiceError::not_found(Missing::Ehr, format!("no EHR with id {id}")),
         None => ServiceError::not_found(Missing::Ehr, "no EHR names the requested subject_id"),
     })
-}
-
-/// The access marks the current request enforces, which every extract read
-/// honours.
-fn enforced() -> Enforced {
-    Enforced {
-        access_restriction: crate::system_log::access_context::access_restriction_enforced(),
-        access_delay: crate::system_log::access_context::access_delay_enforced(),
-    }
 }

@@ -422,7 +422,19 @@ which is what makes an optional stage safe to disable:
    outside the RFC 6750 §2.1 `b64token` alphabet is a malformed token, `401`.
 2. **`EHR_ACCESS`** — always on and unconditional, from the RM's own gateway
    clause ("All access decisions to data in the EHR must be made in accordance
-   with the policies and rules in this object").
+   with the policies and rules in this object"). The settings are the
+   `access_directives` scheme, an `ACCESS_DIRECTIVE_SETTINGS` of the draft
+   access control package, refused whole with `400` at every write unless the
+   draft BMM's invariants and the terminology groups hold (RM EHR IM
+   §`ACCESS_CONTROL_SETTINGS` leaves the class "Currently implementation
+   dependent": the scheme is our own design). A new version is committed by a
+   gate-keeper the current settings name or by `admin_role` on the subject's
+   instruction (BASE Architecture Overview §Security Policy, "Access control of
+   access settings"); the settings are read only by those callers and the
+   subject, and are absent to anyone else in AQL, an EHR Extract and the
+   CONTRIBUTION read, since a restriction stays invisible to a provider (EHDS
+   Art. 8). Who writes and reads them is our own design
+   (`service::ehr::access_rule`).
 3. **RBAC** — the coarse operation class (public / clinical / admin /
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an

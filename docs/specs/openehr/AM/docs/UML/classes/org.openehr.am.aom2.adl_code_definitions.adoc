@@ -67,7 +67,7 @@ a_code: `link:/releases/BASE/{base_release}/foundation_types.html#_string_class[
 ): `link:/releases/BASE/{base_release}/foundation_types.html#_boolean_class[Boolean^]` +
  +
 __Post__: `Result = is_at_code (a_code) or else is_id_code (a_code) or else is_value_code (a_code) or else is_value_set_code (a_code)`
-a|True if `_a_code_` is any kind of ADL archetype local code.
+a|True if `_a_code_` is any kind of archetype local code.
 
 h|*1..1*
 |*is_at_code* ( +

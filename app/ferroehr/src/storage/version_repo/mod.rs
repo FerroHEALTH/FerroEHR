@@ -74,6 +74,7 @@ macro_rules! audit_of_version {
 pub mod attestation;
 pub mod commit;
 pub mod contribution;
+pub mod ehr_access;
 pub mod import;
 pub mod meta;
 pub mod placement;

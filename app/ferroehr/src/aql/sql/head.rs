@@ -75,7 +75,7 @@ pub(super) fn bind_head(
     q: &mut SelectStatement,
     version_alias: &str,
     latest: bool,
-    gates: super::gates::Gates,
+    gates: super::gates::Gates<'_>,
     placement: HeadPlacement,
 ) -> String {
     let h = head_alias(version_alias);

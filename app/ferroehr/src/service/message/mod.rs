@@ -32,6 +32,7 @@
 //! vending no message endpoints.
 
 mod export;
+mod export_objects;
 mod extract_type;
 mod import;
 pub mod import_policy;
