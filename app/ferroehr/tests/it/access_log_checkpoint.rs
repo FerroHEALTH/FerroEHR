@@ -393,16 +393,17 @@ async fn an_ehrs_log_round_trips_through_export_and_import() {
     assert!(own.chain.is_empty(), "{own:?}");
 }
 
-/// A local link is never signed on its own, even under an `OpenPGP` key: the
-/// record keeps no signature and the checkpoint seals the chain (#5562).
+/// Under an `OpenPGP` key each appended link carries a signature the keyring
+/// verifies, written with its row, and a replaced signature is a finding
+/// (#5562).
 #[tokio::test]
-async fn a_local_link_carries_no_signature_and_the_checkpoint_seals_it() {
+async fn a_signed_link_verifies_and_a_replaced_signature_does_not() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = &testdb.pool();
     let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
     assert!(log.seals());
     let entries = append(&log, SYSTEM_A).await;
-    assert!(entries.iter().all(|entry| entry.link.signature.is_none()));
+    assert!(entries.iter().all(|entry| entry.link.signature.is_some()));
     let first = entries.first().expect("an entry");
     let read = log
         .store()
@@ -411,24 +412,96 @@ async fn a_local_link_carries_no_signature_and_the_checkpoint_seals_it() {
         .expect("read")
         .expect("the entry");
     assert!(
-        matches!(&read, AccessLogRecord::AccessLogEntry(entry) if entry.link.signature.is_none())
+        matches!(&read, AccessLogRecord::AccessLogEntry(entry) if entry.link == first.link),
+        "the stored link is the signed one: {read:?}"
     );
-    let column: Option<String> = sqlx::query_scalar(
-        "SELECT column_name::text FROM information_schema.columns \
-         WHERE table_schema = 'audit' AND table_name = 'access_log_record' \
-         AND column_name = 'signature'",
-    )
-    .fetch_optional(pool)
-    .await
-    .expect("read the catalogue");
-    assert_eq!(column, None, "a local record keeps no link signature");
-    let checkpoint = log.seal().await.expect("seal").expect("a checkpoint");
-    assert_eq!(
-        checkpoint.sequence,
-        entries.last().expect("an entry").link.sequence
-    );
+    log.seal().await.expect("seal").expect("a checkpoint");
     let verification = log.verify(None).await.expect("verify");
     assert!(verification.intact(), "{verification:?}");
+
+    let second = entries.get(1).expect("a second entry");
+    let foreign = second.link.signature.clone().expect("signed");
+    tamper(
+        pool,
+        "audit.access_log_record",
+        &[&format!(
+            "UPDATE audit.access_log_record SET signature = '{foreign}' WHERE chain_seq = {}",
+            first.link.sequence
+        )],
+    )
+    .await;
+    let verification = log.verify(None).await.expect("verify");
+    assert_eq!(
+        verification.findings,
+        vec![ChainFinding::LinkSignature {
+            sequence: first.link.sequence
+        }]
+    );
+}
+
+/// A stored signature is part of the record: the table refuses to set or
+/// change it after the insert, as it refuses every change but a tombstone.
+#[tokio::test]
+async fn a_stored_link_signature_is_never_updated() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = &testdb.pool();
+    let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
+    let entries = append(&log, SYSTEM_A).await;
+    let first = entries.first().expect("an entry");
+    let refused =
+        sqlx::query("UPDATE audit.access_log_record SET signature = NULL WHERE chain_seq = $1")
+            .bind(first.link.sequence)
+            .execute(pool)
+            .await
+            .expect_err("the signature does not change");
+    assert!(refused.to_string().contains("append-only"), "{refused}");
+}
+
+/// Two appends in one transaction sign the links the chain gives them: the
+/// second foresees its links from the head the first one moved.
+#[tokio::test]
+async fn appends_in_one_transaction_sign_the_links_the_chain_gives() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = &testdb.pool();
+    let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
+    let mut conn = pool.acquire().await.expect("connection");
+    let mut tx = conn.begin().await.expect("begin");
+    let first = log
+        .store()
+        .append_in(
+            &mut tx,
+            vec![entry(1, SYSTEM_A, MOVED), entry(2, SYSTEM_A, STAYS)],
+        )
+        .await
+        .expect("the first append");
+    let second = log
+        .store()
+        .append_in(&mut tx, vec![entry(3, SYSTEM_A, MOVED)])
+        .await
+        .expect("the second append");
+    tx.commit().await.expect("commit");
+    let last = first.last().expect("an entry");
+    let next = second.first().expect("an entry");
+    assert_eq!(next.link.previous_digest, last.link.digest);
+    assert!(
+        first
+            .iter()
+            .chain(&second)
+            .all(|e| e.link.signature.is_some())
+    );
+    log.seal().await.expect("seal").expect("a checkpoint");
+    let verification = log.verify(None).await.expect("verify");
+    assert!(verification.intact(), "{verification:?}");
+}
+
+/// Without an `OpenPGP` key nothing is signed and nothing is sealed.
+#[tokio::test]
+async fn a_keyring_without_a_key_signs_no_link() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let log = checkpoints(&testdb.pool(), SYSTEM_A, Arc::new(Signer::digest_default()));
+    assert!(!log.seals());
+    let entries = append(&log, SYSTEM_A).await;
+    assert!(entries.iter().all(|entry| entry.link.signature.is_none()));
 }
 
 /// A link another system signed, as the draft's optional

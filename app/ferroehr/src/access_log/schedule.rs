@@ -14,9 +14,9 @@ use crate::access_log::checkpoint::Checkpoints;
 
 /// The time between two scheduled checkpoints: five minutes.
 ///
-/// Links are not signed one by one, so the interval bounds how long a record
-/// waits for a signature to cover it; a run on a log that did not grow writes
-/// nothing, and one that did costs one signature and one row.
+/// A checkpoint fixes the tail against a rewrite of the whole chain after it;
+/// a run on a log that did not grow writes nothing, and one that did costs
+/// one signature and one row.
 // NOTE: our own design (#5562), no spec fixes the interval; a day holds at most 288 checkpoints.
 pub const INTERVAL: Duration = Duration::from_mins(5);
 

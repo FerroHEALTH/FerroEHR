@@ -304,18 +304,19 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   said it would take the record, so the log holds both or neither.
   `access_log_checkpoint` keeps the signed `ACCESS_LOG_CHECKPOINT`s of the
   head, signed with the version-signing keyring's OpenPGP key. Whenever the
-  keyring holds one, `access_log::schedule` seals the head every five minutes
-  when it grew, and without one nothing is sealed; no key of
-  `[audit.access_log]` switches it (#5562, our own design). A local link is
-  never signed on its own: a signature per link would cost an OpenPGP
-  signature and a statement per record in the drain's transaction, and the
-  next checkpoint covers the record within the interval
-  (`audit/0029_unsigned_access_log_links.sql`). `access_log::checkpoint`
-  seals and verifies (the chain through `audit.verify_audit_chain()` and the
-  checkpoint beside it), `access_log::chain` verifies a span of links apart
-  from the database (an export), the optional signature of a link another
-  system signed included, and `access_log::transfer` exports one EHR's
-  records with the span and checkpoint and imports another system's into
+  keyring holds one, every local link is signed and `access_log::schedule`
+  seals the head every five minutes when it grew; without one nothing is
+  signed or sealed, and no key of `[audit.access_log]` switches either
+  (#5562, our own design). `AccessLogStore::append_in` locks the head
+  (`audit.audit_chain_reserve()`), computes the links its rows will get by
+  the chain rule the insert trigger applies, signs each digest and writes the
+  signature in the same `INSERT`, refusing the transaction when the trigger
+  gave another link (`audit/0029_access_log_link_signed_at_insert.sql`).
+  `access_log::checkpoint` seals and verifies (the chain through
+  `audit.verify_audit_chain()`, the checkpoint and the link signatures beside
+  it), `access_log::chain` verifies a span of links apart from the database
+  (an export), and `access_log::transfer` exports one EHR's records with the
+  span and checkpoint and imports another system's into
   `access_log_imported_*`, outside this system's chain
   (`audit/0028_access_log_checkpoint.sql`).
   Every access to EHR data writes one entry per EHR it

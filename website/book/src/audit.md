@@ -800,9 +800,15 @@ is our own design.
 
 - **The key** is the keyring of [version signing](signing/pgp.md):
   `[record.signing]` in `pgp` mode, with its `retired_key_files` still
-  verifying what an earlier key signed. With that key the log is sealed; a
-  deployment without it seals nothing, and `ferroehr access-log checkpoint`
-  answers that the keyring holds no key.
+  verifying what an earlier key signed. With that key every link is signed
+  and the log is sealed; a deployment without it signs nothing, and
+  `ferroehr access-log checkpoint` answers that the keyring holds no key.
+- **Use an Ed25519 key.** Each access writes one entry per EHR it reached,
+  and each entry's link is signed in the audit writer's transaction. A
+  signature costs about 13 µs with an Ed25519 key, against 1.0 ms with
+  RSA-2048, 2.5 ms with RSA-3072 and 5.5 ms with RSA-4096 (rPGP, one core).
+  With RSA, an AQL query over a thousand EHRs adds seconds of signing while
+  every other audit write waits on the head of the chain.
 - **The schedule.** The server seals the head every five minutes when the
   chain grew since the last checkpoint; a run on a log that did not grow
   writes nothing. There is no switch and no interval to set.
@@ -814,17 +820,15 @@ is our own design.
 - **Verification.** `ferroehr access-log verify` and
   `POST /admin/access-log/verify` recompute the whole chain (an entry
   replaced by its tombstone verifies through the content digest the
-  tombstone keeps), check the checkpoint's signature and check that the link
-  at its position is the one it sealed. Each finding is reported; the command
-  exits 1 when the log does not verify, and the route answers `200` with
-  `intact: false`.
-- **Links are not signed one by one.** A record is covered by a signature
-  once the next checkpoint seals it, at most five minutes after it is
-  written. Signing each link would cost one OpenPGP signature and one more
-  statement per record inside the audit writer's transaction, which an AQL
-  query over many EHRs multiplies by the EHRs it serves. The draft's
-  optional `ACCESS_LOG_LINK.signature` is still read: a signed link in
-  another system's export is verified on import.
+  tombstone keeps), check the checkpoint's signature and that the link at its
+  position is the one it sealed, and check the signature of every signed
+  link. Each finding is reported; the command exits 1 when the log does not
+  verify, and the route answers `200` with `intact: false`.
+- **Signed links.** Each link's digest is signed as the eHDSI Audit Trail
+  Profile §2.2 asks of a national contact point. The server locks the head
+  of the chain, computes the links the new records will get, signs them and
+  writes each signature with its record in one `INSERT`; a stored signature
+  never changes.
 - **Moving the log with the EHR.** EHDS Annex II 2.6 and Art 9(2) keep the
   access information available when an EHR moves to another system.
   `ferroehr access-log export --ehr-id <id>` and

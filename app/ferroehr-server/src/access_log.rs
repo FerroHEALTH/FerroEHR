@@ -6,8 +6,8 @@
 //! scheduled checkpoint, and `ferroehr access-log …`.
 //!
 //! The keyring is the one `[record.signing]` configures: with an `OpenPGP`
-//! key in it the server seals the chain on the built-in schedule, and
-//! without one it seals nothing (#5562). No openEHR spec governs log
+//! key in it the server signs each link and seals the chain on the built-in
+//! schedule, and without one it signs nothing (#5562). No openEHR spec governs log
 //! signing: our own design.
 
 use std::path::{Path, PathBuf};
@@ -82,7 +82,9 @@ pub fn build(
 /// Start the scheduled checkpoint when the keyring holds an `OpenPGP` key.
 pub fn spawn_schedule(checkpoints: &Checkpoints) {
     if !checkpoints.seals() {
-        tracing::info!("no OpenPGP key in the keyring: the access log is not sealed");
+        tracing::info!(
+            "no OpenPGP key in the keyring: the access log is neither signed nor sealed"
+        );
         return;
     }
     let interval = ferroehr::access_log::schedule::INTERVAL;

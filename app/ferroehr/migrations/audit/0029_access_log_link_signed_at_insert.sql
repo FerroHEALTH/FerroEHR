@@ -1,18 +1,48 @@
 -- SPDX-FileCopyrightText: Cadasto B.V.
 -- SPDX-License-Identifier: BUSL-1.1
 
--- audit: a local access-log link is not signed on its own (#5562).
+-- audit: a local access-log link is signed before its row is written and
+-- stored by the same INSERT (#5562).
 --
--- The checkpoints seal this system's chain whenever the keyring holds an
--- OpenPGP key, on a built-in schedule, so the signature of each local link
--- (0028) is gone: the record loses its signature column, the tombstone
--- trigger loses the one update it admitted for it, and the clinical role
--- loses the grant to set it. A link imported from another system keeps its
--- optional ACCESS_LOG_LINK.signature in access_log_imported_link.
+-- Whenever the keyring holds an OpenPGP key, the application locks the head
+-- of the chain (audit.audit_chain_reserve), computes the links its rows will
+-- get by the chain rule the insert trigger applies, signs each digest, and
+-- inserts the content with its signature. The trigger keeps the signature it
+-- is given instead of clearing it, and checks nothing of it: a signature over
+-- another digest fails verification, and the application refuses the
+-- transaction when a link it signed is not the link the trigger gave. The
+-- signature is no longer set by an UPDATE after the insert (0028), so the
+-- tombstone trigger loses that exception and the clinical role its UPDATE
+-- grant on the column.
 --
 -- No openEHR spec governs log signing or storage: our own design/extension.
 --
 -- Runs with search_path = audit, ext, public.
+
+-- The head of the chain, locked until the transaction ends: the position and
+-- link digest (lower-case hexadecimal) the next record follows.
+CREATE FUNCTION audit.audit_chain_reserve()
+    RETURNS TABLE (head_seq bigint, head_digest text)
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path = audit, pg_catalog
+    AS $$
+BEGIN
+    RETURN QUERY
+        SELECT s.head_seq, encode(s.head_hash, 'hex')
+          FROM audit.audit_chain_state s
+         WHERE s.singleton
+           FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'audit chain state is missing: refusing to append an unchained record'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION audit.audit_chain_reserve() FROM PUBLIC;
+
+COMMENT ON FUNCTION audit.audit_chain_reserve() IS
+    'Lock the head of the audit chain until the transaction ends and return its position and link digest, so a writer can sign the links its next rows will get.';
 
 CREATE OR REPLACE FUNCTION audit.access_log_record_chain_link() RETURNS trigger
     LANGUAGE plpgsql
@@ -53,10 +83,10 @@ BEGIN
        OR NEW.system_id IS DISTINCT FROM OLD.system_id
        OR NEW.time_recorded IS DISTINCT FROM OLD.time_recorded
        OR (NEW.chain_seq, NEW.algorithm, NEW.previous_digest, NEW.content_digest,
-           NEW.digest, NEW.stored_at)
+           NEW.digest, NEW.signature, NEW.stored_at)
           IS DISTINCT FROM
           (OLD.chain_seq, OLD.algorithm, OLD.previous_digest, OLD.content_digest,
-           OLD.digest, OLD.stored_at)
+           OLD.digest, OLD.signature, OLD.stored_at)
     THEN
         RAISE EXCEPTION
             'audit.access_log_record is append-only: an entry is only replaced by its own tombstone (record %)',
@@ -71,8 +101,10 @@ DO $grants$
 BEGIN
     IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'ferroehr_clinical') THEN
         REVOKE UPDATE (signature) ON access_log_record FROM ferroehr_clinical;
+        GRANT INSERT (signature) ON access_log_record TO ferroehr_clinical;
+        GRANT EXECUTE ON FUNCTION audit.audit_chain_reserve() TO ferroehr_clinical;
+    ELSE
+        RAISE NOTICE 'skipping access-log signature grants (roles absent: see the ext role block NOTICE)';
     END IF;
 END
 $grants$;
-
-ALTER TABLE access_log_record DROP COLUMN signature;

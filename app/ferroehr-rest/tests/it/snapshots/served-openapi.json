@@ -613,11 +613,11 @@
           "admin-access-log"
         ],
         "summary": "Verify the access log against its newest checkpoint\n(`POST /admin/access-log/verify`). **Our own extension.**",
-        "description": "The whole chain is recomputed, tombstones taken as recorded; the\ncheckpoint's proof and the link it seals are checked. A finding is\nnot a request failure.",
+        "description": "The whole chain is recomputed, tombstones taken as recorded; the\ncheckpoint's proof, the link it seals and every signed link are\nchecked. A finding is not a request failure.",
         "operationId": "admin_verify_access_log",
         "responses": {
           "200": {
-            "description": "The verification ran. `intact` is true when a checkpoint was there to verify against and nothing failed; `findings` names each failure of the checkpoint, `chain` each damaged record or boundary of the chain.",
+            "description": "The verification ran. `intact` is true when a checkpoint was there to verify against and nothing failed; `findings` names each failure of the checkpoint and the signed links, `chain` each damaged record or boundary of the chain.",
             "content": {
               "application/json": {
                 "schema": {},
@@ -26909,7 +26909,7 @@
     },
     {
       "name": "admin-access-log",
-      "description": "The integrity of the access log: seal its head in a checkpoint signed with the keyring's OpenPGP key, verify the chain against a signed checkpoint, and export one EHR's log with the checkpoint it verifies against for a transfer to another system. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes (same admin gate + RBAC Admin class)."
+      "description": "The integrity of the access log: seal its head in a checkpoint signed with the keyring's OpenPGP key, verify the chain and the signatures against a checkpoint, and export one EHR's log with the checkpoint it verifies against for a transfer to another system. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes (same admin gate + RBAC Admin class)."
     },
     {
       "name": "admin-identifiers",

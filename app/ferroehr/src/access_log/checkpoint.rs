@@ -11,8 +11,8 @@
 //! records it covers. The chain itself is verified where it is stored, by
 //! `audit.verify_audit_chain()` through
 //! [`AuditStore::verify_chain_advancing`], which accepts a tombstone in place
-//! of its entry; this module adds what a checkpoint adds: its proof and the
-//! link it seals. A local link is never signed on its own (#5562).
+//! of its entry; this module adds what a checkpoint adds: its proof, the link
+//! it seals, and the signature of each signed link.
 //!
 //! No openEHR spec governs log signing: our own design
 //! (`docs/plans/access-log.md` §Integrity).
@@ -33,13 +33,16 @@ use crate::versioning::signature::trust::TrustedCertificates;
 use openehr_rm::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
 use openehr_rm::draft::access_log::invariants::check_checkpoint;
 
+/// How many signed links one page of the signature check reads.
+const SIGNATURE_PAGE: i64 = 1000;
+
 /// The outcome of verifying the log against a checkpoint.
 #[derive(Debug, Clone)]
 pub struct Verification {
     /// The checkpoint the log was verified against; `None` when none is
     /// stored and none was given.
     pub checkpoint: Option<AccessLogCheckpoint>,
-    /// What the checkpoint fails.
+    /// What the checkpoint and the signed links fail.
     pub findings: Vec<ChainFinding>,
     /// What the chain fails, as the audit chain's verifier reports it.
     pub chain: Vec<AuditChainFinding>,
@@ -68,7 +71,8 @@ pub struct Checkpoints {
 impl Checkpoints {
     /// The checkpoints of the log in the audit pool `pool`, sealed for
     /// `system_id` with `signer`'s key; `trusted` verifies what other
-    /// systems signed.
+    /// systems signed. Whenever the keyring holds an `OpenPGP` key the
+    /// entries this writes carry a signed link (#5562).
     #[must_use]
     pub fn new(
         pool: PgPool,
@@ -77,6 +81,11 @@ impl Checkpoints {
         trusted: Arc<TrustedCertificates>,
     ) -> Self {
         let store = AccessLogStore::new(pool.clone());
+        let store = if signer.holds_key() {
+            store.with_link_signer(Arc::clone(&signer))
+        } else {
+            store
+        };
         Self {
             pool,
             store,
@@ -86,8 +95,8 @@ impl Checkpoints {
         }
     }
 
-    /// Whether the keyring holds the `OpenPGP` key a checkpoint is signed
-    /// with; without one nothing is sealed.
+    /// Whether the keyring holds the `OpenPGP` key checkpoints and links are
+    /// signed with; without one nothing is sealed or signed.
     #[must_use]
     pub fn seals(&self) -> bool {
         self.signer.holds_key()
@@ -104,7 +113,8 @@ impl Checkpoints {
         &self.pool
     }
 
-    /// The access-log store over the same pool.
+    /// The access-log store over the same pool, signing links whenever the
+    /// keyring holds a key.
     #[must_use]
     pub fn store(&self) -> &AccessLogStore {
         &self.store
@@ -223,8 +233,9 @@ impl Checkpoints {
     }
 
     /// Verify the log against `checkpoint`, or the newest stored one when
-    /// none is given: the whole chain, the checkpoint's proof, and that the
-    /// link at its sequence is the one it seals.
+    /// none is given: the whole chain, the checkpoint's proof, that the link
+    /// at its sequence is the one it seals, and the signature of every signed
+    /// link.
     ///
     /// A run that finds nothing moves the audit chain's verification cursor
     /// to the newest record, as a scheduled full pass does.
@@ -247,6 +258,7 @@ impl Checkpoints {
         if let Some(checkpoint) = &checkpoint {
             self.verify_checkpoint(checkpoint, &mut findings).await?;
         }
+        self.verify_link_signatures(&mut findings).await?;
         Ok(Verification {
             checkpoint,
             findings,
@@ -272,6 +284,37 @@ impl Checkpoints {
             findings.push(ChainFinding::CheckpointDigest { sequence });
         }
         Ok(())
+    }
+
+    /// The findings of every signed link whose signature does not verify.
+    async fn verify_link_signatures(
+        &self,
+        findings: &mut Vec<ChainFinding>,
+    ) -> Result<(), AccessLogError> {
+        let mut after = 0_i64;
+        loop {
+            let rows = sqlx::query(
+                "SELECT chain_seq, digest, signature FROM audit.access_log_record \
+                 WHERE signature IS NOT NULL AND chain_seq > $1 ORDER BY chain_seq LIMIT $2",
+            )
+            .bind(after)
+            .bind(SIGNATURE_PAGE)
+            .fetch_all(&mut *acquire(&self.pool).await?)
+            .await?;
+            let Some(last) = rows.last() else {
+                return Ok(());
+            };
+            after = last.try_get("chain_seq")?;
+            for row in &rows {
+                let digest: String = row.try_get("digest")?;
+                let signature: String = row.try_get("signature")?;
+                if !self.signed(digest.as_bytes(), &signature) {
+                    findings.push(ChainFinding::LinkSignature {
+                        sequence: row.try_get("chain_seq")?,
+                    });
+                }
+            }
+        }
     }
 }
 

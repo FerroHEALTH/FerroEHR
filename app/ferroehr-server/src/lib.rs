@@ -950,7 +950,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     );
     let access_log = access_log::build(&config, pools.audit.clone(), Arc::clone(&signer))?;
     // NOTE: our own design, the drain appends every access's entry through the checkpoints'
-    // store; no request has run before this.
+    // store, which signs links under an OpenPGP key; no request has run before this.
     if let Some(sender) = &audit_sender {
         let installed = sender.use_access_log(access_log.store().clone());
         tracing::debug!(

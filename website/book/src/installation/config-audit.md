@@ -249,10 +249,13 @@ spool, so a restart loses what the spool holds.
 |---|---|---|---|
 | `trusted_key_files` | list of paths | `[]` | Armored OpenPGP public certificates of the systems whose exported logs this deployment imports. An import is refused when neither these nor the keyring's own key signed its checkpoint. |
 
-Checkpoints need no key of this section. Whenever `[record.signing]` holds an
-OpenPGP key (`mode = "pgp"` with a `key_file`), the server seals the access
-log in a signed checkpoint every five minutes when it grew; without one it
-seals nothing. The key is the one `[record.signing]` configures for version
+Signing the access log needs no key of this section. Whenever
+`[record.signing]` holds an OpenPGP key (`mode = "pgp"` with a `key_file`),
+the server signs each link of the access log and seals it in a signed
+checkpoint every five minutes when it grew; without one it signs nothing.
+Use an Ed25519 key: a link is signed for every entry an access writes, and a
+signature costs about 13 µs with Ed25519 against 1.0 to 5.5 ms with RSA of
+2048 to 4096 bits. The key is the one `[record.signing]` configures for version
 signatures, with its retired certificates: one key per deployment, kept in
 the secret store its `key_file` and `key_passphrase_file` name. See the
 [audit page](../audit.md#checkpoints-and-the-transfer-of-a-log).

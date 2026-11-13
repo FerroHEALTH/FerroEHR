@@ -4,10 +4,10 @@
 //! The `[audit.access_log]` section: the systems whose exported logs this
 //! deployment accepts (#5129).
 //!
-//! Sealing the log needs no key of its own here: whenever the keyring
-//! (`[record.signing]` in `pgp` mode) holds an `OpenPGP` key the server seals
-//! the chain in signed checkpoints on a built-in schedule, and without one it
-//! seals nothing (#5562). No openEHR spec governs log signing or its
+//! Signing the log needs no key of its own here: whenever the keyring
+//! (`[record.signing]` in `pgp` mode) holds an `OpenPGP` key the server signs
+//! each link and seals the chain in signed checkpoints on a built-in
+//! schedule, and without one it signs nothing (#5562). No openEHR spec governs log signing or its
 //! configuration: our own design (`docs/plans/access-log.md` §Integrity).
 
 #![cfg_attr(
