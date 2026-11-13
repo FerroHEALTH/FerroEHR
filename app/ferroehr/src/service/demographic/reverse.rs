@@ -105,7 +105,9 @@ impl FerroEhrService {
                     namespace: "local".to_owned(),
                     r#type: "PARTY_RELATIONSHIP".to_owned(),
                     id: UidBasedId::HierObjectId(HierObjectId::from(row.source_vo_id.0)),
-                    path: Some(relationship_path(row)),
+                    // A standalone container is the relationship itself, so
+                    // the reference needs no path into it.
+                    path: (!row.standalone).then(|| relationship_path(row)),
                 }));
             let source = row.source_vo_id.to_string();
             if !out.sources.contains(&source) {
@@ -154,6 +156,7 @@ mod tests {
             position: 3,
             name_unique: unique.0,
             uid_unique: unique.1,
+            standalone: false,
         }
     }
 

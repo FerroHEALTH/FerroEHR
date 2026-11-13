@@ -10,6 +10,7 @@
 use ferroehr::config::auth_section::AuthConfig;
 use ferroehr::config::authz::RbacConfig;
 use ferroehr::config::rest::ApiConfig;
+use ferroehr::config::server::PublicRoot;
 use ferrohealth_server::section::ServerSection;
 use ferrohealth_smart::assurance::AssuranceSection;
 
@@ -23,6 +24,11 @@ pub struct AppConfig {
     /// `[server]` — the listener and the stack around the routes: the
     /// family's section.
     pub server: ServerSection,
+    /// The URL every route is reached at, `[server] public_base_url` with
+    /// `server.base_path`: the SMART discovery document's `baseUrl`, the SCIM
+    /// base URL and the base of a `DPoP` proof's `htu` hang off it. `None`
+    /// when the deployment names no public URL.
+    pub public_root: Option<PublicRoot>,
     /// `[api]` — the REST API, the System-Options identity and the ADMIN and
     /// terminology groups.
     pub api: ApiConfig,
@@ -57,7 +63,8 @@ impl From<&ferroehr::config::FerroEhrConfig> for AppConfig {
     /// The REST adapter's runtime view of the platform configuration tree.
     fn from(config: &ferroehr::config::FerroEhrConfig) -> Self {
         Self {
-            server: config.server.clone(),
+            server: config.server.shared.clone(),
+            public_root: config.server.public_root(),
             api: config.api.clone(),
             auth: config.auth.clone(),
             audit_organization_claim: config.authz.abac.organization_claim().map(str::to_owned),

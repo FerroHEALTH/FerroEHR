@@ -340,8 +340,8 @@ mod tests {
     #[test]
     fn the_server_defaults_are_the_products() {
         let (loaded, config) = assemble_from(None, &env(&[]), &[]).expect("zero-config load");
-        assert_eq!(config.server.listen.to_string(), "0.0.0.0:8080");
-        assert_eq!(config.server.body_limit_bytes(), 64 * 1024 * 1024);
+        assert_eq!(config.server.shared.listen.to_string(), "0.0.0.0:8080");
+        assert_eq!(config.server.shared.body_limit_bytes(), 64 * 1024 * 1024);
         assert_eq!(
             loaded.provenance().source("server.body_limit"),
             ferrohealth_config::provenance::Source::Default
@@ -360,12 +360,12 @@ mod tests {
         .expect("write");
         let (_, config) =
             assemble_from(Some(file.path()), &env(&[]), &[]).expect("a partial table loads");
-        assert_eq!(config.server.listen.to_string(), "10.0.0.5:9090");
+        assert_eq!(config.server.shared.listen.to_string(), "10.0.0.5:9090");
         assert_eq!(
-            config.server.request_timeout,
+            config.server.shared.request_timeout,
             ferrohealth_config::units::Duration::from_secs(5)
         );
-        assert_eq!(config.server.body_limit_bytes(), 64 * 1024 * 1024);
+        assert_eq!(config.server.shared.body_limit_bytes(), 64 * 1024 * 1024);
 
         let (_, config) = assemble_from(
             Some(file.path()),
@@ -373,7 +373,33 @@ mod tests {
             &[],
         )
         .expect("an override loads");
-        assert_eq!(config.server.body_limit_bytes(), 1_048_576);
+        assert_eq!(config.server.shared.body_limit_bytes(), 1_048_576);
+    }
+
+    /// `[server] public_base_url` is read from the environment beside the
+    /// family section's keys, and the public root keeps the mount path.
+    #[test]
+    fn the_public_base_url_maps_from_the_environment() {
+        let (_, config) = assemble_from(
+            None,
+            &env(&[
+                (
+                    "FERROEHR__SERVER__PUBLIC_BASE_URL",
+                    "https://gw.example/cdr",
+                ),
+                ("FERROEHR__SERVER__BASE_PATH", "/ehr"),
+            ]),
+            &[],
+        )
+        .expect("the public URL loads");
+        assert_eq!(
+            config
+                .server
+                .public_root()
+                .map(|root| root.to_string())
+                .as_deref(),
+            Some("https://gw.example/cdr/ehr")
+        );
     }
 
     /// An unknown key set from the environment names its full dotted path and

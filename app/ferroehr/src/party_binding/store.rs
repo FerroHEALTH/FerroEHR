@@ -142,7 +142,10 @@ pub(crate) async fn reindex_committed(
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
     if committed.kind == Kind::PartyRelationship {
-        return crate::party_binding::protect::check(tx, ctx.binding, committed, facts).await;
+        crate::party_binding::protect::check(tx, ctx.binding, committed, facts).await?;
+        let targets = facts.map_or(&[][..], |f| f.targets.as_slice());
+        party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
+        return Ok(());
     }
     if crate::versioning::committer::person_commits() {
         // NOTE: RM common master04 §Audit Details, PARTY_SELF names the record
@@ -215,8 +218,8 @@ pub(crate) async fn reindex_stored(
 /// What an import does after it lands the versions of `vo_id` of `kind`, on
 /// `tx`: marks a demographic object one of whose versions is a policy party
 /// ([`crate::party_binding::policy_mark::mark_stored`]), and brings a
-/// party's reverse-relationship index and side-table rows to its stored head
-/// ([`reindex_stored`]).
+/// demographic object's reverse-relationship index and a party's side-table
+/// rows to its stored head ([`reindex_stored`]).
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -229,7 +232,7 @@ pub(crate) async fn reindex_imported(
     if kind.is_demographic() {
         crate::party_binding::policy_mark::mark_stored(tx, Some(vo_id)).await?;
     }
-    if kind.is_party() {
+    if kind.is_demographic() {
         reindex_stored(tx, mapping, kind, vo_id).await?;
     }
     Ok(())

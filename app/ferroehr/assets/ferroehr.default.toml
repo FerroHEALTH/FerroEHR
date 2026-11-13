@@ -15,7 +15,7 @@
 #
 # What you must set
 #
-# This file lists 915 keys. A deployment that holds real data sets the 10
+# This file lists 913 keys. A deployment that holds real data sets the 10
 # below; every other key is optional and runs on the built-in default its line
 # shows, or stays unset where its note says so.
 #
@@ -52,7 +52,8 @@ spec_profile = "development"
 
 # The HTTP listener: the family's section (the listen address, the timeouts,
 # the body limit, the overload bound, the drain, TLS, the trusted proxies, the
-# caller rate and compression).
+# caller rate and compression) and the public base URL every public URL derives
+# from.
 [server]
 # The socket address the listener binds. Optional (infrastructure).
 listen = "0.0.0.0:8080"
@@ -99,6 +100,16 @@ forwarded_header = "forwarded"
 compression = true
 # The smallest response body that is compressed. Optional (infrastructure).
 compression_min_size = "1KiB"
+# The URL clients reach this listener at, through any proxy in front of it:
+# `https://cdr.example.com`, or with a path when a proxy serves the server
+# under one. Every public URL derives from it, after `server.base_path`: the
+# SMART discovery document's `baseUrl` (it, `base_path` and `api.base_path`),
+# every SCIM `meta.location` (it, `base_path` and `/scim/v2`) and the URL a
+# `DPoP` proof's `htu` is compared with (it, `base_path` and the request path,
+# RFC 9449 §4.3). An absolute `http(s)` URL with no userinfo, query or
+# fragment; required with `auth.smart.discovery`, `[auth.scim]` or
+# `[auth.dpop]`. Optional, unset by default (infrastructure).
+#? public_base_url = ""
 
 # The listener's TLS; unset, the listener speaks plain HTTP behind a proxy that
 # terminates TLS.
@@ -577,9 +588,6 @@ product_scope = ""
 # The `DPoP` proof check of the surface; absent for none, so a `DPoP` request
 # is refused as carrying no admitted credential.
 #? [auth.dpop]
-# The surface's base URL as its clients address it, which a proof's `htu` is
-# compared with, the request path appended; required. Optional (trust).
-#? external_url = ""
 # How long after its `iat` a proof is accepted, at most `300s`. Optional
 # (trust).
 #? max_age = "1min"
@@ -811,7 +819,9 @@ min_version = "1.3"
 # metadata of one `[auth]` issuer that serves a user launch: `[auth]
 # described_issuer`, else the one issuer that is not of kind `machines` and
 # whose metadata is available. Several such issuers and no `described_issuer`,
-# or none, refuse the start. Optional (infrastructure).
+# or none, refuse the start. master04 §Services makes every
+# `services.*.baseUrl` an "Absolute URL to the root of the API (required)", so
+# the document needs `[server] public_base_url`. Optional (infrastructure).
 discovery = false
 # The RFC 8414 §2 authorization-server metadata of the `[auth]` issuer it
 # names, whose key set is a `jwks_file` and carries none: a JSON document read
@@ -825,12 +835,6 @@ discovery = false
 # `/gateway/v1/.well-known/smart-configuration`. Optional, unset by default
 # (infrastructure).
 #? platform_base_url = ""
-# The server's externally reachable origin (scheme + host [+ port]), e.g.
-# `https://cdr.example.com`. master04 §Services makes every `services.*`
-# entry's `baseUrl` an "Absolute URL to the root of the API (required)", so the
-# document prefixes this origin onto the served base paths. Required when
-# `Self::discovery` is set. Optional, unset by default (infrastructure).
-#? public_base_url = ""
 # Episode context (master09 §Experimental: Episode Context), advertised only:
 # `episode_launch = true` adds `context-openehr-episode` to the document's
 # capabilities and applies no episode filtering (openEHR has no first-class
@@ -846,12 +850,6 @@ patient_issuers = []
 # The SCIM 2.0 service provider and its provisioning clients; absent,
 # `/scim/v2/` is not served.
 #? [auth.scim]
-# The externally reachable origin the SCIM base URL hangs off, such as
-# `https://cdr.example.com`; every `meta.location` and discovery document names
-# `<public_base_url>/scim/v2` (RFC 7643 §3.1: `location` is "The URI of the
-# resource being returned"). Required. Optional, unset by default
-# (infrastructure).
-#? public_base_url = ""
 # The most resources one list response returns (RFC 7643 §5, the
 # `ServiceProviderConfig` `filter.maxResults`). Optional.
 #? filter_max_results = 100

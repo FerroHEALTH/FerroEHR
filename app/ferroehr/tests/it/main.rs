@@ -119,6 +119,7 @@ mod service_branching;
 mod service_contribution;
 mod service_definition;
 mod service_demographic;
+mod service_demographic_refs;
 mod service_dump_load;
 mod service_ehr;
 mod service_ehr_access;

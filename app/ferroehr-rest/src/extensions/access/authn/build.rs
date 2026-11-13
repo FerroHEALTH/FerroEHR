@@ -89,7 +89,9 @@ impl Authenticator {
     /// and whose metadata is available. Every
     /// caller an issuer admits carries `patient_claim`, the live ABAC patient
     /// claim, as the `ferrohealth-smart` `PatientClaim`. The `DPoP` proof
-    /// check of `[auth.dpop]` records each accepted proof in `replay`, which
+    /// check of `[auth.dpop]` compares a proof's `htu` with the server's
+    /// public root (`[server] public_base_url` with `server.base_path`) and
+    /// the request path, and records each accepted proof in `replay`, which
     /// the server builds over the clinical pool every replica shares.
     ///
     /// With a party `source` and an `[[auth.party]]` table, every caller is
@@ -102,7 +104,8 @@ impl Authenticator {
     /// issuer or does not fit the issuer it names, a served document whose
     /// issuer `describe` refuses (an `[auth] described_issuer` that names no
     /// issuer the document can describe, or no `described_issuer` and several
-    /// or no issuers it can describe), a `patient_claim` that names no claim,
+    /// or no issuers it can describe), an `[auth.dpop]` table without a public
+    /// root, a `patient_claim` that names no claim,
     /// or a party binding the shared crate refuses or that has
     /// `[[auth.party]]` tables and no `source`.
     pub async fn new(
@@ -174,8 +177,12 @@ impl Authenticator {
             if !issuers.is_empty() {
                 gate = gate.with_bearer(Arc::new(issuers));
             }
-            if let Some(settings) = resolved.dpop {
-                let check = ProofCheck::new(settings, replay)
+            if let Some(dpop) = resolved.dpop {
+                let root = config.public_root.as_ref().ok_or_else(|| {
+                    "[auth.dpop] requires server.public_base_url, the URL a proof's htu names"
+                        .to_owned()
+                })?;
+                let check = ProofCheck::new(dpop.settings(root.url().clone()), replay)
                     .map_err(|e| format!("auth.dpop is refused: {e}"))?;
                 gate = gate.with_dpop(Arc::new(check));
             }

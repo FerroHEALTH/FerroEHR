@@ -147,8 +147,9 @@ export FERROEHR__AUTH__ISSUER__0__KIND=persons
 export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
 export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=my-smart-app
 export FERROEHR__AUTH__SMART__DISCOVERY=true
-# The external origin absolute service URLs are built from; required.
-export FERROEHR__AUTH__SMART__PUBLIC_BASE_URL=https://cdr.example.com
+# The URL clients reach the server at, which the absolute service URLs hang
+# off; required.
+export FERROEHR__SERVER__PUBLIC_BASE_URL=https://cdr.example.com
 ```
 
 A document looks like:
@@ -183,8 +184,9 @@ A document looks like:
 
 - **`services`** names the openEHR REST service; `org.fhir.rest` is never
   advertised, because FerroEHR serves no FHIR API for clinical data. Each
-  `baseUrl` is **absolute**, built by prefixing the CDR's own base path with
-  `public_base_url`, which is why that key is required.
+  `baseUrl` is **absolute**, built from
+  [`server.public_base_url`](installation/config-server.md#public_base_url-the-one-public-url),
+  `server.base_path` and `api.base_path`, which is why that key is required.
 - **`capabilities`** carries what the server enforces: `context-openehr-ehr`
   and `openehr-permission-v1` always, `permission-user`, and
   `permission-patient` only when `patient_issuers` binds an issuer; the client
@@ -213,7 +215,7 @@ The keys live in `[auth]` and `[auth.smart]`; see the
 | Key | Default | Meaning |
 |---|---|---|
 | `FERROEHR__AUTH__SMART__DISCOVERY` | `false` | Serve the discovery document. |
-| `FERROEHR__AUTH__SMART__PUBLIC_BASE_URL` | unset (**required when enabled**) | The external origin absolute `services.*.baseUrl` values are built from, e.g. `https://cdr.example.com`. |
+| `FERROEHR__SERVER__PUBLIC_BASE_URL` | unset (**required when enabled**) | The URL clients reach the server at, e.g. `https://cdr.example.com`: the absolute `services.*.baseUrl` values are it, `server.base_path` and `api.base_path`. |
 | `FERROEHR__AUTH__SMART__PLATFORM_BASE_URL` | unset | Base the discovery document hangs off. Unset = the REST root (`/ferroehr/rest`). A leading path is honoured (`/gateway/v1` → `/gateway/v1/.well-known/smart-configuration`). |
 | `FERROEHR__AUTH__SMART__PATIENT_ISSUERS` | `[]` | The issuers whose `patient/` grants count. |
 | `FERROEHR__AUTH__SMART__EPISODE_LAUNCH` | `false` | Advertise and accept episode launch context (experimental; advisory only, no episode filtering). |

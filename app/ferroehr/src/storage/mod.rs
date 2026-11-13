@@ -89,6 +89,7 @@ pub mod marks;
 pub mod node_repo;
 pub mod node_write;
 pub mod opt_out;
+pub mod party_heads;
 pub mod party_reverse;
 pub mod policy_register;
 pub mod promoted;

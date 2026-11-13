@@ -81,9 +81,11 @@ kind = "machines"
 audience = ["ferroehr-scim"]
 token_types = ["JWT"]
 
-[auth.scim]
+# The URL clients reach the server at, which every SCIM location names.
+[server]
 public_base_url = "https://sandbox.ferroehr.eu"
 
+[auth.scim]
 [[auth.scim.client]]
 issuer = "http://localhost:8180/sandbox"
 client_id = "sandbox-scim"
