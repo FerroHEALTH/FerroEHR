@@ -4,7 +4,8 @@
 //! The default definitions seeded at boot.
 //!
 //! The binary carries a default definition of each policy archetype
-//! ([`crate::party_binding::policy::DEFINITIONS`]) and the default
+//! ([`crate::party_binding::policy::DEFINITIONS`]), of the access policy
+//! archetype ([`crate::access_policy::DEFINITIONS`]) and the default
 //! demographic definitions the default party mapping names
 //! ([`crate::party_binding::shipped::DEFINITIONS`]). Every boot stores each
 //! one through the normal definition path when no definition of its id is
@@ -29,7 +30,8 @@ pub enum Seeded {
 }
 
 impl FerroEhrService {
-    /// Seeds the default definitions, the policy definitions first: stores
+    /// Seeds the default definitions, the policy and access policy
+    /// definitions first: stores
     /// each one whose id no stored definition holds, and keeps every stored
     /// one as it is.
     ///
@@ -39,6 +41,7 @@ impl FerroEhrService {
     pub async fn seed_default_definitions(&self) -> Result<Vec<Seeded>, ServiceError> {
         let definitions = crate::party_binding::policy::DEFINITIONS
             .iter()
+            .chain(&crate::access_policy::DEFINITIONS)
             .chain(&crate::party_binding::shipped::DEFINITIONS);
         let mut seeded = Vec::new();
         for (file, text) in definitions {

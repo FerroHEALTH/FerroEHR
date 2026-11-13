@@ -847,6 +847,324 @@
         }
       }
     },
+    "/ferroehr/rest/extensions/v1/admin/access_policy": {
+      "get": {
+        "tags": [
+          "admin-access-policy"
+        ],
+        "summary": "Read the access policy in force (`GET /admin/access_policy`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_access_policy_read",
+        "responses": {
+          "200": {
+            "description": "The newest `ACCESS_POLICY`, in canonical JSON. The weak `ETag` is its `OBJECT_VERSION_ID` and `Last-Modified` its commit time.",
+            "content": {
+              "application/json": {
+                "schema": {},
+                "example": {
+                  "_type": "ACCESS_POLICY",
+                  "name": {
+                    "_type": "DV_TEXT",
+                    "value": "Access policy"
+                  },
+                  "archetype_node_id": "openEHR-EHR-ACCESS_POLICY.controller.v1",
+                  "archetype_details": {
+                    "_type": "ARCHETYPED",
+                    "archetype_id": {
+                      "_type": "ARCHETYPE_ID",
+                      "value": "openEHR-EHR-ACCESS_POLICY.controller.v1"
+                    },
+                    "rm_version": "1.2.0"
+                  },
+                  "controller": {
+                    "_type": "PARTY_REF",
+                    "id": {
+                      "_type": "HIER_OBJECT_ID",
+                      "value": "8c2b2b2e-3c57-4a8e-9f0e-6a1b7f1e2d3c"
+                    },
+                    "namespace": "demographic",
+                    "type": "ORGANISATION"
+                  },
+                  "care_relationship_required": true,
+                  "purpose_required": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No access policy is committed; nothing is tightened.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin-access-policy"
+        ],
+        "summary": "Commit the next version of the access policy\n(`PUT /admin/access_policy`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_access_policy_write",
+        "parameters": [
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The `OBJECT_VERSION_ID` of the version this write replaces, as the read's `ETag` gave it.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "description": "`*` to create the first version.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The whole `ACCESS_POLICY` in canonical JSON, read strictly and checked against the invariants of the draft access control BMM.",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The new version, as a read answers it, with its `OBJECT_VERSION_ID` as the `ETag`. The next request on every replica runs under it.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "201": {
+            "description": "The first version, as a read answers it.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Neither `If-Match` nor `If-None-Match: *`, an `If-Match` that is no `OBJECT_VERSION_ID`, or a body refused whole: no canonical-JSON `ACCESS_POLICY`, a broken invariant of the draft BMM, a root that is no `ACCESS_POLICY` archetype root, or a controller that is no `ORGANISATION` or not the policy's. The version in force stays.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "`If-Match` names a version that is no longer the newest, or none is committed; or `If-None-Match: *` while one is.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not `application/json`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/access_policy/history": {
+      "get": {
+        "tags": [
+          "admin-access-policy"
+        ],
+        "summary": "Read every version of the access policy\n(`GET /admin/access_policy/history`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_access_policy_history",
+        "responses": {
+          "200": {
+            "description": "Every `ORIGINAL_VERSION` of the policy with its `contribution` and `commit_audit`, newest first; empty when none is committed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/access_policy/versioned": {
+      "get": {
+        "tags": [
+          "admin-access-policy"
+        ],
+        "summary": "Read the versioned access policy\n(`GET /admin/access_policy/versioned`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_access_policy_versioned",
+        "responses": {
+          "200": {
+            "description": "The `VERSIONED_ACCESS_POLICY`: its `uid`, the controller as `owner_id`, and `time_created`. The weak `ETag` is its `uid`.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No access policy is committed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ferroehr/rest/extensions/v1/admin/archive/ehrs": {
       "post": {
         "tags": [
@@ -26297,6 +26615,10 @@
     {
       "name": "message",
       "description": "EHR-Extract export and import. OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no message/extract API at all, so no released operation governs any route here; they carry the ordinary clinical authentication class, not the admin gate."
+    },
+    {
+      "name": "admin-access-policy",
+      "description": "The controller's ACCESS_POLICY of the draft access control package: read with its version uid as the ETag, committed whole as the next version in its own contribution over the version `If-Match` names (or created with `If-None-Match: *`), and listed by version, by `admin_role` only; a write also needs the `write_access_policy` grant. A change applies on the next request with no restart. OUR OWN EXTENSION: ITS-REST defines no resource for the access policy."
     },
     {
       "name": "admin-registers",

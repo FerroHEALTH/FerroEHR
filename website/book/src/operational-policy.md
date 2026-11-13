@@ -1743,3 +1743,29 @@ A floor that must hold before a register can be read stays configuration. With
 register refuses a map that classifies nothing (no template, no archetype and
 `shipped_map = false`) as the `no_category_map` gap, unless
 `deployment.accepts` names it.
+
+## The access policy
+
+The controller's access policy states what holds for every EHR this FerroEHR
+keeps: which kinds of data carry which sensitivity (`classifications`),
+whether a professional's clinical access needs a care relationship
+(`care_relationship_required`, with a `relationship_grace`) and a declared
+purpose (`purpose_required`), and the `catalogue` of named directives a
+patient can accept by reference, such as an IHE BPPC policy. It is an
+`ACCESS_POLICY` of FerroEHR's draft access control package, written against
+the default archetype `openEHR-EHR-ACCESS_POLICY.controller.v1`, which every
+boot stores, or against one of your own. Break-glass and the default floor
+stay in `ferroehr.toml`; the policy can only tighten them. Until you write
+one, nothing is tightened.
+
+- **Versioned.** Every write is a new version in its own contribution, with
+  you as committer; the history route lists them all.
+- **Whole, over a version.** Name the version you replace in `If-Match`, or
+  create the first with `If-None-Match: *`. A stale condition is `412`.
+- **Checked when written.** A body that is no canonical-JSON `ACCESS_POLICY`
+  or breaks an invariant of the draft model is refused whole with `400`.
+- **Effective without a restart**, as the registers above.
+
+The routes are on
+[Admin & messaging APIs](operations-admin-apis.md#the-access-policy). A write
+needs `admin_role` and a policy grant of `write_access_policy`.

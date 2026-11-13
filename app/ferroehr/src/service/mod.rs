@@ -227,6 +227,9 @@ pub struct FerroEhrService {
     /// its default in [`Self::new`] until [`Self::refresh_policy_registers`]
     /// reads the stored versions.
     pub(in crate::service) registers: Arc<crate::policy_register::LiveRegisters>,
+    /// The controller's `ACCESS_POLICY` in force, at no version in
+    /// [`Self::new`] until [`Self::read_access_policy`] reads the stored one.
+    pub(in crate::service) access_policy: Arc<crate::access_policy::LivePolicy>,
     /// Whether a category register that classifies nothing is refused: the
     /// `no_category_map` floor of a production deployment that audits and has
     /// not accepted the gap by name. `false` in [`Self::new`].
@@ -299,6 +302,9 @@ impl FerroEhrService {
             cohort: Arc::new(linkage::cohort::config::CohortConfig::default()),
             ehr_index: ehr_index::provider::EhrIndexProvider::Unconfigured,
             registers: Arc::new(crate::policy_register::LiveRegisters::new(
+                pools.clinical.clone(),
+            )),
+            access_policy: Arc::new(crate::access_policy::LivePolicy::new(
                 pools.clinical.clone(),
             )),
             require_category_map: false,

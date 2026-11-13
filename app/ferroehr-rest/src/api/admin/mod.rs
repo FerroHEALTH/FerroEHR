@@ -22,10 +22,12 @@
 //! `PERSON`'s binding key, and [`outbox`] the feed of
 //! commit events to the readers the `read_change_feed` grants name, and
 //! [`registers`] the operational-policy registers (the audit category map, the
-//! access delay and the Cedar policy set). Each carries its own
+//! access delay and the Cedar policy set), and [`access_policy`] the
+//! controller's versioned `ACCESS_POLICY`. Each carries its own
 //! spec-silence flag and register citation.
 
 pub mod access_delay;
+pub mod access_policy;
 pub mod access_repair;
 pub mod access_restriction;
 pub mod archive;

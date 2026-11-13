@@ -41,6 +41,10 @@
 //! - [`policy_register`] — the operational-policy admin registers (the audit
 //!   category map, the access delay and the Cedar policy set), versioned and
 //!   read on every request.
+//! - [`access_policy`] — the controller's `ACCESS_POLICY` in force, kept
+//!   fresh by `LISTEN`/`NOTIFY`.
+//! - [`draft_model`] — the RM extended by the draft packages, which archetypes
+//!   are validated against.
 //! - [`served_vocabulary`] — the deployment gap codes and OpenAPI family slugs
 //!   the server serves and the viewer names.
 
@@ -51,12 +55,14 @@ pub mod access_control_draft;
 pub mod access_control_invariants;
 pub mod access_log_draft;
 pub mod access_log_invariants;
+pub mod access_policy;
 pub mod aql;
 pub mod banner;
 pub mod config;
 pub mod db;
 pub mod decommission;
 pub mod draft_invariants;
+pub mod draft_model;
 pub mod error;
 pub mod extensions;
 pub mod identifier_protection;

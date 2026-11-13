@@ -23,6 +23,8 @@
 //! - [`policy_register`] — the operational-policy admin registers (the audit
 //!   category map, the access delay and the Cedar policy set); our own
 //!   extension.
+//! - [`access_policy`] — the controller's versioned `ACCESS_POLICY`; our own
+//!   extension.
 //! - [`opt_out`] — the EHDS Art. 10 opt-out from access through the access
 //!   services; our own extension.
 //! - `dump_load` — `export_ehrs` / `load_ehrs`.
@@ -48,6 +50,7 @@ mod dump_load;
 mod statistics;
 
 pub mod access_delay;
+pub mod access_policy;
 pub mod access_repair;
 pub mod integrity;
 pub mod marks;

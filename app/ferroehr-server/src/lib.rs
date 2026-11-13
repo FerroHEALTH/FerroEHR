@@ -67,6 +67,7 @@ use ferrohealth_telemetry::request_log::RequestLog;
 pub mod db_cmd;
 pub mod definitions;
 pub mod party_binding;
+pub mod policy;
 pub mod process;
 
 /// How long to wait for the audit queue to flush on shutdown.
@@ -1036,13 +1037,9 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     }
 
     let binding_lease = party_binding::prepare(&service, &config).await?;
-    // The policy registers in force before the listener takes traffic, and the
-    // retention register keyed on the category register in force.
-    service
-        .read_policy_registers()
-        .await
-        .context("reading the operational-policy registers")?;
-    service.policy_registers().listened().spawn_listener();
+    // The policy in force before the listeners take traffic, and the retention
+    // register keyed on the category register in force.
+    policy::read_and_listen(&service).await?;
     service
         .mirror_category_map()
         .await
