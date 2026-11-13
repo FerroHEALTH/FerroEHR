@@ -207,9 +207,6 @@ pub(crate) async fn reindex_stored(
     vo_id: VoId,
 ) -> Result<(), StorageError> {
     party_reverse::rebuild(tx, vo_id).await?;
-    if kind == Kind::PartyRelationship {
-        return Ok(());
-    }
     let mut heads = stored_heads(tx, mapping, kind, Some(&[vo_id.0]), None).await?;
     let Some(head) = heads.pop() else {
         return Ok(());
