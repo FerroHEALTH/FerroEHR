@@ -92,12 +92,6 @@ impl ImportRecord {
     /// civil date always has.
     pub fn by_operator(system_id: &str, today: jiff::civil::Date) -> Result<Self, AccessLogError> {
         let retain_until = today.saturating_add(jiff::Span::new().years(3));
-        let coded = |terminology: &str, value: &str| {
-            json!({ "_type": "DV_CODED_TEXT", "value": value,
-                    "defining_code": { "_type": "CODE_PHRASE",
-                        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
-                        "code_string": value } })
-        };
         let accessor = json!({ "_type": "ACCESSOR",
             "kind": coded("openehr", "system"),
             "party": { "_type": "PARTY_IDENTIFIED", "name": system_id } });
@@ -200,13 +194,21 @@ impl Checkpoints {
             links,
             checkpoint,
         };
+        self.verified(&export)?;
+        Ok(export)
+    }
+
+    /// Refuse `export` unless its span verifies against its checkpoint under
+    /// the keyring and the trusted certificates.
+    fn verified(&self, export: &LogExport) -> Result<(), TransferError> {
         let findings = chain::verify(export.span(), &|data, signature| {
             self.signed(data, signature)
         })?;
-        if !findings.is_empty() {
-            return Err(TransferError::Unverified(findings));
+        if findings.is_empty() {
+            Ok(())
+        } else {
+            Err(TransferError::Unverified(findings))
         }
-        Ok(export)
     }
 
     /// Import the access log `export` of an EHR moved from another system,
@@ -244,12 +246,7 @@ impl Checkpoints {
                 });
             }
         }
-        let findings = chain::verify(export.span(), &|data, signature| {
-            self.signed(data, signature)
-        })?;
-        if !findings.is_empty() {
-            return Err(TransferError::Unverified(findings));
-        }
+        self.verified(export)?;
         let entry = import_entry(self.system_id(), &export.ehr_id, record)?;
         let mut conn = acquire(self.pool()).await.map_err(AccessLogError::from)?;
         let mut tx = conn.begin().await.map_err(AccessLogError::from)?;
@@ -359,25 +356,28 @@ async fn store_records(
     Ok(())
 }
 
+/// A term of `terminology` whose code and rubric are `value`, in its ITS-JSON
+/// form.
+fn coded(terminology: &str, value: &str) -> serde_json::Value {
+    json!({ "_type": "DV_CODED_TEXT", "value": value,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
+                "code_string": value } })
+}
+
 /// The entry of this system's log that records the import of `ehr_id`'s log.
 fn import_entry(
     system_id: &str,
     ehr_id: &str,
     record: ImportRecord,
 ) -> Result<AccessLogEntry, AccessLogError> {
-    let coded = |value: &str, terminology: &str| {
-        json!({ "_type": "DV_CODED_TEXT", "value": value,
-                "defining_code": { "_type": "CODE_PHRASE",
-                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
-                    "code_string": value } })
-    };
     let mut entry = json!({
         "_type": "ACCESS_LOG_ENTRY",
         "uid": { "_type": "HIER_OBJECT_ID", "value": uuid::Uuid::now_v7().to_string() },
         "system_id": system_id,
         "time_recorded": { "_type": "DV_DATE_TIME", "value": jiff::Timestamp::now().to_string() },
-        "action": coded("import", "openehr"),
-        "outcome": { "_type": "ACCESS_OUTCOME", "result": coded("granted", "openehr") },
+        "action": coded("openehr", "import"),
+        "outcome": { "_type": "ACCESS_OUTCOME", "result": coded("openehr", "granted") },
         "accessor": serde_json::to_value(&record.accessor).map_err(AccessLogError::Canonical)?,
         "ehr_id": { "_type": "HIER_OBJECT_ID", "value": ehr_id },
         "is_emergency": false,
