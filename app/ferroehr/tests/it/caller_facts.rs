@@ -17,7 +17,6 @@ use serde_json::{Value, json};
 
 use crate::fixtures::{if_match, object};
 use crate::policy_fixtures::{capability, create, granted, granting, of_client};
-use ferroehr::access_terminology::ForeignCode;
 use ferroehr::error::ServiceError;
 use ferroehr::ids::VoId;
 use ferroehr::party_binding::grants::capabilities::with_capabilities;
@@ -26,6 +25,7 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
+use openehr_rm::draft::access_control::terminology::ForeignCode;
 
 /// The HL7 v3 `ActCode` sensitivity terminology id.
 const ACT_CODE: &str = "2.16.840.1.113883.5.25";

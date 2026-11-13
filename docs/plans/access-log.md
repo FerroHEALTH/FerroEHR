@@ -26,7 +26,8 @@ follows):
 - the draft model as a BMM 2.4 schema that includes `openehr_rm_1.2.0`, in
   the P_BMM JSON form of the vendored schemas, lives outside this tree at
   `tools/openehr-codegen/draft/bmm/openehr_access_log_0.1.0.bmm.json`, the
-  generator's input for `app/ferroehr`'s `access_log_draft` module (#5124);
+  generator's input for `openehr-rm`'s `draft::access_log` module (#5124,
+  #5540);
   on submission it goes to the RM repository's `computable/BMM/`.
 
 The tree goes with this plan when the last implementation issue lands

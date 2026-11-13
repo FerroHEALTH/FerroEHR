@@ -599,9 +599,16 @@ pub(crate) fn external_index(
         let dep_spec = generation_spec(dep_comp, dep.generation)?;
         let (dep_units, _) = generation_units(dep_spec)?;
         let mut modules = BTreeMap::new();
+        // A draft emitted into the dependency's own crate names it `crate`.
+        let own = (dep_comp.crate_name == crate_name)
+            .then(|| format!("{}::", dep_comp.crate_name.replace('-', "_")));
         for unit in &dep_units {
             for s in emittable_specs(&unit.model, &unit.schema) {
                 let path = generation_module_path(dep_comp, dep.generation, &unit.schema, &s);
+                let path = match own.as_deref().and_then(|p| path.strip_prefix(p)) {
+                    Some(rest) => format!("crate::{rest}"),
+                    None => path,
+                };
                 modules.insert(s, path);
             }
         }

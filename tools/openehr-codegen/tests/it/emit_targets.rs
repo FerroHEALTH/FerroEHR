@@ -761,6 +761,14 @@ fn rustfmt_tree(target: &str, files: &BTreeMap<String, String>) -> BTreeMap<Stri
         let krate = path.split('/').next().unwrap_or_default();
         by_crate.entry(krate).or_default().push(full);
     }
+    // `emit` formats on disk, where a crate's `draft` subtree (`emit-drafts`
+    // output, outside this target) answers the `mod draft;` rustfmt follows.
+    for krate in by_crate.keys() {
+        copy_tree(
+            &crates_root().join(krate).join("src/draft"),
+            &scratch.join(krate).join("src/draft"),
+        );
+    }
     for (krate, paths) in &by_crate {
         let status = Command::new("rustfmt")
             .args(["--edition", "2024", "--quiet"])
@@ -782,6 +790,28 @@ fn rustfmt_tree(target: &str, files: &BTreeMap<String, String>) -> BTreeMap<Stri
 }
 
 // ── helpers ─────────────────────────────────────────────────────────────────
+
+/// Copy the tree at `from` to `to`, if `from` exists.
+#[expect(
+    clippy::panic,
+    reason = "test diagnostics: a scratch copy that fails names the path"
+)]
+fn copy_tree(from: &Path, to: &Path) {
+    let Ok(entries) = std::fs::read_dir(from) else {
+        return;
+    };
+    std::fs::create_dir_all(to).unwrap_or_else(|e| panic!("cannot create {}: {e}", to.display()));
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let target = to.join(entry.file_name());
+        if path.is_dir() {
+            copy_tree(&path, &target);
+        } else {
+            std::fs::copy(&path, &target)
+                .unwrap_or_else(|e| panic!("cannot copy {}: {e}", path.display()));
+        }
+    }
+}
 
 /// The workspace `crates/` directory every emitted path is relative to.
 fn crates_root() -> PathBuf {

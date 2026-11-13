@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The `emit-drafts` subcommand: write the files `render::emit_drafts` renders
-//! into each draft's application module, after wiping the module's previously
-//! generated files.
+//! into the `draft` module of each receiving openEHR crate, after wiping that
+//! module's previously generated files, and declare the hand-written modules
+//! beside them.
 
-use crate::cli::{remove_generated_files, rustfmt, write_emitted};
-use crate::plan::drafts::DRAFTS;
-use crate::render::emit_drafts::{module_dir, render_draft_files, workspace_root};
+use crate::cli::{rustfmt, write_emitted};
+use crate::generated_tree::{declare_hand_written_modules, remove_generated_files};
+use crate::render::emit_drafts::{draft_roots, render_draft_files, workspace_root};
 
 /// Regenerate every draft module of `plan::drafts::DRAFTS`.
 ///
@@ -17,14 +18,19 @@ use crate::render::emit_drafts::{module_dir, render_draft_files, workspace_root}
 pub(crate) fn cmd_emit_drafts() -> Result<(), Box<dyn std::error::Error>> {
     let files = render_draft_files()?;
     let root = workspace_root();
-    for draft in DRAFTS {
-        let dir = root.join(module_dir(draft));
+    let roots: Vec<_> = draft_roots().into_iter().map(|r| root.join(r)).collect();
+    for dir in &roots {
         if dir.exists() {
-            remove_generated_files(&dir)?;
+            remove_generated_files(dir)?;
         }
     }
-    let written = write_emitted(&root, &files)?;
+    let mut written = write_emitted(&root, &files)?;
+    for dir in &roots {
+        declare_hand_written_modules(dir, "mod.rs", None, &mut written)?;
+    }
+    written.sort();
+    written.dedup();
     rustfmt(&written)?;
-    println!("emitted {} draft files", written.len());
+    println!("emitted {} draft files", files.len());
     Ok(())
 }

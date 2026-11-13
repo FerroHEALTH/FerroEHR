@@ -18,14 +18,23 @@ use sha2::{Digest, Sha256};
 use sqlx::{AssertSqlSafe, Connection, PgConnection, PgPool, Row};
 
 use ferroehr::access_log::store::{AccessLogStore, canonical_form};
-use ferroehr::access_log_draft::access_log::access_log_entry::AccessLogEntry;
-use ferroehr::access_log_draft::access_log::access_log_record::AccessLogRecord;
 use ferroehr::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
 use ferroehr::system_log::store::{AuditStore, VerifyScope};
+use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
+use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
+
+/// The example entry of the access-log proposal, the fixture the draft's own
+/// tests in `openehr-rm` read.
+fn example() -> Value {
+    serde_json::from_str(include_str!(
+        "../../../../crates/openehr-rm/tests/fixtures/draft/access_log_entry.json"
+    ))
+    .expect("the example entry fixture is JSON")
+}
 
 /// The proposal's example entry with the uid and EHR of number `n`.
 fn entry(n: u32) -> AccessLogEntry {
-    let mut value = crate::access_log_draft::example();
+    let mut value = example();
     value["uid"]["value"] = json!(format!("0193f1a2-7c1e-7b4a-9f00-{n:012x}"));
     value["ehr_id"]["value"] = json!(format!("7d44b88c-4199-4bad-97dc-{n:012x}"));
     serde_json::from_value(value).expect("the example entry reads")
@@ -418,7 +427,7 @@ async fn the_table_admits_the_tombstone_replacement_and_nothing_else() {
         "uid": { "_type": "HIER_OBJECT_ID", "value": "0193f1a2-7c1e-7b4a-9f00-0000000000aa" },
         "system_id": first.system_id,
         "time_recorded": { "_type": "DV_DATE_TIME", "value": "2026-11-07T09:14:03.120Z" },
-        "link": crate::access_log_draft::example()["link"],
+        "link": example()["link"],
         "time_removed": { "_type": "DV_DATE_TIME", "value": "2031-11-08T00:00:00Z" },
         "grounds": [{ "_type": "DV_CODED_TEXT", "value": "retention period ended",
             "defining_code": { "terminology_id": { "value": "local" }, "code_string": "expired" } }]
