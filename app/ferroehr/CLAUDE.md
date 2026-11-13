@@ -8,7 +8,10 @@ change proposals, no openEHR release), with the canonical-JSON serde the spec
 crates get. Never hand-edit them: change the draft BMM or the emitter and
 regenerate (`codegen-drift` checks them). Their class invariants are
 hand-written in `access_log_invariants` and `access_control_invariants`, over
-the shared report of `draft_invariants`. `access_control_draft` re-emits the
+the shared report of `draft_invariants`; `access_control_invariants` reads
+every coded attribute through `access_terminology`, the access control
+groups of `ferroehr-operations` and the only codes the access evaluator and
+write checks read. `access_control_draft` re-emits the
 RM polymorphic parents its `LOCATABLE` and `VERSIONED_OBJECT` subtypes join
 (`LOCATABLE`, `VERSIONED_OBJECT` and the EHR Extract classes that hold a
 `LOCATABLE`), and its `open_seam` converts `ACCESS_DIRECTIVE_SETTINGS` to and
@@ -150,6 +153,13 @@ module.**
   exactly): syslog frames through its `Spool` and `Forwarder`, the FHIR Feed
   through a `Forwarder` over the store's `Outbox` (`feed.rs`). Never re-implement what those crates hold: a
   missing field or shape is a FerroAUDIT issue, not local code.
+- **Access log** (`src/access_log/`, #5121): `store` keeps each draft
+  `ACCESS_LOG_ENTRY` in `audit.access_log_record` as its RFC 8785 canonical
+  form without its link; the insert trigger gives it its `ACCESS_LOG_LINK` in
+  the chain `audit_event` shares and derives the search columns from it, and
+  an entry changes only by its replacement with its own tombstone. Never
+  compute a link outside the trigger, and never write a search column: both
+  are read from the content.
 - **Consume `openehr-*` types directly** — never re-model the RM or re-serialize;
   canonical JSON/XML goes through `openehr-its`.
 - DB tests take their database from the shared harness — `testkit::db()`

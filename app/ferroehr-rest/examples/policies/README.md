@@ -30,8 +30,8 @@ a decision over subject and resource attributes in NIST SP 800-162's sense:
   `permit`.
 - Multi-valued attributes (contribution/query template sets, query patient sets)
   are fanned out by the engine as a cartesian product with **all-must-permit**;
-  a request that touches nothing asks nothing and so is not denied. This matches
-  the remote PDP exactly, which the differential test pins.
+  a request that touches nothing asks nothing and so is not denied, which the
+  corpus test in `tests/it/authz_cedar_engine.rs` pins.
 - A policy that **cannot be evaluated is not a decision.** Unsafe optional-
   attribute reads are refused at load by schema validation; anything that still
   errors at evaluation (arithmetic overflow, say) surfaces as a fail-closed
