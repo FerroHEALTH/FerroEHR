@@ -710,8 +710,7 @@ config:
   auth:
     enabled: true
 
-  # [authz] — coarse RBAC (on with auth) + ABAC (off).
-  authz:
+  # [authz] — coarse RBAC (on with auth) + ABAC (off). Under config.authz:
     # The party binding. `provider` (issuer and id, in NL the URA) is required
     # once auth admits a credential: every access record of a bound person and
     # every version a person commits name it (EHDS Art. 13(4), Annex II 3.2(a)).
