@@ -23,9 +23,11 @@ follows):
   recording, integrity and retention, terminology, ITS-REST resources, AQL,
   and the appendix with the conformance points and the amendment record);
 - `antora/modules/ROOT/partials/`: the class partials, rendered from the BMM;
-- `antora/computable/BMM/openehr_access_log_0.1.0.bmm.json`: the draft model
-  as a BMM 2.4 schema that includes `openehr_rm_1.2.0`, in the P_BMM JSON
-  form of the vendored schemas under `tools/openehr-codegen/vendor/bmm/`.
+- the draft model as a BMM 2.4 schema that includes `openehr_rm_1.2.0`, in
+  the P_BMM JSON form of the vendored schemas, lives outside this tree at
+  `tools/openehr-codegen/draft/bmm/openehr_access_log_0.1.0.bmm.json`, the
+  generator's input for `app/ferroehr`'s `access_log_draft` module (#5124);
+  on submission it goes to the RM repository's `computable/BMM/`.
 
 The tree goes with this plan when the last implementation issue lands
 (`docs/plans/README.md`). The specification text is the part that outlives
@@ -232,7 +234,7 @@ serves the reads. Nothing in the model assumes one process.
 ## The model
 
 The BMM is
-`docs/plans/access-log/antora/computable/BMM/openehr_access_log_0.1.0.bmm.json`,
+`tools/openehr-codegen/draft/bmm/openehr_access_log_0.1.0.bmm.json`,
 and the specification pages define every attribute. The two class diagrams
 below carry every attribute of the BMM with its type and multiplicity; an
 attribute whose type is a class is drawn as an association, with the
@@ -1030,7 +1032,7 @@ the design.
 touches (the openEHR Jira projects by component):
 
 - **SPECRM:** the new `org.openehr.rm.access_log` package and its classes,
-  with the BMM in `antora/computable/BMM/` as its computable form.
+  with the BMM in `tools/openehr-codegen/draft/bmm/` as its computable form.
 - **SPECTERM:** the groups `access action`, `access outcome`, `accessor
   kind`, `access authorisation` and `access refusal reason`, and the group
   id constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`.

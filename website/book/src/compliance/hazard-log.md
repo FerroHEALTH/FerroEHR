@@ -309,8 +309,8 @@ retrieval scoped to one patient.
 **Effect:** the information EHDS Art. 9 gives a patient cannot be produced.
 
 **Control:** ITI-81 `GET /fhir/r4/AuditEvent` searches the log by patient,
-agent, action and date, and a configured subject audit role reads one
-subject's records and nothing else. EHDS Art. 9(2) has the information
+agent, action and date, and a caller holding a `read_subject_audit` grant in
+the CDR reads one subject's records and nothing else. EHDS Art. 9(2) has the information
 provided "through electronic health data access services", which the Member
 States establish (Art. 4(1)); FerroEHR serves the log to such a service and
 has no patient-facing interface of its own. Where a deployment turns on the
@@ -322,7 +322,7 @@ controller feeds and carry those records unfiltered.
 
 **Shown by:** `app/ferroehr-rest/tests/it/audit_iti81.rs`:
 `searchset_bundle_with_filters_and_paging`,
-`the_subject_audit_role_reads_one_subjects_log_and_nothing_else`,
+`a_subject_audit_grant_reads_one_subjects_log_and_nothing_else`,
 `rbac_gates_the_audit_surface_to_admins`;
 `app/ferroehr-rest/tests/it/access_delay_trail.rs`:
 `a_record_about_a_held_composition_appears_in_the_persons_trail_at_release`,
@@ -332,8 +332,9 @@ controller feeds and carry those records unfiltered.
 `the_fhir_feed_carries_a_record_about_a_held_composition`,
 `the_event_stream_carries_the_commit_of_a_held_composition`.
 
-**Remains:** the subject audit role is unset by default, so the log is
-admin-only until the deployment configures it. A deployment that passes a
+**Remains:** `[authz.grants] allowed` does not allow `read_subject_audit` by
+default, so the log is admin-only until the deployment allows it and grants
+it to the service that serves the person. A deployment that passes a
 controller feed to the person shows them the records about a held composition
 before its release.
 

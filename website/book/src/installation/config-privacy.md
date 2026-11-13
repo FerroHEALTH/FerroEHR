@@ -425,10 +425,10 @@ Four properties worth knowing before you enable it:
 - **Nothing resolves an identifier to a party.** The server offers no lookup
   from an identifier value to the party that holds it. The keyed digest keeps a
   value live for at most one party at a time.
-- **Reading a value back is audited and needs its own role.**
+- **Reading a value back is audited and needs its own grant.**
   `GET /ferroehr/rest/extensions/v1/admin/party/identifiers` serves a party version with its values
-  put back, for a caller holding both the admin role and
-  `authz.rbac.identifier_reader_role`, and records each scheme it expands
+  put back, for a caller holding both the admin role and a `read_identifiers`
+  grant in the CDR, and records each scheme it expands
   ([reading a party's protected identifiers](../operations-admin-apis.md#reading-a-partys-protected-identifiers)).
 - **The key is load-bearing and rotation is a re-encryption.** The runbook is in
   [Operations](../operations.md#rotating-the-national-identifier-key).

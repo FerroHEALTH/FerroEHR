@@ -441,10 +441,10 @@
         },
         "responses": {
           "204": {
-            "description": "The opt-out is recorded. A caller holding one of `authz.rbac.access_service_roles` then reads the EHR as absent at every route, query and export, unless it declares an emergency purpose and acts for no person (EHDS Art. 10(2)); every other caller reads it as before."
+            "description": "The opt-out is recorded. A caller holding an `access_service` grant in the CDR then reads the EHR as absent at every route, query and export, unless it declares an emergency purpose and acts for no person (EHDS Art. 10(2)); every other caller reads it as before."
           },
           "400": {
-            "description": "The body is not the object above, or the deployment declares no access-service caller (`authz.rbac.access_service_roles` is empty).",
+            "description": "The body is not the object above, or `authz.grants.allowed` does not allow `access_service`, so no caller can be an access service.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2195,7 +2195,7 @@
             }
           },
           "403": {
-            "description": "Not in the Admin class, or holding neither `authz.rbac.identifier_reader_role` (unset: nobody holds it) nor a policy grant of `read_identifiers`.",
+            "description": "Not in the Admin class, or holding no policy grant of `read_identifiers`.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -7032,7 +7032,7 @@
           {
             "name": "patient",
             "in": "query",
-            "description": "The recorded patient (EHR subject) id. Required for a caller holding `authz.rbac.subject_audit_role`, which reads the log for one subject at a time.",
+            "description": "The recorded patient (EHR subject) id. Required for a caller whose access comes from a `read_subject_audit` grant, which reads the log for one subject at a time.",
             "required": false,
             "schema": {
               "type": "string"
@@ -7109,7 +7109,7 @@
             }
           },
           "403": {
-            "description": "Caller lacks the admin role, or holds only the subject-scoped audit role and named no `patient` (OperationOutcome).",
+            "description": "Caller lacks the admin role, or holds only a `read_subject_audit` grant and named no `patient` (OperationOutcome).",
             "content": {
               "application/fhir+json": {}
             }
@@ -26284,7 +26284,7 @@
     },
     {
       "name": "admin-identifiers",
-      "description": "The audited read of a party's protected national identifiers: a party version with the identifiers `[privacy.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and `authz.rbac.identifier_reader_role`, and every read is an access record naming the reader, the party and the scheme, never the value."
+      "description": "The audited read of a party's protected national identifiers: a party version with the identifiers `[privacy.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and a `read_identifiers` grant in the CDR, and every read is an access record naming the reader, the party and the scheme, never the value."
     },
     {
       "name": "admin-marks",

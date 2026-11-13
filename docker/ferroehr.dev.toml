@@ -137,11 +137,6 @@ password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl
 scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
 roles = ["READONLY"]
 
-# The healthcare provider the dev lanes act for (an example id under the OID
-# arc 2.999), and the binding key of each Basic user.
-[authz.rbac]
-import_role = "IMPORTER"
-
 # The operations the party store may grant: beside a system client's commit,
 # the SCIM provisioning each lane's client is granted in the CDR before it
 # provisions (scripts/scim-provision.sh) and the change feed a lane may grant
@@ -149,6 +144,8 @@ import_role = "IMPORTER"
 [authz.grants]
 allowed = ["commit_composition", "read_change_feed", "scim_provision"]
 
+# The healthcare provider the dev lanes act for (an example id under the OID
+# arc 2.999), and the binding key of each Basic user.
 [authz.party_binding]
 provider = { issuer = "urn:oid:2.999.7.9", id = "dev" }
 

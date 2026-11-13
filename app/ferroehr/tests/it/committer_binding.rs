@@ -400,12 +400,19 @@ async fn a_patient_commits_no_demographic_version() {
 }
 
 #[tokio::test]
-async fn an_import_needs_the_role_and_refuses_a_local_login_from_an_untrusted_system() {
+async fn an_import_needs_a_grant_and_refuses_a_local_login_from_an_untrusted_system() {
     let (_source_db, source) = crate::fixtures::service().await;
     let source = source.with_system_id("legacy.example");
     let (_target_db, target) = crate::fixtures::service().await;
     let target = crate::policy_fixtures::granting(target).await;
-    let ehr = crate::fixtures::create_ehr(&source).await;
+    // NOTE: an import grant reaches only an EHR whose subject names a namespace,
+    // which FerroEHR's own extract rewrites to `local`.
+    let subject = ferroehr::service::ehr_index::types::SubjectRef {
+        id: "pt-1".to_owned(),
+        namespace: "nl.legacy-his.patients".to_owned(),
+        r#type: "PERSON".to_owned(),
+    };
+    let ehr = crate::fixtures::create_ehr_subject(&source, &subject).await;
     let local_login = json!({ "_type": "PARTY_IDENTIFIED", "name": "bob",
         "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": "bob", "type": "basic" }] });
     let mut stated = WriteRequest::new(crate::typed_body::typed(&composition("from elsewhere")));
@@ -422,11 +429,8 @@ async fn an_import_needs_the_role_and_refuses_a_local_login_from_an_untrusted_sy
     let extract: openehr_rm::prelude::Extract =
         openehr_its::json::from_canonical_value(&extracts[0]).expect("an EXTRACT");
 
-    let strict = target.with_import_policy(ImportPolicy::new(
-        Some("IMPORTER".to_owned()),
-        vec![ISSUER.to_owned()],
-    ));
-    // A caller without the import role is refused.
+    let strict = target.with_import_policy(ImportPolicy::new(vec![ISSUER.to_owned()]));
+    // A caller holding no import grant is refused, whatever role it names.
     let clinician = CommitterIdentity {
         subject: "clinician".to_owned(),
         id_type: "basic",
@@ -441,19 +445,29 @@ async fn an_import_needs_the_role_and_refuses_a_local_login_from_an_untrusted_sy
         external: None,
     };
     let refused = ferroehr::system_log::access_context::with_roles(
-        vec!["USER".to_owned()],
+        vec!["USER".to_owned(), "IMPORTER".to_owned()],
         with_committer(
             Some(clinician.clone()),
             Box::pin(strict.import_ehr(None, extract.clone())),
         ),
     )
     .await
-    .expect_err("no import role");
+    .expect_err("no import grant");
     assert!(matches!(refused.flattened(), ServiceError::Forbidden(_)));
-    // With the role, a wrapped committer carrying a login of this deployment
-    // from an untrusted system is refused.
-    let refused = ferroehr::system_log::access_context::with_roles(
-        vec!["IMPORTER".to_owned()],
+    // Under an import grant that vouches for no system, a wrapped committer
+    // carrying a login of this deployment from an untrusted system is refused.
+    granted(
+        &strict,
+        "importer",
+        &[capability(
+            "import_ehr",
+            &[scope("subject_namespace", "local")],
+        )],
+    )
+    .await;
+    let refused = as_client(
+        &strict,
+        "importer",
         with_committer(
             Some(clinician.clone()),
             Box::pin(strict.import_ehr(None, extract.clone())),
@@ -461,7 +475,14 @@ async fn an_import_needs_the_role_and_refuses_a_local_login_from_an_untrusted_sy
     )
     .await
     .expect_err("a local login from an untrusted system");
-    assert!(matches!(refused.flattened(), ServiceError::Forbidden(_)));
+    let refused = refused.flattened();
+    assert!(matches!(refused, ServiceError::Forbidden(_)));
+    assert!(
+        refused
+            .to_string()
+            .contains("wrapped AUDIT_DETAILS.committer"),
+        "{refused}"
+    );
     // A grant that vouches for the source system on another operation, or
     // vouches for this node itself, trusts nothing for an EHR import.
     let source_system = source_system_id(&extracts[0]);
@@ -484,12 +505,9 @@ async fn an_import_needs_the_role_and_refuses_a_local_login_from_an_untrusted_sy
     let refused = as_client(
         &strict,
         "extract-importer",
-        ferroehr::system_log::access_context::with_roles(
-            vec!["IMPORTER".to_owned()],
-            with_committer(
-                Some(clinician.clone()),
-                Box::pin(strict.import_ehr(None, extract.clone())),
-            ),
+        with_committer(
+            Some(clinician.clone()),
+            Box::pin(strict.import_ehr(None, extract.clone())),
         ),
     )
     .await
@@ -512,10 +530,7 @@ async fn an_import_needs_the_role_and_refuses_a_local_login_from_an_untrusted_sy
     as_client(
         &strict,
         "migrator",
-        ferroehr::system_log::access_context::with_roles(
-            vec!["IMPORTER".to_owned()],
-            with_committer(Some(clinician), Box::pin(strict.import_ehr(None, extract))),
-        ),
+        with_committer(Some(clinician), Box::pin(strict.import_ehr(None, extract))),
     )
     .await
     .expect("a vouched-for system's import lands");

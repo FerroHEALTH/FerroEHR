@@ -393,16 +393,18 @@ natural person", even after an opt-out. No openEHR specification governs this;
 it is our own design.
 
 FerroEHR ships the software part: a mark on the whole EHR that the callers you
-declare as the access services read as absent. Whether the right exists, how
+grant as the access services read as absent. Whether the right exists, how
 the person exercises it, and the rules and safeguards of Art. 10(2) are your
 Member State's law and yours to apply. Where the Member State enforces the
 opt-out in its own services, leave the mark unused.
 
-- **Declaring the access services.** `authz.rbac.access_service_roles` lists
-  the roles your Art. 4 access service (the person's) and your Art. 12 health
-  professional access service carry in their tokens or Basic users. It is
-  empty by default, so the opt-out holds for nobody, and recording one is
-  refused with **400**.
+- **Granting the access services.** Your Art. 4 access service (the
+  person's) and your Art. 12 health professional access service each hold an
+  `access_service` grant in the CDR: a capability of a `ROLE` their `ACTOR`
+  or `PERSON` performs ([Operational policy](operational-policy.md#what-the-grants-decide)).
+  `[authz.grants] allowed` does not allow `access_service` by default, so the
+  opt-out holds for nobody, and recording one is refused with **400**. A role
+  a token names grants nothing here.
 - **Recording and reversing it.** The controller records the opt-out on the
   person's instruction with
   `POST /ferroehr/rest/extensions/v1/admin/access-opt-out` and reverses it with
@@ -410,14 +412,14 @@ opt-out in its own services, leave the mark unused.
   ([the routes](operations-admin-apis.md#legal-marks-restriction-objection-and-retention)).
   A reversal keeps the row in the register with its reversal time, and stays
   open whatever the configuration, so an opt-out can always be reversed.
-- **What an access service sees.** A request from a caller holding one of the
-  declared roles reads the EHR as absent: a route that names the EHR or an
+- **What an access service sees.** A request from a caller holding an
+  `access_service` grant reads the EHR as absent: a route that names the EHR or an
   object in it answers **404** as for an unknown EHR, a population query leaves
   its data out, a query scoped to it answers as for an unknown EHR, an export
   and the lookup by subject find no such EHR, and a write to it is refused as a
   write to an unknown EHR.
 - **What it does not change.** Every other caller reads the record as before:
-  your own care, through callers that hold none of the declared roles, and the
+  your own care, through callers that hold no `access_service` grant, and the
   controller's admin routes. Nothing is deleted. It is not the Art. 8
   restriction above, which reaches every professional route and leaves the
   person's own access open.
@@ -434,8 +436,8 @@ opt-out in its own services, leave the mark unused.
   administrator.
 
 ```toml
-[authz.rbac]
-access_service_roles = ["EHDS-ACCESS-SERVICE"]
+[authz.grants]
+allowed = ["commit_composition", "access_service"]
 
 [audit]
 purpose_codes = ["TREAT", "ETREAT"]
@@ -578,8 +580,7 @@ Admin operation) and `READONLY` (`readonly_role`, refused on every write).
 | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE` | `ADMIN` | role required for admin operations |
 | `FERROEHR__AUTHZ__RBAC__READONLY_ROLE` | `READONLY` | role marking a principal read-only: refused on every write |
 | `FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS` | `["roles","groups","entitlements"]` | JWT claim paths mined for roles, per issuer; a Keycloak issuer adds `realm_access.roles` |
-| `FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS` | empty | the `persons` issuers whose role claims may grant the administrator, emergency, import and identifier-reader roles; a token of any other issuer never holds them |
-| `FERROEHR__AUTHZ__RBAC__SUBJECT_AUDIT_ROLE` | unset | role that reads the access log for ONE subject at a time (`GET /fhir/r4/AuditEvent` with `patient` required). Unset, that log stays admin-only. See [Audit trail](audit.md#getting-the-log-out) |
+| `FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS` | empty | the `persons` issuers whose role claims may grant the administrator and emergency roles; a token of any other issuer never holds them |
 
 Roles come from the JWT claims listed in `ROLE_CLAIMS`, or from a Basic user's
 configured roles. The defaults are the carriers
