@@ -95,10 +95,11 @@ fn with_model_constraint(constraint: &[&str]) -> Archetype {
 
 /// The first object of the first attribute, descending one level.
 fn first_child(attrs: Option<&mut [CAttribute]>) -> &mut CObject {
-    &mut attrs.unwrap_or_default()[0]
-        .children
-        .as_deref_mut()
-        .unwrap_or_default()[0]
+    attrs
+        .and_then(<[CAttribute]>::first_mut)
+        .and_then(|attr| attr.children.as_deref_mut())
+        .and_then(<[CObject]>::first_mut)
+        .expect("the fixture nests one object under one attribute")
 }
 
 /// The `C_STRING` under `ELEMENT.value` / `DV_TEXT.value`.
