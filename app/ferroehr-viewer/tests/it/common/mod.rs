@@ -909,7 +909,16 @@ impl Element {
     }
 
     /// Scroll it to the middle of the viewport, clear of the sticky top bar
-    /// and the docked decision bar.
+    /// and the docked decision bar, and wait for the browser to draw it
+    /// there.
+    ///
+    /// A popover form is a modal dialog placed against its trigger by CSS
+    /// anchor positioning, and the browser moves it with a scrolled anchor
+    /// only at its next rendering update (CSS Anchor Positioning, "Taking
+    /// Scroll Into Account"). Until then its controls still report their
+    /// place before the scroll, and a click aimed there lands outside the
+    /// dialog, which closes it as a press outside does and posts nothing
+    /// (#5503). The second animation frame starts after that update.
     ///
     /// # Panics
     /// When the `WebDriver` answers with anything but success.
@@ -921,7 +930,12 @@ impl Element {
         element_command(&format!("scroll_to_centre({})", self.what), async {
             self.inner
                 .handle()
-                .execute("arguments[0].scrollIntoView({block: 'center'});", vec![arg])
+                .execute_async(
+                    "const done = arguments[arguments.length - 1]; \
+                     arguments[0].scrollIntoView({block: 'center'}); \
+                     requestAnimationFrame(() => requestAnimationFrame(() => done()));",
+                    vec![arg],
+                )
                 .await
                 .map(|_| ())
         })
