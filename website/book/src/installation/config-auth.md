@@ -564,11 +564,11 @@ creates persons, make the name attributes administrator-controlled, as the key
 is; [Enterprise identity providers](../identity-providers.md#just-in-time-creation)
 shows the settings per identity provider.
 
-### `[authz.import]` and `[[authz.system_client]]`
+### `[[authz.system_client]]`
 
-`[authz.import] trusted_systems` lists the `creating_system_id` values whose
-wrapped committers may name a local party on import; this node's own
-`[api] system_id` is refused.
+The systems whose wrapped committers an import may carry are no key: a
+`creating_system` element of the importer's import grant names each one
+([What the grants decide](../operational-policy.md#what-the-grants-decide)).
 
 Each OAuth client-credentials client that commits is declared in one
 `[[authz.system_client]]` table, keyed by `issuer` (a `machines` or `persons`
@@ -717,14 +717,20 @@ by default.
 | `contact_erasure_delay` | duration | `"0s"` | How long after a User's deletion the contacts of every version of its `PERSON` are erased (GDPR Art. 17). `"0s"` erases them in the deletion itself; at most `"30d"`. |
 | `max_group_members` | integer | `5000` | The most members one Group holds. An add past it is **400** `invalidValue`. A membership change versions only the member's `PERSON`, so its cost does not grow with the Group. At least 1. |
 
-Each `[[auth.scim.client]]` table declares one provisioning client:
-
-| Key | Description |
-|---|---|
-| `issuer` | The issuer of the client's access tokens: your own authorization server, an `[[auth.issuer]]` of kind `machines`. FerroEHR issues no tokens. |
-| `client_id` | The client the token names (`client_id`, failing that `azp`). |
-| `scope` | The one scope a token of the client must hold. SMART on openEHR defines none for SCIM, so the value is yours to choose. |
-| `binding_issuer` | The identifier issuer of the binding keys the client provisions: the `identifier_issuer` of an `[[auth.party]]` table. Each User belongs to the one client whose `binding_issuer` issues its key, so no two clients share one. |
+Who provisions is CDR data, read on every request: a provisioning client is
+an OAuth client-credentials client of your own authorization server (an
+`[[auth.issuer]]` of kind `machines`) whose `ACTOR` holds a `scim_provision`
+grant in force. The grant's `binding_issuer` is the identifier issuer of the
+binding keys the client provisions, the `identifier_issuer` of an
+`[[auth.party]]` table, and its `token_scope` the scope a token of the client
+must hold; SMART on openEHR defines none for SCIM, so the value is yours to
+choose. Each User belongs to the one client whose `binding_issuer` issues its
+key, so no two clients' grants name one. `[authz.grants] allowed` must admit
+`scim_provision`. The first such grant is written with
+[`ferroehr party-binding grant`](../operational-policy.md#the-first-grant),
+since no administrator can log in before the persons it provisions exist;
+[Operational policy](../operational-policy.md#what-the-grants-decide) has the
+grant's terms.
 
 Every `meta.location` and discovery document names the resource by its URI
 (RFC 7643 §3.1), under `<public_base_url>/scim/v2` with
@@ -732,35 +738,33 @@ Every `meta.location` and discovery document names the resource by its URI
 and `server.base_path`, so the table needs that key.
 
 The table's presence turns the endpoint on; it has no `enabled` key, and
-setting one refuses the start. The start is refused when the table is present without
-`server.public_base_url` or without a client, and for a client that misses a key, is declared twice,
-shares a `binding_issuer`, names an issuer that is not of kind `machines`, or
-names a `binding_issuer` no `[[auth.party]]` table carries. It is refused too
-when the [party mapping](#authzparty_binding) lacks what a User is written
-with: a default person template with a `user_name` selector, and
-`[authz.party_binding.professional_role]`.
+setting one refuses the start. The start is refused when the table is present
+without `server.public_base_url`, and when the [party mapping](#authzparty_binding)
+lacks what a User is written with: a default person template with a
+`user_name` selector, and `[authz.party_binding.professional_role]`.
 
 ```toml
 [server]
 public_base_url = "https://cdr.example.com"
 
 [auth.scim]
-[[auth.scim.client]]
-issuer = "https://as.example.com"
-client_id = "entra-provisioning"
-scope = "ferroehr/scim"
-binding_issuer = "urn:example:staff-login"
+
+[authz.grants]
+allowed = ["commit_composition", "scim_provision"]
 ```
 
 `/scim/v2/ServiceProviderConfig` answers without a token, so a client can read
 the authentication scheme before it holds one. Every other path needs a
-bearer token of a declared client that acts for nobody and holds its `scope`:
+bearer token of a client that acts for nobody and holds a `scim_provision`
+grant in force:
 
 - no token, or one that does not verify, is **401** with
   `WWW-Authenticate: Bearer`;
-- a person's token, a client no table declares, and a token without the
-  scope are **403**, the last with `WWW-Authenticate: Bearer
-  error="insufficient_scope"` (RFC 6750 §3.1).
+- a person's token, a client with no grant in force, a grant whose
+  `binding_issuer` no `[[auth.party]]` table issues or another client's grant
+  names too, and a token without the grant's `token_scope` are **403**, the
+  last with `WWW-Authenticate: Bearer error="insufficient_scope"` (RFC 6750
+  §3.1).
 
 Every refusal is an RFC 7644 §3.12 `Error` message in `application/scim+json`.
 The client's requests count against
@@ -853,7 +857,8 @@ serve no attribution, so FerroEHR erases them (GDPR Art. 5(1)(e)): with
 `auth.scim.contact_erasure_delay = 0` the deletion removes the `contacts` of every
 version of the `PERSON` in the same transaction, and with a period a sweep
 that runs every minute removes them once the period has passed. The sweep
-reaches every deleted `PERSON` whose binding key a `[[auth.scim.client]]` issues,
+reaches every deleted `PERSON` whose binding key the `binding_issuer` of a
+`scim_provision` grant issues, one that has ended included,
 an administrator's demographic `DELETE` included. Each version keeps its uid,
 audit and contribution, and its node rows are derived again from the erased
 body. A server signature on such a version is removed, because it was taken
@@ -953,10 +958,12 @@ it, so the steps split between the two.
    its `type`. FerroEHR holds one value per `type` and no preference among
    them, so `/scim/v2/Schemas` declares `primary` read-only and the `primary`
    Entra sends is ignored (RFC 7644 §3.3).
-2. **Declare the client.** Add a `[[auth.scim.client]]` whose `issuer` is your
-   authorization server, an `[[auth.issuer]]` of kind `machines`, and whose
-   `binding_issuer` is the `identifier_issuer` of the `[[auth.party]]` your
-   professionals log in through. Set `server.public_base_url` to the URL
+2. **Grant the client.** Grant its client `scim_provision`, with `ferroehr
+   party-binding grant` or as an administrator through the Demographic API:
+   the `--issuer` is your authorization server, an `[[auth.issuer]]` of kind
+   `machines`, the `binding_issuer` element the `identifier_issuer` of the
+   `[[auth.party]]` your professionals log in through, and the `token_scope`
+   element the scope its token holds. Set `server.public_base_url` to the URL
    Entra reaches. In the Helm chart, a `config.auth.scim` value also adds the
    `/scim/v2` path to the Ingress. `ferroehr config check` refuses a mapping
    the endpoint cannot serve.
@@ -975,7 +982,7 @@ it, so the steps split between the two.
      service.
    - [ ] `uti` is cached for the lifetime of the assertion, and an assertion
      whose `uti` was seen before is refused as a replay.
-   - [ ] The access token it issues holds the client's `scope`, names the
+   - [ ] The access token it issues holds the grant's `token_scope`, names the
      client in `client_id`, and lives between 1 and 6 hours, the range
      Microsoft's guide asks for.
 

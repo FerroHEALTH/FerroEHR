@@ -229,18 +229,20 @@ compose_up() {
 }
 
 # Binds every login the catalogue authenticates as to a demographic PERSON,
-# through the SCIM clients of docker/ferroehr.dev.toml and docker/sut-smart.yml:
-# the three Basic users, and the subject the runner mints SMART tokens for
+# through the SCIM clients the server grants scim_provision first: one for the
+# three Basic users of docker/ferroehr.dev.toml, and one for the subject the
+# runner mints SMART tokens for under docker/sut-smart.yml
 # (docs/conformance/party/ferroehr/ixit.json `scoped_tokens.mint`). Each is the
 # instrument's own login, so its PERSON carries the name the catalogue states
 # as its committer (`name: Veredictum`), and the server's committer names it.
 provision() {
   local origin="http://localhost:${FERROEHR_PORT:-8080}"
+  local grant="${COMPOSE[*]} exec -T ferroehr ferroehr"
   echo "==> Provisioning the catalogue's logins through /scim/v2/Users"
-  bash "$REPO_ROOT/scripts/scim-provision.sh" "$origin" basic-users --name Veredictum \
-    ferroehr ferroehr-admin ferroehr-readonly
-  bash "$REPO_ROOT/scripts/scim-provision.sh" "$origin" cnf-smart --name Veredictum \
-    cnf-smart-app
+  (cd "$REPO_ROOT" && SCIM_GRANT="$grant" bash scripts/scim-provision.sh "$origin" basic-users \
+    urn:ferroehr:basic-user --name Veredictum ferroehr ferroehr-admin ferroehr-readonly)
+  (cd "$REPO_ROOT" && SCIM_GRANT="$grant" bash scripts/scim-provision.sh "$origin" cnf-smart \
+    urn:ferroehr:cnf-smart-login --name Veredictum cnf-smart-app)
 }
 
 # Writes the JUnit, CTRF and Markdown views beside the results in $1.

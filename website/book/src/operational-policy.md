@@ -16,8 +16,10 @@ access, is openEHR demographic data in the party store: the
 with every change a version with its committer. Policy that has no home in
 the openEHR demographic model is an [admin register](#the-admin-registers).
 FerroEHR stores, validates and protects the policy parties, and every
-request resolves its caller's grants from them before any check runs
-([Which checks read a grant](#which-checks-read-a-grant)).
+request resolves its caller's grants from them before any check runs. The
+checks that decide on a grant are listed under
+[What the grants decide](#what-the-grants-decide) and
+[Which checks read a grant](#which-checks-read-a-grant).
 
 No openEHR specification governs operational policy or where it is kept, and
 none gives a party an authorization meaning. The classes are the openEHR
@@ -199,6 +201,9 @@ client identifier type are the stable contract.
 | `read_subject_audit` | Read the access log of one subject |
 | `access_service` | Act as an EHDS Article 10 access service, held to a subject's opt-out |
 | `read_identifiers` | Read a party's protected national identifiers |
+| `data_origin` | Be an origin of data: the grant's `origin` is the id the party's data carry |
+| `read_change_feed` | Read the commit-event outbox as the reader the grant's `reader` names |
+| `scim_provision` | Provision Users and Groups over SCIM, owning the binding keys of the grant's `binding_issuer` |
 | `hold_roles` | Hold, as a Basic user, the roles its `role` elements name |
 | `hold_scopes` | Hold, as a Basic user, the SMART scopes its `scope` elements name |
 | `create_at_login` | Create a provisional `PERSON` at the first login of a person no party carries, under the admission conditions the grant names ([Just-in-time admission](#just-in-time-admission)) |
@@ -215,6 +220,11 @@ in the element's `name`:
 | `template` | A template the grant writes |
 | `facility` | A facility the grant covers, an element or a `CLUSTER` |
 | `subject_namespace` | The `EHR_STATUS.subject.external_ref.namespace` of the EHRs it touches |
+| `creating_system` | On an import grant: a `creating_system_id` whose wrapped committers the import may carry |
+| `origin` | On `data_origin`: the origin id, exactly one |
+| `reader` | On `read_change_feed`: the reader's name, exactly one, matching `^[a-z][a-z0-9-]{0,62}$` |
+| `binding_issuer` | On `scim_provision`: the `identifier_issuer` of the binding keys the client owns, exactly one |
+| `token_scope` | On `scim_provision`: a scope the client's access token must hold, at least one |
 | `acts_for` | On a `PARTY_RELATIONSHIP`: the source acts for the target |
 | `role` | A `DV_TEXT`: a role a `hold_roles` grant gives |
 | `scope` | A `DV_TEXT`: a SMART scope a `hold_scopes` grant gives |
@@ -230,7 +240,11 @@ terminology ([Federation agreements](#federation-agreements)), and the value of
 an element any of these codes names is that element's value, never an
 operation. A code of another terminology grants nothing, and a code of
 `ferroehr-operations` that no table defines is refused at commit.
-A capability that codes several operations grants each of them.
+A capability that codes several operations grants each of them. A scope
+element holds a `DV_TEXT`, a `DV_CODED_TEXT` or a `DV_IDENTIFIER`, whose `id`
+is read. A `ROLE` whose `data_origin`, `read_change_feed` or `scim_provision`
+capability names its element other than as the table says is refused with
+`400` at its commit.
 
 **Who acts.** A client is any `ACTOR` (`AGENT`, `PERSON`, `ORGANISATION` or
 `GROUP`) that carries, anywhere in its `details` or `identities`, a
@@ -266,6 +280,105 @@ and the database cannot answer, the request is answered `503`.
 
 `ferroehr party-binding refill` rebuilds the grants from the party versions,
 with the rest of the binding side table.
+
+### What the grants decide
+
+Each check below reads the grants in force on the request, so a change an
+administrator commits decides the next request on every replica with no
+restart. Each operation must also be in `[authz.grants] allowed`.
+
+**The committers an import may carry.** An `IMPORTED_VERSION` keeps the
+original's `commit_audit`, so an import could make a version read as a local
+colleague's act. A wrapped committer naming a party of this CDR, or carrying a
+login of its issuers, is refused with `403` unless the version's
+`creating_system_id` is one a `creating_system` element of the caller's
+`import_ehr` grant (for `POST /ehr` with an extract) or `import_ehr_extract`
+grant (for an extract import into an existing EHR) names. This node's own
+system id is never trusted that way.
+
+**The origins of data** (EHDS Annex II 3.4). An origin is recognised when a
+`data_origin` grant in force names it in its `origin` element: a retention
+period may be keyed on it (`PUT {ext}/admin/retention/policy`), and an ABAC
+rule may name it. A body with no `FEEDER_AUDIT`, committed by the holder of
+such a grant, is stamped with that origin in `version.origins`; any other
+direct commit keeps this server's `system_id`. A system that only sends data
+through a feed, and never commits itself, holds the grant on an `AGENT` of
+its own with no client identifier. A committer whose grants name two origins
+commits no body without a `FEEDER_AUDIT` (`403`), since that body would come
+from neither.
+
+**The readers of the change feed.** A reader of the commit-event outbox is
+named by the `reader` element of a `read_change_feed` grant in force. While
+one is, every commit writes its outbox row; with none, no commit does. The
+reader registry is reconciled with the grants at boot, on every feed call and
+before every prune, so a reader no grant names any more is inactive and holds
+the prune back no longer. `GET {ext}/admin/outbox/{reader}` and its
+acknowledgement answer `404` for a reader no grant names, and `403` to a caller
+whose own `read_change_feed` grant does not name it.
+
+**The SCIM provisioning clients.** A request to `/scim/v2/` is admitted for a
+client-credentials token whose client's `ACTOR` holds a `scim_provision` grant
+in force. Its `binding_issuer` is the `identifier_issuer` of an
+`[[auth.party]]` table that no other client's grant names, and the token must
+hold one of its `token_scope` values (`403` with `insufficient_scope`
+otherwise). The client owns the Users whose binding key that issuer issues.
+The contacts of a deleted User are erased for every client that ever held the
+grant, so ending a grant stops no erasure.
+
+A capability of each, on a `ROLE` of your own archetype with no template (the
+element names carry the codes):
+
+```json
+{ "_type": "CAPABILITY", "archetype_node_id": "at0020",
+  "name": { "_type": "DV_TEXT", "value": "Provisioning" },
+  "credentials": { "_type": "ITEM_TREE", "archetype_node_id": "at0021",
+    "name": { "_type": "DV_TEXT", "value": "Terms" },
+    "items": [
+      { "_type": "ELEMENT", "archetype_node_id": "at0022",
+        "name": { "_type": "DV_TEXT", "value": "Operation" },
+        "value": { "_type": "DV_CODED_TEXT", "value": "scim_provision",
+          "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+            "code_string": "scim_provision" } } },
+      { "_type": "ELEMENT", "archetype_node_id": "at0023",
+        "name": { "_type": "DV_CODED_TEXT", "value": "binding_issuer",
+          "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+            "code_string": "binding_issuer" } },
+        "value": { "_type": "DV_TEXT", "value": "urn:example:login" } },
+      { "_type": "ELEMENT", "archetype_node_id": "at0024",
+        "name": { "_type": "DV_CODED_TEXT", "value": "token_scope",
+          "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+            "code_string": "token_scope" } },
+        "value": { "_type": "DV_TEXT", "value": "ferroehr/scim" } }
+    ] } }
+```
+
+A change-feed reader's capability codes `read_change_feed` with a `reader`
+element (`ferrobridge`), an origin's codes `data_origin` with an `origin`
+element (`lab.example`), and an importer's `import_ehr` grant adds a
+`creating_system` element (`legacy.example`) for each system it vouches for.
+
+### The first grant
+
+An administrator is a person bound to a `PERSON`, and the `PERSON`s of a new
+deployment usually arrive through a SCIM client, which itself needs a
+`scim_provision` grant. `ferroehr party-binding grant` breaks that circle on
+the operator's authority: it commits, through the same path a Demographic
+API write takes, an `AGENT` carrying the client identifier (unless an `ACTOR`
+names the client already) and a `ROLE` it performs whose capability grants
+the operation with the elements given. The commits carry the server's own
+committer, the ceiling and the element rules apply, and a client that holds
+the operation already gets nothing, so it runs again safely:
+
+```console
+ferroehr party-binding grant --issuer https://login.example.org/machines \
+  --client-id entra-provisioning --operation scim_provision \
+  --element binding_issuer=urn:example:login --element token_scope=ferroehr/scim
+```
+
+Every later grant is an administrator's write through the Demographic API.
 
 ### The grant ceiling
 
@@ -1265,6 +1378,18 @@ design:
   `roles` list need not name the `ROLE`.
 - **Break-glass stays in the configuration**, so emergency access works when
   the party store does not answer.
+- **Trust in imported committers is the importer's.** The RM keeps an
+  imported version's audit as received (`IMPORTED_VERSION`); which systems'
+  committers may name a local party is a scope of the importer's grant.
+- **An origin is a party's grant.** RM `FEEDER_AUDIT_DETAILS.system_id` names
+  where data came from as free text; which ids a deployment recognises, and
+  which origin a direct commit takes, is the `data_origin` grant.
+- **The change feed and SCIM are grants.** No openEHR spec defines a change
+  feed or SCIM provisioning, so who reads the one and who provisions through
+  the other is FerroEHR's own reading of a capability.
+- **The first grant is the operator's.** `ferroehr party-binding grant`
+  commits it offline with the server's own committer, since no
+  administrator can log in before the persons a provisioning client creates.
 - **A `create_at_login` grant admits logins by its credentials, whoever
   performs its `ROLE`,** and must declare a condition: the RM and the
   Demographic API say nothing about creating a party at a login.

@@ -159,6 +159,15 @@ impl LiveGrants {
         &self.listened
     }
 
+    /// Read the copy again in a detached task whenever a notification marks
+    /// it stale, and at least every `every` while the listener is down, so a
+    /// commit of a request that resolves no caller, or of no request at all,
+    /// decides under the grants in force (whether it writes its outbox row)
+    /// without a read on its own path.
+    pub fn spawn_refresher(self: &Arc<Self>, every: std::time::Duration) {
+        tokio::spawn(refresher(Arc::clone(self), every));
+    }
+
     /// The revision this replica holds; `None` before its first read.
     #[must_use]
     pub fn revision(&self) -> Option<i64> {
@@ -380,6 +389,81 @@ impl LiveGrants {
             .filter_map(|row| Admission::read(Credentials::of(row.credentials.as_ref())).ok())
             .filter(|admission| admission.names(issuer))
             .collect()
+    }
+}
+
+impl LiveGrants {
+    /// Every grant of `operation` in force at `now`, of any performer, with
+    /// its performer, from the copy held: what a store-wide reading such as
+    /// the registered origins or the change-feed readers ranges over. A
+    /// performer that is a client `ACTOR` in a state that holds no grant
+    /// holds none here either.
+    #[must_use]
+    pub fn all_in_force(&self, operation: Operation, now: jiff::Timestamp) -> Vec<(Uuid, Grant)> {
+        let held = self.held();
+        let ceiling = self.ceiling();
+        let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
+        let silenced: std::collections::BTreeSet<Uuid> = held
+            .clients
+            .values()
+            .filter(|client| !client.state.grants())
+            .map(|client| client.party)
+            .collect();
+        held.capabilities
+            .iter()
+            .filter(|(performer, _)| !silenced.contains(performer))
+            .flat_map(|(performer, rows)| rows.iter().map(move |row| (*performer, row)))
+            .filter(|(_, row)| in_force(row, &ceiling, today, now) == Some(operation))
+            .map(|(performer, row)| {
+                (
+                    performer,
+                    Grant::new(
+                        operation,
+                        row.role_id,
+                        row.credentials.clone().map(Arc::new),
+                    ),
+                )
+            })
+            .collect()
+    }
+
+    /// Every stored grant of `operation`, of any performer, whether or not it
+    /// is in force or above the ceiling: what must still be honoured once a
+    /// grant has ended, such as the erasure of the contacts of the Users a
+    /// former SCIM client deleted.
+    #[must_use]
+    pub fn all_stored(&self, operation: Operation) -> Vec<Grant> {
+        self.held()
+            .capabilities
+            .values()
+            .flatten()
+            .filter(|row| Operation::of(&row.operation) == Some(operation))
+            .map(|row| {
+                Grant::new(
+                    operation,
+                    row.role_id,
+                    row.credentials.clone().map(Arc::new),
+                )
+            })
+            .collect()
+    }
+}
+
+/// The refresher loop of [`LiveGrants::spawn_refresher`].
+#[expect(
+    clippy::infinite_loop,
+    reason = "a detached task that lives as long as the runtime"
+)]
+async fn refresher(grants: Arc<LiveGrants>, every: std::time::Duration) {
+    loop {
+        let seen = grants.listened.notifications();
+        let _notified = grants.listened.notified_after(seen, every).await;
+        if let Err(error) = grants.refresh_if_stale().await {
+            tracing::warn!(
+                error = %crate::error::ErrorChain::new(&error),
+                "the policy grants could not be read; the next notification reads them again"
+            );
+        }
     }
 }
 

@@ -119,11 +119,8 @@ services:
       # A person is refused until a demographic party carries their login, so
       # the realm's four users are provisioned through SCIM under that
       # identifier issuer by the ferroehr-provision-keycloak one-shot below,
-      # with a second client of the development issuer.
-      FERROEHR__AUTH__SCIM__CLIENT__1__ISSUER: http://localhost:8180/quickstart
-      FERROEHR__AUTH__SCIM__CLIENT__1__CLIENT_ID: quickstart-scim-keycloak
-      FERROEHR__AUTH__SCIM__CLIENT__1__SCOPE: ferroehr/scim
-      FERROEHR__AUTH__SCIM__CLIENT__1__BINDING_ISSUER: urn:ferroehr:keycloak-quickstart-login
+      # as a second client of the development issuer, which the
+      # ferroehr-grant-keycloak one-shot grants scim_provision in the CDR.
       # The development CA, trusted for the issuer's metadata and key set
       # beside the platform roots (`[auth.tls] trust_roots_file`) on every platform. It
       # needs a 5.5.0 or later image: 5.4.2 refuses the key.
@@ -138,8 +135,8 @@ services:
       # The realm's service client's system/aql-* grant counts only for a
       # client the CDR grants query_system_wide (SMART on openEHR §Resource
       # Scopes): ferroehr-provision-keycloak writes its AGENT and ROLE, and the
-      # ceiling admits the operation.
-      FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,query_system_wide
+      # ceiling admits the operation beside the SCIM clients' scim_provision.
+      FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,query_system_wide,scim_provision
       # The service client is declared as a system client, the only way a
       # caller acting for no person commits into an EHR. It writes no
       # COMPOSITION here (no `writes`), so it creates EHRs and reads; the
@@ -171,6 +168,42 @@ services:
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 
+  # Grants the `quickstart-scim-keycloak` client scim_provision in the CDR
+  # for the realm's identifier issuer, on the operator's authority, as the
+  # base file's ferroehr-grant does for the Basic user's client.
+  ferroehr-grant-keycloak:
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:main}
+    network_mode: service:identity-issuer
+    depends_on:
+      ferroehr:
+        condition: service_healthy
+    environment:
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
+      FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
+      FERROEHR__USAGE_REPORT__ENABLED: "false"
+    configs:
+      - source: ferroehr-config${FERROEHR_EHR_INDEX:+-${FERROEHR_EHR_INDEX}}
+        target: /etc/ferroehr/ferroehr.toml
+    command:
+      - party-binding
+      - grant
+      - --issuer
+      - http://localhost:8180/quickstart
+      - --client-id
+      - quickstart-scim-keycloak
+      - --operation
+      - scim_provision
+      - --element
+      - binding_issuer=urn:ferroehr:keycloak-quickstart-login
+      - --element
+      - token_scope=ferroehr/scim
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+
   # Provisions the realm's four users as professional PERSONs through
   # FerroEHR's SCIM endpoint (RFC 7644 §3.3), as the base file's
   # ferroehr-provision does for the Basic user: each User's loginIdentifier is
@@ -188,6 +221,8 @@ services:
     depends_on:
       ferroehr:
         condition: service_healthy
+      ferroehr-grant-keycloak:
+        condition: service_completed_successfully
       ferroehr-provision:
         condition: service_healthy
     entrypoint:

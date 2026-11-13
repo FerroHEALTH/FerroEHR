@@ -455,7 +455,7 @@ impl FerroEhrService {
         tx: &mut PgConnection,
         erased: &[EhrId],
     ) -> Result<(), ServiceError> {
-        if !self.outbox_enabled {
+        if !self.outbox_written() {
             return Ok(());
         }
         for &ehr_id in erased {
@@ -496,7 +496,7 @@ impl FerroEhrService {
         party_kind: Option<&str>,
         erased: &[VoId],
     ) -> Result<(), ServiceError> {
-        if !self.outbox_enabled {
+        if !self.outbox_written() {
             return Ok(());
         }
         let versions: Vec<serde_json::Value> = erased

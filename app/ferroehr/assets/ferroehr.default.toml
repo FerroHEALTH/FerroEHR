@@ -15,7 +15,7 @@
 #
 # What you must set
 #
-# This file lists 886 keys. A deployment that holds real data sets the 10
+# This file lists 878 keys. A deployment that holds real data sets the 10
 # below; every other key is optional and runs on the built-in default its line
 # shows, or stays unset where its note says so.
 #
@@ -869,24 +869,8 @@ patient_issuers = []
 # storage. Optional.
 #? max_group_members = 5000
 
-# The provisioning clients.
-#? [[auth.scim.client]]
-# The issuer of the client's access tokens: the deployment's own authorization
-# server, an `[auth.issuer]` of kind `machines`. It renders with any userinfo
-# masked. Optional (trust).
-#? issuer = ""
-# The client the token names (`client_id`, failing that `azp`). Optional
-# (trust).
-#? client_id = ""
-# The scope a token of the client must hold. Optional (trust).
-#? scope = ""
-# The identifier issuer of the binding keys the client provisions, the
-# `identifier_issuer` of an `[auth.party]` table; no two clients share one.
-# Optional (trust).
-#? binding_issuer = ""
-
-# RBAC, ABAC, assurance, the party binding, the system clients, the grant
-# ceiling and the registered origins.
+# RBAC, ABAC, assurance, the party binding, the system clients and the grant
+# ceiling.
 [authz]
 
 # Role-based access control.
@@ -1485,12 +1469,6 @@ provisional_report_after = "30d"
 # condition matches is read from. Optional (trust).
 #? idp_claim = "idp"
 
-# The systems whose imported committers are trusted (`[authz.import]`).
-[authz.import]
-# The `creating_system_id` values whose wrapped committers may name a local
-# party; never this node's own system id. Optional (trust).
-trusted_systems = []
-
 # The system clients that commit (`[authz.system_client]`).
 #? [[authz.system_client]]
 # The `machines` or `persons` issuer of the client's tokens. It renders with
@@ -1524,20 +1502,6 @@ trusted_systems = []
 # The prefix every admitted facility identifier starts with; exclusive with
 # `id`. Optional, unset by default (trust).
 #? id_prefix = ""
-
-# The origins of data this deployment recognises, which a retention period and
-# an access rule may name (`[authz.origin]`, EHDS Annex II 3.4).
-#? [[authz.origin]]
-# The id the origin's data carry: the
-# `FEEDER_AUDIT.originating_system_audit.system_id` its feeds commit under, and
-# the origin a direct commit by one of `Self::clients` is stamped with.
-# Compared exactly. Required in its table (trust).
-#? id = ""
-# The authenticated clients whose direct commits come from this origin: a Basic
-# user name, or the `client_id` (failing that the `azp`) of an OAuth 2.0 access
-# token (RFC 9068 §2.2). Each client belongs to one origin at most. Optional
-# (trust).
-#? clients = []
 
 # The operations the policy grants may grant (`[authz.grants]`).
 [authz.grants]
@@ -2378,13 +2342,8 @@ timeout = "30s"
 # Optional (infrastructure).
 max_result_rows = 10000
 
-# The commit-event outbox readers and their retention.
+# The commit-event outbox retention; its readers are the change-feed grants.
 [record.change_feed]
-# The readers of the outbox feed, each a name matching `^[a-z][a-z0-9-]{0,62}$`
-# (`ferrobridge`, for one). Boot registers each one and marks every reader the
-# list no longer names inactive. Empty by default: no commit writes an outbox
-# row. Optional.
-readers = []
 # How long a row is kept once every active reader has acknowledged it, counted
 # from its commit instant. Optional.
 retention = "7d"

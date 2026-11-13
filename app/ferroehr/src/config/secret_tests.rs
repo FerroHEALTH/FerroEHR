@@ -518,17 +518,6 @@ fn a_system_client_issuer_never_renders_its_userinfo() {
     );
 }
 
-/// An `[[auth.scim.client]]` issuer renders and refuses with its userinfo
-/// masked.
-#[test]
-fn a_scim_client_issuer_never_renders_its_userinfo() {
-    assert_table_issuer_masked(
-        "[[auth.scim.client]]\nissuer = \"https://u:SCIM_PW_SENTINEL@scim.example/realms/ferroehr\"\nclient_id = \"idm\"\nscope = \"scim\"\nbinding_issuer = \"urn:example:login\"\n",
-        "SCIM_PW_SENTINEL",
-        "scim.example",
-    );
-}
-
 /// An `authz.rbac.role_issuers` issuer renders and refuses with its userinfo
 /// masked.
 #[test]

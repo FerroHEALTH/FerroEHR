@@ -6,7 +6,6 @@
 
 use std::sync::Arc;
 
-use ferroehr::origins::OriginsConfig;
 use ferroehr::policy_register::LiveRegisters;
 use ferroehr::system_log::categories::{AccessedContent, CategoryRecord, Classifier};
 
@@ -14,14 +13,12 @@ use ferroehr::system_log::categories::{AccessedContent, CategoryRecord, Classifi
 /// Annex II 3.4).
 ///
 /// The policy registers whose category map every access is classified
-/// through, the origin register (`[[authz.origin]]`), and the `system_id` a
-/// direct commit by an unregistered client is stamped with.
+/// through, and the `system_id` a direct commit by a caller holding no
+/// `data_origin` grant is stamped with ([`ferroehr::origins`]).
 #[derive(Debug, Clone)]
 pub struct ContentRules {
     /// The policy registers in force; `None` classifies through an empty map.
     pub registers: Option<Arc<LiveRegisters>>,
-    /// The `[[authz.origin]]` register.
-    pub origins: OriginsConfig,
     /// The effective openEHR `system_id` (`[api] system_id`).
     pub system_id: String,
 }
@@ -30,7 +27,6 @@ impl Default for ContentRules {
     fn default() -> Self {
         Self {
             registers: None,
-            origins: OriginsConfig::default(),
             system_id: ferroehr::service::DEFAULT_SYSTEM_ID.to_owned(),
         }
     }

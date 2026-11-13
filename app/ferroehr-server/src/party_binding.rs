@@ -26,6 +26,8 @@ use ferroehr::db::domain::DomainPools;
 use ferroehr::ids::VoId;
 use ferroehr::party_binding::check::{Administrator, BasicUser, CheckInput, Expected, Report};
 use ferroehr::party_binding::fill::{LEASE_RENEWAL, LEASE_TTL, Lease};
+use ferroehr::party_binding::grants::bootstrap::{ClientGrant, Granted};
+use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::adopt::{AdoptInput, AdoptReport};
 use ferroehr::service::message::import_policy::ImportPolicy;
@@ -53,6 +55,34 @@ pub enum PartyBindingCmd {
     /// refuses, naming them, the `PERSON`s whose key fails the provenance
     /// rule of `check`.
     Adopt(AdoptArgs),
+    /// Grant an operation of the `ferroehr-operations` terminology to a
+    /// client, on the operator's authority: an `AGENT` carrying the client
+    /// identifier, unless an `ACTOR` names the client already, and a `ROLE`
+    /// it performs whose capability grants the operation with the scope
+    /// elements given. It is the first grant of a new deployment, such as the
+    /// `scim_provision` of the client that provisions the administrators;
+    /// every later grant is an administrator's write through the
+    /// Demographic API. A client that holds the operation already gets
+    /// nothing.
+    Grant(GrantArgs),
+}
+
+/// The operator input of `ferroehr party-binding grant`.
+#[derive(Debug, Clone, clap::Args)]
+pub struct GrantArgs {
+    /// The issuer of the client's tokens.
+    #[arg(long, value_name = "ISSUER")]
+    pub issuer: String,
+    /// The client's OAuth 2.0 `client_id`.
+    #[arg(long, value_name = "CLIENT_ID")]
+    pub client_id: String,
+    /// The operation's code, such as `scim_provision`.
+    #[arg(long, value_name = "CODE")]
+    pub operation: String,
+    /// A scope element of the grant, its code of the operation terminology
+    /// and the text it names, such as `binding_issuer=urn:example:login`.
+    #[arg(long = "element", value_name = "CODE=TEXT")]
+    pub elements: Vec<String>,
 }
 
 /// Who the provenance rule accepts as the committer that introduced a key.
@@ -127,7 +157,6 @@ pub fn install(
     let service = service
         .with_import_policy(ImportPolicy::new(
             config.authz.rbac.import_role.clone(),
-            config.authz.import.trusted_systems.clone(),
             logins,
         ))
         .with_grant_ceiling(config.authz.grants.ceiling(&config.authz.rbac))
@@ -170,6 +199,9 @@ pub async fn prepare(
         .context("reading the policy grants")?;
     service.grants().listened().spawn_listener();
     service.grants().log_agreements();
+    service
+        .grants()
+        .spawn_refresher(std::time::Duration::from_secs(60));
     let errors = service
         .party_mapping_errors(&config.authz.party_binding.sections())
         .await?;
@@ -285,6 +317,13 @@ pub async fn run(
             println!("{}", serde_json::to_string_pretty(&report)?);
             Ok(())
         }
+        PartyBindingCmd::Grant(args) => {
+            let config = ferroehr::config::load(file, sets)?;
+            config.validate()?;
+            let granted = Box::pin(grant(args, &config)).await?;
+            println!("{}", serde_json::to_string_pretty(&granted)?);
+            Ok(())
+        }
     }
 }
 
@@ -320,6 +359,7 @@ pub async fn check(args: &CheckArgs, config: &FerroEhrConfig) -> anyhow::Result<
     let pools = ferroehr::db::connect_domains(&config.database)
         .await
         .context("connecting to PostgreSQL")?;
+    input.scim_clients = scim_clients(&pools).await?;
     judged(&pools, config)
         .await?
         .check_binding(&input)
@@ -334,12 +374,13 @@ pub async fn check(args: &CheckArgs, config: &FerroEhrConfig) -> anyhow::Result<
 /// No mapping is configured, the mapping or the operator input is refused,
 /// an adoption is refused, or the party store fails.
 pub async fn adopt(args: &AdoptArgs, config: &FerroEhrConfig) -> anyhow::Result<AdoptReport> {
-    let input = AdoptInput {
+    let mut input = AdoptInput {
         check: provenance_input(&args.provenance, config)?,
         parties: args.parties.iter().map(|party| VoId(*party)).collect(),
         namespace: config.authz.party_binding.namespace.clone(),
     };
     let pools = crate::connect_pool(config).await?;
+    input.check.scim_clients = scim_clients(&pools).await?;
     let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await;
     let mut service = judged(&pools, config).await?;
     if let Some(sender) = sender {
@@ -356,9 +397,67 @@ pub async fn adopt(args: &AdoptArgs, config: &FerroEhrConfig) -> anyhow::Result<
     adopted
 }
 
+/// Runs `ferroehr party-binding grant` over the configured database, with
+/// the configured audit trail recording the commits.
+///
+/// # Errors
+/// An unknown operation code or a malformed element, the configuration's
+/// mapping refused, a commit refused (an operation above `[authz.grants]
+/// allowed` included), or the party store fails.
+pub async fn grant(args: &GrantArgs, config: &FerroEhrConfig) -> anyhow::Result<Granted> {
+    let operation = Operation::of(&args.operation).with_context(|| {
+        format!(
+            "{:?} is no operation of the ferroehr-operations terminology",
+            args.operation
+        )
+    })?;
+    let elements = args
+        .elements
+        .iter()
+        .map(|element| {
+            element
+                .split_once('=')
+                .map(|(code, text)| (code.trim().to_owned(), text.trim().to_owned()))
+                .with_context(|| format!("--element {element:?} is not CODE=TEXT"))
+        })
+        .collect::<anyhow::Result<Vec<_>>>()?;
+    let request = ClientGrant {
+        issuer: args.issuer.clone(),
+        client_id: args.client_id.clone(),
+        operation,
+        elements,
+    };
+    let pools = crate::connect_pool(config).await?;
+    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await;
+    let mut service = judged(&pools, config).await?;
+    if let Some(sender) = sender {
+        service = service.with_audit(sender);
+    }
+    let granted = service
+        .grant_client(&request)
+        .await
+        .context("granting the operation to the client");
+    drop(service);
+    if let Some(handle) = handle {
+        handle.shutdown(crate::AUDIT_DRAIN_TIMEOUT).await;
+    }
+    granted
+}
+
+/// The SCIM clients the provenance rule names, read from the `scim_provision`
+/// grants of the party store `pools` serves.
+///
+/// # Errors
+/// The party store fails.
+async fn scim_clients(pools: &DomainPools) -> anyhow::Result<Vec<(String, String)>> {
+    ferroehr::party_binding::grants::store::provisioning_clients(&pools.party)
+        .await
+        .context("reading the SCIM clients from the scim_provision grants")
+}
+
 /// The provenance rule's input from the configuration and `args`: the key
-/// types, the mapped Basic users, the SCIM clients, the administrators and
-/// the declared migrations.
+/// types, the mapped Basic users, the administrators and the declared
+/// migrations; the SCIM clients come from the party store.
 ///
 /// # Errors
 /// `[auth]` does not resolve.
@@ -376,6 +475,7 @@ fn provenance_input(args: &ProvenanceArgs, config: &FerroEhrConfig) -> anyhow::R
                 )
             })
             .collect::<BTreeMap<_, _>>(),
+        scim_clients: Vec::new(),
         basic_users: config
             .authz
             .party_binding
@@ -386,13 +486,6 @@ fn provenance_input(args: &ProvenanceArgs, config: &FerroEhrConfig) -> anyhow::R
                 key_issuer: user.key_issuer.clone(),
                 key: user.key.clone(),
             })
-            .collect(),
-        scim_clients: config
-            .auth
-            .scim
-            .iter()
-            .flat_map(|scim| &scim.client)
-            .map(|client| (client.issuer.clone(), client.client_id.clone()))
             .collect(),
         administrators: args
             .admins

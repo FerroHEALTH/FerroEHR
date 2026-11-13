@@ -237,8 +237,8 @@ origins taken from one row only.
 data that was read (Annex II 3.2(e)).
 
 **Control:** each committed version records the distinct originating systems
-of its body; a body with none records the origin of the registered client that
-committed it directly (`[[authz.origin]]`), or this server; a read records the origins of
+of its body; a body with none records the origin of the committer's
+`data_origin` grant in the CDR, or this server; a read records the origins of
 what it served, an AQL page the union, with the true count beside a capped
 set. The FHIR `AuditEvent` of a read or a query carries the origins of the
 data it served.

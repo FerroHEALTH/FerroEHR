@@ -10,7 +10,7 @@
 //! inside a transaction that is then rolled back, so the check writes
 //! nothing. For each binding key a live `PERSON` carries it reports the
 //! committer of the version that introduced the key and judges it: a SCIM
-//! client of `[[auth.scim.client]]`, an administrator the operator names, a
+//! client by its `scim_provision` grant, an administrator the operator names, a
 //! migration the operator declares, or just-in-time creation on a bound
 //! `persons` issuer. A stored version records no role its
 //! committer held, so the administrators are operator input, named in the
@@ -122,8 +122,10 @@ pub struct CheckInput {
     pub key_types: BTreeMap<String, String>,
     /// The mapped Basic users.
     pub basic_users: Vec<BasicUser>,
-    /// Each `[[auth.scim.client]]` as its token `issuer` and `client_id`.
-    pub scim_clients: Vec<(ferrohealth_secret::secret_url::SecretUrl, String)>,
+    /// Each SCIM client, a client whose `ACTOR` holds a `scim_provision`
+    /// grant ([`crate::party_binding::grants::store::provisioning_clients`]),
+    /// as its token `issuer` and `client_id`.
+    pub scim_clients: Vec<(String, String)>,
     /// The administrators the operator names.
     pub administrators: Vec<Administrator>,
     /// The committer names of the migrations the operator declares.
@@ -264,7 +266,7 @@ pub struct Committer {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Origin {
-    /// A `[[auth.scim.client]]`.
+    /// A SCIM client, by its `scim_provision` grant.
     Scim,
     /// An administrator the operator named.
     Administrator,

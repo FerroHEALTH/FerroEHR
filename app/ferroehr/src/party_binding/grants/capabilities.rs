@@ -185,6 +185,22 @@ impl<'a> Credentials<'a> {
             .collect()
     }
 
+    /// What each element `code` names identifies: the text of a `DV_TEXT` or
+    /// `DV_CODED_TEXT` value, or the `id` of a `DV_IDENTIFIER` value, trimmed,
+    /// such as the origin of a [`Operation::DataOrigin`] grant.
+    #[must_use]
+    pub fn identified(self, code: &str) -> Vec<&'a str> {
+        self.values(code)
+            .filter_map(|value| {
+                value
+                    .get("value")
+                    .or_else(|| value.get("id"))
+                    .and_then(Value::as_str)
+            })
+            .map(str::trim)
+            .collect()
+    }
+
     /// The code of each `DV_CODED_TEXT` element `code` names.
     #[must_use]
     pub fn codes(self, code: &str) -> Vec<&'a str> {
@@ -321,6 +337,7 @@ mod tests {
         let grant = Grant::new(Operation::ImportEhr, Uuid::nil(), Some(Arc::new(tree)));
         let credentials = grant.credentials();
         assert_eq!(credentials.texts("template"), vec!["T.v1", "U.v1"]);
+        assert_eq!(credentials.identified("template"), vec!["T.v1", "U.v1"]);
         let [facility] = credentials.clusters("facility")[..] else {
             panic!("one facility");
         };

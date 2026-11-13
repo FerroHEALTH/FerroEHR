@@ -11,13 +11,14 @@
 //! caller the login binding bound to a party by that party; every other
 //! caller has none and reads nothing. The copy is read only when a
 //! notification or a lost listener asks for it, so a request adds no
-//! transaction; a store that cannot answer is the server's failure and
-//! answers `503`. A request whose own commit changed a grant reads the copy
-//! again before it answers, so the caller's next request runs under the
-//! change. A Basic user holds the roles and scopes its `hold_roles` and
-//! `hold_scopes` grants name ([`basic`]), resolved before any gate reads
-//! them, the admission of an external caller reads its federation agreement
-//! from them ([`admit`]), and a check reads the rest through
+//! transaction, and the replica's refresher reads it on each notification for
+//! the commits of every other request; a store that cannot answer is the
+//! server's failure and answers `503`. A request whose own commit changed a
+//! grant reads the copy again before it answers, so the caller's next request
+//! runs under the change. A Basic user holds the roles and scopes its
+//! `hold_roles` and `hold_scopes` grants name ([`basic`]), resolved before any
+//! gate reads them, the admission of an external caller reads its federation
+//! agreement from them ([`admit`]), and a check reads the rest through
 //! [`Capabilities::current`]. No openEHR spec gives a capability an
 //! authorization meaning: our own design.
 
@@ -26,7 +27,7 @@ use std::sync::Arc;
 
 use axum::response::Response;
 use ferroehr::party_binding::grants::capabilities::{Actor, Capabilities, with_capabilities};
-use ferroehr::party_binding::grants::live::tracking;
+use ferroehr::party_binding::grants::live::{LiveGrants, tracking};
 use ferroehr::party_binding::grants::operation::{Operation, ROLE, SCOPE};
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::Outcome;
@@ -34,14 +35,14 @@ use ferrohealth_smart::resource::{Access, Caller, Via};
 
 use super::{AuthError, AuthLayer, Principal, upper_cased};
 
-/// The capabilities of the caller of `principal`, after reading the grant
-/// rows when this replica's copy is stale.
+/// The capabilities of the caller of `principal` under `grants`, after
+/// reading the grant rows when this replica's copy is stale.
 ///
 /// # Errors
 /// [`AuthError::PartyUnavailable`] when the copy is stale and the party store
 /// cannot answer.
-pub(super) async fn resolve(
-    layer: &AuthLayer,
+pub(crate) async fn resolve(
+    grants: &LiveGrants,
     principal: &Principal,
 ) -> Result<Arc<Capabilities>, AuthError> {
     let Some(caller) = principal.access.caller() else {
@@ -65,7 +66,6 @@ pub(super) async fn resolve(
         (_, _, _, Some(party)) => Actor::Party(party),
         _ => return Ok(Arc::default()),
     };
-    let grants = layer.service.grants();
     if let Err(error) = grants.refresh_if_stale().await {
         tracing::warn!(
             error = %ferroehr::error::ErrorChain::new(&error),
@@ -142,13 +142,13 @@ pub(super) fn client_holds(granted: &Capabilities, operation: Operation) -> bool
 /// Runs `request` inside the caller's capabilities `granted`, reads the grant
 /// rows again when its own commit changed one, and carries `granted` on the
 /// response.
-pub(super) async fn scoped<F: Future<Output = Response>>(
-    layer: &AuthLayer,
+pub(crate) async fn scoped<F: Future<Output = Response>>(
+    grants: &LiveGrants,
     granted: Arc<Capabilities>,
     request: F,
 ) -> Response {
     let (mut resp, changed) = tracking(with_capabilities(Arc::clone(&granted), request)).await;
-    if changed && let Err(error) = layer.service.grants().refresh().await {
+    if changed && let Err(error) = grants.refresh().await {
         // NOTE: no specification governs this: our own design; the commit
         // notified every replica, and a copy that could not be read is read
         // again on the next request.

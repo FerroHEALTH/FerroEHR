@@ -27,6 +27,7 @@
 
 pub mod admission;
 pub mod agreement;
+pub mod bootstrap;
 pub mod capabilities;
 pub(crate) mod derive;
 pub mod live;
@@ -40,22 +41,26 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::error::{ServiceError, Violation};
+use crate::extensions::outbox::config::is_reader_name;
 use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
 use crate::party_binding::grants::capabilities::{Credentials, Grant};
-use crate::party_binding::grants::operation::{Operation, ROLE};
+use crate::party_binding::grants::operation::{
+    BINDING_ISSUER, ORIGIN, Operation, READER, ROLE, TOKEN_SCOPE,
+};
 use crate::party_binding::grants::trust::FederationTrust;
 
 /// Refuses the committed body `facts` of the `ROLE` `role` when it grants an
 /// operation the ceiling of `grants` does not admit, a `hold_roles` grant
-/// names a role the ceiling reserves, a `create_at_login` grant admits
-/// nothing ([`admission::check`]), or a federation agreement breaks its rules
+/// names a role the ceiling reserves, a capability breaks the element rules
+/// ([`check_elements`]), a `create_at_login` grant admits nothing
+/// ([`admission::check`]), or a federation agreement breaks its rules
 /// ([`check_agreements`]).
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) naming the first such capability and
-/// the configuration key, the `422` of [`admission::check`] and of
-/// [`check_agreements`], and a storage failure.
+/// the configuration key, the `400` of [`check_elements`], the `422` of
+/// [`admission::check`] and of [`check_agreements`], and a storage failure.
 pub(crate) async fn check_role(
     tx: &mut PgConnection,
     role: Uuid,
@@ -83,6 +88,7 @@ pub(crate) async fn check_role(
         .iter()
         .find(|capability| !ceiling.allows_code(&capability.code))
     else {
+        check_elements(facts)?;
         admission::check(facts)?;
         return check_agreements(tx, role, facts, &grants.federation()).await;
     };
@@ -97,6 +103,72 @@ pub(crate) async fn check_role(
             allowed.join(", ")
         }
     )))
+}
+
+/// Refuses the committed body `facts` of a `ROLE` when a capability of an
+/// operation that is read by one element does not name it exactly once: the
+/// `origin` of [`Operation::DataOrigin`], the `reader` of
+/// [`Operation::ReadChangeFeed`] (a name of the reader registry's grammar),
+/// and the `binding_issuer` of [`Operation::ScimProvision`] with at least one
+/// `token_scope`.
+///
+/// # Errors
+/// [`ServiceError::BadRequest`] (`400`) naming the capability's operation
+/// and the element.
+fn check_elements(facts: &Facts) -> Result<(), ServiceError> {
+    for capability in &facts.grants.capabilities {
+        let credentials = Credentials::of(capability.credentials.as_ref());
+        let one = |code: &str| -> Result<String, ServiceError> {
+            let mut named: Vec<&str> = credentials.identified(code);
+            named.retain(|value| !value.is_empty());
+            named.dedup();
+            match named.as_slice() {
+                [value] => Ok((*value).to_owned()),
+                _ => Err(ServiceError::precondition(format!(
+                    "the capability granting {} names {} {code} elements: it names exactly \
+                     one, a DV_TEXT or a DV_IDENTIFIER in an element whose name is \
+                     ferroehr-operations::{code}",
+                    capability.code,
+                    named.len()
+                ))),
+            }
+        };
+        match Operation::of(&capability.code) {
+            Some(Operation::DataOrigin) => {
+                let origin = one(ORIGIN)?;
+                if origin.chars().any(char::is_whitespace) {
+                    return Err(ServiceError::precondition(format!(
+                        "the origin {origin:?} carries whitespace: an origin is compared \
+                         exactly with FEEDER_AUDIT.originating_system_audit.system_id"
+                    )));
+                }
+            }
+            Some(Operation::ReadChangeFeed) => {
+                let reader = one(READER)?;
+                if !is_reader_name(&reader) {
+                    return Err(ServiceError::precondition(format!(
+                        "the reader {reader:?} is not a reader name: use 1 to 63 lowercase \
+                         letters, digits and `-`, starting with a letter"
+                    )));
+                }
+            }
+            Some(Operation::ScimProvision) => {
+                one(BINDING_ISSUER)?;
+                if credentials
+                    .identified(TOKEN_SCOPE)
+                    .iter()
+                    .all(|scope| scope.is_empty() || scope.contains(char::is_whitespace))
+                {
+                    return Err(ServiceError::precondition(
+                        "the capability granting scim_provision names no token_scope: it names \
+                         the scope, one token, that the client's access token must hold",
+                    ));
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 /// Refuses the committed body `facts` of the `ROLE` `role` when a federation

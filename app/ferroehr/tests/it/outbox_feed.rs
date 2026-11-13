@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The outbox feed against a real `PostgreSQL` 18: the reader registry the
-//! boot reconciles from `[record.change_feed] readers`, the cursor a reader moves by
-//! acknowledging, and the retention prune that every active cursor holds back
-//! (#4786, #4766, #3330).
+//! The outbox feed against a real `PostgreSQL` 18: the reader registry
+//! reconciled with the change-feed grants in the CDR, the cursor a reader
+//! moves by acknowledging, and the retention prune that every active cursor
+//! holds back (#4786, #4766, #3330, #5439).
 //!
 //! No openEHR spec governs eventing: our own design/extension.
 
@@ -287,5 +287,102 @@ async fn a_read_waits_for_a_commit_that_drew_a_lower_seq() {
     assert!(
         served_seqs[0] < served_seqs[1],
         "in seq order: {served_seqs:?}"
+    );
+}
+
+/// A caller of the request, for the feed's own-grant check.
+fn caller(subject: &str) -> ferroehr::versioning::committer::CommitterIdentity {
+    ferroehr::versioning::committer::CommitterIdentity {
+        subject: subject.to_owned(),
+        id_type: "oauth2",
+        issuer: Some(crate::policy_fixtures::ISSUER.to_owned()),
+        client: Some(subject.to_owned()),
+        person: false,
+        party: None,
+        representative: false,
+        bound: None,
+        system: true,
+        system_client: None,
+        external: None,
+    }
+}
+
+/// A reader is named by a `read_change_feed` grant in the CDR, read on the
+/// call with no restart: an ungranted name is `404`, a granted one is
+/// registered and read, a caller whose own grant does not name it is `403`,
+/// and the reader no grant names any more is inactive (#5439).
+#[tokio::test]
+async fn the_change_feed_grants_name_the_readers_and_who_reads_them() {
+    use crate::policy_fixtures::{as_client, capability, granted, scope};
+    use ferroehr::error::ServiceError;
+    use ferroehr::versioning::committer::with_committer;
+
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = crate::policy_fixtures::granting(FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    ))
+    .await;
+    crate::fixtures::create_ehr(&svc).await;
+    let ungranted = svc
+        .outbox_events(OutboxDomain::Clinical, READER, 10)
+        .await
+        .expect_err("no grant names the reader");
+    assert!(
+        matches!(ungranted, ServiceError::NotFound(_)),
+        "{ungranted:?}"
+    );
+
+    let (_, omop_role) = granted(
+        &svc,
+        "omop-etl",
+        &[capability("read_change_feed", &[scope("reader", READER)])],
+    )
+    .await;
+    granted(
+        &svc,
+        "other-etl",
+        &[capability("read_change_feed", &[scope("reader", "other")])],
+    )
+    .await;
+    let events = as_client(
+        &svc,
+        "omop-etl",
+        with_committer(
+            Some(caller("omop-etl")),
+            Box::pin(svc.outbox_events(OutboxDomain::Clinical, READER, 10)),
+        ),
+    )
+    .await
+    .expect("the reader's own client reads it");
+    assert_eq!(events.len(), 1, "the EHR creation");
+    let foreign = as_client(
+        &svc,
+        "other-etl",
+        with_committer(
+            Some(caller("other-etl")),
+            Box::pin(svc.outbox_events(OutboxDomain::Clinical, READER, 10)),
+        ),
+    )
+    .await
+    .expect_err("another reader's client reads it not");
+    assert!(matches!(foreign, ServiceError::Forbidden(_)), "{foreign:?}");
+    assert_eq!(
+        registry(&pool).await,
+        vec![(READER.to_owned(), 0, true), ("other".to_owned(), 0, true)],
+        "the read registered every granted reader"
+    );
+
+    crate::policy_fixtures::delete(
+        &svc,
+        ferroehr::service::demographic::types::PartyKind::Role,
+        &omop_role,
+    )
+    .await;
+    svc.reconcile_change_feed().await.expect("reconciled");
+    assert_eq!(
+        registry(&pool).await,
+        vec![(READER.to_owned(), 0, false), ("other".to_owned(), 0, true)],
+        "the reader no grant names any more is inactive"
     );
 }

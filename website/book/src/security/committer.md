@@ -73,7 +73,7 @@ A system client commits clinical content only as declared:
   facility and never fills it.
 
 The full rules are under
-[`[[authz.system_client]]`](../installation/config-auth.md#authzimport-and-authzsystem_client).
+[`[[authz.system_client]]`](../installation/config-auth.md#authzsystem_client).
 
 ## What a client may still send
 
@@ -110,7 +110,7 @@ header path, send no `openEHR-AUDIT_DETAILS` committer at all.
 | A system COMPOSITION outside its `writes`, or a person act from a client that is not `relay` | `403` |
 | A system COMPOSITION without a facility of its `facilities`, a relay act naming no professional, or an organisation `composer` | `422` naming the element |
 | A patient-context token's demographic write | `403` |
-| An import of a version whose committer names a local party, from a system `[authz.import] trusted_systems` does not list | `403` |
+| An import of a version whose committer names a local party, from a system no `creating_system` element of the importer's import grant names | `403` |
 
 A login the binding cannot use is refused before any commit; the codes are
 under [How a login is looked up](../installation/config-auth.md#how-a-login-is-looked-up).
@@ -134,7 +134,10 @@ deviation is reported upstream in
 attestations as received, so an `IMPORTED_VERSION` names who committed at the
 source. A wrapped committer that names a `PERSON` of this server, or carries
 a login identifier of its issuers, is refused with `403` unless the version
-was created by a system `[authz.import] trusted_systems` lists.
+was created by a system a `creating_system` element of the caller's import
+grant names, read from the CDR on the request
+([Operational policy](../operational-policy.md#what-the-grants-decide)). This
+node's own system id is never trusted that way.
 
 ## What the access record adds
 

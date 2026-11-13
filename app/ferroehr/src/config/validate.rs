@@ -27,12 +27,6 @@ impl FerroEhrConfig {
         self.validate_audit(&mut errors);
         self.validate_audit_syslog(&mut errors);
         self.validate_outbound_clients(&mut errors);
-        errors.extend(
-            self.origins()
-                .errors()
-                .into_iter()
-                .map(ConfigError::semantic),
-        );
         if let Some(cors) = &self.api.cors {
             errors.extend(cors.errors().into_iter().map(ConfigError::semantic));
         }
@@ -512,7 +506,7 @@ impl FerroEhrConfig {
             self.auth
                 .scim
                 .iter()
-                .flat_map(|scim| scim.errors(resolved.as_ref()))
+                .flat_map(crate::config::scim::ScimConfig::errors)
                 .map(ConfigError::semantic),
         );
         if self.auth.smart.discovery

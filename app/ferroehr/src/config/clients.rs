@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The system clients that commit (`[[authz.system_client]]`) and the systems
-//! whose imported committers are trusted (`[authz.import]`).
+//! The system clients that commit (`[[authz.system_client]]`).
 //!
 //! A system commit is declared and checked, never filled: each committing
 //! OAuth client-credentials client is declared with the provider it acts for
@@ -72,18 +71,6 @@ pub enum Origin {
     Device,
 }
 
-/// The `[authz.import]` table.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(default, deny_unknown_fields)]
-#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
-pub struct ImportConfig {
-    /// The `creating_system_id` values whose wrapped committers may name a
-    /// local party; never this node's own system id.
-    // TODO(#5005): hold an imported committer naming a local party to these systems.
-    pub trusted_systems: Vec<String>,
-}
-
 /// The boot refusals of `[[authz.system_client]]`, each naming its table.
 #[must_use]
 pub fn system_client_errors(clients: &[SystemClient], resolved: &Resolved) -> Vec<String> {
@@ -134,21 +121,4 @@ pub fn system_client_errors(clients: &[SystemClient], resolved: &Resolved) -> Ve
         }
     }
     errors
-}
-
-/// The boot refusals of `[authz.import]`: a trusted system is never this
-/// node, whose own committers are its own.
-#[must_use]
-pub fn import_errors(import: &ImportConfig, system_id: &str) -> Vec<String> {
-    import
-        .trusted_systems
-        .iter()
-        .filter(|system| system.trim().is_empty() || system.as_str() == system_id)
-        .map(|system| {
-            format!(
-                "authz.import.trusted_systems names {system:?}, which is empty or this node's own \
-                 api.system_id"
-            )
-        })
-        .collect()
 }

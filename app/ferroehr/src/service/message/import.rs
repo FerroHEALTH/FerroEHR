@@ -1,10 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! EHR-Extract import (`import_ehr` / `import_ehr_extract`), the inverse of
-//! export: each received
-//! `X_VERSIONED_*`'s `ORIGINAL_VERSION`s are replayed into the local store as
-//! `IMPORTED_VERSION`s.
+//! EHR-Extract import (`import_ehr` / `import_ehr_extract`), the inverse of export:
+//! each received `X_VERSIONED_*`'s `ORIGINAL_VERSION`s are replayed into the local
+//! store as `IMPORTED_VERSION`s.
 //!
 //! Spec: RM common
 //! `master06-change_control_package.adoc` §Copying / §Distributed Versioning

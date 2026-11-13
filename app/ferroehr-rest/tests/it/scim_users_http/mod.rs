@@ -17,7 +17,8 @@ use ferroehr::config::binding::person::{
     GroupSection, MembershipSection, PersonAttribute, PersonSection, PersonTemplate, RoleSection,
     Selector,
 };
-use ferroehr::config::scim::{ScimClient, ScimConfig};
+use ferroehr::config::scim::ScimConfig;
+use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_smart::config::{AuthSection, IssuerEntry};
@@ -293,12 +294,6 @@ fn config() -> AppConfig {
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
-    let client = |client_id: &str, binding_issuer: &str| ScimClient {
-        issuer: ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
-        client_id: client_id.to_owned(),
-        scope: SCOPE.to_owned(),
-        binding_issuer: binding_issuer.to_owned(),
-    };
     {
         let mut c = AppConfig {
             server: common::server(),
@@ -310,10 +305,7 @@ fn config() -> AppConfig {
             ferroehr::config::server::PublicRoot::new("https://cdr.example.com", "")
                 .expect("a public root"),
         );
-        c.auth.scim = Some(ScimConfig {
-            client: vec![client(CLIENT, LOGIN), client(OTHER, OTHER_LOGIN)],
-            ..ScimConfig::default()
-        });
+        c.auth.scim = Some(ScimConfig::default());
         c
     }
 }
@@ -361,7 +353,8 @@ async fn app_of(
         .expect("the mapping compiles");
     let mut service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
         .with_mapped_party_templates(sections.mapped_templates())
-        .with_binding_mapping(mapping);
+        .with_binding_mapping(mapping)
+        .with_grant_ceiling(GrantCeiling::new(Operation::ALL));
     if audited {
         let (sender, _handle) =
             ferroehr::system_log::sender::start(common::local_audit(), None, Some(pool.clone()))
@@ -382,10 +375,28 @@ async fn app_of(
             .await
             .expect("the archetype uploads");
     }
+    grant_clients(&service).await;
     ferroehr_rest::scim::endpoint::check(&config).expect("the endpoint can be served");
     let service = Arc::new(service);
     let app = common::router_with(config, Arc::clone(&service)).await;
     (db, pool, service, app)
+}
+
+/// Commits the `scim_provision` grants of the two clients to the CDR:
+/// [`CLIENT`] owning the Users of [`LOGIN`] and [`OTHER`] those of
+/// [`OTHER_LOGIN`], each token holding [`SCOPE`].
+async fn grant_clients(service: &FerroEhrService) {
+    use crate::policy_fixture::{capability, grant, scope};
+    for (client, binding_issuer) in [(CLIENT, LOGIN), (OTHER, OTHER_LOGIN)] {
+        let provisioning = capability(
+            "scim_provision",
+            &[
+                scope("binding_issuer", binding_issuer),
+                scope("token_scope", SCOPE),
+            ],
+        );
+        grant(service, MACHINES, client, &[provisioning]).await;
+    }
 }
 
 /// A client-credentials token of `client_id` holding the SCIM scope.

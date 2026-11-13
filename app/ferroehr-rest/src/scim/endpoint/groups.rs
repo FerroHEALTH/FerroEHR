@@ -22,7 +22,6 @@ use std::sync::Arc;
 use axum::body::Bytes;
 use axum::extract::{Extension, Path, Query, State};
 use axum::response::Response;
-use ferroehr::config::scim::ScimClient;
 use ferroehr::ids::VoId;
 use ferroehr::party_binding::provisioned::GroupFilter;
 use ferroehr::service::FerroEhrService;
@@ -35,7 +34,7 @@ use crate::scim::endpoint::listing::{
     ListQuery, Listing, ReadQuery, audited, equalities, json_body, listed,
 };
 use crate::scim::endpoint::user_map;
-use crate::scim::endpoint::{ScimCaller, refusal, scim_json};
+use crate::scim::endpoint::{ScimCaller, ScimClient, refusal, scim_json};
 use crate::scim::protocol::error::ScimError;
 use crate::scim::protocol::etag::{self, ReadPrecondition};
 use crate::scim::protocol::filter::Filter;
@@ -142,7 +141,7 @@ pub(crate) async fn list(
             groups: Vec::new(),
         };
         if let Some(filter) = filter {
-            let client = groups.inner.map.client(&client);
+            let client = group_map::client_of(&client);
             matched = groups
                 .service
                 .provisioned_groups(client, &filter, page.offset(), page.count())
@@ -292,7 +291,7 @@ async fn find(
     };
     groups
         .service
-        .provisioned_group(groups.inner.map.client(client), VoId(party))
+        .provisioned_group(group_map::client_of(client), VoId(party))
         .await
         .map_err(|error| user_map::service_refusal(&error.classified()))?
         .ok_or_else(|| missing(id))
