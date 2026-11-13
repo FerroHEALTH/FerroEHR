@@ -64,7 +64,8 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
    deny_unknown_fields)]`, `Default` is the source of truth).
 2. Run `cargo run -p config-reference` and commit what it writes **in the
    same change** (#5316): the shipped `app/ferroehr/assets/ferroehr.default.toml`,
-   every key with its default under its description, which the book page
+   every key with its default under its description (only the must-set keys
+   as live lines, every other as a `#?` line), which the book page
    `website/book/src/installation/config-keys.md` includes whole. It is
    generated from the types' JSON Schema (`schemars`, the `schema` feature of `ferroehr`), so
    a new section type derives `JsonSchema` behind that feature, and its doc

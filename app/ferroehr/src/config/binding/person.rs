@@ -80,7 +80,7 @@ pub static NO_PERSON: PersonSection = PersonSection {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
-#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct PersonTemplate {
     /// An operational template in the definition store rooted at `PERSON`.
     pub template_id: String,
@@ -100,7 +100,7 @@ pub struct PersonTemplate {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
-#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct Selector {
     /// The openEHR path.
     pub path: String,
@@ -113,7 +113,7 @@ pub struct Selector {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
-#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct PersonAttribute {
     /// A SCIM attribute path, with the RFC 7644 §3.4.2.2 `valuePath` filter
     /// form (`emails[type eq "work"].value`).
