@@ -5,8 +5,9 @@
 //! configuration tree (#5316): the shipped default `ferroehr.toml`, holding
 //! every key with its default under its description, which the book's
 //! reference page includes. The file opens with the keys a deployment that
-//! holds real data must set, and every key carries its class (#5455); a key
-//! the types leave unclassified fails both modes ([`class`]). `--check`
+//! holds real data must set, which are its only live lines, and every key
+//! carries its class (#5455); a key the types leave unclassified fails both
+//! modes ([`class`]). `--check`
 //! writes nothing and fails when the committed file differs from what the
 //! types generate.
 //!
@@ -120,5 +121,28 @@ mod tests {
             must_set.contains(&"database.url".to_owned()),
             "{must_set:?}"
         );
+    }
+
+    #[test]
+    fn the_template_sets_only_must_set_keys() {
+        let sections = model::sections(schema().as_value()).expect("every key is classified");
+        let must_set: Vec<String> = sections
+            .iter()
+            .flat_map(|section| section.keys.iter().filter(|key| key.must_set))
+            .map(|key| model::bare(&key.name))
+            .collect();
+        let template = render::template(&sections);
+        let live: Vec<&str> = template
+            .lines()
+            .filter(|line| !line.starts_with('#') && !line.starts_with('[') && !line.is_empty())
+            .filter_map(|line| line.split_once(" = ").map(|(name, _)| name))
+            .collect();
+        assert!(!live.is_empty(), "the template sets no key at all");
+        for name in &live {
+            assert!(
+                must_set.iter().any(|key| key == name),
+                "{name} is a live line but no must-set key: {live:?}"
+            );
+        }
     }
 }

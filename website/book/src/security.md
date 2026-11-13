@@ -401,7 +401,7 @@ opt-out in its own services, leave the mark unused.
 - **Granting the access services.** Your Art. 4 access service (the
   person's) and your Art. 12 health professional access service each hold an
   `access_service` grant in the CDR: a capability of a `ROLE` their `ACTOR`
-  or `PERSON` performs ([Operational policy](operational-policy.md#which-checks-read-a-grant)).
+  or `PERSON` performs ([Operational policy](operational-policy.md#what-the-grants-decide)).
   `[authz.grants] allowed` does not allow `access_service` by default, so the
   opt-out holds for nobody, and recording one is refused with **400**. A role
   a token names grants nothing here.

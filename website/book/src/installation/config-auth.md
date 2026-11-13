@@ -170,7 +170,7 @@ Basic user refuses the start.
 | `user` | string | required | The user-id. Empty, or with a colon or a control character, is a boot error (RFC 7617 §2). |
 | `password_hash` | secret | required | Argon2**id** PHC hash (`$argon2id$v=19$…`), never a plaintext password. Boot-validated against the OWASP floor; see below. |
 | `password_hash_file` | path | unset | Read the hash from a file instead, for a mounted secret. A hash is an offline cracking target, so prefer this wherever the configuration file itself is not treated as sensitive. Exactly one of the pair is required. |
-| `scopes` | list of string | `[]` | The SMART on openEHR scopes the user holds, checked on every route exactly like a token's `scope` claim. A user bound to a `PERSON` also holds the scopes of its `hold_scopes` grants ([Which checks read a grant](../operational-policy.md#which-checks-read-a-grant)). A user with none is refused everywhere a requirement applies. |
+| `scopes` | list of string | `[]` | The SMART on openEHR scopes the user holds, checked on every route exactly like a token's `scope` claim. A user bound to a `PERSON` also holds the scopes of its `hold_scopes` grants ([What the grants decide](../operational-policy.md#what-the-grants-decide)). A user with none is refused everywhere a requirement applies. |
 | `roles` | list of string | `[]` | The user's RBAC roles, upper-cased on authentication. A user bound to a `PERSON` also holds the roles of its `hold_roles` grants, never a privileged one. A user with none holds no role and is refused wherever [`[authz.rbac]`](#authzrbac) asks for one. |
 
 `[auth.basic]` itself takes one key beside the users:
@@ -614,7 +614,7 @@ have no key here: each is a grant in the CDR (`read_subject_audit`,
 `access_service`, `import_ehr` and `import_ehr_extract`, `read_identifiers`),
 under `[authz.grants] allowed`. The keys that named a role for them before
 5.7.1 are unknown keys, and the server refuses to start with one
-([Which checks read a grant](../operational-policy.md#which-checks-read-a-grant)).
+([What the grants decide](../operational-policy.md#what-the-grants-decide)).
 
 > [!NOTE]
 > The management surface is **not** configured under `[authz.rbac]`.

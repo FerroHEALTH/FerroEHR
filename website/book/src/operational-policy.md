@@ -18,8 +18,7 @@ the openEHR demographic model is an [admin register](#the-admin-registers).
 FerroEHR stores, validates and protects the policy parties, and every
 request resolves its caller's grants from them before any check runs. The
 checks that decide on a grant are listed under
-[What the grants decide](#what-the-grants-decide),
-[Which checks read a grant](#which-checks-read-a-grant) and
+[What the grants decide](#what-the-grants-decide) and
 [What a system client may do](#what-a-system-client-may-do).
 
 No openEHR specification governs operational policy or where it is kept, and
@@ -63,7 +62,7 @@ policy with no demographic home is an admin register. The privileges beyond
 clinical access have no configuration key: reading one subject's access log,
 acting as an EHDS Art. 10 access service, importing, and reading protected
 national identifiers are each a grant of its own operation
-([Which checks read a grant](#which-checks-read-a-grant)).
+([What the grants decide](#what-the-grants-decide)).
 
 ## The policy parties
 
@@ -295,9 +294,10 @@ with the rest of the binding side table.
 
 ### What the grants decide
 
-Each check below reads the grants in force on the request, so a change an
-administrator commits decides the next request on every replica with no
-restart. Each operation must also be in `[authz.grants] allowed`.
+Each check below reads the grants of the request's caller, beside what the
+configuration grants. A change an administrator commits decides the next
+request on every replica with no restart, and each operation must also be in
+`[authz.grants] allowed`.
 
 **The committers an import may carry.** An `IMPORTED_VERSION` keeps the
 original's `commit_audit`, so an import could make a version read as a local
@@ -337,8 +337,78 @@ otherwise). The client owns the Users whose binding key that issuer issues.
 The contacts of a deleted User are erased for every client that ever held the
 grant, so ending a grant stops no erasure.
 
-A capability of each, on a `ROLE` of your own archetype with no template (the
-element names carry the codes):
+**A Basic user's roles and scopes.** A Basic user bound to a `PERSON`
+holds, beside the roles and scopes of its `[[auth.basic.users]]` table,
+the roles the `role` elements of its `hold_roles` grants name and the
+scopes the `scope` elements of its `hold_scopes` grants name. Every gate
+reads them: the role gate, the SMART on openEHR scopes, ABAC and the
+access record. A token's roles and scopes come from the token alone, since
+its issuer is their authority.
+
+**Importing.** `message_import_ehr` admits a caller with an `import_ehr`
+grant whose `subject_namespace` names the EHR's subject namespace;
+`message_import_ehr_extract` the same with an `import_ehr_extract` grant
+([What a system client may do](#what-a-system-client-may-do)).
+
+**Committing and exporting as a system client.** A system client commits
+under its `commit_composition` grants and exports under its
+`export_ehr_extract` grants
+([What a system client may do](#what-a-system-client-may-do)).
+
+**Reading protected identifiers.** `GET /admin/party/identifiers` admits an
+administrator who holds a `read_identifiers` grant. The administrator role
+alone reveals no national identifier.
+
+**Reading one subject's access log.** `GET /fhir/r4/AuditEvent` admits a
+caller outside the administrator role that holds a `read_subject_audit`
+grant, for one subject at a time: the `patient` parameter names exactly one
+subject, and without it the call is `403`
+([Audit trail](audit.md#retrieving-audit-records-iti-81)).
+
+**Acting as an access service.** A caller with an `access_service` grant is
+an EHDS Art. 10 access service: an EHR whose person opted out reads as
+absent to it at every route, query and export, unless it declares one of
+`[audit] emergency_purpose_codes` and acts for no person (Art. 10(2)).
+While `[authz.grants] allowed` does not allow `access_service`, recording an
+opt-out is refused with `400`, since it would hold for nobody
+([Opt-out from the access services](security.md#opt-out-from-the-access-services-ehds-art-10)).
+
+A role a token names never grants any of these four: each comes from its
+grant alone, under the grant ceiling. The privileged roles of
+`[authz.rbac]`, `admin_role` and `emergency_access_role`, come from the
+configuration and the token issuers `role_issuers` lists, and never from a
+`hold_roles` grant: a `ROLE` whose `hold_roles` grant names one is refused at
+commit with `403`, and one stored before the role was configured is never
+honoured.
+
+For example, a ward clerk who signs in with Basic holds the clerk role
+through this capability of a `ROLE` the clerk's `PERSON` performs:
+
+```json
+"capabilities": [{
+  "_type": "CAPABILITY", "archetype_node_id": "at0020",
+  "name": { "_type": "DV_TEXT", "value": "Ward clerk" },
+  "credentials": {
+    "_type": "ITEM_TREE", "archetype_node_id": "at0021", "name": { "_type": "DV_TEXT", "value": "Grant" },
+    "items": [
+      { "_type": "ELEMENT", "archetype_node_id": "at0022", "name": { "_type": "DV_TEXT", "value": "Operation" },
+        "value": { "_type": "DV_CODED_TEXT", "value": "Hold roles",
+          "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "hold_roles" } } },
+      { "_type": "ELEMENT", "archetype_node_id": "at0023",
+        "name": { "_type": "DV_CODED_TEXT", "value": "Role",
+          "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "role" } },
+        "value": { "_type": "DV_TEXT", "value": "WARD_CLERK" } }
+    ]
+  }
+}]
+```
+
+A `hold_scopes` capability is built the same way, with one `scope` element
+per SMART scope. Both operations are allowed by name in
+`[authz.grants] allowed`, as every other operation.
+
+A SCIM provisioning client's capability, on a `ROLE` of your own archetype
+with no template (the element names carry the codes):
 
 ```json
 { "_type": "CAPABILITY", "archetype_node_id": "at0020",
@@ -415,76 +485,6 @@ key, for example `the ROLE grants the operation import_ehr, which
 already stored, for example before you narrowed the ceiling, is never
 honoured, and the server logs the operations it skips when it reads the
 grants.
-
-### Which checks read a grant
-
-Each check below reads the grants of the request's caller, beside what the
-configuration grants:
-
-- **A Basic user's roles and scopes.** A Basic user bound to a `PERSON`
-  holds, beside the roles and scopes of its `[[auth.basic.users]]` table,
-  the roles the `role` elements of its `hold_roles` grants name and the
-  scopes the `scope` elements of its `hold_scopes` grants name. Every gate
-  reads them: the role gate, the SMART on openEHR scopes, ABAC and the
-  access record. A token's roles and scopes come from the token alone, since
-  its issuer is their authority.
-- **Importing.** `message_import_ehr` admits a caller with an `import_ehr`
-  grant whose `subject_namespace` names the EHR's subject namespace;
-  `message_import_ehr_extract` the same with an `import_ehr_extract` grant
-  ([What a system client may do](#what-a-system-client-may-do)).
-- **Committing and exporting as a system client.** A system client commits
-  under its `commit_composition` grants and exports under its
-  `export_ehr_extract` grants
-  ([What a system client may do](#what-a-system-client-may-do)).
-- **Reading protected identifiers.** `GET /admin/party/identifiers` admits an
-  administrator who holds a `read_identifiers` grant. The administrator role
-  alone reveals no national identifier.
-- **Reading one subject's access log.** `GET /fhir/r4/AuditEvent` admits a
-  caller outside the administrator role that holds a `read_subject_audit`
-  grant, for one subject at a time: the `patient` parameter names exactly one
-  subject, and without it the call is `403`
-  ([Audit trail](audit.md#retrieving-audit-records-iti-81)).
-- **Acting as an access service.** A caller with an `access_service` grant is
-  an EHDS Art. 10 access service: an EHR whose person opted out reads as
-  absent to it at every route, query and export, unless it declares one of
-  `[audit] emergency_purpose_codes` and acts for no person (Art. 10(2)).
-  While `[authz.grants] allowed` does not allow `access_service`, recording
-  an opt-out is refused with `400`, since it would hold for nobody
-  ([Opt-out from the access services](security.md#opt-out-from-the-access-services-ehds-art-10)).
-
-A role a token names never grants any of these four: each comes from its
-grant alone, under the grant ceiling. The privileged roles of
-`[authz.rbac]`, `admin_role` and `emergency_access_role`, come from the
-configuration and the token issuers `role_issuers` lists, and never from a
-`hold_roles` grant: a `ROLE` whose `hold_roles` grant names one is refused at
-commit with `403`, and one stored before the role was configured is never
-honoured.
-
-For example, a ward clerk who signs in with Basic holds the clerk role
-through this capability of a `ROLE` the clerk's `PERSON` performs:
-
-```json
-"capabilities": [{
-  "_type": "CAPABILITY", "archetype_node_id": "at0020",
-  "name": { "_type": "DV_TEXT", "value": "Ward clerk" },
-  "credentials": {
-    "_type": "ITEM_TREE", "archetype_node_id": "at0021", "name": { "_type": "DV_TEXT", "value": "Grant" },
-    "items": [
-      { "_type": "ELEMENT", "archetype_node_id": "at0022", "name": { "_type": "DV_TEXT", "value": "Operation" },
-        "value": { "_type": "DV_CODED_TEXT", "value": "Hold roles",
-          "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "hold_roles" } } },
-      { "_type": "ELEMENT", "archetype_node_id": "at0023",
-        "name": { "_type": "DV_CODED_TEXT", "value": "Role",
-          "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "role" } },
-        "value": { "_type": "DV_TEXT", "value": "WARD_CLERK" } }
-    ]
-  }
-}]
-```
-
-A `hold_scopes` capability is built the same way, with one `scope` element
-per SMART scope. Both operations are allowed by name in
-`[authz.grants] allowed`, as every other operation.
 
 ### Federation agreements
 

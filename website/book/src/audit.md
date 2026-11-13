@@ -577,7 +577,7 @@ There is no patient-facing route in the product: a portal that shows a person
 who accessed their record builds on ITI-81 and authenticates the person itself.
 What the product gives that portal is a grant of its own size: a
 `read_subject_audit` grant in the CDR
-([Operational policy](operational-policy.md#which-checks-read-a-grant)) reads
+([Operational policy](operational-policy.md#what-the-grants-decide)) reads
 the log for one subject at a time, with
 the `patient` parameter required, so the portal never holds an admin credential
 over every patient's log ([GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj)

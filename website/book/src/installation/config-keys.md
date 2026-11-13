@@ -1,7 +1,7 @@
 # Every configuration key
 
 This page shows the shipped `ferroehr.toml` template, [`ferroehr.default.toml`][template]. It
-holds every key FerroEHR reads, each under its description and set to its default.
+holds every key FerroEHR reads, each under its description with its default.
 `tools/config-reference` generates it from the configuration types, so it matches the server you
 run.
 
@@ -9,9 +9,9 @@ run.
   Every other key is optional, and its note says so.
 - Each key's note ends with whether you must set it and why it is a key: infrastructure, trust,
   or neither for a tuning key with a built-in default.
-- A live line is a key at its default. Change the value to set it.
-- A `#?` line is a key with no default, a secret, or a key of a table the defaults leave out.
-  Remove the `#?` marker and the space after it, then fill in the value, to set it.
+- Only the keys of **What you must set** are live lines, so a copy of the file sets nothing else.
+- Every other key is a `#?` line, showing its default or, for a key with no default or a secret,
+  a placeholder. Remove the `#?` marker and the space after it, then edit the value, to set it.
 - A `# [table.<name>]` header shows a table you name yourself, with its keys commented out.
 
 Every key can also be set as an environment variable: `FERROEHR`, then the TOML path with `__`

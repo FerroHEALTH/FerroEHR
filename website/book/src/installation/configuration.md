@@ -14,8 +14,8 @@ map of which page documents which section.
 Copy the shipped template, edit it, and run:
 
 ```bash
-# Every key under its description, each at its default, generated from the
-# configuration types.
+# Every key under its description with its default, generated from the
+# configuration types; only the keys you must set are live lines.
 curl -fsSLo ferroehr.toml \
   https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/main/app/ferroehr/assets/ferroehr.default.toml
 
@@ -30,8 +30,8 @@ ferroehr --config ferroehr.toml
 The template opens with a **What you must set** block: the keys a deployment
 that holds real data sets (the posture, the database, the system identifier,
 the patient identity source and pseudonym namespace, the provider and at
-least one token issuer). Every other key is optional and runs on the built-in
-default its line shows. Each key's note ends with why it is in the file:
+least one token issuer), and they are its only live lines. Every other key is
+optional: its `#?` line shows the built-in default it runs on. Each key's note ends with why it is in the file:
 infrastructure (what the server needs before it reaches its store), trust
 (what it trusts, its floors and its secrets), or nothing more for a tuning
 key. A key the configuration types leave unclassified fails the build, so the
