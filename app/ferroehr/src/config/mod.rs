@@ -30,6 +30,7 @@ pub mod agreement;
 pub mod auth;
 pub mod auth_section;
 pub mod authz;
+mod beside;
 pub mod binding;
 pub mod clients;
 pub mod deployment;
@@ -40,6 +41,7 @@ pub mod redact;
 pub mod rest;
 pub mod retention;
 pub mod scim;
+pub mod server;
 pub mod smart;
 mod validate;
 pub mod versioning;
@@ -72,8 +74,9 @@ pub struct FerroEhrConfig {
     pub deployment: profile::DeploymentConfig,
     /// `[server]` — the HTTP listener: the family's section (the listen
     /// address, the timeouts, the body limit, the overload bound, the drain,
-    /// TLS, the trusted proxies, the caller rate and compression).
-    pub server: ferrohealth_server::section::ServerSection,
+    /// TLS, the trusted proxies, the caller rate and compression) and the
+    /// public base URL every public URL derives from.
+    pub server: server::ServerConfig,
     /// `[telemetry]`: the console, the request log and the OpenTelemetry
     /// export, the family's shared section.
     pub telemetry: ferrohealth_telemetry::section::TelemetrySection,
@@ -123,10 +126,13 @@ impl Default for FerroEhrConfig {
     fn default() -> Self {
         Self {
             deployment: profile::DeploymentConfig::default(),
-            server: ferrohealth_server::section::ServerSection {
-                listen: std::net::SocketAddr::from(([0, 0, 0, 0], 8080)),
-                body_limit: ferrohealth_config::units::ByteSize::from_mib(64),
-                ..ferrohealth_server::section::ServerSection::default()
+            server: server::ServerConfig {
+                shared: ferrohealth_server::section::ServerSection {
+                    listen: std::net::SocketAddr::from(([0, 0, 0, 0], 8080)),
+                    body_limit: ferrohealth_config::units::ByteSize::from_mib(64),
+                    ..ferrohealth_server::section::ServerSection::default()
+                },
+                public_base_url: None,
             },
             telemetry: ferrohealth_telemetry::section::TelemetrySection::default(),
             usage_report: ferrohealth_usage_report::section::UsageReportSection::default(),
@@ -464,7 +470,7 @@ mod tests {
         // PORT alone sets server.listen on all interfaces (the container-
         // platform convention: Vercel/Cloud Run/Heroku inject only the port).
         let c = assemble_ok(None, &env(&[("PORT", "3123")]), &[]);
-        assert_eq!(c.server.listen.to_string(), "0.0.0.0:3123");
+        assert_eq!(c.server.shared.listen.to_string(), "0.0.0.0:3123");
         let c = assemble_ok(
             None,
             &env(&[
@@ -473,7 +479,7 @@ mod tests {
             ]),
             &[],
         );
-        assert_eq!(c.server.listen.to_string(), "127.0.0.1:9000");
+        assert_eq!(c.server.shared.listen.to_string(), "127.0.0.1:9000");
     }
 
     // ── 2. Mapping ────────────────────────────────────────────────────────────
@@ -493,7 +499,7 @@ mod tests {
             &[],
         );
         assert_eq!(
-            c.server.max_concurrent_requests,
+            c.server.shared.max_concurrent_requests,
             std::num::NonZeroUsize::new(64)
         );
         let [issuer] = c.auth.shared.issuers() else {
@@ -1300,7 +1306,7 @@ mod tests {
     fn a_served_smart_document_needs_an_issuer() {
         let mut c = standalone();
         c.auth.smart.discovery = true;
-        c.auth.smart.public_base_url = Some(SecretUrl::new("https://cdr.example.com"));
+        c.server.public_base_url = Some(SecretUrl::new("https://cdr.example.com"));
         let err = c
             .validate()
             .expect_err("SMART without an [auth] issuer must refuse");
@@ -1374,7 +1380,7 @@ mod tests {
     #[test]
     fn validate_management_port_must_differ_from_the_listen_port() {
         let mut c = standalone();
-        c.server.listen = "0.0.0.0:8080".parse().expect("an address");
+        c.server.shared.listen = "0.0.0.0:8080".parse().expect("an address");
         c.management.listen = Some("0.0.0.0:8080".parse().expect("an address"));
         assert!(c.validate().is_err());
         c.management.listen = Some("127.0.0.1:8080".parse().expect("an address"));
@@ -1391,7 +1397,7 @@ mod tests {
     #[test]
     fn validate_keeps_the_clinical_body_tier_below_the_listener_limit() {
         let mut c = standalone();
-        c.server.body_limit = ferrohealth_config::units::ByteSize::from_bytes(64);
+        c.server.shared.body_limit = ferrohealth_config::units::ByteSize::from_bytes(64);
         c.api.body_limit = Some(ferrohealth_config::units::ByteSize::from_bytes(64));
         let err = c.validate().expect_err("a tier at the ceiling").to_string();
         assert!(err.contains("api.body_limit"), "{err}");

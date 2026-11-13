@@ -35,20 +35,31 @@ pub struct ReverseRelationships {
     pub sources: Vec<String>,
 }
 
-/// The path of one inline relationship in its source party's data: the
-/// `relationships` attribute narrowed by the relationship's archetype node id
-/// and, when it can be quoted, its name.
+/// The path of one inline relationship in its source party's data, which
+/// names that one relationship and no sibling.
 ///
-/// No specification fixes which path a `reverse_relationships` reference
-/// carries; this is our own design, in the archetype-path predicate form of
-/// BASE `architecture_overview/master11-paths.adoc` §Paths.
+/// BASE `architecture_overview/master11-paths.adoc` §Data Paths and
+/// Uniqueness: a `uid` predicate is "the preferred method to achieve runtime
+/// unique node identification", a `name/value` predicate is unique where the
+/// names are, and the positional predicate is unique where the order of a
+/// container is preserved, which the stored body preserves. The path takes
+/// the first of the three that names one relationship: the `uid` when no
+/// sibling shares it, else the archetype node id and the name when no
+/// sibling shares both, else the position. No specification fixes which path
+/// a `reverse_relationships` reference carries: our own design.
 fn relationship_path(row: &ReverseRelationship) -> String {
-    match (row.node_id.as_deref(), row.name.as_deref()) {
-        (Some(node), Some(name)) if !name.contains('\'') => {
+    let quotable = |text: &&str| !text.contains('\'');
+    let uid = row.uid.as_deref().filter(quotable);
+    let name = row.name.as_deref().filter(quotable);
+    match (uid, name, row.node_id.as_deref()) {
+        (Some(uid), _, Some(node)) if row.uid_unique => {
+            format!("/relationships[{node} and uid='{uid}']")
+        }
+        (Some(uid), _, None) if row.uid_unique => format!("/relationships[uid='{uid}']"),
+        (_, Some(name), Some(node)) if row.name_unique => {
             format!("/relationships[{node} and name/value='{name}']")
         }
-        (Some(node), _) => format!("/relationships[{node}]"),
-        (None, _) => "/relationships".to_owned(),
+        _ => format!("/relationships[{}]", row.position),
     }
 }
 
@@ -94,7 +105,9 @@ impl FerroEhrService {
                     namespace: "local".to_owned(),
                     r#type: "PARTY_RELATIONSHIP".to_owned(),
                     id: UidBasedId::HierObjectId(HierObjectId::from(row.source_vo_id.0)),
-                    path: Some(relationship_path(row)),
+                    // A standalone container is the relationship itself, so
+                    // the reference needs no path into it.
+                    path: (!row.standalone).then(|| relationship_path(row)),
                 }));
             let source = row.source_vo_id.to_string();
             if !out.sources.contains(&source) {
@@ -126,6 +139,52 @@ impl FerroEhrService {
                 Missing::VersionedObject,
                 format!("PARTY {vo_id}"),
             )),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn row(uid: Option<&str>, name: Option<&str>, unique: (bool, bool)) -> ReverseRelationship {
+        ReverseRelationship {
+            source_vo_id: VoId(uuid::Uuid::nil()),
+            node_id: Some("at0001".to_owned()),
+            name: name.map(str::to_owned),
+            uid: uid.map(str::to_owned),
+            position: 3,
+            name_unique: unique.0,
+            uid_unique: unique.1,
+            standalone: false,
+        }
+    }
+
+    /// The path takes a unique `uid`, else a unique name, else the position
+    /// (BASE `master11-paths.adoc` §Data Paths and Uniqueness).
+    #[test]
+    fn the_path_takes_the_first_unique_predicate() {
+        for (row, path) in [
+            (
+                row(Some("u-1"), Some("a"), (true, true)),
+                "/relationships[at0001 and uid='u-1']",
+            ),
+            (
+                row(Some("u-1"), Some("a"), (true, false)),
+                "/relationships[at0001 and name/value='a']",
+            ),
+            (
+                row(None, Some("a"), (true, false)),
+                "/relationships[at0001 and name/value='a']",
+            ),
+            (row(None, Some("a"), (false, false)), "/relationships[3]"),
+            (
+                row(None, Some("o'clock"), (true, false)),
+                "/relationships[3]",
+            ),
+            (row(Some("u'1"), None, (false, true)), "/relationships[3]"),
+        ] {
+            assert_eq!(relationship_path(&row), path, "{row:?}");
         }
     }
 }

@@ -65,6 +65,7 @@ use crate::extensions::access::authn::{self, AuthError, Authenticator};
 use crate::scim::protocol::MEDIA_TYPE;
 use crate::scim::protocol::discovery::{self, Discovery, DiscoveryError};
 use crate::scim::protocol::error::ScimError;
+use crate::scim::protocol::urn;
 use crate::state::AppState;
 
 /// The path the endpoint is served under.
@@ -92,6 +93,18 @@ pub enum EndpointError {
     Mapping(String),
 }
 
+/// The SCIM base URL every `meta.location` and discovery document names:
+/// [`BASE_PATH`] under the server's public root (`[server] public_base_url`
+/// and `server.base_path`; RFC 7643 §3.1: `location` is "The URI of the
+/// resource being returned"). Boot validation requires the root with
+/// `[auth.scim]`.
+fn base_url(config: &AppConfig) -> String {
+    config
+        .public_root
+        .as_ref()
+        .map_or_else(String::new, |root| root.at(BASE_PATH))
+}
+
 /// Checks that `config` describes a SCIM endpoint that can be served.
 ///
 /// # Errors
@@ -99,7 +112,7 @@ pub enum EndpointError {
 /// of a party mapping that lacks what a User is written with.
 pub fn check(config: &AppConfig) -> Result<(), EndpointError> {
     if let Some(scim) = &config.auth.scim {
-        schemas::discovery(scim, &config.party_binding)?;
+        schemas::discovery(scim, base_url(config), &config.party_binding)?;
         user_map::UserMap::new(&config.party_binding).map_err(EndpointError::Mapping)?;
         group_map::GroupMap::new(config, scim).map_err(EndpointError::Mapping)?;
     }
@@ -116,7 +129,7 @@ pub(crate) fn router(
     service: Arc<FerroEhrService>,
 ) -> Option<Router<AppState>> {
     let scim = config.auth.scim.as_ref()?;
-    let discovery = match schemas::discovery(scim, &config.party_binding) {
+    let discovery = match schemas::discovery(scim, base_url(config), &config.party_binding) {
         Ok(discovery) => Arc::new(discovery),
         Err(error) => {
             tracing::error!(%error, "the SCIM endpoint is not mounted: its schemas do not build");
@@ -183,18 +196,20 @@ fn resources(
     discovery: &Discovery,
     service: Arc<FerroEhrService>,
 ) -> Result<Router<AppState>, String> {
-    let schema = |name: &str| {
-        discovery
+    let base_url = base_url(config);
+    let listing = |name: &str, urn: &str, attributes: &[&str]| {
+        let schema = discovery
             .resource_schema(name)
             .cloned()
-            .ok_or_else(|| format!("the discovery documents define no {name}"))
+            .ok_or_else(|| format!("the discovery documents define no {name}"))?;
+        listing::Listing::new(schema, scim, &base_url, urn, attributes)
     };
     let users = users::Users::new(
         Arc::clone(&service),
         user_map::UserMap::new(&config.party_binding)?,
-        schema("User")?,
+        listing("User", urn::CORE_USER, &["userName", "externalId", "id"])?,
         scim,
-    )?;
+    );
     let routes = Router::new()
         .route("/Users", get(users::list).post(users::create))
         .route(
@@ -208,7 +223,15 @@ fn resources(
     let Some(map) = group_map::GroupMap::new(config, scim)? else {
         return Ok(routes);
     };
-    let groups = groups::Groups::new(service, map, schema("Group")?, scim)?;
+    let groups = groups::Groups::new(
+        service,
+        map,
+        listing(
+            "Group",
+            urn::CORE_GROUP,
+            &["displayName", "externalId", "id"],
+        )?,
+    );
     Ok(routes.merge(
         Router::new()
             .route("/Groups", get(groups::list).post(groups::create))

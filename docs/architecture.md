@@ -332,9 +332,21 @@ lookup by a value reads the one object instead of every node of the
 archetype (#4437). The feature envelope is documented per construct;
 rejections are explicit typed errors.
 
-A query whose outermost `FROM` class is `PERSON`, `ORGANISATION` or `ROLE` is
-the experimental demographic extension (no openEHR spec governs it; QUERY
-master03 §FROM gives semantics only to the clinical repository). The planner
+A query whose outermost `FROM` class is a demographic class is the
+experimental demographic extension (no openEHR spec governs it; QUERY
+master03 §FROM gives semantics only to the clinical repository). Every class
+whose concrete RM descendants are all demographic versioned objects is a root
+(#5474): the five concrete `PARTY` classes, the abstract `PARTY` and `ACTOR`
+over the concrete classes the RM model lists below them (`aql::lower`, the
+`descendants` of the generated RM model, so a root reads `rm_type IN (…)`),
+and the standalone `PARTY_RELATIONSHIP` container, whose root row is the only
+`PARTY_RELATIONSHIP` row (an inline relationship stays in its source party's
+data and is read by path). Every root carries the one policy predicate,
+`vo_head.policy_party_at IS NULL` on the head row it joins by key
+(`aql::sql::gates`), so a caller who is no administrator reads no policy
+party or acts-for relationship container under any root. A join under an abstract root reads
+each party's class (`version.kind`) and matches the subject reference against
+that class and its demographic RM ancestors. The planner
 marks the IR `QueryDomain::Demographic`, and the same SQL runs on the party
 pool, whose `search_path` names the `party` schema rendered from the same DDL,
 without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`, ABAC subject

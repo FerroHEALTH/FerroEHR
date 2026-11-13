@@ -74,6 +74,7 @@ pub(crate) mod integrity;
 pub(crate) mod lifecycle;
 pub mod object_version_id;
 pub mod origins;
+pub(crate) mod party_refs;
 pub(crate) mod person;
 pub(crate) mod profile;
 pub(crate) mod read;

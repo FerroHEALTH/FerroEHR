@@ -82,12 +82,13 @@ impl Listing {
     pub(super) fn new(
         schema: ResourceSchema,
         scim: &ferroehr::config::scim::ScimConfig,
+        base_url: &str,
         urn: &str,
         attributes: &[&str],
     ) -> Result<Self, String> {
         Ok(Self {
             schema,
-            base_url: scim.base_url().unwrap_or_default(),
+            base_url: base_url.to_owned(),
             max_results: scim.filter_max_results,
             filter: FilterSupport::equality_conjunction(urn, attributes)
                 .map_err(|error| error.to_string())?,

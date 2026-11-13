@@ -188,7 +188,7 @@ pub fn grouping(base_path: &str, route: Option<&str>) -> Option<Key> {
 /// FerroEHR's own extensions (#4330).
 #[must_use]
 pub fn api_mounts(config: &FerroEhrConfig) -> Vec<String> {
-    let server = config.server.base_path.as_str();
+    let server = config.server.shared.base_path.as_str();
     vec![
         format!("{server}{}", config.api.base_path),
         format!("{server}{}", config.api.extensions_path()),
@@ -423,7 +423,7 @@ mod tests {
             api_mounts(&config),
             [BASE.to_owned(), "/ferroehr/rest/extensions/v1".to_owned()]
         );
-        config.server.base_path =
+        config.server.shared.base_path =
             ferrohealth_server::section::BasePath::new("/edge").expect("a base path");
         config.api.base_path = "/ferroehr/ehr/v1".to_owned();
         assert_eq!(

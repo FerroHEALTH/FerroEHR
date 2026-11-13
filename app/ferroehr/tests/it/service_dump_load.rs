@@ -1404,12 +1404,17 @@ async fn demographic_wave_round_trips_standalone_party_and_relationship() {
     let person_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Wava")))
         .await
         .expect("create_party");
+    // The relationship's target is a party container the source holds too
+    // (RM demographic master02 §Party Relationships).
+    let target_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Wava Target")))
+        .await
+        .expect("create the target party");
     let rel_vo = Box::pin(crate::fixtures::create_relationship(
         &source,
         wave_uv(&wave_relationship(
             "parent-of",
             &person_vo.to_string(),
-            "33333333-3333-4333-8333-333333333333",
+            &target_vo.to_string(),
         )),
     ))
     .await
@@ -1488,12 +1493,17 @@ async fn demographic_wave_round_trips_in_canonical_xml() {
     let person_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Xara")))
         .await
         .expect("create_party");
+    // The relationship's target is a party container the source holds too
+    // (RM demographic master02 §Party Relationships).
+    let target_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Xara Target")))
+        .await
+        .expect("create the target party");
     let rel_vo = Box::pin(crate::fixtures::create_relationship(
         &source,
         wave_uv(&wave_relationship(
             "cares-for",
             &person_vo.to_string(),
-            "44444444-4444-4444-8444-444444444444",
+            &target_vo.to_string(),
         )),
     ))
     .await
@@ -1563,12 +1573,17 @@ async fn demographic_wave_round_trips_inside_a_7z_container() {
     let person_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Zena")))
         .await
         .expect("create_party");
+    // The relationship's target is a party container the source holds too
+    // (RM demographic master02 §Party Relationships).
+    let target_vo = crate::fixtures::create_party(&source, wave_uv(&wave_person("Zena Target")))
+        .await
+        .expect("create the target party");
     let rel_vo = Box::pin(crate::fixtures::create_relationship(
         &source,
         wave_uv(&wave_relationship(
             "employs",
             &person_vo.to_string(),
-            "55555555-5555-4555-8555-555555555555",
+            &target_vo.to_string(),
         )),
     ))
     .await

@@ -38,6 +38,16 @@ use crate::party_binding::grants::operation::{
     SCOPES,
 };
 
+/// Refuses the committed body `facts` of a `ROLE` that [`check_ceiling`] or
+/// [`check_terms`] refuses.
+///
+/// # Errors
+/// The refusal of the first that refuses.
+pub(crate) fn check_role(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
+    check_ceiling(facts, ceiling)?;
+    check_terms(facts)
+}
+
 /// Refuses the committed body `facts` of a `ROLE` when it grants an
 /// operation `ceiling` does not admit.
 ///

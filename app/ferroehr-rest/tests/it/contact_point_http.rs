@@ -122,10 +122,7 @@ async fn serve(agreement: Agreement) -> (testkit::TestDb, Arc<FerroEhrService>, 
             countries: vec!["BE".to_owned()],
             ..FederationSection::default()
         }],
-        dpop: Some(DpopSection {
-            external_url: "https://ehr.example".to_owned(),
-            ..DpopSection::default()
-        }),
+        dpop: Some(DpopSection::default()),
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
@@ -137,6 +134,10 @@ async fn serve(agreement: Agreement) -> (testkit::TestDb, Arc<FerroEhrService>, 
     config.auth.smart.patient_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(
         CONTACT_POINT,
     )];
+    config.public_root = Some(
+        ferroehr::config::server::PublicRoot::new("https://ehr.example", "")
+            .expect("a public root"),
+    );
     let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
         .await
         .expect("build app");

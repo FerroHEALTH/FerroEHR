@@ -160,12 +160,14 @@ user = "ferroehr-readonly"
 key_issuer = "urn:ferroehr:basic-user"
 key = "ferroehr-readonly"
 
+# The URL clients reach the server at, which every SCIM location names.
+[server]
+public_base_url = "http://localhost:8080"
+
 # The SCIM endpoint the lanes provision their persons through. The client
 # below provisions the three Basic users; an overlay that adds a persons
 # issuer adds its own client (index 1), since no two share a binding_issuer.
 [auth.scim]
-public_base_url = "http://localhost:8080"
-
 [[auth.scim.client]]
 issuer = "https://scim.ferroehr.invalid"
 client_id = "basic-users"
