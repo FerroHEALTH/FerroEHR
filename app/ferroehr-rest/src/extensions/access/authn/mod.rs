@@ -396,7 +396,7 @@ pub struct Authenticator {
     /// The party binding every admitted caller is looked up in, when an
     /// `[[auth.party]]` table binds an issuer.
     party: Option<Arc<party::Binding>>,
-    /// The system clients and the federation agreements.
+    /// The system clients and the federation agreements' caller limits.
     declared: declared::Declared,
 }
 
@@ -478,7 +478,6 @@ impl Authenticator {
         if let Some(refusal) = access.caller().and_then(party::kind_refusal) {
             return Err(refusal);
         }
-        let access = self.declared.admit(access)?;
         let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
         let roles = self.role_issuers.roles(caller);
         let honoured = self.gate.honoured(&access);
@@ -570,9 +569,10 @@ pub(crate) async fn middleware(
                 Ok(granted) => granted,
                 Err(e) => return refusal::response(auth, req.headers(), &e),
             };
-            let mut principal = grants::basic(principal, &granted, |role| {
-                auth.role_issuers.is_privileged(role)
-            });
+            let mut principal = match grants::bound(&layer, principal, &granted, req.headers()) {
+                Ok(principal) => principal,
+                Err(refusal) => return *refusal,
+            };
             if let Some(refusal) = purpose::mismatch(&layer, &principal, &req) {
                 return refusal;
             }

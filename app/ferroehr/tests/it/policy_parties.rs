@@ -476,10 +476,34 @@ async fn only_an_administrator_writes_a_system_client() {
 #[tokio::test]
 async fn only_an_administrator_grants_a_policy_role() {
     let (_db, svc) = mapped().await;
-    let [_, (partner, _), (person, _)] = referred(&svc).await;
+    let [_, _, (person, _)] = referred(&svc).await;
     let (agent, _) = as_admin(create(&svc, PartyKind::Agent, &body("agent", &[])))
         .await
         .expect("an administrator creates the AGENT");
+    // NOTE: a federation agreement names its partner by a client identifier
+    // of a federation issuer (#5440), which only an administrator writes.
+    let federation = "https://federation.example";
+    svc.grants().set_federation(
+        ferroehr::party_binding::grants::trust::FederationTrust::new(
+            std::collections::BTreeMap::from([(
+                federation.to_owned(),
+                ferroehr::party_binding::grants::trust::PartnerIssuer::default(),
+            )]),
+            ferroehr::system_log::config::Retention::Forever,
+        ),
+    );
+    let mut identified = plain(
+        "ORGANISATION",
+        "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0",
+        "Regional care network",
+    );
+    identified["details"] = json!({ "_type": "ITEM_TREE", "archetype_node_id": "at0010",
+        "name": text("details"), "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0011",
+            "name": text("client"), "value": { "_type": "DV_IDENTIFIER", "issuer": federation,
+                "id": "remote-portal", "type": "client_id" } }] });
+    let (partner, _) = as_admin(create(&svc, PartyKind::Organisation, &identified))
+        .await
+        .expect("an administrator creates the partner");
     for (name, ids) in [
         ("data-migration-role", [(AGENT, agent)]),
         ("federation-partner-role", [(PARTNER, partner)]),

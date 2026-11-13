@@ -25456,7 +25456,7 @@
           "management"
         ],
         "summary": "Build/spec provenance — version, git, spec pins, manufacturer\n(`GET /management/info`).",
-        "description": "OUR OWN EXTENSION — no openEHR spec governs this: the ITS-REST resource set\ndefines no management or introspection surface.\n\nAccess-level gated by the `info` endpoint's configured [`AccessLevel`];\nabsent (a router `404`) unless opted in — and that `404` is answered\n**before authentication**, because a non-opted-in endpoint is simply not a\nroute. Body: the [`BuildInfo`] record.",
+        "description": "OUR OWN EXTENSION — no openEHR spec governs this: the ITS-REST resource set\ndefines no management or introspection surface.\n\nAccess-level gated by the `info` endpoint's configured [`AccessLevel`];\nabsent (a router `404`) unless opted in — and that `404` is answered\n**before authentication**, because a non-opted-in endpoint is simply not a\nroute. Body: the [`BuildInfo`] record, whose binding lists the federation\nagreements in force, read from the CDR on the request.",
         "operationId": "info_view",
         "responses": {
           "200": {

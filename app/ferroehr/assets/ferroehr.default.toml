@@ -15,7 +15,7 @@
 #
 # What you must set
 #
-# This file lists 907 keys. A deployment that holds real data sets the 10
+# This file lists 886 keys. A deployment that holds real data sets the 10
 # below; every other key is optional and runs on the built-in default its line
 # shows, or stays unset where its note says so.
 #
@@ -885,8 +885,8 @@ patient_issuers = []
 # Optional (trust).
 #? binding_issuer = ""
 
-# RBAC, ABAC, assurance, the party binding, the system clients, the federation
-# agreements and the registered origins.
+# RBAC, ABAC, assurance, the party binding, the system clients, the grant
+# ceiling and the registered origins.
 [authz]
 
 # Role-based access control.
@@ -1524,78 +1524,6 @@ trusted_systems = []
 # The prefix every admitted facility identifier starts with; exclusive with
 # `id`. Optional, unset by default (trust).
 #? id_prefix = ""
-
-# The federation agreements (`[authz.federation]`).
-[authz.federation]
-
-# The agreements, one per issuer and accessor.
-#? [[authz.federation.agreement]]
-# The `federation` issuer of the external callers. It renders with any userinfo
-# masked. Optional (trust).
-#? issuer = ""
-# Who the agreement admits: named persons, or the organisation. Optional, unset
-# by default (trust).
-#? accessor = "person"
-# The agreement's name. Optional (trust).
-#? name = ""
-# The agreement's version. Optional (trust).
-#? version = ""
-# The ISO 3166-1 alpha-2 jurisdiction; a `profile = "nl"` issuer implies `NL`.
-# Optional (trust).
-#? jurisdiction = ""
-# The kind of exchange the agreement covers. Optional (trust).
-#? exchange = ""
-# What the exchange is for; required of an NL agreement, which may not serve a
-# keuring (Wabvpz Art. 15f(2)). Optional, unset by default (trust).
-#? purpose = "care"
-# The source of the consent the exchange is conditioned on, never its legal
-# ground. Optional, unset by default (trust).
-#? consent = "mitz"
-# The most an external caller may read: `patient/` scopes only. Optional
-# (trust).
-#? reads = []
-# The template ids an external person may commit; none by default. Optional
-# (trust).
-#? writes = []
-# Whether an external person may discard a dispensation of the same point of
-# care within `discard_window`. Optional (trust).
-#? discard = false
-# The window of a discard, a whole number of hours (MyHealth@EU Requirements
-# Catalogue 10.0.0, requirement 07.04, sets `"24h"`). Optional (trust).
-#? discard_window = "1d"
-# The MyHealth@EU service a contact point's person agreement serves, which
-# names the `*_NOT_FOUND` code of a request outside the TRC patient; required
-# on a `contact_point` issuer and refused elsewhere. Optional, unset by default
-# (trust).
-#? ehdsi_service = "patient_summary"
-# Whether a professional of the agreement may read an opted-out EHR where
-# national law provides the EHDS Art. 10(2) vital-interest access. Optional
-# (trust).
-#? opt_out_override = false
-# For an organisation: whether no natural person views the data, or the
-# requester logs the person. Optional, unset by default (trust).
-#? access_class = "automated"
-# For a `chained` access: how long the requester keeps its log, a calendar
-# period (`"P5Y"`). Optional, unset by default (trust).
-#? chained_log_retention = "P5Y"
-
-# The legal ground of the processing.
-#? [authz.federation.agreement.legal_ground]
-# The point of GDPR Art. 6(1), `a` to `f`. Optional (trust).
-#? gdpr_6_1 = ""
-# The point of GDPR Art. 9(2), `a` to `j`. Optional (trust).
-#? gdpr_9_2 = ""
-# The national provision, such as `UAVG Art. 30(3)(a)`. Optional (trust).
-#? national = ""
-
-# The admission rate per caller, above which a request is refused before any
-# patient lookup; required.
-#? [authz.federation.agreement.caller_rate]
-# The requests per second a caller may send once its burst is spent. Required
-# in its table (trust).
-#? requests_per_second = 0
-# The requests a caller may send at once. Required in its table (trust).
-#? burst = 0
 
 # The origins of data this deployment recognises, which a retention period and
 # an access rule may name (`[authz.origin]`, EHDS Annex II 3.4).

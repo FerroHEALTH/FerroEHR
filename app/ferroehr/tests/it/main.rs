@@ -72,6 +72,7 @@ mod directory_item_refs;
 mod ehr_index_ihe;
 mod ext_functions;
 mod external_callers;
+mod federation_agreements;
 mod federation_node;
 mod fixtures;
 mod import_concurrency;

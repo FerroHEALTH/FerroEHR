@@ -128,8 +128,11 @@ profile, and the server acts on the kind:
     context participation (`422` otherwise). An organisation `composer` is
     refused with `422`.
 - **A verified external person or organisation** of a `federation` issuer is
-  admitted only under the `[[authz.federation.agreement]]` of its issuer and
-  accessor, and refused with `403` without one or under the other accessor's.
+  admitted only under the federation agreement its partner holds in the CDR
+  for its accessor kind, the partner being the party that carries the
+  token's issuer and `client_id` as a `client_id` identifier
+  ([Operational policy](operational-policy.md#federation-agreements)), and
+  refused with `403` without one or under the other accessor's.
   Its rights come from the agreement, never from a role:
   - it holds only the `patient/` scopes the agreement `reads` (beside
     `openid`, `profile`, `fhirUser`, `online_access` and `launch`), so a token

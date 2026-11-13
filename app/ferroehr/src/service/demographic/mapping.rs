@@ -363,6 +363,18 @@ impl FerroEhrService {
         self
     }
 
+    /// Judge the federation agreements against `trust`: a commit of one that
+    /// breaks a rule is refused, and a request is admitted only under one that
+    /// keeps them.
+    #[must_use]
+    pub fn with_federation_trust(
+        self,
+        trust: crate::party_binding::grants::trust::FederationTrust,
+    ) -> Self {
+        self.grants.set_federation(trust);
+        self
+    }
+
     /// The policy grants in force on this replica.
     #[must_use]
     pub fn grants(&self) -> &std::sync::Arc<crate::party_binding::grants::live::LiveGrants> {

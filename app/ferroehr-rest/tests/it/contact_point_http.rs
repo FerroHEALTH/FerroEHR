@@ -10,20 +10,20 @@
 //! other EHR gets one `404` `trc-patient-mismatch` answer carrying the
 //! service's `*_NOT_FOUND` code (eHDSI XCA Profile 8.0.1 §4.2.1, §4.2.2), and
 //! it discards a dispensation of its own point of care within the agreement's
-//! window (MyHealth@EU Requirements Catalogue 10.0.0, requirement 07.04).
+//! window (MyHealth@EU Requirements Catalogue 10.0.0, requirement 07.04). The
+//! agreement is the contact point partner's, committed to the CDR (#5440).
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use axum::Router;
-use ferroehr::config::agreement::{Accessor, Agreement, EhdsiService};
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::version_update::WriteRequest;
+use ferroehr::system_log::config::Retention;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
-use ferrohealth_server::section::CallerRate;
 use ferrohealth_smart::config::{AuthSection, IssuerEntry};
 use ferrohealth_smart::federation::{FederationSection, Field, Mapping, Source};
 use ferrohealth_smart::kind::IssuerKind;
@@ -33,6 +33,7 @@ use http::StatusCode;
 use openehr_rm::prelude::EhrStatus;
 use serde_json::{Value, json};
 
+use crate::agreement_parties::{Accessor, Terms};
 use crate::common::{self, BASE};
 
 /// NCPeH-A's authorization server, a MyHealth@EU contact point.
@@ -63,29 +64,20 @@ fn certificate() -> ClientCertificate {
 }
 
 /// The contact point's person agreement for ePrescription, reading and
-/// writing the dispensation, with `discard` over `hours`.
-fn eprescription(hours: u32) -> Agreement {
-    Agreement {
-        issuer: ferrohealth_secret::secret_url::SecretUrl::new(CONTACT_POINT),
-        accessor: Some(Accessor::Person),
-        reads: vec![SCOPE.to_owned()],
-        writes: vec![DISPENSATION.to_owned()],
-        discard: true,
-        discard_window: ferrohealth_config::units::Duration::from_hours(u64::from(hours)),
-        ehdsi_service: Some(EhdsiService::Eprescription),
-        caller_rate: Some(CallerRate {
-            requests_per_second: std::num::NonZeroU32::MIN.saturating_add(99),
-            burst: std::num::NonZeroU32::MIN.saturating_add(99),
-        }),
-        ..Agreement::default()
-    }
+/// writing the dispensation, with a discard within `hours`.
+fn eprescription(hours: u32) -> Terms {
+    Terms::new(Accessor::Person, CONTACT_POINT)
+        .text("read_scope", SCOPE)
+        .text("template", DISPENSATION)
+        .discard_window(&format!("PT{hours}H"))
+        .text("ehdsi_service", "eprescription")
 }
 
-/// The router trusting the contact point under `agreement`: a
+/// The router trusting the contact point, whose partner holds `agreement`: a
 /// sender-constrained `federation` issuer with the eHDSI mapping, its table
 /// mapping the professional's country and authority and the provider's
 /// authority, over the local EHR index, with the dispensation template held.
-async fn serve(agreement: Agreement) -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
+async fn serve(agreement: Terms) -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     let (db, pool) = common::migrated_pool().await;
     let (sender, _handle): (_, AuditHandle) =
         start(common::local_audit(), None, Some(pool.clone()))
@@ -126,9 +118,18 @@ async fn serve(agreement: Agreement) -> (testkit::TestDb, Arc<FerroEhrService>, 
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
+    svc.grants()
+        .set_ceiling(crate::agreement_parties::ceiling());
+    svc.grants()
+        .set_federation(ferroehr::config::federation::trust(
+            &auth.shared,
+            Retention::Forever,
+        ));
+    crate::agreement_parties::commit(&svc, CONTACT_POINT, &["ncpeh-b"], &[agreement])
+        .await
+        .expect("the agreement commits");
     let mut config = AppConfig {
         auth,
-        agreements: vec![agreement],
         ..common::api_config(true)
     };
     config.auth.smart.patient_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(
@@ -388,7 +389,7 @@ async fn a_contact_point_discards_a_dispensation_of_its_point_of_care_within_the
 
 #[tokio::test]
 async fn a_dispensation_without_ppd_046_and_a_discard_after_the_window_are_refused() {
-    let (_db, svc, app) = serve(eprescription(0)).await;
+    let (db, svc, app) = serve(eprescription(1)).await;
     let mine = patient_ehr(&svc, "SYNTHETIC-1").await;
     let unpermitted = token(
         Some("SYNTHETIC-1"),
@@ -402,7 +403,16 @@ async fn a_dispensation_without_ppd_046_and_a_discard_after_the_window_are_refus
     let credential = token(Some("SYNTHETIC-1"), PROVIDER, &json!({}));
     let (status, version) = dispense(&app, &mine, &credential, &point_of_care(PROVIDER)).await;
     assert_eq!(status, StatusCode::CREATED, "the dispensation commits");
-    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    // NOTE: the one-hour window is the shortest an agreement holds, so the
+    // dispensation is moved two hours back to fall outside it.
+    sqlx::query(
+        "UPDATE clinical.version SET committed_at = committed_at - interval '2 hours' \
+         WHERE vo_id = $1::uuid",
+    )
+    .bind(version.split("::").next().expect("a container"))
+    .execute(&db.pool())
+    .await
+    .expect("the dispensation moves back");
     let path = format!("/ehr/{mine}/composition/{version}");
     let (status, body) = send(&app, "DELETE", &path, &credential, None).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");

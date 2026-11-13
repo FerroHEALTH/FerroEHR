@@ -679,6 +679,30 @@ are gone. **Our own design:** the RM (Incomplete Content) allows an
 incomplete demographic version, and no specification governs when a login
 creates one.
 
+**Federation agreements are grants on the partner** (#5440). An agreement
+is a capability coding `federated_person_access` or
+`federated_organisation_access` in a `ROLE` the partner's `ACTOR` performs;
+that `ACTOR` carries a `client_id` identifier per client of its `federation`
+issuer, so a verified external caller resolves to its partner as a system
+client does, and the agreement is one of its grants, read per request from
+the in-memory copy. Its terms are credentials elements named by codes of
+the same terminology (`agreement_name` to `requester_log_retention`), whose
+values are never operations, and its validity is the grant's. The rules the
+configuration loader once applied at boot run at the `ROLE`'s commit
+(`party_binding::grants::check_agreements`, `422` naming each rule), judged
+against `ferroehr::config::federation::trust`, what `[auth]` trusts of each
+`federation` issuer and `[audit.store]`'s horizon: the partner's issuers are
+`federation` ones, one agreement per partner and accessor, a caller rate and
+`patient/` reads on every agreement, a contact point's `ehdsi_service`, and
+the EHDS Art. 13(4) and Annex II 3.2(b) rules of an organisation and of a
+`chained` access. The admission judges the agreement again for the caller's
+own issuer, so one that no longer keeps them, after its partner changed,
+admits nobody. No rule is a country's: the jurisdiction is the agreement's
+element and the consent source is `registry` or `local`. `/management/info`
+reads the agreements in force from the copy on each request. **Our own
+design:** no specification gives a capability an authorization meaning or
+governs a data-sharing agreement's form.
+
 **Break-glass stays in the configuration.** Emergency access (EHDS Art.
 11(5)) must work when the party store does not answer, so
 `emergency_access_role` and `emergency_purpose_codes` stay TOML. **Our own
