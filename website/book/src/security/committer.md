@@ -160,8 +160,9 @@ relationship. The identifier gets there in one of four ways:
    `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier`.
    FerroEHR creates the `PERSON` and its professional `ROLE` in one
    contribution.
-2. **Just-in-time creation** at the first login, off by default per issuer
-   ([configuration](../installation/config-auth.md#just-in-time-creation)).
+2. **Just-in-time creation** at the first login, off until an administrator
+   writes a `create_at_login` grant for the issuer in the CDR
+   ([Operational policy](../operational-policy.md#just-in-time-admission)).
 3. **The demographic API**, under the administrator role.
 4. **An existing `PERSON`** that already carries the identifier, adopted as
    [the migration](../installation/party-binding-migration.md) describes.

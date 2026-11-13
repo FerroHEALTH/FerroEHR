@@ -500,7 +500,7 @@ fn an_agreement_issuer_never_renders_its_userinfo() {
 #[test]
 fn a_party_binding_issuer_never_renders_its_userinfo() {
     assert_table_issuer_masked(
-        "[[authz.party_binding.issuer]]\nissuer = \"https://u:BINDING_PW_SENTINEL@binding.example/realms/ferroehr\"\njit = true\n",
+        "[[authz.party_binding.issuer]]\nissuer = \"https://u:BINDING_PW_SENTINEL@binding.example/realms/ferroehr\"\nidp_claim = \"idp\"\n",
         "BINDING_PW_SENTINEL",
         "binding.example",
     );

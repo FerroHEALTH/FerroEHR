@@ -22,6 +22,7 @@ use crate::fixtures::{if_match, object, written_vo};
 use ferroehr::config::FerroEhrConfig;
 use ferroehr::error::ServiceError;
 use ferroehr::ids::VoId;
+use ferroehr::party_binding::grants::admission::{ADMIT_IDP, LOGIN_ISSUER};
 use ferroehr::party_binding::grants::capabilities::{Actor, Capabilities, ClientState};
 use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
@@ -561,6 +562,145 @@ async fn a_stored_operation_above_the_ceiling_is_never_honoured() {
         [],
         "a replica whose ceiling does not admit the stored privilege never honours it"
     );
+}
+
+/// The token issuer of the persons whose first logins an admission admits.
+const LOGIN: &str = "https://login.example.org/persons";
+
+/// A capability granting `create_at_login` for [`LOGIN`] with the further
+/// credentials `items`.
+fn admits(items: &[Value]) -> Value {
+    let mut all = vec![named(
+        LOGIN_ISSUER,
+        &json!({ "_type": "DV_URI", "value": LOGIN }),
+    )];
+    all.extend_from_slice(items);
+    capability(&["create_at_login"], &all, None)
+}
+
+#[tokio::test]
+async fn a_create_at_login_grant_admits_the_logins_of_the_issuer_it_names_per_read() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = replica(&db.pool(), GrantCeiling::new(Operation::ALL)).await;
+    let (idp, _) = create(&svc, PartyKind::Agent, &agent("identity-provider"))
+        .await
+        .expect("the AGENT commits");
+    let admission = role(
+        idp,
+        None,
+        &[admits(&[named(ADMIT_IDP, &text("https://sts.example/"))])],
+    );
+    let (role_vo, role_uid) = create(&svc, PartyKind::Role, &admission)
+        .await
+        .expect("the admission commits");
+    svc.grants().refresh().await.expect("the grants read");
+    let now = jiff::Timestamp::now();
+    let [admitted] = &*svc.grants().admissions(LOGIN, now) else {
+        panic!("one admission for the issuer it names");
+    };
+    assert_eq!(admitted.idp(), ["https://sts.example/"]);
+    assert!(!admitted.guests());
+    assert_eq!(
+        svc.grants().admissions("https://other.example", now),
+        [],
+        "an issuer no grant names is admitted by none"
+    );
+    assert_eq!(
+        svc.grants()
+            .capabilities(Actor::Party(idp.0), now)
+            .grants()
+            .len(),
+        1,
+        "the performer holds the grant like any other"
+    );
+    let ended = role(
+        idp,
+        Some(dates(None, Some(&day(-1)))),
+        &[admits(&[named(ADMIT_IDP, &text("https://sts.example/"))])],
+    );
+    update(&svc, PartyKind::Role, (role_vo, &role_uid), &ended, "532")
+        .await
+        .expect("the admission ends");
+    svc.grants().refresh().await.expect("the grants read");
+    assert_eq!(
+        svc.grants().admissions(LOGIN, jiff::Timestamp::now()),
+        [],
+        "the ended admission admits nothing on the next read"
+    );
+}
+
+#[tokio::test]
+async fn the_books_login_admission_admits_its_tenant_from_its_first_day() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = replica(&db.pool(), GrantCeiling::new(Operation::ALL)).await;
+    let organisation = crate::policy_parties::plain(
+        "ORGANISATION",
+        "openEHR-DEMOGRAPHIC-ORGANISATION.hospital.v1",
+        "Hospital",
+    );
+    let (provider, _) = create(&svc, PartyKind::Organisation, &organisation)
+        .await
+        .expect("the ORGANISATION commits");
+    let admission = crate::policy_parties::body(
+        "login-admission",
+        &[(crate::policy_parties::PROVIDER, provider)],
+    );
+    create(&svc, PartyKind::Role, &admission)
+        .await
+        .expect("the book's admission commits");
+    svc.grants().refresh().await.expect("the grants read");
+    let tenant = "https://login.microsoftonline.com/0f1e2d3c-4b5a-4968-8776-655443322110/v2.0";
+    let day_one: jiff::Timestamp = "2026-12-01T08:00:00Z".parse().expect("an instant");
+    let [admitted] = &*svc.grants().admissions(tenant, day_one) else {
+        panic!("the tenant is admitted from 1 December 2026");
+    };
+    assert_eq!(admitted.groups(), ["5f2a9c1e-0000-4000-8000-00000000c11a"]);
+    assert_eq!(
+        admitted.assurance(),
+        Some(ferrohealth_smart::assurance::AssuranceLevel::Substantial)
+    );
+    let eve: jiff::Timestamp = "2026-11-30T23:00:00Z".parse().expect("an instant");
+    assert_eq!(
+        svc.grants().admissions(tenant, eve),
+        [],
+        "not before its first day"
+    );
+}
+
+#[tokio::test]
+async fn a_create_at_login_grant_admitting_every_login_or_above_the_ceiling_is_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = replica(&db.pool(), GrantCeiling::new(Operation::ALL)).await;
+    let (idp, _) = create(&svc, PartyKind::Agent, &agent("identity-provider"))
+        .await
+        .expect("the AGENT commits");
+    let refused = create(&svc, PartyKind::Role, &role(idp, None, &[admits(&[])]))
+        .await
+        .expect_err("an admission without a condition admits every login");
+    assert!(
+        matches!(&refused, ServiceError::Unprocessable { violation, .. }
+            if violation.detail().contains("declares no admission condition")),
+        "{refused:?}"
+    );
+    let unnamed = capability(&["create_at_login"], &[named(ADMIT_IDP, &text("x"))], None);
+    let refused = create(&svc, PartyKind::Role, &role(idp, None, &[unnamed]))
+        .await
+        .expect_err("an admission naming no issuer");
+    assert!(
+        matches!(&refused, ServiceError::Unprocessable { violation, .. }
+            if violation.detail().contains("names no login issuer")),
+        "{refused:?}"
+    );
+    let narrow = replica(&db.pool(), GrantCeiling::default()).await;
+    let refused = create(
+        &narrow,
+        PartyKind::Role,
+        &role(idp, None, &[admits(&[named(ADMIT_IDP, &text("x"))])]),
+    )
+    .await
+    .expect_err("the default ceiling does not admit create_at_login");
+    assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
+    assert_eq!(svc.grants().admissions(LOGIN, jiff::Timestamp::now()), []);
 }
 
 #[tokio::test]

@@ -24,6 +24,7 @@
 //! No openEHR spec gives a capability an authorization meaning, or governs
 //! the side table: our own design.
 
+pub mod admission;
 pub mod capabilities;
 pub(crate) mod derive;
 pub mod live;

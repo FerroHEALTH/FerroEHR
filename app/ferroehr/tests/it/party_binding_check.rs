@@ -499,7 +499,7 @@ async fn a_key_just_in_time_creation_introduced_passes_on_a_jit_issuer() {
     assert_eq!(
         verdict(&svc, &input).await,
         None,
-        "no issuer has jit = true"
+        "no persons issuer is bound"
     );
     input.jit_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(JIT_ISSUER)];
     assert_eq!(verdict(&svc, &input).await, Some(Origin::Jit));

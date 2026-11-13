@@ -22,7 +22,10 @@ use std::sync::{Arc, PoisonError, RwLock};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::party_binding::grants::capabilities::{Actor, Capabilities, Client, ClientState, Grant};
+use crate::party_binding::grants::admission::Admission;
+use crate::party_binding::grants::capabilities::{
+    Actor, Capabilities, Client, ClientState, Credentials, Grant,
+};
 use crate::party_binding::grants::operation::{GrantCeiling, Operation};
 use crate::party_binding::grants::store::{self, CHANNEL, CapabilityRow, Loaded};
 use crate::policy_register::listen::Listened;
@@ -263,6 +266,27 @@ impl LiveGrants {
             })
             .collect();
         Capabilities::new(client, grants)
+    }
+
+    /// The admission rules in force at `now` for the first logins of the
+    /// token issuer `issuer`, from the copy held: each
+    /// [`Operation::CreateAtLogin`] grant naming it that holds on the date of
+    /// `now` in UTC and at `now`, under the ceiling, whoever performs its
+    /// `ROLE`.
+    #[must_use]
+    pub fn admissions(&self, issuer: &str, now: jiff::Timestamp) -> Vec<Admission> {
+        let held = self.held();
+        let ceiling = self.ceiling();
+        let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
+        held.capabilities
+            .values()
+            .flatten()
+            .filter(|row| in_force(row, &ceiling, today, now) == Some(Operation::CreateAtLogin))
+            // NOTE: admission::check refuses the commit of credentials that do not
+            // read, so a stored one that does not is never honoured; our own design.
+            .filter_map(|row| Admission::read(Credentials::of(row.credentials.as_ref())).ok())
+            .filter(|admission| admission.names(issuer))
+            .collect()
     }
 }
 

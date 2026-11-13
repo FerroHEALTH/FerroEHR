@@ -27,6 +27,9 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::party_binding::grants::admission::{
+    ADMIT_ASSURANCE, ADMIT_GROUP, ADMIT_GUESTS, ADMIT_IDP, ADMIT_ROLE, LOGIN_ISSUER,
+};
 use crate::party_binding::policy_mark::ACTS_FOR;
 
 /// The code naming the credentials element whose `DV_DATE_TIME` is the
@@ -43,8 +46,19 @@ pub const NOT_AFTER: &str = "not_after";
 pub const SCOPES: [&str; 3] = ["template", "facility", "subject_namespace"];
 
 /// The codes of the terminology that name no operation.
-const QUALIFIERS: [&str; 6] = [
-    ACTS_FOR, NOT_BEFORE, NOT_AFTER, SCOPES[0], SCOPES[1], SCOPES[2],
+const QUALIFIERS: [&str; 12] = [
+    ACTS_FOR,
+    NOT_BEFORE,
+    NOT_AFTER,
+    SCOPES[0],
+    SCOPES[1],
+    SCOPES[2],
+    LOGIN_ISSUER,
+    ADMIT_IDP,
+    ADMIT_GROUP,
+    ADMIT_ROLE,
+    ADMIT_ASSURANCE,
+    ADMIT_GUESTS,
 ];
 
 /// One operation a capability may grant.
@@ -73,11 +87,15 @@ pub enum Operation {
     AccessService,
     /// Read a party's protected national identifiers.
     ReadIdentifiers,
+    /// Create a provisional `PERSON` at the first login of a person no party
+    /// carries, under the admission conditions the grant's credentials name
+    /// ([`crate::party_binding::grants::admission`]).
+    CreateAtLogin,
 }
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 10] = [
         Self::CommitComposition,
         Self::ImportEhr,
         Self::ImportEhrExtract,
@@ -87,6 +105,7 @@ impl Operation {
         Self::ReadSubjectAudit,
         Self::AccessService,
         Self::ReadIdentifiers,
+        Self::CreateAtLogin,
     ];
 
     /// The operation's code in [`crate::party_binding::policy_mark::TERMINOLOGY`].
@@ -102,6 +121,7 @@ impl Operation {
             Self::ReadSubjectAudit => "read_subject_audit",
             Self::AccessService => "access_service",
             Self::ReadIdentifiers => "read_identifiers",
+            Self::CreateAtLogin => "create_at_login",
         }
     }
 
@@ -182,6 +202,7 @@ mod tests {
         }
         assert_eq!(Operation::of("import_everything"), None);
         assert!(is_qualifier(ACTS_FOR) && is_qualifier("template"));
+        assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_GUESTS));
     }
 
     #[test]

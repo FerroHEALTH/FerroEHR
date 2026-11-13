@@ -324,12 +324,12 @@ pub struct GrantsConfig {
     /// The operations are `commit_composition`, `import_ehr`,
     /// `import_ehr_extract`, `export_ehr_extract`, `federated_person_access`,
     /// `federated_organisation_access`, `read_subject_audit`,
-    /// `access_service` and `read_identifiers`. The default allows only
-    /// `commit_composition`, which lets a client write the templates its
-    /// grant names and nothing else: an import, an export, a federation
-    /// agreement and every privilege reach data beyond one system's own
-    /// writes, so each is allowed by name. An empty list lets the store grant
-    /// nothing.
+    /// `access_service`, `read_identifiers` and `create_at_login`. The
+    /// default allows only `commit_composition`, which lets a client write
+    /// the templates its grant names and nothing else: an import, an export,
+    /// a federation agreement, every privilege and the creation of a
+    /// `PERSON` at a first login reach beyond one system's own writes, so
+    /// each is allowed by name. An empty list lets the store grant nothing.
     pub allowed: Vec<crate::party_binding::grants::operation::Operation>,
 }
 
