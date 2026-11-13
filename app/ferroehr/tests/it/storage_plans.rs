@@ -838,6 +838,21 @@ fn aql_sql_with(
     ehr_ids: Vec<EhrId>,
     limit: Option<i64>,
 ) -> ferroehr::aql::sql::PreparedQuery {
+    aql_sql_for(
+        aql,
+        params,
+        (ehr_ids, limit),
+        ferroehr::aql::sql::PolicyParties::Served,
+    )
+}
+
+/// [`aql_sql_with`] for a caller `policy_parties` describes.
+fn aql_sql_for(
+    aql: &str,
+    params: &Params,
+    (ehr_ids, limit): (Vec<EhrId>, Option<i64>),
+    policy_parties: ferroehr::aql::sql::PolicyParties,
+) -> ferroehr::aql::sql::PreparedQuery {
     let ast = openehr_query::parser::parse_str(aql).expect("the AQL parses");
     let ir = ferroehr::aql::plan(&ast, params, SpecProfile::default()).expect("the AQL plans");
     let ctx = SqlCtx {
@@ -849,7 +864,7 @@ fn aql_sql_with(
         limit,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
-        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
+        policy_parties,
     };
     ferroehr::aql::sql::build(&ir, params, &ctx).expect("the AQL lowers to SQL")
 }
@@ -1888,6 +1903,134 @@ async fn a_lookup_by_a_person_identifier_reads_the_one_person() {
         let prepared = aql_sql_with(PERSON_LOOKUP_AQL, &params, Vec::new(), limit);
         let plan = explain_aql(&pools.party, prepared).await;
         assert_value_lookup(name, &plan, PERSONS);
+    }
+}
+
+/// The party classes the root lookup seeds, each with its kind.
+const SEEDED_PARTIES: [(&str, ferroehr::service::demographic::types::PartyKind); 4] = [
+    (
+        "PERSON",
+        ferroehr::service::demographic::types::PartyKind::Person,
+    ),
+    (
+        "ORGANISATION",
+        ferroehr::service::demographic::types::PartyKind::Organisation,
+    ),
+    (
+        "GROUP",
+        ferroehr::service::demographic::types::PartyKind::Group,
+    ),
+    (
+        "AGENT",
+        ferroehr::service::demographic::types::PartyKind::Agent,
+    ),
+];
+
+/// [`person_with_identifier`] as a party of `class`.
+fn party_with_identifier(class: &str, index: u32) -> Value {
+    let mut body = person_with_identifier(index);
+    let archetype = format!(
+        "openEHR-DEMOGRAPHIC-{class}.{}.v1",
+        class.to_ascii_lowercase()
+    );
+    body["_type"] = json!(class);
+    body["archetype_node_id"] = json!(archetype);
+    body["archetype_details"]["archetype_id"]["value"] = json!(archetype);
+    body
+}
+
+/// A standalone `PARTY_RELATIONSHIP` from and to the PERSON `person`,
+/// carrying the identifier of `index` in its `details`.
+fn relationship_with_identifier(person: VoId, index: u32) -> Value {
+    let archetype = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.relationship.v1";
+    let reference = json!({ "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+        "id": { "_type": "HIER_OBJECT_ID", "value": person.to_string() } });
+    json!({
+        "_type": "PARTY_RELATIONSHIP",
+        "archetype_node_id": archetype,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "rm_version": "1.1.0" },
+        "name": { "_type": "DV_TEXT", "value": format!("Relationship {index}") },
+        "details": person_with_identifier(index)["details"].clone(),
+        "source": reference.clone(),
+        "target": reference
+    })
+}
+
+/// A lookup by an identifier value under each demographic root, concrete,
+/// abstract and the standalone `PARTY_RELATIONSHIP`, reads the one object
+/// through `idx_node_hot_value_search` (#5474), for an administrator and,
+/// under the policy filter, for any other caller.
+///
+/// The store holds fifty objects of each class, numbered apart, and the
+/// statistics are taken after they land, so the plan is the one they choose.
+#[tokio::test]
+async fn a_lookup_under_every_demographic_root_reads_the_one_object() {
+    use ferroehr::aql::sql::PolicyParties;
+    const EACH: u32 = 50;
+    const MIDDLE: u32 = 25;
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let pools = ferroehr::db::domain::DomainPools::from_shared(&pool);
+    let svc = FerroEhrService::new(&pools);
+    let mut index = 0;
+    let mut anchor = None;
+    for (class, kind) in SEEDED_PARTIES {
+        for _ in 0..EACH {
+            let created = svc
+                .party_create(
+                    kind,
+                    WriteRequest::new(
+                        openehr_its::json::from_canonical_value(&party_with_identifier(
+                            class, index,
+                        ))
+                        .expect("the fixture is a party"),
+                    ),
+                )
+                .await
+                .expect("create a party");
+            anchor.get_or_insert(crate::fixtures::written_vo(&created));
+            index += 1;
+        }
+    }
+    let person = anchor.expect("a PERSON was seeded");
+    for _ in 0..EACH {
+        svc.party_relationship_create(WriteRequest::new(
+            openehr_its::json::from_canonical_value(&relationship_with_identifier(person, index))
+                .expect("the fixture is a PARTY_RELATIONSHIP"),
+        ))
+        .await
+        .expect("create a relationship");
+        index += 1;
+    }
+    pools
+        .party
+        .execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seeded parties");
+
+    // One object of each class sits in the middle of its class's numbers.
+    for (class, wanted) in [
+        ("GROUP", 2 * EACH + MIDDLE),
+        ("AGENT", 3 * EACH + MIDDLE),
+        ("ACTOR", 2 * EACH + MIDDLE),
+        ("PARTY", MIDDLE),
+        ("PARTY_RELATIONSHIP", 4 * EACH + MIDDLE),
+    ] {
+        let aql = format!(
+            "SELECT p/uid/value, id/items[at0001]/value/type \
+             FROM {class} p CONTAINS CLUSTER id[{PERSON_IDENTIFIER_CLUSTER}] \
+             WHERE id/items[at0001]/value/id = $v"
+        );
+        let params = Params::default().with("v", ParamValue::Str(person_identifier(wanted)));
+        for policy in [PolicyParties::Served, PolicyParties::Hidden] {
+            for limit in [None, Some(10)] {
+                let prepared = aql_sql_for(&aql, &params, (Vec::new(), limit), policy);
+                let plan = explain_aql(&pools.party, prepared).await;
+                assert_value_lookup(&format!("{class} ({policy:?}, {limit:?})"), &plan, index);
+            }
+        }
     }
 }
 

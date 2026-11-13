@@ -41,6 +41,7 @@ pub(crate) mod assurance;
 mod build;
 pub(crate) mod declared;
 mod gates;
+mod grants;
 mod issuer;
 mod party;
 pub(crate) mod purpose;
@@ -618,6 +619,10 @@ pub(crate) async fn middleware(
                     Err(e) => return refusal::response(auth, req.headers(), &e),
                 }
             }
+            let granted = match grants::resolve(&layer, &for_audit).await {
+                Ok(granted) => granted,
+                Err(e) => return refusal::response(auth, req.headers(), &e),
+            };
             // The roles ride beside the committer identity for the request
             // scope, so a record the service layer emits by itself carries
             // them too (#3239).
@@ -632,7 +637,7 @@ pub(crate) async fn middleware(
                             binding,
                             ferroehr::versioning::committer::with_committer(
                                 Some(committer),
-                                next.run(req),
+                                Box::pin(grants::scoped(&layer, granted, next.run(req))),
                             ),
                         ),
                     ),
@@ -660,14 +665,6 @@ pub fn client_of(principal: &Principal) -> Option<String> {
     match principal.method {
         AuthMethod::Basic => Some(principal.subject.clone()),
         AuthMethod::Bearer => principal.access.caller()?.client_id().map(str::to_owned),
-    }
-}
-
-/// The `mechanism` metric label for a known authenticated principal.
-fn mechanism_label(method: AuthMethod) -> &'static str {
-    match method {
-        AuthMethod::Basic => "basic",
-        AuthMethod::Bearer => "bearer",
     }
 }
 

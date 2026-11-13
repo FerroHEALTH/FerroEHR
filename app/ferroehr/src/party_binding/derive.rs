@@ -105,6 +105,8 @@ pub(crate) struct Facts {
     pub(crate) performer: Option<String>,
     /// The `time_validity` of a `ROLE`.
     pub(crate) validity: Option<Value>,
+    /// The client identifiers and granted operations the grant rows read.
+    pub(crate) grants: super::grants::derive::GrantFacts,
     /// What makes the version a policy party, whatever the mapping
     /// ([`crate::party_binding::policy_mark::policy_content`]).
     pub(crate) policy: Option<crate::party_binding::policy_mark::PolicyContent>,
@@ -121,6 +123,7 @@ impl Facts {
             .map(canonical_key);
         let mut facts = Self {
             template,
+            grants: super::grants::derive::GrantFacts::of(kind, body),
             policy: crate::party_binding::policy_mark::policy_content(body),
             ..Self::default()
         };

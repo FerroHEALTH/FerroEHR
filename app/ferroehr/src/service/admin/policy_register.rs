@@ -86,7 +86,7 @@ impl FerroEhrService {
 
     /// Bring the registers in force up to date before the request path
     /// decides anything: a read when a register write was notified or the
-    /// listener is down ([`crate::policy_register::listen`]), and no database
+    /// listener is down ([`crate::policy_register::listen::Listened`]), and no database
     /// work otherwise.
     ///
     /// # Errors

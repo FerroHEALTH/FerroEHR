@@ -41,13 +41,22 @@ macro_rules! relationships_of_v {
 }
 
 /// The columns [`reverse_of`] reads, from the index row `t`, the source head
-/// `h` and the relationship `r`.
+/// `h`, the relationship `r` and the source version `v` its siblings are
+/// counted in.
 macro_rules! reverse_columns {
     () => {
         "SELECT h.vo_id AS source_vo_id, \
                 r.rel ->> 'archetype_node_id' AS node_id, \
                 r.rel -> 'name' ->> 'value' AS name, \
-                v.kind = 'PARTY_RELATIONSHIP' AS standalone \
+                v.kind = 'PARTY_RELATIONSHIP' AS standalone, \
+                r.rel -> 'uid' ->> 'value' AS uid, \
+                r.ord AS position, \
+                (SELECT count(*) = 1 FROM jsonb_array_elements(v.body::jsonb -> 'relationships') sib(rel) \
+                 WHERE sib.rel ->> 'archetype_node_id' IS NOT DISTINCT FROM r.rel ->> 'archetype_node_id' \
+                   AND sib.rel -> 'name' ->> 'value' IS NOT DISTINCT FROM r.rel -> 'name' ->> 'value') \
+                    AS name_unique, \
+                (SELECT count(*) = 1 FROM jsonb_array_elements(v.body::jsonb -> 'relationships') sib(rel) \
+                 WHERE sib.rel -> 'uid' ->> 'value' = r.rel -> 'uid' ->> 'value') AS uid_unique \
          FROM party_relationship_target t \
          JOIN vo_head h ON h.vo_id = t.source_vo_id AND h.restricted_at IS NULL "
     };
@@ -152,6 +161,15 @@ pub struct ReverseRelationship {
     /// Whether the relationship is a standalone `PARTY_RELATIONSHIP`
     /// container, `source_vo_id` then being that container.
     pub standalone: bool,
+    /// The relationship's `uid/value`.
+    pub uid: Option<String>,
+    /// The relationship's 1-based position in the source's `relationships`.
+    pub position: i64,
+    /// Whether no other relationship of the source has its `archetype_node_id`
+    /// and its `name/value`.
+    pub name_unique: bool,
+    /// Whether no other relationship of the source has its `uid/value`.
+    pub uid_unique: bool,
 }
 
 /// The relationships whose target is `target`, ordered by source container
@@ -163,6 +181,8 @@ pub struct ReverseRelationship {
 /// committed last at or before `at` holds them. Both are index probes, never a
 /// walk of a source's versions. A source under restriction of processing is
 /// left out, as every read path leaves it out (`vo_head.restricted_at`).
+///
+/// Each row carries what tells it from its siblings in that list.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
@@ -214,6 +234,10 @@ pub async fn reverse_of(
             node_id: row.try_get("node_id")?,
             name: row.try_get("name")?,
             standalone: row.try_get("standalone")?,
+            uid: row.try_get("uid")?,
+            position: row.try_get("position")?,
+            name_unique: row.try_get("name_unique")?,
+            uid_unique: row.try_get("uid_unique")?,
         });
     }
     Ok(out)

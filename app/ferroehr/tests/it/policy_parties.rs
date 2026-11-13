@@ -20,6 +20,7 @@ use crate::fixtures::{at, delete_precondition, if_match, object, written_vo};
 use ferroehr::config::FerroEhrConfig;
 use ferroehr::error::ServiceError;
 use ferroehr::ids::VoId;
+use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::party_binding::policy::{PolicyKind, PolicyRole};
 use ferroehr::party_binding::protect;
 use ferroehr::service::FerroEhrService;
@@ -92,7 +93,8 @@ async fn loaded() -> (testkit::TestDb, FerroEhrService) {
 }
 
 /// A service holding the policy definitions with the mapping of `toml`
-/// installed, as the server installs it.
+/// installed, as the server installs it, under an `[authz.grants] allowed`
+/// that admits every operation, so each worked example grants what it codes.
 async fn mapped_by(toml: &str) -> (testkit::TestDb, FerroEhrService) {
     let (db, svc) = loaded().await;
     let config = config(toml);
@@ -102,7 +104,8 @@ async fn mapped_by(toml: &str) -> (testkit::TestDb, FerroEhrService) {
         .expect("the mapping compiles");
     let svc = svc
         .with_mapped_party_templates(sections.mapped_templates())
-        .with_binding_mapping(mapping);
+        .with_binding_mapping(mapping)
+        .with_grant_ceiling(GrantCeiling::new(Operation::ALL));
     (db, svc)
 }
 

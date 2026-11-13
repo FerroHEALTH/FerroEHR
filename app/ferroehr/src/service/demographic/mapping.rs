@@ -337,16 +337,50 @@ impl FerroEhrService {
     }
 
     /// Refills the binding side table under the installed mapping once no
-    /// replica's lease was renewed within `ttl` ([`crate::party_binding::fill::refill`]).
+    /// replica's lease was renewed within `ttl` ([`crate::party_binding::fill::refill`]),
+    /// or, with no mapping installed, the grant rows alone
+    /// ([`crate::party_binding::fill::refill_grants`]).
     ///
     /// # Errors
-    /// [`FillError::Unmapped`] when no mapping is installed, and the
-    /// [`crate::party_binding::fill::refill`] refusals.
+    /// The [`crate::party_binding::fill::refill`] and
+    /// [`crate::party_binding::fill::refill_grants`] refusals.
     pub async fn refill_binding(&self, ttl: std::time::Duration) -> Result<(), FillError> {
         if self.binding.is_empty() {
-            return Err(FillError::Unmapped);
+            return crate::party_binding::fill::refill_grants(&self.demographic_pool).await;
         }
         crate::party_binding::fill::refill(&self.demographic_pool, &self.binding, ttl).await
+    }
+
+    /// Honour the policy grants under `ceiling`, `[authz.grants] allowed`:
+    /// a commit of a capability above it is refused and a stored one is
+    /// never honoured.
+    #[must_use]
+    pub fn with_grant_ceiling(
+        self,
+        ceiling: crate::party_binding::grants::operation::GrantCeiling,
+    ) -> Self {
+        self.grants.set_ceiling(ceiling);
+        self
+    }
+
+    /// The policy grants in force on this replica.
+    #[must_use]
+    pub fn grants(&self) -> &std::sync::Arc<crate::party_binding::grants::live::LiveGrants> {
+        &self.grants
+    }
+
+    /// Fills the grant rows when they were never filled, then reads them, as
+    /// a boot does before the replica takes traffic.
+    ///
+    /// # Errors
+    /// [`FillError::Storage`] when the party store fails, two `AGENT`s
+    /// naming one client included.
+    pub async fn read_grants(&self) -> Result<(), FillError> {
+        crate::party_binding::fill::fill_grants_once(&self.demographic_pool).await?;
+        self.grants
+            .refresh()
+            .await
+            .map_err(|unavailable| FillError::Storage(unavailable.into_inner()))
     }
 
     /// Runs the pre-flight of a migration to party binding under the installed

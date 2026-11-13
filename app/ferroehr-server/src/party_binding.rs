@@ -33,9 +33,10 @@ use ferroehr::service::message::import_policy::ImportPolicy;
 /// `ferroehr party-binding …` subcommands.
 #[derive(Debug, Subcommand)]
 pub enum PartyBindingCmd {
-    /// Rebuild the binding side table from the party versions under the
-    /// configured mapping and store its digest. Run it with every replica
-    /// stopped: it refuses while a replica's lease is live.
+    /// Rebuild the binding side table, the policy grants included, from the
+    /// party versions under the configured mapping and store its digest. Run
+    /// it with every replica stopped: it refuses while a replica's lease is
+    /// live. With no mapping configured it rebuilds the policy grants alone.
     Refill,
     /// Report, from the party versions and writing nothing, what binding
     /// will make of them: the keys per issuer, duplicates, inactive and
@@ -99,8 +100,8 @@ pub struct CheckArgs {
     pub expected_issuer: Option<String>,
 }
 
-/// Returns `service` with the import rules and the configured party mapping
-/// installed.
+/// Returns `service` with the import rules, the grant ceiling
+/// (`[authz.grants] allowed`) and the configured party mapping installed.
 ///
 /// The mapping is the templates a mapped party is validated against and the
 /// mapping the side table is derived under: the shipped default definitions
@@ -122,11 +123,13 @@ pub fn install(
         .iter()
         .map(|settings| settings.issuer.clone())
         .chain(key_issuers.iter().cloned());
-    let service = service.with_import_policy(ImportPolicy::new(
-        config.authz.rbac.import_role.clone(),
-        config.authz.import.trusted_systems.clone(),
-        logins,
-    ));
+    let service = service
+        .with_import_policy(ImportPolicy::new(
+            config.authz.rbac.import_role.clone(),
+            config.authz.import.trusted_systems.clone(),
+            logins,
+        ))
+        .with_grant_ceiling(config.authz.grants.ceiling());
     let sections = config.authz.party_binding.sections();
     let mapping = sections
         .binding_mapping(&key_issuers, &config.authz.rbac.admin_role)
@@ -136,14 +139,17 @@ pub fn install(
         .with_binding_mapping(mapping))
 }
 
-/// Seeds the default policy and demographic definitions, judges the mapping
-/// against its templates, prepares the side table and takes this replica's
-/// lease, renewed in the background until it is released.
+/// Prepares this replica's party store before it takes traffic.
+///
+/// Seeds the default policy and demographic definitions, reads the policy
+/// grants and starts their listener, judges the mapping against its
+/// templates, prepares the side table and takes this replica's lease,
+/// renewed in the background until it is released.
 ///
 /// # Errors
-/// A default definition the definition store refuses, a template the
-/// mapping cannot use, a table filled under another mapping, a value two
-/// parties carry, or a party store failure.
+/// A default definition the definition store refuses, two `AGENT`s naming
+/// one client, a template the mapping cannot use, a table filled under
+/// another mapping, a value two parties carry, or a party store failure.
 pub async fn prepare(
     service: &Arc<FerroEhrService>,
     config: &FerroEhrConfig,
@@ -152,6 +158,11 @@ pub async fn prepare(
         .seed_default_definitions()
         .await
         .context("seeding the default definitions")?;
+    service
+        .read_grants()
+        .await
+        .context("reading the policy grants")?;
+    service.grants().listened().spawn_listener();
     let errors = service
         .party_mapping_errors(&config.authz.party_binding.sections())
         .await?;
@@ -218,9 +229,9 @@ impl Held {
 /// `ferroehr party-binding refill`.
 ///
 /// # Errors
-/// The configuration does not load or validate, no mapping is configured, a
-/// replica's lease is live, a value two parties carry, or the party store
-/// fails.
+/// The configuration does not load or validate, a replica's lease is live, a
+/// value two parties carry, two `AGENT`s naming one client, or the party
+/// store fails.
 #[expect(
     clippy::print_stdout,
     reason = "the party-binding subcommand's PURPOSE is console output \
@@ -241,7 +252,10 @@ pub async fn run(
                 .refill_binding(LEASE_TTL)
                 .await
                 .context("refilling the party binding side table")?;
-            println!("the party binding side table is refilled under the configured mapping");
+            println!(
+                "the party binding side table and the policy grants are refilled under the \
+                 configured mapping"
+            );
             Ok(())
         }
         PartyBindingCmd::Check(args) => {
