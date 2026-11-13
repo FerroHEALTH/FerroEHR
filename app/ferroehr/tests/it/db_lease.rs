@@ -157,7 +157,8 @@ async fn an_abandoned_ehr_access_index_load_frees_its_connection() {
     let load = tokio::spawn({
         let pool = pool.clone();
         async move {
-            ferroehr::storage::version_repo::meta::ehr_access_bodies_with_settings(&pool).await
+            ferroehr::storage::version_repo::ehr_access::ehr_access_bodies_with_settings(&pool)
+                .await
         }
     });
     let waiting = || async {

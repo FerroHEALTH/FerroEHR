@@ -22,6 +22,7 @@
 
 mod common;
 
+mod aom14_quantity_item;
 mod aom2_model_xml;
 mod aom2_xml;
 mod attested_version;

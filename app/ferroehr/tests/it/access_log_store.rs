@@ -25,7 +25,7 @@ use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecor
 
 /// The example entry of the access-log proposal, the fixture the draft's own
 /// tests in `openehr-rm` read.
-fn example() -> Value {
+pub(crate) fn example() -> Value {
     serde_json::from_str(include_str!(
         "../../../../crates/openehr-rm/tests/fixtures/draft/access_log_entry.json"
     ))
@@ -50,7 +50,7 @@ fn hex(bytes: &[u8]) -> String {
 }
 
 /// The SHA-256 of `text`'s UTF-8 octets in lower-case hexadecimal.
-fn sha256_hex(text: &str) -> String {
+pub(crate) fn sha256_hex(text: &str) -> String {
     hex(&Sha256::digest(text.as_bytes()))
 }
 

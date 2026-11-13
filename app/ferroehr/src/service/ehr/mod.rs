@@ -49,7 +49,8 @@ mod status;
 pub(in crate::service) mod tags;
 pub(crate) mod validation;
 
-pub mod access_types;
+pub mod access_rule;
+pub mod access_settings;
 
 use openehr_base::v1_3::base_types::identification::lexical::composite_ids_equal;
 

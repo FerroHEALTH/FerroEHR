@@ -293,7 +293,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   walk both in position order. An entry changes only by its replacement with
   its own tombstone, which keeps its uid, time and link, so the chain verifies
   after its content is gone (`audit/0027_access_log_record.sql`,
-  `access_log::store`). No openEHR spec governs audit storage: our own design.
+  `access_log::store`). Each entry states its retention when it is written
+  (`access_log::retention`: `retain_until` and the grounds `ehds-logging`'s
+  policy computes from its categories and origins, the longest when they
+  differ), and the audit store's hourly worker replaces every entry past its
+  `retain_until` by its tombstone, in any order of expiry
+  (`access_log::expiry`); an erasure a law orders takes the same path through
+  `POST /admin/access-log/erase`, which writes an access record. No openEHR
+  spec governs audit storage: our own design.
 - **One pool and one DSN per storage domain.** `[database.clinical]`,
   `[database.party]` and `[database.audit]` each carry a
   `url`/`url_file`, defaulting to the shared `[database].url`, and
@@ -408,7 +415,19 @@ which is what makes an optional stage safe to disable:
    outside the RFC 6750 §2.1 `b64token` alphabet is a malformed token, `401`.
 2. **`EHR_ACCESS`** — always on and unconditional, from the RM's own gateway
    clause ("All access decisions to data in the EHR must be made in accordance
-   with the policies and rules in this object").
+   with the policies and rules in this object"). The settings are the
+   `access_directives` scheme, an `ACCESS_DIRECTIVE_SETTINGS` of the draft
+   access control package, refused whole with `400` at every write unless the
+   draft BMM's invariants and the terminology groups hold (RM EHR IM
+   §`ACCESS_CONTROL_SETTINGS` leaves the class "Currently implementation
+   dependent": the scheme is our own design). A new version is committed by a
+   gate-keeper the current settings name or by `admin_role` on the subject's
+   instruction (BASE Architecture Overview §Security Policy, "Access control of
+   access settings"); the settings are read only by those callers and the
+   subject, and are absent to anyone else in AQL, an EHR Extract and the
+   CONTRIBUTION read, since a restriction stays invisible to a provider (EHDS
+   Art. 8). Who writes and reads them is our own design
+   (`service::ehr::access_rule`).
 3. **RBAC** — the coarse operation class (public / clinical / admin /
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an
@@ -994,7 +1013,7 @@ policy can only tighten them.
   `CONTRIBUTION` with the request committer's `AUDIT_DETAILS` (RM Common IM
   master06 §Contributions, §Committal and Audits), as one row of the
   append-only clinical table `access_policy_version` (migration
-  `clinical/0037`). The `ORIGINAL_VERSION` is rendered by the same builder as
+  `clinical/0038`). The `ORIGINAL_VERSION` is rendered by the same builder as
   every other version. Its `owner_id` is the controller of the first version,
   and a later version naming another controller is refused. Our own choice:
   the policy rows stay out of the `version`/`node` spine, so no AQL, EHR

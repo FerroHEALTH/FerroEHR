@@ -256,7 +256,7 @@ The cardinality of container attributes may be constrained in cADL with the `_ca
     }
 --------
 
-The keyword `cardinality` implies firstly that the property events must be of a container type, such as `List<T>` , `Set<T>` , `Bag<T>` . The integer range indicates the valid membership of the container; a single `\*` means the range `0..*`, i.e. '0 to many'. The type of the container is not explicitly indicated, since it is usually defined by the information model. However, the semantics of a logical set (unique membership, ordering not significant), a logical list (ordered, non-unique membership) or a bag (unordered, non-unique membership) can be constrained using the additional keywords `ordered` , `unordered` , `unique` and `non-unique` within the cardinality constraint, as per the following examples:
+The keyword `cardinality` implies firstly that the property events must be of a container type, such as `List<T>` , `Set<T>` , `Bag<T>` . The integer range indicates the valid membership of the container; a single `\*` means the range `0..*`, i.e. '0 to many'. The type of the container is not explicitly indicated, since it is usually defined by the information model. However, the semantics of a logical set (unique membership, ordering not significant), a logical list (ordered, non-unique membership) or a bag (unordered, non-unique membership) can be constrained using the additional keywords `ordered`, `unordered` and `unique` within the cardinality constraint, as per the following examples:
 
 [source, cadl]
 --------
@@ -265,10 +265,12 @@ The keyword `cardinality` implies firstly that the property events must be of a 
     events cardinality ∈ {*; unordered} ∈ {                 -- logical bag
 --------
 
+The keyword `unique` means logical uniqueness: no two members of the container may be equal by value. Object identity is not meant, and attributes that distinguish sibling objects anyway, such as their names, are not taken into account. When `unique` is not stated, membership is non-unique.
+
 In theory, none of these constraints can be stronger than the semantics of the corresponding container in the relevant part of the reference model. However, in practice, developers often use lists to facilitate integration, when the actual semantics are intended to be of a set; in such cases, they typically ensure set-like semantics in their own code rather than by using an `Set<T>` type. How such constraints are evaluated in practice may depend somewhat on knowledge of the  software system.
 
 [.principle]
-A *cardinality constraint* may be used after any attribute name (or after its `existence` constraint, if there is one) in order to indicate that the attribute refers to a container type, what number of member items it must have in the data, and optionally, whether it has "list", "set", or "bag" semantics, via the use of the keywords `ordered`, `unordered`, `unique` and `non-unique`.
+A *cardinality constraint* may be used after any attribute name (or after its `existence` constraint, if there is one) in order to indicate that the attribute refers to a container type, what number of member items it must have in the data, and optionally, whether it has "list", "set", or "bag" semantics, via the use of the keywords `ordered`, `unordered` and `unique`.
 
 The numeric part of the cardinality constraint can take the values `{0}`, `{0..0}`, `{0..n}`, `{m..n}`, `{0..\*}`, or `{*}`, or a syntactic equivalent. The first two of these constraints are unlikely to be useful, but there is no reason to prevent them. There is no default cardinality, since if none is shown, the relevant attribute is assumed to be single-valued (in the interests of uniformity in archetypes, this holds even for smarter parsers that can access the reference model and determine that the attribute is in fact a container).
 

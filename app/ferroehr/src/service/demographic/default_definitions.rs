@@ -7,7 +7,9 @@
 //! ([`crate::party_binding::policy::DEFINITIONS`]), of the access policy
 //! archetype ([`crate::access_policy::DEFINITIONS`]) and the default
 //! demographic definitions the default party mapping names
-//! ([`crate::party_binding::shipped::DEFINITIONS`]). Every boot stores each
+//! ([`crate::party_binding::shipped::DEFINITIONS`]), and the default
+//! `EHR_ACCESS` definition of the `access_directives` scheme
+//! ([`crate::service::ehr::access_settings::DEFINITIONS`]). Every boot stores each
 //! one through the normal definition path when no definition of its id is
 //! stored, and leaves a stored one alone whatever its text: it never
 //! overwrites a deployment's definition and never re-seeds over its change.
@@ -31,7 +33,7 @@ pub enum Seeded {
 
 impl FerroEhrService {
     /// Seeds the default definitions, the policy and access policy
-    /// definitions first: stores
+    /// definitions first and the `EHR_ACCESS` definition last: stores
     /// each one whose id no stored definition holds, and keeps every stored
     /// one as it is.
     ///
@@ -42,7 +44,8 @@ impl FerroEhrService {
         let definitions = crate::party_binding::policy::DEFINITIONS
             .iter()
             .chain(&crate::access_policy::DEFINITIONS)
-            .chain(&crate::party_binding::shipped::DEFINITIONS);
+            .chain(&crate::party_binding::shipped::DEFINITIONS)
+            .chain(&crate::service::ehr::access_settings::DEFINITIONS);
         let mut seeded = Vec::new();
         for (file, text) in definitions {
             seeded.push(match self.definition_load(SourceFormat::Adl2, text).await {

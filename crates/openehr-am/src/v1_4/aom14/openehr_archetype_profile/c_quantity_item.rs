@@ -16,4 +16,12 @@ pub struct CQuantityItem {
     pub magnitude: Interval<f64>,
     /// Optional units constraint.
     pub units: Option<String>,
+    /// Optional units system from which the code in `_units_` is defined, as for `DV_QUANTITY._units_system_`: a URI identifying a terminology containing units concepts.
+    ///
+    /// If not set, the UCUM standard (case-sensitive codes) is assumed as the units system.
+    pub units_system: Option<String>,
+    /// Optional displayable form of `_units_`, as for `DV_QUANTITY._units_display_name_`, e.g. `'lb'` for `'[lb_av]'`.
+    ///
+    /// NOTE: The display name may be language-dependent, so it is better set in templates than in archetypes.
+    pub units_display_name: Option<String>,
 }

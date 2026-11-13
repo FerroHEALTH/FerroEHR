@@ -16,7 +16,8 @@
 //! for disagreement, and no openEHR spec governs storage mechanics. Beside
 //! them, [`marks`] keeps the legal marks, [`access_delay`] the EHDS Art. 3(3)
 //! delay of the person's own access, [`access_restriction`] the EHDS Art. 8
-//! restriction of access by health professionals, [`opt_out`] the EHDS Art. 10
+//! restriction of access by health professionals, [`access_log_erasure`] the
+//! erasure of an access-log entry a law orders, [`opt_out`] the EHDS Art. 10
 //! opt-out from access through the access services, [`identifiers`] serves the audited
 //! read of a party's protected national identifiers, [`binding_key`] the re-key of a
 //! `PERSON`'s binding key, and [`outbox`] the feed of
@@ -27,6 +28,7 @@
 //! spec-silence flag and register citation.
 
 pub mod access_delay;
+pub mod access_log_erasure;
 pub mod access_policy;
 pub mod access_repair;
 pub mod access_restriction;

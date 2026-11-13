@@ -18,6 +18,8 @@
 //!   objection and the retention register; our own extension.
 //! - [`access_delay`] — the EHDS Art. 3(3) delay of the person's own access;
 //!   our own extension.
+//! - [`access_log_erasure`]: the erasure of an access-log entry a law
+//!   orders, which replaces it by its tombstone; our own extension.
 //! - [`access_repair`] — the repair of an EHR held closed by `EHR_ACCESS`
 //!   settings that do not parse; our own extension.
 //! - [`policy_register`] — the operational-policy admin registers (the audit
@@ -50,6 +52,7 @@ mod dump_load;
 mod statistics;
 
 pub mod access_delay;
+pub mod access_log_erasure;
 pub mod access_policy;
 pub mod access_repair;
 pub mod integrity;

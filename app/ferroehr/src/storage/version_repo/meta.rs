@@ -28,7 +28,7 @@ use serde_json::Value;
 use sqlx::postgres::PgRow;
 use sqlx::{PgPool, Row};
 
-use crate::db::acquire::{acquire, lease};
+use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
 use crate::storage::error::StorageError;
 
@@ -512,29 +512,6 @@ pub async fn current_vo(
         branch_number: row.try_get("branch_number")?,
         branch_version: row.try_get("branch_version")?,
     }))
-}
-
-/// Every EHR's current `EHR_ACCESS` body that names `settings`, as
-/// `(ehr_id, canonical JSON text)`.
-///
-/// The text match only prefilters: the caller parses each body and keeps the
-/// settings it understands; a logically deleted version has no body. It runs
-/// on a [`lease`], as every waiting query restarts an abandoned load.
-///
-/// # Errors
-/// Returns [`StorageError::Database`] on a driver failure.
-pub async fn ehr_access_bodies_with_settings(
-    pool: &PgPool,
-) -> Result<Vec<(EhrId, String)>, StorageError> {
-    const SQL: &str = "SELECT version.ehr_id, version.body \
-                       FROM version \
-                       JOIN vo_head h ON h.vo_id = version.vo_id AND h.trunk_head_sys_version = version.sys_version \
-                       WHERE version.kind = 'EHR_ACCESS' AND strpos(version.body, '\"settings\"') > 0";
-    let mut leased = lease(pool).await?;
-    let rows = leased.run(|conn| sqlx::query(SQL).fetch_all(conn)).await?;
-    rows.iter()
-        .map(|row| Ok((row.try_get("ehr_id")?, row.try_get("body")?)))
-        .collect()
 }
 
 /// The current version's metadata only.

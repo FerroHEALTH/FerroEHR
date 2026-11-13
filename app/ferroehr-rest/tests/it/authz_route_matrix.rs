@@ -455,6 +455,9 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     // The repair of an EHR held closed by access settings that do not parse
     // commits a new EHR_ACCESS version (#4853).
     ("POST", "/admin/ehr-access/repair"),
+    // The erasure of an access-log entry a law orders replaces it by its
+    // tombstone (#5128).
+    ("POST", "/admin/access-log/erase"),
     // The repair the parity sweep is the diagnosis for. Unlike the sweep it
     // REPLACES stored rows, so it stays out of EXTENSION_READ_ROUTES and a
     // read-only server refuses it (#3143).

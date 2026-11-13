@@ -339,6 +339,105 @@
         }
       }
     },
+    "/ferroehr/rest/extensions/v1/admin/access-log/erase": {
+      "post": {
+        "tags": [
+          "admin-marks"
+        ],
+        "summary": "Replace an access-log entry by its tombstone on the grounds of the law\nthat orders its erasure (`POST /admin/access-log/erase`).",
+        "description": "**Our own extension: no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_access_log_erase",
+        "requestBody": {
+          "description": "`{ \"uid\": …, \"grounds\": [ … ] }`: the uid of the access-log entry and one or more `DV_CODED_TEXT` naming the provisions that order its erasure.",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The `ACCESS_LOG_TOMBSTONE` that replaced the entry, with its uid, `system_id`, `time_recorded`, chain link, `time_removed` and grounds.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "The body names no uid, gives no grounds, or a ground is no `DV_CODED_TEXT` the model admits.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No access-log record has the uid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record is a tombstone already, or the local audit store, which keeps the access log, is off.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not `application/json`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ferroehr/rest/extensions/v1/admin/access-opt-out": {
       "get": {
         "tags": [
@@ -1688,7 +1787,7 @@
         "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
         "operationId": "admin_ehr_access_repair",
         "requestBody": {
-          "description": "`{ \"ehr_id\": …, \"settings\": … }`: the EHR and the whole new `EHR_ACCESS.settings` object, of the `ferroehr.access_control.v1` scheme, whose `_type` is `FERROEHR_ACCESS_CONTROL_V1`.",
+          "description": "`{ \"ehr_id\": …, \"settings\": … }`: the EHR and the whole new `EHR_ACCESS.settings` object, an `ACCESS_DIRECTIVE_SETTINGS` of the `access_directives` scheme.",
           "content": {
             "application/json": {
               "schema": {}
@@ -1706,7 +1805,7 @@
             }
           },
           "400": {
-            "description": "The body does not name the EHR, or the settings are not settings of the `ferroehr.access_control.v1` scheme that parse.",
+            "description": "The body does not name the EHR, or the settings are not settings of the `access_directives` scheme whose every invariant holds; the problem names the first defect.",
             "content": {
               "application/problem+json": {
                 "schema": {

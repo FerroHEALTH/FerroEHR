@@ -278,6 +278,7 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
         .merge(admin::access_restriction::access_restriction_routes())
         .merge(admin::opt_out::opt_out_routes())
         .merge(admin::access_repair::access_repair_routes())
+        .merge(admin::access_log_erasure::access_log_erasure_routes())
         .merge(admin::identifiers::identifier_routes())
         .merge(admin::binding_key::binding_key_routes())
         .merge(admin::outbox::outbox_routes())
@@ -363,7 +364,7 @@ where
     // an access-service caller unless it declares a vital interest under Art. 10(2).
     let opted_out = opt_out::applies(&state, op);
     let guarded = Box::pin(async move {
-        match ehr_access::enforce(&state, op, &parts).await {
+        match ehr_access::enforce(&state, &parts).await {
             Ok(()) => {
                 if enforced {
                     match restriction::refuse_restricted(&state, op, &parts).await {

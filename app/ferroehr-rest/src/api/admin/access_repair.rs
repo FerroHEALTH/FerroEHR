@@ -50,9 +50,9 @@ guarded_handler! {
         post, path = "/admin/ehr-access/repair", tag = "admin-marks",
         request_body(content = serde_json::Value,
                      description = "`{ \"ehr_id\": …, \"settings\": … }`: the EHR and \
-                                    the whole new `EHR_ACCESS.settings` object, of the \
-                                    `ferroehr.access_control.v1` scheme, whose \
-                                    `_type` is `FERROEHR_ACCESS_CONTROL_V1`."),
+                                    the whole new `EHR_ACCESS.settings` object, an \
+                                    `ACCESS_DIRECTIVE_SETTINGS` of the `access_directives` \
+                                    scheme."),
         responses(
             (status = 200, description = "`{ \"ehr_id\": …, \"version_uid\": … }`: the \
                                           `EHR_ACCESS` version the repair committed. The \
@@ -60,7 +60,8 @@ guarded_handler! {
              body = serde_json::Value),
             (status = 400, description = "The body does not name the EHR, or the \
                                           settings are not settings of the \
-                                          `ferroehr.access_control.v1` scheme that parse.",
+                                          `access_directives` scheme whose every invariant \
+                                          holds; the problem names the first defect.",
              body = serde_json::Value),
             (status = 404, description = "No such EHR.", body = serde_json::Value),
             (status = 409, description = "The EHR's settings parse, so it is not held: a \

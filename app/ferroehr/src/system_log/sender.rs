@@ -979,7 +979,7 @@ fn render_audit_event(
     }
 }
 
-/// The hourly retention reaper, for a horizon in days or in calendar years.
+/// The hourly retention reaper, which also tombstones the expired access-log entries.
 #[expect(
     clippy::infinite_loop,
     reason = "the retention reaper is a detached background task with no \
@@ -988,13 +988,13 @@ fn render_audit_event(
               then need the never type as a type argument, which is unstable"
 )]
 async fn reaper(store: AuditStore, retention: Retention) {
+    let access_log = crate::access_log::store::AccessLogStore::new(store.pool.clone());
     loop {
         tokio::time::sleep(REAP_INTERVAL).await;
-        let today = jiff::Timestamp::now()
-            .to_zoned(jiff::tz::TimeZone::UTC)
-            .date();
-        let reaped = store.reap_due(today, retention).await;
-        match reaped {
+        let now = jiff::Timestamp::now();
+        let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
+        crate::access_log::expiry::scheduled(&access_log, now).await;
+        match store.reap_due(today, retention).await {
             Ok(0) => {}
             Ok(n) => {
                 crate::telemetry::metrics::metrics()

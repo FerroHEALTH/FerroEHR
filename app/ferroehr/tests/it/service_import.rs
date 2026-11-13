@@ -374,10 +374,9 @@ async fn import_ehr_into_fixed_fresh_id() {
     assert_eq!(target_status["is_modifiable"], json!(false));
 }
 
-/// An extract whose `EHR_ACCESS` carries settings of the access-control scheme
-/// that do not parse is refused with `400` naming the setting, and the same
-/// extract with settings that parse imports: a stored copy would hold the EHR
-/// closed.
+/// An extract whose `EHR_ACCESS` carries `access_directives` settings that
+/// break an invariant is refused with `400` naming it, and the same extract
+/// with settings that hold imports: a stored copy would hold the EHR closed.
 #[tokio::test]
 async fn import_ehr_refuses_access_settings_that_do_not_parse() {
     let (_source_db, source) = crate::fixtures::service().await;
@@ -393,8 +392,12 @@ async fn import_ehr_refuses_access_settings_that_do_not_parse() {
             if item["item"]["_type"] == json!("X_VERSIONED_EHR_ACCESS") {
                 for version in item["item"]["versions"].as_array_mut().expect("versions") {
                     version["data"]["settings"] = json!({
-                        "_type": "FERROEHR_ACCESS_CONTROL_V1",
-                        "default_access": default_access
+                        "_type": "ACCESS_DIRECTIVE_SETTINGS",
+                        "default_access": { "_type": "DV_CODED_TEXT", "value": default_access,
+                            "defining_code": { "_type": "CODE_PHRASE",
+                                "terminology_id": { "_type": "TERMINOLOGY_ID",
+                                    "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
+                                "code_string": default_access } }
                     });
                 }
             }
@@ -411,8 +414,8 @@ async fn import_ehr_refuses_access_settings_that_do_not_parse() {
         .expect_err("settings that do not parse are refused");
     assert!(
         matches!(&refused, ServiceError::BadRequest(r)
-            if r.message.contains("EHR_ACCESS.settings.default_access")),
-        "a 400 naming the setting: {refused:?}"
+            if r.message.contains("ACCESS_DIRECTIVE_SETTINGS.Default_access_valid")),
+        "a 400 naming the invariant: {refused:?}"
     );
     svc.import_ehr(
         Some(ferroehr::ids::EhrId(uuid::Uuid::now_v7())),
