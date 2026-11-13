@@ -190,11 +190,6 @@ services:
         condition: service_healthy
       ferroehr-provision:
         condition: service_healthy
-    configs:
-      - source: service-client-agent
-        target: /etc/quickstart/agent.json
-      - source: service-client-role
-        target: /etc/quickstart/role.json
     entrypoint:
       - sh
       - -c
@@ -216,12 +211,13 @@ services:
         case $$status in 201|409) ;; *) echo "provisioning $$1 answered $$status" >&2; cat /tmp/answer >&2; exit 1;; esac;
         done;
         demographic=http://localhost:8080/ferroehr/rest/openehr/v1/demographic;
+        printf '%s' '{"_type":"AGENT","archetype_node_id":"openEHR-DEMOGRAPHIC-AGENT.quickstart_service.v1","archetype_details":{"_type":"ARCHETYPED","archetype_id":{"_type":"ARCHETYPE_ID","value":"openEHR-DEMOGRAPHIC-AGENT.quickstart_service.v1"},"rm_version":"1.1.0"},"name":{"_type":"DV_TEXT","value":"Quickstart service"},"details":{"_type":"ITEM_TREE","archetype_node_id":"at0010","name":{"_type":"DV_TEXT","value":"details"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0011","name":{"_type":"DV_TEXT","value":"client"},"value":{"_type":"DV_IDENTIFIER","issuer":"${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr","id":"ferroehr-service","type":"client_id"}}]},"identities":[{"_type":"PARTY_IDENTITY","archetype_node_id":"at0001","name":{"_type":"DV_TEXT","value":"name"},"details":{"_type":"ITEM_TREE","archetype_node_id":"at0002","name":{"_type":"DV_TEXT","value":"details"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0003","name":{"_type":"DV_TEXT","value":"name"},"value":{"_type":"DV_TEXT","value":"ferroehr-service"}}]}}]}' > /tmp/agent.json;
         status=$$(curl -sS -o /tmp/answer -D /tmp/headers -w '%{http_code}' -X POST -u ferroehr:ferroehr
-        -H 'Content-Type: application/json' --data @/etc/quickstart/agent.json $$demographic/agent);
+        -H 'Content-Type: application/json' --data @/tmp/agent.json $$demographic/agent);
         case $$status in
         201)
         agent=$$(sed -n 's|^[Ee][Tt][Aa][Gg]:.*"\([0-9a-f-]*\)::.*|\1|p' /tmp/headers);
-        sed "s/AGENT_ID/$$agent/" /etc/quickstart/role.json > /tmp/role.json;
+        printf '%s%s%s' '{"_type":"ROLE","archetype_node_id":"openEHR-DEMOGRAPHIC-ROLE.quickstart_query.v1","archetype_details":{"_type":"ARCHETYPED","archetype_id":{"_type":"ARCHETYPE_ID","value":"openEHR-DEMOGRAPHIC-ROLE.quickstart_query.v1"},"rm_version":"1.1.0"},"name":{"_type":"DV_TEXT","value":"System-wide query"},"identities":[{"_type":"PARTY_IDENTITY","archetype_node_id":"at0001","name":{"_type":"DV_TEXT","value":"name"},"details":{"_type":"ITEM_TREE","archetype_node_id":"at0002","name":{"_type":"DV_TEXT","value":"details"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0003","name":{"_type":"DV_TEXT","value":"name"},"value":{"_type":"DV_TEXT","value":"system-wide query"}}]}}],"performer":{"_type":"PARTY_REF","namespace":"demographic","type":"AGENT","id":{"_type":"HIER_OBJECT_ID","value":"' "$$agent" '"}},"capabilities":[{"_type":"CAPABILITY","archetype_node_id":"at0020","name":{"_type":"DV_TEXT","value":"grant"},"credentials":{"_type":"ITEM_TREE","archetype_node_id":"at0021","name":{"_type":"DV_TEXT","value":"terms"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0022","name":{"_type":"DV_TEXT","value":"operation"},"value":{"_type":"DV_CODED_TEXT","value":"query_system_wide","defining_code":{"_type":"CODE_PHRASE","terminology_id":{"_type":"TERMINOLOGY_ID","value":"ferroehr-operations"},"code_string":"query_system_wide"}}}]}}]}' > /tmp/role.json;
         status=$$(curl -sS -o /tmp/answer -w '%{http_code}' -X POST -u ferroehr:ferroehr
         -H 'Content-Type: application/json' --data @/tmp/role.json $$demographic/role);
         case $$status in 201) ;; *) echo "granting ferroehr-service answered $$status" >&2; cat /tmp/answer >&2; exit 1;; esac;;
@@ -334,89 +330,6 @@ volumes:
   keycloak-tls:
 
 configs:
-  # The service client's AGENT and the ROLE granting it `query_system_wide`,
-  # written by ferroehr-provision-keycloak. Their archetypes are the
-  # quickstart's own: FerroEHR recognises a client by the `client_id`
-  # identifier and a grant by the `ferroehr-operations` code, never by an
-  # archetype. AGENT_ID is replaced by the AGENT's id.
-  service-client-agent:
-    content: |
-      {
-        "_type": "AGENT",
-        "archetype_node_id": "openEHR-DEMOGRAPHIC-AGENT.quickstart_service.v1",
-        "archetype_details": {
-          "_type": "ARCHETYPED",
-          "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-AGENT.quickstart_service.v1" },
-          "rm_version": "1.1.0"
-        },
-        "name": { "_type": "DV_TEXT", "value": "Quickstart service" },
-        "details": {
-          "_type": "ITEM_TREE", "archetype_node_id": "at0010", "name": { "_type": "DV_TEXT", "value": "details" },
-          "items": [{
-            "_type": "ELEMENT", "archetype_node_id": "at0011", "name": { "_type": "DV_TEXT", "value": "client" },
-            "value": {
-              "_type": "DV_IDENTIFIER",
-              "issuer": "${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr",
-              "id": "ferroehr-service",
-              "type": "client_id"
-            }
-          }]
-        },
-        "identities": [{
-          "_type": "PARTY_IDENTITY", "archetype_node_id": "at0001", "name": { "_type": "DV_TEXT", "value": "name" },
-          "details": {
-            "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": { "_type": "DV_TEXT", "value": "details" },
-            "items": [{
-              "_type": "ELEMENT", "archetype_node_id": "at0003", "name": { "_type": "DV_TEXT", "value": "name" },
-              "value": { "_type": "DV_TEXT", "value": "ferroehr-service" }
-            }]
-          }
-        }]
-      }
-  service-client-role:
-    content: |
-      {
-        "_type": "ROLE",
-        "archetype_node_id": "openEHR-DEMOGRAPHIC-ROLE.quickstart_query.v1",
-        "archetype_details": {
-          "_type": "ARCHETYPED",
-          "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-ROLE.quickstart_query.v1" },
-          "rm_version": "1.1.0"
-        },
-        "name": { "_type": "DV_TEXT", "value": "System-wide query" },
-        "identities": [{
-          "_type": "PARTY_IDENTITY", "archetype_node_id": "at0001", "name": { "_type": "DV_TEXT", "value": "name" },
-          "details": {
-            "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": { "_type": "DV_TEXT", "value": "details" },
-            "items": [{
-              "_type": "ELEMENT", "archetype_node_id": "at0003", "name": { "_type": "DV_TEXT", "value": "name" },
-              "value": { "_type": "DV_TEXT", "value": "system-wide query" }
-            }]
-          }
-        }],
-        "performer": {
-          "_type": "PARTY_REF", "namespace": "demographic", "type": "AGENT",
-          "id": { "_type": "HIER_OBJECT_ID", "value": "AGENT_ID" }
-        },
-        "capabilities": [{
-          "_type": "CAPABILITY", "archetype_node_id": "at0020", "name": { "_type": "DV_TEXT", "value": "grant" },
-          "credentials": {
-            "_type": "ITEM_TREE", "archetype_node_id": "at0021", "name": { "_type": "DV_TEXT", "value": "terms" },
-            "items": [{
-              "_type": "ELEMENT", "archetype_node_id": "at0022", "name": { "_type": "DV_TEXT", "value": "operation" },
-              "value": {
-                "_type": "DV_CODED_TEXT", "value": "query_system_wide",
-                "defining_code": {
-                  "_type": "CODE_PHRASE",
-                  "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
-                  "code_string": "query_system_wide"
-                }
-              }
-            }]
-          }
-        }]
-      }
-
   # The development TLS material, generated once per volume: an EC P-256 CA,
   # and a certificate for `keycloak` (SAN keycloak, localhost, 127.0.0.1)
   # signed by it. Keycloak reads the PKCS #12 key store; the CDR reads only
