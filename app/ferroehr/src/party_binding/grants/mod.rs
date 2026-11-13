@@ -39,6 +39,18 @@ use crate::party_binding::grants::operation::{
     BINDING_ISSUER, GrantCeiling, ORIGIN, Operation, READER, ROLE, TOKEN_SCOPE,
 };
 
+/// Refuses the committed body `facts` of a `ROLE` that grants above
+/// `ceiling` ([`check_ceiling`]) or breaks the element rules
+/// ([`check_elements`]).
+///
+/// # Errors
+/// [`ServiceError::Forbidden`] (`403`) or [`ServiceError::BadRequest`]
+/// (`400`), as those checks name them.
+pub(crate) fn check_role(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
+    check_ceiling(facts, ceiling)?;
+    check_elements(facts)
+}
+
 /// Refuses the committed body `facts` of a `ROLE` when it grants an
 /// operation `ceiling` does not admit, or a `hold_roles` grant names a role
 /// the ceiling reserves.
@@ -46,7 +58,7 @@ use crate::party_binding::grants::operation::{
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) naming the first such capability and
 /// the configuration key.
-pub(crate) fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
+fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(), ServiceError> {
     let reserved = facts
         .grants
         .capabilities
@@ -92,7 +104,7 @@ pub(crate) fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(),
 /// # Errors
 /// [`ServiceError::BadRequest`] (`400`) naming the capability's operation
 /// and the element.
-pub(crate) fn check_elements(facts: &Facts) -> Result<(), ServiceError> {
+fn check_elements(facts: &Facts) -> Result<(), ServiceError> {
     for capability in &facts.grants.capabilities {
         let credentials = Credentials::of(capability.credentials.as_ref());
         let one = |code: &str| -> Result<String, ServiceError> {

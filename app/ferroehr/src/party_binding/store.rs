@@ -159,8 +159,7 @@ pub(crate) async fn reindex_committed(
     if committed.kind == Kind::Role
         && let Some(facts) = facts
     {
-        grants::check_ceiling(facts, &ctx.grants.ceiling())?;
-        grants::check_elements(facts)?;
+        grants::check_role(facts, &ctx.grants.ceiling())?;
     }
     let (lifecycle_state, trunk_head) = head_of(tx, committed.vo_id).await?;
     let head = if trunk_head == Some(committed.sys_version) {
