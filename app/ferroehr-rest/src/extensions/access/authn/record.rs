@@ -205,7 +205,7 @@ fn of(
 
 /// The record of the patient-portal representative `portal`: bound to their
 /// `PERSON`, representing the subject's `PERSON` (EHDS Annex II 3.2(a)).
-fn portal_record(portal: &super::PortalRepresentative) -> BindingRecord {
+fn portal_record(portal: &super::portal::PortalRepresentative) -> BindingRecord {
     let mut record = BindingRecord::bound(
         PartyTriple {
             namespace: portal.namespace.clone(),

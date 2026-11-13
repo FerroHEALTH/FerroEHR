@@ -44,6 +44,7 @@ mod gates;
 pub(crate) mod grants;
 mod issuer;
 mod party;
+pub(crate) mod portal;
 pub(crate) mod purpose;
 pub(crate) mod record;
 pub(crate) mod refusal;
@@ -123,7 +124,7 @@ pub struct Principal {
     pub honoured: Honoured,
     /// The EHR a bound representative is confined to, `None` for every other
     /// caller (#5086).
-    pub represented: Option<RepresentedEhr>,
+    pub represented: Option<portal::RepresentedEhr>,
 }
 
 impl Principal {
@@ -162,45 +163,6 @@ impl Principal {
             represented: None,
         }
     }
-}
-
-/// The EHR a bound representative is confined to: the one whose
-/// `EHR_STATUS.subject.external_ref` names the subject the token asserts and the
-/// party source records a live representation of.
-///
-/// No openEHR spec governs resolving a login to a party: our own design.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RepresentedEhr {
-    /// That EHR's id, or `None` when no EHR names the subject, so the
-    /// representative reaches no EHR.
-    pub ehr_id: Option<String>,
-    /// The representative of a `patients` issuer's token, whom FerroEHR binds
-    /// itself; `None` for a representative of a `persons` issuer, whom the
-    /// login binding bound.
-    pub portal: Option<PortalRepresentative>,
-}
-
-/// Someone a `patients` issuer's token admits for the patient it names.
-///
-/// That is the actor of its RFC 8693 §4.1 `act` claim, or the person signing
-/// in under their own login, bound to their `PERSON` by that login and
-/// admitted while it holds a live representation of the EHR's subject.
-///
-/// No openEHR spec governs resolving a login to a party: our own design.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PortalRepresentative {
-    /// The representative's `PERSON` container.
-    pub person: uuid::Uuid,
-    /// The subject's `PERSON` container.
-    pub subject: uuid::Uuid,
-    /// The openEHR `subject_relationship` code the relationship names.
-    pub relationship: Option<String>,
-    /// The issuer of the representative's login.
-    pub login_issuer: String,
-    /// The representative's login under that issuer.
-    pub login: String,
-    /// The `PARTY_REF.namespace` the `PERSON`s are named under.
-    pub namespace: String,
 }
 
 /// The mechanism that authenticated a [`Principal`].
@@ -518,41 +480,6 @@ impl Authenticator {
         Ok(Authenticated { principal, fresh })
     }
 
-    /// The committer identity of `principal`, holding `granted`, with what
-    /// the server knows of the person beyond the binding: the bound party's
-    /// details, or the `PERSON` of the patient writing the representation
-    /// that authorises a proxy, as [`gates::patient_person`] read it
-    /// (`patient`).
-    ///
-    /// Returns it with that patient's `PERSON`.
-    ///
-    /// # Errors
-    /// The refusal `patient` carries, or the one the binding's details meet.
-    async fn committer(
-        &self,
-        principal: &Principal,
-        granted: &ferroehr::party_binding::grants::capabilities::Capabilities,
-        patient: Result<Option<uuid::Uuid>, AuthError>,
-    ) -> Result<
-        (
-            ferroehr::versioning::committer::CommitterIdentity,
-            Option<uuid::Uuid>,
-        ),
-        AuthError,
-    > {
-        let mut committer = party::committer_identity(principal, granted);
-        let patient = patient?;
-        if let Some(person) = patient {
-            committer.bound = Some(party::patient_details(principal, person, &self.namespace));
-        }
-        if let Some(binding) = self.party.as_deref()
-            && let Some(details) = binding.details(principal).await?
-        {
-            committer.bound = Some(details);
-        }
-        Ok((committer, patient))
-    }
-
     /// Returns `refusal` naming the caller of `access` when the login binding
     /// or the caller's kind refused it, so the failed-authentication record
     /// carries who was refused.
@@ -690,10 +617,11 @@ pub(crate) async fn middleware(
             let patient = gates::patient_person(&layer, &req, &principal).await;
             req.extensions_mut().insert(principal.clone());
             let for_audit = principal.clone();
-            let (committer, patient) = match auth.committer(&for_audit, &granted, patient).await {
-                Ok(committer) => committer,
-                Err(e) => return refusal::response(auth, req.headers(), &e),
-            };
+            let (committer, patient) =
+                match portal::committer(auth, &for_audit, &granted, patient).await {
+                    Ok(committer) => committer,
+                    Err(e) => return refusal::response(auth, req.headers(), &e),
+                };
             // The roles ride beside the committer identity for the request
             // scope, so a record the service layer emits by itself carries
             // them too (#3239).
@@ -708,7 +636,7 @@ pub(crate) async fn middleware(
                             binding,
                             ferroehr::versioning::committer::with_committer(
                                 Some(committer),
-                                Box::pin(as_patient(
+                                Box::pin(portal::as_patient(
                                     patient,
                                     grants::scoped(live, granted, next.run(req)),
                                 )),
@@ -727,16 +655,6 @@ pub(crate) async fn middleware(
             resp
         }
         Err(e) => refusal::refusal_of(auth, req.headers(), &e),
-    }
-}
-
-/// Runs `fut` as a request of the patient whose `PERSON` is `patient`, when
-/// one is, so the party protection admits the representation of that
-/// `PERSON` it writes.
-async fn as_patient<F: Future>(patient: Option<uuid::Uuid>, fut: F) -> F::Output {
-    match patient {
-        Some(person) => ferroehr::party_binding::protect::patient(person, fut).await,
-        None => fut.await,
     }
 }
 

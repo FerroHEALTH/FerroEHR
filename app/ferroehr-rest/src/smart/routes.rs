@@ -698,29 +698,21 @@ mod tests {
         }
     }
 
-    /// A write of a standalone relationship is the patient's to make as well,
-    /// held by the party protection; reading one is the DEMOGRAPHIC API's.
+    /// The patient writes a standalone relationship; reading one is the DEMOGRAPHIC API's.
     #[test]
     fn a_patient_writes_a_standalone_relationship_and_reads_none() {
-        let table = routes();
-        let ext = "/ferroehr/rest/extensions/v1";
-        let one = format!("{ext}/demographic/party_relationship/{{uid_based_id}}");
-        let create = format!("{ext}/demographic/party_relationship");
-        for (method, template) in [
+        let create = "/ferroehr/rest/extensions/v1/demographic/party_relationship".to_owned();
+        let (table, one) = (routes(), format!("{create}/{{uid_based_id}}"));
+        for (method, path) in [
             (Method::POST, &create),
             (Method::PUT, &one),
             (Method::DELETE, &one),
         ] {
-            assert_eq!(
-                table.need(&method, Some(template), template),
-                Need::Representation(table.product()),
-                "{method} {template}"
-            );
+            let need = table.need(&method, Some(path), path);
+            assert_eq!(need, Need::Representation(table.product()), "{method}");
         }
-        assert!(matches!(
-            table.need(&Method::GET, Some(&one), &one),
-            Need::Demographic(_)
-        ));
+        let read = table.need(&Method::GET, Some(&one), &one);
+        assert!(matches!(read, Need::Demographic(_)));
     }
 
     /// The outbox feed needs its own scope: the product scope does not reach it,

@@ -95,7 +95,7 @@ pub(super) fn patient_context<'a>(
             return Some(refusal);
         }
         let namespace = &layer.authenticator.namespace;
-        match super::party::represented_ehr(&layer.service, namespace, &principal.access).await {
+        match super::portal::represented_ehr(&layer.service, namespace, &principal.access).await {
             Ok(represented) => {
                 principal.represented = represented;
                 None

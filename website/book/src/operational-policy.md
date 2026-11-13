@@ -1565,7 +1565,7 @@ changes only a representation they inserted themself: one an administrator
 recorded, such as a court-appointed guardian's, is the administrator's
 (EHDS Art. 5).
 
-### Own design
+### Where the portal is our own design
 
 No openEHR specification governs these points; each is FerroEHR's own
 design:

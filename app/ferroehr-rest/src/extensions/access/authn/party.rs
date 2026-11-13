@@ -24,7 +24,6 @@ use ferroehr::config::binding::Providers;
 use ferroehr::error::ServiceError;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::party_binding::source::BindingSource;
-use ferroehr::service::demographic::portal::PortalLogin;
 use ferroehr::versioning::committer::bound::BoundDetails;
 
 use ferrohealth_smart::assurance::AssuranceSection;
@@ -34,7 +33,7 @@ use ferrohealth_smart::party::binding::PartyBinding;
 use ferrohealth_smart::party::{GroupsCause, Outcome, PartyRef, Represented};
 use ferrohealth_smart::resource::{Access, Caller};
 
-use super::{AuthError, PortalRepresentative, RepresentedEhr};
+use super::AuthError;
 
 mod jit;
 
@@ -427,7 +426,10 @@ pub(super) const fn unrecorded() -> AuthError {
 /// `represented` claim names, matched on the party id without regard to case.
 // NOTE: no openEHR spec governs resolving a login to a party, our own design: the
 // claim is a bare string, and the source names a subject by its container id.
-fn represented_subject<'a>(outcome: &'a Outcome, represented: &str) -> Option<&'a PartyRef> {
+pub(super) fn represented_subject<'a>(
+    outcome: &'a Outcome,
+    represented: &str,
+) -> Option<&'a PartyRef> {
     let represented = represented.trim();
     outcome
         .bound()?
@@ -435,138 +437,6 @@ fn represented_subject<'a>(outcome: &'a Outcome, represented: &str) -> Option<&'
         .iter()
         .map(Represented::subject)
         .find(|subject| subject.id().eq_ignore_ascii_case(represented))
-}
-
-/// The EHR the representative of `access` is confined to, `None` for any
-/// other caller.
-///
-/// A representative of a `persons` issuer reaches the EHR whose
-/// `EHR_STATUS.subject.external_ref` names the represented subject (#5086),
-/// looked up through `service`, which records the resolution on the access
-/// log. Someone a `patients` issuer's token admits for its patient, the
-/// actor of its `act` claim or a login of a representative's `PERSON` under
-/// the token's issuer, reaches the EHR of the launch context while that
-/// `PERSON` represents its subject today ([`portal`]); the `PERSON`s are
-/// named under `namespace`.
-///
-/// # Errors
-/// [`AuthError::PartyRefused`] when the bound party represents no such
-/// subject, and [`AuthError::PartyUnavailable`] when the store cannot answer.
-pub(super) async fn represented_ehr(
-    service: &ferroehr::service::FerroEhrService,
-    namespace: &str,
-    access: &Access,
-) -> Result<Option<RepresentedEhr>, AuthError> {
-    let Some(caller) = access.caller() else {
-        return Ok(None);
-    };
-    let represented = match caller.kind() {
-        CallerKind::Representative { represented, .. } => represented,
-        CallerKind::PatientRepresentative { actor } => {
-            let login = (actor.issuer.as_str(), actor.sub.as_str());
-            return match portal(service, namespace, caller, login).await? {
-                Some(represented) => Ok(Some(represented)),
-                None => Err(unrecorded()),
-            };
-        }
-        CallerKind::Patient => {
-            let login = (caller.issuer().unwrap_or_default(), caller.subject());
-            return portal(service, namespace, caller, login).await;
-        }
-        _ => return Ok(None),
-    };
-    let subject = caller
-        .party()
-        .and_then(|outcome| represented_subject(outcome, represented))
-        .ok_or_else(unrecorded)?;
-    let found = service
-        .ehr_id_for_subject(subject.id(), subject.namespace())
-        .await
-        .map_err(unavailable(
-            "the EHR of the represented subject could not be read",
-        ))?;
-    Ok(Some(RepresentedEhr {
-        ehr_id: found.map(|ehr| ehr.to_string()),
-        portal: None,
-    }))
-}
-
-/// The representative the login `(issuer, value)` of `caller`, a `patients`
-/// issuer's token, is for the subject of its launch EHR, named under
-/// `namespace`: `None` when no representative's `PERSON` carries the login or
-/// that `PERSON` is the subject itself, so the caller is the patient.
-///
-/// # Errors
-/// [`AuthError::PartyRefused`] when the `PERSON` holds no live representation
-/// of the subject (`refused-representation-unrecorded`), is inactive or
-/// abandoned, or two `PERSON`s carry the login; [`AuthError::PartyUnavailable`]
-/// when the store cannot answer.
-async fn portal(
-    service: &ferroehr::service::FerroEhrService,
-    namespace: &str,
-    caller: &Caller,
-    (issuer, value): (&str, &str),
-) -> Result<Option<RepresentedEhr>, AuthError> {
-    let ehr = caller.ehr_id().map(str::parse::<uuid::Uuid>);
-    let Some(Ok(ehr)) = ehr else {
-        // NOTE: master07 §Context Selection, a token naming no EHR reaches none, so its
-        // patient has no subject a representation could hold.
-        return Ok(None);
-    };
-    let found = service
-        .portal_login(issuer, value, ferroehr::ids::EhrId(ehr))
-        .await
-        .map_err(unavailable(
-            "the party store could not bind the portal login",
-        ))?;
-    let (code, person) = match found {
-        PortalLogin::Unbound | PortalLogin::Subject => return Ok(None),
-        PortalLogin::Represents {
-            person,
-            subject,
-            relationship,
-        } => {
-            return Ok(Some(RepresentedEhr {
-                ehr_id: Some(ehr.to_string()),
-                portal: Some(PortalRepresentative {
-                    person,
-                    subject,
-                    relationship,
-                    login_issuer: issuer.to_owned(),
-                    login: value.to_owned(),
-                    namespace: namespace.to_owned(),
-                }),
-            }));
-        }
-        PortalLogin::Unrecorded { person } => ("refused-representation-unrecorded", Some(person)),
-        PortalLogin::Inactive { person } => ("refused-inactive", Some(person)),
-        PortalLogin::Ambiguous => ("refused-ambiguous", None),
-    };
-    tracing::warn!(
-        issuer,
-        outcome = code,
-        "the patient-portal binding refused the request"
-    );
-    Err(AuthError::PartyRefused {
-        code,
-        principal: None,
-        party: person.map(|person| {
-            Box::new(ferroehr::system_log::binding::PartyTriple {
-                namespace: namespace.to_owned(),
-                class: "PERSON".to_owned(),
-                id: person.to_string(),
-            })
-        }),
-        named: None,
-    })
-}
-
-/// The `503` of a store that could not answer, logged as `what`.
-fn unavailable<E: std::error::Error + 'static>(what: &'static str) -> impl FnOnce(E) -> AuthError {
-    move |error| {
-        tracing::warn!(error = %ferroehr::error::ErrorChain::new(&error), "{what}");
-        AuthError::PartyUnavailable { retry_after: None }
-    }
 }
 
 /// The refusal `outcome` answers, or `None` for an outcome the request
@@ -668,32 +538,6 @@ pub(super) fn kind_refusal(caller: &Caller) -> Option<AuthError> {
         message: "a system caller acts for no person, so it holds system/ scopes only".to_owned(),
         principal: None,
     })
-}
-
-/// What the committer of the patient of `principal`, whose `PERSON` is
-/// `person`, named under `namespace`, carries when they write the
-/// representation that authorises a proxy: their `PERSON` and their login,
-/// since a demographic version has no record subject a `PARTY_SELF` could
-/// name (RM common master04 §Audit Details).
-pub(super) fn patient_details(
-    principal: &super::Principal,
-    person: uuid::Uuid,
-    namespace: &str,
-) -> BoundDetails {
-    let caller = principal.access.caller();
-    BoundDetails {
-        namespace: namespace.to_owned(),
-        portal: Some(ferroehr::versioning::committer::bound::PortalParty {
-            person,
-            relationship: None,
-            login_issuer: caller
-                .and_then(Caller::issuer)
-                .unwrap_or_default()
-                .to_owned(),
-            login: principal.subject.clone(),
-        }),
-        ..BoundDetails::default()
-    }
 }
 
 /// Returns the platform committer identity published for the service layer.
