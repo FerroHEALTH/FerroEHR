@@ -49,9 +49,9 @@ Changed or Removed in the changelog. The order to apply them in is on
   ([Operational policy](../operational-policy.md#what-a-system-client-may-do)).
 - **Import needs a role.** Importing an EHR Extract needs
   `[authz.rbac] import_role` or a `system/` caller. Upgrade: set
-  `import_role` and give it to the accounts that import. From 5.7.1 a
-  system caller imports only under an `import_ehr` or `import_ehr_extract`
-  grant in the CDR.
+  `import_role` and give it to the accounts that import. From 5.7.1
+  `import_role` is gone, and every caller, person or system, imports only
+  under an `import_ehr` or `import_ehr_extract` grant in the CDR.
 
 ## Binding and the committer
 

@@ -130,8 +130,9 @@ deviation is reported upstream in
 
 ## Imports
 
-`POST /message/import…` needs the role `[authz.rbac] import_role` names, an
-`import_ehr` or `import_ehr_extract` policy grant, or a `system/` caller. An imported version keeps its wrapped `commit_audit` and
+`POST /message/import…` needs an `import_ehr` or `import_ehr_extract` policy
+grant covering the EHR's subject namespace. An imported version keeps its
+wrapped `commit_audit` and
 attestations as received, so an `IMPORTED_VERSION` names who committed at the
 source. A wrapped committer that names a `PERSON` of this server, or carries
 a login identifier of its issuers, is refused with `403` unless the version

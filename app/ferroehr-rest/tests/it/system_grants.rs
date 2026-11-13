@@ -155,15 +155,74 @@ pub(crate) async fn system_client(
         .expect("the AGENT acts for the provider");
     }
     if !capabilities.is_empty() {
-        let archetype = "openEHR-DEMOGRAPHIC-ROLE.integration.v1";
-        let role = json!({
-            "_type": "ROLE", "archetype_node_id": archetype,
-            "archetype_details": archetyped(archetype), "name": text("Integration"),
-            "identities": identities("integration"),
-            "performer": reference("AGENT", vo),
-            "capabilities": capabilities
-        });
-        create(svc, PartyKind::Role, &role).await;
+        performs(svc, ("AGENT", vo), capabilities).await;
     }
     vo
+}
+
+/// Commits, as the server, a `ROLE` of a deployment's own archetype the
+/// party `performer` (its RM type and container) performs, holding
+/// `capabilities`.
+pub(crate) async fn performs(
+    svc: &FerroEhrService,
+    performer: (&str, VoId),
+    capabilities: &[Value],
+) {
+    let archetype = "openEHR-DEMOGRAPHIC-ROLE.integration.v1";
+    let role = json!({
+        "_type": "ROLE", "archetype_node_id": archetype,
+        "archetype_details": archetyped(archetype), "name": text("Integration"),
+        "identities": identities("integration"),
+        "performer": reference(performer.0, performer.1),
+        "capabilities": capabilities
+    });
+    create(svc, PartyKind::Role, &role).await;
+}
+
+/// Maps every Basic user of `config` to a `PERSON` by its user name, a
+/// binding key of the [`crate::party_binding_http::LOGIN`] issuer, beside
+/// the persons issuer and party table that key belongs to; the service needs
+/// [`crate::party_binding_http::mapping`], and [`bound_persons`] commits each
+/// `PERSON`.
+pub(crate) fn bind_basic_users(config: &mut ferroehr_rest::config::AppConfig) {
+    let binding = crate::party_binding_http::config(None);
+    config.auth.shared.enabled = true;
+    config.auth.shared.issuer.extend(binding.auth.shared.issuer);
+    config.auth.shared.party.extend(binding.auth.shared.party);
+    let users: Vec<String> = config
+        .auth
+        .shared
+        .basic
+        .as_ref()
+        .map(|basic| basic.users.iter().map(|user| user.user.clone()).collect())
+        .unwrap_or_default();
+    config.party_binding.basic_user = users
+        .into_iter()
+        .map(|user| ferroehr::config::binding::BasicUserKey {
+            key_issuer: crate::party_binding_http::LOGIN.to_owned(),
+            key: user.clone(),
+            user,
+        })
+        .collect();
+}
+
+/// Commits the `PERSON` every Basic user of `config` binds to under
+/// [`bind_basic_users`], the one `granted` names holding `capabilities`, when
+/// any are given, through a `ROLE` it performs.
+pub(crate) async fn bound_persons(
+    svc: &FerroEhrService,
+    config: &ferroehr_rest::config::AppConfig,
+    (granted, capabilities): (&str, &[Value]),
+) {
+    for key in &config.party_binding.basic_user {
+        let (uid, _) = crate::party_binding_http::professional(svc, &key.key, "532").await;
+        if key.user == granted && !capabilities.is_empty() {
+            performs(
+                svc,
+                ("PERSON", crate::party_binding_http::vo(&uid)),
+                capabilities,
+            )
+            .await;
+        }
+    }
 }

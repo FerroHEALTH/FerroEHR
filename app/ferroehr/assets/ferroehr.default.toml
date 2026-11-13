@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 868 keys. A deployment that holds real data sets the 10
+# This file lists 864 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
@@ -887,31 +887,13 @@ profile = "sandbox"
 # granting roles (a restriction overrides a grant). Supports the conformance
 # catalogue's authorization-separation cases. Optional (trust).
 #? readonly_role = "READONLY"
-# The role that may read the access log for ONE subject at a time
-# (`FERROEHR__AUTHZ__RBAC__SUBJECT_AUDIT_ROLE`, default unset). Optional, unset
-# by default (trust).
-#? subject_audit_role = ""
 # The role that may reach data under an EHDS Art. 8 access restriction in an
 # emergency (`FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE`, default unset).
 # Optional, unset by default (trust).
 #? emergency_access_role = ""
-# The roles of an EHDS Art. 10 access-service caller, held to an opt-out
-# (`FERROEHR__AUTHZ__RBAC__ACCESS_SERVICE_ROLES`; empty, the default, holds
-# nobody). Optional (trust).
-#? access_service_roles = []
-# The role that may read a party's protected national identifiers
-# (`FERROEHR__AUTHZ__RBAC__IDENTIFIER_READER_ROLE`, default unset). Optional,
-# unset by default (trust).
-#? identifier_reader_role = ""
-# The role that may import an EHR or an EHR extract (`message_import_ehr`,
-# `message_import_ehr_extract`; default unset). Optional, unset by default
-# (trust).
-#? import_role = ""
-# The issuers whose role claims may grant `admin_role`,
-# `emergency_access_role`, `import_role` and `identifier_reader_role`, each a
-# `persons` issuer; empty, the default, lets no token grant them. A policy
-# grant of `import_ehr`, `import_ehr_extract` or `read_identifiers` is a second
-# source. Each renders with any userinfo masked. Optional (trust).
+# The issuers whose role claims may grant `admin_role` and
+# `emergency_access_role`, each a `persons` issuer; empty, the default, lets no
+# token grant them. Each renders with any userinfo masked. Optional (trust).
 #? role_issuers = []
 # What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default `open`).
 # Optional (trust).

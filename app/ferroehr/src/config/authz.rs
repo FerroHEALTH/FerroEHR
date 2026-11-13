@@ -68,18 +68,6 @@ pub struct RbacConfig {
     /// granting roles (a restriction overrides a grant). Supports the
     /// conformance catalogue's authorization-separation cases.
     pub readonly_role: String,
-    /// The role that may read the access log for ONE subject at a time
-    /// (`FERROEHR__AUTHZ__RBAC__SUBJECT_AUDIT_ROLE`, default unset).
-    ///
-    /// A portal that shows a person who accessed their record (GDPR Art. 15
-    /// with Recital 63, `docs/law/eu/gdpr/oj.html`, EHDS Art. 9, for Dutch deployments Wabvpz Art. 15e)
-    /// needs the ITI-81 retrieval for that person and nobody else. A caller
-    /// holding this role may call `GET /fhir/r4/AuditEvent` only with the
-    /// `patient` parameter, the subject's opaque pseudonym; without it the call
-    /// is refused, and the unscoped retrieval stays with `admin_role`. Unset,
-    /// the log is admin-only, as before (#3240). No openEHR spec governs the
-    /// access log — our own design/extension.
-    pub subject_audit_role: Option<String>,
     /// The role that may reach data under an EHDS Art. 8 access restriction in
     /// an emergency (`FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE`, default
     /// unset).
@@ -92,29 +80,9 @@ pub struct RbacConfig {
     /// may. No openEHR spec governs restriction of access — our own
     /// design/extension.
     pub emergency_access_role: Option<String>,
-    /// The roles of an EHDS Art. 10 access-service caller, held to an opt-out
-    /// (`FERROEHR__AUTHZ__RBAC__ACCESS_SERVICE_ROLES`; empty, the default, holds nobody).
-    pub access_service_roles: Vec<String>,
-    /// The role that may read a party's protected national identifiers
-    /// (`FERROEHR__AUTHZ__RBAC__IDENTIFIER_READER_ROLE`, default unset).
-    ///
-    /// `GET /admin/party/identifiers` expands the identifiers
-    /// `[privacy.identifier_protection]` seals, and every read is an
-    /// access record. The route sits in the ADMIN API and also needs this
-    /// role, so holding `admin_role` alone does not reveal a national
-    /// identifier. Unset, nobody may call it (#3776). No openEHR spec governs
-    /// this — our own design/extension.
-    pub identifier_reader_role: Option<String>,
-    /// The role that may import an EHR or an EHR extract
-    /// (`message_import_ehr`, `message_import_ehr_extract`; default unset).
-    // TODO(#5005): require the role on the two import operations.
-    pub import_role: Option<String>,
-    /// The issuers whose role claims may grant `admin_role`,
-    /// `emergency_access_role`, `import_role` and `identifier_reader_role`,
-    /// each a `persons` issuer; empty, the default, lets no token grant them.
-    /// A policy grant of `import_ehr`, `import_ehr_extract` or
-    /// `read_identifiers` is a second source. Each renders with any userinfo
-    /// masked.
+    /// The issuers whose role claims may grant `admin_role` and
+    /// `emergency_access_role`, each a `persons` issuer; empty, the default,
+    /// lets no token grant them. Each renders with any userinfo masked.
     pub role_issuers: Vec<SecretUrl>,
     /// What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default
     /// `open`).
@@ -139,11 +107,7 @@ impl Default for RbacConfig {
             enabled: true,
             admin_role: "ADMIN".to_owned(),
             readonly_role: "READONLY".to_owned(),
-            subject_audit_role: None,
             emergency_access_role: None,
-            access_service_roles: Vec::new(),
-            identifier_reader_role: None,
-            import_role: None,
             role_issuers: Vec::new(),
             ehr_access_default: EhrAccessDefault::Open,
         }
@@ -151,21 +115,15 @@ impl Default for RbacConfig {
 }
 
 impl RbacConfig {
-    /// The privileged roles, upper-cased: `admin_role`,
-    /// `emergency_access_role`, `import_role` and `identifier_reader_role`,
-    /// which a `hold_roles` grant never gives.
+    /// The privileged roles, upper-cased: `admin_role` and
+    /// `emergency_access_role`, which a `hold_roles` grant never gives.
     #[must_use]
     pub fn privileged_roles(&self) -> Vec<String> {
-        [
-            Some(&self.admin_role),
-            self.emergency_access_role.as_ref(),
-            self.import_role.as_ref(),
-            self.identifier_reader_role.as_ref(),
-        ]
-        .into_iter()
-        .flatten()
-        .map(|role| role.trim().to_uppercase())
-        .collect()
+        [Some(&self.admin_role), self.emergency_access_role.as_ref()]
+            .into_iter()
+            .flatten()
+            .map(|role| role.trim().to_uppercase())
+            .collect()
     }
 }
 

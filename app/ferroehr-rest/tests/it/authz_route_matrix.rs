@@ -393,7 +393,7 @@ const ADMIN_READ: &[(&str, &str)] = &[
     // The EHDS Art. 10 opt-out register (#4516).
     ("GET", "/admin/access-opt-out"),
     // The audited read of a party's protected national identifiers (#3776). It
-    // also needs `authz.rbac.identifier_reader_role`, checked in its handler.
+    // also needs a `read_identifiers` grant, checked in its handler.
     ("GET", "/admin/party/identifiers"),
     // The outbox feed read (#4786); a read moves no cursor.
     ("GET", "/admin/outbox/{reader}"),

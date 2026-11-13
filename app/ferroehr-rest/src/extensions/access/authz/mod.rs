@@ -466,23 +466,6 @@ impl RbacGate {
         authorize(class, principal_roles, &self.rules)
     }
 
-    /// Whether the caller holds the configured subject-scoped audit role
-    /// (`authz.rbac.subject_audit_role`), which reads the access log for one
-    /// subject at a time (#3240). `false` when the key is unset. Role matching
-    /// is ASCII-case-insensitive, like every other role here. Consulted by the
-    /// ITI-81 retrieval, which lives in the `fhir` feature.
-    #[cfg(feature = "fhir")]
-    pub(crate) fn holds_subject_audit_role(&self, principal_roles: &[String]) -> bool {
-        self.rules
-            .subject_audit_role
-            .as_deref()
-            .is_some_and(|role| {
-                principal_roles
-                    .iter()
-                    .any(|held| held.eq_ignore_ascii_case(role))
-            })
-    }
-
     /// Apply the read-only restriction for a write flag + the caller's roles: a
     /// principal carrying the configured read-only role is refused on writes.
     pub(crate) fn decide_readonly(
