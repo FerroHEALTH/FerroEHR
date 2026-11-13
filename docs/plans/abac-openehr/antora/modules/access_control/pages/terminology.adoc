@@ -8,29 +8,56 @@ NOTE: This page proposes a change to the xref:TERM::index.adoc[openEHR Terminolo
 
 == Groups
 
-The invariants of the package name the terminology `Terminology_id_access_control` and one group constant per coded attribute. If openEHR adopts the groups, `Terminology_id_access_control` is `openehr` and the constants are added to `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`; until then a system names the terminology it documents for them.
+Ten groups are added to the openEHR Terminology. The codes are for the terminology editors to assign; until then each rubric serves as its code, as it does in FerroEHR's `ferroehr-operations` terminology, which defines these groups today. If openEHR adopts them, `Terminology_id_access_control` in the invariants is `openehr`; until then a system names the terminology it documents for them.
 
-[cols="2,3", options="header"]
+[cols="2,3,3", options="header"]
 |===
-|Constant |Coded attribute
+|Group |Rubrics |Coded attribute or use
 
-|`Group_id_access_default`
-|`ACCESS_DIRECTIVE_SETTINGS._default_access_`
+|access default
+|open, restricted, consent_required
+|`ACCESS_DIRECTIVE_SETTINGS._default_access_` (`Group_id_access_default`)
 
-|`Group_id_access_directive_kind`
-|`ACCESS_DIRECTIVE._kind_`
+|access directive kind
+|consent, restriction, opt_out, delegation
+|`ACCESS_DIRECTIVE._kind_` (`Group_id_access_directive_kind`)
 
-|`Group_id_access_effect`
-|`ACCESS_DIRECTIVE._effect_`
+|access effect
+|permit, deny
+|`ACCESS_DIRECTIVE._effect_` (`Group_id_access_effect`)
 
-|`Group_id_access_relationship`
-|`ACCESS_ACTOR_SCOPE._relationship_`
+|access relationship
+|care, representative, proxy
+|`ACCESS_ACTOR_SCOPE._relationship_` (`Group_id_access_relationship`)
 
-|`Group_id_access_caller_kind`
-|`ACCESS_ACTOR_SCOPE._caller_kind_`
+|access caller kind
+|professional, access_service, subject, representative, system
+|`ACCESS_ACTOR_SCOPE._caller_kind_` (`Group_id_access_caller_kind`)
+
+|access operation
+|read, write, export, query
+|`ACCESS_DIRECTIVE._operations_`: the classes of operation a directive applies to
+
+|access sensitivity clearance
+|sensitivity_clearance
+|The `_name_` of an `ELEMENT` in `CAPABILITY._credentials_` whose value is a sensitivity code the capability clears
+
+|access permitted purpose
+|permitted_purpose
+|The `_name_` of an `ELEMENT` in `CAPABILITY._credentials_` whose value is a purpose of use the capability permits
+
+|care relationship
+|member_of, under_care_of
+|The `_name_` of a `PARTY_RELATIONSHIP`: a professional's membership of a care-team `GROUP`, and the subject being under the care of a team or unit
+
+|access refusal
+|refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required
+|The refusal of each step of xref:decision_procedure.adoc#_procedure[the procedure]
 |===
 
-// TODO(#5507): add the rubrics of each group, the clearance group and the demographic care relationship group once the FerroEHR terminology defines them.
+The first five groups have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other five are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a clearance, a permitted purpose or a care relationship by the code in an element's or a relationship's `_name_`. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
+
+A system that keeps the access log of the Access Log Information Model records a refusal of this procedure in `ACCESS_OUTCOME._reason_` with its `access refusal` code; `refused-opt-out` and `refused-restricted` correspond to its `opted out` and `restricted by the subject` reasons.
 
 == Codes from Other Terminologies
 

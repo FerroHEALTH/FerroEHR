@@ -27,31 +27,31 @@ The steps run in order for each EHR the access reaches. The first step that refu
 
 |1. Opt-out
 |An `opt_out` directive in force binds callers of kind `access_service`. Unless its `_emergency_override_` holds and the caller declares an emergency, and the caller does not act for the subject, the EHR MUST be answered as one that does not exist.
-|opted out (not shown to the caller)
+|`refused-opt-out`, not shown
 
 |2. Restriction
 |A `restriction` directive that applies binds callers of kind `professional` and the systems that act for a provider. Data it covers MUST be answered as data that do not exist: a named object as absent, and left out of queries and exports. A caller that declares an emergency, where `_emergency_override_` holds, passes, and the access MUST be marked as an emergency override (EHDS Art 11(5)).
-|restricted (not shown to the caller)
+|`refused-restricted`, not shown
 
 |3. Consent deny
 |Any other deny directive that applies refuses.
-|consent denied
+|`refused-consent-denied`
 
 |4. Sensitivity
 |A datum whose labels are not all cleared for the caller, and not named by a permit directive that applies, is refused when named and left out of a query.
-|sensitivity
+|`refused-sensitivity`
 
 |5. Care relationship
 |Where `ACCESS_POLICY._care_relationship_required_` holds and the caller is a professional, the caller needs a live care relationship to the subject, a permit directive that applies, or an entry in `_gate_keepers_`.
-|no care relationship
+|`refused-no-care-relationship`
 
 |6. Purpose
 |Where `ACCESS_POLICY._purpose_required_` holds, an access without a declared purpose is refused, and so is a purpose none of the caller's capabilities permits.
-|purpose missing; purpose not permitted
+|`refused-purpose-missing`, `refused-purpose-not-permitted`
 
 |7. Default
 |`open` admits. `restricted` admits a caller that a permit directive that applies, an entry in `_gate_keepers_` or a live care relationship names. `consent_required` admits only a caller that a permit directive that applies names.
-|consent required
+|`refused-consent-required`
 |===
 
 Directives combine by deny-overrides: where a permit and a deny both apply, the deny decides, and a permit decides only through the steps that ask for one (4, 5 and 7). Classifications combine by union.
@@ -60,7 +60,7 @@ The subject reading their own record skips steps 3 to 7. A representative is hel
 
 == Refusals
 
-A refusal that is shown is answered as forbidden, and the answer MAY carry the refusal. The refusals of steps 1 and 2 MUST NOT be shown: the fact that a person has restricted access "shall not be visible to healthcare providers" (EHDS Art 8). Every refusal, shown or not, SHOULD be recorded with its step in the system's access log, together with the directive, the `EHR_ACCESS` version and the `ACCESS_POLICY` version it rested on.
+A refusal that is shown is answered as forbidden, and the answer MAY carry the refusal. The refusals of steps 1 and 2 MUST NOT be shown: the fact that a person has restricted access "shall not be visible to healthcare providers" (EHDS Art 8). Every refusal, shown or not, SHOULD be recorded with its `access refusal` code (xref:terminology.adoc[Terminology]) in the system's access log, together with the directive, the `EHR_ACCESS` version and the `ACCESS_POLICY` version it rested on.
 
 == Queries
 

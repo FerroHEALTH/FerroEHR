@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Row I/O for the grant rows: `binding_client`, `binding_capability`,
-//! `binding_provider` and the revision that moves with them.
+//! `binding_provider` and the revision that moves with them, beside the
+//! caller facts of [`super::caller::store`].
 //!
 //! A commit of an `ACTOR` or a `ROLE` replaces the rows of that party with the
 //! ones its new head holds, in its own transaction; a change moves the
@@ -19,6 +20,7 @@
 )]
 
 use serde_json::Value;
+use sqlx::postgres::PgRow;
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
@@ -55,17 +57,18 @@ pub(crate) struct GrantHead<'a> {
 
 impl GrantHead<'_> {
     /// What a live head holds; `None` for a deleted one.
-    fn live(&self) -> Option<&Facts> {
+    pub(crate) fn live(&self) -> Option<&Facts> {
         (self.lifecycle_state != DELETED)
             .then_some(self.facts)
             .flatten()
     }
 }
 
-/// Replaces the grant rows of `head`, a party of `kind`, on its commit
-/// transaction `tx`; moves the revision and notifies when they changed.
-/// An `ACTOR` holds client rows, an `ORGANISATION` its provider row too, and
-/// a `ROLE` capability rows; every other kind holds none.
+/// Replaces the grant rows and the caller facts of `head`, a party of `kind`,
+/// on its commit transaction `tx`; moves the revision and notifies when they
+/// changed. An `ACTOR` holds client rows, an `ORGANISATION` its provider row
+/// too, a `PERSON` its care relationships, and a `ROLE` capability rows and
+/// its clearances and purposes; every other kind holds none.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure, the unique violation of
@@ -77,8 +80,20 @@ pub(crate) async fn write(
 ) -> Result<(), StorageError> {
     let changed = match kind {
         Kind::Organisation => write_clients(tx, head).await? | write_provider(tx, head).await?,
-        Kind::Agent | Kind::Person | Kind::Group => write_clients(tx, head).await?,
-        Kind::Role => write_role(tx, head).await?,
+        Kind::Person => {
+            super::caller::store::write(tx, head, Some(head.vo_id), None).await?;
+            write_clients(tx, head).await?
+        }
+        Kind::Agent | Kind::Group => write_clients(tx, head).await?,
+        Kind::Role => {
+            let performer = head
+                .live()
+                .and_then(|facts| facts.performer.as_deref())
+                .and_then(container);
+            let validity = head.live().and_then(|facts| facts.validity.as_ref());
+            super::caller::store::write(tx, head, performer, validity).await?;
+            write_role(tx, head).await?
+        }
         _ => false,
     };
     if changed {
@@ -236,7 +251,7 @@ impl<'a> CapabilityColumns<'a> {
 }
 
 /// Moves the revision and notifies [`CHANNEL`] with it, on `tx`.
-async fn revise(tx: &mut PgConnection) -> Result<(), StorageError> {
+pub(crate) async fn revise(tx: &mut PgConnection) -> Result<(), StorageError> {
     sqlx::query(
         "WITH revised AS ( \
              UPDATE binding_grant_revision SET revision = revision + 1, revised_at = now() \
@@ -258,6 +273,7 @@ pub(crate) async fn clear(tx: &mut PgConnection) -> Result<(), StorageError> {
         "DELETE FROM binding_client",
         "DELETE FROM binding_capability",
         "DELETE FROM binding_provider",
+        "DELETE FROM binding_caller_fact",
     ] {
         sqlx::query(statement).execute(&mut *tx).await?;
     }
@@ -273,6 +289,18 @@ pub(crate) async fn refilled(tx: &mut PgConnection) -> Result<(), StorageError> 
     revise(tx).await?;
     super::live::note_change();
     Ok(())
+}
+
+/// The grant revision and the facts revision, on `conn`, in one read.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub(crate) async fn revisions(conn: &mut PgConnection) -> Result<(i64, i64), StorageError> {
+    Ok(
+        sqlx::query_as("SELECT revision, facts_revision FROM binding_grant_revision")
+            .fetch_one(&mut *conn)
+            .await?,
+    )
 }
 
 /// The revision, on `tx`; `0` until the first fill or grant change.
@@ -310,7 +338,8 @@ pub(crate) async fn erase(tx: &mut PgConnection, vo_ids: &[Uuid]) -> Result<(), 
         .execute(&mut *tx)
         .await?
         .rows_affected();
-    if clients > 0 || capabilities > 0 || providers > 0 {
+    let facts = super::caller::store::erase(tx, vo_ids).await?;
+    if clients > 0 || capabilities > 0 || providers > 0 || facts {
         revise(tx).await?;
         super::live::note_change();
     }
@@ -330,24 +359,88 @@ pub(crate) struct ClientRow {
     pub(crate) provider: Option<(String, String)>,
 }
 
-/// One stored capability, with its dates as `[lower, upper)` bounds.
+/// One stored capability.
 #[derive(Debug, Clone)]
 pub(crate) struct CapabilityRow {
     pub(crate) role_id: Uuid,
     pub(crate) performer_id: Uuid,
     pub(crate) operation: String,
-    pub(crate) lifecycle_state: String,
-    /// The `ROLE`'s dates; `None` when they are empty.
-    pub(crate) role_dates: Option<Dates>,
-    /// The capability's dates; `None` when they are empty.
-    pub(crate) dates: Option<Dates>,
-    pub(crate) not_before: Option<jiff::Timestamp>,
-    pub(crate) not_after: Option<jiff::Timestamp>,
+    /// When it holds.
+    pub(crate) term: Term,
     pub(crate) credentials: Option<Value>,
 }
 
+/// When a stored grant or caller fact holds: the lifecycle state of the head
+/// that holds it, its dates as `[lower, upper)` bounds and its instants.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Term {
+    pub(crate) lifecycle_state: String,
+    /// The `ROLE`'s dates, every date for a care relationship; `None` when
+    /// they are empty.
+    pub(crate) role_dates: Option<Dates>,
+    /// The capability's or the relationship's dates; `None` when they are
+    /// empty.
+    pub(crate) dates: Option<Dates>,
+    pub(crate) not_before: Option<jiff::Timestamp>,
+    pub(crate) not_after: Option<jiff::Timestamp>,
+}
+
+impl Term {
+    /// Whether it holds on `today` and at `now`: its head is `complete` or
+    /// `incomplete`, both its date ranges hold `today`, and `now` is within
+    /// its instants.
+    pub(crate) fn holds(&self, today: jiff::civil::Date, now: jiff::Timestamp) -> bool {
+        let live = matches!(self.lifecycle_state.as_str(), "532" | "553");
+        let dated = self.role_dates.is_some_and(|dates| dates.holds(today))
+            && self.dates.is_some_and(|dates| dates.holds(today));
+        let timed = self.not_before.is_none_or(|before| before <= now)
+            && self.not_after.is_none_or(|after| now <= after);
+        live && dated && timed
+    }
+
+    /// The term of the stored row `row`, read from its `lifecycle_state`,
+    /// `role_empty`, `role_lower`, `role_upper`, `empty`, `lower`, `upper`,
+    /// `not_before` and `not_after` columns.
+    pub(crate) fn of(row: &PgRow) -> Result<Self, StorageError> {
+        let dates = |empty: &str, lower: &str, upper: &str| -> Result<_, StorageError> {
+            if row.try_get::<bool, _>(empty)? {
+                return Ok(None);
+            }
+            let bound = |column: &str| -> Result<_, StorageError> {
+                Ok(row
+                    .try_get::<Option<jiff_sqlx::Date>, _>(column)?
+                    .map(jiff_sqlx::Date::to_jiff))
+            };
+            Ok(Some(Dates {
+                lower: bound(lower)?,
+                upper: bound(upper)?,
+            }))
+        };
+        let instant = |column: &str| -> Result<_, StorageError> {
+            Ok(row
+                .try_get::<Option<jiff_sqlx::Timestamp>, _>(column)?
+                .map(jiff_sqlx::Timestamp::to_jiff))
+        };
+        Ok(Self {
+            lifecycle_state: row.try_get("lifecycle_state")?,
+            role_dates: dates("role_empty", "role_lower", "role_upper")?,
+            dates: dates("empty", "lower", "upper")?,
+            not_before: instant("not_before")?,
+            not_after: instant("not_after")?,
+        })
+    }
+}
+
+/// The columns [`Term::of`] reads, as a select list over a table with the
+/// `lifecycle_state`, `role_validity`, `validity`, `not_before` and
+/// `not_after` columns of the grant rows.
+pub(crate) const TERM_COLUMNS: &str = "lifecycle_state, \
+    isempty(role_validity) AS role_empty, lower(role_validity) AS role_lower, \
+    upper(role_validity) AS role_upper, isempty(validity) AS empty, lower(validity) AS lower, \
+    upper(validity) AS upper, not_before, not_after";
+
 /// A non-empty date range `[lower, upper)`, each bound `None` when unbounded.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Dates {
     pub(crate) lower: Option<jiff::civil::Date>,
     pub(crate) upper: Option<jiff::civil::Date>,
@@ -361,12 +454,14 @@ impl Dates {
 }
 
 /// Everything the grant rows hold, read in one snapshot: the revision, every
-/// client identifier with its provider, and every capability.
+/// client identifier with its provider, every capability, and every caller
+/// fact.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Loaded {
     pub(crate) revision: i64,
     pub(crate) clients: Vec<ClientRow>,
     pub(crate) capabilities: Vec<CapabilityRow>,
+    pub(crate) facts: super::caller::store::Changed,
 }
 
 /// The SCIM clients a binding key's provenance names, as token issuer and
@@ -423,52 +518,28 @@ pub(crate) async fn load(conn: &mut PgConnection) -> Result<Loaded, StorageError
         });
     }
     let mut capabilities = Vec::new();
-    for row in sqlx::query(
-        "SELECT role_id, performer_id, operation, lifecycle_state, \
-                isempty(role_validity) AS role_empty, \
-                lower(role_validity) AS role_lower, upper(role_validity) AS role_upper, \
-                isempty(validity) AS empty, lower(validity) AS lower, upper(validity) AS upper, \
-                not_before, not_after, credentials \
-         FROM binding_capability ORDER BY performer_id, role_id, ordinal",
-    )
-    .fetch_all(&mut *tx)
-    .await?
+    let statement = format!(
+        "SELECT role_id, performer_id, operation, {TERM_COLUMNS}, credentials \
+         FROM binding_capability ORDER BY performer_id, role_id, ordinal"
+    );
+    for row in sqlx::query(sqlx::AssertSqlSafe(statement))
+        .fetch_all(&mut *tx)
+        .await?
     {
-        let dates = |empty: &str, lower: &str, upper: &str| -> Result<_, StorageError> {
-            if row.try_get::<bool, _>(empty)? {
-                return Ok(None);
-            }
-            let bound = |column: &str| -> Result<_, StorageError> {
-                Ok(row
-                    .try_get::<Option<jiff_sqlx::Date>, _>(column)?
-                    .map(jiff_sqlx::Date::to_jiff))
-            };
-            Ok(Some(Dates {
-                lower: bound(lower)?,
-                upper: bound(upper)?,
-            }))
-        };
-        let instant = |column: &str| -> Result<_, StorageError> {
-            Ok(row
-                .try_get::<Option<jiff_sqlx::Timestamp>, _>(column)?
-                .map(jiff_sqlx::Timestamp::to_jiff))
-        };
         capabilities.push(CapabilityRow {
             role_id: row.try_get("role_id")?,
             performer_id: row.try_get("performer_id")?,
             operation: row.try_get("operation")?,
-            lifecycle_state: row.try_get("lifecycle_state")?,
-            role_dates: dates("role_empty", "role_lower", "role_upper")?,
-            dates: dates("empty", "lower", "upper")?,
-            not_before: instant("not_before")?,
-            not_after: instant("not_after")?,
+            term: Term::of(&row)?,
             credentials: row.try_get("credentials")?,
         });
     }
+    let facts = super::caller::store::load(&mut tx, None).await?;
     tx.commit().await?;
     Ok(Loaded {
         revision,
         clients,
         capabilities,
+        facts,
     })
 }

@@ -1,6 +1,6 @@
-# Care-team GROUP and membership definitions: provenance
+# Care-team GROUP, membership and care relationship definitions: provenance
 
-Two ADL 2 archetypes of FerroEHR's default demographic definitions, which
+Four ADL 2 archetypes of FerroEHR's default demographic definitions, which
 the binary carries and stores at boot when absent, so that the party mapping
 of groups (`[authz.party_binding.group]` and
 `[authz.party_binding.membership]`, whose defaults name them) finds them and
@@ -12,6 +12,19 @@ SCIM can provision Groups:
    membership a member's `PERSON` holds to the team's `GROUP`, named by
    `[authz.party_binding.membership] archetype_id` in its interface form,
    `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1`.
+3. `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.0.adls`: an example
+   care-team membership a professional's `PERSON` holds to the team's
+   `GROUP`, whose details carry `member_of` of FerroEHR's terminology
+   `ferroehr-operations`.
+4. `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1.0.0.adls`: an
+   example care relationship a patient's `PERSON` holds to a care team's
+   `GROUP` or a unit, with the admission as its `time_validity`, whose details
+   carry `under_care_of` of that terminology.
+
+FerroEHR reads a care relationship by its code in any archetype, never by
+the id of the third or fourth file; a deployment may model one in an
+archetype of its own. The care delivery environment writes them under the
+`write_care_relationship` grant.
 
 The book's "Default demographic definitions" page lists the whole set with
 the configuration that names each file. They are defaults: a deployment may
@@ -32,6 +45,8 @@ its modification time.
 |---|---|
 | GROUP | `openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0` (1013.1.475, 2019-08-09), `openEHR-DEMOGRAPHIC-PARTY_IDENTITY.organisation_name.v0` (1013.1.476, 2019-08-09) |
 | Membership | `openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0` (1013.1.475, 2019-08-09; its inline `PARTY_RELATIONSHIP`) |
+| Member of | `openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0` (1013.1.475, 2019-08-09; its inline `PARTY_RELATIONSHIP`) |
+| Under care of | `openEHR-DEMOGRAPHIC-PERSON.person-patient.v0` (1013.1.821, 2019-08-09; its inline `PARTY_RELATIONSHIP`) |
 
 ## What changed from the sources
 
@@ -51,6 +66,10 @@ its modification time.
   The type of relationship element becomes the member's optional role in the
   team; the type of the relationship is its name (`PARTY_RELATIONSHIP`
   `Type_validity`).
+- The two care relationships keep that shape and hold, as their one
+  mandatory element, the coded care relationship code, after the
+  representation definition; `member_of` keeps the optional role in the team,
+  and `under_care_of` replaces it with an optional discharge time.
 - Every element is optional, so a team provisioned with only a name commits
   `532|complete|`.
 - The node ids are ADL 2 id-codes and the terminology is English only.
