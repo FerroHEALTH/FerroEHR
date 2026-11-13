@@ -27,6 +27,9 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::party_binding::grants::admission::{
+    ADMIT_ASSURANCE, ADMIT_GROUP, ADMIT_GUESTS, ADMIT_IDP, ADMIT_ROLE, LOGIN_ISSUER,
+};
 use crate::party_binding::policy_mark::ACTS_FOR;
 
 /// The code naming the credentials element whose `DV_DATE_TIME` is the
@@ -51,8 +54,21 @@ pub const ROLE: &str = "role";
 pub const SCOPE: &str = "scope";
 
 /// The codes of the terminology that name no operation.
-const QUALIFIERS: [&str; 8] = [
-    ACTS_FOR, NOT_BEFORE, NOT_AFTER, SCOPES[0], SCOPES[1], SCOPES[2], ROLE, SCOPE,
+const QUALIFIERS: [&str; 14] = [
+    ACTS_FOR,
+    NOT_BEFORE,
+    NOT_AFTER,
+    SCOPES[0],
+    SCOPES[1],
+    SCOPES[2],
+    ROLE,
+    SCOPE,
+    LOGIN_ISSUER,
+    ADMIT_IDP,
+    ADMIT_GROUP,
+    ADMIT_ROLE,
+    ADMIT_ASSURANCE,
+    ADMIT_GUESTS,
 ];
 
 /// One operation a capability may grant.
@@ -86,6 +102,10 @@ pub enum Operation {
     /// Hold, as a Basic user, the SMART scopes the grant's [`SCOPE`] elements
     /// name.
     HoldScopes,
+    /// Create a provisional `PERSON` at the first login of a person no party
+    /// carries, under the admission conditions the grant's credentials name
+    /// ([`crate::party_binding::grants::admission`]).
+    CreateAtLogin,
     /// Count a `system/aql-*` grant of the client's token, which "would
     /// grant access to all registered and ad-hoc AQL queries system-wide"
     /// (SMART on openEHR, `master08-scopes.adoc` §Resource Scopes).
@@ -97,7 +117,7 @@ pub enum Operation {
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 13] = [
+    pub const ALL: [Self; 14] = [
         Self::CommitComposition,
         Self::ImportEhr,
         Self::ImportEhrExtract,
@@ -109,6 +129,7 @@ impl Operation {
         Self::ReadIdentifiers,
         Self::HoldRoles,
         Self::HoldScopes,
+        Self::CreateAtLogin,
         Self::QuerySystemWide,
         Self::AccessDemographic,
     ];
@@ -128,6 +149,7 @@ impl Operation {
             Self::ReadIdentifiers => "read_identifiers",
             Self::HoldRoles => "hold_roles",
             Self::HoldScopes => "hold_scopes",
+            Self::CreateAtLogin => "create_at_login",
             Self::QuerySystemWide => "query_system_wide",
             Self::AccessDemographic => "access_demographic",
         }
@@ -232,6 +254,7 @@ mod tests {
         }
         assert_eq!(Operation::of("import_everything"), None);
         assert!(is_qualifier(ACTS_FOR) && is_qualifier("template"));
+        assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_GUESTS));
     }
 
     #[test]

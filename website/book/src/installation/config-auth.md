@@ -246,7 +246,7 @@ attributes a person, and `enabled` is refused at boot.
 | `provider` | `{ issuer, id }`, or `[[authz.party_binding.provider]]` tables | **required** once `[auth]` admits a credential | The healthcare provider this deployment acts for, as an identifier issuer and id (in the Netherlands the URA). Every access record of a bound or provisional person and every version a person commits name it (EHDS Art. 13(4), Annex II 3.2(a)). A deployment that serves several providers declares one table per value of its issuers' `tenant_claim` (`tenant`, `issuer`, `id`) instead; the two forms cannot be combined, and a bound issuer that names no `tenant_claim` is refused beside the table form. |
 | `namespace` | string | `demographic` | The `PARTY_REF.namespace` a bound party is written under, the value of the ITS-REST overview example (`committer.external_ref.namespace="demographic"`), held to the `OBJECT_REF.namespace` pattern `[a-zA-Z][a-zA-Z0-9_.:/&?=+-]*`. |
 | `basic_user` | `[[authz.party_binding.basic_user]]` tables | `[]` | One per Basic user: `user`, `key_issuer` (the `identifier_issuer` of an `[[auth.party]]` table) and `key`, the binding key the user's `PERSON` carries. A Basic user with no table, a table naming no Basic user and a `key_issuer` no table names refuse the start. |
-| `issuer` | `[[authz.party_binding.issuer]]` tables | `[]` | One per `persons` issuer that creates a provisional `PERSON` at a first login; see [Just-in-time creation](#just-in-time-creation). |
+| `issuer` | `[[authz.party_binding.issuer]]` tables | `[]` | How the tokens of one `persons` issuer are read when a first login creates a provisional `PERSON`; see [Just-in-time creation](#just-in-time-creation). |
 | `provisional_report_after` | duration | `"30d"` | The age past which `ferroehr party-binding check` reports a provisional `PERSON`. |
 
 ```toml
@@ -473,40 +473,45 @@ record the professional, never `PARTY_SELF`.
 
 Just-in-time creation lets a professional with no party work under their own
 account at their first login, before SCIM or an administrator completes the
-record. It is off by default and enabled per `persons` issuer in one
-`[[authz.party_binding.issuer]]` table. When a login of that issuer matches no
-party, FerroEHR commits one `PERSON` of the default template with lifecycle
-state `553|incomplete|`, which RM common §Incomplete Content allows for
-"incomplete demographic details", and its professional `ROLE` in the same
-demographic contribution, then serves the request bound to it. The next
-request binds to that `PERSON` and creates nothing. When a login creates a
-party is FerroEHR's own design: no openEHR specification governs it.
+record. When a login of a `persons` issuer matches no party, and a
+`create_at_login` grant in the CDR admits it, FerroEHR commits one `PERSON`
+of the default template with lifecycle state `553|incomplete|`, which RM
+common §Incomplete Content allows for "incomplete demographic details", and
+its professional `ROLE` in the same demographic contribution, then serves the
+request bound to it. The next request binds to that `PERSON` and creates
+nothing. When a login creates a party is FerroEHR's own design: no openEHR
+specification governs it.
+
+Which logins are created is operational policy, so it is CDR data and no
+configuration key: an administrator writes a `ROLE` whose capability grants
+`ferroehr-operations::create_at_login`, naming the issuer and the admission
+conditions, through the Demographic API. The grant is read on each first
+login, so a change applies to the next one without a restart. The
+[Operational policy](../operational-policy.md#just-in-time-admission) page
+documents the grant and has a worked example. `[authz.grants] allowed`
+must list `create_at_login`, which the default does not, or no such grant
+can be written or honoured.
+
+The `[[authz.party_binding.issuer]]` table only says how an issuer's tokens
+are read, and an issuer without one reads the defaults:
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `issuer` | string | required | A `persons` issuer an `[[auth.party]]` table binds. |
-| `jit` | boolean | `false` | Whether a first login with no party creates a provisional `PERSON`. |
-| `guests_jit` | boolean | `false` | Whether a guest is created too; needs `jit` and the issuer's `[[auth.party]] guests`. |
 | `user_name_claim` | string | the profile's `person_key` | The claim the `userName` is read from. It must be one the issuer controls: an email address, a phone number, `preferred_username`, `name`, `upn` and `unique_name` refuse the start. |
-| `idp_claim` | string | `idp` | The dotted claim path the identity provider is read from (the Microsoft Entra `idp` claim). |
-| `admit_idp` | list of strings | `[]` | The identity providers whose logins are created. |
-| `admit_groups` | list of strings | `[]` | The groups, read from the `[[auth.party]] group_claim`, of which a created login holds one. |
-| `admit_roles` | list of strings | `[]` | The roles, read from `[auth] role_claims`, of which a created login holds one. |
-| `admit_assurance` | `low`, `substantial` or `high` | unset | The lowest `[authz.assurance]` level a created login carries. |
+| `idp_claim` | string | `idp` | The dotted claim path an `admit_idp` condition reads the identity provider from (the Microsoft Entra `idp` claim). |
 
-`jit = true` needs at least one admission condition, and a login must meet
-every condition the table declares. It also needs a default person template
-with a `user_name` selector, `[authz.party_binding.professional_role]`, and an
-attribute that maps an OpenID Connect name claim (`name`, `given_name`,
-`family_name`, `middle_name` or `nickname`) to the default template; boot
-refuses the table otherwise.
+Creation also needs a default person template with a `user_name` selector,
+`[authz.party_binding.professional_role]`, and an attribute that maps an
+OpenID Connect name claim (`name`, `given_name`, `family_name`,
+`middle_name` or `nickname`) to the default template. The default mapping
+has them. When a grant admits a login and the mapping lacks one, the login
+is not created and the server logs what is missing.
 
 ```toml
 [[authz.party_binding.issuer]]
 issuer = "https://login.microsoftonline.com/<tenant-id>/v2.0"
-jit = true
-admit_groups = ["5f2a9c1e-0000-4000-8000-00000000c11a"]
-admit_assurance = "substantial"
+user_name_claim = "oid"
 ```
 
 What it writes is the attribution minimum: the binding key, the `userName`
@@ -526,8 +531,10 @@ login whose outcome is anything other than unbound: an ambiguous, inactive,
 abandoned or deprovisioned party, a token without the key claim and a party
 with the wrong marker are refused as before. A `PERSON` a SCIM client deleted
 is never created again by a later login, whatever the identity provider still
-issues. A login that fails an admission condition, or whose token carries no
-mapped name claim, is refused with `403` and `refused-unbound`.
+issues. A login that no grant in force admits, or whose token carries no
+mapped name claim, is refused with `403` and `refused-unbound`. A guest is
+created only under a grant whose `admit_guests` is true, and only when the
+issuer's `[[auth.party]] guests` admits it.
 
 Concurrent first requests of one login commit one `PERSON`: the binding key's
 unique index refuses the second commit, and that request binds to the first

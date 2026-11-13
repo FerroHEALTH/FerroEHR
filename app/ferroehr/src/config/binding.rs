@@ -66,8 +66,9 @@ pub struct PartyBindingConfig {
     pub representation: Option<person::RepresentationSection>,
     /// The patient's `PERSON` template.
     pub patient: Option<person::PatientSection>,
-    /// What FerroEHR does for each `persons` issuer beyond the lookup
-    /// (`[[authz.party_binding.issuer]]`): just-in-time creation.
+    /// How FerroEHR reads each `persons` issuer's tokens when it creates a
+    /// provisional `PERSON` at a first login
+    /// (`[[authz.party_binding.issuer]]`).
     pub issuer: Vec<jit::IssuerBinding>,
     /// The age past which `ferroehr party-binding check` reports a
     /// provisional `PERSON`.
@@ -361,7 +362,7 @@ pub fn errors(authz: &crate::config::authz::AuthzConfig, resolved: &Resolved) ->
     key_types(binding, resolved, &mut errors);
     shared_audiences(resolved, &mut errors);
     providers(binding, resolved, &mut errors);
-    errors.extend(jit::errors(binding, resolved, &authz.assurance));
+    errors.extend(jit::errors(binding, resolved));
     if let Err(e) = resolved.check_role_issuers("authz.rbac.role_issuers", &authz.rbac.role_issuers)
     {
         errors.push(crate::error::ErrorChain::new(&e).to_string());

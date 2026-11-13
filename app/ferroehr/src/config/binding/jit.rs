@@ -1,22 +1,26 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `[[authz.party_binding.issuer]]`: what FerroEHR does for one `persons`
-//! issuer beyond looking its logins up, which is just-in-time creation of a
-//! provisional `PERSON` at a first login.
+//! `[[authz.party_binding.issuer]]`: how a `persons` issuer's tokens are
+//! read when a first login creates a provisional `PERSON`.
 //!
-//! Creation is off by default and needs declared admission conditions (an
-//! `idp` allow-list, a required group or role, or a minimum assurance level)
-//! and a mapping that can write the binding key, the `userName`, a name and
-//! the professional `ROLE`. The person's own data come from the access token
-//! (RFC 9068 §2.2.2), and only what the mapping marks is written (GDPR Art.
-//! 25(2)). No openEHR spec governs when a party is created at a login: our
-//! own design.
+//! The table names the claim the `userName` comes from and the one naming
+//! the identity provider.
+//!
+//! Whether a login is created is policy, held in the CDR: a
+//! `create_at_login` grant of the operation terminology names the issuer and
+//! its admission conditions
+//! ([`crate::party_binding::grants::admission`]), read on every first
+//! login. This table only says how the token is read, and creation needs a
+//! mapping that can write the binding key, the `userName`, a name and the
+//! professional `ROLE` ([`mapping_errors`]). The person's own data come from
+//! the access token (RFC 9068 §2.2.2), and only what the mapping marks is
+//! written (GDPR Art. 25(2)). No openEHR spec governs when a party is
+//! created at a login: our own design.
 
 use std::collections::BTreeSet;
 
 use ferrohealth_secret::secret_url::SecretUrl;
-use ferrohealth_smart::assurance::{AssuranceLevel, AssuranceSection};
 use ferrohealth_smart::config::Resolved;
 use ferrohealth_smart::kind::IssuerKind;
 use serde::{Deserialize, Serialize};
@@ -32,66 +36,30 @@ use super::person::{NEVER_A_KEY, Source};
 pub struct IssuerBinding {
     /// The `persons` issuer the table holds for. It renders with any userinfo masked.
     pub issuer: SecretUrl,
-    /// Whether a first login with no party creates a provisional `PERSON`.
-    pub jit: bool,
-    /// Whether a guest the issuer's `[[auth.party]]` table admits is created
-    /// too.
-    pub guests_jit: bool,
     /// The claim the `userName` is read from; the issuer profile's
     /// `person_key` when unset.
     pub user_name_claim: Option<String>,
-    /// The dotted claim path the identity provider is read from.
+    /// The dotted claim path the identity provider an `admit_idp` admission
+    /// condition matches is read from.
     pub idp_claim: String,
-    /// The identity providers whose logins are created.
-    pub admit_idp: Vec<String>,
-    /// The groups, read from the `[[auth.party]]` table's `group_claim`, one
-    /// of which a created login holds.
-    pub admit_groups: Vec<String>,
-    /// The roles, read from `[auth] role_claims`, one of which a created
-    /// login holds.
-    pub admit_roles: Vec<String>,
-    /// The lowest `[authz.assurance]` level a created login carries.
-    pub admit_assurance: Option<AssuranceLevel>,
 }
 
 impl Default for IssuerBinding {
     fn default() -> Self {
         Self {
             issuer: SecretUrl::default(),
-            jit: false,
-            guests_jit: false,
             user_name_claim: None,
             // NOTE: Microsoft Entra access-token-claims-reference.md, `idp`: the identity
             // provider that authenticated the subject.
             idp_claim: "idp".to_owned(),
-            admit_idp: Vec::new(),
-            admit_groups: Vec::new(),
-            admit_roles: Vec::new(),
-            admit_assurance: None,
         }
     }
 }
 
-impl IssuerBinding {
-    /// Whether the table declares at least one admission condition.
-    #[must_use]
-    pub fn admits_by_condition(&self) -> bool {
-        !self.admit_idp.is_empty()
-            || !self.admit_groups.is_empty()
-            || !self.admit_roles.is_empty()
-            || self.admit_assurance.is_some()
-    }
-}
-
 /// The boot refusals of the `[[authz.party_binding.issuer]]` tables of
-/// `binding`, judged against the trusted issuers of `resolved` and the levels
-/// `assurance` maps.
+/// `binding`, judged against the trusted issuers of `resolved`.
 #[must_use]
-pub fn errors(
-    binding: &PartyBindingConfig,
-    resolved: &Resolved,
-    assurance: &AssuranceSection,
-) -> Vec<String> {
+pub fn errors(binding: &PartyBindingConfig, resolved: &Resolved) -> Vec<String> {
     let mut errors = Vec::new();
     let mut seen = BTreeSet::new();
     for table in &binding.issuer {
@@ -102,38 +70,16 @@ pub fn errors(
         if !seen.insert(table.issuer.expose()) {
             errors.push(format!("{at} is listed twice"));
         }
-        let party = resolved.party.iter().find(|p| p.issuer == table.issuer);
+        let bound = resolved.party.iter().any(|p| p.issuer == table.issuer);
         let persons = resolved.kinds.get(table.issuer.expose()) == Some(&IssuerKind::Persons);
-        let Some(party) = party.filter(|_| persons) else {
+        if !(bound && persons) {
             errors.push(format!(
                 "{at} names no persons issuer an [[auth.party]] table binds"
             ));
             continue;
-        };
-        if table.guests_jit && !table.jit {
-            errors.push(format!("{at} sets guests_jit without jit"));
         }
-        if table.guests_jit && !party.guests {
-            errors.push(format!(
-                "{at} sets guests_jit, and its [[auth.party]] table admits no guest"
-            ));
-        }
-        if !table.admit_groups.is_empty() && party.group_claim.trim().is_empty() {
-            errors.push(format!(
-                "{at} sets admit_groups, and its [[auth.party]] table reads no group_claim"
-            ));
-        }
-        if !table.admit_idp.is_empty() && table.idp_claim.trim().is_empty() {
-            errors.push(format!("{at} sets admit_idp with an empty idp_claim"));
-        }
-        if let Some(level) = table.admit_assurance
-            && !assurance.levels.values().any(|mapped| *mapped >= level)
-        {
-            errors.push(format!(
-                "{at} sets admit_assurance = {:?}, which no [authz.assurance] levels value \
-                 reaches",
-                level.as_str()
-            ));
+        if table.idp_claim.trim().is_empty() {
+            errors.push(format!("{at} sets an empty idp_claim"));
         }
         if let Some(claim) = &table.user_name_claim
             && (claim.trim().is_empty() || NEVER_A_KEY.contains(&claim.as_str()))
@@ -144,39 +90,48 @@ pub fn errors(
                  name, upn or unique_name"
             ));
         }
-        if table.jit {
-            if !table.admits_by_condition() {
-                errors.push(format!(
-                    "{at} sets jit without an admission condition: set at least one of \
-                     admit_idp, admit_groups, admit_roles and admit_assurance"
-                ));
-            }
-            mapping_errors(binding, &at, &mut errors);
-        }
     }
     attribute_errors(binding, &mut errors);
     errors
 }
 
-/// The refusals of a mapping just-in-time creation cannot write with.
-fn mapping_errors(binding: &PartyBindingConfig, at: &str, errors: &mut Vec<String>) {
+/// The `persons` issuers an `[[auth.party]]` table of `resolved` binds: the
+/// issuers whose first logins a `create_at_login` grant may create a
+/// `PERSON` for.
+#[must_use]
+pub fn login_issuers(resolved: &Resolved) -> Vec<SecretUrl> {
+    resolved
+        .party
+        .iter()
+        .filter(|table| resolved.kinds.get(table.issuer.expose()) == Some(&IssuerKind::Persons))
+        .map(|table| table.issuer.clone())
+        .collect()
+}
+
+/// Why the mapping of `binding` cannot write a provisional `PERSON`.
+///
+/// It needs a default person template with a `userName` selector, a
+/// professional `ROLE`, and a name attribute read from an OpenID Connect
+/// claim. Empty when just-in-time creation can write.
+#[must_use]
+pub fn mapping_errors(binding: &PartyBindingConfig) -> Vec<String> {
+    let mut errors = Vec::new();
     let Some(template) = binding.person().template.iter().find(|t| t.default) else {
-        errors.push(format!(
-            "{at} sets jit, and no [[authz.party_binding.person.template]] sets default = true"
-        ));
-        return;
+        errors.push("no [[authz.party_binding.person.template]] sets default = true".to_owned());
+        return errors;
     };
     if template.user_name.is_none() {
         errors.push(format!(
-            "{at} sets jit, and the default template {:?} names no user_name selector",
+            "the default template {:?} names no user_name selector",
             template.template_id
         ));
     }
     if binding.professional_role.is_none() {
-        errors.push(format!(
-            "{at} sets jit, which commits the professional ROLE, and \
-             [authz.party_binding.professional_role] is not set"
-        ));
+        errors.push(
+            "[authz.party_binding.professional_role], the ROLE a created PERSON performs, is \
+             not set"
+                .to_owned(),
+        );
     }
     let named = binding.person().attribute.iter().any(|attribute| {
         attribute.oidc.is_some()
@@ -185,11 +140,12 @@ fn mapping_errors(binding: &PartyBindingConfig, at: &str, errors: &mut Vec<Strin
     });
     if !named {
         errors.push(format!(
-            "{at} sets jit, and no [[authz.party_binding.person.attribute]] maps an OpenID \
-             Connect name claim to the default template {:?}",
+            "no [[authz.party_binding.person.attribute]] maps an OpenID Connect name claim to \
+             the default template {:?}",
             template.template_id
         ));
     }
+    errors
 }
 
 /// The refusals of an attribute just-in-time creation is told to write and
@@ -215,7 +171,7 @@ mod tests {
 
     const ISSUER: &str = "https://login.example";
 
-    fn resolved(guests: bool) -> Resolved {
+    fn resolved() -> Resolved {
         let section = AuthSection {
             enabled: true,
             issuer: vec![IssuerEntry {
@@ -228,7 +184,6 @@ mod tests {
                 issuer: SecretUrl::new(ISSUER),
                 identifier_issuer: "urn:login".to_owned(),
                 identifier_type: "guid".to_owned(),
-                guests,
                 ..PartySection::default()
             }],
             ..AuthSection::default()
@@ -272,43 +227,27 @@ mod tests {
         }
     }
 
-    fn jit() -> IssuerBinding {
+    fn table() -> IssuerBinding {
         IssuerBinding {
             issuer: SecretUrl::new(ISSUER),
-            jit: true,
-            admit_idp: vec!["https://sts.example/".to_owned()],
             ..IssuerBinding::default()
         }
     }
 
     #[test]
-    fn jit_with_an_admission_condition_and_a_full_mapping_boots() {
-        let errors = errors(&with(jit()), &resolved(false), &AssuranceSection::default());
+    fn a_table_of_a_bound_persons_issuer_and_a_full_mapping_boot() {
+        let errors = errors(&with(table()), &resolved());
         assert!(errors.is_empty(), "{errors:?}");
-    }
-
-    #[test]
-    fn jit_without_an_admission_condition_is_refused() {
-        let table = IssuerBinding {
-            admit_idp: Vec::new(),
-            ..jit()
-        };
-        let errors = errors(&with(table), &resolved(false), &AssuranceSection::default());
-        assert!(
-            errors
-                .iter()
-                .any(|e| e.contains("without an admission condition")),
-            "{errors:?}"
-        );
+        assert_eq!(mapping_errors(&mapped()), Vec::<String>::new());
     }
 
     #[test]
     fn a_table_of_no_bound_persons_issuer_is_refused() {
-        let table = IssuerBinding {
+        let other = IssuerBinding {
             issuer: SecretUrl::new("https://elsewhere.example"),
-            ..jit()
+            ..table()
         };
-        let errors = errors(&with(table), &resolved(false), &AssuranceSection::default());
+        let errors = errors(&with(other), &resolved());
         assert!(
             errors.iter().any(|e| e.contains("names no persons issuer")),
             "{errors:?}"
@@ -316,55 +255,20 @@ mod tests {
     }
 
     #[test]
-    fn guests_jit_needs_jit_and_a_table_admitting_guests() {
-        let table = IssuerBinding {
-            jit: false,
-            guests_jit: true,
-            ..jit()
-        };
-        let errors = errors(&with(table), &resolved(false), &AssuranceSection::default());
-        assert!(
-            errors.iter().any(|e| e.contains("guests_jit without jit")),
-            "{errors:?}"
-        );
-        assert!(
-            errors.iter().any(|e| e.contains("admits no guest")),
-            "{errors:?}"
-        );
-    }
-
-    #[test]
-    fn an_unreachable_assurance_level_and_an_editable_user_name_claim_are_refused() {
-        let table = IssuerBinding {
-            admit_assurance: Some(AssuranceLevel::High),
+    fn a_table_listed_twice_an_empty_idp_claim_and_an_editable_user_name_claim_are_refused() {
+        let odd = IssuerBinding {
+            idp_claim: " ".to_owned(),
             user_name_claim: Some("preferred_username".to_owned()),
-            ..jit()
+            ..table()
         };
-        let errors = errors(&with(table), &resolved(false), &AssuranceSection::default());
-        assert!(
-            errors
-                .iter()
-                .any(|e| e.contains("no [authz.assurance] levels value")),
-            "{errors:?}"
-        );
-        assert!(
-            errors
-                .iter()
-                .any(|e| e.contains("a claim the issuer controls")),
-            "{errors:?}"
-        );
-    }
-
-    #[test]
-    fn jit_needs_a_user_name_selector_a_role_and_a_name_claim() {
-        let mut binding = with(jit());
-        binding.person.get_or_insert_default().template[0].user_name = None;
-        binding.professional_role = None;
-        binding.person.get_or_insert_default().attribute[0].oidc = None;
-        binding.person.get_or_insert_default().attribute[0].scim =
-            Some("name.formatted".to_owned());
-        let errors = errors(&binding, &resolved(false), &AssuranceSection::default());
-        for wanted in ["user_name selector", "professional_role", "name claim"] {
+        let mut binding = with(odd);
+        binding.issuer.push(table());
+        let errors = errors(&binding, &resolved());
+        for wanted in [
+            "listed twice",
+            "empty idp_claim",
+            "a claim the issuer controls",
+        ] {
             assert!(
                 errors.iter().any(|e| e.contains(wanted)),
                 "{wanted}: {errors:?}"
@@ -373,8 +277,53 @@ mod tests {
     }
 
     #[test]
+    fn creation_needs_a_user_name_selector_a_role_and_a_name_claim() {
+        let mut binding = mapped();
+        binding.person.get_or_insert_default().template[0].user_name = None;
+        binding.professional_role = None;
+        binding.person.get_or_insert_default().attribute[0].oidc = None;
+        binding.person.get_or_insert_default().attribute[0].scim =
+            Some("name.formatted".to_owned());
+        let errors = mapping_errors(&binding);
+        for wanted in ["user_name selector", "professional_role", "name claim"] {
+            assert!(
+                errors.iter().any(|e| e.contains(wanted)),
+                "{wanted}: {errors:?}"
+            );
+        }
+        binding.person.get_or_insert_default().template[0].default = false;
+        assert!(
+            mapping_errors(&binding)
+                .iter()
+                .any(|e| e.contains("default = true")),
+            "no default template"
+        );
+    }
+
+    #[test]
+    fn the_admission_keys_are_unknown_keys() {
+        for key in [
+            "jit = true",
+            "guests_jit = true",
+            "admit_idp = [\"https://sts.example/\"]",
+            "admit_groups = [\"clinicians\"]",
+            "admit_roles = [\"clinical\"]",
+            "admit_assurance = \"substantial\"",
+        ] {
+            let table = format!("issuer = \"{ISSUER}\"\n{key}\n");
+            assert!(
+                toml::from_str::<IssuerBinding>(&table).is_err(),
+                "{key} is CDR data, refused as an unknown key"
+            );
+        }
+        let kept =
+            format!("issuer = \"{ISSUER}\"\nuser_name_claim = \"oid\"\nidp_claim = \"idp\"\n");
+        assert!(toml::from_str::<IssuerBinding>(&kept).is_ok());
+    }
+
+    #[test]
     fn a_jit_attribute_without_a_claim_is_refused() {
-        let mut binding = with(jit());
+        let mut binding = with(table());
         binding
             .person
             .get_or_insert_default()
@@ -384,7 +333,7 @@ mod tests {
                 jit: true,
                 ..PersonAttribute::default()
             });
-        let errors = errors(&binding, &resolved(false), &AssuranceSection::default());
+        let errors = errors(&binding, &resolved());
         assert!(
             errors.iter().any(|e| e.contains("names no oidc claim")),
             "{errors:?}"
