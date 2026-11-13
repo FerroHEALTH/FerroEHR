@@ -102,8 +102,8 @@ impl FerroEhrService {
         Ok(())
     }
 
-    /// Commits the default [`initial_ehr_access`] for every EHR that holds no
-    /// `EHR_ACCESS`, each in its own transaction, and returns how many it
+    /// Commits the default `EHR_ACCESS`, with no settings, for every EHR that
+    /// holds none, each in its own transaction, and returns how many it
     /// restored.
     ///
     /// `EHR.ehr_access` is 1..1 (RM ehr `ehr.adoc` invariant
@@ -112,8 +112,7 @@ impl FerroEhrService {
     /// none on every other occasion.
     ///
     /// # Errors
-    /// The storage read errors and the
-    /// [`crate::versioning::change::commit_contribution`] write errors.
+    /// The storage read errors and the commit's write errors.
     pub async fn restore_default_ehr_access(&self) -> Result<usize, ServiceError> {
         let missing = crate::storage::version_repo::ehr_access::ehrs_without_ehr_access(&self.pool)
             .await

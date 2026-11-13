@@ -27,7 +27,9 @@ use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use serde_json::Value;
 
+use crate::access_control_draft::access_control::access_directive::AccessDirective;
 use crate::access_control_draft::access_control::access_directive_settings::AccessDirectiveSettings;
+use crate::access_terminology::{AccessDefault, ForeignCode, ForeignKind, OperationClass, Term};
 use crate::error::ServiceError;
 
 /// The `_type` of the settings on the wire (canonical JSON).
@@ -49,39 +51,6 @@ pub const DEFINITIONS: [(&str, &str); 1] = [(
         "../../../assets/definitions/access/openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0.adls"
     ),
 )];
-
-/// What an EHR admits where no directive applies: the
-/// `ACCESS_DIRECTIVE_SETTINGS.default_access` code of the `access default`
-/// group.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DefaultAccess {
-    /// Any caller the other layers admit.
-    Open,
-    /// Only the callers a permit directive, a gate-keeper or a care
-    /// relationship names.
-    Restricted,
-    /// Only the callers a permit directive names, apart from the subject and
-    /// an emergency override.
-    ConsentRequired,
-}
-
-impl DefaultAccess {
-    /// The disposition `coded` names, or `None` for a code outside the
-    /// `access default` group.
-    fn read(coded: &DvCodedText) -> Option<Self> {
-        if coded.defining_code.terminology_id.value
-            != crate::party_binding::policy_mark::TERMINOLOGY
-        {
-            return None;
-        }
-        match coded.defining_code.code_string.as_str() {
-            "open" => Some(Self::Open),
-            "restricted" => Some(Self::Restricted),
-            "consent_required" => Some(Self::ConsentRequired),
-            _ => None,
-        }
-    }
-}
 
 /// The EHRs whose current `EHR_ACCESS` carries settings, with those settings,
 /// shared from the service's cache
@@ -136,15 +105,16 @@ impl EhrAccessSettings {
     }
 
     /// What the EHR admits where no directive applies: the settings'
-    /// `default_access`, and [`DefaultAccess::Restricted`] for an EHR held
+    /// `default_access`, and [`AccessDefault::Restricted`] for an EHR held
     /// closed.
     #[must_use]
-    pub fn default_access(&self) -> DefaultAccess {
+    pub fn default_access(&self) -> AccessDefault {
         match self {
-            Self::Directives(settings) => {
-                DefaultAccess::read(&settings.default_access).unwrap_or(DefaultAccess::Restricted)
-            }
-            Self::HeldClosed => DefaultAccess::Restricted,
+            // NOTE: our own design, the write check holds the code to its group, so a
+            // stored code outside it reads as the closed disposition, never as open.
+            Self::Directives(settings) => AccessDefault::read_coded(&settings.default_access)
+                .unwrap_or(AccessDefault::Restricted),
+            Self::HeldClosed => AccessDefault::Restricted,
         }
     }
 
@@ -177,6 +147,14 @@ enum Defect {
     /// The settings do not decode as the class.
     #[error("EHR_ACCESS.settings do not read as an {SETTINGS_TYPE}: {0}")]
     Decode(#[source] serde_json::Error),
+    /// A coded value is outside the terminology its attribute is bound to.
+    #[error("EHR_ACCESS.settings.{path}: {reason}")]
+    Code {
+        /// The attribute path, such as `directives[0].operations[1]`.
+        path: String,
+        /// Why the code is refused.
+        reason: String,
+    },
     /// The settings break a BMM invariant of the draft access control.
     #[error("EHR_ACCESS.settings break the invariant {0}")]
     Invariant(crate::draft_invariants::Violation),
@@ -196,7 +174,104 @@ fn read_settings(settings: &Value) -> Result<AccessDirectiveSettings, Defect> {
     {
         return Err(Defect::Invariant(*first));
     }
+    check_codes(&read)?;
     Ok(read)
+}
+
+/// Checks the coded values the draft BMM binds no invariant to: each
+/// directive operation is a code of the `access operation` group, and each
+/// purpose, category, sensitivity and legal ground is a code of the
+/// jurisdiction's terminology, never of FerroEHR's.
+fn check_codes(settings: &AccessDirectiveSettings) -> Result<(), Defect> {
+    for (index, directive) in settings
+        .directives
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .enumerate()
+    {
+        check_directive(&format!("directives[{index}]"), directive)?;
+    }
+    for (index, label) in settings
+        .labels
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .enumerate()
+    {
+        foreign(
+            &format!("labels[{index}].sensitivities"),
+            ForeignKind::Sensitivity,
+            &label.sensitivities,
+        )?;
+    }
+    Ok(())
+}
+
+/// [`check_codes`] over one directive at `path` and its exceptions.
+fn check_directive(path: &str, directive: &AccessDirective) -> Result<(), Defect> {
+    for (index, operation) in directive
+        .operations
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .enumerate()
+    {
+        OperationClass::read_coded(operation).map_err(|error| Defect::Code {
+            path: format!("{path}.operations[{index}]"),
+            reason: error.to_string(),
+        })?;
+    }
+    foreign(
+        &format!("{path}.purposes"),
+        ForeignKind::Purpose,
+        directive.purposes.as_deref().unwrap_or_default(),
+    )?;
+    foreign(
+        &format!("{path}.legal_grounds"),
+        ForeignKind::LegalGround,
+        directive.legal_grounds.as_deref().unwrap_or_default(),
+    )?;
+    for (index, scope) in directive
+        .data
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .enumerate()
+    {
+        let scope_path = format!("{path}.data[{index}]");
+        foreign(
+            &format!("{scope_path}.categories"),
+            ForeignKind::Category,
+            scope.categories.as_deref().unwrap_or_default(),
+        )?;
+        foreign(
+            &format!("{scope_path}.sensitivities"),
+            ForeignKind::Sensitivity,
+            scope.sensitivities.as_deref().unwrap_or_default(),
+        )?;
+    }
+    for (index, exception) in directive
+        .exceptions
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .enumerate()
+    {
+        check_directive(&format!("{path}.exceptions[{index}]"), exception)?;
+    }
+    Ok(())
+}
+
+/// Refuses the first of `codes`, at `path`, that is no code of `kind`.
+fn foreign(path: &str, kind: ForeignKind, codes: &[DvCodedText]) -> Result<(), Defect> {
+    for (index, coded) in codes.iter().enumerate() {
+        ForeignCode::read(kind, coded).map_err(|error| Defect::Code {
+            path: format!("{path}[{index}]"),
+            reason: error.to_string(),
+        })?;
+    }
+    Ok(())
 }
 
 /// Checks written `EHR_ACCESS.settings` before they are committed.
@@ -395,6 +470,76 @@ mod tests {
         }
     }
 
+    /// A directive operation outside the `access operation` group, and a
+    /// purpose, category, sensitivity or legal ground coded in FerroEHR's
+    /// terminology, are refused naming the attribute.
+    #[test]
+    fn a_code_outside_its_terminology_is_refused() {
+        let foreign = |code: &str| {
+            json!({ "_type": "DV_CODED_TEXT", "value": code,
+                    "defining_code": { "_type": "CODE_PHRASE",
+                        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "v3-ActReason" },
+                        "code_string": code } })
+        };
+        let restriction = |extra: Value| directive("restriction", "deny", &extra);
+        check_written_settings(&settings(
+            "open",
+            &[restriction(json!({
+                "operations": [term("read")],
+                "purposes": [foreign("TREAT")],
+                "legal_grounds": [foreign("GDPR-9-2-a")],
+                "data": [{ "categories": [foreign("LAB")], "sensitivities": [foreign("PSY")] }]
+            }))],
+        ))
+        .expect("codes of their terminologies");
+        let cases = [
+            (
+                json!({ "operations": [term("delete")] }),
+                "directives[0].operations[0]",
+            ),
+            (
+                json!({ "operations": [foreign("read")] }),
+                "directives[0].operations[0]",
+            ),
+            (
+                json!({ "purposes": [term("TREAT")] }),
+                "directives[0].purposes[0]",
+            ),
+            (
+                json!({ "legal_grounds": [term("GDPR")] }),
+                "directives[0].legal_grounds[0]",
+            ),
+            (
+                json!({ "data": [{ "categories": [term("LAB")] }] }),
+                "directives[0].data[0].categories[0]",
+            ),
+            (
+                json!({ "data": [{ "sensitivities": [term("PSY")] }] }),
+                "directives[0].data[0].sensitivities[0]",
+            ),
+        ];
+        for (extra, path) in cases {
+            let message = refused(&settings("open", &[restriction(extra)]));
+            assert!(message.contains(path), "{path}: {message}");
+        }
+        let mut labelled = settings("open", &[]);
+        labelled["labels"] = json!([{
+            "target": { "_type": "OBJECT_REF", "namespace": "local", "type": "VERSIONED_COMPOSITION",
+                        "id": { "_type": "HIER_OBJECT_ID", "value": "8849182c-82ad-4088-a07f-48ead4180515" } },
+            "sensitivities": [term("PSY")]
+        }]);
+        assert!(refused(&labelled).contains("labels[0].sensitivities[0]"));
+        let exception = directive(
+            "restriction",
+            "deny",
+            &json!({ "exceptions": [directive("consent", "permit", &json!({ "operations": [term("delete")] }))] }),
+        );
+        assert!(
+            refused(&settings("open", &[exception]))
+                .contains("directives[0].exceptions[0].operations[0]")
+        );
+    }
+
     /// A code of the right group in another terminology is outside the group.
     #[test]
     fn a_code_of_another_terminology_is_refused() {
@@ -411,7 +556,7 @@ mod tests {
         let read = EhrAccessSettings::from_ehr_access(&access)
             .expect("the settings read")
             .expect("settings");
-        assert_eq!(read.default_access(), DefaultAccess::ConsentRequired);
+        assert_eq!(read.default_access(), AccessDefault::ConsentRequired);
         assert_eq!(read.gate_keepers().len(), 1);
         assert!(matches!(
             EhrAccessSettings::from_ehr_access(&json!({ "_type": "EHR_ACCESS" })),
@@ -428,7 +573,7 @@ mod tests {
         assert!(EhrAccessSettings::from_ehr_access(&access).is_err());
         let held = EhrAccessSettings::held_or_read(&access).expect("held");
         assert_eq!(held, EhrAccessSettings::HeldClosed);
-        assert_eq!(held.default_access(), DefaultAccess::Restricted);
+        assert_eq!(held.default_access(), AccessDefault::Restricted);
         assert_eq!(held.gate_keepers(), &[]);
     }
 }

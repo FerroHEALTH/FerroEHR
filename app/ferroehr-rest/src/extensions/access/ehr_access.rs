@@ -30,11 +30,12 @@
 )]
 
 use axum::response::{IntoResponse, Response};
+use ferroehr::access_terminology::AccessDefault;
 use ferroehr::aql::sql::EhrAccessScope;
 use ferroehr::config::authz::EhrAccessDefault;
 use ferroehr::ids::EhrId;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
-use ferroehr::service::ehr::access_settings::{DefaultAccess, EhrAccessSettings};
+use ferroehr::service::ehr::access_settings::EhrAccessSettings;
 use openehr_its::rest::runtime::ApiError;
 use uuid::Uuid;
 
@@ -97,9 +98,9 @@ impl EhrAccessGate {
             };
         };
         match read.default_access() {
-            DefaultAccess::Open => Ok(()),
+            AccessDefault::Open => Ok(()),
             // TODO(#5513): the access evaluator admits the callers a permit directive names.
-            DefaultAccess::Restricted | DefaultAccess::ConsentRequired => {
+            AccessDefault::Restricted | AccessDefault::ConsentRequired => {
                 if admin || caller.settings.subject() || caller.settings.is_gate_keeper(settings) {
                     Ok(())
                 } else {
@@ -152,26 +153,57 @@ async fn enforce_ehr(
     principal: Option<&Principal>,
     ehr_id: EhrId,
 ) -> Result<(), Box<Response>> {
-    let roles = principal.map_or(&[][..], |p| p.roles.as_slice());
     let settings = state
         .backend()
         .current_ehr_access_settings(ehr_id)
         .await
-        .map_err(|e| {
-            Box::new(server_error(
-                principal,
-                &format!("EHR_ACCESS settings unavailable: {e}"),
-            ))
-        })?;
-    let authz = state.authz();
-    let (server_default, admin_role) = server_disposition(authz.as_deref());
-    let settings_caller = state.backend().settings_caller();
-    let caller = GateCaller {
-        roles,
-        settings: &settings_caller,
-    };
-    EhrAccessGate::ehr_gate((*settings).as_ref(), &caller, server_default, admin_role)
+        .map_err(|e| Box::new(unavailable(principal, &e)))?;
+    Decider::of(state, principal)
+        .decide((*settings).as_ref())
         .map_err(|reason| Box::new(forbidden(principal, &reason)))
+}
+
+/// The per-EHR decision for one caller, its inputs read once.
+struct Decider {
+    /// The caller's roles.
+    roles: Vec<String>,
+    /// The caller as the settings' rules see it.
+    settings_caller: SettingsCaller,
+    /// The server-wide disposition of a setting-less EHR.
+    server_default: EhrAccessDefault,
+    /// The role a restricted EHR admits.
+    admin_role: String,
+}
+
+impl Decider {
+    /// The decision for `principal` under `state`'s configuration.
+    fn of(state: &AppState, principal: Option<&Principal>) -> Self {
+        let authz = state.authz();
+        let (server_default, admin_role) = server_disposition(authz.as_deref());
+        Self {
+            roles: principal.map_or_else(Vec::new, |p| p.roles.clone()),
+            settings_caller: state.backend().settings_caller(),
+            server_default,
+            admin_role: admin_role.to_owned(),
+        }
+    }
+
+    /// [`EhrAccessGate::ehr_gate`] over an EHR's `settings`.
+    fn decide(&self, settings: Option<&EhrAccessSettings>) -> Result<(), String> {
+        let caller = GateCaller {
+            roles: &self.roles,
+            settings: &self.settings_caller,
+        };
+        EhrAccessGate::ehr_gate(settings, &caller, self.server_default, &self.admin_role)
+    }
+}
+
+/// The fail-closed `500` of settings that cannot be read.
+fn unavailable(principal: Option<&Principal>, error: &impl std::fmt::Display) -> Response {
+    server_error(
+        principal,
+        &format!("EHR_ACCESS settings unavailable: {error}"),
+    )
 }
 
 /// The per-EHR decision for an AQL execution: the EHRs the authenticated caller
@@ -183,27 +215,13 @@ async fn enforce_ehr(
 /// fail-closed `500` when the settings cannot be read.
 pub(crate) async fn query_scope(state: &AppState) -> Result<EhrAccessScope, Box<Response>> {
     let principal = current_principal();
-    let roles = principal.as_ref().map_or(&[][..], |p| p.roles.as_slice());
     let index = state
         .backend()
         .ehr_access_settings_index()
         .await
-        .map_err(|e| {
-            Box::new(server_error(
-                principal.as_ref(),
-                &format!("EHR_ACCESS settings unavailable: {e}"),
-            ))
-        })?;
-    let authz = state.authz();
-    let (server_default, admin_role) = server_disposition(authz.as_deref());
-    let settings_caller = state.backend().settings_caller();
-    let caller = GateCaller {
-        roles,
-        settings: &settings_caller,
-    };
-    let readable = |settings: Option<&EhrAccessSettings>| {
-        EhrAccessGate::ehr_gate(settings, &caller, server_default, admin_role).is_ok()
-    };
+        .map_err(|e| Box::new(unavailable(principal.as_ref(), &e)))?;
+    let decider = Decider::of(state, principal.as_ref());
+    let readable = |settings: Option<&EhrAccessSettings>| decider.decide(settings).is_ok();
     let scope = if readable(None) {
         let withheld: Vec<EhrId> = index
             .iter()
