@@ -1,0 +1,45 @@
+IHE Technical Framework copyright licence
+=========================================
+
+This identifier covers the IHE documents vendored at `docs/specs/ihe-consents/`,
+fetched by `scripts/vendor/ihe-consents.sh`: the Basic Patient Privacy
+Consents (BPPC) chapters of the IT Infrastructure Technical Framework, the
+Advanced Patient Privacy Consents (APPC) supplement, and the chapter quoted
+below. It is not an SPDX-listed licence. It is the grant IHE International
+states for its Technical Framework documents, recorded in machine-readable
+form so that a glob elsewhere in REUSE.toml cannot assert the wrong terms
+over them.
+
+What the grant states
+---------------------
+
+Quoted verbatim from chapter 9, Copyright Licenses, of the IHE Technical
+Frameworks General Introduction and Shared Appendices, Revision 2.0, June 4,
+2021, https://profiles.ihe.net/GeneralIntro/ch-9.html, read 2026-11-13:
+
+  IHE International hereby grants to each Member Organization, and to any
+  other user of these documents, an irrevocable, worldwide, perpetual,
+  royalty-free, nontransferable, nonexclusive, non-sublicensable license
+  under its copyrights in any IHE profiles and Technical Framework
+  documents, as well as any additional copyrighted materials that will be
+  owned by IHE International and will be made available for use by Member
+  Organizations, to reproduce and distribute (in any and all print,
+  electronic or other means of reproduction, storage or transmission) such
+  IHE Technical Documents.
+
+  The licenses covered by this Copyright License are only to those
+  copyrights owned or controlled by IHE International itself. If parts of
+  the Technical Framework are included in products that also include
+  materials owned or controlled by other parties, licenses to use those
+  products are beyond the scope of this IHE document and would have to be
+  obtained from that other party.
+
+The same chapter reserves the rights of the base standards IHE documents
+use (DICOM, HL7, LOINC, SNOMED CT) to their owners.
+
+How this repository uses it
+---------------------------
+
+The documents are reproduced whole and unmodified, which is what the grant
+permits. The chapter itself is vendored beside them as
+`docs/specs/ihe-consents/profiles.ihe.net/GeneralIntro/ch-9.html`.

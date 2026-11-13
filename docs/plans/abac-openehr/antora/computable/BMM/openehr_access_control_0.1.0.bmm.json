@@ -1,0 +1,595 @@
+{
+  "bmm_version": "2.4",
+  "rm_publisher": "openehr",
+  "schema_name": "access_control",
+  "rm_release": "0.1.0",
+  "schema_revision": "0.1.0.1",
+  "schema_lifecycle_state": "draft",
+  "schema_description": "openEHR Access Control: a draft change proposal for a concrete ACCESS_CONTROL_SETTINGS scheme of access directives (consent, restriction, opt-out, delegation, sensitivity labels) carried by EHR_ACCESS, and a versioned ACCESS_POLICY of a controller. The classes hold facts; the decision procedure is fixed by the scheme. Not an openEHR release.",
+  "schema_author": "FerroEHR (FerroHEALTH/FerroEHR#5487), draft for review",
+  "includes": {
+    "openehr_rm_1.2.0": {
+      "id": "openehr_rm_1.2.0"
+    }
+  },
+  "packages": {
+    "org.openehr.rm.access_control": {
+      "name": "org.openehr.rm.access_control",
+      "classes": [
+        "ACCESS_DIRECTIVE_SETTINGS",
+        "ACCESS_DIRECTIVE",
+        "ACCESS_ACTOR_SCOPE",
+        "ACCESS_DATA_SCOPE",
+        "ACCESS_LABEL",
+        "ACCESS_POLICY",
+        "ACCESS_CLASSIFICATION",
+        "VERSIONED_ACCESS_POLICY"
+      ]
+    }
+  },
+  "class_definitions": {
+    "ACCESS_DIRECTIVE_SETTINGS": {
+      "name": "ACCESS_DIRECTIVE_SETTINGS",
+      "documentation": "The concrete `ACCESS_CONTROL_SETTINGS` of the access directive scheme, carried by `EHR_ACCESS._settings_` and versioned with the EHR. It records the facts an access decision about one EHR rests on: the default disposition, the gate-keepers who may change the settings, the directives the subject or their representative gave (consent, restriction, opt-out, delegation scope), and sensitivity labels on individual versioned objects. It carries no rule language: the decision procedure that reads these facts is fixed by the scheme. `EHR_ACCESS.scheme()` returns `access_directives` for an instance of this class.",
+      "ancestors": [
+        "ACCESS_CONTROL_SETTINGS"
+      ],
+      "properties": {
+        "default_access": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "default_access",
+          "documentation": "What the EHR admits where no directive applies, coded in the `access default` group: `open` (any caller the other layers admit), `restricted` (only callers a permit directive, a gate-keeper or a care relationship names) or `consent_required` (only callers a permit directive names, apart from the subject and an emergency override).",
+          "is_mandatory": true,
+          "type": "DV_CODED_TEXT"
+        },
+        "gate_keepers": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "gate_keepers",
+          "documentation": "The parties who may commit a new version of the `EHR_ACCESS` that holds these settings: usually `PARTY_SELF` for a competent adult, otherwise a parent, guardian or other responsible party referenced into the demographic service (BASE Architecture Overview, Security, Access Control of access settings). Empty leaves the change to the system's administrators.",
+          "type_def": {
+            "container_type": "List",
+            "type": "PARTY_PROXY"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "directives": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "directives",
+          "documentation": "The directives in force or recorded for this EHR. A directive outside its `_time_validity_` is kept as history and decides nothing.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_DIRECTIVE"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "labels": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "labels",
+          "documentation": "Sensitivity labels on individual versioned objects of the EHR, beside the labels the system's `ACCESS_POLICY` classification gives whole kinds of data.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_LABEL"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        }
+      },
+      "functions": {
+        "scheme": {
+          "name": "scheme",
+          "documentation": "The name of this scheme, `access_directives`, which `EHR_ACCESS.scheme()` returns.",
+          "result": {
+            "_type": "P_BMM_SIMPLE_TYPE",
+            "type": "String"
+          }
+        }
+      },
+      "invariants": {
+        "Default_access_valid": "terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_default, default_access.defining_code)",
+        "Gate_keepers_valid": "gate_keepers /= Void implies not gate_keepers.is_empty",
+        "Directives_valid": "directives /= Void implies not directives.is_empty",
+        "Labels_valid": "labels /= Void implies not labels.is_empty",
+        "Opt_out_unique": "directives /= Void implies directives.filter (d | d.is_opt_out).count <= 1"
+      }
+    },
+    "ACCESS_DIRECTIVE": {
+      "name": "ACCESS_DIRECTIVE",
+      "documentation": "One instruction about access to the data of one EHR, given by the subject, their representative or the controller on their instruction: a consent permit or deny, an EHDS Art. 8 restriction, an EHDS Art. 10 opt-out, or the scope of a delegation. A directive applies to an access when every attribute it sets matches the access (the actor, the operation, the purpose, the data, the time), and none of its exceptions applies. Where a permit and a deny both apply, the deny wins.",
+      "ancestors": [
+        "LOCATABLE"
+      ],
+      "properties": {
+        "kind": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "kind",
+          "documentation": "What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).",
+          "is_mandatory": true,
+          "type": "DV_CODED_TEXT"
+        },
+        "effect": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "effect",
+          "documentation": "Whether the directive permits or denies the access it applies to, coded in the `access effect` group: `permit` or `deny`.",
+          "is_mandatory": true,
+          "type": "DV_CODED_TEXT"
+        },
+        "applies_to": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "applies_to",
+          "documentation": "The callers the directive applies to; any one matching scope is enough. Empty applies to every caller the kind can bind.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_ACTOR_SCOPE"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "operations": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "operations",
+          "documentation": "The operations the directive applies to, coded in the operation terminology the system documents (such as `read`, `write`, `export`). Empty applies to every operation.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "purposes": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "purposes",
+          "documentation": "The purposes of use the directive applies to, coded in the purpose-of-use terminology the system accepts. Empty applies to every purpose.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "data": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "data",
+          "documentation": "The data the directive applies to; data in any one scope is covered. Empty applies to the whole EHR, including data recorded after the directive.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_DATA_SCOPE"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "time_validity": {
+          "_type": "P_BMM_GENERIC_PROPERTY",
+          "name": "time_validity",
+          "documentation": "When the directive is in force. Void is in force from the commit of the version that adds it until a later version removes it.",
+          "type_def": {
+            "root_type": "DV_INTERVAL",
+            "generic_parameters": [
+              "DV_DATE_TIME"
+            ]
+          }
+        },
+        "emergency_override": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "emergency_override",
+          "documentation": "Whether a caller declaring an emergency purpose of use, under the system's emergency rules, is exempt from this directive (EHDS Art. 11(5) for a restriction; Art. 10(2) for an opt-out where national law allows it).",
+          "is_mandatory": true,
+          "type": "Boolean"
+        },
+        "exceptions": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "exceptions",
+          "documentation": "Narrower directives of the opposite effect inside this one, such as 'deny mental health data, except to my GP'. An access an exception applies to is not decided by this directive.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_DIRECTIVE"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "instructed_by": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "instructed_by",
+          "documentation": "Who gave the instruction: `PARTY_SELF` for the subject, otherwise their representative or the professional who recorded it on their behalf.",
+          "type": "PARTY_PROXY"
+        },
+        "instructed": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "instructed",
+          "documentation": "When the instruction was given.",
+          "type": "DV_DATE_TIME"
+        },
+        "legal_grounds": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "legal_grounds",
+          "documentation": "The legal provisions the directive rests on, such as GDPR Art. 9(2)(a), EHDS Art. 8 or a national provision, coded in a terminology the jurisdiction names.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "evidence": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "evidence",
+          "documentation": "The record of the instruction in the EHR, such as the `ADMIN_ENTRY` that holds the signed consent (RM EHR IM, Entry package, Standard Clinical Types of Data).",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_EHR_URI"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "identifiers": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "identifiers",
+          "documentation": "Identifiers of the directive in other systems, such as a FHIR `Consent.identifier`, an IHE BPPC or APPC policy identifier, or a national consent registry reference.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_IDENTIFIER"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "details": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "details",
+          "documentation": "Further archetyped detail the deployment records with the directive. The decision procedure never reads it.",
+          "type": "ITEM_STRUCTURE"
+        }
+      },
+      "functions": {
+        "is_deny": {
+          "name": "is_deny",
+          "documentation": "True when `_effect_` is the `deny` code of the `access effect` group.",
+          "result": {
+            "_type": "P_BMM_SIMPLE_TYPE",
+            "type": "Boolean"
+          }
+        },
+        "is_restriction": {
+          "name": "is_restriction",
+          "documentation": "True when `_kind_` is the `restriction` code of the `access directive kind` group.",
+          "result": {
+            "_type": "P_BMM_SIMPLE_TYPE",
+            "type": "Boolean"
+          }
+        },
+        "is_opt_out": {
+          "name": "is_opt_out",
+          "documentation": "True when `_kind_` is the `opt_out` code of the `access directive kind` group.",
+          "result": {
+            "_type": "P_BMM_SIMPLE_TYPE",
+            "type": "Boolean"
+          }
+        }
+      },
+      "invariants": {
+        "Kind_valid": "terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_directive_kind, kind.defining_code)",
+        "Effect_valid": "terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_effect, effect.defining_code)",
+        "Restriction_denies": "is_restriction implies is_deny",
+        "Opt_out_denies_whole_record": "is_opt_out implies (is_deny and data = Void)",
+        "Exceptions_opposite": "exceptions /= Void implies exceptions.for_all (e | e.is_deny /= is_deny and e.exceptions = Void)",
+        "Applies_to_valid": "applies_to /= Void implies not applies_to.is_empty",
+        "Operations_valid": "operations /= Void implies not operations.is_empty",
+        "Purposes_valid": "purposes /= Void implies not purposes.is_empty",
+        "Data_valid": "data /= Void implies not data.is_empty",
+        "Exceptions_valid": "exceptions /= Void implies not exceptions.is_empty",
+        "Legal_grounds_valid": "legal_grounds /= Void implies not legal_grounds.is_empty",
+        "Evidence_valid": "evidence /= Void implies not evidence.is_empty",
+        "Identifiers_valid": "identifiers /= Void implies not identifiers.is_empty"
+      }
+    },
+    "ACCESS_ACTOR_SCOPE": {
+      "name": "ACCESS_ACTOR_SCOPE",
+      "documentation": "A description of callers. A caller matches when it matches every attribute that is set.",
+      "properties": {
+        "party": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "party",
+          "documentation": "A party in the demographic service: a `PERSON` or `AGENT` matches itself; an `ORGANISATION` or `GROUP` matches every caller that acts for it or is a member of it.",
+          "type": "PARTY_REF"
+        },
+        "role": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "role",
+          "documentation": "A functional role the caller holds, coded as the role's capability or the caller's token states it, such as a professional role code.",
+          "type": "DV_CODED_TEXT"
+        },
+        "relationship": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "relationship",
+          "documentation": "A relationship the caller must hold to the subject of the EHR, coded in the `access relationship` group: `care` (a live care relationship), `representative` or `proxy`.",
+          "type": "DV_CODED_TEXT"
+        },
+        "caller_kind": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "caller_kind",
+          "documentation": "The kind of caller, coded in the `access caller kind` group: `professional`, `access_service`, `subject`, `representative` or `system`.",
+          "type": "DV_CODED_TEXT"
+        }
+      },
+      "invariants": {
+        "Not_empty": "party /= Void or role /= Void or relationship /= Void or caller_kind /= Void",
+        "Relationship_valid": "relationship /= Void implies terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_relationship, relationship.defining_code)",
+        "Caller_kind_valid": "caller_kind /= Void implies terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)"
+      }
+    },
+    "ACCESS_DATA_SCOPE": {
+      "name": "ACCESS_DATA_SCOPE",
+      "documentation": "A description of data in an EHR. Data match when they match every attribute that is set, and an attribute holding a list matches when any of its members does.",
+      "properties": {
+        "objects": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "objects",
+          "documentation": "Individual versioned objects, such as one `VERSIONED_COMPOSITION`.",
+          "type_def": {
+            "container_type": "List",
+            "type": "OBJECT_REF"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "templates": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "templates",
+          "documentation": "Template identifiers the data were committed under.",
+          "type_def": {
+            "container_type": "List",
+            "type": "String"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "archetypes": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "archetypes",
+          "documentation": "Root archetypes of the data; a specialisation of a named archetype matches too.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ARCHETYPE_ID"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "categories": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "categories",
+          "documentation": "Categories of the data, such as the EHDS priority categories, coded in a terminology the jurisdiction names.",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "sensitivities": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "sensitivities",
+          "documentation": "Sensitivity codes, matched against the labels the data carry, coded in a terminology the system documents (such as the HL7 v3 confidentiality and sensitivity codes).",
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "origins": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "origins",
+          "documentation": "The systems the data came from, as `FEEDER_AUDIT_DETAILS._system_id_` or the committing system's `_system_id_` records them.",
+          "type_def": {
+            "container_type": "List",
+            "type": "String"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "recorded": {
+          "_type": "P_BMM_GENERIC_PROPERTY",
+          "name": "recorded",
+          "documentation": "When the data were committed.",
+          "type_def": {
+            "root_type": "DV_INTERVAL",
+            "generic_parameters": [
+              "DV_DATE_TIME"
+            ]
+          }
+        }
+      },
+      "invariants": {
+        "Not_empty": "objects /= Void or templates /= Void or archetypes /= Void or categories /= Void or sensitivities /= Void or origins /= Void or recorded /= Void",
+        "Objects_valid": "objects /= Void implies not objects.is_empty",
+        "Templates_valid": "templates /= Void implies not templates.is_empty",
+        "Archetypes_valid": "archetypes /= Void implies not archetypes.is_empty",
+        "Categories_valid": "categories /= Void implies not categories.is_empty",
+        "Sensitivities_valid": "sensitivities /= Void implies not sensitivities.is_empty",
+        "Origins_valid": "origins /= Void implies not origins.is_empty"
+      }
+    },
+    "ACCESS_LABEL": {
+      "name": "ACCESS_LABEL",
+      "documentation": "Sensitivity labels on one versioned object of the EHR. A caller reads labelled data only when a capability clears every label, a permit directive names the label, or an emergency override applies.",
+      "properties": {
+        "target": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "target",
+          "documentation": "The versioned object the labels apply to.",
+          "is_mandatory": true,
+          "type": "OBJECT_REF"
+        },
+        "sensitivities": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "sensitivities",
+          "documentation": "The sensitivity codes the object carries.",
+          "is_mandatory": true,
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 1,
+            "upper_unbounded": true
+          }
+        },
+        "reason": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "reason",
+          "documentation": "Why the object is labelled, never clinical content.",
+          "type": "DV_TEXT"
+        }
+      }
+    },
+    "ACCESS_POLICY": {
+      "name": "ACCESS_POLICY",
+      "documentation": "The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps. It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, and lists the named directives a subject can accept by reference. Kept in its own versioned container, outside any EHR and outside the demographic service.",
+      "ancestors": [
+        "LOCATABLE"
+      ],
+      "properties": {
+        "controller": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "controller",
+          "documentation": "The `ORGANISATION` whose policy this is, the controller of the data.",
+          "is_mandatory": true,
+          "type": "PARTY_REF"
+        },
+        "classifications": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "classifications",
+          "documentation": "The rules that give kinds of data their sensitivity labels.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_CLASSIFICATION"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "care_relationship_required": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "care_relationship_required",
+          "documentation": "Whether a professional's clinical access to an EHR needs a live care relationship to its subject, beyond the operation the caller's capability grants.",
+          "is_mandatory": true,
+          "type": "Boolean"
+        },
+        "relationship_grace": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "relationship_grace",
+          "documentation": "How long after a care relationship ends it still admits access, for follow-up (BASE Architecture Overview, Security, Time-limitation of access).",
+          "type": "DV_DURATION"
+        },
+        "purpose_required": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "purpose_required",
+          "documentation": "Whether an access to clinical data must declare a purpose of use.",
+          "is_mandatory": true,
+          "type": "Boolean"
+        },
+        "catalogue": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "catalogue",
+          "documentation": "Named directives a subject can accept by an identifier, such as an IHE BPPC policy or a national consent choice. Each carries at least one identifier.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_DIRECTIVE"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "details": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "details",
+          "documentation": "Further archetyped detail. The decision procedure never reads it.",
+          "type": "ITEM_STRUCTURE"
+        }
+      },
+      "invariants": {
+        "Is_archetype_root": "is_archetype_root",
+        "Grace_valid": "relationship_grace /= Void implies relationship_grace.magnitude >= 0",
+        "Catalogue_identified": "catalogue /= Void implies catalogue.for_all (d | d.identifiers /= Void)",
+        "Classifications_valid": "classifications /= Void implies not classifications.is_empty",
+        "Catalogue_valid": "catalogue /= Void implies not catalogue.is_empty"
+      }
+    },
+    "ACCESS_CLASSIFICATION": {
+      "name": "ACCESS_CLASSIFICATION",
+      "documentation": "One classification rule: data the scope describes carry the given sensitivity labels.",
+      "ancestors": [
+        "LOCATABLE"
+      ],
+      "properties": {
+        "data": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "data",
+          "documentation": "The kind of data the rule classifies. It names no individual object.",
+          "is_mandatory": true,
+          "type": "ACCESS_DATA_SCOPE"
+        },
+        "sensitivities": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "sensitivities",
+          "documentation": "The sensitivity codes the data carry.",
+          "is_mandatory": true,
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 1,
+            "upper_unbounded": true
+          }
+        }
+      },
+      "invariants": {
+        "No_objects": "data.objects = Void"
+      }
+    },
+    "VERSIONED_ACCESS_POLICY": {
+      "name": "VERSIONED_ACCESS_POLICY",
+      "documentation": "Version container for an `ACCESS_POLICY`, committed in contributions with their audit like any other versioned object.",
+      "ancestors": [
+        "VERSIONED_OBJECT"
+      ]
+    }
+  }
+}
