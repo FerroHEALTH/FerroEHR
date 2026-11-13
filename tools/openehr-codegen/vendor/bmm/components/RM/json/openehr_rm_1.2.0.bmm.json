@@ -4423,7 +4423,7 @@
                 },
                 "magnitude": {
                     "name": "magnitude",
-                    "documentation": "Numeric value of the duration as a number of seconds. Computed using the method `_to_seconds()_` inherited from `Iso8601_duration`.",
+                    "documentation": "Numeric value of the duration as a number of seconds. Computed using the method `_to_seconds()_` inherited from `link:/releases/BASE/latest/foundation_types.html#_iso8601_duration_class[Iso8601_duration^]`.",
                     "result": {
                         "_type": "P_BMM_SIMPLE_TYPE",
                         "type": "Double"

@@ -5,12 +5,18 @@
 |Issue|Details|Raiser|Completed
 
 
-|[[latest_issue]]2.1.5
+|[[latest_issue]]2.1.6
+|{spec_tickets}/SPECPR-392[SPECPR-392^]: Correct the `OBJECT_VERSION_ID` example in the version identification scheme to use double colons (`"1234::system_id::version_tree_id"`), and align the description of `_creating_system_id_` forms (reverse domain name, GUID or ISO OID) with the BASE Architecture Overview.
+|J Zeilstra, +
+S Iancu
+|[[latest_issue_date]]25 Jul 2026
+
+|2.1.5
 |{spec_tickets}/SPECRM-87[SPECRM-87^]: Support tags: added <<tags, Tags Package>> (Addresses {spec_tickets}/SPECPR-265[SPECPR-265^]).
 |S Iancu, +
 B Næss, +
 M Polajnar
-|[[latest_issue_date]]17 Nov 2022
+|17 Nov 2022
 
 |
 |{spec_tickets}/SPECRM-107[SPECRM-107^]: Add `inactive` and `abandoned` states to Version lifecycle (fixes {spec_tickets}/SPECPR-383[SPECPR-383^]).

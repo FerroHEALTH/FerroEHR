@@ -1,0 +1,78 @@
+include::partial$module_vars.adoc[]
+
+= The Decision Procedure
+
+include::partial$draft_notice.adoc[]
+
+== Overview
+
+The scheme `access_directives` fixes how an access is decided from the facts of the three sets (xref:design_overview.adoc#_three_sets_of_facts[Three Sets of Facts]). No openEHR or other specification gives such a procedure; this one is the proposal's own. A system MUST decide every access to an EHR whose `EHR_ACCESS.scheme()` is `access_directives` by this procedure, after it has authenticated the caller and checked that the caller's capabilities grant the operation at all. The procedure adds conditions to that check and never grants an operation the caller's capabilities do not grant.
+
+== Terms
+
+* A directive is *in force* at the time of the access when the access falls within its `_time_validity_`, or the attribute is void.
+* A directive *applies* to an access when it is in force, every attribute it sets matches the access, and none of its `_exceptions_` applies. An exception applies when every attribute it sets matches the access.
+* A caller *declares an emergency* when it states a purpose of use the system documents as an emergency purpose and holds the role the system's emergency rules require.
+* The *labels* of a datum are the sensitivities of the `ACCESS_LABEL` instances that target it and of the `ACCESS_POLICY` classifications whose scope it falls in.
+* A caller is *cleared* for a sensitivity when one of its capabilities carries that sensitivity as a clearance code.
+* A caller has a *live care relationship* to the subject when it is a member of a care-team `GROUP` (or acts for an organisational unit) that the subject's `PERSON` is under the care of, within the validity of both relationships plus the policy's `_relationship_grace_`.
+
+== Procedure
+
+The steps run in order for each EHR the access reaches. The first step that refuses decides.
+
+[cols="1,5,2", options="header"]
+|===
+|Step |Rule |Refusal
+
+|1. Opt-out
+|An `opt_out` directive in force binds callers of kind `access_service`. Unless its `_emergency_override_` holds and the caller declares an emergency, and the caller does not act for the subject, the EHR MUST be answered as one that does not exist.
+|`refused-opt-out`, not shown
+
+|2. Restriction
+|A `restriction` directive that applies binds callers of kind `professional` and the systems that act for a provider. Data it covers MUST be answered as data that do not exist: a named object as absent, and left out of queries and exports. A caller that declares an emergency, where `_emergency_override_` holds, passes, and the access MUST be marked as an emergency override (EHDS Art 11(5)).
+|`refused-restricted`, not shown
+
+|3. Consent deny
+|Any other deny directive that applies refuses.
+|`refused-consent-denied`
+
+|4. Sensitivity
+|A datum whose labels are not all cleared for the caller, and not named by a permit directive that applies, is refused when named and left out of a query.
+|`refused-sensitivity`
+
+|5. Care relationship
+|Where `ACCESS_POLICY._care_relationship_required_` holds and the caller is a professional, the caller needs a live care relationship to the subject, a permit directive that applies, or an entry in `_gate_keepers_`.
+|`refused-no-care-relationship`
+
+|6. Purpose
+|Where `ACCESS_POLICY._purpose_required_` holds, an access without a declared purpose is refused, and so is a purpose none of the caller's capabilities permits.
+|`refused-purpose-missing`, `refused-purpose-not-permitted`
+
+|7. Default
+|`open` admits. `restricted` admits a caller that a permit directive that applies, an entry in `_gate_keepers_` or a live care relationship names. `consent_required` admits only a caller that a permit directive that applies names.
+|`refused-consent-required`
+|===
+
+Directives combine by deny-overrides: where a permit and a deny both apply, the deny decides, and a permit decides only through the steps that ask for one (4, 5 and 7). Classifications combine by union.
+
+The subject reading their own record skips steps 3 to 7. A representative is held to the subject's directives and to any `delegation` directive that names them. An EHR whose `EHR_ACCESS` has no settings is decided by the system's documented default.
+
+== Refusals
+
+A refusal that is shown is answered as forbidden, and the answer MAY carry the refusal. The refusals of steps 1 and 2 MUST NOT be shown: the fact that a person has restricted access "shall not be visible to healthcare providers" (EHDS Art 8). Every refusal, shown or not, SHOULD be recorded with its `access refusal` code (xref:terminology.adoc[Terminology]) in the system's access log, together with the directive, the `EHR_ACCESS` version and the `ACCESS_POLICY` version it rested on.
+
+== Queries
+
+A query MUST apply the same procedure to every row it could return, so that a count, a limit and a page cover only the rows the caller may read. A system that runs a query as one database statement applies the procedure as a condition of that statement.
+
+== Reading and Writing the Settings
+
+. A new version of an `EHR_ACCESS` whose settings are `ACCESS_DIRECTIVE_SETTINGS` MUST be committed only by a party its current `_gate_keepers_` name, by the subject, or by the controller acting on the subject's instruction.
+. The settings MUST be read only by the same parties. To everyone else the `EHR_ACCESS` is answered as one that does not exist, because a restriction must not be visible to providers (EHDS Art 8).
+. A system MUST check every new version against the invariants of the classes and the terminology groups of xref:terminology.adoc[Terminology] before it stores it, and refuse it whole when a check fails.
+. A directive is withdrawn by a later version without it, so the history of the subject's choices is the version history of the `EHR_ACCESS` (Security Policy, "Audit trailing").
+
+== Exchange
+
+An EHR Extract carries the `EHR_ACCESS` versions in `X_VERSIONED_EHR_ACCESS`, so the subject's directives move with the record. A receiving system that implements the scheme applies them as they are. A system that does not sees a `scheme()` it does not know, and keeps the object as data. `ACCESS_POLICY` does not travel with an EHR: it belongs to the controller, not to the subject.

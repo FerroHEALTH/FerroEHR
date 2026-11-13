@@ -1,0 +1,13 @@
+=== ACCESS_DATA_SCOPE Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_data_scope.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_data_scope.adoc[]
+
+====
