@@ -451,18 +451,53 @@ async fn the_default_definition_is_stored_at_boot_only_when_absent() {
         .seed_default_definitions()
         .await
         .expect("the first boot seeds");
-    assert!(
-        first.contains(&Seeded::Stored(id.to_owned())),
-        "the definition is stored: {first:?}"
-    );
     let again = svc
         .seed_default_definitions()
         .await
         .expect("the next boot seeds");
     assert!(
-        again.contains(&Seeded::Kept(
-            "openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0.adls".to_owned()
-        )),
+        first.contains(&Seeded::Stored(id.to_owned())),
+        "the definition is stored: {first:?}"
+    );
+    assert!(
+        again.contains(&Seeded::Kept(format!("{id}.adls"))),
         "the stored definition is kept: {again:?}"
+    );
+}
+
+/// The ADL 2 errors of the shipped definition against `rm`.
+fn errors_against(rm: &dyn openehr_adl::validate::rm::RmModel) -> Vec<String> {
+    use openehr_adl::validate::bindings::NoTerminologyResolver;
+    use openehr_adl::validate::catalogue::Severity;
+    let (_, text) = ferroehr::service::ehr::access_settings::DEFINITIONS[0];
+    openehr_adl::validate::validate_source(text, None, rm, &NoTerminologyResolver)
+        .expect("the definition parses")
+        .into_iter()
+        .filter(|issue| issue.severity == Severity::Error)
+        .map(|issue| format!("{}: {}", issue.code.mnemonic(), issue.message))
+        .collect()
+}
+
+/// The default definition constrains the settings to the draft class
+/// `ACCESS_DIRECTIVE_SETTINGS` and its attributes, and validates against the
+/// RM extended by the draft packages, where the class conforms to the RM's
+/// `ACCESS_CONTROL_SETTINGS` (AOM2 `master11-rm_adaptation.adoc`).
+#[test]
+fn the_settings_definition_validates_against_the_rm_with_the_drafts() {
+    let errors = errors_against(&ferroehr::draft_model::RM_WITH_DRAFTS);
+    assert!(errors.is_empty(), "{errors:?}");
+}
+
+/// RM 1.2.0 alone has no `ACCESS_DIRECTIVE_SETTINGS`, so the validator
+/// without the draft packages refuses the same definition by its draft
+/// classes (`VCORM`, AOM2 `master04.3` §Reference Model Type Matching).
+#[test]
+fn the_settings_definition_is_refused_by_the_rm_without_the_drafts() {
+    let errors = errors_against(&openehr_adl::validate::rm::ProductionRmModel);
+    assert!(
+        errors
+            .iter()
+            .any(|e| e.starts_with("VCORM") && e.contains("ACCESS_DIRECTIVE_SETTINGS")),
+        "{errors:?}"
     );
 }

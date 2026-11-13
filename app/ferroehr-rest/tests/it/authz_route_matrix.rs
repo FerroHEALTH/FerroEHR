@@ -407,12 +407,11 @@ const ADMIN_READ: &[(&str, &str)] = &[
     ("GET", "/admin/restriction"),
     ("GET", "/admin/retention/policy"),
     ("GET", "/admin/retention/due"),
-    // The EHDS Art. 8 access-restriction register (#3682).
-    ("GET", "/admin/access-restriction"),
+    // The versions of an EHR's EHR_ACCESS settings, which hold the EHDS
+    // Art. 8 restriction and Art. 10 opt-out directives (#5510).
+    ("GET", "/admin/ehr-access"),
     // The EHDS Art. 3(3) access-delay register (#4351).
     ("GET", "/admin/access-delay"),
-    // The EHDS Art. 10 opt-out register (#4516).
-    ("GET", "/admin/access-opt-out"),
     // The audited read of a party's protected national identifiers (#3776). It
     // also needs a `read_identifiers` grant, checked in its handler.
     ("GET", "/admin/party/identifiers"),
@@ -459,18 +458,14 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     ("PUT", "/admin/retention/policy"),
     ("PUT", "/admin/retention/anchor"),
     ("POST", "/admin/retention/hold"),
-    // The EHDS Art. 8 access restriction, recorded and lifted on the person's
-    // instruction (#3682).
-    ("POST", "/admin/access-restriction"),
-    ("POST", "/admin/access-restriction/lift"),
+    // The controller's commit of an EHR's EHR_ACCESS settings on the person's
+    // instruction, the EHDS Art. 8 restriction and Art. 10 opt-out among them
+    // (#5510).
+    ("POST", "/admin/ehr-access"),
     // The EHDS Art. 3(3) delay of the person's access, held and released by a
     // health professional (#4351).
     ("POST", "/admin/access-delay"),
     ("POST", "/admin/access-delay/release"),
-    // The EHDS Art. 10 opt-out from access through the access services,
-    // recorded and reversed on the person's instruction (#4516).
-    ("POST", "/admin/access-opt-out"),
-    ("POST", "/admin/access-opt-out/reverse"),
     // The administrator re-key of a PERSON's binding key (#5013).
     ("POST", "/admin/party/binding-key"),
     // The repair of an EHR held closed by access settings that do not parse

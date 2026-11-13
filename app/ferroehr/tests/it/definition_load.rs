@@ -583,6 +583,8 @@ fn a_shipped_definition_never_changes_under_its_id() {
     let carried: Vec<(&str, &str)> = ferroehr::party_binding::shipped::DEFINITIONS
         .iter()
         .chain(&ferroehr::party_binding::policy::DEFINITIONS)
+        .chain(&ferroehr::access_policy::DEFINITIONS)
+        .chain(&ferroehr::service::ehr::access_settings::DEFINITIONS)
         .copied()
         .collect();
     for (name, text) in &carried {

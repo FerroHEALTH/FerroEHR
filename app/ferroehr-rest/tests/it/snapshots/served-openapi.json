@@ -1033,514 +1033,6 @@
         }
       }
     },
-    "/ferroehr/rest/extensions/v1/admin/access-opt-out": {
-      "get": {
-        "tags": [
-          "admin-marks"
-        ],
-        "summary": "Read one EHR's opt-out register (`GET /admin/access-opt-out`).",
-        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
-        "operationId": "admin_access_opt_out_register",
-        "parameters": [
-          {
-            "name": "ehr_id",
-            "in": "query",
-            "description": "The EHR whose register to read.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The register rows, newest first; a reversal is a row with `reversed_at` set.",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "400": {
-            "description": "`ehr_id` is missing or not a UUID.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthenticated.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not in the Admin class.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No such EHR.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "The admin API is disabled on this server.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "admin-marks"
-        ],
-        "summary": "Record the person's opt-out from access through the access services\n(`POST /admin/access-opt-out`).",
-        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
-        "operationId": "admin_access_opt_out",
-        "requestBody": {
-          "description": "`{ \"ehr_id\": …, \"note\": …? }`, recorded on the person's instruction (EHDS Art. 10(1)). The opt-out covers the whole EHR.",
-          "content": {
-            "application/json": {
-              "schema": {},
-              "example": {
-                "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
-                "note": "opt-out received through the national access service on 2026-11-01"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "204": {
-            "description": "The opt-out is recorded. A caller holding an `access_service` grant in the CDR then reads the EHR as absent at every route, query and export, unless it declares an emergency purpose and acts for no person (EHDS Art. 10(2)); every other caller reads it as before."
-          },
-          "400": {
-            "description": "The body is not the object above, or `authz.grants.allowed` does not allow `access_service`, so no caller can be an access service.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthenticated.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not in the Admin class.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No such EHR; nothing is recorded.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "The admin API is disabled on this server.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "The body is not `application/json`.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/ferroehr/rest/extensions/v1/admin/access-opt-out/reverse": {
-      "post": {
-        "tags": [
-          "admin-marks"
-        ],
-        "summary": "Reverse the person's opt-out (`POST /admin/access-opt-out/reverse`).",
-        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
-        "operationId": "admin_reverse_access_opt_out",
-        "requestBody": {
-          "description": "`{ \"ehr_id\": … }`, on the person's instruction (EHDS Art. 10(1): the exercise of the right is reversible).",
-          "content": {
-            "application/json": {
-              "schema": {},
-              "example": {
-                "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "204": {
-            "description": "Every opt-out that stood carries a reversal instant, and the access services read the EHR again. Reversing nothing succeeds."
-          },
-          "400": {
-            "description": "The body does not name the EHR.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthenticated.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not in the Admin class.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No such EHR.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "The admin API is disabled on this server.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "The body is not `application/json`.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/ferroehr/rest/extensions/v1/admin/access-restriction": {
-      "get": {
-        "tags": [
-          "admin-marks"
-        ],
-        "summary": "Read one EHR's access-restriction register\n(`GET /admin/access-restriction`).",
-        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
-        "operationId": "admin_access_restriction_register",
-        "parameters": [
-          {
-            "name": "ehr_id",
-            "in": "query",
-            "description": "The EHR whose register to read.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The register rows, newest request first; a lift is a row with `lifted_at` set.",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "400": {
-            "description": "`ehr_id` is missing or not a UUID.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthenticated.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not in the Admin class.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "The EHR is unknown.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "The admin API is disabled on this server.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "admin-marks"
-        ],
-        "summary": "Record an EHDS Art. 8 restriction of access by health professionals\n(`POST /admin/access-restriction`).",
-        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
-        "operationId": "admin_restrict_access",
-        "requestBody": {
-          "description": "`{ \"ehr_id\": …, \"vo_id\": …?, \"note\": …? }`, recorded on the person's instruction (EHDS Art. 8). Omitting `vo_id` restricts the whole EHR, including data recorded after it.",
-          "content": {
-            "application/json": {
-              "schema": {},
-              "example": {
-                "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398",
-                "note": "instruction received at the front desk on 2026-10-20"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "204": {
-            "description": "The restriction is recorded. Every professional route, query and export then treats the data as absent, and no status, header or count says that a restriction exists. A caller holding `authz.rbac.emergency_access_role` that declares an emergency purpose reads it (EHDS Art. 11(5))."
-          },
-          "400": {
-            "description": "The body is not the object above.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthenticated.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not in the Admin class.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "The EHR is unknown, or the named object is not in it. Nothing is recorded.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "The admin API is disabled on this server.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "The request `Content-Type` is not `application/json`.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/ferroehr/rest/extensions/v1/admin/access-restriction/lift": {
-      "post": {
-        "tags": [
-          "admin-marks"
-        ],
-        "summary": "Lift an EHDS Art. 8 access restriction\n(`POST /admin/access-restriction/lift`).",
-        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
-        "operationId": "admin_lift_access_restriction",
-        "requestBody": {
-          "description": "`{ \"ehr_id\": …, \"vo_id\": …? }`, the grain to lift. Omitting `vo_id` lifts the whole-EHR restrictions and leaves any object-scoped one standing.",
-          "content": {
-            "application/json": {
-              "schema": {},
-              "example": {
-                "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "204": {
-            "description": "Every in-force access restriction at that grain carries a lift instant. Idempotent: lifting nothing succeeds."
-          },
-          "400": {
-            "description": "The body is not the object above.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthenticated.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not in the Admin class.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "The EHR is unknown, or the named object is not in it.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "The admin API is disabled on this server.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "The request `Content-Type` is not `application/json`.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/ferroehr/rest/extensions/v1/admin/access_policy": {
       "get": {
         "tags": [
@@ -2362,6 +1854,184 @@
           },
           "500": {
             "description": "The location, a segment entry, a version-payload entry or the manifest could not be created or written.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/ehr-access": {
+      "get": {
+        "tags": [
+          "admin-marks"
+        ],
+        "summary": "Read every version of an EHR's `EHR_ACCESS` settings\n(`GET /admin/ehr-access`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_ehr_access_versions",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "query",
+            "description": "The EHR whose settings to read.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`{ \"ehr_id\": …, \"versions\": [{ \"version_uid\": …, \"settings\": … }] }`, newest first: the person's instructions and their history.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`ehr_id` is missing or not a UUID.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such EHR.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin-marks"
+        ],
+        "summary": "Commit an EHR's `EHR_ACCESS` settings on the person's instruction\n(`POST /admin/ehr-access`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_ehr_access_commit",
+        "requestBody": {
+          "description": "`{ \"ehr_id\": …, \"preceding_version_uid\": …, \"settings\": … }`: the EHR, the `EHR_ACCESS` version the change is made over, and the whole new `EHR_ACCESS.settings`, an `ACCESS_DIRECTIVE_SETTINGS` of the `access_directives` scheme, or `null` for none. An EHDS Art. 8 restriction is a `restriction` deny directive, of the whole EHR or of the objects its `data` names; an Art. 10 opt-out is an `opt_out` deny directive. Both set `emergency_override` true.",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "`{ \"ehr_id\": …, \"version_uid\": … }`: the committed `EHR_ACCESS` version. Data a restriction covers then reads as absent to every professional route, query and export, unless a caller holding `authz.rbac.emergency_access_role` declares an emergency purpose (EHDS Art. 11(5)); an EHR an opt-out covers reads as absent to every `access_service` grant holder, unless it declares an emergency purpose and acts for no person (EHDS Art. 10(2)). No status, header or count says that either exists.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "The body is not the object above; the settings are not settings of the `access_directives` scheme whose every invariant holds; a `restriction` or `opt_out` directive sets `emergency_override` false; or an `opt_out` directive is committed while `authz.grants.allowed` does not allow `access_service`. The problem names the first defect.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such EHR.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "`preceding_version_uid` is not the current `EHR_ACCESS` version.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not `application/json`.",
             "content": {
               "application/problem+json": {
                 "schema": {
