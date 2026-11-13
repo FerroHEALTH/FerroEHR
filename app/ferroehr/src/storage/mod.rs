@@ -49,6 +49,8 @@
 //!   opt-out directives of `EHR_ACCESS` on `ehr` / `vo_head`.
 //! - [`policy_register`] — the versions of the operational-policy admin
 //!   registers.
+//! - [`access_policy`] — the versions of the controller's
+//!   `VERSIONED_ACCESS_POLICY`.
 //! - [`statistics`] — the counts and listings behind the admin statistics.
 //! - [`integrity`] — the reads of the storage-integrity sweep and the node rebuild.
 //! - [`template_repo`] — the OPT 1.4 `template_store` and the `template_ref`
@@ -70,6 +72,7 @@
 
 pub mod access_delay;
 pub mod access_marks;
+pub mod access_policy;
 pub mod adl2_repo;
 pub mod archetype_repo;
 pub mod blob_ref;

@@ -13,7 +13,8 @@
 //! They are [`archive`] (archival storage), [`report`] (the four activity
 //! statistics) and [`dump_load`] (file-system export and load), and
 //! [`integrity`], which sweeps the storage's two content copies
-//! for disagreement, and no openEHR spec governs storage mechanics. Beside
+//! for disagreement, and no openEHR spec governs storage mechanics.
+//! [`access_log`] seals, verifies and exports the access log (#5129). Beside
 //! them, [`marks`] keeps the legal marks, [`access_delay`] the EHDS Art. 3(3)
 //! delay of the person's own access, [`ehr_access`] the controller's commit
 //! and read of an EHR's `EHR_ACCESS` settings, which hold the EHDS Art. 8
@@ -23,11 +24,14 @@
 //! `PERSON`'s binding key, and [`outbox`] the feed of
 //! commit events to the readers the `read_change_feed` grants name, and
 //! [`registers`] the operational-policy registers (the audit category map, the
-//! access delay and the Cedar policy set). Each carries its own
+//! access delay and the Cedar policy set), and [`access_policy`] the
+//! controller's versioned `ACCESS_POLICY`. Each carries its own
 //! spec-silence flag and register citation.
 
 pub mod access_delay;
+pub mod access_log;
 pub mod access_log_erasure;
+pub mod access_policy;
 pub mod access_repair;
 pub mod archive;
 pub mod binding_key;

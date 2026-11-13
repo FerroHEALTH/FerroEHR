@@ -27,6 +27,8 @@
 //! - [`policy_register`] — the operational-policy admin registers (the audit
 //!   category map, the access delay and the Cedar policy set); our own
 //!   extension.
+//! - [`access_policy`] — the controller's versioned `ACCESS_POLICY`; our own
+//!   extension.
 //! - `dump_load` — `export_ehrs` / `load_ehrs`.
 //! - [`integrity`] — the storage-parity sweep, our own extension: no openEHR
 //!   spec governs storage mechanics.
@@ -51,6 +53,7 @@ mod statistics;
 
 pub mod access_delay;
 pub mod access_log_erasure;
+pub mod access_policy;
 pub mod access_repair;
 pub mod integrity;
 pub mod marks;

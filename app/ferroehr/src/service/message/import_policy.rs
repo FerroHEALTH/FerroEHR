@@ -200,8 +200,7 @@ impl FerroEhrService {
         if !crate::versioning::committer::current_committer().is_some_and(|caller| caller.system) {
             return self.refuse_objected_export(ehr_id).await;
         }
-        let namespace = self.subject_namespace(ehr_id).await?;
-        if Capabilities::current().covers(Operation::ExportEhrExtract, &[namespace.as_deref()]) {
+        if self.export_granted(ehr_id).await? {
             return self.refuse_objected_export(ehr_id).await;
         }
         Err(ServiceError::not_permitted(
@@ -209,6 +208,16 @@ impl FerroEhrService {
              ferroehr-operations::export_ehr_extract whose subject_namespace elements name the \
              subject namespace of the EHR, or hold no_subject_namespace for a subject with none",
         ))
+    }
+
+    /// Whether the request's caller holds an `export_ehr_extract` grant whose
+    /// `subject_namespace` elements cover the EHR `ehr_id`'s subject.
+    ///
+    /// # Errors
+    /// A storage failure of the subject read.
+    pub(super) async fn export_granted(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
+        let namespace = self.subject_namespace(ehr_id).await?;
+        Ok(Capabilities::current().covers(Operation::ExportEhrExtract, &[namespace.as_deref()]))
     }
 
     /// The subject namespace of the EHR `ehr_id`'s current `EHR_STATUS`;

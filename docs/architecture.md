@@ -299,8 +299,17 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   differ), and the audit store's hourly worker replaces every entry past its
   `retain_until` by its tombstone, in any order of expiry
   (`access_log::expiry`); an erasure a law orders takes the same path through
-  `POST /admin/access-log/erase`, which writes an access record. No openEHR
-  spec governs audit storage: our own design.
+  `POST /admin/access-log/erase`, which writes an access record. `access_log_checkpoint` keeps the
+  signed `ACCESS_LOG_CHECKPOINT`s of the head, signed with the version-signing
+  keyring's OpenPGP key; a link's `signature` may be set once, after the
+  insert that computed its digest. `access_log::checkpoint` seals and verifies
+  (the chain through `audit.verify_audit_chain()`, the checkpoint and the link
+  signatures beside it), `access_log::chain` verifies a span of links apart
+  from the database (an export), and `access_log::transfer` exports one EHR's
+  records with the span and checkpoint and imports another system's into
+  `access_log_imported_*`, outside this system's chain
+  (`audit/0028_access_log_checkpoint.sql`). No openEHR spec governs audit
+  storage: our own design.
 - **One pool and one DSN per storage domain.** `[database.clinical]`,
   `[database.party]` and `[database.audit]` each carry a
   `url`/`url_file`, defaulting to the shared `[database].url`, and
@@ -426,9 +435,11 @@ which is what makes an optional stage safe to disable:
    access settings"); the settings are read only by those callers and the
    subject, and are absent to anyone else in AQL, an EHR Extract and the
    CONTRIBUTION read, since a restriction stays invisible to a provider (EHDS
-   Art. 8). Who writes and reads them is our own design
-   (`service::ehr::access_rule`). The EHDS Art. 8 restriction and Art. 10
-   opt-out are `restriction` and `opt_out` directives of these settings,
+   Art. 8). An EHR Extract also carries them for the holder of an
+   `export_ehr_extract` grant covering the EHR, since the extract transfers
+   the whole EHR (RM EHR Extract IM, `X_VERSIONED_EHR_ACCESS`). Who writes and
+   reads them is our own design (`service::ehr::access_rule`). The EHDS
+   Art. 8 restriction and Art. 10 opt-out are `restriction` and `opt_out` directives of these settings,
    committed by the controller over `POST /admin/ehr-access` (which names the
    EHR in its body, so it reaches an EHR a restriction hides) or by a
    gate-keeper. Every `EHR_ACCESS` commit, import, archive load and repair
@@ -1005,6 +1016,58 @@ removed outright and refused as unknown keys.
   policy per category map and writes each record under the policy of the map
   its digest names, so a record emitted under one map and written after a
   change still renders with the categories it was classified into.
+
+### The controller's access policy (`ferroehr::access_policy`) — our own design
+
+`ACCESS_POLICY` is a class of FerroEHR's draft access control package
+(`tools/openehr-codegen/draft/bmm/openehr_access_control_0.1.0.bmm.json`, no
+openEHR release), and ITS-REST defines no resource for it: the store, the
+resource and the in-memory copy are our own design (#5512). It holds the facts
+that hold for every EHR the controller keeps: the sensitivity of kinds of data
+(`classifications`), whether clinical access needs a care relationship
+(`care_relationship_required`, `relationship_grace`) and a declared purpose
+(`purpose_required`), and the `catalogue` of named directives a subject accepts
+by reference (IHE BPPC). BASE Architecture Overview §Security Policy leaves
+privacy levels to "standards or agreements within jurisdictions of use", which
+the classifications carry. Break-glass and the default floor stay in TOML; the
+policy can only tighten them.
+
+- **One versioned object.** The instance is single-tenant, so it keeps one
+  `VERSIONED_ACCESS_POLICY`, outside every EHR and outside the demographic
+  service. Each write commits one `ORIGINAL_VERSION` on its trunk in its own
+  `CONTRIBUTION` with the request committer's `AUDIT_DETAILS` (RM Common IM
+  master06 §Contributions, §Committal and Audits), as one row of the
+  append-only clinical table `access_policy_version` (migration
+  `clinical/0038`). The `ORIGINAL_VERSION` is rendered by the same builder as
+  every other version. Its `owner_id` is the controller of the first version,
+  and a later version naming another controller is refused. Our own choice:
+  the policy rows stay out of the `version`/`node` spine, so no AQL, EHR
+  extract or EHR-scoped contribution read reaches them.
+- **Strict on write.** A body is read by the strict canonical-JSON reader of
+  the generated draft type, then checked against the invariants of the draft
+  BMM (`openehr_rm::draft::access_control::invariants::check_policy`), the root `LOCATABLE` rules
+  (the root `archetype_node_id` is the archetype id `archetype_details` names,
+  of an `ACCESS_POLICY` archetype) and the controller's type (`ORGANISATION`).
+  A body that does not hold is refused whole with `400`.
+- **Resource.** `GET {ext}/admin/access_policy` (weak `ETag` the version uid,
+  `Last-Modified` its commit time), `PUT` over the version `If-Match` names or
+  creating the first with `If-None-Match: *` (RFC 9110 §13.1), `412` when the
+  precondition fails, `GET …/history` (every `ORIGINAL_VERSION`, newest first)
+  and `GET …/versioned`. Admin role; the write also needs the
+  `write_access_policy` grant.
+- **Default archetype.** `openEHR-EHR-ACCESS_POLICY.controller.v1` is seeded
+  at boot like the policy definitions. Archetypes are validated against the RM
+  extended by the draft classes (`ferroehr::draft_model`, over the class
+  tables `emit-drafts` writes into `openehr_rm::draft` and `openehr_adl::validate::rm_extended::ExtendedRmModel`,
+  AOM2 master11 RM adaptation), so an archetype over a draft class passes
+  VCORM. With no version committed nothing is tightened.
+- **In memory, invalidated by `LISTEN`/`NOTIFY`.** As the registers above:
+  each replica holds the newest version and listens on
+  `ferroehr_access_policy`; a write notifies in its transaction, a
+  notification marks the copy stale and the next operation outside the admin
+  group reads the head (one indexed read) and installs a new version. With
+  nothing stale a request touches no database; while the listener is down
+  every request reads; a store that cannot answer is `503`.
 
 ## Templates, validation, FLAT
 

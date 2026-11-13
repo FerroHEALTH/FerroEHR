@@ -379,6 +379,10 @@ const ADMIN_READ: &[(&str, &str)] = &[
     // defect classes only — a pinned EXTENSION_READ_ROUTES read despite the
     // POST verb, so a read-only integrity auditor can run it (#2692).
     ("POST", "/admin/integrity/verify"),
+    // The access log's verification against its checkpoint moves no record
+    // (#5129), and its export reads the log.
+    ("POST", "/admin/access-log/verify"),
+    ("GET", "/admin/access-log/export"),
     // The legal registers, read side: the restriction sequence a controller
     // answers an Art. 18(3) notice from, the declared retention periods, and
     // what has fallen due. They carry ids, grounds and citations, never
@@ -399,6 +403,11 @@ const ADMIN_READ: &[(&str, &str)] = &[
     // The operational-policy registers and their versions (#5442).
     ("GET", "/admin/registers/{register}"),
     ("GET", "/admin/registers/{register}/history"),
+    // The controller's access policy, its versions and its versioned object
+    // (#5512).
+    ("GET", "/admin/access_policy"),
+    ("GET", "/admin/access_policy/history"),
+    ("GET", "/admin/access_policy/versioned"),
 ];
 
 /// Admin-class writes (relative to their namespace).
@@ -452,11 +461,17 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     // REPLACES stored rows, so it stays out of EXTENSION_READ_ROUTES and a
     // read-only server refuses it (#3143).
     ("POST", "/admin/integrity/rebuild-nodes"),
+    // A checkpoint of the access log is a new, signed record (#5129).
+    ("POST", "/admin/access-log/checkpoint"),
     // The outbox acknowledgement moves the reader's cursor (#4786).
     ("POST", "/admin/outbox/{reader}/ack"),
     // A new version of an operational-policy register decides every request
     // after it (#5442).
     ("PUT", "/admin/registers/{register}"),
+    // A new version of the access policy decides every request after it. It
+    // also needs a `write_access_policy` grant, checked in its handler
+    // (#5512).
+    ("PUT", "/admin/access_policy"),
 ];
 
 /// The ITI-81 audit retrieval: the node's security-surveillance record, so the

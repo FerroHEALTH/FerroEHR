@@ -339,6 +339,75 @@
         }
       }
     },
+    "/ferroehr/rest/extensions/v1/admin/access-log/checkpoint": {
+      "post": {
+        "tags": [
+          "admin-access-log"
+        ],
+        "summary": "Seal the head of the access log in a signed checkpoint\n(`POST /admin/access-log/checkpoint`). **Our own extension.**",
+        "operationId": "admin_seal_access_log_checkpoint",
+        "responses": {
+          "200": {
+            "description": "The checkpoint of the head of the chain, as its ITS-JSON `ACCESS_LOG_CHECKPOINT`. A head already sealed answers its stored checkpoint.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The chain is empty.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The keyring holds no OpenPGP key to sign with.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ferroehr/rest/extensions/v1/admin/access-log/erase": {
       "post": {
         "tags": [
@@ -427,6 +496,463 @@
           },
           "415": {
             "description": "The body is not `application/json`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/access-log/export": {
+      "get": {
+        "tags": [
+          "admin-access-log"
+        ],
+        "summary": "Export one EHR's access log for its transfer to another system\n(`GET /admin/access-log/export?ehr_id=`). **Our own extension.**",
+        "operationId": "admin_export_access_log",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "query",
+            "description": "The EHR whose log is exported.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The EHR's records with their links, every link from the first of them to the checkpoint they verify against, and that checkpoint, verified before it is answered. `ferroehr access-log import` reads this document.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`ehr_id` is missing.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The log holds no record of the EHR.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No checkpoint covers the records and the keyring holds no OpenPGP key to seal one.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The span holds `audit_event` records, which cannot be verified apart from this database.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/access-log/verify": {
+      "post": {
+        "tags": [
+          "admin-access-log"
+        ],
+        "summary": "Verify the access log against its newest checkpoint\n(`POST /admin/access-log/verify`). **Our own extension.**",
+        "description": "The whole chain is recomputed, tombstones taken as recorded; the\ncheckpoint's proof, the link it seals and every signed link are\nchecked. A finding is not a request failure.",
+        "operationId": "admin_verify_access_log",
+        "responses": {
+          "200": {
+            "description": "The verification ran. `intact` is true when a checkpoint was there to verify against and nothing failed; `findings` names each failure of the checkpoint and the signed links, `chain` each damaged record or boundary of the chain.",
+            "content": {
+              "application/json": {
+                "schema": {},
+                "example": {
+                  "intact": false,
+                  "checkpoint": {
+                    "sequence": 48213,
+                    "digest": "<64 hex>"
+                  },
+                  "findings": [
+                    "the checkpoint at 48213 is not signed by a trusted key"
+                  ],
+                  "chain": [
+                    {
+                      "chain_seq": 48190,
+                      "finding": "record content was modified after it was written"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/access_policy": {
+      "get": {
+        "tags": [
+          "admin-access-policy"
+        ],
+        "summary": "Read the access policy in force (`GET /admin/access_policy`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_access_policy_read",
+        "responses": {
+          "200": {
+            "description": "The newest `ACCESS_POLICY`, in canonical JSON. The weak `ETag` is its `OBJECT_VERSION_ID` and `Last-Modified` its commit time.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No access policy is committed; nothing is tightened.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "admin-access-policy"
+        ],
+        "summary": "Commit the next version of the access policy\n(`PUT /admin/access_policy`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_access_policy_write",
+        "parameters": [
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The `OBJECT_VERSION_ID` of the version this write replaces, as the read's `ETag` gave it.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "description": "`*` to create the first version.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The whole `ACCESS_POLICY` in canonical JSON, read strictly and checked against the invariants of the draft access control BMM.",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The new version, as a read answers it, with its `OBJECT_VERSION_ID` as the `ETag`. The next request on every replica runs under it.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "201": {
+            "description": "The first version, as a read answers it.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Neither `If-Match` nor `If-None-Match: *`, an `If-Match` that is no `OBJECT_VERSION_ID`, or a body refused whole: no canonical-JSON `ACCESS_POLICY`, a broken invariant of the draft BMM, a root that is no `ACCESS_POLICY` archetype root, or a controller that is no `ORGANISATION` or not the policy's. The version in force stays.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "`If-Match` names a version that is no longer the newest, or none is committed; or `If-None-Match: *` while one is.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not `application/json`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/access_policy/history": {
+      "get": {
+        "tags": [
+          "admin-access-policy"
+        ],
+        "summary": "Read every version of the access policy\n(`GET /admin/access_policy/history`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_access_policy_history",
+        "responses": {
+          "200": {
+            "description": "Every `ORIGINAL_VERSION` of the policy with its `contribution` and `commit_audit`, newest first; empty when none is committed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/access_policy/versioned": {
+      "get": {
+        "tags": [
+          "admin-access-policy"
+        ],
+        "summary": "Read the versioned access policy\n(`GET /admin/access_policy/versioned`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_access_policy_versioned",
+        "responses": {
+          "200": {
+            "description": "The `VERSIONED_ACCESS_POLICY`: its `uid`, the controller as `owner_id`, and `time_created`. The weak `ETag` is its `uid`.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No access policy is committed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -26052,6 +26578,10 @@
       "description": "The storage-parity sweep: every stored version is re-derived from its decomposed node rows and compared with its materialized body, so tampering or corruption of either copy is reported. OUR OWN EXTENSION: no ITS-REST operation governs this route, and no openEHR spec governs storage mechanics (same admin gate + RBAC Admin class)."
     },
     {
+      "name": "admin-access-log",
+      "description": "The integrity of the access log: seal its head in a checkpoint signed with the keyring's OpenPGP key, verify the chain and the signatures against a checkpoint, and export one EHR's log with the checkpoint it verifies against for a transfer to another system. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes (same admin gate + RBAC Admin class)."
+    },
+    {
       "name": "admin-identifiers",
       "description": "The audited read of a party's protected national identifiers: a party version with the identifiers `[privacy.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and a `read_identifiers` grant in the CDR, and every read is an access record naming the reader, the party and the scheme, never the value."
     },
@@ -26066,6 +26596,10 @@
     {
       "name": "message",
       "description": "EHR-Extract export and import. OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no message/extract API at all, so no released operation governs any route here; they carry the ordinary clinical authentication class, not the admin gate."
+    },
+    {
+      "name": "admin-access-policy",
+      "description": "The controller's ACCESS_POLICY of the draft access control package: read with its version uid as the ETag, committed whole as the next version in its own contribution over the version `If-Match` names (or created with `If-None-Match: *`), and listed by version, by `admin_role` only; a write also needs the `write_access_policy` grant. A change applies on the next request with no restart. OUR OWN EXTENSION: ITS-REST defines no resource for the access policy."
     },
     {
       "name": "admin-registers",

@@ -22,6 +22,7 @@ pub mod access_control;
 pub mod common;
 pub mod ehr_extract;
 mod json_serde;
+pub mod model;
 mod open_seam;
 
 // hand-written modules (spec behaviour), auto-declared:

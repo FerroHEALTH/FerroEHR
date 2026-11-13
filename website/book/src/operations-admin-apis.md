@@ -230,6 +230,23 @@ and write over the version it answers. A document that does not hold is
 **400** and leaves the version in force. Every read and write is an access
 record of its own.
 
+## The access policy
+
+Four routes behind the same switch, for `admin_role` only, carry the
+controller's access policy. What it holds is on
+[Operational policy](operational-policy.md#the-access-policy).
+
+| Route | Body or header | Success |
+|---|---|---|
+| `GET {ext}/admin/access_policy` | — | **200**: the newest `ACCESS_POLICY`; the weak `ETag` is its version uid and `Last-Modified` its commit time. **404** while none is committed |
+| `PUT {ext}/admin/access_policy` | `If-Match: <version uid>`, or `If-None-Match: *` for the first version, and the whole `ACCESS_POLICY` | **200** (**201** for the first): the new version with its `ETag`; the next request on every replica runs under it. Needs a policy grant of `write_access_policy` |
+| `GET {ext}/admin/access_policy/history` | — | **200**: every `ORIGINAL_VERSION`, newest first, with its contribution and commit audit |
+| `GET {ext}/admin/access_policy/versioned` | — | **200**: the `VERSIONED_ACCESS_POLICY` |
+
+A write with neither condition is **400**, and one whose condition no longer
+holds is **412**: read the policy again and write over the version it answers.
+A policy that does not hold is **400** and leaves the version in force.
+
 ## Legal marks: restriction, objection and retention
 
 Eleven routes behind the same switch and role, carrying the four marks the law
