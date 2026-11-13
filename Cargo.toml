@@ -240,8 +240,9 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # code (`DpopSection::settings`), so `[server] public_base_url` is the one
 # public URL; 0.23 keeps a Basic user's credential alone (`with_granted_scope`,
 # `with_granted_roles`), and 0.24 asks the product for a client's standing
-# (`kind::standing`). Verified on crates.io 2026-11-13.
-ferrohealth-smart = { version = "=0.24.0", default-features = false, features = ["fetch", "idp-entra"] }
+# (`kind::standing`), whose 0.24.1 names a refused `[auth]` key by its path.
+# Verified on crates.io 2026-11-13.
+ferrohealth-smart = { version = "=0.24.1", default-features = false, features = ["fetch", "idp-entra"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroAUTH, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over

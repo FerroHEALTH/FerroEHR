@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The standing of a client, a delegate actor and a scopeless subject, read
-//! from the policy grants: `ferrohealth-smart` asks it while it classifies a
-//! token, and it answers from this replica's copy of the grant rows.
+//! from the policy grants.
+//!
+//! `ferrohealth-smart` asks it while it classifies a token, and it answers
+//! from this replica's copy of the grant rows.
 //!
 //! Each question names an identifier its issuer issued, and the answer is the
 //! grants of the `ACTOR` carrying that identifier as a `client_id` under that

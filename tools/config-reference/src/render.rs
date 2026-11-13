@@ -19,9 +19,10 @@ const GENERATED: &str =
 /// The longest comment line the TOML files wrap at.
 const WIDTH: usize = 79;
 
-/// The shipped default `ferroehr.toml`: every key under its description, a
-/// key the defaults set as a live line and any other, a secret included, as
-/// a `#?` line with a placeholder, so the file parses to the defaults.
+/// The shipped default `ferroehr.toml`: every key under its description,
+/// a must-set key with a default as a live line and every other key as a
+/// `#?` line with its default or a placeholder, so the file sets nothing
+/// beyond the must-set block and parses to the defaults.
 pub(crate) fn template(sections: &[Section]) -> String {
     let mut out = String::new();
     let _ = writeln!(out, "# {GENERATED}");
@@ -29,11 +30,12 @@ pub(crate) fn template(sections: &[Section]) -> String {
         "# SPDX-FileCopyrightText: Cadasto B.V.\n\
          # SPDX-License-Identifier: BUSL-1.1\n\
          #\n\
-         # ferroehr.toml: every key FerroEHR reads, each under its description and set to\n\
-         # its default. Copy this file to ferroehr.toml and edit what you change. A line\n\
-         # marked `#?` is a key with no default, a secret, or a table the defaults leave\n\
-         # out: remove `#? ` and fill the placeholder to set it. A line marked `#` under a\n\
-         # `# [table.<name>]` header shows a table you name yourself.\n\
+         # ferroehr.toml: every key FerroEHR reads, each under its description. Copy\n\
+         # this file to ferroehr.toml and set the keys the \"What you must set\" block\n\
+         # names, which are its only live lines. Every other key is a `#?` line that\n\
+         # shows its default, or a placeholder where it has none: remove `#? ` and edit\n\
+         # the value to set it. A line marked `#` under a `# [table.<name>]` header\n\
+         # shows a table you name yourself.\n\
          #\n\
          # A duration is a string with its unit (\"500ms\", \"30s\", \"10min\", \"12h\",\n\
          # \"7d\"), a size a string with an IEC binary unit (\"64MiB\"). Each key can\n\
@@ -75,8 +77,8 @@ fn must_set(out: &mut String, sections: &[Section]) {
         out,
         &format!(
             "This file lists {total} keys. A deployment that holds real data sets the \
-             {required} below; every other key is optional and runs on the built-in default \
-             its line shows, or stays unset where its note says so."
+             {required} below, the only live lines; every other key is optional and runs on \
+             the built-in default its `#?` line shows, or stays unset where its note says so."
         ),
     );
     out.push_str("#\n");
@@ -157,6 +159,12 @@ fn write_section(out: &mut String, section: &Section, mode: Mode, keys: &[Key]) 
         Mode::Example => "#? ",
         Mode::Comment => "# ",
     };
+    // NOTE: a live header with no live key under it would set an empty table,
+    // so a table the defaults hold is live only while a must-set key is.
+    let lead = match mode {
+        Mode::Live if !keys.iter().any(live) => "#? ",
+        _ => lead,
+    };
     if !section.path.is_empty() {
         let _ = writeln!(out, "{lead}{}", header(section));
     }
@@ -172,14 +180,20 @@ fn write_section(out: &mut String, section: &Section, mode: Mode, keys: &[Key]) 
             // NOTE: a secret's default renders masked, and a masked value is no
             // value to set, so the line carries the placeholder instead.
             (Some(_), Mode::Live | Mode::Example) if key.masked => ("#? ", &key.example),
-            (Some(default), Mode::Live) => ("", default),
-            (Some(default), Mode::Example) => ("#? ", default),
+            (Some(default), Mode::Live) if key.must_set => ("", default),
+            (Some(default), Mode::Live | Mode::Example) => ("#? ", default),
             (None, Mode::Live | Mode::Example) => ("#? ", &key.example),
             (Some(default), Mode::Comment) => ("# ", default),
             (None, Mode::Comment) => ("# ", &key.example),
         };
         let _ = writeln!(out, "{lead}{name} = {value}");
     }
+}
+
+/// Whether `key` is a live line of a table the defaults hold: a must-set key
+/// with a default that is no secret.
+fn live(key: &Key) -> bool {
+    key.must_set && key.default.is_some() && !key.masked
 }
 
 /// The TOML header of `section`.

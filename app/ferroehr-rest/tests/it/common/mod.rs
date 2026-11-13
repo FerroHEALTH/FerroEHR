@@ -290,27 +290,36 @@ pub(crate) async fn first_party(service: &FerroEhrService, config: &AppConfig) {
         .map(|entry| entry.issuer.expose().to_owned())
         .filter(|issuer| issuer != BASIC_ISSUER)
         .collect();
-    if issuers.is_empty() {
-        return;
-    }
-    allowing(service, &[Operation::SignInPersons]);
     for issuer in issuers {
-        service
-            .grant_client(&ClientGrant {
-                issuer,
-                client_id: TEST_CLIENT.to_owned(),
-                operation: Operation::SignInPersons,
-                elements: Vec::new(),
-            })
-            .await
-            .expect("the test client is granted sign_in_persons");
+        grant_standing(service, &issuer, TEST_CLIENT, Operation::SignInPersons).await;
     }
+}
+
+/// Grants the client `client_id` of `issuer` `operation` on `service`, as an
+/// administrator grants a client its standing: `sign_in_persons`,
+/// `act_for_persons` or `access_without_scope`.
+pub(crate) async fn grant_standing(
+    service: &FerroEhrService,
+    issuer: &str,
+    client_id: &str,
+    operation: Operation,
+) {
+    allowing(service, &[operation]);
+    service
+        .grant_client(&ClientGrant {
+            issuer: issuer.to_owned(),
+            client_id: client_id.to_owned(),
+            operation,
+            elements: Vec::new(),
+        })
+        .await
+        .expect("the client is granted its standing");
 }
 
 /// [`ferroehr_rest::build_with`] after [`first_party`].
 pub(crate) async fn build_with(config: AppConfig, service: Arc<FerroEhrService>) -> Router {
-    first_party(&service, &config).await;
-    ferroehr_rest::build_with(config, service)
+    Box::pin(first_party(&service, &config)).await;
+    Box::pin(ferroehr_rest::build_with(config, service))
         .await
         .expect("the router builds")
 }
@@ -322,8 +331,8 @@ pub(crate) async fn build_full(
     authz: Option<Arc<ferroehr_rest::extensions::access::authz::AuthzHandle>>,
     observability: ferroehr_rest::extensions::management::Observability,
 ) -> Router {
-    first_party(&service, &config).await;
-    ferroehr_rest::build_full(config, service, authz, observability)
+    Box::pin(first_party(&service, &config)).await;
+    Box::pin(ferroehr_rest::build_full(config, service, authz, observability))
         .await
         .expect("the router builds")
 }
@@ -480,6 +489,16 @@ pub(crate) async fn with_basic_users(
     grant_basic_users(service, pool, users).await;
 }
 
+/// Turns Basic authentication on in `config` for the one user `user`, with
+/// the password `pw`: the first administrator, bound to no party, holding
+/// `admin_role` and the product scope from the configuration alone.
+pub(crate) fn first_admin_only(config: &mut AppConfig, user: &str) {
+    let hash = hash_password("pw");
+    config.auth.shared.enabled = true;
+    config.auth.shared.basic = Some(basic_section(&[(user, hash.as_str())]));
+    config.rbac.first_admin = Some(user.to_owned());
+}
+
 /// Turns Basic authentication on in `config` for each `(user, roles)`, every
 /// user with the password `pw`, beside the issuers `config` trusts already.
 ///
@@ -548,20 +567,11 @@ pub(crate) async fn grant_basic_users(
 ) {
     let honoured = [Operation::HoldRoles, Operation::HoldScopes];
     allowing(service, &honoured);
-    let committer = binding_service(pool);
+    let committer = binding_service(pool)
+        .with_outbox_gate(ferroehr::extensions::outbox::OutboxGate::WhileGranted);
     allowing(&committer, &honoured);
-    let today = jiff::Zoned::now()
-        .with_time_zone(jiff::tz::TimeZone::UTC)
-        .date()
-        .to_string();
     for (user, roles) in users {
-        let mut conn = pool.acquire().await.expect("a connection");
-        let rows =
-            ferroehr::party_binding::lookup::key_rows(&mut conn, BASIC_LOGIN, "guid", user, &today)
-                .await
-                .expect("the binding key reads");
-        drop(conn);
-        if rows.iter().any(|row| row.live) {
+        if bound_already(pool, BASIC_LOGIN, user).await {
             continue;
         }
         let (uid, _) =
@@ -729,17 +739,69 @@ pub(crate) async fn app(config: AppConfig) -> (testkit::TestDb, Router) {
 }
 
 /// [`app`] with the `PERSON`s of the Basic users `users` of [`basic_users`]
-/// committed with their grants ([`grant_basic_users`]).
+/// committed with their grants ([`grant_basic_users`]), and a `PERSON` for
+/// each `(issuer, sub)` of `bound` ([`bind_issuer`], [`bind_subjects`]).
 pub(crate) async fn app_granting(
     config: AppConfig,
     users: &[(&str, &[&str])],
+    bound: &[(&str, &str)],
 ) -> (testkit::TestDb, Router) {
     let (db, pool) = migrated_pool().await;
     let service = Arc::new(FerroEhrService::new(
         &ferroehr::db::domain::DomainPools::from_shared(&pool),
     ));
     grant_basic_users(&service, &pool, users).await;
+    bind_subjects(&pool, bound).await;
     (db, router_with(config, service).await)
+}
+
+/// The identifier issuer the logins of the `persons` issuer `issuer` bind
+/// under in [`bind_issuer`].
+pub(crate) fn logins_of(issuer: &str) -> String {
+    format!("{issuer}/logins")
+}
+
+/// Binds the logins of the `persons` issuer `issuer` in `config`: once a
+/// `[[auth.party]]` table binds the Basic users, every person is bound, the
+/// tokens of every `persons` issuer included.
+pub(crate) fn bind_issuer(config: &mut AppConfig, issuer: &str) {
+    config
+        .auth
+        .shared
+        .party
+        .push(ferrohealth_smart::party::config::PartySection {
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer),
+            identifier_issuer: logins_of(issuer),
+            identifier_type: "guid".to_owned(),
+            ..ferrohealth_smart::party::config::PartySection::default()
+        });
+}
+
+/// Commits into `pool` the `PERSON` each login `(issuer, sub)` binds to under
+/// [`bind_issuer`], unless one carries its key already.
+pub(crate) async fn bind_subjects(pool: &PgPool, bound: &[(&str, &str)]) {
+    let committer = binding_service(pool);
+    for (issuer, sub) in bound {
+        let logins = logins_of(issuer);
+        if !bound_already(pool, &logins, sub).await {
+            crate::party_binding_http::professional_of(&committer, &logins, sub, "532").await;
+        }
+    }
+}
+
+/// Whether a live `PERSON` in `pool` carries the key `key` under `issuer`.
+async fn bound_already(pool: &PgPool, issuer: &str, key: &str) -> bool {
+    let party = ferroehr::db::domain_pool_from(pool, ferroehr::db::domain::Domain::Party);
+    let today = jiff::Zoned::now()
+        .with_time_zone(jiff::tz::TimeZone::UTC)
+        .date()
+        .to_string();
+    let mut conn = party.acquire().await.expect("a connection");
+    ferroehr::party_binding::lookup::key_rows(&mut conn, issuer, "guid", key, &today)
+        .await
+        .expect("the binding key reads")
+        .iter()
+        .any(|row| row.live)
 }
 
 /// Drive one request through `app` and return its status, headers and body.

@@ -42,6 +42,7 @@ fn config(enabled: bool) -> AppConfig {
     // Basic and bearer together: the bearer issuer, and the Basic users of
     // `basic_users` beside it.
     config.auth = common::issuer_auth(ISSUER, AUDIENCE);
+    common::bind_issuer(&mut config, ISSUER);
     common::basic_users(&mut config, USERS);
     config.auth.shared.enabled = enabled;
     config
@@ -50,9 +51,10 @@ fn config(enabled: bool) -> AppConfig {
 /// The Basic user: a clinician.
 const USERS: &[(&str, &[&str])] = &[("alice", &["USER"])];
 
-/// The app under [`config`], the Basic user's `PERSON` committed.
+/// The app under [`config`], the `PERSON`s of the Basic user and of the
+/// bearer tokens' `alice` committed.
 async fn app(enabled: bool) -> (testkit::TestDb, Router) {
-    common::app_granting(config(enabled), USERS).await
+    common::app_granting(config(enabled), USERS, &[(ISSUER, "alice")]).await
 }
 
 /// The current POSIX second — the unit JWT `exp`/`iat` claims use (RFC 7519
@@ -754,8 +756,12 @@ async fn authenticated_write_attributes_the_default_committer() {
     let history: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
     let audit = &history["items"][0]["audits"][0];
     assert_eq!(
-        audit["committer"]["name"], "alice",
+        audit["committer"]["identifiers"][0]["id"], "alice",
         "default committer is the authenticated principal: {history}"
+    );
+    assert_eq!(
+        audit["committer"]["external_ref"]["type"], "PERSON",
+        "the Basic user commits as its bound PERSON: {history}"
     );
     assert_eq!(
         audit["committer"]["identifiers"][0]["type"], "basic",

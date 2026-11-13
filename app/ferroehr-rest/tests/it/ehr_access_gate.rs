@@ -65,8 +65,12 @@ const USERS: &[(&str, &[&str])] = &[
     ("nadia", &["NURSE"]),
 ];
 
-fn committer(name: &str) -> Value {
-    json!({ "_type": "PARTY_IDENTIFIED", "name": name })
+/// The committer a contribution names: the placeholder naming the Basic user
+/// `alice` by its login, since a Basic user commits as its bound `PERSON`,
+/// which the server writes.
+fn committer() -> Value {
+    json!({ "_type": "PARTY_IDENTIFIED",
+            "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": "alice" }] })
 }
 
 fn coded(code: &str, value: &str) -> Value {
@@ -100,7 +104,7 @@ fn access_contribution(ehr: &Value, scheme: &Value) -> Value {
         "_type": "CONTRIBUTION",
         "versions": [ {
             "_type": "ORIGINAL_VERSION",
-            "commit_audit": { "change_type": coded("251", "modification"), "committer": committer("alice") },
+            "commit_audit": { "change_type": coded("251", "modification"), "committer": committer() },
             "lifecycle_state": coded("532", "complete"),
             "preceding_version_uid": { "value": preceding },
             "data": {
@@ -117,7 +121,7 @@ fn access_contribution(ehr: &Value, scheme: &Value) -> Value {
                 "settings": scheme
             }
         } ],
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("alice") }
+        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer() }
     })
 }
 

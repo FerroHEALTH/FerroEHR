@@ -328,11 +328,15 @@ Entra ID exposes a standards-compliant OIDC issuer per tenant.
    # the `entra` profile reads.
    export FERROEHR__AUTH__ISSUER__0__PROFILE=entra
    export FERROEHR__AUTH__ISSUER__0__AUDIENCE=api://ferroehr
-   export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=<the client id of your app>
    export FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS=roles
    # Its roles may grant the administrator role.
    export FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=https://login.microsoftonline.com/<tenant-id>/v2.0
    ```
+
+   Then grant your app `sign_in_persons` in the CDR, on the `AGENT` carrying
+   its client id under the tenant issuer ([Operational
+   policy](operational-policy.md)); a person's token through any other
+   client is refused with `401`.
 
 5. **Verify**: request a token for the app (any OAuth2 client credential or
    auth-code flow) and call the API. Read the status codes as a diagnostic:
@@ -451,10 +455,11 @@ broker) rather than pointing anything at LDAP.
    # AD FS mints no RFC 9068 tokens: name the type and the claims its tokens carry.
    export FERROEHR__AUTH__ISSUER__0__TOKEN_TYPES=JWT
    export FERROEHR__AUTH__ISSUER__0__REQUIRED_CLAIMS=iss,sub,aud,exp
-   export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=<the client id of your app>
    export FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS=role
    export FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=https://adfs.example.com/adfs
    ```
+
+   Grant your app `sign_in_persons` in the CDR, as for Entra ID above.
 
    Discovery works out of the box (`https://adfs.example.com/adfs/.well-known/openid-configuration`).
 4. **Verify** with the same status table as above: `401` without a token, `403`

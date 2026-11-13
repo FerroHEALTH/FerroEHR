@@ -1095,9 +1095,9 @@ mod tests {
             .expect("ok");
         assert_eq!(p.principal.subject, "alice");
         assert_eq!(p.principal.method, AuthMethod::Basic);
-        assert_eq!(
-            p.principal.scopes,
-            vec!["user/composition-*.cruds".to_owned()]
+        assert!(
+            p.principal.scopes.is_empty(),
+            "a Basic user is a credential alone; its scopes are grants of its PERSON"
         );
         assert_eq!(
             p.principal.roles,

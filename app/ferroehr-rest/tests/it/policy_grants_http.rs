@@ -73,7 +73,7 @@ async fn replica(
         }
     }
     let mut app = common::api_config(true);
-    common::with_basic_users(&mut app, &svc, pool, &[("root", &["ADMIN"])]).await;
+    common::first_admin_only(&mut app, "root");
     app.auth
         .shared
         .issuer
@@ -114,6 +114,30 @@ async fn capabilities(app: &Router, credential: &str) -> Arc<Capabilities> {
     let (status, capabilities) = granted(app, credential).await;
     assert_eq!(status, StatusCode::OK);
     capabilities.expect("an authenticated request carries its capabilities")
+}
+
+/// The capabilities of a request of the first administrator `root`, which
+/// holds the product scope alone: a read of a party no store holds, which
+/// reaches its handler and answers `404`.
+async fn administrator_capabilities(app: &Router) -> Arc<Capabilities> {
+    let resp = app
+        .clone()
+        .oneshot(
+            common::req(
+                "GET",
+                format!("{BASE}/demographic/agent/{}", uuid::Uuid::nil()),
+            )
+            .auth(common::basic_credential("root"))
+            .accept("application/json")
+            .build(),
+        )
+        .await
+        .expect("a response");
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    resp.extensions()
+        .get::<Arc<Capabilities>>()
+        .cloned()
+        .expect("an authenticated request carries its capabilities")
 }
 
 /// The templates the grants of `capabilities` write, sorted.
@@ -271,7 +295,7 @@ async fn a_grant_changed_through_the_demographic_api_decides_the_next_request() 
         "a client no ACTOR names has none"
     );
     assert_eq!(
-        *capabilities(&app, &common::basic_credential("root")).await,
+        *administrator_capabilities(&app).await,
         Capabilities::default(),
         "a caller who is no system client and binds to no party has none"
     );

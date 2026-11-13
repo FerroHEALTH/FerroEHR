@@ -123,8 +123,10 @@ Basic user whose scopes do not grant the operation is refused with `403`. See
 > export FERROEHR__AUTH__ISSUER__0__KIND=persons
 > export FERROEHR__AUTH__ISSUER__0__PROFILE=keycloak
 > export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
-> export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=ferroehr-viewer
 > ```
+>
+> A person signs in through a client the CDR grants `sign_in_persons`, such
+> as the viewer, on the `AGENT` carrying its client id under the realm.
 >
 > Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068 profile the
 > server expects by default, which the `keycloak` profile admits. The client's

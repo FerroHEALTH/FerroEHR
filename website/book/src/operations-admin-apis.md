@@ -347,7 +347,7 @@ curl -H "Authorization: Bearer $TOKEN" \
   and the admin role, and it also needs the role
   [`authz.rbac.identifier_reader_role`](installation/config-auth.md#authzrbac)
   names or a `read_identifiers` policy grant
-  ([Operational policy](operational-policy.md#which-checks-read-a-grant)).
+  ([Operational policy](operational-policy.md#what-the-grants-decide)).
   Holding the admin role alone reveals no national identifier (**403**).
 - **Any version.** `version_uid` names one party version; a historical
   version shows the value it committed.

@@ -147,12 +147,15 @@ it, `enabled = true` refuses the start.
 export FERROEHR__AUTH__ISSUER__0__ISSUER=https://as.example/realms/ferroehr
 export FERROEHR__AUTH__ISSUER__0__KIND=persons
 export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
-export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=my-smart-app
 export FERROEHR__AUTH__SMART__DISCOVERY=true
 # The URL clients reach the server at, which the absolute service URLs hang
 # off; required.
 export FERROEHR__SERVER__PUBLIC_BASE_URL=https://cdr.example.com
 ```
+
+The app signs persons in once the CDR grants it `sign_in_persons`, on the
+`AGENT` carrying `my-smart-app` under the issuer
+([Operational policy](operational-policy.md)).
 
 A document looks like:
 

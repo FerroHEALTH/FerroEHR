@@ -120,12 +120,9 @@ pub struct RbacConfig {
     /// `[auth] product_scope` from this file
     /// (`FERROEHR__AUTHZ__RBAC__FIRST_ADMIN`, default unset).
     ///
-    /// A Basic user holds only the roles and scopes its `PERSON`'s policy
-    /// grants name, and `admin_role` is never one of them, so a new
-    /// deployment has no administrator to write the first policy party. This
-    /// user is that administrator: it writes the grants of every other
-    /// person through the Demographic API. Unset, no Basic user holds
-    /// `admin_role`. No openEHR spec governs this: our own design.
+    /// No policy grant gives `admin_role`, so this user is the administrator
+    /// who writes the first policy parties through the Demographic API.
+    /// Unset, no Basic user holds `admin_role`. Our own design.
     pub first_admin: Option<String>,
     /// What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default
     /// `open`).
@@ -262,9 +259,11 @@ pub struct AbacConfig {
     pub engine: AbacEngineKind,
     /// The JWT claim carrying the caller's organization (default
     /// `organization_id`); resolved opportunistically (absent → no attribute).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub organization_claim: String,
     /// The JWT claim carrying the patient id (default `patient_id`); its presence
     /// enables the local subject gate. Set to empty to disable the gate.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub patient_claim: String,
     /// The subject namespace patient-claim ids are issued in
     /// (`EHR_STATUS.subject.external_ref.namespace`, RM ehr master04 §EHR
@@ -274,6 +273,7 @@ pub struct AbacConfig {
     /// (claim, this value). Unset, a claim names the subject holding that id
     /// only when no other namespace holds the same id, and matches nothing
     /// otherwise. No openEHR spec governs the claim — our own extension.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub patient_namespace: Option<String>,
     /// Remote-PDP settings.
     pub remote: RemoteConfig,

@@ -61,6 +61,10 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
             .with_outbox_gate(OutboxGate::WhileGranted),
     )
     .await;
+    // NOTE: the Basic user's PERSON is committed before any reader is
+    // granted, so its commits write no outbox row.
+    let mut config = common::api_config(true);
+    common::with_basic_users(&mut config, &svc, &pool, &[("root", &[])]).await;
     for (client, reader) in [("bridge", READER), ("other", "other")] {
         let reads = capability("read_change_feed", &[scope("reader", reader)]);
         grant(&svc, MACHINES, client, &[reads]).await;
@@ -68,8 +72,6 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     // The replica's refresher reads the grants on the commits' notification.
     svc.grants().refresh().await.expect("the grants read");
     let svc = Arc::new(svc);
-    let mut config = common::api_config(true);
-    common::with_basic_users(&mut config, &svc, &pool, &[("root", &[])]).await;
     config.auth.shared.issuer.push(machines(
         MACHINES,
         ferrohealth_smart::profile::Preset::Rfc9068,

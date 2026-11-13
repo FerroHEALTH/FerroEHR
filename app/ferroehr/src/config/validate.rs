@@ -735,7 +735,9 @@ mod tests {
         config.authz.rbac.first_admin = Some("root".to_owned());
         assert_eq!(config.first_admin_error(), None);
         config.authz.rbac.first_admin = Some("admin".to_owned());
-        let refused = config.first_admin_error().expect("an unknown user is refused");
+        let refused = config
+            .first_admin_error()
+            .expect("an unknown user is refused");
         assert!(refused.contains("\"admin\""), "{refused}");
     }
 }

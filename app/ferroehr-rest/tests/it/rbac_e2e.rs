@@ -58,6 +58,7 @@ fn rest_config() -> AppConfig {
         c
     };
     config.auth = common::issuer_auth(ISSUER, AUDIENCE);
+    common::bind_issuer(&mut config, ISSUER);
     common::basic_users(&mut config, USERS);
     config.rbac.role_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(ISSUER)];
     config
@@ -87,6 +88,7 @@ async fn service(audit: Option<AuditSender>) -> (testkit::TestDb, Arc<FerroEhrSe
         svc = svc.with_audit(sender);
     }
     common::grant_basic_users(&svc, &pool, USERS).await;
+    common::bind_subjects(&pool, &[(ISSUER, "svc")]).await;
     (pg, Arc::new(svc))
 }
 
@@ -482,7 +484,10 @@ async fn default_committer_names_the_callers_issuer_on_both_paths() {
         );
         for audit in audits {
             let identifier = &audit["committer"]["identifiers"][0];
-            assert_eq!(audit["committer"]["name"], subject, "{id_type}: {history}");
+            assert_eq!(
+                audit["committer"]["external_ref"]["type"], "PERSON",
+                "{id_type}: the bound PERSON commits: {history}"
+            );
             assert_eq!(identifier["id"], subject, "{id_type}: {history}");
             assert_eq!(identifier["type"], id_type, "{id_type}: {history}");
             assert_eq!(identifier["issuer"], issuer, "{id_type}: {history}");

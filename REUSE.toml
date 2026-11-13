@@ -583,6 +583,30 @@ precedence = "override"
 SPDX-FileCopyrightText = "HL7 International"
 SPDX-License-Identifier = "CC0-1.0"
 
+# The FHIR R4 and R5 Consent resource: CC0 1.0, as each release's licence page
+# states.
+[[annotations]]
+path = "docs/specs/fhir-consent/**"
+precedence = "override"
+SPDX-FileCopyrightText = "HL7 International"
+SPDX-License-Identifier = "CC0-1.0"
+
+# IHE BPPC and APPC: the copyright licence of the IHE General Introduction,
+# chapter 9, vendored beside them; the LicenseRef text quotes the grant.
+[[annotations]]
+path = "docs/specs/ihe-consents/**"
+precedence = "override"
+SPDX-FileCopyrightText = "IHE International, Inc."
+SPDX-License-Identifier = "LicenseRef-IHE-Technical-Framework-Copyright"
+
+# The OASIS XACML 2.0 core specification: the document's own notice, a grant
+# to copy and distribute it unmodified with the notice kept.
+[[annotations]]
+path = "docs/specs/xacml/**"
+precedence = "override"
+SPDX-FileCopyrightText = "OASIS Open"
+SPDX-License-Identifier = "LicenseRef-OASIS-Copyright"
+
 # Logius's Logboek Dataverwerkingen NEN7513 Extensie: the W3C notice in its
 # LICENSE file, and CC BY 4.0 as its publication states.
 [[annotations]]
@@ -618,6 +642,9 @@ path = [
   "docs/specs/mitz/PROVENANCE.md",
   "docs/specs/ihe-balp/PROVENANCE.md",
   "docs/specs/fhir-auditevent/PROVENANCE.md",
+  "docs/specs/fhir-consent/PROVENANCE.md",
+  "docs/specs/ihe-consents/PROVENANCE.md",
+  "docs/specs/xacml/PROVENANCE.md",
   "docs/specs/dicom-ps3-15/PROVENANCE.md",
   "docs/specs/rfc-independent/PROVENANCE.md",
   "docs/specs/iso-health-informatics/PROVENANCE.md",

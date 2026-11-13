@@ -88,10 +88,11 @@ pub fn product_scope(section: &AuthSection) -> &str {
     }
 }
 
-/// Resolves `[auth]` into the issuers and the Basic store the crate checks
-/// credentials against, for a reader that classifies no token: the boot
-/// checks, the party mapping and the federation trust. A standing question
-/// asked of it fails ([`Unasked`]).
+/// Resolves `[auth]` for a reader that classifies no token.
+///
+/// The boot checks, the party mapping and the federation trust read the
+/// issuers and the Basic store; a standing question asked of the result fails
+/// ([`Unasked`]).
 ///
 /// # Errors
 /// [`AuthConfigError::Section`] when the crate refuses the section.
@@ -99,8 +100,10 @@ pub fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
     resolve_with(section, Arc::new(Unasked))
 }
 
-/// Resolves `[auth]` as [`resolve`] does, every issuer's standing questions
-/// answered by `standing`: which clients a `persons` issuer's people sign in
+/// Resolves `[auth]` with every issuer's standing questions answered by
+/// `standing`.
+///
+/// The questions are which clients a `persons` issuer's people sign in
 /// through or are acted for by, which RFC 8693 actors are delegates, and
 /// which system subjects are admitted without a scope.
 ///
