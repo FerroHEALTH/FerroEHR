@@ -332,9 +332,14 @@ pub(crate) async fn build_full(
     observability: ferroehr_rest::extensions::management::Observability,
 ) -> Router {
     Box::pin(first_party(&service, &config)).await;
-    Box::pin(ferroehr_rest::build_full(config, service, authz, observability))
-        .await
-        .expect("the router builds")
+    Box::pin(ferroehr_rest::build_full(
+        config,
+        service,
+        authz,
+        observability,
+    ))
+    .await
+    .expect("the router builds")
 }
 
 /// The `[auth]` table of `section`, with no vendor adapter table.
