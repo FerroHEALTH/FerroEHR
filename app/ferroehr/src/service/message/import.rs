@@ -68,6 +68,7 @@ use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::error::refusal::{Clash, Missing, Refusal};
 use crate::ids::{EhrId, VoId};
+use crate::party_binding::grants::operation::Operation;
 use crate::service::FerroEhrService;
 use crate::service::ehr::access_types::check_written_settings;
 use crate::storage::ehr_repo;
@@ -118,7 +119,7 @@ impl FerroEhrService {
         an_ehr_id: Option<EhrId>,
         an_extract: Extract,
     ) -> Result<EhrId, ServiceError> {
-        let (containers, parties) = self.admitted(&an_extract).await?;
+        let (containers, parties) = self.admitted(&an_extract, Operation::ImportEhr).await?;
         // A whole-EHR clone must carry an EHR_STATUS (EHR.ehr_status 1..1, RM
         // ehr §"EHR Creation") — the target could not otherwise be a valid EHR.
         if !containers.iter().any(|c| c.kind == Kind::EhrStatus) {
@@ -219,7 +220,9 @@ impl FerroEhrService {
                 format!("no EHR with id {an_ehr_id}"),
             ));
         }
-        let (containers, parties) = self.admitted(&an_extract).await?;
+        let (containers, parties) = self
+            .admitted(&an_extract, Operation::ImportEhrExtract)
+            .await?;
         reject_duplicate_singleton_containers(&containers)?;
 
         let mut conn = acquire(&self.pool).await?;
