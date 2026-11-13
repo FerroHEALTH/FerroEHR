@@ -1,0 +1,50 @@
+archetype (adl_version=2.0.6; rm_release=1.1.0)
+    openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"FerroEHR">
+        ["organisation"] = <"Cadasto B.V.">
+    >
+    lifecycle_state = <"unmanaged">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"The membership of a professional in a care team that puts them in the care of the team's patients: a PARTY_RELATIONSHIP from the professional's PERSON, its source, to the care team's GROUP, its target.">
+            use = <"Held in the professional's PERSON.relationships, written by the care delivery environment, such as a hospital's ADT or rostering system, under a write_care_relationship grant, with time_validity bounding the membership. Its details hold the code that makes it a care relationship, member_of of FerroEHR's terminology ferroehr-operations, and the member's optional role in the team. Adapted from the PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+    other_details = <
+        ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+        ["derived_from"] = <"openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0 (openEHR CKM 1013.1.475, modified 2019-08-09)">
+    >
+
+definition
+    PARTY_RELATIONSHIP[id1] matches {
+        details matches {
+            ITEM_TREE[id2] matches {
+                items matches {
+                    ELEMENT[id3] occurrences matches {1} matches {
+                        value matches { DV_CODED_TEXT[id4] }
+                    }
+                    ELEMENT[id6] occurrences matches {0..1} matches {
+                        value matches { DV_TEXT[id7] }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["id1"] = <text = <"Care team membership"> description = <"The membership of a professional in a care team.">>
+            ["id2"] = <text = <"Details"> description = <"The details of the care relationship.">>
+            ["id3"] = <text = <"Care relationship code"> description = <"The code that makes the relationship a care relationship: member_of of FerroEHR's terminology ferroehr-operations.">>
+            ["id6"] = <text = <"Role in the team"> description = <"The role the member holds in the team.">>
+        >
+    >

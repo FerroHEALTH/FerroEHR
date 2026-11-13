@@ -57,6 +57,7 @@ mod audit_ehds_mapping;
 mod audit_feed;
 mod audit_store;
 mod audit_text;
+mod caller_facts;
 mod canonical_json_literals;
 mod codec_corpus;
 mod cohort_bench;

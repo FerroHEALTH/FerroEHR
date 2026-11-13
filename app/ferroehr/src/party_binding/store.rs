@@ -37,7 +37,6 @@ use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
 use crate::error::ServiceError;
-use crate::error::refusal::{Clash, Refusal};
 use crate::ids::VoId;
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::{Facts, container};
@@ -50,7 +49,10 @@ use crate::storage::party_reverse;
 use crate::versioning::change::Committed;
 use crate::versioning::{Kind, SigningCtx};
 
+mod conflict;
 mod standalone;
+
+use conflict::selector_in_use;
 
 /// The `version_lifecycle_state` code of a logically deleted head.
 const DELETED: &str = "523";
@@ -93,38 +95,6 @@ impl Head {
     }
 }
 
-/// The `409` of a violation of one of the selector unique indexes: the commit
-/// gives a binding key, a `userName`, an `externalId` or a group
-/// `displayName` a second live party. Every other failure is classified as
-/// storage.
-pub(crate) fn selector_in_use(e: StorageError) -> ServiceError {
-    let StorageError::Database(source) = e else {
-        return ServiceError::Storage(e);
-    };
-    let selector = source
-        .as_database_error()
-        .filter(|db| db.is_unique_violation())
-        .and_then(|db| db.constraint())
-        .and_then(|constraint| match constraint {
-            "uq_binding_identifier_key" => Some("binding key"),
-            "uq_binding_identifier_user_name" => Some("userName"),
-            "uq_binding_identifier_external_id" => Some("externalId"),
-            "uq_binding_identifier_display_name" => Some("displayName"),
-            "uq_binding_client" => Some("client identifier"),
-            _ => None,
-        });
-    match selector {
-        Some(selector) => ServiceError::Conflict(
-            Refusal::new(
-                Clash::State,
-                format!("the {selector} this party carries is already held by another party"),
-            )
-            .with_source(source),
-        ),
-        None => ServiceError::Storage(StorageError::Database(source)),
-    }
-}
-
 /// Judges the party commit `committed` against the protection rules
 /// ([`crate::party_binding::protect`]), then brings its reverse-relationship
 /// index and side-table rows to its new head, on its commit transaction `tx`.
@@ -143,6 +113,7 @@ pub(crate) async fn reindex_committed(
     committed: &Committed,
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
+    grants::caller::check_content(facts)?;
     if committed.kind == Kind::PartyRelationship {
         return standalone::committed(tx, ctx.binding, committed, facts).await;
     }
@@ -188,9 +159,11 @@ pub(crate) async fn reindex_committed(
         .as_ref()
         .map_or(&[][..], |f| f.targets.as_slice());
     party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
+    let care = grants::caller::CareBefore::read(tx, committed).await?;
     reindex_heads(tx, ctx.binding, committed.kind, vec![head])
         .await
-        .map_err(selector_in_use)
+        .map_err(selector_in_use)?;
+    care.check(tx, ctx.binding).await
 }
 
 /// Rebuilds the reverse-relationship index of the party `vo_id` of `kind` from
