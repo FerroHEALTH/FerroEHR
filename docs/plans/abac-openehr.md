@@ -10,8 +10,9 @@
   Confidentiality), the BMM 2.4 P_BMM form of the vendored schemas;
   Regulation (EU) 2025/327 (EHDS) Art. 3(3), 4(2), 8, 9, 10, 11(5) and Annex
   II 3.2 and 3.4; Regulation (EU) 2016/679 (GDPR) Art. 6 and 9; ISO 22600 by
-  its public scope; HL7 FHIR R4 and R5 `Consent`, IHE BPPC and IHE APPC (none
-  of these three is vendored, see [Sources](#sources-and-what-each-requires));
+  its public scope; HL7 FHIR R4 and R5 `Consent`, IHE BPPC and IHE APPC
+  (vendored under `docs/specs/fhir-consent/` and `docs/specs/ihe-consents/`
+  by #5505, see [Sources](#sources-and-what-each-requires));
   the RBAC-as-demographic-data program (#5433 and its corrections), the admin
   registers (#5442, PR #5459), representatives (#5446) and the access log
   design (#5121, `docs/plans/access-log.md`).
@@ -201,11 +202,14 @@ operation the caller's capabilities do not grant.
   policy per EHR, a controller's policy, the role and delegation model in the
   demographic service). Anything beyond the public scope is checkable only
   against the standard.
-- **HL7 FHIR R4 and R5 `Consent`, IHE BPPC, IHE APPC:** not vendored. The
-  mapping below is written from the published resource definitions and
-  profile names as FerroEHR's authors know them, and every row is to be
-  checked against the vendored text before the mapping is built (build issue
-  1).
+- **HL7 FHIR R4 and R5 `Consent`, IHE BPPC, IHE APPC:** vendored by #5505.
+  FHIR R4 4.0.1 and R5 5.0.0 `Consent` (resource page, definitions,
+  StructureDefinition, the bound value sets, the examples) under
+  `docs/specs/fhir-consent/`; BPPC as ITI TF-1 chapter 19 and ITI TF-3
+  section 5.1 of the HTML Technical Framework, and the APPC supplement Rev.
+  1.4, under `docs/specs/ihe-consents/`. Every row of the
+  [Mappings](#mappings) cites the section or element that grounds it. XACML
+  2.0, on which APPC builds, is not vendored.
 
 ## Rules versus facts
 
@@ -520,10 +524,11 @@ filters rows by the same facts in SQL ([AQL](#aql)).
   reading the same patient sees the rest of the record, and the HIV results
   are left out.
 - **Regional sharing (BPPC).** The policy catalogue holds a permit directive
-  identified by the region's opt-in policy OID, applying to callers acting for
-  any `ORGANISATION` of the regional `GROUP`. A patient who signs it gets a
-  directive copied from the catalogue entry with the signed form as
-  `evidence`; `default_access` stays `consent_required` for everyone else.
+  identified by the region's opt-in policy (its BPPC code and code system),
+  applying to callers acting for any `ORGANISATION` of the regional `GROUP`.
+  A patient who signs it gets a directive copied from the catalogue entry
+  with the signed form as `evidence`; `default_access` stays
+  `consent_required` for everyone else.
 
 ### Per-request resolution with no added transactions
 
@@ -654,65 +659,230 @@ with this schema added as a second draft row:
 
 ### FHIR `Consent`, R4 and R5, both ways
 
-One directive is one `Consent`; its exceptions are nested provisions.
+Checked against the vendored R4 (4.0.1) and R5 (5.0.0) texts under
+`docs/specs/fhir-consent/` (#5505): the resource page (`consent.html`), the
+formal definitions (`consent-definitions.html`, cited below by element), the
+StructureDefinition (`consent.profile.json`, for cardinality and bindings),
+the bound value sets and the published examples.
 
-| `ACCESS_DIRECTIVE` | FHIR R4 `Consent` | FHIR R5 `Consent` |
-|---|---|---|
-| in force in the current `EHR_ACCESS` version | `status` `active`; a directive removed in a later version `inactive` | `status` `active` / `inactive` |
-| `kind` | `scope` `patient-privacy` and `category` (a FerroEHR code system for restriction, opt-out and delegation) | `category` |
-| EHR subject | `patient` | `subject` |
-| `instructed` | `dateTime` | `date` |
-| `instructed_by` | `performer` | `grantor` |
-| controller (from `ACCESS_POLICY`) | `organization` | `manager`, `controller` |
-| `evidence` | `sourceReference` (DocumentReference of the `ADMIN_ENTRY` composition) | `sourceReference` |
-| `legal_grounds` | `policy.authority` / `policyRule` | `regulatoryBasis` |
-| `identifiers` | `identifier` | `identifier`; a catalogue id in `policyBasis` |
-| `effect` | `provision.type` `permit` / `deny` | `decision` |
-| `time_validity` | `provision.period` | `period` |
-| `applies_to.party`, `.role` | `provision.actor.reference`, `.role` | `provision.actor` (and `grantee`) |
-| `operations` | `provision.action` | `provision.action` |
-| `purposes` | `provision.purpose` | `provision.purpose` |
-| `data.sensitivities` | `provision.securityLabel` | `provision.securityLabel` |
-| `data.categories`, `.templates` | `provision.code`, `provision.class` | `provision.code`, `provision.documentType` / `resourceType` |
-| `data.recorded` | `provision.dataPeriod` | `provision.dataPeriod` |
-| `data.objects` | `provision.data` (`meaning` `instance`) | `provision.data` |
-| `exceptions` | nested `provision` | nested `provision` |
+**The structure is a base policy with exceptions.** Both releases state it in
+§6.2.3 Background and Context: R4 "a base policy (represented as
+Consent.policy/Consent.policyRule) which is either opt-in or opt-out,
+followed by a listing of exceptions to that policy (represented as
+Consent.provision(s))"; R5 "a base policy (represented as Consent.decision)
+which is either permit or deny, followed by a listing of exceptions". R4
+`Consent.provision.type` is "Not permitted in root rule, required in all
+nested rules", and the root `Consent.provision` is "An exception to the base
+policy". R5 has no `provision.type`: `decision` is the default and every
+provision is an exception to its parent. Several published examples of
+both releases use three levels: the base, one exception carrying the scope, and
+exceptions nested in it (`consent-example-Emergency.json`,
+`consent-example-pkb.json`, `consent-example-smartonfhir.json`). That is the
+shape of a directive with a scope and exceptions, with the opposite effect as
+the base. The mapping is:
+
+- **Export.** A directive with empty `applies_to`, `operations`, `purposes`
+  and `data` is the base (R4 `policyRule`, R5 `decision`), and its
+  `exceptions` are the exception provisions. A directive with a scope is
+  written as the base of the opposite effect, its scope as the one exception
+  provision, and its own exceptions nested inside that one. The R4 base is
+  `policyRule` `OPTIN` (permit) or `OPTOUT` (deny) of v3 ActCode, the codes
+  the R4 examples use (`consent-example-notThem.json`,
+  `consent-example-Emergency.json`) under the extensible
+  ConsentPolicyRuleCodes binding. A scoped directive's `Consent` states the
+  opposite effect outside the scope, where FerroEHR decides by
+  `default_access` and the other directives: a loss to FHIR.
+- **Import.** A `Consent` whose exception provisions carry no nested
+  provision is one directive: the base's effect over the whole EHR, the
+  exception provisions as its `exceptions`. A `Consent` whose exception
+  provisions nest further gives one directive per exception provision: the
+  exception's effect, its conditions as the scope, the nested provisions as
+  its `exceptions`. Its base then adds a whole-EHR permit directive when it
+  permits (deny-overrides keeps every scoped deny in force). When it denies,
+  it adds nothing if the EHR's `default_access` is not `open`, and the
+  `Consent` is refused if it is, since a whole-EHR deny directive would
+  override the scoped permits. A provision nested a level deeper is refused
+  with the element named. A scoped directive therefore comes back from its
+  own export with its base as a second fact; the owner decides whether that
+  stands or the export of scoped directives stays one way.
+- **Codes the import reads.** An R4 `policyRule` other than `OPTIN` or
+  `OPTOUT` is read as an `ACCESS_POLICY.catalogue` identifier and refused
+  when the catalogue does not hold it. An R5 `Consent` with provisions and no
+  `decision` is refused: it has no base. A nested R4 `type` equal to its
+  parent's effect is refused, since it would not be an exception; an absent
+  one (`consent-example-pkb.json` nests eleven) is read as the opposite of
+  its parent, the way R5 reads every provision.
+
+The text fixes the base and the exceptions; how a base maps onto
+`default_access` and how a three-level `Consent` splits into directives is
+FerroEHR's own design, since FHIR leaves enforcement out of scope (§6.2.3:
+"The specification of these details is not in scope for the Consent
+resource").
+
+The R4 examples do not read the root provision one way:
+`consent-example-Out.json` pairs `OPTOUT` with a root provision whose
+narrative withholds data, while `consent-example-Emergency.json` pairs
+`OPTOUT` with a root provision that permits. The import follows the
+definition (the root provision is an exception to the base), and the
+round-trip tests name `consent-example-Out.json` as the R4 example whose
+narrative reads the other way. `consent-example-notOrg.json` carries a root
+`type` the definition does not permit; the import accepts a root `type` that
+equals the exception's effect and refuses one that contradicts it. Of the
+vendored examples, `consent-example-notThis.json` (both releases) is refused
+for its `provision.data.meaning` `related`; every other one imports under
+these rules.
+
+| `ACCESS_DIRECTIVE` | FHIR R4 `Consent` | FHIR R5 `Consent` | Ground in the vendored text |
+|---|---|---|---|
+| in force in the current `EHR_ACCESS` version | `status` `active`; a directive removed in a later version `inactive` | `status` `active` / `inactive` | `Consent.status`, required ConsentState: `inactive` "The consent is terminated or replaced" |
+| `kind` | `scope` `patient-privacy`; `category` LOINC `59284-0` Patient Consent (`57016-8` Privacy policy acknowledgement Document for a directive copied from a BPPC catalogue entry), with the FerroEHR kind code as a second coding | `category`: the FerroEHR kind code, LOINC `59284-0` beside it | R4 `Consent.scope` 1..1, extensible, "This list is now extensible"; R4 `Consent.category` 1..*, extensible ConsentCategoryCodes, which holds `59284-0` and `57016-8` and no code for a restriction, an opt-out or a delegation; R5 `Consent.category` 0..*, example binding |
+| EHR subject | `patient` | `subject` | R4 `Consent.patient`, required by ppc-2 when the scope is privacy; R5 `Consent.subject` Reference(Patient \| Practitioner \| Group) |
+| `instructed` | no element; `dateTime` takes the commit time of the `EHR_ACCESS` version, and `instructed` goes in the FerroEHR extension | `date`, the day only | R4 `Consent.dateTime`: "not the time of the original consent, but the time that this statement was made or derived"; R5 `Consent.date` is a `date`, "Date the consent instance was agreed to" |
+| `instructed_by` | `performer` | `grantor` | R4 `Consent.performer` is "Either the Grantor ... or the Grantee", so an R4 import cannot tell the two apart; R5 `Consent.grantor` |
+| controller (from `ACCESS_POLICY`) | `organization` | `manager`, `controller` | R4 `Consent.organization` "manages the consent"; R5 `Consent.manager`, `Consent.controller` "controls/enforces the access" |
+| `evidence` | `sourceReference`, one item | `sourceReference` | R4 `Consent.source[x]` 0..1; R5 `Consent.sourceReference` 0..* (DocumentReference among its targets) |
+| `legal_grounds` | `policy`, one per ground (`uri` the provision, `authority` the issuing body) | `regulatoryBasis` | R4 `Consent.policy` 0..*, `uri`; `policyRule` 0..1 carries the base (§6.2.3, §6.2.5), and ppc-1 needs `policy` or `policyRule`; R5 `Consent.regulatoryBasis` 0..*, example ConsentPolicyRuleCodes |
+| the catalogue entry a directive was copied from | `policy.uri`, the policy identifier (`urn:oid:` for a BPPC policy) | `policyBasis.url`, the URL of the entry on the `ACCESS_POLICY` resource | R4 `Consent.policy.uri` "Specific policy covered by this consent"; R5 `Consent.policyBasis.url` "should be dereferencable to a computable policy" |
+| `identifiers` | `identifier` | `identifier` | `Consent.identifier` 0..* in both |
+| `effect` | the base or the exception, as above | the base or the exception, as above | §6.2.3 and `Consent.provision.type` (R4), `Consent.decision` (R5) |
+| `time_validity` | root `provision.period` | `period` | R4 has no `Consent.period`; R4 `provision.period` "The timeframe in this rule is valid"; R5 `Consent.period` covers "all provisions unless specified in that provision" |
+| `applies_to.party` | `provision.actor.reference`, with `actor.role` a participation code (`PRCP` in the examples) | `provision.actor.reference`, `actor.role` optional; `grantee` repeats the parties for search | `provision.actor.role` is "How the individual is involved", bound to SecurityRoleType (R4, 1..1) and ParticipationRoleType (R5, 0..1), never the caller's functional role; R5 `Consent.grantee`: "for ease of search only" |
+| `applies_to.role` | `provision.actor.reference` to a `Group` of the actors holding the role | the same | `provision.actor.reference`: "use group to identify a set of actors by some property they share (e.g. 'admitting officers')" |
+| `operations` | `provision.action` | `provision.action` | example ConsentActionCodes; "the only action in the understood and tested scope of this resource is 'read'" |
+| `purposes` | `provision.purpose` | `provision.purpose` | extensible PurposeOfUse, `Coding` |
+| `data.sensitivities` | `provision.securityLabel` | `provision.securityLabel` | "If the consent specifies a security label of 'R' then it applies to all resources that are labeled 'R' or lower"; for other labels "subsumption logic applies" |
+| `data.categories` | `provision.code` | `provision.code` | "If this code is found in an instance, then the rule applies" |
+| `data.templates` | `provision.class` | `provision.documentType` | R4 `provision.class`: "a FHIR resource type, a profile on a type, or a CDA document, or some other type"; R5 `provision.documentType` "some other type that indicates what sort of information"; R5 `provision.resourceType` is bound extensibly to FHIR resource types and takes no openEHR template |
+| `data.recorded` | `provision.dataPeriod` | `provision.dataPeriod` | "Clinical or Operational Relevant period of time that bounds the data"; the commit time is the operational period, so an imported clinical period is read as a commit-time bound |
+| `data.objects` | `provision.data` (`meaning` `instance`) | `provision.data` (`meaning` `instance`) | required ConsentDataMeaning: `instance` "applies directly to the instance of the resource" |
+| `exceptions` | `provision` with `type`, inside the exception | `provision`, inside the exception | R4 nested `provision.type` is required; R5 `provision.provision` "Provisions which provide exceptions to the base provision or subprovisions" |
 
 Losses, in each direction:
 
-- **From FHIR:** provisions nested deeper than one level, `provision.data`
-  with `meaning` `related` or `dependents`, and R5 `provision.expression` have
-  no openEHR form; an import refuses the `Consent` and names the element,
-  never drops it. `verification` maps to `details` only.
-- **To FHIR:** `emergency_override` and `relationship` (the care relationship
-  as a match condition) have no core element; they go in a FerroEHR
-  extension. `origins` maps to no core element either.
-- **R4 `Consent.scope`** forces a choice of one of four scopes; a restriction
-  and an opt-out are both `patient-privacy`, told apart by `category`.
+- **From FHIR:** a provision nested deeper than the three levels above;
+  `provision.data` with
+  `meaning` `related`, `dependents` or `authoredby` (ConsentDataMeaning has
+  these four codes); R5 `provision.expression`; R5 `policyBasis` that names a
+  computable policy other than a catalogue entry; an R4 `policyRule` the
+  catalogue does not hold; an actor reference to a resource with no party in
+  the demographic service. An import refuses the `Consent` and names the
+  element, never drops it. `verification` maps to `details` only. A
+  `securityLabel` from the confidentiality system covers its level and every
+  lower one, so the import maps it to every sensitivity code at or below
+  it.
+- **To FHIR:** `emergency_override`, `relationship` and `caller_kind` have no
+  core element; they go in a FerroEHR extension. `origins` maps to no core
+  element either. R4 loses `instructed` to the extension and every
+  `evidence` item after the first; R5 keeps the day of `instructed` only. A
+  scoped directive states the opposite effect outside its scope (above).
+  The model's one level of exceptions holds every shape the vendored
+  examples use.
+- **R4 `Consent.scope`** is bound extensibly to the four codes `adr`,
+  `research`, `patient-privacy` and `treatment`; every directive is
+  `patient-privacy`, and the kinds are told apart by `category`.
 
 ### IHE BPPC
 
+Checked against ITI TF-1 chapter 19 and ITI TF-3 section 5.1 under
+`docs/specs/ihe-consents/profiles.ihe.net/ITI/TF/` (#5505).
+
 BPPC records that a patient acknowledged a privacy policy the policy domain
-publishes, identified by an OID, in a document; it carries no structured
-rule. FerroEHR maps an acknowledgment to the `ACCESS_POLICY.catalogue` entry
-with that identifier: the directive is copied into the patient's
-`EHR_ACCESS` with the BPPC document (stored as a composition) as `evidence`.
-An OID the catalogue does not hold is refused, since FerroEHR cannot know what
-the policy means. Export writes the BPPC acknowledgment for every directive
-copied from a catalogue entry. No loss for policies in the catalogue.
+publishes; it carries no structured rule ("the content of the policy is human
+readable text, and that we provide no structured or coded way to interpret",
+TF-1 19.1.1). The acknowledgement is a CDA R2 document (TF-3 5.1.2, template
+`1.3.6.1.4.1.19376.1.5.3.1.1.7`; with a scanned part, 5.1.3, template
+`.1.7.1` on XDS-SD) with one `documentationOf/serviceEvent` per policy
+acknowledged (5.1.2.2.3). Each `serviceEvent/code` names the policy: `code`
+is the Patient Privacy Policy Identifier and `codeSystem` the policy domain's
+code system (5.1.2.2.6). Each `serviceEvent/effectiveTime` gives the range
+over which the acknowledgement holds: `low` required, `high` optional, the
+same in every service event of one document (5.1.2.2.7).
+
+FerroEHR maps each service event to the `ACCESS_POLICY.catalogue` entry with
+that `code` in that `codeSystem`: the entry's directive is copied into the
+patient's `EHR_ACCESS` with `effectiveTime` as its `time_validity`, the
+policy code in `identifiers`, and the BPPC document (stored as a
+composition) as `evidence`. A document that acknowledges several policies
+gives one directive per service event, all with the same `evidence`. A
+policy the catalogue does not hold is refused, since FerroEHR cannot know
+what it means. An opt-out policy (TF-1 19.1.1.2) is a catalogue entry whose
+directive denies. Where the domain runs on implied consent, no
+acknowledgement exists (TF-1 19.1.1, 19.6.1) and `default_access` carries
+that rule.
+
+Export writes, for the directives copied from catalogue entries, one
+acknowledgement document per distinct `time_validity` ("If different
+effectiveTimes are needed then different documents should be generated",
+5.1.2.2.7), with the text description, the policy codes and the time range
+the content module requires (5.1.2.2), LOINC `57016-8` and format code
+`urn:ihe:iti:bppc:2007` (5.1.2.1.1). No loss for policies in the catalogue.
+BPPC defines no revocation: a directive removed in a later version is
+withdrawn by the document sharing infrastructure, from which a consumer
+reads only "Approved" acknowledgements (TF-1 19.6.4).
 
 ### IHE APPC
 
-APPC carries structured policies (XACML) inside the consent document. Each
-XACML policy maps to one directive: `Effect` to `effect`; the subject
-attributes (role, organisation, user id, purpose of use) to `applies_to` and
-`purposes`; the resource attributes (confidentiality code, class and type
-codes, practice setting) to `data`; the environment's time bounds to
-`time_validity`. A policy set whose combining algorithm is deny-overrides
-maps whole. First-applicable and permit-overrides, and conditions over other
-attributes, have no form here and are refused on import with the element
-named. Export writes one XACML policy per directive and exception, under
-deny-overrides.
+Checked against the APPC supplement, Rev. 1.4 (Trial Implementation, July 2,
+2021), under `docs/specs/ihe-consents/www.ihe.net/` (#5505). APPC builds on
+XACML 2.0 (TF-3 5.6.1), which is not vendored; the statements below about
+XACML's own structure (`Effect` on `Rule`, the combining algorithm
+attributes) rest on that standard and are to be checked against it when it
+is vendored.
+
+A Privacy Consent Document is an XACML 2.0 document with exactly one root
+`PolicySet`, whose `PolicySetId` is a URN-encoded UUID, which holds a
+`Description`, and which matches the patient by
+`urn:ihe:iti:ser:2016:patient-id` (TF-3 5.6.2.1.1, 5.6.2.1.1.1). The patient
+match maps to the EHR subject. The root may reference the policy domain's
+foundational policies by `PolicySetIdReference` or `PolicyIdReference`
+instead of carrying rules; "How external references are resolved is out of
+scope for this profile" (5.6.2.1.1), and the profile's own example
+(5.6.2.1.1.2) is such a reference narrowed by a subject `Target`. FerroEHR
+resolves a reference against `ACCESS_POLICY.catalogue`, as for BPPC, and
+refuses one the catalogue does not hold. When a BPPC document is the human
+readable form, the Root Policy Set ID equals the BPPC policy identifier
+(5.6.2.1.1.1).
+
+A policy the document carries maps to one directive. Its `effect` is the
+`Effect` of its rules (XACML places `Effect` on `Rule`), a rule of the
+opposite effect whose target narrows the policy's maps to an exception, and
+anything else is refused. The attributes map by the profile's tables:
+
+| APPC attribute (TF-3 section) | `ACCESS_DIRECTIVE` |
+|---|---|
+| Subject: User ID, string (5.6.2.1.4.1); NPI and Other Provider Identifier, `II` (5.6.2.1.4.5, .8) | `applies_to.party`, a `PERSON` found by identifier |
+| Subject: User Organization ID, `anyURI` (5.6.2.1.4.3) | `applies_to.party`, an `ORGANISATION` |
+| Subject: User Role, `CV` (5.6.2.1.4.6) | `applies_to.role` |
+| Subject: Purpose Of Use, `CV` (5.6.2.1.4.7) | `purposes` |
+| Resource: Patient ID (5.6.2.1.5.1.5) | the EHR subject |
+| Resource: Confidentiality Code (5.6.2.1.5.2.2) | `data.sensitivities` |
+| Resource: Class Code, Type Code (5.6.2.1.5.2.1, .13) | `data.categories` |
+| Resource: Author Institution ID, Source System ID (5.6.2.1.5.1.1, .6) | `data.origins` |
+| Resource: Creation Time (5.6.2.1.5.2.3) | `data.recorded` |
+| Resource: Document Unique ID, Reference ID List (5.6.2.1.5.2.14, .9) | `data.objects`, where the identifier names an object the EHR holds |
+| Action: `action-id`, an IHE transaction URI (5.6.2.1.6.1) | `operations`, through a fixed table from transaction to FerroEHR operation (own design) |
+| Document entry `serviceStartTime`, `serviceStopTime` (5.6.2.2.1.6, .7) | `time_validity` |
+
+APPC defines no environment attribute ("No additional constraints",
+5.6.2.1.7), so `time_validity` comes from the document entry's service
+times. A time condition inside the policy that is a plain interval narrows
+it; any other condition is refused. User Organization (a plain-text name),
+User Home Community ID, Author Person ID, Event Code, Healthcare Facility
+Type Code, Practice Setting Code, Service Start and Stop Time of a document,
+and the Folder and SubmissionSet attributes have no form in `data` or
+`applies_to` and are refused on import with the attribute named.
+
+APPC fixes no combining algorithm: it lists "Should the profile define a
+policy-combining and a rule-combining algorithm?" as open issue APPC-7, and
+its example uses `policy-combining-algorithm:deny-overrides`. A policy set
+or policy whose combining algorithm is deny-overrides maps whole, since the
+evaluator is deny-overrides; first-applicable, permit-overrides and the
+others are refused on import with the element named. Export writes one root
+`PolicySet` per document with `PolicyCombiningAlgId` deny-overrides, the
+`Description` and patient match the profile requires, one `Policy` per
+directive with its exceptions as rules, the document entry `typeCode`
+`57016-8` and `formatCode` `urn:ihe:iti:appc:2016:consent` (5.6.2.2.1.1,
+.3).
 
 ### EHDS
 
@@ -809,7 +979,8 @@ it removes and adds. In order, each blocked by the one before unless noted:
    `docs/specs/` with provenance, and re-check every row of the
    [Mappings](#mappings) against them. AC: the texts are vendored with
    sha256 pins; the mapping table cites section by section; any row that
-   does not hold is corrected here before issue 10.
+   does not hold is corrected here before issue 10. Done in #5505: the
+   corrections are in the three mapping sections.
 2. **Generate the draft types.** Depends on #5124 landing. Add the access
    control BMM as a second draft row; decide the re-emitted RM classes;
    hand-written invariant checks with one refusing test per invariant;
@@ -864,8 +1035,9 @@ it removes and adds. In order, each blocked by the one before unless noted:
     and `[authz.abac.policy]` and the `ferrohealth-authz` remote client use.
     AC: as issue 11.
 13. **FHIR `Consent` and IHE APPC/BPPC import and export.** After 1 and 9.
-    AC: round trips of the vendored examples; each listed loss refused with
-    the element named.
+    AC: every vendored `Consent` example imports, or is refused, as the
+    FHIR section states; round trips of directives through each format;
+    each listed loss refused with the element named.
 14. **Docs.** `docs/architecture.md` records the design with its citations
     and own-design labels (the acceptance criterion of #5487); the book's
     security page loses the Cedar section and gains "Access directives",
