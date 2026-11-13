@@ -208,8 +208,12 @@ operation the caller's capabilities do not grant.
   `docs/specs/fhir-consent/`; BPPC as ITI TF-1 chapter 19 and ITI TF-3
   section 5.1 of the HTML Technical Framework, and the APPC supplement Rev.
   1.4, under `docs/specs/ihe-consents/`. Every row of the
-  [Mappings](#mappings) cites the section or element that grounds it. XACML
-  2.0, on which APPC builds, is not vendored.
+  [Mappings](#mappings) cites the section or element that grounds it.
+- **OASIS XACML 2.0:** vendored by #5525. The core specification (OASIS
+  Standard, 1 February 2005) under `docs/specs/xacml/`; APPC writes its
+  consent documents in it (APPC TF-3 5.6.1). The APPC mapping cites its
+  policy structure (§5.1, §5.22, §5.29, §5.30) and its combining algorithms
+  (§B.10, Appendix C).
 
 ## Rules versus facts
 
@@ -824,10 +828,9 @@ reads only "Approved" acknowledgements (TF-1 19.6.4).
 
 Checked against the APPC supplement, Rev. 1.4 (Trial Implementation, July 2,
 2021), under `docs/specs/ihe-consents/www.ihe.net/` (#5505). APPC builds on
-XACML 2.0 (TF-3 5.6.1), which is not vendored; the statements below about
-XACML's own structure (`Effect` on `Rule`, the combining algorithm
-attributes) rest on that standard and are to be checked against it when it
-is vendored.
+XACML 2.0 (TF-3 5.6.1); the statements below about XACML's own structure
+cite the core specification under `docs/specs/xacml/` (#5525) as "XACML"
+with its section.
 
 A Privacy Consent Document is an XACML 2.0 document with exactly one root
 `PolicySet`, whose `PolicySetId` is a URN-encoded UUID, which holds a
@@ -843,10 +846,31 @@ refuses one the catalogue does not hold. When a BPPC document is the human
 readable form, the Root Policy Set ID equals the BPPC policy identifier
 (5.6.2.1.1.1).
 
-A policy the document carries maps to one directive. Its `effect` is the
-`Effect` of its rules (XACML places `Effect` on `Rule`), a rule of the
-opposite effect whose target narrows the policy's maps to an exception, and
-anything else is refused. The attributes map by the profile's tables:
+A policy the document carries maps to one directive. XACML places `Effect`
+on `Rule` alone: `RuleType` requires the attribute and `EffectType` takes
+`Permit` or `Deny` (XACML 5.29, 5.30), while `PolicyType` and
+`PolicySetType` carry no effect (5.22, 5.1). The directive's `effect` is
+therefore the `Effect` of the policy's base rule, the rule whose target is
+the policy's own (a rule with no `Target` takes the policy's, 5.29). A rule
+of the opposite effect whose target narrows the base maps to an exception,
+provided the policy's `RuleCombiningAlgId` lets that rule decide where both
+apply, as an exception does; anything else is refused. XACML 5.22 makes
+`RuleCombiningAlgId` required on every `Policy`, so the pairing is always
+stated:
+
+- deny-overrides (C.1) or ordered-deny-overrides (C.2, the same algorithm
+  evaluated in document order): a `Permit` base with `Deny` exceptions;
+- permit-overrides (C.3) or ordered-permit-overrides (C.4): a `Deny` base
+  with `Permit` exceptions;
+- first-applicable (C.5): either base, when every exception rule precedes
+  the base rule, since the first rule whose target and condition hold
+  decides.
+
+Under deny-overrides a `Permit` rule never decides where a `Deny` rule also
+applies (C.1), so a `Deny` base with `Permit` rules under it is refused with
+the policy named, and so is the mirror case under permit-overrides. A
+policy with a single rule maps whatever its rule-combining algorithm. The
+attributes map by the profile's tables:
 
 | APPC attribute (TF-3 section) | `ACCESS_DIRECTIVE` |
 |---|---|
@@ -874,15 +898,38 @@ and the Folder and SubmissionSet attributes have no form in `data` or
 
 APPC fixes no combining algorithm: it lists "Should the profile define a
 policy-combining and a rule-combining algorithm?" as open issue APPC-7, and
-its example uses `policy-combining-algorithm:deny-overrides`. A policy set
-or policy whose combining algorithm is deny-overrides maps whole, since the
-evaluator is deny-overrides; first-applicable, permit-overrides and the
-others are refused on import with the element named. Export writes one root
-`PolicySet` per document with `PolicyCombiningAlgId` deny-overrides, the
-`Description` and patient match the profile requires, one `Policy` per
-directive with its exceptions as rules, the document entry `typeCode`
-`57016-8` and `formatCode` `urn:ihe:iti:appc:2016:consent` (5.6.2.2.1.1,
-.3).
+its example uses
+`urn:oasis:names:tc:xacml:1.0:policy-combining-algorithm:deny-overrides`
+(5.6.2.1.1.2). XACML defines the two kinds apart: a `PolicySet` names a
+policy-combining algorithm in `PolicyCombiningAlgId` and a `Policy` a
+rule-combining algorithm in `RuleCombiningAlgId`, both required (5.1,
+5.22). Its identifiers (B.10), all of which a conforming implementation
+must support (10.2.3), are `deny-overrides`, `permit-overrides` and
+`first-applicable` in both kinds under
+`urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:` and
+`urn:oasis:names:tc:xacml:1.0:policy-combining-algorithm:`,
+`only-one-applicable` for policy sets alone under the second, and
+`ordered-deny-overrides` and `ordered-permit-overrides` in both kinds under
+the `urn:oasis:names:tc:xacml:1.1:` prefixes. XACML 2.0 adds no `2.0`
+combining identifier.
+
+Directives combine by deny-overrides across an EHR (step 3 of the decision
+procedure), which is the policy-combining deny-overrides of XACML C.1: any
+policy that evaluates to `Deny` decides. A policy set whose
+`PolicyCombiningAlgId` is deny-overrides or ordered-deny-overrides maps
+whole; permit-overrides, ordered-permit-overrides, first-applicable and
+only-one-applicable (C.3 to C.6) are refused on import with the element
+named. A policy's `RuleCombiningAlgId` is checked by the rule above. Export
+writes one root `PolicySet` per document with `PolicyCombiningAlgId`
+`urn:oasis:names:tc:xacml:1.0:policy-combining-algorithm:deny-overrides`,
+the `Description` and patient match the profile requires, and one `Policy`
+per directive: a `permit` directive with `RuleCombiningAlgId`
+`urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-overrides`, a
+`deny` directive with
+`urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:permit-overrides`,
+the base as one rule and each exception as one rule, so that an exception
+decides where it applies. The document entry carries `typeCode` `57016-8`
+and `formatCode` `urn:ihe:iti:appc:2016:consent` (5.6.2.2.1.1, .3).
 
 ### EHDS
 
