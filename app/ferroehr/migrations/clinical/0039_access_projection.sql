@@ -147,6 +147,10 @@ CREATE TRIGGER tg_access_settings_notify
     AFTER INSERT OR UPDATE OR DELETE ON access_settings
     FOR EACH ROW EXECUTE FUNCTION access_settings_notify();
 
+-- PUBLIC holds EXECUTE on a new function by default (PostgreSQL 18, GRANT,
+-- "Notes"); only the trigger calls it, so no role of any domain reaches it.
+REVOKE ALL ON FUNCTION access_settings_notify() FROM PUBLIC;
+
 DO $$
 BEGIN
     IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'ferroehr_clinical') THEN

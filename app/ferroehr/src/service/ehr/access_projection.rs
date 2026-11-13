@@ -15,7 +15,7 @@
 //! label. Settings that do not read as the `access_directives` scheme project
 //! as held closed, with no directive or label. A change to an EHR's settings
 //! notifies every replica when it commits, so each drops its copy
-//! ([`crate::service::ehr::access::EhrAccessCache`]). No openEHR spec governs
+//! (`service::ehr::access::EhrAccessCache`). No openEHR spec governs
 //! the projection: our own design (#5509).
 
 #![expect(
