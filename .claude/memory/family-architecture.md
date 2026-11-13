@@ -30,7 +30,7 @@ The rules that follow from it:
 - **Shared crates carry the cross-cutting work**, never a product's domain:
   - FerroAUTH (renamed from FerroSMART on 2026-10-25): `ferrohealth-smart` (authentication, OAuth 2.0 and SMART,
     the authenticated subject with its scopes and roles) and
-    `ferrohealth-authz` (the policy decision: ABAC, Cedar, a remote PDP);
+    `ferrohealth-authz` (the policy decision: ABAC, Cedar);
   - FerroAUDIT: `ihe-atna` (the whole audit trail: sending, forwarding and
     retrieving) and `ehds-logging` (the EHDS access record);
   - FerroUI: `ferrohealth-ui` (every console);

@@ -1,0 +1,1 @@
+NOTE: This is a draft change proposal prepared in the FerroEHR repository. It has not been submitted to openEHR and is not part of any RM release. Submitting it, or any part of it, to openEHR needs the FerroEHR owner's approval.

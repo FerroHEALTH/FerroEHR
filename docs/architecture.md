@@ -280,6 +280,20 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   resolve a party or a subject through them; `service::linkage` holds those
   crossings and the access record each one owes. The linkage schema that held a
   cross-reference before is gone (`audit/0021_drop_linkage_domain.sql`).
+- **The access log** is the `audit` schema. `audit_event` holds one row per
+  access as the request path writes it today, with the FHIR `AuditEvent`
+  rendered from its columns. `access_log_record` holds the draft openEHR
+  `ACCESS_LOG_ENTRY` (#5121) as its ITS-JSON canonical form without its link
+  (RFC 8785), the search columns its insert trigger derives from that form,
+  and its `ACCESS_LOG_LINK`: the content digest over the canonical form and
+  the digest over the previous digest, the sequence and the content digest.
+  Both tables continue one hash chain under one cursor and one head
+  (`audit_chain_state`), each `audit_event` row keeps verifying under its
+  `digest_version`, and `audit.verify_audit_chain()` and its incremental form
+  walk both in position order. An entry changes only by its replacement with
+  its own tombstone, which keeps its uid, time and link, so the chain verifies
+  after its content is gone (`audit/0027_access_log_record.sql`,
+  `access_log::store`). No openEHR spec governs audit storage: our own design.
 - **One pool and one DSN per storage domain.** `[database.clinical]`,
   `[database.party]` and `[database.audit]` each carry a
   `url`/`url_file`, defaulting to the shared `[database].url`, and
@@ -399,8 +413,7 @@ which is what makes an optional stage safe to disable:
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an
    OAuth2 scope is NOT a role (RFC 6749 §3.3).
-4. **ABAC** — off by default. A policy engine (embedded Cedar, or an external
-   PDP) decides over subject attributes (subject, roles, scopes, organization,
+4. **ABAC** — off by default. The embedded Cedar engine decides over subject attributes (subject, roles, scopes, organization,
    patient) and resource attributes (patient, template), fanned out over
    multi-valued attributes as a cartesian product with **all-must-permit** and
    short-circuit deny.
@@ -408,12 +421,14 @@ which is what makes an optional stage safe to disable:
    can only narrow. Disabled SMART produces zero wire drift.
 
 **Deny-by-default and fail-closed, in both senses.** No stage permits by
-omission: a gate reached without a principal refuses; an unconfigured resource
-kind on the external PDP denies (and the missing rule is a boot error); Cedar is
+omission: a gate reached without a principal refuses; Cedar is
 deny-by-default with `forbid` overriding `permit`. And a stage that cannot
 DECIDE is never read as a decision — an unreachable token issuer is `503`, a
-policy server answering `5xx` or a Cedar policy that errors during evaluation is
-a fail-closed `500`. Silence is never consent, and a broken control never looks
+Cedar policy that errors during evaluation is a fail-closed `500`. FerroEHR
+calls no remote policy decision point: the owner removed it on 2026-11-13
+(#5487, #5516), since it is a second policy world over HTTP that receives none
+of the openEHR access facts, and ITS-REST 1.1.0 mandates no authorization
+scheme (`Requests_and_responses.md` §Authentication and authorization). Silence is never consent, and a broken control never looks
 like a policy outcome.
 
 Configuration is boot-validated rather than degraded at the first request: a
@@ -1035,7 +1050,7 @@ adapter (`ferroehr-rest`) calls directly:
 | Demographic | `service::demographic` | ITS-REST Demographic API |
 | Query | `service::query` | ITS-REST Query API, AQL |
 | Validity checking | `service::validity` | RM and AM invariants at commit |
-| System log | `ferroehr::system_log` (dual DICOM PS3.15 + FHIR `AuditEvent`/BALP rendering, written and sent by the shared FerroAUDIT crates `ihe-atna` and `ehds-logging`; local Audit Record Repository in the `audit` schema, on by default; syslog + ITI-20 ATX:FHIR Feed forwarding sinks; the ITI-81 retrieval as the read side; ITI-19 mTLS via `[server.tls]`) | IHE ATNA, BALP |
+| System log | `ferroehr::system_log` and `ferroehr::access_log` (the draft openEHR access log's store; dual DICOM PS3.15 + FHIR `AuditEvent`/BALP rendering, written and sent by the shared FerroAUDIT crates `ihe-atna` and `ehds-logging`; local Audit Record Repository in the `audit` schema, on by default; syslog + ITI-20 ATX:FHIR Feed forwarding sinks; the ITI-81 retrieval as the read side; ITI-19 mTLS via `[server.tls]`) | IHE ATNA, BALP |
 | Admin | `service::admin` (+archive/dump-load) | ITS-REST Admin API plus our own extension routes |
 | EHR index | `service::ehr_index` over the `ehr` subject columns or an IHE PIX Manager | our own extension |
 | Terminology | `service::terminology` (in-process `openehr-term` bundle + one FHIR R4B terminology server, FerroTERM in every shipped deployment, reached through the published `ferrobridge-term` client with an optional OAuth2 client-credentials grant; commit-time ac-code constraint-binding resolution) | TERM, AQL terminology function |

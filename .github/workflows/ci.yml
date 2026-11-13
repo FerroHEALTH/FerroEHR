@@ -680,6 +680,13 @@ jobs:
         if: ${{ !cancelled() }}
         run: bash scripts/render/zenodo-json.sh --check
 
+      # The class partials of the draft openEHR modules under docs/plans/*/antora/
+      # are rendered from their BMM schemas, so a hand edit of a class table, or a
+      # BMM change without its partials, fails here.
+      - name: bmm-partials / The draft class partials match their BMM schemas
+        if: ${{ !cancelled() }}
+        run: bash scripts/render/bmm-partials.sh --check
+
       # ---- compose-version-guard ---------------------------------------
       # Compose version guard: the standalone quickstart docker-compose.yml pins
       # the published images by tag, so a release cut that forgets those defaults

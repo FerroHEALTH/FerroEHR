@@ -33,7 +33,7 @@
 //! - [`authz`] — our **own enterprise extensions** (no openEHR spec governs
 //!   them): the coarse
 //!   RBAC gate (runs in the authn middleware) + the fine-grained ABAC engine
-//!   (Cedar / remote PDP, enforced by the PEP [`pep`]).
+//!   (Cedar, enforced by the PEP [`pep`]).
 //! - [`pep`] — the policy-enforcement point: the ABAC gate **and** the
 //!   spec-grounded **SMART** resource-scope + launch-context gate
 //!   (`docs/specs/openehr/ITS-REST/docs/smart_app_launch/master08-scopes.adoc`

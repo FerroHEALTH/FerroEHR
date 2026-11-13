@@ -24,45 +24,11 @@ fn coded(terminology: &str, value: &str, code: &str) -> Value {
 }
 
 /// The example entry of the proposal's appendix, its `<...>` placeholders
-/// standing for the codes the terminology editors assign and the digests.
+/// standing for the codes the terminology editors assign and the digests. The
+/// fixture is shared with the access-log store tests of `ferroehr`.
 fn example() -> Value {
-    json!({
-        "_type": "ACCESS_LOG_ENTRY",
-        "uid": { "_type": "HIER_OBJECT_ID", "value": "0193f1a2-7c1e-7b4a-9f00-2c6d1e8b5a01" },
-        "system_id": "cdr.example.org",
-        "time_recorded": { "_type": "DV_DATE_TIME", "value": "2026-11-07T09:14:03.120Z" },
-        "action": coded("openehr", "read", "<access action: read>"),
-        "operation": coded("openehr_its_rest_1.1.0", "getComposition", "getComposition"),
-        "outcome": { "_type": "ACCESS_OUTCOME",
-            "result": coded("openehr", "granted", "<access outcome: granted>"),
-            "delivered": 1 },
-        "accessor": { "_type": "ACCESSOR",
-            "kind": coded("openehr", "person", "<accessor kind: person>"),
-            "party": { "_type": "PARTY_IDENTIFIED",
-                "external_ref": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
-                    "id": { "_type": "HIER_OBJECT_ID", "value": "6f1c2d3e-4b5a-4c6d-8e7f-90a1b2c3d4e5" } } },
-            "provider": { "_type": "PARTY_IDENTIFIED", "name": "Example Hospital",
-                "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "example national register",
-                    "id": "00001234", "type": "provider" }] },
-            "credential": { "_type": "ACCESS_CREDENTIAL", "issuer": "https://login.example.org",
-                "subject": "a1b2c3", "token_id": "jti-7f3e" } },
-        "ehr_id": { "_type": "HIER_OBJECT_ID", "value": "7d44b88c-4199-4bad-97dc-d78268e01398" },
-        "items": [{ "_type": "ACCESSED_ITEM",
-            "version_id": { "_type": "OBJECT_VERSION_ID",
-                "value": "8849182c-82ad-4088-a07f-48ead4180515::cdr.example.org::1" },
-            "rm_type": "COMPOSITION",
-            "template_id": { "_type": "TEMPLATE_ID", "value": "Example discharge summary" },
-            "origins": [{ "_type": "ACCESS_ORIGIN", "system_id": "cdr.example.org" }],
-            "was_delivered": true }],
-        "purposes": [coded("http://terminology.hl7.org/CodeSystem/v3-ActReason", "treatment", "TREAT")],
-        "is_emergency": false,
-        "channel": { "_type": "ACCESS_CHANNEL", "request_id": "01JC2Q7N3X" },
-        "retention": { "_type": "ACCESS_RETENTION",
-            "retain_until": { "_type": "DV_DATE", "value": "2031-11-07" },
-            "grounds": [coded("local", "national retention period", "nl-logging-5y")] },
-        "link": { "_type": "ACCESS_LOG_LINK", "sequence": 48213, "algorithm": "SHA-256",
-            "previous_digest": "<64 hex>", "content_digest": "<64 hex>", "digest": "<64 hex>" }
-    })
+    serde_json::from_str(include_str!("../../fixtures/draft/access_log_entry.json"))
+        .expect("the example entry fixture is JSON")
 }
 
 /// Reads `value` as an access-log record.
