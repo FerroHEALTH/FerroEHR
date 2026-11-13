@@ -41,6 +41,7 @@ use crate::versioning::{Kind, SigningCtx, restriction};
 
 mod construct;
 pub(crate) mod precondition;
+mod project;
 pub(crate) mod resolve;
 mod sign;
 
@@ -749,16 +750,14 @@ async fn apply_change(
     // version in their state, which would otherwise put every caller's
     // future over the size the lint allows.
     let committed = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
-    crate::versioning::access_delay::hold_on_creation(tx, ctx, ehr_id, &committed.0).await?;
-    if committed.0.kind.is_demographic() {
-        Box::pin(crate::party_binding::store::reindex_committed(
-            tx,
-            ctx,
-            &committed.0,
-            party_facts.as_deref(),
-        ))
-        .await?;
-    }
+    Box::pin(project::committed(
+        tx,
+        ctx,
+        ehr_id,
+        &committed.0,
+        party_facts.as_deref(),
+    ))
+    .await?;
     Ok(committed)
 }
 

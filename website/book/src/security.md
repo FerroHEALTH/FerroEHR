@@ -324,9 +324,13 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
   gate-keeper names a party of the demographic service by its
   `external_ref`, matched against the `PERSON` the caller is bound to. With
   no gate-keeper, only an administrator changes the settings. Every other
-  caller is refused with `403`. Changes are committed with a CONTRIBUTION
-  (there is no dedicated `EHR_ACCESS` endpoint in the openEHR REST API) and
-  are versioned and audited like all record content.
+  caller is refused with `403`. A gate-keeper commits changes with a
+  CONTRIBUTION (there is no dedicated `EHR_ACCESS` endpoint in the openEHR
+  REST API). The controller commits them on the person's instruction with
+  `POST /ferroehr/rest/extensions/v1/admin/ehr-access`, which names the EHR
+  in its body, so it reaches an EHR a restriction hides, and reads every
+  version with `GET /ferroehr/rest/extensions/v1/admin/ehr-access?ehr_id=…`.
+  Every change is versioned and audited like all record content.
 - **Who reads the settings:** the administrator, the record's person and the
   gate-keepers. To anyone else the settings are absent, so a restriction stays
   invisible to a provider (EHDS Art. 8): an AQL query returns no
@@ -367,7 +371,10 @@ Upgrading drops every stored `EHR_ACCESS` of the removed
 `FERROEHR_ACCESS_CONTROL_V1` scheme, with its history, and the next boot
 gives each such EHR the default `EHR_ACCESS` with no settings, which the
 server default governs. Commit new settings in the `access_directives`
-scheme for the EHRs that had them.
+scheme for the EHRs that had them. Upgrading also drops the Art. 8
+restriction and Art. 10 opt-out registers below with their rows and their
+admin routes: record each restriction and opt-out that stood again as a
+directive.
 
 ### Restriction of access by health professionals (EHDS Art. 8)
 
@@ -378,12 +385,25 @@ providers. Art. 11(5) lets the restricted data be reached where necessary to
 protect the person's vital interests, logged so the person can see it. No
 openEHR specification governs this; it is our own design.
 
-- **Recording it.** The controller records a restriction on the person's
-  instruction with `POST /ferroehr/rest/extensions/v1/admin/access-restriction`, for a whole EHR or
-  for one versioned object, and lifts it with
-  `POST /ferroehr/rest/extensions/v1/admin/access-restriction/lift`
+- **Recording it.** A restriction is a `restriction` deny directive of the
+  EHR's own `EHR_ACCESS` settings (the `access_directives` scheme above). The
+  controller records it on the person's instruction by committing a new
+  `EHR_ACCESS` version with `POST /ferroehr/rest/extensions/v1/admin/ehr-access`,
+  for the whole EHR (no `data`) or for the versioned objects its
+  `data[].objects` name, and lifts it by committing a version without it
   ([the routes](operations-admin-apis.md#legal-marks-restriction-objection-and-retention)).
-  A whole-EHR restriction covers data recorded after it too.
+  `GET /ferroehr/rest/extensions/v1/admin/ehr-access` reads every version, so a
+  lifted restriction stays in the history, and an EHR Extract carries the
+  versions. A whole-EHR restriction covers data recorded after it too.
+- **What the server reads of it.** Each commit projects the restriction
+  directives in force onto marks on the EHR and on its objects, in the
+  commit's own transaction. The projection never reads a directive more
+  permissively than it is written: a `data` scope beyond `objects`
+  (templates, categories and the rest) restricts the whole EHR, a directive
+  holds until its `time_validity` ends whether or not it has begun, and
+  `applies_to`, `operations`, `purposes` and `exceptions` do not narrow it
+  yet. A directive with `emergency_override` false is refused with **400**,
+  because the emergency override below lifts every restriction.
 - **What a professional sees.** Restricted data reads as absent: a restricted
   composition or EHR answers **404** exactly as an unknown one does, a query
   leaves it out at every scope (and a query scoped to a restricted EHR answers
@@ -440,13 +460,17 @@ opt-out in its own services, leave the mark unused.
   `[authz.grants] allowed` does not allow `access_service` by default, so the
   opt-out holds for nobody, and recording one is refused with **400**. A role
   a token names grants nothing here.
-- **Recording and reversing it.** The controller records the opt-out on the
-  person's instruction with
-  `POST /ferroehr/rest/extensions/v1/admin/access-opt-out` and reverses it with
-  `POST /ferroehr/rest/extensions/v1/admin/access-opt-out/reverse`
+- **Recording and reversing it.** An opt-out is an `opt_out` deny directive
+  of the EHR's own `EHR_ACCESS` settings, at most one, covering the whole EHR.
+  The controller records it on the person's instruction by committing a new
+  `EHR_ACCESS` version with `POST /ferroehr/rest/extensions/v1/admin/ehr-access`,
+  and reverses it by committing a version without it
   ([the routes](operations-admin-apis.md#legal-marks-restriction-objection-and-retention)).
-  A reversal keeps the row in the register with its reversal time, and stays
-  open whatever the configuration, so an opt-out can always be reversed.
+  The reversed opt-out stays readable as a past version, and a version
+  without one is accepted whatever the configuration, so an opt-out can
+  always be reversed. Its `emergency_override` must be true: a directive that
+  sets it false is refused with **400**, because the vital-interest override
+  below lifts every opt-out.
 - **What an access service sees.** A request from a caller holding an
   `access_service` grant reads the EHR as absent: a route that names the EHR or an
   object in it answers **404** as for an unknown EHR, a population query leaves
@@ -466,8 +490,8 @@ opt-out in its own services, leave the mark unused.
   route that names the opted-out EHR, in its path or in a `POST
   /message/export` manifest, adds an access record
   `access-opt-out-override:ehr-wide` against it.
-- **The record.** Recording, reversing and reading the register are each an
-  access record on the EHR (`access-opt-out:ehr-wide`) naming the
+- **The record.** Each commit and each read through the controller's route
+  is an access record on the EHR (`ehr-access:ehr-wide`) naming the
   administrator.
 
 ```toml

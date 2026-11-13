@@ -45,8 +45,8 @@
 //!   retention register, and the marks on `ehr` / `vo_head` they drive.
 //! - [`access_delay`] — the EHDS Art. 3(3) delay of the person's own access
 //!   and its mark on `vo_head`.
-//! - [`opt_out`] — the EHDS Art. 10 opt-out from access through the access
-//!   services and its mark on `ehr`.
+//! - [`access_marks`] — the marks of the EHDS Art. 8 restriction and Art. 10
+//!   opt-out directives of `EHR_ACCESS` on `ehr` / `vo_head`.
 //! - [`policy_register`] — the versions of the operational-policy admin
 //!   registers.
 //! - [`statistics`] — the counts and listings behind the admin statistics.
@@ -69,6 +69,7 @@
 //! consuming [`version_repo::read::StoredVersion`] on read.
 
 pub mod access_delay;
+pub mod access_marks;
 pub mod adl2_repo;
 pub mod archetype_repo;
 pub mod blob_ref;
@@ -88,7 +89,6 @@ pub mod integrity;
 pub mod marks;
 pub mod node_repo;
 pub mod node_write;
-pub mod opt_out;
 pub mod party_heads;
 pub mod party_reverse;
 pub mod policy_register;

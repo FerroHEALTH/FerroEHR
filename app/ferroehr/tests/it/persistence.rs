@@ -102,8 +102,6 @@ async fn migrations_apply_cleanly_and_idempotently() {
         tables("clinical").await,
         [
             "access_delay",
-            "access_opt_out",
-            "access_restriction",
             "adl2_artefact",
             "archetype_store",
             "blob_ref",

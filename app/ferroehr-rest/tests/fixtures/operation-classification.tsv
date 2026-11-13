@@ -1,8 +1,5 @@
 # op	generated	class	kind	access	is_write	pep_mode	audit	smart_permission	smart_read	smart_write
 admin_access_delay_register	false	-	None	None	-	Skip	None	-	false	false
-admin_access_opt_out	false	-	None	None	-	Skip	None	-	false	false
-admin_access_opt_out_register	false	-	None	None	-	Skip	None	-	false	false
-admin_access_restriction_register	false	-	None	None	-	Skip	None	-	false	false
 admin_archive_ehrs	false	-	None	None	-	Skip	None	-	false	false
 admin_archive_parties	false	-	None	None	-	Skip	None	-	false	false
 admin_config	false	-	None	None	-	Skip	None	-	false	false
@@ -10,7 +7,6 @@ admin_delay_access	false	-	None	None	-	Skip	None	-	false	false
 admin_dump	false	-	None	None	-	Skip	None	-	false	false
 admin_ehr_delete	true	Some(Admin)	None	None	true	Skip	Some(Audited { action: Delete, object: Ehr })	Delete	false	false
 admin_ehr_delete_all	true	Some(Admin)	None	None	true	Skip	Some(Audited { action: Delete, object: Ehr })	Delete	false	false
-admin_lift_access_restriction	false	-	None	None	-	Skip	None	-	false	false
 admin_lift_restriction	false	-	None	None	-	Skip	None	-	false	false
 admin_load	false	-	None	None	-	Skip	None	-	false	false
 admin_outbox_ack	false	-	None	None	-	Skip	Some(Audited { action: Update, object: ApplicationActivity })	-	false	false
@@ -28,14 +24,12 @@ admin_report_versioned_composition_count	false	-	None	None	-	Skip	None	-	false	f
 admin_research_objection	false	-	None	None	-	Skip	None	-	false	false
 admin_restore_archived_ehrs	false	-	None	None	-	Skip	None	-	false	false
 admin_restore_archived_parties	false	-	None	None	-	Skip	None	-	false	false
-admin_restrict_access	false	-	None	None	-	Skip	None	-	false	false
 admin_restrict_processing	false	-	None	None	-	Skip	None	-	false	false
 admin_restriction_register	false	-	None	None	-	Skip	None	-	false	false
 admin_retention_anchor	false	-	None	None	-	Skip	None	-	false	false
 admin_retention_due	false	-	None	None	-	Skip	None	-	false	false
 admin_retention_hold	false	-	None	None	-	Skip	None	-	false	false
 admin_retention_policies	false	-	None	None	-	Skip	None	-	false	false
-admin_reverse_access_opt_out	false	-	None	None	-	Skip	None	-	false	false
 admin_template_delete	false	-	None	None	-	Skip	None	-	false	false
 admin_verify_storage_parity	false	-	None	None	-	Skip	None	-	false	false
 agent_create	true	Some(Clinical)	None	None	true	Skip	Some(Audited { action: Create, object: Demographic })	Create	false	false
