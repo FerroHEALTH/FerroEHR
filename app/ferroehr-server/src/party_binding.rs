@@ -155,10 +155,7 @@ pub fn install(
         .map(|settings| settings.issuer.clone())
         .chain(key_issuers.iter().cloned());
     let service = service
-        .with_import_policy(ImportPolicy::new(
-            config.authz.rbac.import_role.clone(),
-            logins,
-        ))
+        .with_import_policy(ImportPolicy::new(logins))
         .with_grant_ceiling(config.authz.grants.ceiling(&config.authz.rbac))
         .with_federation_trust(ferroehr::config::federation::trust(
             &config.auth.shared,

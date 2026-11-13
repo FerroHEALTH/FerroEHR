@@ -14,6 +14,7 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
+use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::event::{
     AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
@@ -48,13 +49,13 @@ fn rest_config() -> AppConfig {
             ("portal", &["PORTAL"]),
         ],
     );
+    crate::system_grants::bind_basic_users(&mut config);
     config
 }
 
 fn authz(enabled: bool) -> Option<Arc<AuthzHandle>> {
     let mut cfg = AuthzConfig::default();
     cfg.rbac.enabled = enabled;
-    cfg.rbac.subject_audit_role = Some("PORTAL".to_owned());
     // RBAC-only: no engine, inert resolvers (nothing here consults ABAC).
     let resolvers = AuthzResolvers {
         subject: Arc::new(|_| Box::pin(async { Ok::<_, ResolveError>(None) })),
@@ -104,13 +105,27 @@ async fn seed(
 async fn app(with_store: bool, rbac: bool) -> (testkit::TestDb, Router, AuditStore) {
     let (pg, pool) = common::migrated_pool().await;
     let store = AuditStore::new(pool.clone()).with_render_policy(policy());
-    let mut svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let mut svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_binding_mapping(crate::party_binding_http::mapping())
+        .with_grant_ceiling(GrantCeiling::new([Operation::ReadSubjectAudit]));
     if with_store {
         svc = svc.with_audit_store(store.clone());
     }
+    let svc = Arc::new(svc);
+    // NOTE: the portal reads one subject's log by its grant in the CDR, the
+    // read_subject_audit capability of a ROLE its PERSON performs (#5521).
+    crate::system_grants::bound_persons(
+        &svc,
+        &rest_config(),
+        (
+            "portal",
+            &[crate::system_grants::capability("read_subject_audit", &[])],
+        ),
+    )
+    .await;
     let app = ferroehr_rest::build_full(
         rest_config(),
-        Arc::new(svc),
+        svc,
         authz(rbac),
         ferroehr_rest::extensions::management::Observability::default(),
     )
@@ -398,12 +413,13 @@ async fn rbac_gates_the_audit_surface_to_admins() {
     assert_eq!(bundle["total"], 1);
 }
 
-/// The subject-scoped grant (#3240): a caller holding `subject_audit_role`
-/// reads the access log for the one subject it names and nothing else — the
-/// grant a patient portal holds instead of an admin credential over every
-/// patient's log (GDPR Art. 15 with Recital 63, EHDS Art. 9).
+/// The subject-scoped grant (#3240, #5521): a caller holding a
+/// `read_subject_audit` grant in the CDR reads the access log for the one
+/// subject it names and nothing else — the grant a patient portal holds
+/// instead of an admin credential over every patient's log (GDPR Art. 15
+/// with Recital 63, EHDS Art. 9).
 #[tokio::test]
-async fn the_subject_audit_role_reads_one_subjects_log_and_nothing_else() {
+async fn a_subject_audit_grant_reads_one_subjects_log_and_nothing_else() {
     let (_pg, app, store) = app(true, true).await;
     seed(
         &store,
@@ -444,7 +460,7 @@ async fn the_subject_audit_role_reads_one_subjects_log_and_nothing_else() {
         "{bundle}"
     );
 
-    // Unscoped: the same role is refused, with the reason naming the parameter.
+    // Unscoped: the same grant is refused, with the reason naming the parameter.
     let resp = app
         .clone()
         .oneshot(get(
@@ -462,7 +478,7 @@ async fn the_subject_audit_role_reads_one_subjects_log_and_nothing_else() {
         "{outcome}"
     );
 
-    // A role that is neither admin nor the subject role is still refused, even
+    // A caller with neither the admin role nor the grant is still refused, even
     // when it names a patient.
     let resp = app
         .clone()
@@ -605,11 +621,11 @@ async fn every_shall_parameter_matches_what_it_names() {
     }
 }
 
-/// The subject-scoped role stays held to one subject now that a parameter
+/// The subject-scoped grant stays held to one subject now that a parameter
 /// takes several values: two patients, in one parameter or two, are refused,
 /// and `patient.identifier` scopes the read as `patient` does.
 #[tokio::test]
-async fn the_subject_audit_role_cannot_name_two_subjects() {
+async fn a_subject_audit_grant_cannot_name_two_subjects() {
     let (_pg, app, store) = app(true, true).await;
     seed_two(&store).await;
     for criteria in [

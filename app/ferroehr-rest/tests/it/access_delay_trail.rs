@@ -20,6 +20,7 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
+use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::policy_register::Register;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::sender::{
@@ -41,7 +42,7 @@ const PATIENT: &str = "patient-7";
 /// A deployment that holds patient summaries for 72 hours, audits to the
 /// local store with every EHR resolving to [`PATIENT`], and gates by role:
 /// `dr` a professional, `root` the controller, `portal` the person's portal
-/// holding the subject-scoped audit role.
+/// holding a `read_subject_audit` grant in the CDR.
 async fn app() -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
     let audit = common::local_audit();
@@ -59,7 +60,9 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     let svc = Arc::new(
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender)
-            .with_audit_store(AuditStore::new(pool.clone())),
+            .with_audit_store(AuditStore::new(pool.clone()))
+            .with_binding_mapping(crate::party_binding_http::mapping())
+            .with_grant_ceiling(GrantCeiling::new([Operation::ReadSubjectAudit])),
     );
     svc.put_policy_register(
         Register::AccessDelay,
@@ -80,9 +83,18 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
             ("portal", &["PORTAL"]),
         ],
     );
+    crate::system_grants::bind_basic_users(&mut config);
+    crate::system_grants::bound_persons(
+        &svc,
+        &config,
+        (
+            "portal",
+            &[crate::system_grants::capability("read_subject_audit", &[])],
+        ),
+    )
+    .await;
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
-    authz.rbac.subject_audit_role = Some("PORTAL".to_owned());
     let handle = AuthzHandle::build(
         &authz,
         &config.api.base_path,

@@ -35,8 +35,7 @@ pub(super) enum Primary {
 /// grant them.
 #[derive(Debug, Default)]
 pub(super) struct RoleIssuers {
-    /// `admin_role`, `emergency_access_role`, `import_role` and
-    /// `identifier_reader_role`, upper-cased.
+    /// `admin_role` and `emergency_access_role`, upper-cased.
     privileged: Vec<String>,
     /// `role_issuers`.
     issuers: Vec<SecretUrl>,

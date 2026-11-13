@@ -126,7 +126,7 @@ async fn a_migration_agent_imports_and_exports_only_its_granted_namespaces() {
     let (_source_db, source) = crate::fixtures::service().await;
     let (_target_db, target) = crate::fixtures::service().await;
     let target = target
-        .with_import_policy(ImportPolicy::new(Some("IMPORTER".to_owned()), Vec::new()))
+        .with_import_policy(ImportPolicy::new(Vec::new()))
         .with_grant_ceiling(GrantCeiling::new(Operation::ALL));
 
     let legacy = create_ehr_subject(&source, &subject("pt-1")).await;
@@ -211,12 +211,13 @@ async fn a_migration_agent_imports_and_exports_only_its_granted_namespaces() {
         .expect("an export by no system caller is not a grant's to decide");
 }
 
+/// A role is no grant: a caller whose token names an importer role, with no
+/// import grant in the CDR, imports nothing (#5521).
 #[tokio::test]
-async fn the_import_role_imports_without_a_grant() {
+async fn a_role_imports_nothing_without_a_grant() {
     let (_source_db, source) = crate::fixtures::service().await;
     let (_target_db, target) = crate::fixtures::service().await;
-    let target =
-        target.with_import_policy(ImportPolicy::new(Some("IMPORTER".to_owned()), Vec::new()));
+    let target = target.with_import_policy(ImportPolicy::new(Vec::new()));
     let legacy = create_ehr_subject(&source, &subject("pt-1")).await;
     commit(&source, legacy, "a note").await;
     let whole: Extract = openehr_its::json::from_canonical_value(
@@ -229,13 +230,14 @@ async fn the_import_role_imports_without_a_grant() {
         agent: None,
         ..person
     };
-    ferroehr::system_log::access_context::with_roles(
-        vec!["IMPORTER".to_owned()],
-        ferroehr::versioning::committer::with_committer(
-            Some(person),
-            Box::pin(target.import_ehr(None, whole)),
-        ),
-    )
-    .await
-    .expect("the import role imports as before");
+    forbidden(
+        ferroehr::system_log::access_context::with_roles(
+            vec!["IMPORTER".to_owned()],
+            ferroehr::versioning::committer::with_committer(
+                Some(person),
+                Box::pin(target.import_ehr(None, whole)),
+            ),
+        )
+        .await,
+    );
 }

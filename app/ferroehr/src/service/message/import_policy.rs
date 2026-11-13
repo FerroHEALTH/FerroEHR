@@ -15,11 +15,10 @@
 //! a `creating_system` element of its grant of the import operation in
 //! [`crate::party_binding::policy_mark::TERMINOLOGY`], read per request from
 //! [`Capabilities::current`], and never this node's own system id. Importing
-//! needs the declared import role, or a grant of the import's operation
-//! (`import_ehr`, `import_ehr_extract`) covering the subject namespace of the
-//! EHR it touches; exporting by a system caller needs an `export_ehr_extract`
+//! needs a grant of the import's operation (`import_ehr`,
+//! `import_ehr_extract`) covering the subject namespace of the EHR it touches; exporting by a system caller needs an `export_ehr_extract`
 //! grant covering the EHR the same way. No openEHR spec governs who may
-//! import or export: our own design (#5005, #5432, #5438, #5439).
+//! import or export: our own design (#5005, #5432, #5438, #5439, #5521).
 
 #![expect(
     clippy::disallowed_types,
@@ -46,23 +45,19 @@ pub struct ImportPolicy {
     /// Whether the rules are in force; the default policy admits every
     /// import.
     enforced: bool,
-    /// `[authz.rbac] import_role`.
-    role: Option<String>,
     /// The issuers whose logins a wrapped committer may not carry: every
     /// trusted issuer, its `identifier_issuer`, and `ferroehr`.
     issuers: BTreeSet<String>,
 }
 
 impl ImportPolicy {
-    /// Returns the policy importing under `role`, with `issuers` the
-    /// deployment's own login issuers.
+    /// Returns the policy with `issuers` the deployment's own login issuers.
     #[must_use]
-    pub fn new(role: Option<String>, issuers: impl IntoIterator<Item = String>) -> Self {
+    pub fn new(issuers: impl IntoIterator<Item = String>) -> Self {
         let mut issuers: BTreeSet<String> = issuers.into_iter().collect();
         issuers.insert("ferroehr".to_owned());
         Self {
             enforced: true,
-            role,
             issuers,
         }
     }
@@ -106,15 +101,15 @@ impl FerroEhrService {
     }
 
     /// Admits an import of `containers` and `parties`, the operation
-    /// `operation`, by the request's caller: one holding the import role, or
-    /// a grant of `operation` naming the subject namespace of each
+    /// `operation`, by the request's caller: one holding a grant of
+    /// `operation` naming the subject namespace of each
     /// `EHR_STATUS` the import carries. An `import_ehr` must carry one; an
     /// `import_ehr_extract` carrying none is held to its target EHR by
     /// [`Self::admit_import_target`].
     ///
     /// # Errors
-    /// [`ServiceError::Forbidden`] (`403`) when the caller holds neither the
-    /// import role nor such a grant, or a wrapped committer names a local
+    /// [`ServiceError::Forbidden`] (`403`) when the caller holds no such
+    /// grant, or a wrapped committer names a local
     /// party or login from a system its grant does not vouch for; a storage
     /// failure.
     pub(super) async fn admit_import(
@@ -127,8 +122,7 @@ impl FerroEhrService {
         if !policy.enforced {
             return Ok(());
         }
-        if crate::versioning::committer::current_committer().is_some() && !self.holds_import_role()
-        {
+        if crate::versioning::committer::current_committer().is_some() {
             let namespaces = imported_namespaces(containers);
             let namespaces: Vec<&str> = namespaces.iter().map(String::as_str).collect();
             let capabilities = Capabilities::current();
@@ -161,13 +155,13 @@ impl FerroEhrService {
     }
 
     /// Admits an `import_ehr_extract` into the EHR `target` by the request's
-    /// caller: the EHR exists, and the caller holds the import role or an
-    /// `import_ehr_extract` grant naming the target's subject namespace.
+    /// caller: the EHR exists, and the caller holds an `import_ehr_extract`
+    /// grant naming the target's subject namespace.
     ///
     /// # Errors
     /// `ehr_id_does_not_exist` (`404`) for no EHR `target`;
-    /// [`ServiceError::Forbidden`] (`403`) for a caller with neither; a
-    /// storage failure.
+    /// [`ServiceError::Forbidden`] (`403`) for a caller without it; a storage
+    /// failure.
     pub(super) async fn admit_import_target(&self, target: EhrId) -> Result<(), ServiceError> {
         let stored: Option<Option<String>> =
             sqlx::query_scalar("SELECT subject_namespace FROM ehr WHERE id = $1")
@@ -182,7 +176,6 @@ impl FerroEhrService {
         };
         if !self.import_policy.enforced
             || crate::versioning::committer::current_committer().is_none()
-            || self.holds_import_role()
         {
             return Ok(());
         }
@@ -191,15 +184,6 @@ impl FerroEhrService {
             return Ok(());
         }
         Err(refused_import(Operation::ImportEhrExtract))
-    }
-
-    /// Whether the request's caller holds `[authz.rbac] import_role`.
-    fn holds_import_role(&self) -> bool {
-        self.import_policy.role.as_deref().is_some_and(|role| {
-            crate::system_log::access_context::current_roles()
-                .iter()
-                .any(|held| held.eq_ignore_ascii_case(role))
-        })
     }
 
     /// Admits an export of the EHR `ehr_id` by the request's caller: a system
@@ -297,12 +281,11 @@ fn imported_namespaces(containers: &[ImportContainer]) -> BTreeSet<String> {
         .collect()
 }
 
-/// The refusal of an import as `operation` by a caller holding neither the
-/// import role nor a grant covering the EHR.
+/// The refusal of an import as `operation` by a caller holding no grant
+/// covering the EHR.
 fn refused_import(operation: Operation) -> ServiceError {
     ServiceError::not_permitted(format!(
-        "importing needs the role [authz.rbac] import_role names, or a grant of \
-         ferroehr-operations::{operation} whose subject_namespace elements name the subject \
-         namespace of the EHR"
+        "importing needs a grant of ferroehr-operations::{operation} whose subject_namespace \
+         elements name the subject namespace of the EHR"
     ))
 }

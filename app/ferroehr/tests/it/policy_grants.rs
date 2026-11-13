@@ -941,7 +941,7 @@ fn the_grant_ceiling_is_read_from_the_file_and_the_environment() {
 }
 
 #[tokio::test]
-async fn an_import_grant_admits_an_import_the_caller_holds_no_role_for() {
+async fn only_an_import_grant_admits_an_import() {
     let (_source_db, source) = crate::fixtures::service().await;
     let subject = ferroehr::service::ehr_index::types::SubjectRef {
         id: "pt-1".to_owned(),
@@ -956,10 +956,7 @@ async fn an_import_grant_admits_an_import_the_caller_holds_no_role_for() {
     let source_system = crate::committer_binding::source_system_id(&extracts[0]);
     let target = replica(&db.pool(), GrantCeiling::new([Operation::ImportEhr]))
         .await
-        .with_import_policy(ImportPolicy::new(
-            Some("IMPORTER".to_owned()),
-            vec![ISSUER.to_owned()],
-        ));
+        .with_import_policy(ImportPolicy::new(vec![ISSUER.to_owned()]));
     let (migrator, _) = create(&target, PartyKind::Agent, &agent("migrator"))
         .await
         .expect("the AGENT commits");
@@ -1003,12 +1000,15 @@ async fn an_import_grant_admits_an_import_the_caller_holds_no_role_for() {
         agent: None,
         external: None,
     };
-    let refused = with_committer(
-        Some(person.clone()),
-        Box::pin(target.import_ehr(None, extract.clone())),
+    let refused = ferroehr::system_log::access_context::with_roles(
+        vec!["IMPORTER".to_owned()],
+        with_committer(
+            Some(person.clone()),
+            Box::pin(target.import_ehr(None, extract.clone())),
+        ),
     )
     .await
-    .expect_err("neither the import role nor a grant");
+    .expect_err("a role is no grant");
     assert!(matches!(refused.flattened(), ServiceError::Forbidden(_)));
     with_capabilities(
         granted,
@@ -1020,15 +1020,14 @@ async fn an_import_grant_admits_an_import_the_caller_holds_no_role_for() {
 
 #[test]
 fn the_privileged_roles_are_reserved_from_a_hold_roles_grant() {
-    let config =
-        config("[authz.rbac]\nimport_role = \"Importer\"\nidentifier_reader_role = \"reader\"\n");
+    let config = config("[authz.rbac]\nemergency_access_role = \"Break_Glass\"\n");
     assert_eq!(
         config.authz.rbac.privileged_roles(),
-        ["ADMIN", "IMPORTER", "READER"]
+        ["ADMIN", "BREAK_GLASS"]
     );
     let ceiling = config.authz.grants.ceiling(&config.authz.rbac);
-    assert!(ceiling.reserves("admin") && ceiling.reserves("IMPORTER"));
-    assert!(!ceiling.reserves("READONLY"));
+    assert!(ceiling.reserves("admin") && ceiling.reserves("break_glass"));
+    assert!(!ceiling.reserves("READONLY") && !ceiling.reserves("IMPORTER"));
     assert_eq!(
         ceiling.allowed().collect::<Vec<_>>(),
         vec![Operation::CommitComposition]
