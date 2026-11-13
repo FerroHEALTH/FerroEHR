@@ -504,24 +504,16 @@ async fn a_keyring_without_a_key_signs_no_link() {
     assert!(entries.iter().all(|entry| entry.link.signature.is_none()));
 }
 
-/// A link another system signed, as the draft's optional
-/// `ACCESS_LOG_LINK.signature` lets it, verifies under a trusted key, and a
-/// signature over another link is a finding.
+/// The signed links of another system's export verify under a trusted key,
+/// and a signature over another link is a finding at its position.
 #[tokio::test]
 async fn a_foreign_signed_link_verifies_and_a_replaced_signature_does_not() {
     let testdb = testkit::db().await.expect("testkit database");
-    let key_a = generate_key();
-    let signer = keyring(&key_a);
+    let signer = keyring(&generate_key());
     let source = checkpoints(&testdb.pool(), SYSTEM_A, Arc::clone(&signer));
     append(&source, SYSTEM_A).await;
     let mut export = source.export(MOVED).await.expect("export");
-    for link in &mut export.links {
-        link.signature = Some(
-            signer
-                .attest(link.digest.as_bytes())
-                .expect("sign the link"),
-        );
-    }
+    assert!(export.links.iter().all(|link| link.signature.is_some()));
     let trusted = |data: &[u8], signature: &str| signer.attests(data, signature);
     assert_eq!(
         chain::verify(export.span(), &trusted).expect("verify"),
@@ -530,8 +522,14 @@ async fn a_foreign_signed_link_verifies_and_a_replaced_signature_does_not() {
 
     let first = export.links.first().expect("a link").sequence;
     let foreign = export.links.get(1).and_then(|link| link.signature.clone());
-    let replaced = export.links.first_mut().expect("a link");
-    replaced.signature = foreign;
+    export.links.first_mut().expect("a link").signature = foreign.clone();
+    for record in &mut export.records {
+        if let AccessLogRecord::AccessLogEntry(entry) = record
+            && entry.link.sequence == first
+        {
+            entry.link.signature = foreign.clone();
+        }
+    }
     assert_eq!(
         chain::verify(export.span(), &trusted).expect("verify"),
         vec![ChainFinding::LinkSignature { sequence: first }]
