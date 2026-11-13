@@ -1,0 +1,59 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_POLICY*
+
+h|*Description*
+2+a|The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps. It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, and lists the named directives a subject can accept by reference. Kept in its own versioned container, outside any EHR and outside the demographic service.
+
+h|*Inherit*
+2+|`xref:common:archetyped_package.adoc#_locatable_class[LOCATABLE]`
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*controller*: `xref:{class_party_ref}[PARTY_REF]`
+a|The `ORGANISATION` whose policy this is, the controller of the data.
+
+h|*0..1*
+|*classifications*: `xref:{class_list}[List]<xref:access_control:access_control_package.adoc#_access_classification_class[ACCESS_CLASSIFICATION]>`
+a|The rules that give kinds of data their sensitivity labels.
+
+h|*1..1*
+|*care_relationship_required*: `xref:{class_boolean}[Boolean]`
+a|Whether a professional's clinical access to an EHR needs a live care relationship to its subject, beyond the operation the caller's capability grants.
+
+h|*0..1*
+|*relationship_grace*: `xref:data_types:date_time_package.adoc#_dv_duration_class[DV_DURATION]`
+a|How long after a care relationship ends it still admits access, for follow-up (BASE Architecture Overview, Security, Time-limitation of access).
+
+h|*1..1*
+|*purpose_required*: `xref:{class_boolean}[Boolean]`
+a|Whether an access to clinical data must declare a purpose of use.
+
+h|*0..1*
+|*catalogue*: `xref:{class_list}[List]<xref:access_control:access_control_package.adoc#_access_directive_class[ACCESS_DIRECTIVE]>`
+a|Named directives a subject can accept by an identifier, such as an IHE BPPC policy or a national consent choice. Each carries at least one identifier.
+
+h|*0..1*
+|*details*: `xref:data_structures:item_structure_package.adoc#_item_structure_class[ITEM_STRUCTURE]`
+a|Further archetyped detail. The decision procedure never reads it.
+
+h|*Invariants*
+2+a|__Is_archetype_root__: `is_archetype_root`
+
+h|
+2+a|__Grace_valid__: `relationship_grace /= Void implies relationship_grace.magnitude >= 0`
+
+h|
+2+a|__Catalogue_identified__: `catalogue /= Void implies catalogue.for_all (d | d.identifiers /= Void)`
+
+h|
+2+a|__Classifications_valid__: `classifications /= Void implies not classifications.is_empty`
+
+h|
+2+a|__Catalogue_valid__: `catalogue /= Void implies not catalogue.is_empty`
+
+|===

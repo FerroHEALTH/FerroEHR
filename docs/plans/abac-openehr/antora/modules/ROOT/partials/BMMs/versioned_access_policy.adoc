@@ -1,0 +1,10 @@
+[source,json]
+--------
+{
+  "name": "VERSIONED_ACCESS_POLICY",
+  "documentation": "Version container for an `ACCESS_POLICY`, committed in contributions with their audit like any other versioned object.",
+  "ancestors": [
+    "VERSIONED_OBJECT"
+  ]
+}
+--------

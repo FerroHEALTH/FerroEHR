@@ -359,9 +359,6 @@ endpoint = "https://u2:URL_PW_SENTINEL_2@h2:4317/p2"
 [record.multimedia]
 url = "https://u3:URL_PW_SENTINEL_3@h3:8333/p3"
 
-[authz.abac.remote.endpoint]
-url = "https://u4:URL_PW_SENTINEL_4@h4:3001/p4/"
-
 [terminology.endpoint]
 url = "https://u5:URL_PW_SENTINEL_5@h5:443/p5"
 
@@ -387,7 +384,6 @@ url = "tls://u8:URL_PW_SENTINEL_8@h8:6514/p8"
         (1, 5432),
         (2, 4317),
         (3, 8333),
-        (4, 3001),
         (5, 443),
         (7, 8443),
         (8, 6514),

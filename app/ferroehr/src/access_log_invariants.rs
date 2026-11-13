@@ -21,6 +21,7 @@ use crate::access_log_draft::access_log::access_log_checkpoint::AccessLogCheckpo
 use crate::access_log_draft::access_log::access_log_entry::AccessLogEntry;
 use crate::access_log_draft::access_log::access_log_link::AccessLogLink;
 use crate::access_log_draft::access_log::access_log_record::AccessLogRecord;
+use crate::access_log_draft::access_log::access_log_tombstone::AccessLogTombstone;
 use crate::access_log_draft::access_log::access_origin::AccessOrigin;
 use crate::access_log_draft::access_log::access_outcome::AccessOutcome;
 use crate::access_log_draft::access_log::access_query::AccessQuery;
@@ -70,18 +71,35 @@ fn in_group(coded: &DvCodedText, group: &[&str]) -> bool {
 /// # Errors
 /// [`Violations`] naming each invariant the record breaks.
 pub fn check_record(record: &AccessLogRecord) -> Result<(), Violations> {
-    let mut check = Check::default();
     match record {
-        AccessLogRecord::AccessLogEntry(entry) => entry_rules(&mut check, entry),
-        AccessLogRecord::AccessLogTombstone(tombstone) => {
-            check.hold(
-                !tombstone.system_id.is_empty(),
-                "ACCESS_LOG_RECORD",
-                "System_id_valid",
-            );
-            link_rules(&mut check, &tombstone.link);
-        }
+        AccessLogRecord::AccessLogEntry(entry) => check_entry(entry),
+        AccessLogRecord::AccessLogTombstone(tombstone) => check_tombstone(tombstone),
     }
+}
+
+/// Checks every invariant of an `ACCESS_LOG_ENTRY` and of the objects it
+/// holds.
+///
+/// # Errors
+/// [`Violations`] naming each invariant the entry breaks.
+pub fn check_entry(entry: &AccessLogEntry) -> Result<(), Violations> {
+    let mut check = Check::default();
+    entry_rules(&mut check, entry);
+    check.finish()
+}
+
+/// Checks every invariant of an `ACCESS_LOG_TOMBSTONE` and of its link.
+///
+/// # Errors
+/// [`Violations`] naming each invariant the tombstone breaks.
+pub fn check_tombstone(tombstone: &AccessLogTombstone) -> Result<(), Violations> {
+    let mut check = Check::default();
+    check.hold(
+        !tombstone.system_id.is_empty(),
+        "ACCESS_LOG_RECORD",
+        "System_id_valid",
+    );
+    link_rules(&mut check, &tombstone.link);
     check.finish()
 }
 

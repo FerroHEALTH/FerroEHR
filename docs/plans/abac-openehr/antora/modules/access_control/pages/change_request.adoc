@@ -1,0 +1,54 @@
+include::partial$module_vars.adoc[]
+
+= Change Request (draft)
+
+include::partial$draft_notice.adoc[]
+
+This page is the text a Change Request to the openEHR RM component would carry, with the problem report it answers. Nothing on it has been filed. Filing it, on the openEHR specifications trackers or anywhere else, needs the FerroEHR owner's approval of this text first.
+
+== Problem Report (SPECPR)
+
+[horizontal]
+Title:: No concrete access control settings scheme is defined for `EHR_ACCESS`
+
+Component:: RM, BASE
+
+Description:: The EHR Information Model makes `EHR_ACCESS` the object every access decision to EHR data is made in accordance with, and types its `_settings_` as `ACCESS_CONTROL_SETTINGS`, an abstract class with no attributes whose description reads "Intended to support multiple access control schemes. Currently implementation dependent." (RM EHR IM, `ACCESS_CONTROL_SETTINGS`). The EHR Package, EHR Access, states that the settings include "default privacy policy, lists of identified accessors (individuals and groups) and exceptions to the default policies", and defers the classes to "the Security Information Model", which the Architecture Overview, Package Structure, says "defines the semantics of access control and privacy setting for information in the EHR". The RM 1.2.0 `security` package holds no class. The Architecture Overview, Security and Confidentiality, Access Control, Overview, states that "there is currently no published formal, proven model of access control for shared health information" and that the architecture is "designed to accommodate alternative models of access control, each defined by a subtype of the class `ACCESS_CONTROL_SETTING`". No such subtype is published, so the settings of one system cannot be read by another, an EHR Extract carries them as opaque data, and patient consent and restriction are recorded in system-specific forms.
+
+Minor defect:: The Architecture Overview names the class `ACCESS_CONTROL_SETTING`; the RM names it `ACCESS_CONTROL_SETTINGS`.
+
+== Change Request (SPECRM)
+
+[horizontal]
+Title:: Add the `access_control` package: the `access_directives` scheme of `ACCESS_CONTROL_SETTINGS` and a versioned `ACCESS_POLICY`
+
+Raised by:: FerroEHR (draft, not filed)
+
+Answers:: the problem report above
+
+Reason:: Fills the slot RM EHR IM §EHR Access and BASE Architecture Overview §Access Control leave open with one concrete scheme, so that the subject's directives and the sensitivity of data are recorded as versioned, exchangeable facts with one decision procedure. Carries the rights of Regulation (EU) 2025/327 Art 8, 10, 11(5) and 4(2), and maps to HL7 FHIR `Consent` (R4, R5), IHE BPPC and IHE APPC (xref:mappings.adoc[Mappings]).
+
+Change description::
+* A new RM package `org.openehr.rm.access_control` (xref:access_control_package.adoc[The access_control Package]) with the classes `ACCESS_DIRECTIVE_SETTINGS` (a subtype of `ACCESS_CONTROL_SETTINGS`, the scheme `access_directives`), `ACCESS_DIRECTIVE`, `ACCESS_ACTOR_SCOPE`, `ACCESS_DATA_SCOPE`, `ACCESS_LABEL`, `ACCESS_POLICY`, `ACCESS_CLASSIFICATION` and `VERSIONED_ACCESS_POLICY`, and its BMM `openehr_access_control_0.1.0.bmm.json`, which includes `openehr_rm_1.2.0`.
+* The decision procedure of the scheme (xref:decision_procedure.adoc[The Decision Procedure]) as normative text of the package.
+* In the EHR Package, EHR Access: a sentence naming `access_directives` as a published scheme and pointing at the package; the reference to "the Security Information Model" pointed at it.
+* No existing class changes.
+
+Related changes::
+* SPECTERM: the terminology groups of xref:terminology.adoc[Terminology].
+* SPECITS: the `EHR_ACCESS` and `ACCESS_POLICY` resources of xref:its_rest.adoc[ITS-REST Resources], and the ITS-JSON schema of the package.
+* SPECBASE: in the Architecture Overview, Security and Confidentiality, Access Control, Overview, a paragraph naming the published scheme, and the class name corrected to `ACCESS_CONTROL_SETTINGS`.
+
+Impact:: Additive. A system that does not implement the scheme sees an `EHR_ACCESS` whose `scheme()` it does not know and keeps it as data. A system that implements it decides access to an EHR with these settings by the procedure.
+
+== What is Labelled as Own Design
+
+No openEHR or other specification governs the following; each is this proposal's own choice, and a reviewer can change any of them without touching the rest:
+
+* the scheme name `access_directives` and every class of the package;
+* facts with a fixed procedure, deny-overrides, and one level of exceptions;
+* the order of the procedure's steps and its refusals;
+* care relationships through care-team `GROUP` membership and an under-care-of relationship, with a grace period;
+* sensitivity clearances and permitted purposes as codes on a `CAPABILITY`;
+* `ACCESS_POLICY` as a versioned root outside the EHR and the demographic service, and its ITS-REST resources;
+* the read and write rule for `EHR_ACCESS`.

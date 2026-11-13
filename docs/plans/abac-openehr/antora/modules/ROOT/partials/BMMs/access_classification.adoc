@@ -1,0 +1,36 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_CLASSIFICATION",
+  "documentation": "One classification rule: data the scope describes carry the given sensitivity labels.",
+  "ancestors": [
+    "LOCATABLE"
+  ],
+  "properties": {
+    "data": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "data",
+      "documentation": "The kind of data the rule classifies. It names no individual object.",
+      "is_mandatory": true,
+      "type": "ACCESS_DATA_SCOPE"
+    },
+    "sensitivities": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "sensitivities",
+      "documentation": "The sensitivity codes the data carry.",
+      "is_mandatory": true,
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 1,
+        "upper_unbounded": true
+      }
+    }
+  },
+  "invariants": {
+    "No_objects": "data.objects = Void"
+  }
+}
+--------

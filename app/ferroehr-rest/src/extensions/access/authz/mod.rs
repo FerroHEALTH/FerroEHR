@@ -16,9 +16,8 @@
 //! 1. RBAC, coarse and always on when auth is enabled: every generated ITS-REST
 //!    operation is classified ([`classify`]) and gated by a role model
 //!    ([`roles`]) driven by `ferroehr::config::authz::AuthzConfig`.
-//! 2. ABAC, fine-grained and opt-in: the policy decision point of
-//!    `ferrohealth-authz`, its embedded Cedar engine or its remote decision
-//!    point, consulted per clinical operation with the attributes the PEP
+//! 2. ABAC, fine-grained and opt-in: the embedded Cedar engine of
+//!    `ferrohealth-authz`, consulted per clinical operation with the attributes the PEP
 //!    resolves ([`request`]).
 //!
 //! This module also carries the per-server authorization handle wired onto
@@ -34,14 +33,12 @@
 //! - [`classify`]: `operation_id → OperationClass` / `ResourceKind` /
 //!   `AccessMode` (total-coverage-guarded).
 //! - [`cedar`]: the embedded Cedar engine over the Cedar admin register.
-//! - [`remote`]: the remote decision point `[authz.abac.remote]` describes.
 //! - [`request`]: the ABAC request and the model the Cedar schema is written
 //!   from.
 
 pub mod cedar;
 pub mod classify;
 pub mod content;
-pub mod remote;
 pub mod request;
 pub mod roles;
 
@@ -145,8 +142,7 @@ impl std::fmt::Debug for AuthzResolvers {
 /// `registers` ([`cedar::RegisterCedar`]).
 ///
 /// # Errors
-/// [`AuthzError::Load`] if the Cedar register in force does not validate, or
-/// the remote decision point's settings or token client cannot be built.
+/// [`AuthzError::Load`] if the Cedar register in force does not validate.
 pub fn build_engine(
     config: &AbacConfig,
     registers: &Arc<LiveRegisters>,
@@ -156,7 +152,6 @@ pub fn build_engine(
     }
     let engine: Arc<dyn PolicyEngine> = match config.engine {
         AbacEngineKind::Cedar => Arc::new(cedar::RegisterCedar::new(Arc::clone(registers))?),
-        AbacEngineKind::Remote => Arc::new(remote::remote_pdp(config)?),
     };
     Ok(Some(engine))
 }
@@ -270,13 +265,9 @@ pub(crate) struct AbacGate {
     /// The subject namespace patient-claim ids are read in
     /// (`abac.patient_namespace`); `None` reads the id alone.
     pub(crate) patient_namespace: Option<String>,
-    /// Whether DIRECTORY (FOLDER) operations reach the PDP — the
-    /// `abac.check_directory` switch, so the opt-in is engine-independent
-    /// rather than inferred from a remote-PDP-shaped policy map.
+    /// Whether DIRECTORY (FOLDER) operations reach the engine, the
+    /// `abac.check_directory` switch.
     pub(crate) directory_checked: bool,
-    /// The configured engine, which decides whether the caller's patient
-    /// travels as a subject attribute and which decision counter moves.
-    pub(crate) engine_kind: AbacEngineKind,
 }
 
 impl std::fmt::Debug for AbacGate {
@@ -299,18 +290,6 @@ impl AbacGate {
             patient_claim: config.patient_claim().map(str::to_owned),
             patient_namespace: config.patient_namespace().map(str::to_owned),
             directory_checked: config.check_directory,
-            engine_kind: config.engine,
-        }
-    }
-
-    /// The caller's patient as the principal's `patient` attribute: the Cedar
-    /// engine reads it there, while the remote decision point reads a
-    /// parameter the resource lacks from the subject, which would put the
-    /// caller's patient on an object whose subject no claim names.
-    pub(crate) fn subject_patient(&self, patient: Option<&String>) -> Option<String> {
-        match self.engine_kind {
-            AbacEngineKind::Cedar => patient.cloned(),
-            AbacEngineKind::Remote => None,
         }
     }
 }
@@ -646,55 +625,29 @@ mod tests {
         assert_eq!(handle.admin_role(), "SUPERADMIN");
     }
 
-    /// DIRECTORY gating reads `abac.check_directory`, so it works identically
-    /// under both engines and is not inferred from the remote-PDP policy map (a
-    /// Cedar deployment would otherwise need a policy name its engine never
-    /// reads). No openEHR spec governs authorization — our own design.
+    /// DIRECTORY gating reads `abac.check_directory`, off by default. No
+    /// openEHR spec governs authorization — our own design.
     #[test]
-    fn directory_checked_is_engine_independent() {
+    fn directory_checked_follows_its_switch() {
         let engine: Arc<dyn PolicyEngine> = Arc::new(InertEngine);
-
-        for kind in [AbacEngineKind::Cedar, AbacEngineKind::Remote] {
-            let off = AbacConfig {
-                enabled: true,
-                engine: kind,
-                ..AbacConfig::default()
-            };
-            let gate = AbacGate::new(&off, Arc::clone(&engine), inert_resolvers());
-            assert!(
-                !gate.directory_checked,
-                "{kind:?}: DIRECTORY gating is off by default"
-            );
-
-            let on = AbacConfig {
-                check_directory: true,
-                ..off
-            };
-            let gate = AbacGate::new(&on, Arc::clone(&engine), inert_resolvers());
-            assert!(
-                gate.directory_checked,
-                "{kind:?}: check_directory alone enables DIRECTORY gating"
-            );
-        }
-
-        // A `directory` entry in the remote-PDP policy map no longer enables it.
-        let mut policy = std::collections::BTreeMap::new();
-        policy.insert(
-            "directory".to_owned(),
-            ferroehr::config::authz::PolicyRule {
-                name: "directory-access".to_owned(),
-                parameters: vec![],
-            },
-        );
-        let map_only = AbacConfig {
+        let off = AbacConfig {
             enabled: true,
-            policy,
             ..AbacConfig::default()
         };
-        let gate = AbacGate::new(&map_only, engine, inert_resolvers());
+        let gate = AbacGate::new(&off, Arc::clone(&engine), inert_resolvers());
         assert!(
             !gate.directory_checked,
-            "the wire policy map is not the opt-in switch"
+            "DIRECTORY gating is off by default"
+        );
+
+        let on = AbacConfig {
+            check_directory: true,
+            ..off
+        };
+        let gate = AbacGate::new(&on, engine, inert_resolvers());
+        assert!(
+            gate.directory_checked,
+            "check_directory alone enables DIRECTORY gating"
         );
     }
 
@@ -712,27 +665,6 @@ mod tests {
                 policies: Vec::new(),
             })
         }
-    }
-
-    #[test]
-    fn the_callers_patient_is_a_subject_attribute_for_cedar_only() {
-        let patient = "p-1".to_owned();
-        let cedar = AbacConfig {
-            enabled: true,
-            engine: AbacEngineKind::Cedar,
-            ..AbacConfig::default()
-        };
-        let remote = AbacConfig {
-            engine: AbacEngineKind::Remote,
-            ..cedar.clone()
-        };
-        let gate =
-            |config: &AbacConfig| AbacGate::new(config, Arc::new(InertEngine), inert_resolvers());
-        assert_eq!(
-            gate(&cedar).subject_patient(Some(&patient)),
-            Some(patient.clone())
-        );
-        assert_eq!(gate(&remote).subject_patient(Some(&patient)), None);
     }
 
     #[tokio::test]
