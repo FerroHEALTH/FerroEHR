@@ -71,7 +71,7 @@ async fn ensure_not_access_restricted_tx(
     let restricted = crate::system_log::access_context::access_restriction_enforced();
     let opted_out = crate::system_log::access_context::access_opt_out_enforced();
     if let Some(ehr_id) = ehr_id.filter(|_| restricted || opted_out)
-        && crate::storage::opt_out::ehr_hidden(&mut *tx, ehr_id, restricted, opted_out).await?
+        && crate::storage::access_marks::ehr_hidden(&mut *tx, ehr_id, restricted, opted_out).await?
     {
         return Err(ServiceError::not_found(
             Missing::Ehr,
@@ -79,7 +79,7 @@ async fn ensure_not_access_restricted_tx(
         ));
     }
     if let Some(vo_id) = vo_id.filter(|_| restricted)
-        && crate::storage::marks::is_access_restricted(&mut *tx, vo_id).await?
+        && crate::storage::access_marks::is_access_restricted(&mut *tx, vo_id).await?
     {
         return Err(ServiceError::not_found(
             Missing::VersionedObject,
