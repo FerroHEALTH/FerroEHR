@@ -149,6 +149,11 @@ impl Grant {
 pub struct Credentials<'a>(Option<&'a Value>);
 
 impl<'a> Credentials<'a> {
+    /// The credentials tree `tree`, as a capability holds it.
+    pub(crate) fn of(tree: Option<&'a Value>) -> Self {
+        Self(tree)
+    }
+
     /// The items below this tree whose `name` is `code`, in document order.
     #[must_use]
     pub fn named(self, code: &str) -> Vec<&'a Value> {

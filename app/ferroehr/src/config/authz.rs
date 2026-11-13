@@ -21,6 +21,7 @@ use ferrohealth_secret::secret_url::SecretUrl;
 use serde::{Deserialize, Serialize};
 
 use crate::config::abac_rules::RemoteConfig;
+use crate::party_binding::grants::operation::GrantCeiling;
 
 /// The server-wide disposition for an EHR that carries no
 /// `ACCESS_CONTROL_SETTINGS` of its own — the `ehr_access_default` tri-state's
@@ -111,7 +112,9 @@ pub struct RbacConfig {
     /// The issuers whose role claims may grant `admin_role`,
     /// `emergency_access_role`, `import_role` and `identifier_reader_role`,
     /// each a `persons` issuer; empty, the default, lets no token grant them.
-    /// Each renders with any userinfo masked.
+    /// A policy grant of `import_ehr`, `import_ehr_extract` or
+    /// `read_identifiers` is a second source. Each renders with any userinfo
+    /// masked.
     pub role_issuers: Vec<SecretUrl>,
     /// What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default
     /// `open`).
@@ -144,6 +147,25 @@ impl Default for RbacConfig {
             role_issuers: Vec::new(),
             ehr_access_default: EhrAccessDefault::Open,
         }
+    }
+}
+
+impl RbacConfig {
+    /// The privileged roles, upper-cased: `admin_role`,
+    /// `emergency_access_role`, `import_role` and `identifier_reader_role`,
+    /// which a `hold_roles` grant never gives.
+    #[must_use]
+    pub fn privileged_roles(&self) -> Vec<String> {
+        [
+            Some(&self.admin_role),
+            self.emergency_access_role.as_ref(),
+            self.import_role.as_ref(),
+            self.identifier_reader_role.as_ref(),
+        ]
+        .into_iter()
+        .flatten()
+        .map(|role| role.trim().to_uppercase())
+        .collect()
     }
 }
 
@@ -324,12 +346,13 @@ pub struct GrantsConfig {
     /// The operations are `commit_composition`, `import_ehr`,
     /// `import_ehr_extract`, `export_ehr_extract`, `federated_person_access`,
     /// `federated_organisation_access`, `read_subject_audit`,
-    /// `access_service`, `read_identifiers`, `query_system_wide` and
-    /// `access_demographic`. The default allows only `commit_composition`,
-    /// which lets a client write the templates its grant names and nothing
-    /// else: an import, an export, a federation agreement, a system-wide
-    /// query, the DEMOGRAPHIC API and every privilege reach data beyond one
-    /// system's own writes, so each is allowed by name. An empty list lets the store grant
+    /// `access_service`, `read_identifiers`, `hold_roles`, `hold_scopes`,
+    /// `query_system_wide` and `access_demographic`. The default allows only
+    /// `commit_composition`, which lets a client write the templates its
+    /// grant names and nothing else: an import, an export, a federation
+    /// agreement, a system-wide query, the DEMOGRAPHIC API and every
+    /// privilege reach data beyond one system's own writes, so each is
+    /// allowed by name. An empty list lets the store grant
     /// nothing.
     pub allowed: Vec<crate::party_binding::grants::operation::Operation>,
 }
@@ -343,10 +366,11 @@ impl Default for GrantsConfig {
 }
 
 impl GrantsConfig {
-    /// The ceiling these operations set.
+    /// The ceiling these operations set, reserving the privileged roles of
+    /// `rbac` ([`RbacConfig::privileged_roles`]).
     #[must_use]
-    pub fn ceiling(&self) -> crate::party_binding::grants::operation::GrantCeiling {
-        crate::party_binding::grants::operation::GrantCeiling::new(self.allowed.iter().copied())
+    pub fn ceiling(&self, rbac: &RbacConfig) -> GrantCeiling {
+        GrantCeiling::new(self.allowed.iter().copied()).with_reserved_roles(rbac.privileged_roles())
     }
 }
 
