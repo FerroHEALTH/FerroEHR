@@ -426,8 +426,10 @@ which is what makes an optional stage safe to disable:
    access settings"); the settings are read only by those callers and the
    subject, and are absent to anyone else in AQL, an EHR Extract and the
    CONTRIBUTION read, since a restriction stays invisible to a provider (EHDS
-   Art. 8). Who writes and reads them is our own design
-   (`service::ehr::access_rule`).
+   Art. 8). An EHR Extract also carries them for the holder of an
+   `export_ehr_extract` grant covering the EHR, since the extract transfers
+   the whole EHR (RM EHR Extract IM, `X_VERSIONED_EHR_ACCESS`). Who writes and
+   reads them is our own design (`service::ehr::access_rule`).
 3. **RBAC** — the coarse operation class (public / clinical / admin /
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an

@@ -332,7 +332,10 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
   invisible to a provider (EHDS Art. 8): an AQL query returns no
   `EHR_ACCESS` row of the EHR, an EHR Extract leaves its `EHR_ACCESS` out,
   and a CONTRIBUTION that commits an `EHR_ACCESS` version reads as unknown
-  (`404`).
+  (`404`). One caller more receives the `EHR_ACCESS` in an EHR Extract: the
+  holder of an `export_ehr_extract` grant whose `subject_namespace` covers
+  the EHR, such as a migration client, since the extract transfers the whole
+  EHR and an import elsewhere must keep the person's directives.
 - **Every write is checked:** a CONTRIBUTION, an EHR Extract import and an
   admin archive load that carry settings are refused whole with `400` naming
   the first defect: settings of another scheme (the removed
