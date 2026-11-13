@@ -1,0 +1,37 @@
+include::partial$module_vars.adoc[]
+
+= Terminology
+
+include::partial$draft_notice.adoc[]
+
+NOTE: This page proposes a change to the xref:TERM::index.adoc[openEHR Terminology] (SPECTERM).
+
+== Groups
+
+The invariants of the package name the terminology `Terminology_id_access_control` and one group constant per coded attribute. If openEHR adopts the groups, `Terminology_id_access_control` is `openehr` and the constants are added to `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`; until then a system names the terminology it documents for them.
+
+[cols="2,3", options="header"]
+|===
+|Constant |Coded attribute
+
+|`Group_id_access_default`
+|`ACCESS_DIRECTIVE_SETTINGS._default_access_`
+
+|`Group_id_access_directive_kind`
+|`ACCESS_DIRECTIVE._kind_`
+
+|`Group_id_access_effect`
+|`ACCESS_DIRECTIVE._effect_`
+
+|`Group_id_access_relationship`
+|`ACCESS_ACTOR_SCOPE._relationship_`
+
+|`Group_id_access_caller_kind`
+|`ACCESS_ACTOR_SCOPE._caller_kind_`
+|===
+
+// TODO(#5507): add the rubrics of each group, the clearance group and the demographic care relationship group once the FerroEHR terminology defines them.
+
+== Codes from Other Terminologies
+
+Sensitivity, category and purpose-of-use codes are not part of these groups. They come from the terminology the jurisdiction names, such as the HL7 v3 `Confidentiality` and `ActCode` sensitivity codes, the EHDS categories, and the HL7 `PurposeOfUse` codes, and a system compares them by terminology identifier and code. This keeps the privacy levels "defined by standards or agreements within jurisdictions of use" (xref:BASE:architecture_overview:security.adoc[Security Policy], Privacy).

@@ -1,0 +1,25 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_LABEL*
+
+h|*Description*
+2+a|Sensitivity labels on one versioned object of the EHR. A caller reads labelled data only when a capability clears every label, a permit directive names the label, or an emergency override applies.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*target*: `xref:{class_object_ref}[OBJECT_REF]`
+a|The versioned object the labels apply to.
+
+h|*1..1*
+|*sensitivities*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
+a|The sensitivity codes the object carries.
+
+h|*0..1*
+|*reason*: `xref:data_types:text_package.adoc#_dv_text_class[DV_TEXT]`
+a|Why the object is labelled, never clinical content.
+
+|===
