@@ -3,8 +3,7 @@
 
 //! The access-log store (#5125) against a real `PostgreSQL` 18: an entry is
 //! kept as its canonical form and chained by the link the draft defines
-//! (`docs/plans/access-log/antora/modules/access_log/pages/semantics.adoc`
-//! §Integrity), the verifier finds a removed, an inserted and a reordered
+//! (`docs/plans/access-log.md` §Integrity), the verifier finds a removed, an inserted and a reordered
 //! record, a tombstone replaces an entry and leaves the chain intact, and the
 //! records of `audit_event` and of the access log verify as one chain.
 //!

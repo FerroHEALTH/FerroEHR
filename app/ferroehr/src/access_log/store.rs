@@ -5,10 +5,9 @@
 //! its `ACCESS_LOG_LINK`, and an entry replaced in place by its tombstone
 //! (#5125).
 //!
-//! The draft's integrity rules (`docs/plans/access-log/antora/modules/
-//! access_log/pages/semantics.adoc` §Integrity) fix the chain: the canonical
-//! form of a record is its ITS-JSON serialisation without its link,
-//! canonicalised by RFC 8785; `content_digest` is the SHA-256 of that form and
+//! The draft's integrity rules (`docs/plans/access-log.md` §Integrity) fix
+//! the chain: the canonical form of a record is its ITS-JSON serialisation
+//! without its link, canonicalised by RFC 8785; `content_digest` is the SHA-256 of that form and
 //! `digest` the SHA-256 of `previous_digest`, the sequence and
 //! `content_digest`, one per line. The store writes the canonical form, and
 //! the insert trigger of `audit.access_log_record`
