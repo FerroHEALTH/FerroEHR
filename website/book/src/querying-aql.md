@@ -487,8 +487,8 @@ replaces it rather than appending.
 ## Queries rooted at a demographic class
 
 The Demographic API reads a party by its identifier and has no search. To find
-a person, an organisation or a role by what it holds, such as an identifier in
-its `details`, FerroEHR serves a subset of the experimental AQL demographic
+a party or a relationship by what it holds, such as an identifier in its
+`details`, FerroEHR serves a subset of the experimental AQL demographic
 extension on the same `POST /query/aql` and `GET /query/aql` routes. No openEHR
 specification governs it: QUERY 1.1 lets `FROM` name any Reference Model class
 but gives semantics only to the clinical repository, so everything below is
@@ -504,16 +504,36 @@ ORDER BY p/uid/value
 **The grammar served.** The query is ordinary AQL 1.1 syntax with these rules on
 the `FROM` clause:
 
-- The outermost class is `PERSON`, `ORGANISATION` or `ROLE`, optionally under a
-  `VERSION` class. It is the only demographic class at the root of the query.
+- The outermost class is a demographic root, optionally under a `VERSION`
+  class, and it is the only demographic class at the root of the query. The
+  roots served are:
+
+  | Root | What it reads |
+  |---|---|
+  | `PERSON`, `ORGANISATION`, `GROUP`, `AGENT`, `ROLE` | the parties of that class |
+  | `ACTOR` | every `PERSON`, `ORGANISATION`, `GROUP` and `AGENT` |
+  | `PARTY` | every party of the five classes |
+  | `PARTY_RELATIONSHIP` | the relationships stored as their own object on FerroEHR's relationship routes |
+
+  The abstract `PARTY` and `ACTOR` cover the concrete classes the RM places
+  below them, so `FROM PARTY p WHERE …` finds a party by an identifier
+  without knowing its class. Every root reads parties of any archetype. A
+  relationship held inside its source party's `relationships` is part of that
+  party, so you read it through a path such as
+  `p/relationships[at0030]/target/id/value`, never as a root.
 - Below it, `CONTAINS` may name the content classes a party holds: `CLUSTER`,
   `ELEMENT`, the item structures, and the party containers `PARTY_IDENTITY`,
   `CONTACT`, `ADDRESS` and `CAPABILITY`, with archetype and node predicates as
   usual, for example
   `CONTAINS CLUSTER c[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v2]`.
 - `SELECT`, `WHERE` and `ORDER BY` take paths inside the party: its `details`
-  tree, its `identities`, `contacts` and `capabilities`, `p/uid/value`, and
-  the whole party (`SELECT p`). Named parameters, `LIMIT`/`OFFSET`, the REST
+  tree, its `identities`, `contacts` (with their `addresses`) and
+  `capabilities` (with their `credentials`), its `relationships` and
+  `roles`, `p/uid/value`, and the whole party (`SELECT p`). `identities`,
+  `contacts`, `addresses` and `capabilities` hold structure nodes, so a path
+  through them follows the row rule above; `relationships` and `roles` are
+  held in the party's own data, so a projected path through them follows the
+  cell rule and answers the array of its matches. Named parameters, `LIMIT`/`OFFSET`, the REST
   `offset` and `fetch`, and the functions and aggregates of the clinical
   envelope apply unchanged.
 
@@ -524,8 +544,10 @@ no row. `p/uid/value` is the version identifier the Demographic API returns.
 **What is refused.** Each of these is a **400 Bad Request** naming the
 construct, so you can tell a refusal from an empty result:
 
-- `GROUP`, `AGENT`, `PARTY_RELATIONSHIP`, and the abstract `PARTY` and `ACTOR`;
-- a demographic class anywhere but the root, or a second one;
+- a demographic class anywhere but the root, or a second one, including
+  `PARTY p CONTAINS PARTY_RELATIONSHIP r`;
+- a `PARTY_RELATIONSHIP` root that names an `EHR`, because a relationship is
+  the subject of no EHR;
 - a query that names `EHR` or a clinical versioned object such as
   `COMPOSITION` anywhere but directly under the root (see the join below);
 - an `ehr_id` scope (query parameter or `openehr-ehr-id` header), because a
@@ -544,8 +566,10 @@ ORDER BY c/context/start_time/value DESC
 A party is the subject of an EHR when the EHR's current `EHR_STATUS.subject`
 is a `PARTY_SELF` whose `external_ref` names the party: its `id.value` is the
 party's uid without `::<system>::<version>`, and its `type` is the root class
-or one of its abstract RM ancestors (`ACTOR` for `PERSON` and `ORGANISATION`,
-`PARTY` for all three). This is the reference `POST /ehr` stores, so an EHR
+or one of its abstract RM ancestors (`ACTOR` for `PERSON`, `ORGANISATION`,
+`GROUP` and `AGENT`, `PARTY` for all five). Under the abstract `PARTY` or
+`ACTOR` root each party joins under its own class, so a reference that names
+a `PERSON` as an `ORGANISATION` joins under no root. This is the reference `POST /ehr` stores, so an EHR
 created with that subject joins with no other call.
 
 The `namespace` of the reference is not
@@ -581,6 +605,14 @@ content, do not apply to parties. The SMART `aql-…` scopes that govern every
 query still apply. The query runs on the demographic database credential, and
 its access record is filed under the demographic domain with the number of rows
 served.
+
+**Policy parties.** A caller without the administrator role never receives
+a policy party through any root: a system's `AGENT`, a policy `ROLE`, an
+acts-for `PARTY_RELATIONSHIP`, or a party that holds an acts-for
+relationship. The rule applies under every root, the abstract `PARTY` and
+`ACTOR` included, to the nodes reached through `CONTAINS` and to the party
+half of a join, and counts, pages and aggregates see only what you may read
+([Operational policy](operational-policy.md) has the rule in full).
 
 ## Version scope: LATEST_VERSION and ALL_VERSIONS
 
@@ -797,8 +829,9 @@ results. Supported today includes:
 - `FROM` over `EHR`, `VERSIONED_OBJECT` (its `uid` and `owner_id`), `VERSION`
   (`LATEST_VERSION` / `ALL_VERSIONS`, its commit metadata and its
   attestations, see [VERSION paths](#version-paths)), and the RM
-  structure classes, with archetype and name predicates, and over `PERSON`,
-  `ORGANISATION` and `ROLE` as the experimental demographic extension;
+  structure classes, with archetype and name predicates, and over the
+  demographic classes (`PARTY`, `ACTOR`, their five concrete classes and a
+  standalone `PARTY_RELATIONSHIP`) as the experimental demographic extension;
 - `CONTAINS` trees with `AND`, `OR`, and `NOT CONTAINS`;
 - `WHERE` comparisons on typed leaves (with openEHR magnitude ordering for
   quantities), `EXISTS`, `LIKE`, `MATCHES` value lists, and range predicates;
@@ -815,9 +848,9 @@ results. Supported today includes:
 Every refusal below is a typed error naming the construct, so you never get a
 silently incorrect answer:
 
-- **Demographic forms outside the served subset.** `GROUP`, `AGENT`,
-  `PARTY_RELATIONSHIP`, `PARTY` and `ACTOR`, a demographic class below the root,
-  and a query mixing a demographic root with `EHR` or clinical content (see
+- **Demographic forms outside the served subset.** A demographic class below
+  the root, and a query mixing a demographic root with `EHR` or clinical
+  content other than the join (see
   [Queries rooted at a demographic class](#queries-rooted-at-a-demographic-class)).
 - **`TOP … BACKWARD`.** `TOP` is deprecated as of AQL 1.1.0 and the direction
   variant is not implemented; the error carries the specification's own rewrite
