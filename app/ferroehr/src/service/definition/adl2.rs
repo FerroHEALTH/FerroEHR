@@ -29,7 +29,7 @@ use openehr_adl::opt::{OptError, RawOpt, create_opt, unresolved_constituents};
 use openehr_adl::parse::Dialect;
 use openehr_adl::validate::catalogue::Severity;
 use openehr_adl::validate::resource_meta::check_base_description;
-use openehr_adl::validate::rm::{ProductionRmModel, production_model_governs};
+use openehr_adl::validate::rm::production_model_governs;
 use openehr_adl::validate::{validate_source, validate_source_integrity};
 use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::archetype::authored_archetype::AuthoredArchetype;
@@ -38,6 +38,7 @@ use openehr_sdt::flat::example::{DetailLevel, ExampleType, apply_output_uid};
 use openehr_sdt::flat::webtemplate::builder_v2_4::build_web_template_v2_4;
 
 use crate::db::acquire::acquire;
+use crate::draft_model::RM_WITH_DRAFTS;
 use openehr_sdt::flat::webtemplate::model::WebTemplate;
 use serde_json::Value;
 use sqlx::Connection as _;
@@ -101,7 +102,8 @@ impl FerroEhrService {
     /// `ValidationFailed` carrying the rule-code mnemonics, which the template
     /// upload answers `400` too
     /// (`operations/definition_template_adl2_upload.yaml` declares no `422`). The openEHR
-    /// [`ProductionRmModel`] governs openEHR-published archetypes; a foreign or
+    /// RM, extended by the draft packages ([`RM_WITH_DRAFTS`]), governs
+    /// openEHR-published archetypes; a foreign or
     /// test model skips the RM pass, which would false-fire VCORM
     /// (`AOM2/master04.3` §Reference Model Type Matching). External term
     /// bindings are verified through the terminology-service resolver (VETDF,
@@ -138,7 +140,7 @@ impl FerroEhrService {
         let repo = self.adl2_repository(&mut tx).await?;
         let owned = source.to_owned();
         let mut issues = on_engine_stack(move || match resolver {
-            Some(resolver) => validate_source(&owned, Some(&repo), &ProductionRmModel, &resolver),
+            Some(resolver) => validate_source(&owned, Some(&repo), &RM_WITH_DRAFTS, &resolver),
             None => validate_source_integrity(&owned, Dialect::Adl2, Some(&repo)),
         })
         .await?

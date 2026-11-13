@@ -542,7 +542,6 @@ impl BindingMapping {
     /// archetypes and relationship codes, in lower-case hex.
     #[must_use]
     pub fn digest(&self) -> String {
-        use sha2::Digest as _;
         let mut text = String::new();
         let mut line = |parts: &[&str]| {
             text.push_str(&parts.join("\u{1f}"));
@@ -577,16 +576,7 @@ impl BindingMapping {
         if let Some(membership) = &self.membership {
             line(&["membership", membership]);
         }
-        sha2::Sha256::digest(text.as_bytes()).iter().fold(
-            String::with_capacity(64),
-            |mut hex, byte| {
-                use std::fmt::Write as _;
-                // NOTE: `impl fmt::Write for String` never fails
-                // (<https://doc.rust-lang.org/std/fmt/trait.Write.html#impl-Write-for-String>).
-                let _written = write!(hex, "{byte:02x}");
-                hex
-            },
-        )
+        crate::digest::sha256_hex(&text)
     }
 }
 

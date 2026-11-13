@@ -195,6 +195,7 @@ async fn query(dsn: &str, case: &Case, ehr: Uuid, plan: &Path) -> anyhow::Result
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),
         policy_parties: ferroehr::aql::sql::PolicyParties::Served,
+        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
     };
     let prepared = ferroehr::aql::sql::build(&ir, &params, &ctx)
         .map_err(|e| anyhow!("lower {}: {e}", case.name))?;

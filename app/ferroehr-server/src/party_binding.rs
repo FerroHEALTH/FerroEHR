@@ -189,7 +189,8 @@ pub fn install(
 
 /// Prepares this replica's party store before it takes traffic.
 ///
-/// Seeds the default policy and demographic definitions, reads the policy
+/// Seeds the default policy, demographic and `EHR_ACCESS` definitions,
+/// commits the default `EHR_ACCESS` of every EHR without one, reads the policy
 /// grants, starts their listener and logs the federation agreements in
 /// force, judges the mapping against its
 /// templates, prepares the side table and takes this replica's lease,
@@ -207,6 +208,10 @@ pub async fn prepare(
         .seed_default_definitions()
         .await
         .context("seeding the default definitions")?;
+    service
+        .restore_default_ehr_access()
+        .await
+        .context("restoring the default EHR_ACCESS of the EHRs without one")?;
     service
         .read_grants()
         .await

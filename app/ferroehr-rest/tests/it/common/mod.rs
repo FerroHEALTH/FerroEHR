@@ -53,6 +53,7 @@ const EXTENSION_ROOTS: &[&str] = &[
     "/admin/access-log",
     "/admin/access-opt-out",
     "/admin/access-restriction",
+    "/admin/access_policy",
     "/admin/archive",
     "/admin/config",
     "/admin/dump",
@@ -823,6 +824,38 @@ pub(crate) async fn grant_to(
 /// Whether a live `PERSON` in `pool` carries the key `key` under `issuer`.
 async fn bound_already(pool: &PgPool, issuer: &str, key: &str) -> bool {
     bound_person(pool, issuer, key).await.is_some()
+}
+
+/// The `PERSON` the Basic user `user` of [`grant_basic_users`] is bound to.
+pub(crate) async fn basic_person(pool: &PgPool, user: &str) -> uuid::Uuid {
+    bound_person(pool, BASIC_LOGIN, user)
+        .await
+        .expect("the Basic user is bound to a PERSON")
+}
+
+/// `access_directives` settings of the `access default` code `default`, whose
+/// gate-keepers are the `PERSON`s `gate_keepers`.
+pub(crate) fn access_settings(default: &str, gate_keepers: &[uuid::Uuid]) -> Value {
+    let mut settings = serde_json::json!({
+        "_type": "ACCESS_DIRECTIVE_SETTINGS",
+        "default_access": { "_type": "DV_CODED_TEXT", "value": default,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID",
+                    "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
+                "code_string": default } }
+    });
+    if !gate_keepers.is_empty() {
+        settings["gate_keepers"] = gate_keepers
+            .iter()
+            .map(|person| {
+                serde_json::json!({ "_type": "PARTY_IDENTIFIED",
+                    "external_ref": { "_type": "PARTY_REF", "namespace": "demographic",
+                        "type": "PERSON",
+                        "id": { "_type": "HIER_OBJECT_ID", "value": person.to_string() } } })
+            })
+            .collect();
+    }
+    settings
 }
 
 /// The live `PERSON` in `pool` carrying the key `key` under `issuer`.

@@ -255,6 +255,16 @@ async fn write_contribution(
         )
         .await?;
     }
+    // NOTE: BASE Architecture Overview, Access control of access settings: the
+    // gate-keeper rule is judged against the settings current in this transaction.
+    if let Some(ehr_id) = ehr_id
+        && write
+            .changes
+            .iter()
+            .any(|(_, c)| c.kind() == Kind::EhrAccess)
+    {
+        cx.check_ehr_access_writer(&mut tx, ehr_id).await?;
+    }
     for (_, change) in &write.changes {
         if let Change::Modify {
             vo_id,

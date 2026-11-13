@@ -4,9 +4,9 @@
 //! The repair of an EHR held closed by `EHR_ACCESS` settings that do not
 //! parse.
 //!
-//! An EHR whose `ferroehr.access_control.v1` settings cannot be read is held
-//! closed: every path route refuses it and every query leaves it out
-//! ([`crate::service::ehr::access_types::EhrAccessSettings::held_closed`]). The
+//! An EHR whose `access_directives` settings cannot be read is held closed:
+//! every path route refuses it and every query leaves it out
+//! ([`crate::service::ehr::access_settings::EhrAccessSettings::HeldClosed`]). The
 //! CONTRIBUTION that would replace the settings names the EHR and is refused
 //! too, so this administrator's act is the one way back: it commits a new
 //! `EHR_ACCESS` version carrying settings that parse, as a modification with
@@ -27,7 +27,7 @@ use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
-use crate::service::ehr::access_types::{EHR_ACCESS_CONTROL_V1_SCHEME, EhrAccessSettings};
+use crate::service::ehr::access_settings::{EhrAccessSettings, check_written_settings};
 use crate::service::response::ResourceMeta;
 use crate::service::write::Mode;
 use crate::storage::version_repo::read::VersionAt;
@@ -54,7 +54,8 @@ impl FerroEhrService {
     /// - `conflict` (`409`) — the EHR's settings parse, so it is not held; the
     ///   ordinary CONTRIBUTION changes them.
     /// - `bad_request` (`400`) — `settings` are not settings of the
-    ///   `ferroehr.access_control.v1` scheme that parse.
+    ///   `access_directives` scheme whose every invariant holds, naming the
+    ///   first defect.
     /// - `version_conflict` — the `EHR_ACCESS` moved on while the repair ran.
     /// - `exception` — a database fault (rolled back).
     /// - `service_overloaded` — the access record was refused under
@@ -85,6 +86,7 @@ impl FerroEhrService {
                  change them with a CONTRIBUTION"
             )));
         }
+        check_written_settings(&settings)?;
         let mut access = current.canonical;
         let Some(object) = access.as_object_mut() else {
             return Err(ServiceError::exception(format!(
@@ -92,27 +94,6 @@ impl FerroEhrService {
             )));
         };
         object.insert("settings".to_owned(), settings);
-        match EhrAccessSettings::from_ehr_access(&access) {
-            Ok(Some(_)) => {}
-            Ok(None) => {
-                return Err(ServiceError::bad_request(
-                    format!(
-                        "the repair settings must carry the {EHR_ACCESS_CONTROL_V1_SCHEME} \
-                         scheme's _type"
-                    ),
-                    NotThisScheme,
-                ));
-            }
-            Err(error) => {
-                return Err(ServiceError::bad_request(
-                    format!(
-                        "the repair settings do not parse as the {EHR_ACCESS_CONTROL_V1_SCHEME} \
-                         scheme"
-                    ),
-                    error,
-                ));
-            }
-        }
         self.validate_for_commit(Kind::EhrAccess, &access, false)
             .await?;
         let audit = self.audit(change_type::MODIFICATION, "EHR_ACCESS settings repair");
@@ -144,8 +125,3 @@ impl FerroEhrService {
         ))
     }
 }
-
-/// Repair settings that carry no `_type` of the scheme this server reads.
-#[derive(Debug, thiserror::Error)]
-#[error("the settings carry another scheme's _type, or none")]
-struct NotThisScheme;

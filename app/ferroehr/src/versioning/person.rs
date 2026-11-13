@@ -69,6 +69,10 @@ pub(crate) fn refuse_composing_for_others(
 /// authorises a proxy does. Which committers count is our own design: no
 /// openEHR spec governs it.
 ///
+/// An `EHR_ACCESS` is no health data: it holds the person's own access
+/// choices, and the gate-keeper rule of
+/// [`crate::service::ehr::access_rule`] decides who changes it.
+///
 /// # Errors
 /// [`ServiceError::Restricted`] (`403`) when a person or their representative
 /// changes a version whose committer is neither `PARTY_SELF` nor
@@ -79,7 +83,9 @@ pub(crate) async fn refuse_altering_others(
     vo_id: VoId,
     preceding: TreeId,
 ) -> Result<(), ServiceError> {
-    if !crate::versioning::committer::inserts_for_the_person() {
+    // NOTE: EHDS Art. 5 and Art. 8, an EHR_ACCESS holds the person's own access
+    // choices, whose writers the gate-keeper rule decides (service::ehr::access_rule).
+    if kind == Kind::EhrAccess || !crate::versioning::committer::inserts_for_the_person() {
         return Ok(());
     }
     let (committer, named) =

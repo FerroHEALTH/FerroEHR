@@ -1663,16 +1663,24 @@ fn store_access_settings(dir: &str, settings: &Value) {
     }
 }
 
-/// An archive whose `EHR_ACCESS` settings do not parse is refused with the
-/// `400` a CONTRIBUTION writing them gets, naming the setting and the EHR, and
-/// nothing of it is written; the same archive with settings that parse loads.
+/// An archive whose `EHR_ACCESS` settings break an invariant is refused with
+/// the `400` a CONTRIBUTION writing them gets, naming the invariant and the
+/// EHR, and nothing of it is written; the same archive with settings that
+/// hold loads.
 /// Stored, the first would hold the EHR closed.
 #[tokio::test]
 async fn an_archive_whose_access_settings_do_not_parse_is_refused() {
     let (_src_db, _src_pool, source) = repository().await;
     let (_dst_db, dst_pool, target) = repository().await;
     let (dir, ehr) = exported(&source).await;
-    let settings = |default_access: &str| json!({ "_type": "FERROEHR_ACCESS_CONTROL_V1", "default_access": default_access });
+    let settings = |default_access: &str| {
+        json!({ "_type": "ACCESS_DIRECTIVE_SETTINGS",
+                "default_access": { "_type": "DV_CODED_TEXT", "value": default_access,
+                    "defining_code": { "_type": "CODE_PHRASE",
+                        "terminology_id": { "_type": "TERMINOLOGY_ID",
+                            "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
+                        "code_string": default_access } } })
+    };
 
     store_access_settings(&dir, &settings("bogus"));
     let err = target
@@ -1684,8 +1692,9 @@ async fn an_archive_whose_access_settings_do_not_parse_is_refused() {
         "the write path's refusal, got {err:?}"
     );
     assert!(
-        err.message().contains("EHR_ACCESS.settings.default_access"),
-        "the refusal names the setting, got {err:?}"
+        err.message()
+            .contains("ACCESS_DIRECTIVE_SETTINGS.Default_access_valid"),
+        "the refusal names the invariant, got {err:?}"
     );
     assert!(
         err.message().contains(&ehr.to_string()),

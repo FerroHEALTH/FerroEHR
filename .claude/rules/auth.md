@@ -26,8 +26,9 @@ governs maintenance and extension, not initial build.
 - SMART scope grammar/enforcement: the vendored
   `docs/specs/openehr/ITS-REST/docs/smart_app_launch/` text (master08 is the
   load-bearing scope grammar). EHR-level access: the
-  `ferroehr.access_control.v1` scheme implemented in
-  `app/ferroehr/src/service/ehr/access_types.rs` (no openEHR spec defines a
+  `access_directives` scheme (`ACCESS_DIRECTIVE_SETTINGS` of the draft access
+  control package), checked in `app/ferroehr/src/service/ehr/access_settings.rs`
+  with its writers and readers in `access_rule.rs` (no openEHR spec defines a
   concrete ACCESS_CONTROL_SETTINGS scheme — our own design).
 
 ## Rules

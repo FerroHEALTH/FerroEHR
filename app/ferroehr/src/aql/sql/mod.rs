@@ -124,6 +124,25 @@ pub struct SqlCtx {
     /// ([`crate::party_binding::policy`]) or leaves them out; a clinical query
     /// reads no party, so it never applies there.
     pub policy_parties: PolicyParties,
+    /// The EHRs whose `EHR_ACCESS` objects the query reads rows of.
+    pub access_settings: EhrAccessReaders,
+}
+
+/// The EHRs whose `EHR_ACCESS` settings a query may read rows of.
+///
+/// The service derives it from the caller and the settings' gate-keepers
+/// (`crate::service::ehr::access_rule`), and the SQL generator applies it to
+/// the head row of every versioned-object source, so a restriction stays
+/// invisible to a provider (EHDS Art. 8). No openEHR spec governs who reads
+/// the settings: our own design.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum EhrAccessReaders {
+    /// Every EHR's: an administrator, or the subject in their own EHR.
+    #[default]
+    Every,
+    /// Only these EHRs': those whose settings name the caller a gate-keeper;
+    /// an empty list reads none.
+    Only(Vec<EhrId>),
 }
 
 /// Whether a demographic query serves the policy parties
@@ -403,7 +422,7 @@ struct Builder<'a> {
     presence_only: bool,
     /// The EHDS Art. 8 and Art. 3(3) access gates, read once when the builder
     /// starts (`crate::system_log::access_context`).
-    gates: gates::Gates,
+    gates: gates::Gates<'a>,
     /// The structure steps the SELECT paths bind once per row
     /// ([`Builder::bind_select_paths`]), one entry per distinct step prefix.
     step_bindings: Vec<StepBinding>,
@@ -440,7 +459,7 @@ impl<'a> Builder<'a> {
             sub_ctr: 0,
             streaming: false,
             presence_only: false,
-            gates: gates::Gates::current(ir.domain, ctx.policy_parties),
+            gates: gates::Gates::current(ir.domain, ctx.policy_parties, &ctx.access_settings),
             step_bindings: Vec::new(),
         }
     }

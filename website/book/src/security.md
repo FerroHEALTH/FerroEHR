@@ -268,76 +268,109 @@ control.
 > outage rather than a control. Bind callers to patients with the ABAC layer
 > below; this key decides only the default disposition.
 
-Committing settings with the `ferroehr.access_control.v1` scheme
-switches that EHR to explicit policy, and those settings **always win over the
-server default**, in both directions:
+Committing settings of the `access_directives` scheme switches that EHR to
+explicit policy, and those settings **always win over the server default**,
+in both directions. The settings are an `ACCESS_DIRECTIVE_SETTINGS`, a class
+of FerroEHR's draft access control package, and every coded value is a code
+of the access control groups of FerroEHR's terminology `ferroehr-operations`:
 
 ```json
 {
   "_type": "EHR_ACCESS",
-  "name": { "_type": "DV_TEXT", "value": "access" },
-  "archetype_node_id": "openEHR-EHR-EHR_ACCESS.generic.v1",
+  "name": { "_type": "DV_TEXT", "value": "EHR Access" },
+  "archetype_node_id": "openEHR-EHR-EHR_ACCESS.access_directives.v1",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": { "_type": "ARCHETYPE_ID",
+                      "value": "openEHR-EHR-EHR_ACCESS.access_directives.v1" },
+    "rm_version": "1.2.0"
+  },
   "settings": {
-    "_type": "FERROEHR_ACCESS_CONTROL_V1",
-    "gate_keeper": "user:alice",
-    "default_access": "restricted",
-    "access_list": [
-      { "principal": "user:bob",   "access": "full" },
-      { "principal": "role:nurse", "access": "restricted_below", "max_level": 2 }
-    ],
-    "privacy": {
-      "default_level": 0,
-      "composition_overrides": [
-        { "uid": "8849182c-82ad-4088-a07f-48ead4180515", "level": 3 }
-      ]
-    }
+    "_type": "ACCESS_DIRECTIVE_SETTINGS",
+    "default_access": {
+      "_type": "DV_CODED_TEXT", "value": "restricted",
+      "defining_code": { "_type": "CODE_PHRASE",
+        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+        "code_string": "restricted" }
+    },
+    "gate_keepers": [
+      { "_type": "PARTY_SELF" },
+      { "_type": "PARTY_RELATED",
+        "external_ref": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+                          "id": { "_type": "HIER_OBJECT_ID",
+                                  "value": "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f80" } },
+        "relationship": { "_type": "DV_CODED_TEXT", "value": "guardian",
+          "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+            "code_string": "10" } } }
+    ]
   }
 }
 ```
 
-- **Access list:** with `default_access: "restricted"`, only listed
-  principals may touch the EHR: `user:<login or OIDC subject>` or
-  `role:<role>` (matched against the caller's roles). Everyone else gets
-  `403`. An EHR Extract export by manifest (`POST /message/export`) passes
-  this gate for every EHR the manifest names before it reads any content,
-  so one EHR the caller may not reach refuses the whole export.
-- **Privacy levels:** integer sensitivity levels with meanings you define
-  for your jurisdiction. A composition's level is its override entry or the
-  default, and a caller may read it only when its level is *strictly below*
-  their ceiling. `full` access has no ceiling; `restricted_below` uses the
-  entry's `max_level`; a caller with **no access-list entry** gets
-  `default_level + 1`, so the default level stays readable and only raised
-  levels are withheld. This gate applies to Composition **read** routes.
-  An override's `uid` is the `VERSIONED_COMPOSITION` uid, or a version uid
-  whose first part is one; a CONTRIBUTION that writes any other `uid` is
-  refused with `400`.
-- **Unreadable settings:** settings that carry the scheme's `_type` but do
-  not parse hold the EHR closed. A request that names the EHR is refused
-  with `500`, no query reaches it, and the server logs an error naming it.
-  A CONTRIBUTION, an EHR Extract import or an admin archive load that
-  carries such settings is refused with `400` naming the setting that does
-  not parse (the load names its EHR too, and writes nothing of the archive),
-  so only settings stored before that check can hold an EHR. An
-  administrator repairs a held EHR with
+- **Default access:** `open` admits any caller the other layers admit.
+  `restricted` and `consent_required` admit the administrator
+  (`authz.rbac.admin_role`), the record's person and the gate-keepers; every
+  other caller gets `403`. An EHR Extract export by manifest
+  (`POST /message/export`) passes this gate for every EHR the manifest names
+  before it reads any content, so one EHR the caller may not reach refuses the
+  whole export. The directives a subject gives (consent, restriction, opt-out
+  and delegation) and the sensitivity labels are stored and checked with the
+  settings; the access evaluator that decides each request by them ships in
+  the same release.
+- **Who writes the settings:** a new `EHR_ACCESS` version is committed by a
+  gate-keeper the current settings name, or by an administrator acting on the
+  person's instruction. `PARTY_SELF` names the record's person; any other
+  gate-keeper names a party of the demographic service by its
+  `external_ref`, matched against the `PERSON` the caller is bound to. With
+  no gate-keeper, only an administrator changes the settings. Every other
+  caller is refused with `403`. Changes are committed with a CONTRIBUTION
+  (there is no dedicated `EHR_ACCESS` endpoint in the openEHR REST API) and
+  are versioned and audited like all record content.
+- **Who reads the settings:** the administrator, the record's person and the
+  gate-keepers. To anyone else the settings are absent, so a restriction stays
+  invisible to a provider (EHDS Art. 8): an AQL query returns no
+  `EHR_ACCESS` row of the EHR, an EHR Extract leaves its `EHR_ACCESS` out,
+  and a CONTRIBUTION that commits an `EHR_ACCESS` version reads as unknown
+  (`404`). One caller more receives the `EHR_ACCESS` in an EHR Extract: the
+  holder of an `export_ehr_extract` grant whose `subject_namespace` covers
+  the EHR, such as a migration client, since the extract transfers the whole
+  EHR and an import elsewhere must keep the person's directives.
+- **Every write is checked:** a CONTRIBUTION, an EHR Extract import and an
+  admin archive load that carry settings are refused whole with `400` naming
+  the first defect: settings of another scheme (the removed
+  `FERROEHR_ACCESS_CONTROL_V1` among them), a member the class does not
+  declare, or a broken invariant of the draft package, named as
+  `CLASS.Invariant`, such as `ACCESS_DIRECTIVE.Restriction_denies`.
+- **Unreadable settings:** stored settings that do not read as the scheme
+  hold the EHR closed. A request that names the EHR is refused with `500`,
+  no query reaches it, and the server logs an error naming it. Only settings
+  stored before the write check can hold an EHR. An administrator repairs a
+  held EHR with
   `POST /ferroehr/rest/extensions/v1/admin/ehr-access/repair`, body
-  `{"ehr_id": "…", "settings": {…}}`: the new settings must parse, the
-  repair commits a new `EHR_ACCESS` version with its own commit audit and
-  contribution, and it writes an access record
+  `{"ehr_id": "…", "settings": {…}}`: the new settings must pass the write
+  check, the repair commits a new `EHR_ACCESS` version with its own commit
+  audit and contribution, and it writes an access record
   (`ehr-access-repair:<versioned object uid>`) naming the administrator. The
   repair is refused with `409` for an EHR that is not held; such an EHR
   changes its settings with a CONTRIBUTION.
-- **Gate-keeper:** once set, only that principal may commit a new
-  `EHR_ACCESS` version (via a CONTRIBUTION; there is no dedicated
-  `EHR_ACCESS` endpoint in the openEHR REST API). Changes are versioned and
-  audited like all record content.
+- **The default definition:** every boot stores the archetype
+  `openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0` when no definition of its
+  id is stored, and never over a stored one. FerroEHR reads the settings by
+  their codes, never by this id, so a deployment may use its own.
 
-The scheme is a FerroEHR extension: openEHR mandates the `EHR_ACCESS`
-object and its change control but publishes no concrete access-control
-scheme. The per-EHR decision also holds for AQL, ad-hoc and stored queries
-alike: an EHR the caller may not read contributes no rows, whether the query
-names it in its `WHERE` clause, in an `EHR` predicate, through the `ehr_id`
-parameter, or not at all, as in a population query. Query results are not
-filtered by privacy level.
+The scheme is a FerroEHR extension: openEHR mandates the `EHR_ACCESS` object
+and its change control but publishes no concrete access-control scheme. The
+per-EHR decision also holds for AQL, ad-hoc and stored queries alike: an EHR
+the caller may not reach contributes no rows, whether the query names it in
+its `WHERE` clause, in an `EHR` predicate, through the `ehr_id` parameter, or
+not at all, as in a population query.
+
+Upgrading drops every stored `EHR_ACCESS` of the removed
+`FERROEHR_ACCESS_CONTROL_V1` scheme, with its history, and the next boot
+gives each such EHR the default `EHR_ACCESS` with no settings, which the
+server default governs. Commit new settings in the `access_directives`
+scheme for the EHRs that had them.
 
 ### Restriction of access by health professionals (EHDS Art. 8)
 
@@ -546,7 +579,7 @@ default, so the person's access stays immediate.
 - **Releasing it.** The treating professional releases a composition once it
   has been explained, from the clinical surface with
   `POST /ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release`.
-  The route takes the checks of a write to that EHR: the EHR access list, the
+  The route takes the checks of a write to that EHR: its `EHR_ACCESS` gate, the
   ABAC check of a composition update and the SMART `composition-` update
   grant. A request that may be the person's is refused with **403**. The
   controller releases with

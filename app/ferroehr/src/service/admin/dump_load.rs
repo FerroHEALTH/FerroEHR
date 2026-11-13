@@ -947,7 +947,7 @@ fn resolve_versions(
 
 /// Refuse an archive any of whose `EHR_ACCESS` versions carries settings the
 /// CONTRIBUTION write path would refuse
-/// ([`check_written_settings`](crate::service::ehr::access_types::check_written_settings)),
+/// ([`check_written_settings`](crate::service::ehr::access_settings::check_written_settings)),
 /// naming the setting and its EHR. A canonical-XML payload that cannot be read
 /// is left to the per-record report the load gives it.
 ///
@@ -976,7 +976,7 @@ fn refuse_unreadable_access_settings(
                 let Some(settings) = version.body.get("settings").filter(|s| !s.is_null()) else {
                     continue;
                 };
-                crate::service::ehr::access_types::check_written_settings(settings)
+                crate::service::ehr::access_settings::check_written_settings(settings)
                     .map_err(|e| for_archived_ehr(e, ehr_id))?;
             }
         }

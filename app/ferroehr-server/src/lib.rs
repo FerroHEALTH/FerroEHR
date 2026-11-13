@@ -42,7 +42,7 @@ use ferroehr::system_log::sender::{
     AuditHandle, AuditSender, ResolvedSubject, SubjectLookup, SubjectResolver,
 };
 use ferroehr::telemetry::build_info::BuildInfo;
-use ferroehr::usage_report::product::{self as usage_product, EventKind, FerroEhr, NOTICE_URL};
+use ferroehr::usage_report::product::{self as usage_product, FerroEhr};
 use ferroehr::usage_report::store::PgStore;
 use ferroehr::versioning::signature::signer::Signer;
 use ferroehr_rest::config::AppConfig;
@@ -64,10 +64,13 @@ use ferroehr::db;
 use ferroehr::service::FerroEhrService;
 use ferroehr::telemetry::{self, indicators};
 use ferrohealth_telemetry::request_log::RequestLog;
+pub mod access_log;
 pub mod db_cmd;
 pub mod definitions;
 pub mod party_binding;
+pub mod policy;
 pub mod process;
+mod usage_report_cmd;
 
 /// How long to wait for the audit queue to flush on shutdown.
 const AUDIT_DRAIN_TIMEOUT: Duration = Duration::from_secs(5);
@@ -133,6 +136,12 @@ pub enum Command {
         #[command(subcommand)]
         cmd: definitions::DefinitionsCmd,
     },
+    /// The access log: seal a checkpoint, verify, export and import.
+    AccessLog {
+        /// Which step to run.
+        #[command(subcommand)]
+        cmd: access_log::AccessLogCmd,
+    },
     /// The party binding side table: `refill` it after a mapping change.
     PartyBinding {
         /// Which step to run.
@@ -184,11 +193,12 @@ pub(crate) async fn dispatch(cli: Cli) -> anyhow::Result<()> {
         })) => run_config_check(config, set),
         Some(Command::Db { cmd }) => db_cmd::run(&cmd, config, set).await,
         Some(Command::Definitions { cmd }) => Box::pin(definitions::run(&cmd, config, set)).await,
+        Some(Command::AccessLog { cmd }) => Box::pin(access_log::run(&cmd, config, set)).await,
         Some(Command::PartyBinding { cmd }) => {
             Box::pin(party_binding::run(&cmd, config, set)).await
         }
         Some(Command::UsageReport { print: _, event }) => {
-            run_usage_report(event, config, set).await
+            usage_report_cmd::run(event, config, set).await
         }
         Some(Command::Report { output }) => run_report(output.as_deref(), config, set).await,
         Some(Command::Common(Common::Serve)) | None => Box::pin(serve(config, set)).await,
@@ -243,67 +253,6 @@ pub async fn write_report(
         .await
         .with_context(|| format!("writing the report to {}", path.display()))?;
     eprintln!("report written to {}", path.display());
-    Ok(())
-}
-
-/// `ferroehr usage-report --print`: assembles the report this instance would
-/// send and prints its exact JSON body to stdout, sending nothing.
-///
-/// Telemetry is not initialised, so stdout carries the JSON alone; the notes
-/// an operator needs go to stderr. The database is read, never written: a
-/// start report on a database with no stored instance id shows a sample id.
-#[expect(
-    clippy::print_stdout,
-    clippy::print_stderr,
-    reason = "the usage-report --print subcommand's PURPOSE is console output \
-              (.claude/rules/reliability.md §tools)"
-)]
-async fn run_usage_report(
-    event: ReportEvent,
-    config_path: Option<&Path>,
-    overrides: &[(String, String)],
-) -> anyhow::Result<()> {
-    let config = ferroehr::config::load(config_path, overrides)?;
-    config.validate()?;
-    let licence = load_licence(&config)?;
-    let build = BuildInfo::for_profile(config.deployment.spec_profile);
-    let identity = usage_product::identity(&build, &licence);
-    let pools = db::connect_domains(&config.database)
-        .await
-        .context("connecting to PostgreSQL")?;
-    let kind = match event {
-        ReportEvent::Start => EventKind::Start,
-        ReportEvent::Daily => EventKind::Daily,
-    };
-    let outcome = usage_product::preview(
-        &config.usage_report,
-        identity,
-        &pools.clinical,
-        &usage_product::window(&usage_product::api_mounts(&config)),
-        kind,
-    )
-    .await
-    .context("assembling the usage report");
-    pools.close().await;
-    let preview = outcome?;
-    println!("{}", serde_json::to_string(&preview.report)?);
-    if !preview.instance_stored {
-        eprintln!(
-            "note: the database holds no instance id yet; the id above is a sample, and the \
-             first start creates the real one"
-        );
-    }
-    if !config.usage_report.enabled {
-        eprintln!(
-            "note: the usage report is OFF (usage_report.enabled = false); this instance sends \
-             nothing"
-        );
-    } else if let Some(variable) = ferroehr::config::loader::usage_report_ci() {
-        eprintln!(
-            "note: the usage report is OFF: CI detected ({variable}); this instance sends nothing"
-        );
-    }
-    eprintln!("details: {NOTICE_URL}");
     Ok(())
 }
 
@@ -999,6 +948,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         verify_on_read = ?signer.verify_on_read(),
         "version signing configured"
     );
+    let access_log = access_log::build(&config, pools.audit.clone(), Arc::clone(&signer))?;
 
     // `[server] system_id` is stamped into `EHR.system_id`,
     // `AUDIT_DETAILS.system_id` and `OBJECT_VERSION_ID.creating_system_id`;
@@ -1017,14 +967,11 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     tracing::info!(provider = ehr_index.name(), "EHR index provider");
 
     let audit_enabled = audit_sender.is_some();
-    let service = Arc::new(assemble_service(
-        &config,
-        &pools,
-        audit_sender,
-        signer,
-        deployment,
-        ehr_index,
-    )?);
+    let service = Arc::new(
+        assemble_service(&config, &pools, audit_sender, signer, deployment, ehr_index)?
+            .with_access_log(access_log.clone()),
+    );
+    access_log::spawn_schedule(&config, &access_log);
 
     // The schemas are prepared by now, so a configured identifier scheme the
     // registry does not hold is refused here, not at its first party commit.
@@ -1036,13 +983,9 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     }
 
     let binding_lease = party_binding::prepare(&service, &config).await?;
-    // The policy registers in force before the listener takes traffic, and the
-    // retention register keyed on the category register in force.
-    service
-        .read_policy_registers()
-        .await
-        .context("reading the operational-policy registers")?;
-    service.policy_registers().listened().spawn_listener();
+    // The policy in force before the listeners take traffic, and the retention
+    // register keyed on the category register in force.
+    policy::read_and_listen(&service).await?;
     service
         .mirror_category_map()
         .await

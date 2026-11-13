@@ -584,6 +584,20 @@ impl FerroEhrConfig {
                 "set only one of record.signing.key_passphrase / key_passphrase_file".to_owned(),
             ));
         }
+        // NOTE: the checkpoints and signed links of the access log sign with the keyring's key (#5129).
+        if self.audit.access_log.needs_key()
+            && !matches!(
+                self.record.signing.mode,
+                crate::versioning::signature::config::Mode::Pgp
+            )
+        {
+            errors.push(ConfigError::semantic(
+                "audit.access_log.checkpoints and audit.access_log.sign_links sign with the \
+                 keyring's OpenPGP key: set record.signing.mode = \"pgp\" and \
+                 record.signing.key_file"
+                    .to_owned(),
+            ));
+        }
     }
 
     /// Every secret that can be given inline or by file is given exactly one

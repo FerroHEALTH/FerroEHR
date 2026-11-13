@@ -69,7 +69,7 @@ use crate::error::refusal::{Clash, Missing, Refusal};
 use crate::ids::{EhrId, VoId};
 use crate::party_binding::grants::operation::Operation;
 use crate::service::FerroEhrService;
-use crate::service::ehr::access_types::check_written_settings;
+use crate::service::ehr::access_settings::check_written_settings;
 use crate::storage::ehr_repo;
 use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::EventActionCode;
