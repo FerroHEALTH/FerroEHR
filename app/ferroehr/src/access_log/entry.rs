@@ -40,10 +40,11 @@ use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use crate::system_log::binding::{BindingCode, BindingRecord, Identified};
 use crate::system_log::event::{
     AccessDecision, AccessDomain, ActingMode, AuditEvent, EntryScope, EventActionCode,
-    EventOutcome, EventType, ObjectClass,
+    EventOutcome, EventType, OPERATION_SYSTEM, ObjectClass,
 };
-use crate::system_log::fhir::OPERATION_SYSTEM;
+#[cfg(feature = "fhir")]
 use crate::system_log::message::AuditContext;
+#[cfg(feature = "fhir")]
 use crate::system_log::store::RecordEnd;
 use crate::versioning::audit::dv_date_time;
 use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
@@ -150,6 +151,7 @@ pub fn entry_of(
 /// its categories and origins call for
 /// ([`crate::access_log::retention::retention`]), any other until the end its
 /// record has ([`crate::system_log::fhir::record_end`]).
+#[cfg(feature = "fhir")]
 #[must_use]
 pub fn for_store(event: &AuditEvent, ctx: &AuditContext) -> Option<Box<AccessLogEntry>> {
     if !writes_entry(event) {

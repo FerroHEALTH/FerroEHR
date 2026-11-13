@@ -13,6 +13,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use openehr_base::containers::NonEmptyVec;
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
+use openehr_rm::v1_2::common::generic::party_identified::PartyIdentified;
+use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use pgp::composed::{ArmorOptions, KeyType, SecretKeyParamsBuilder, SignedSecretKey};
 use rand::rngs::OsRng;
@@ -23,6 +25,7 @@ use ferroehr::access_log::chain::{self, ChainFinding};
 use ferroehr::access_log::checkpoint::Checkpoints;
 use ferroehr::access_log::store::AccessLogError;
 use ferroehr::access_log::transfer::{ImportRecord, LogExport, TransferError};
+use ferroehr::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
 use ferroehr::versioning::signature::config::{Mode, SigningConfig};
 use ferroehr::versioning::signature::signer::{AttestError, Signer};
 use ferroehr::versioning::signature::trust::TrustedCertificates;
@@ -137,6 +140,11 @@ async fn tamper(pool: &PgPool, table: &str, statements: &[&str]) {
     tx.commit().await.expect("commit");
 }
 
+/// The login of the operator who imports the log.
+const OPERATOR: &str = "transfer-operator";
+/// The request that carried the import.
+const IMPORT_REQUEST: &str = "01JC2Q7N3X";
+
 /// The record of the import, by an operator, kept three years.
 fn import_record() -> ImportRecord {
     let coded = |terminology: &str, value: &str| {
@@ -145,16 +153,19 @@ fn import_record() -> ImportRecord {
                     "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
                     "code_string": value } })
     };
+    let mut caller = AuditEvent::new(
+        EventActionCode::Create,
+        ObjectClass::Extract,
+        EventOutcome::Success,
+    );
+    OPERATOR.clone_into(&mut caller.user_id);
+    caller.request_id = Some(IMPORT_REQUEST.to_owned());
     ImportRecord {
-        accessor: serde_json::from_value(json!({ "_type": "ACCESSOR",
-            "kind": coded("openehr", "person"),
-            "party": { "_type": "PARTY_IDENTIFIED", "name": "transfer operator" } }))
-        .expect("the accessor reads"),
+        caller,
         retention: serde_json::from_value(json!({ "_type": "ACCESS_RETENTION",
             "retain_until": { "_type": "DV_DATE", "value": "2029-11-13" },
             "grounds": [coded("local", "ehds-art-9-2")] }))
         .expect("the retention reads"),
-        request_id: Some("01JC2Q7N3X".to_owned()),
     }
 }
 
@@ -356,6 +367,28 @@ async fn an_ehrs_log_round_trips_through_export_and_import() {
     assert_eq!(
         imported.entry.ehr_id.as_ref().map(HierObjectId::value),
         Some(MOVED)
+    );
+    // The import's entry is built by the one recording path, so it names its
+    // caller by login and its request as every other access's entry does.
+    let accessor = &imported.entry.accessor;
+    assert_eq!(accessor.kind.value, "person");
+    let PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party)) = &accessor.party
+    else {
+        panic!("the operator is an identified party: {accessor:?}");
+    };
+    let login = party
+        .identifiers
+        .as_ref()
+        .and_then(|ids| ids.first())
+        .map(|id| id.id.as_str());
+    assert_eq!(login, Some(OPERATOR), "{accessor:?}");
+    assert_eq!(
+        imported
+            .entry
+            .channel
+            .as_ref()
+            .and_then(|channel| channel.request_id.as_deref()),
+        Some(IMPORT_REQUEST)
     );
 
     let stored: Vec<(String, i64, Option<String>, Option<String>)> = sqlx::query_as(

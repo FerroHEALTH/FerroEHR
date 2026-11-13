@@ -676,7 +676,10 @@ pub async fn put_retention_anchor(
 
 /// Place or release the per-object retention hold that exempts one versioned
 /// object from disposal (EPDV Art. 10 Abs. 2 lit. b,
-/// `docs/law/ch/epdv/text-de.html`). Returns whether the object exists.
+/// `docs/law/ch/epdv/text-de.html`).
+///
+/// Returns `None` when the object does not exist, else the EHR it belongs to,
+/// which the access log names.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -684,18 +687,22 @@ pub async fn set_retention_hold(
     tx: &mut PgConnection,
     vo_id: VoId,
     held: bool,
-) -> Result<bool, StorageError> {
-    let updated = sqlx::query(
+) -> Result<Option<Option<EhrId>>, StorageError> {
+    let row = sqlx::query(
         "UPDATE vo_head SET retention_hold_at = CASE WHEN $2 \
              THEN coalesce(retention_hold_at, now()) ELSE NULL END \
-         WHERE vo_id = $1",
+         WHERE vo_id = $1 RETURNING ehr_id",
     )
     .bind(vo_id)
     .bind(held)
-    .execute(&mut *tx)
-    .await?
-    .rows_affected();
-    Ok(updated > 0)
+    .fetch_optional(&mut *tx)
+    .await?;
+    row.map(|row| {
+        row.try_get::<Option<Uuid>, _>("ehr_id")
+            .map(|ehr| ehr.map(EhrId))
+    })
+    .transpose()
+    .map_err(StorageError::from)
 }
 
 /// What has fallen due, oldest first, bounded by `limit`.

@@ -301,7 +301,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (`access_log::expiry`); an erasure a law orders takes the same path through
   `POST /admin/access-log/erase`, which writes the access-log entry recording
   the erasure in the tombstone's own transaction, after the audit sender has
-  said it would take the record, so the log holds both or neither.
+  said it would take the record, so the log holds both or neither. Every entry
+  is built by `access_log::entry` from an `AuditEvent`: the drain's per-access
+  entries, the erasure's, and the import's (`access_log::transfer`). An AQL
+  statement attributes each served row to the EHR of every bound `EHR` source
+  and versioned-object root (`aql::sql` `served_ehr_ids`, the list the ABAC
+  scope collection reads too), so an EHR-only statement writes its per-EHR
+  entries; a management route that touches EHRs records one access per EHR
+  from the service (`emit_mark_access`, `emit_extract_audit`).
   `access_log_checkpoint` keeps the signed `ACCESS_LOG_CHECKPOINT`s of the head, signed with the version-signing
   keyring's OpenPGP key; a link's `signature` may be set once, after the
   insert that computed its digest. `access_log::checkpoint` seals and verifies

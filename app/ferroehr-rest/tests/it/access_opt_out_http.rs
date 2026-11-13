@@ -568,3 +568,22 @@ async fn a_manifest_export_under_the_override_records_it() {
         "one override record for the opted-out EHR the manifest names twice"
     );
 }
+
+/// Recording and reversing an opt-out each write an access-log entry for the
+/// EHR, naming the register (#5564).
+#[tokio::test]
+async fn recording_and_reversing_an_opt_out_each_write_an_entry() {
+    let (_db, pool, app) = Box::pin(app(true)).await;
+    let (ehr, _vo) = ehr_with_composition(&app).await;
+    for (reverse, action) in [(false, "create"), (true, "delete")] {
+        let (status, body) = opt_out(&app, &ehr, reverse).await;
+        assert_eq!(status, StatusCode::NO_CONTENT, "opt-out {reverse}: {body}");
+        let written = crate::access_log_http::entries(&pool, 1, |s| {
+            s.ehr_id.as_deref() == Some(ehr.as_str())
+                && s.action.as_deref() == Some(action)
+                && s.content.contains("\"access-opt-out:ehr-wide\"")
+        })
+        .await;
+        assert_eq!(written[0].result.as_deref(), Some("granted"), "{written:?}");
+    }
+}
