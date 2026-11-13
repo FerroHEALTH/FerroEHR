@@ -559,10 +559,9 @@ fn pinned_cases() -> Vec<PinnedCase> {
                     "class `Cardinality` is contained within 2 package listing(s) (org.openehr.am.aom14.archetype.constraint_model, org.openehr.base.foundation_types.interval); a class must be contained within exactly one package",
                     "class `CARDINALITY` is contained within 2 package listing(s) (org.openehr.am.aom14.archetype.constraint_model, org.openehr.base.foundation_types.interval); a class must be contained within exactly one package",
                     "2 class definitions share one name (Cardinality, CARDINALITY); all classes in a BMM model must be uniquely named",
-                    "class `ARCHETYPE` redefines property `uid` as `HIER_OBJECT_ID`, which does not conform to `UUID` as declared by `AUTHORED_RESOURCE`",
                 ],
             ),
-            adjudication: "AM 1.4.0's own CARDINALITY and the included BASE 1.3.0's Cardinality are DIFFERENT classes whose names are equal under master05-core-model.adoc §Naming Convention ('the class name \"Hashable\" refers to the same class as \"HASHABLE\"'), so §Packages' uniqueness rule is violated and the two containment rows are that collision seen through the same case-insensitive fold; separately ARCHETYPE redefines the inherited `uid: UUID` as HIER_OBJECT_ID, which is not a UUID descendant",
+            adjudication: "AM 1.4.0's own CARDINALITY and the included BASE 1.3.0's Cardinality are DIFFERENT classes whose names are equal under master05-core-model.adoc §Naming Convention ('the class name \"Hashable\" refers to the same class as \"HASHABLE\"'), so §Packages' uniqueness rule is violated and the two containment rows are that collision seen through the same case-insensitive fold; schema revision 1.4.0.3 removes ARCHETYPE's HIER_OBJECT_ID redefinition of the inherited `uid: UUID` (SPECPR-515, AOM1.4/master03-archetype_package.adoc §Machine Identifier), so that finding is gone",
         },
         PinnedCase {
             file: "AM/json/openehr_am_2.2.0.bmm.json",

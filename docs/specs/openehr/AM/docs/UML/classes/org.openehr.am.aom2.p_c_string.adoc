@@ -18,7 +18,7 @@ h|*Attributes*
 h|*1..1 +
 (redefined)*
 |*constraint*: `link:/releases/BASE/{base_release}/foundation_types.html#_list_class[List^]<link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]>`
-a|String constraint - a list of literal strings and / or regular expression strings delimited by the ‘/’ character.
+a|String constraint - either a list of literal strings, or a single regular expression string, stored with its ‘/’ or ‘^’ delimiters.
 
 h|*1..1 +
 (redefined)*

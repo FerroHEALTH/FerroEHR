@@ -54,15 +54,15 @@ a|Specialisation depth of this artefact. Unspecialised artefacts have depth 0, w
 
 h|*1..1*
 |*node_codes* (): `link:/releases/BASE/{base_release}/foundation_types.html#_list_class[List^]<link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]>`
-a|For at-coded archetypes: list of all at codes in the terminology., i.e. the 'at' codes in an ADL archetype, which are the `_node_id_` values on `C_OBJECT` descendants. For id-coded archetypes: list of all id codes in the terminology., i.e. the 'id' codes in an ADL archetype, which are the `_node_id_` values on `C_OBJECT` descendants.
+a|For at-coded archetypes: list of all at codes in the terminology, i.e. the 'at' codes in an archetype, which are the `_node_id_` values on `C_OBJECT` descendants. For id-coded archetypes: list of all id codes in the terminology, i.e. the 'id' codes in an archetype, which are the `_node_id_` values on `C_OBJECT` descendants.
 
 h|*0..1*
 |*value_codes* (): `link:/releases/BASE/{base_release}/foundation_types.html#_list_class[List^]<link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]>`
-a|List of all value term codes in the terminology, i.e. the 'at' codes in an ADL archetype, which are used as possible values on terminological constrainer nodes.
+a|List of all value term codes in the terminology, i.e. the 'at' codes in an archetype, which are used as possible values on terminological constrainer nodes.
 
 h|*0..1*
 |*value_set_codes* (): `link:/releases/BASE/{base_release}/foundation_types.html#_list_class[List^]<link:/releases/BASE/{base_release}/foundation_types.html#_string_class[String^]>`
-a|List of all value set codes in the terminology defining value sets. These correspond to the 'ac' codes in an ADL archetype.
+a|List of all value set codes in the terminology defining value sets. These correspond to the 'ac' codes in an archetype.
 
 h|*1..1*
 |*has_language* ( +

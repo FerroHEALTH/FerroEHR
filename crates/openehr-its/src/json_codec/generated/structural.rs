@@ -1969,7 +1969,12 @@ pub fn declared_fields(ty: &str) -> ::core::option::Option<&'static [&'static st
             "property",
             "rm_type_name",
         ]),
-        "C_QUANTITY_ITEM" => ::core::option::Option::Some(&["magnitude", "units"]),
+        "C_QUANTITY_ITEM" => ::core::option::Option::Some(&[
+            "magnitude",
+            "units",
+            "units_display_name",
+            "units_system",
+        ]),
         "C_REAL" => ::core::option::Option::Some(&[
             "alternative_ids",
             "assumed_value",
