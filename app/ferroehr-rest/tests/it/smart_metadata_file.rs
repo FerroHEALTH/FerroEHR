@@ -57,7 +57,10 @@ fn config(entries: Vec<IssuerEntry>) -> AppConfig {
     };
     cfg.auth.smart.discovery = true;
     cfg.auth.smart.issuer_metadata_file = Some(metadata_file());
-    cfg.auth.smart.public_base_url = Some("https://cdr.example.com".to_owned());
+    cfg.public_root = Some(
+        ferroehr::config::server::PublicRoot::new("https://cdr.example.com", "")
+            .expect("a public root"),
+    );
     cfg
 }
 
@@ -92,6 +95,7 @@ async fn a_metadata_file_naming_no_issuer_refuses_the_boot() {
         None,
         None,
         std::sync::Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        std::sync::Arc::new(ferroehr::config::auth::Unasked),
     )
     .await
     .expect_err("metadata naming no [auth] issuer is refused");

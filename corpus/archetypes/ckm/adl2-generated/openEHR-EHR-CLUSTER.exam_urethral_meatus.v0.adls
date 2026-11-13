@@ -1,0 +1,223 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c782c6e6-5879-44aa-a323-b59c8e4f2f07; build_uid=e6946ee7-abf7-4ed5-a5cc-2d1b8173779d)
+    openEHR-EHR-CLUSTER.exam_urethral_meatus.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Nasjonal IKT">
+        ["email"] = <"silje.ljosland.bakke@nasjonalikt.no">
+        ["date"] = <"2015-06-08">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Nasjonal IKT, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "John Tore Valand, Haukeland Universitetssjukehus, Norway", "Heather Leslie, Atomica Informatics, Australia">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"F5A9924722F395CE821D5011D88AD457">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording a narrative description and clinical interpretation of the findings observed during physical examination of the urethral meatus and distal urethra that is visible to the naked eye.">
+            use = <"Use to record a narrative description of the overall findings observed during the physical examination of the urethral meatus and distal urethra. This initial draft archetype consists only of the core examination pattern data elements (as per CLUSTER.exam_pattern) and will likely be expanded further over time as specific clinical requirements are identified.
+
+This archetype has been specifically designed to be used in the 'Examination findings' SLOT within the CLUSTER.exam_vulva and CLUSTER.exam_penis archetypes, but can also be used within the OBSERVATION.exam and other OBSERVATION or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording data not related to the physical examination of urethral meatus and distal urethra visible to the naked eye. To record findings about urethroscopy use CLUSTER.inspection_urethra.
+
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom.
+
+Not to be used to record stand-alone clinical observations or measurements or test results - use specific OBSERVATION archetypes. For example OBSERVATION.urinalysis.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination of urethral meatus
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- No abnormality detected
+                value matches {
+                    DV_BOOLEAN[at9001] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Discharge presence
+                value matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[ac9004]}    -- Discharge presence (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Discharge type
+                value matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[ac9000]}    -- Discharge type (synthesised)
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0004] matches {    -- Examination findings
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype CLUSTER[at0005] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0006] matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            allow_archetype CLUSTER[at0008] matches {    -- Examination not done
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Caruncle
+                value matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[ac9005]}    -- Caruncle (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Examination of urethral meatus">
+                description = <"Findings observed during physical examination of the urethral meatus and distal urethra.">
+            >
+            ["at0002"] = <
+                text = <"No abnormality detected">
+                description = <"Statement that no abnormality was detected (NAD) on physical examination.">
+                comment = <"Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element.">
+            >
+            ["at0003"] = <
+                text = <"Clinical description">
+                description = <"Narrative description of the overall findings observed during the physical examination.">
+            >
+            ["at0004"] = <
+                text = <"Examination findings">
+                description = <"Structured details about the  physical examination findings.">
+            >
+            ["at0005"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram representing the physical examination findings.">
+            >
+            ["at0006"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the physical examination findings, not captured in other fields.">
+            >
+            ["at0008"] = <
+                text = <"Examination not done">
+                description = <"Details to explicitly record that this examination was not performed.">
+            >
+            ["at0012"] = <
+                text = <"Discharge presence">
+                description = <"The presence or absence of urethral discharge.">
+            >
+            ["at0013"] = <
+                text = <"Discharge type">
+                description = <"Type of urethral discharge.">
+            >
+            ["at0014"] = <
+                text = <"Purulent">
+                description = <"The urethral discharge is purulent in appearance.">
+            >
+            ["at0015"] = <
+                text = <"Mucopurulent">
+                description = <"The urethral discharge is mucopurulent in appearance.">
+            >
+            ["at0016"] = <
+                text = <"Mucous">
+                description = <"The urethral discharge is mucous in appearance.">
+            >
+            ["at0017"] = <
+                text = <"Clear">
+                description = <"The urethral discharge is clear in appearance.">
+            >
+            ["at0018"] = <
+                text = <"Caruncle">
+                description = <"The presence or absence of caruncles.">
+            >
+            ["at0019"] = <
+                text = <"Present">
+                description = <"A urethral discharge is present.">
+            >
+            ["at0020"] = <
+                text = <"Absent">
+                description = <"A urethral discharge is not present.">
+            >
+            ["at0021"] = <
+                text = <"Indeterminate">
+                description = <"It is not possible to tell if a urethral discharge is present.">
+            >
+            ["at0022"] = <
+                text = <"Present">
+                description = <"A urethral caruncle is present.">
+            >
+            ["at0023"] = <
+                text = <"Absent">
+                description = <"A urethral caruncle is not present.">
+            >
+            ["at0024"] = <
+                text = <"Indeterminate">
+                description = <"It is not possible to tell if a urethral caruncle is present.">
+            >
+            ["ac9004"] = <
+                text = <"Discharge presence (synthesised)">
+                description = <"The presence or absence of urethral discharge. (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Discharge type (synthesised)">
+                description = <"Type of urethral discharge. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Caruncle (synthesised)">
+                description = <"The presence or absence of caruncles. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0014", "at0015", "at0016", "at0017">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0022", "at0023", "at0024">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0019", "at0020", "at0021">
+        >
+    >

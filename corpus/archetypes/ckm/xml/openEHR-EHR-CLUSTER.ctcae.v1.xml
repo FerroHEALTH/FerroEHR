@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -623,27 +623,22 @@ This archetype is intended to be nested in the 'Specific details' SLOT within ei
     <term_definitions language="sv">
       <items code="at0000">
         <items id="text">Common Terminology Criteria for Adverse Events (CTCAE)</items>
-        <items id="description">Ett ramverk för att med hjälp av CTCAE-terminologin registrera eventuella biverkningar eller ogynnsamma och oavsiktliga symptom eller sjukdomar.&#xD;
-</items>
+        <items id="description">Ett ramverk för att med hjälp av CTCAE-terminologin registrera eventuella biverkningar eller ogynnsamma och oavsiktliga symptom eller sjukdomar.</items>
         <items id="comment">Tidigare känd som Common Toxicity Criteria (CTC).</items>
       </items>
       <items code="at0001">
         <items id="text">Kategori (SOC)</items>
-        <items id="description">Kategorin i MedDRA System Organ Class (SOC) som den aktuella CTCAE-termen tillhör.&#xD;
-</items>
-        <items id="comment">Detta fält identifierar ett anatomiskt eller fysiologiskt system, etiologi eller syfte.&#xD;
-</items>
+        <items id="description">Kategorin i MedDRA System Organ Class (SOC) som den aktuella CTCAE-termen tillhör.</items>
+        <items id="comment">Detta fält identifierar ett anatomiskt eller fysiologiskt system, etiologi eller syfte.</items>
       </items>
       <items code="at0002">
         <items id="text">Term</items>
-        <items id="description">Namnet på tecknet, symtomet eller sjukdomen som observerats. Registreras som en MedDRA Lowest Level Term (LLT).&#xD;
-</items>
+        <items id="description">Namnet på tecknet, symtomet eller sjukdomen som observerats. Registreras som en MedDRA Lowest Level Term (LLT).</items>
         <items id="comment">Detta element kan mappas (terminologibindas) till motsvarande MedDRA-kod</items>
       </items>
       <items code="at0003">
         <items id="text">Allvarlighetsgrad</items>
-        <items id="description">Kategorisering av biverkningens allvarlighetshetsgrad.&#xD;
-</items>
+        <items id="description">Kategorisering av biverkningens allvarlighetshetsgrad.</items>
         <items id="comment">De kliniska beskrivningarna av varje "allvarlighetsgrad" finns dokumenterade i CTCAE v5.0-specifikationen. Grad 0 har inte använts sedan CTCAE v2 men finns kvar i arketypen för att möjliggöra användning av alla versioner av CTCAE.</items>
       </items>
       <items code="at0009">
@@ -689,9 +684,7 @@ This archetype is intended to be nested in the 'Specific details' SLOT within ei
       <items code="at0001">
         <items id="text">Kategori</items>
         <items id="description">Kategorien innenfor MedDRA System Organ Class (SOC) som er knyttet til CTCAE Term (LTT).</items>
-        <items id="comment">Dette elementet identifiserer et anatomisk eller fysiologisk system, etiologi eller formål.&#xD;
-&#xD;
-</items>
+        <items id="comment">Dette elementet identifiserer et anatomisk eller fysiologisk system, etiologi eller formål.</items>
       </items>
       <items code="at0002">
         <items id="text">Term</items>
@@ -794,4 +787,3 @@ This archetype is intended to be nested in the 'Specific details' SLOT within ei
     </term_definitions>
   </ontology>
 </archetype>
-

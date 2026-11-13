@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -71,16 +71,14 @@ The IDDSI Framwork. International Dysphagia Standardization Initiative. Retrieve
         </terminology_id>
         <code_string>nb</code_string>
       </language>
-      <purpose>For å registrere resultatene for hver enkelt parameter og totalskår for Gugging Swallowing Screen for Intensive Care Units (GUSS-ICU).&#xD;
-</purpose>
+      <purpose>For å registrere resultatene for hver enkelt parameter og totalskår for Gugging Swallowing Screen for Intensive Care Units (GUSS-ICU).</purpose>
       <keywords>svelging, dysfagi, aspirasjon, intensivavdeling, slag, ekstubasjon</keywords>
       <use>Brukes for å registrere resultatene for hver enkelt parameter og totalskår for Gugging Swallowing Screen for Intensive Care Units (GUSS-ICU).&#xD;
 &#xD;
 openEHR-arketyper er fritt tilgjengelige under en åpen lisens, men det spesifikke innholdet i denne Gugging Swallowing Screen for Intensive Care Units (GUSS-ICU)-arketypen er antatt opphavsrettslig beskyttet. All bruk av denne arketypen i implementasjoner må gjøres i henhold til eventuelle vilkår gitt av innehaverne av opphavsretten.&#xD;
  &#xD;
 Informasjon om opphavsrett: GUSS - Gugging Swallowing Screen - University for Continuing Education Krems [Internet], available from https://www.donau-uni.ac.at/en/university/faculties/health-medicine/departments/health-sciences-medicine-research/clinical-neurosciences/research/research-projects/guss/guss-icu.html</use>
-      <misuse>Skal ikke brukes for å registrere resultatene for Gugging Swallowing Screen (GUSS). Bruk arketypen OBSERVATION.guss til dette formålet.&#xD;
-</misuse>
+      <misuse>Skal ikke brukes for å registrere resultatene for Gugging Swallowing Screen (GUSS). Bruk arketypen OBSERVATION.guss til dette formålet.</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
     <details>
@@ -1250,7 +1248,7 @@ Copyright information: Gugging Swallowing Screen for Intensive Care Units (GUSS-
       </items>
       <items code="at0004">
         <items id="text">Preliminary Investigation / Indirect Swallowing Test</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">RASS from 0 to +2</items>
@@ -1258,91 +1256,91 @@ Copyright information: Gugging Swallowing Screen for Intensive Care Units (GUSS-
       </items>
       <items code="at0006">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Coughing and/or throat clearing efficiently</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Swallowing saliva possible</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Drooling (saliva)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Change of voice after swallowing saliva</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Sum</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Direct Swallowing Test (4 subtests)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Semisolid</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Liquids</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Solids</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Liquids &amp; Solids</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Sum</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Total sum</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Item tree</items>
@@ -1355,71 +1353,71 @@ Copyright information: Gugging Swallowing Screen for Intensive Care Units (GUSS-
       </items>
       <items code="at0030">
         <items id="text">Severity code</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Preliminary investigation or semisolids failed. (Severe Dysphagia with high risk of aspiration)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Semisolids passed, fluids failed. (Moderate dysphagia with aspiration risk)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Semisolids passed, fluids passed,solids failed. (Mild dysphagia with low risk of aspiration)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Semisolids passed, fluids passed, solids passed, mixed textures failed. (Mild dysphagia with low risk of aspiration)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Stridor present</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Yes</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">No</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">All textures passed. (Minimal/no Dysphagia; Minimal/no risk of aspiration)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Pass</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Fail</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Pass</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Fail</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Pass</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Fail</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Pass</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Fail</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
     <term_definitions language="nb">
@@ -1441,7 +1439,7 @@ Copyright information: Gugging Swallowing Screen for Intensive Care Units (GUSS-
       </items>
       <items code="at0004">
         <items id="text">Del A: Forhåndsjekk / Indirekte svelgetest</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Richmond Agitation-Sedation Scale (RASS) skåre 0 - +2</items>
@@ -1449,59 +1447,59 @@ Copyright information: Gugging Swallowing Screen for Intensive Care Units (GUSS-
       </items>
       <items code="at0006">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0008">
         <items id="text">Kan hoste eller kremte?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0009">
         <items id="text">Kan svelge spytt?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0010">
         <items id="text">Sikling?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">Endret stemme etter svelging?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0015">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0020">
         <items id="text">Sum</items>
@@ -1509,23 +1507,23 @@ Copyright information: Gugging Swallowing Screen for Intensive Care Units (GUSS-
       </items>
       <items code="at0021">
         <items id="text">Del B: Svelgetest</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0022">
         <items id="text">Tykt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0023">
         <items id="text">Tynt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0024">
         <items id="text">Fast</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0025">
         <items id="text">Fast og flytende</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Sum</items>
@@ -1546,73 +1544,72 @@ Copyright information: Gugging Swallowing Screen for Intensive Care Units (GUSS-
       </items>
       <items code="at0030">
         <items id="text">Evaluering</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0031">
         <items id="text">Ikke bestått forhåndssjekk. (Alvorlig dysfagi. Alvorlig aspirasjonsrisiko)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0032">
         <items id="text">Tykk drikke bestått. Tynn drikke ikke bestått. (Moderat dysfagi. Aspirasjonsrisiko)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0033">
         <items id="text">Tykk drikke bestått. Tynn drikke bestått. Fast føde ikke bestått. (Lettgradelig til moderat dysfagi. Noen grad av aspirasjonsrisiko)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0034">
         <items id="text">Tykk drikke bestått. Tynn drikke bestått. Fast føde bestått. Fast og flytende ikke bestått. (Lettgradelig dysfagi. Lav aspirasjonsrisiko)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0035">
         <items id="text">Respirasjonsbesvær/stridor?</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0036">
         <items id="text">Ja</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0037">
         <items id="text">Nei</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0038">
         <items id="text">Alle konsistenser bestått. (Minimal eller ingen dysfagi. Minimal aspirasjonsrisiko)</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0039">
         <items id="text">Bestått</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0040">
         <items id="text">Ikke bestått</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0047">
         <items id="text">Bestått</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0048">
         <items id="text">Ikke bestått</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0049">
         <items id="text">Bestått</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0050">
         <items id="text">Ikke bestått</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0051">
         <items id="text">Bestått</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0052">
         <items id="text">Ikke bestått</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

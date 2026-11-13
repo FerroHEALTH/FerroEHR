@@ -13,9 +13,9 @@
 //! (`docs/law/eu/ehds/text.html`). No openEHR spec governs an opt-out: our own
 //! design/extension.
 //!
-//! A caller holding one of `[authz.rbac] access_service_roles` is an
-//! access-service caller, and so is every verified external person or
-//! organisation of a `federation` issuer, by its kind. Its requests run with the opt-out enforced,
+//! A caller holding an `access_service` grant in the CDR is an access-service
+//! caller, and so is every verified external person or organisation of a
+//! `federation` issuer, by its kind. Its requests run with the opt-out enforced,
 //! published to the platform layer through
 //! `ferroehr::system_log::access_context`, where the AQL builder, the exports,
 //! the subject lookup and the write guard treat an opted-out EHR as absent.
@@ -27,13 +27,15 @@
 //! surfaces, read the record as before.
 
 use axum::response::{IntoResponse, Response};
-use ferroehr::config::agreement::Accessor;
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::Missing;
 use ferroehr::ids::EhrId;
+use ferroehr::party_binding::grants::agreement::Accessor;
+use ferroehr::party_binding::grants::capabilities::Capabilities;
+use ferroehr::party_binding::grants::operation::Operation;
 use uuid::Uuid;
 
-use super::authn::{Principal, current_principal};
+use super::authn::current_principal;
 use crate::api::RequestParts;
 use crate::overview::error::RestError;
 use crate::state::AppState;
@@ -62,10 +64,8 @@ pub(crate) fn applies(state: &AppState, op: &str) -> OptOut {
     // NOTE: an external person may override only where its agreement sets
     // opt_out_override, and an organisation never; our own design under EHDS Art. 10(2).
     let overridable = match super::authn::declared::admitted(&principal.access) {
-        Some(agreement) => {
-            agreement.opt_out_override && agreement.accessor == Some(Accessor::Person)
-        }
-        None if is_access_service(state, &principal) => true,
+        Some(agreement) => agreement.opt_out_override && agreement.accessor == Accessor::Person,
+        None if Capabilities::current().holds(Operation::AccessService) => true,
         None => return OptOut::Untouched,
     };
     let emergency = state
@@ -78,17 +78,6 @@ pub(crate) fn applies(state: &AppState, op: &str) -> OptOut {
     } else {
         OptOut::Enforced
     }
-}
-
-/// Whether `principal` holds one of `[authz.rbac] access_service_roles`.
-pub(crate) fn is_access_service(state: &AppState, principal: &Principal) -> bool {
-    let declared = &state.config().rbac.access_service_roles;
-    principal.roles.iter().any(|held| {
-        declared
-            .iter()
-            .map(|role| role.trim())
-            .any(|role| !role.is_empty() && held.eq_ignore_ascii_case(role))
-    })
 }
 
 /// Answer, as an unknown target would be answered, a request of an

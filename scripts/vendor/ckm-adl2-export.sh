@@ -11,8 +11,9 @@
 # sources. It is never the ADL 2 corpus (that is `adl2-archetypes.sh`) and
 # never an oracle for our own converter (`.claude/rules/vendored-corpora.md`).
 #
-# The archetype list is the REST API's, paged with size/offset only; the
-# script refuses a list of 20 rows or fewer (the ignored-pagination trap).
+# The archetype list is the REST API's in every lifecycle state, REJECTED and
+# DEPRECATED included (scripts/vendor/lib/ckm.sh), so the file names match
+# `ckm-archetypes.sh` one for one.
 # A reply that is not generated ADL 2 is recorded as unexported, never kept:
 # NOTFOUND (404, a resource not public, such as one in INITIAL or TEAMREVIEW
 # state), EMPTY (200 with no body: CKM's conversion produced nothing), BAD
@@ -25,7 +26,9 @@
 #   CKM_JOBS=2 CKM_PAUSE=0.5 scripts/vendor/ckm-adl2-export.sh
 set -Eeuo pipefail
 
-CKM_REST="https://ckm.openehr.org/ckm/rest/v1"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/vendor/lib/ckm.sh
+. "$ROOT/scripts/vendor/lib/ckm.sh"
 CKM_SERVLET="https://ckm.openehr.org/ckm/retrieveArchetype"
 OUT="corpus/archetypes/ckm/adl2-generated"
 JOBS="${CKM_JOBS:-2}"
@@ -71,15 +74,9 @@ WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 STAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-echo "==> listing the CKM archetype library (size/offset pagination)"
-curl -fsS --proto '=https' "$CKM_REST/archetypes?size=10000&offset=0" \
-  -H "Accept: application/json" -o "$WORK/archetypes.json"
+echo "==> listing the CKM archetype library, every lifecycle state"
+ckm_list_archetypes "$WORK/archetypes.json"
 published=$(jq 'length' "$WORK/archetypes.json")
-if [[ "$published" -le 20 ]]; then
-  echo "::error::the list endpoint returned only $published rows: CKM ignored the" \
-       "pagination parameters (use ?size=M&offset=N)" >&2
-  exit 1
-fi
 
 # One file per archetype, named by its HRID; a repeated HRID gets `__2`, `__3`
 # on the resourceMainId sort order, as `ckm-archetypes.sh` names them.
@@ -93,7 +90,7 @@ jq '
   ' "$WORK/archetypes.json" > "$WORK/rows.json"
 jq -r --arg dir "$OUT" '.[] | "\(.cid) \($dir)/\(.name).adls"' \
   "$WORK/rows.json" > "$WORK/jobs.txt"
-printf '==> %s archetypes published by CKM (jobs=%s, pause=%ss)\n' "$published" "$JOBS" "$PAUSE"
+printf '==> %s archetypes listed by CKM (jobs=%s, pause=%ss)\n' "$published" "$JOBS" "$PAUSE"
 
 find "$OUT" -name '*.adls' -delete
 # shellcheck disable=SC2016 # $0/$1/$2 are the inner bash -c positionals, not this shell's
@@ -109,7 +106,8 @@ exported=$(grep -c '^OK ' "$WORK/fetch.log" || true)
   echo
   echo "Fetched by \`scripts/vendor/ckm-adl2-export.sh\` on $STAMP from"
   echo "\`$CKM_SERVLET?cid-archetype=<cid>&format=ADL2\`, one request per archetype"
-  echo "the REST list (\`$CKM_REST/archetypes\`) names: $published listed,"
+  echo "the REST list (\`$CKM_REST/archetypes\`, every \`resource-state\` its"
+  echo "contract \`$CKM_REST/openapi.json\` enumerates) names: $published listed,"
   echo "$exported exported. CKM ran Release 1.22.0 with Archie's \`adl_2.4_support\`"
   echo "converter (announced on https://discourse.openehr.org/t/adl2-generation-appears-to-be-incorrect/17448,"
   echo "post 13, 2026-11-04)."

@@ -1,0 +1,390 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ab0c1796-c1ad-4f89-9ab1-b961c0f6115b; build_uid=ece17d6c-529c-4bf4-be80-372a23dfd218)
+    openEHR-EHR-OBSERVATION.pathology_test-blood_glucose.v1.0.0
+
+specialize
+    openEHR-EHR-OBSERVATION.pathology_test.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, United Kingdom">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2009-11-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Koray Atalag, University of Auckland, New Zealand", "Sharmila Biswas, Dr Sharmila Biswas GP, Australia", "Doug Chesher, PaLMS, Australia", "Stephen Chu, NEHTA, Australia (Editor)", "Matthew Cordell, NEHTA, Australia", "Andre de Wolf, NeHTA, Australia", "Gail Easterbrook, Flinders Medical Centre, Australia", "David Evans, Queensland Health, Australia", "Shahla Foozonkhah, Ocean Informatics, Australia", "Heath Frankel, Ocean Informatics, Australia", "Grahame Grieve, Health Intersections Pyty Ltd, Australia (Editor)", "Sam Heard, Ocean Informatics, Australia", "Mary Kelaher, NEHTA, Australia", "Michael Legg, Michael Legg & associates, Australia", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Mike Martyn, The Hobart Anaesthetic Group, Australia", "Andrew McIntyre, Medical-Objects, Australia", "David McKillop, NEHTA, Australia", "Ian McNicoll, Ocean Informatics UK, United Kingdom", "Chris Mitchell, RACGP, Australia", "Stewart Morrison, NEHTA, Australia", "Michael Osborne, Mater Health Services, Australia", "Kyle Shore, Charm Health, Australia", "Michael Thompson, Queensland Health, Australia", "Gordon Tomes, Australian Institute of Health and Welfare, Australia", "Richard Townley-O'Neill, NEHTA, Australia">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Pathology (Data Specifications) Version 1.0 [Internet]. Sydney, Australia: National E-Health Transition Authority; 2007 May 29 [cited 2011 Jul 11]; Available at http://www.nehta.gov.au/component/docman/doc_download/962-pathology-v10.">
+        ["2"] = <"Laboratory Technical Framework, Volume 3: Content, Revision 3.0 [Internet]. USA: IHE International; 2011 May 19; [cited 2011 Jul 11]. Available from: http://www.ihe.net/Technical_Framework/index.cfm#laboratory.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"29E5DA5C692B58D7109BDF40FC8A71DA">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings and interpretation of glucose tests performed on plasma, serum or whole blood.">
+            keywords = <"lab", "pathology", "biochemistry", "laboratory", "test", "specimen">
+            use = <"Use to record any glucose test results performed on plasma, serum or whole blood whether measured in a formal laboratory environment, point of care delivery or home monitoring.
+
+This archetype has been designed to enable the health record to:
+- distinguish between fasting and non-fasting glucose measurements, 
+- distinguish measurements from laboratory, point of care and home-based devices, and;
+- capture the complexity of a sequence of glucose measurements for a Glucose Tolerance Test, Glucose Challenge Test and Insulin Hypoglycaemia StimulationTest via the specific Events and State data elements.
+
+Will normally be reported back to the requesting clinician as one component within the context of an overall COMPOSITION-based report.">
+            misuse = <"Not to be used to represent an entire cumulative report. This Pathology test result archetype represents only one of the result sets that is usually viewed as a vertical in a cumulative test report. A cumulative report is a view that is constructed from the results represented by multiple OBSERVATION archetypes.
+
+Not to be used to record urine glucose test results - use OBSERVATION.urinalysis.
+
+Not to be used to record CSF glucose test results - use the generic OBSERVATION.pathology_test with CSF noted as the biological sample.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل نتيجة اختبار المعمل, و التي قد يتم استخدامها لتسجيل اختبار ذي قيمة واحدة, و عادة ما يتم بعد ذلك المزيد من التخصيص أو الوضع في قالب لتمثيل اختبار متعدد القيم أو رتل من الاختبارات. 
+و يمثل هذا النموذج كوالد (أب) للتخصيصات الأخرى لاختبارات معملية أكثر تحديدا مثل الميكروبيولوجيا و الهيستوباثولوجيا.">
+            keywords = <"المعمل - المختبر", "الباثولوجيا - المرضية", "الكيمياء الحيوية", "الدمويات", "الميكروبيولوجيا", "المناعيات - علم المناعة">
+            use = <"قد يستخدم لتسجيل نتيجة اختبار المعمل, و التي قد يتم استخدامها لتسجيل اختبار ذي قيمة واحدة, و عادة ما يتم بعد ذلك المزيد من التخصيص أو الوضع في قالب لتمثيل اختبار متعدد القيم أو رتل من الاختبارات. 
+
+يتم بعد ذلك تقديم التقرير للطبيب السريري الذي قام بطلب الاختبار في سياق تقرير معملي متكامل.">
+            misuse = <"قد تكون التخصيصات أكثر مناسبة للتقارير المركبة مثل حالات الميكروبيولوجيا أو الهيستوباثولوجيا.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] matches {    -- Blood Glucose Test Result
+        /data[at0001]/events matches {
+            EVENT[at0002] matches {
+                /data[at0003]/items[at0095]/items[at0096]/items matches {
+                    ELEMENT[at0078.1] matches {    -- Glucose Result
+                        value matches {
+                            DV_QUANTITY[at0.9004] matches {
+                                property matches {[at0.9000]}    -- Concentration
+                                [units] matches {
+                                    [{"mg/dl"}],
+                                    [{"mmol/l"}]
+                                }
+                            }
+                        }
+                    }
+                }
+                state matches {
+                    ITEM_TREE[at0.8] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            ELEMENT[at0.9] occurrences matches {0..1} matches {    -- Fasting State
+                                value matches {
+                                    DV_BOOLEAN[at0.9005] matches {
+                                        value matches {True}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.11] occurrences matches {0..1} matches {    -- Duration of Fasting
+                                value matches {
+                                    DV_DURATION[at0.9006] matches {
+                                        value matches {PTHM/|>=PT0S|}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.13] occurrences matches {0..1} matches {    -- Glucose Load
+                                value matches {
+                                    DV_QUANTITY[at0.9007] matches {
+                                        property matches {[at0.9001]}    -- Mass
+                                        [units, precision] matches {
+                                            [{"mg"}, {|>=0|}],
+                                            [{"gm"}, {0}]
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0.14] occurrences matches {0..1} matches {    -- Insulin Load
+                                value matches {
+                                    DV_QUANTITY[at0.9008] matches {
+                                        property matches {[at0.9002]}    -- Mass (IU)
+                                        units matches {"IU"}
+                                        precision matches {0}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            POINT_EVENT[at0.2] occurrences matches {0..1} matches {    -- Baseline Measurement
+                offset matches {
+                    DV_DURATION[at0.9009] matches {
+                        value matches {PT0S; PT0S}
+                    }
+                }
+                data matches {
+                    use_node ITEM_TREE[at0.9010] /data[at0001]/events[at0002]/data[at0003]
+                }
+                state matches {
+                    use_node ITEM_TREE[at0.9011] /data[at0001]/events[at0002]/state[at0.8]
+                }
+            }
+            POINT_EVENT[at0.3] occurrences matches {0..1} matches {    -- 1 Hour Measurement
+                offset matches {
+                    DV_DURATION[at0.9012] matches {
+                        value matches {PT1H; PT1H}
+                    }
+                }
+                data matches {
+                    use_node ITEM_TREE[at0.9013] /data[at0001]/events[at0002]/data[at0003]
+                }
+                state matches {
+                    use_node ITEM_TREE[at0.9014] /data[at0001]/events[at0002]/state[at0.8]
+                }
+            }
+            POINT_EVENT[at0.5] occurrences matches {0..1} matches {    -- 2 Hour Measurement
+                offset matches {
+                    DV_DURATION[at0.9015] matches {
+                        value matches {PT2H; PT2H}
+                    }
+                }
+                data matches {
+                    use_node ITEM_TREE[at0.9016] /data[at0001]/events[at0002]/data[at0003]
+                }
+                state matches {
+                    use_node ITEM_TREE[at0.9017] /data[at0001]/events[at0002]/state[at0.8]
+                }
+            }
+            POINT_EVENT[at0.6] occurrences matches {0..1} matches {    -- Pre-prandial Measurement
+                data matches {
+                    use_node ITEM_TREE[at0.9018] /data[at0001]/events[at0002]/data[at0003]
+                }
+                state matches {
+                    use_node ITEM_TREE[at0.9019] /data[at0001]/events[at0002]/state[at0.8]
+                }
+            }
+            POINT_EVENT[at0.7] occurrences matches {0..1} matches {    -- Post-prandial Measurement
+                data matches {
+                    use_node ITEM_TREE[at0.9020] /data[at0001]/events[at0002]/data[at0003]
+                }
+                state matches {
+                    use_node ITEM_TREE[at0.9021] /data[at0001]/events[at0002]/state[at0.8]
+                }
+            }
+        }
+        /protocol[at0004]/items matches {
+            before [at0017]
+            ELEMENT[at0.12] occurrences matches {0..1} matches {    -- Point of Care Device Used
+                value matches {
+                    DV_BOOLEAN[at0.9022] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0.15] occurrences matches {0..1} matches {    -- Route of Administration
+                value matches {
+                    DV_CODED_TEXT[at0.9023] matches {
+                        defining_code matches {[ac0.9003]}    -- Route of Administration (synthesised)
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0.10] matches {    -- Testing Device
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.10"] = <
+                text = <"Testing Device">
+                description = <"The device used to test the specimen.">
+                comment = <"For example: home glucometer.">
+            >
+            ["at0.11"] = <
+                text = <"Duration of Fasting">
+                description = <"The duration of fasting completed by the test subject prior to the sample being taken.">
+            >
+            ["at0.12"] = <
+                text = <"Point of Care Device Used">
+                description = <"The test was performed using a point of care device or a home-based device.">
+            >
+            ["at0.13"] = <
+                text = <"Glucose Load">
+                description = <"The amount of glucose administered to the test subject.">
+            >
+            ["at0.14"] = <
+                text = <"Insulin Load">
+                description = <"The amount of insulin administered to the test subject.">
+            >
+            ["at0.15"] = <
+                text = <"Route of Administration">
+                description = <"Route that the glucose was administered.">
+            >
+            ["at0.16"] = <
+                text = <"Oral">
+                description = <"Glucose load was administered by mouth.">
+            >
+            ["at0.17"] = <
+                text = <"Intravenous">
+                description = <"Glucose load was administered intravenously.">
+            >
+            ["at0.2"] = <
+                text = <"Baseline Measurement">
+                description = <"Specific point in time measurement which provides a reference glucose reading against which subsequent measurements can be compared.">
+            >
+            ["at0.3"] = <
+                text = <"1 Hour Measurement">
+                description = <"Specific point in time measurement taken 1 hour after the Baseline Measurement and subsequent glucose/insulin challenge.">
+            >
+            ["at0.5"] = <
+                text = <"2 Hour Measurement">
+                description = <"Specific point in time measurement taken 2 hours after the Baseline Measurement and subsequent glucose/insulin challenge.">
+            >
+            ["at0.6"] = <
+                text = <"Pre-prandial Measurement">
+                description = <"Measurement taken before a meal.">
+            >
+            ["at0.7"] = <
+                text = <"Post-prandial Measurement">
+                description = <"Measurement taken after a meal.">
+            >
+            ["at0.9"] = <
+                text = <"Fasting State">
+                description = <"A fasting specimen was used for the measurement.">
+            >
+            ["at0000.1"] = <
+                text = <"Blood Glucose Test Result">
+                description = <"The findings and interpretation of glucose tests performed on plasma, serum or whole blood.">
+            >
+            ["at0078.1"] = <
+                text = <"Glucose Result">
+                description = <"Actual value of the glucose test result.">
+            >
+            ["at0.9000"] = <
+                text = <"Concentration">
+                description = <"Concentration">
+            >
+            ["at0.9001"] = <
+                text = <"Mass">
+                description = <"Mass">
+            >
+            ["at0.9002"] = <
+                text = <"Mass (IU)">
+                description = <"Mass (IU)">
+            >
+            ["ac0.9003"] = <
+                text = <"Route of Administration (synthesised)">
+                description = <"Route that the glucose was administered. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0.10"] = <
+                text = <"*Testing Device">
+                description = <"The device used to test the specimen.">
+                comment = <"For example: home glucometer.">
+            >
+            ["at0.11"] = <
+                text = <"*Duration of Fasting">
+                description = <"The duration of fasting completed by the test subject prior to the sample being taken.">
+            >
+            ["at0.12"] = <
+                text = <"*Point of Care Device Used">
+                description = <"The test was performed using a point of care device or a home-based device.">
+            >
+            ["at0.13"] = <
+                text = <"*Glucose Load">
+                description = <"The amount of glucose administered to the test subject.">
+            >
+            ["at0.14"] = <
+                text = <"*Insulin Load">
+                description = <"The amount of insulin administered to the test subject.">
+            >
+            ["at0.15"] = <
+                text = <"*Route of Administration">
+                description = <"Route that the glucose was administered.">
+            >
+            ["at0.16"] = <
+                text = <"*Oral">
+                description = <"Glucose load was administered by mouth.">
+            >
+            ["at0.17"] = <
+                text = <"*Intravenous">
+                description = <"Glucose load was administered intravenously.">
+            >
+            ["at0.2"] = <
+                text = <"*Baseline Measurement">
+                description = <"Specific point in time measurement which provides a reference glucose reading against which subsequent measurements can be compared.">
+            >
+            ["at0.3"] = <
+                text = <"*1 Hour Measurement">
+                description = <"Specific point in time measurement taken 1 hour after the Baseline Measurement and subsequent glucose/insulin challenge.">
+            >
+            ["at0.5"] = <
+                text = <"*2 Hour Measurement">
+                description = <"Specific point in time measurement taken 2 hours after the Baseline Measurement and subsequent glucose/insulin challenge.">
+            >
+            ["at0.6"] = <
+                text = <"*Pre-prandial Measurement">
+                description = <"Measurement taken before a meal.">
+            >
+            ["at0.7"] = <
+                text = <"*Post-prandial Measurement">
+                description = <"Measurement taken after a meal.">
+            >
+            ["at0.9"] = <
+                text = <"*Fasting State">
+                description = <"A fasting specimen was used for the measurement.">
+            >
+            ["at0000.1"] = <
+                text = <"*Blood Glucose Test Result">
+                description = <"The findings and interpretation of glucose tests performed on plasma, serum or whole blood.">
+            >
+            ["at0078.1"] = <
+                text = <"*Glucose Result">
+                description = <"*Actual value of the glucose test result.">
+            >
+            ["at0.9000"] = <
+                text = <"* Concentration (en)">
+                description = <"* Concentration (en)">
+            >
+            ["at0.9001"] = <
+                text = <"* Mass (en)">
+                description = <"* Mass (en)">
+            >
+            ["at0.9002"] = <
+                text = <"* Mass (IU) (en)">
+                description = <"* Mass (IU) (en)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Route of Administration (synthesised)">
+                description = <"Route that the glucose was administered. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9000"] = <http://openehr.org/id/119>
+            ["at0.9001"] = <http://openehr.org/id/124>
+            ["at0.9002"] = <http://openehr.org/id/385>
+        >
+    >
+    value_sets = <
+        ["ac0.9003"] = <
+            id = <"ac0.9003">
+            members = <"at0.16", "at0.17">
+        >
+    >

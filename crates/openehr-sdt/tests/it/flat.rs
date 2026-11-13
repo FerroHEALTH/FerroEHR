@@ -557,6 +557,74 @@ fn persistent_composition_round_trip_synthesises_no_context() {
         .expect("rebuilt deserialises as an RM Composition without a context");
 }
 
+/// A single `0..1` EVENT is collapsed (master04 §"Conditionally Collapsed
+/// Wrapper Types"), but its RM-mandatory `time` (RM data_structures,
+/// `EVENT.time` 1..1) keeps a leaf on the OBSERVATION at the event's own path,
+/// so FLAT has a key for the event time that builds into the event and reads
+/// back out of it (#5421).
+#[test]
+fn a_collapsed_single_event_keeps_its_time_leaf() {
+    let wt = persistent_wt();
+    let observation = wt
+        .tree
+        .children
+        .iter()
+        .find(|c| c.rm_type == "OBSERVATION")
+        .unwrap_or_else(|| panic!("fixture has an OBSERVATION content node"));
+    assert!(
+        observation.children.iter().all(|c| c.rm_type != "EVENT"),
+        "the single 0..1 event is collapsed"
+    );
+    let time = observation
+        .children
+        .iter()
+        .find(|c| c.aql_path.ends_with("/data[at0001]/events[at0002]/time"))
+        .unwrap_or_else(|| {
+            panic!(
+                "the collapsed event's time is a leaf of the OBSERVATION: {:?}",
+                observation
+                    .children
+                    .iter()
+                    .map(|c| &c.aql_path)
+                    .collect::<Vec<_>>()
+            )
+        });
+    assert_eq!(time.rm_type, "DV_DATE_TIME");
+    assert_eq!(time.in_context, Some(true));
+    assert_eq!((time.min, time.max), (Some(1), 1));
+
+    let comp: Value = serde_json::from_str(
+        &std::fs::read_to_string(format!(
+            "{CNF_CORPUS}/compositions/CANONICAL_JSON/persistent_minimal.en.v1__full.json"
+        ))
+        .expect("read persistent composition"),
+    )
+    .expect("parse composition");
+    let event_time = comp
+        .pointer("/content/0/data/events/0/time/value")
+        .and_then(Value::as_str)
+        .unwrap_or_else(|| panic!("the fixture's event carries a time"))
+        .to_owned();
+    let flat = composition_to_flat(&comp, &wt).expect("to_flat");
+    let key = format!("{}/{}:0/{}", wt.tree.id, observation.id, time.id);
+    assert_eq!(
+        flat.get(&key).and_then(Value::as_str),
+        Some(event_time.as_str()),
+        "FLAT carries the event time under {key}: {:?}",
+        flat.keys().collect::<Vec<_>>()
+    );
+    let mut written = flat.clone();
+    written.insert(key, Value::String("2026-11-12T10:30:00Z".into()));
+    let rebuilt = composition_from_flat(&written, &wt, NOW).expect("from_flat");
+    assert_eq!(
+        rebuilt
+            .pointer("/content/0/data/events/0/time/value")
+            .and_then(Value::as_str),
+        Some("2026-11-12T10:30:00Z"),
+        "the FLAT event time builds into the collapsed event"
+    );
+}
+
 #[test]
 fn persistent_composition_keeps_explicitly_supplied_context() {
     // A persistent Composition WITH explicit context content (a participation) is

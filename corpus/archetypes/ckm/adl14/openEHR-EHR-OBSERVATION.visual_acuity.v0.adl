@@ -9,9 +9,9 @@ language
 		["nb"] = <
 			language = <[ISO_639-1::nb]>
 			author = <
-				["name"] = <"Ingrid Heitmann, Arne Løberg Sæter">
-				["organisation"] = <"Oslo universitetssykehus HF">
-				["email"] = <"iheitman@ous-hf.no, arnelsa@gmail.com">
+				["name"] = <"Ingrid Heitmann / Arne Løberg Sæter / Silje Ljosland Bakke">
+				["organisation"] = <"Oslo universitetssykehus HF / Helse Vest IKT, Helse Vest IKT AS">
+				["email"] = <"iheitman@ous-hf.no / arnelsa@gmail.com / silje.ljosland.bakke@helse-vest-ikt.no">
 			>
 		>
 		["es-cl"] = <
@@ -34,32 +34,32 @@ description
 	details = <
 		["nb"] = <
 			language = <[ISO_639-1::nb]>
-			purpose = <"*To record the results of visual acuity assessments, which are typically performed by quantifying the individual's ability to detect, resolve or identify visual differences or symbols. (en)">
-			use = <"*Use to record a single assessment of visual acuity per event.
+			purpose = <"For å registrere resultatet av visusundersøkelser, som vanligvis utføres ved å tallfeste individets evne til å oppdage, skille eller gjenkjenne visuelle forskjeller eller symboler.">
+			use = <"Brukes for å registrere én enkelt visusundersøkelse per hendelse.
 
-Use both for assessments attempting to identify the highest attainable visual acuity, as well as those where the visual acuity under special conditions is of interest.
+Brukes både for undersøkelser som søker å finne den høyest oppnåelige visus, og for undersøkelser der visus under spesielle betingelser er av interesse.
 
-Use the 'Result'-cluster to record the primary notation of the assessment, typically only using one of the contained elements per event. 
+Bruk clusteret 'Resultat' for å registrere undersøkelsens primære notasjon, vanligvis ved å fylle ut kun ett av de underliggende elementene per hendelse.
 
-Use the 'Derived Results' Cluster to record any number of conversions or derivations into other notations.
+Bruk clusteret 'Avledet resultat' for å registrere et vilkårlig antall omregninger eller avledninger til andre notasjoner.
 
-Use the 'Supplementary results'-SLOT for structured results not covered by other elements. 
+Bruk SLOT-en 'Supplerende resultater' for strukturerte resultater som ikke dekkes av andre elementer.
 
-Use the 'Visual aid per eye' SLOT to record what was positioned in front of the eye(s) during the assessment. 
-This allows flexible combination of aids to be recorded, including multiple corrections in front of the same eye. 
+Bruk SLOT-en 'Synshjelpemiddel per øye' for å registrere hva som var plassert foran øyet eller øynene under undersøkelsen.
+Dette gjør det mulig å registrere fleksible kombinasjoner av hjelpemidler, inkludert flere korreksjoner foran samme øye.
 
-Population of 'Visual aid type' element is recommended under all circumstances. 
-Use the value \"unaided\" for uncorrected tests where nothing was positioned in front of the tested eye(s).
+Det anbefales å fylle ut elementet 'Type synshjelpemiddel' i alle tilfeller.
+Bruk verdien \"uten korreksjon\" for ukorrigerte undersøkelser der ingenting var plassert foran øyet eller øynene som ble undersøkt.
 
-Use this archetype for tests of minimum detectable, resolveable or recognizable visual acuity as well as reading acuity, but consider specifying this using the 'Perceptive Task' element.  (en)">
-			keywords = <"*eye (en)", "*sight (en)", "*vision (en)", "*VA (en)", "*ophthalmic (en)", "*visual (en)", "*Snellen (en)", "*low contrast (en)", "*defocus (en)", "*pinhole (en)", "*light perception (en)", "*grating (en)", "*BCVA (en)", "*BRVA (en)", "*EDTRS (en)", "*logMAR (en)", "*decimal (en)", "*logRAD (en)", "*reading (en)">
-			misuse = <"*Not to be used to record multiple visual acuity tests in one event. 
+Bruk denne arketypen for undersøkelser av minste synbare, oppløsbare eller gjenkjennbare visus, så vel som lesevisus, men vurder å angi dette ved hjelp av elementet 'Perseptuell oppgave'.">
+			keywords = <"øye", "syn", "synsstyrke", "visus", "VA", "oftalmologisk", "visuell", "Snellen", "lav kontrast", "defokus", "pinhole", "lyssans", "gitter", "BCVA", "BRVA", "EDTRS", "logMAR", "desimal", "logRAD", "lesing">
+			misuse = <"Brukes ikke for å registrere flere visusundersøkelser i én hendelse.
 
-The \"Result\" cluster is not to be used to record the same visual acuity test in multiple converted units - only the primary notation is to be documented there.  If the same test result is to be converted to other units, use the \"derived result\" cluster for all conversion results. 
+Clusteret \"Resultat\" skal ikke brukes for å registrere den samme visusundersøkelsen i flere omregnede enheter - kun den primære notasjonen skal dokumenteres der. Dersom det samme resultatet skal omregnes til andre enheter, brukes clusteret \"Avledet resultat\" for alle omregnede resultater.
 
-Not to be used for assessments of fixation behaviour or observations of eye movements (e.g. fixes and follows, central steady maintained fixation). No appropriate archetype is available for this at the time of writing.
+Brukes ikke for å registrere vurdering av fikseringsatferd eller observasjon av øyebevegelser (for eksempel fikserer og følger, sentral stabil vedvarende fiksering). Det finnes ingen egnet arketype for dette i skrivende stund.
 
-Not to be used for assessing light projection, use 'OBSERVATION.light_projection_test' instead. (en)">
+Brukes ikke for å registrere vurdering av lysprojeksjon; bruk 'OBSERVATION.light_projection_test' i stedet.">
 		>
 		["en"] = <
 			language = <[ISO_639-1::en]>
@@ -150,8 +150,8 @@ Chen DZ, Tham YC, Shen L, Chee SP. A Comparative Validation Study of Near Visual
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"A34D1A1096E66F3165981E8B16F0D91C">
-		["build_uid"] = <"d8980f6c-07cf-4225-8ae6-6b616c58ea1a">
+		["MD5-CAM-1.0.1"] = <"6DDF574B48E4DABA41B58EF810674487">
+		["build_uid"] = <"d9bd40da-aee6-40ac-a0d6-1acaa53c954b">
 		["ip_acknowledgements"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
 		["revision"] = <"0.0.1-alpha">
 	>
@@ -851,7 +851,6 @@ definition
 		}
 	}
 
-
 ontology
 	terminologies_available = <"SNOMED-CT", ...>
 	term_definitions = <
@@ -876,11 +875,11 @@ ontology
 				>
 				["at0012"] = <
 					text = <"Left eye">
-					description = <"The aid was positioned in front of the left eye.">
+					description = <"The left eye was examined.">
 				>
 				["at0013"] = <
 					text = <"Right eye">
-					description = <"The aid was positioned in front of the left eye.">
+					description = <"The right eye was examined.">
 				>
 				["at0014"] = <
 					text = <"Both eyes">
@@ -1838,11 +1837,11 @@ Supplementary results of reading visual acuity tests can be recorded via the 'su
 				>
 				["at0012"] = <
 					text = <"*Left eye(en)">
-					description = <"*The aid was positioned in front of the left eye. (en)">
+					description = <"*The left eye was examined. (en)">
 				>
 				["at0013"] = <
 					text = <"*Right eye(en)">
-					description = <"*The aid was positioned in front of the left eye. (en)">
+					description = <"*The right eye was examined. (en)">
 				>
 				["at0014"] = <
 					text = <"*Both eyes (en)">
@@ -2783,963 +2782,961 @@ Supplementary results of reading visual acuity tests can be recorded via the 'su
 		["nb"] = <
 			items = <
 				["at0000"] = <
-					text = <"*Visual acuity test (en)">
-					description = <"*A test to quantify an individual's visual acuity as a measure of the ability to detect, resolve or recognize visual details.  (en)">
+					text = <"Visusundersøkelse">
+					description = <"En undersøkelse for å tallfeste et individs visus som et mål på evnen til å oppdage, skille eller gjenkjenne visuelle detaljer.">
 				>
 				["at0001"] = <
-					text = <"Event Series">
+					text = <"Hendelsesserie">
 					description = <"@ internal @">
 				>
 				["at0003"] = <
-					text = <"Tree">
+					text = <"Tre">
 					description = <"@ internal @">
 				>
 				["at0007"] = <
-					text = <"*Eye examined (en)">
-					description = <"*The eye which is being examined, or both eyes in case of a binocular test. (en)">
-					comment = <"*'Both eyes' may only be used for test of binocular visual acuity. (en)">
+					text = <"Undersøkt øye">
+					description = <"Øyet som ble undersøkt, eller begge øyne ved en binokulær undersøkelse.">
+					comment = <"'Begge øyne' skal kun brukes ved undersøkelse av binokulær visus.">
 				>
 				["at0012"] = <
 					text = <"Venstre øye">
-					description = <"*The aid was positioned in front of the left eye. (en)">
+					description = <"Venstre øye ble undersøkt.">
 				>
 				["at0013"] = <
-					text = <"*Right eye(en)">
-					description = <"*The aid was positioned in front of the left eye. (en)">
+					text = <"Høyre øye">
+					description = <"Høyre øye ble undersøkt.">
 				>
 				["at0014"] = <
-					text = <"*Both eyes (en)">
-					description = <"*Both eyes were examined simultaneously. (en)">
+					text = <"Begge øyne">
+					description = <"Begge øyne ble undersøkt samtidig.">
 				>
 				["at0020"] = <
-					text = <"Tree">
+					text = <"Tre">
 					description = <"@ internal @">
 				>
 				["at0021"] = <
-					text = <"*Optotype (en)">
-					description = <"*The type of symbol used to assess visual acuity. (en)">
-					comment = <"*Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available. (en)">
+					text = <"Optotype">
+					description = <"Typen symbol som brukes for å undersøke visus.">
+					comment = <"Koding med en terminologi anbefales. Fritekst bør kun tillates dersom det ikke finnes en egnet kodet verdi.">
 				>
 				["at0023"] = <
-					text = <"*Chart or Stimulus type (en)">
-					description = <"*The type of chart or card used to measure visual acuity. (en)">
-					comment = <"*Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available. (en)">
+					text = <"Type tavle eller stimulus">
+					description = <"Typen tavle eller kort som brukes for å måle visus.">
+					comment = <"Koding med en terminologi anbefales. Fritekst bør kun tillates dersom det ikke finnes en egnet kodet verdi.">
 				>
 				["at0025"] = <
-					text = <"*Chart or stimulus device details (en)">
-					description = <"*Details of the devices used provide a stimulus to be resolved by the eye being tested, such as a chart, projector or digital display. (en)">
+					text = <"Detaljer om tavle eller stimulusutstyr">
+					description = <"Detaljer om utstyret som brukes for å gi en stimulus som skal oppløses av øyet som undersøkes, for eksempel en tavle, en projektor eller en digital skjerm.">
 				>
 				["at0040"] = <
 					text = <"Kommentar">
-					description = <"*Additional narrative about the measurement, not captured in other fields. (en)">
+					description = <"Ytterligere fritekst om målingen, som ikke omfattes av andre felt.">
 				>
 				["at0041"] = <
-					text = <"Tree">
+					text = <"Tre">
 					description = <"@ internal @">
 				>
 				["at0081"] = <
-					text = <"*Testing distance category (en)">
-					description = <"*A categorisation of the testing distance. (en)">
-					comment = <"*Boundary definitions may vary, therefore population of the  'Testing distance' element is encouraged, especially for intermediate or near distances. (en)">
+					text = <"Kategori for undersøkelsesavstand">
+					description = <"En kategorisering av undersøkelsesavstanden.">
+					comment = <"Grensedefinisjonene kan variere, og det oppfordres derfor til å fylle ut elementet 'Undersøkelsesavstand', særlig ved mellomavstand og nær avstand.">
 				>
 				["at0082"] = <
-					text = <"*logMAR chart (en)">
-					description = <"*A logMAR chart was used. (en)">
+					text = <"logMAR-tavle">
+					description = <"En logMAR-tavle ble brukt.">
 				>
 				["at0083"] = <
-					text = <"Snellen">
-					description = <"*A Snellen chart was used. (en)">
+					text = <"Snellen-tavle">
+					description = <"En Snellen-tavle ble brukt.">
 				>
 				["at0084"] = <
-					text = <"*ETDRS chart (en)">
-					description = <"*An ETDRS chart was used. (en)">
+					text = <"ETDRS-tavle">
+					description = <"En ETDRS-tavle ble brukt.">
 				>
 				["at0106"] = <
-					text = <"*Letters (en)">
-					description = <"*Letter optotypes were used (en)">
+					text = <"Bokstaver">
+					description = <"Bokstavoptotyper ble brukt.">
 				>
 				["at0107"] = <
-					text = <"*Orientation-Type Optotypes (en)">
-					description = <"*Orientation-Type optotypes were used (en)">
+					text = <"Retningsoptotyper">
+					description = <"Retningsoptotyper ble brukt.">
 				>
 				["at0108"] = <
-					text = <"*Pictograms (en)">
-					description = <"*Pictogram optotypes were used. (en)">
+					text = <"Piktogrammer">
+					description = <"Piktogramoptotyper ble brukt.">
 				>
 				["at0112"] = <
-					text = <"*Confounding factors (en)">
-					description = <"*Description of any incidental factors related to the state of the subject which may affect clinical interpretation of the measurement. (en)">
-					comment = <"*Examples: 'Patient was confused', \"Lid held open by hand\" \"Eccentric Fixation\". (en)">
+					text = <"Konfunderende faktorer">
+					description = <"Beskrivelse av tilfeldige faktorer knyttet til individets tilstand som kan påvirke den kliniske tolkningen av målingen.">
+					comment = <"Eksempler: 'Pasienten var forvirret', \"Øyelokket ble holdt åpent for hånd\", \"Eksentrisk fiksering\".">
 				>
 				["at0134"] = <
 					text = <"Uspesifisert hendelse">
-					description = <"Uspesifiserte hendelser.">
+					description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
 				>
 				["at0141"] = <
-					text = <"Andre detaljer">
-					description = <"Andre detaljer, som f.eks. cluster for registrering av benyttet refraksjon.">
+					text = <"Undersøkelse ikke utført">
+					description = <"Detaljer for eksplisitt å registrere at denne undersøkelsen ikke ble utført.">
 				>
 				["at0143"] = <
-					text = <"Digital foropter">
-					description = <"Benyttet digital foropter.">
-					comment = <"For eksempel: lokale informasjonskrav eller ekstra metadata for å tilpasse seg FHIR eller CIMI.">
+					text = <"Tilleggsinformasjon">
+					description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+					comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
 				>
 				["at0151"] = <
-					text = <"*Best qualitative result (en)">
-					description = <"*Measures of visual acuity that are qualitative, rather than quantitative. (en)">
-					comment = <"*Not to be used for light projection testing. Use OBSERVATION.light_projection_test archetype for this purpose.
-Higher ordinal values represent better visual function.  (en)">
+					text = <"Beste kvalitative resultat">
+					description = <"Det høyeste nivået av synsfunksjon individet viste under kvalitativ undersøkelse.">
+					comment = <"Brukes ikke for undersøkelse av lysprojeksjon. Bruk arketypen OBSERVATION.light_projection_test til dette formålet.
+Høyere ordinalverdier representerer bedre synsfunksjon.">
 				>
 				["at0193"] = <
-					text = <"*Derived result (en)">
-					description = <"*A grouping of calculated or estimated visual acuity result values derived by conversion from the primary recorded result. (en)">
+					text = <"Avledet resultat">
+					description = <"En gruppering av beregnede eller estimerte visusverdier som er avledet ved omregning fra det primært registrerte resultatet.">
 				>
 				["at0206"] = <
-					text = <"*Lea Symbols (en)">
-					description = <"*Lea symbol optotypes were used. (en)">
+					text = <"Lea-symboler">
+					description = <"Lea-symboloptotyper ble brukt.">
 				>
 				["at0207"] = <
-					text = <"*Kay pictures (en)">
-					description = <"*Kay picture optotypes were used. (en)">
+					text = <"Kay-bilder">
+					description = <"Kay-bildeoptotyper ble brukt.">
 				>
 				["at0208"] = <
-					text = <"*Allen pictures (en)">
-					description = <"*Allen picture optotypes were used. (en)">
+					text = <"Allen-bilder">
+					description = <"Allen-bildeoptotyper ble brukt.">
 				>
 				["at0209"] = <
-					text = <"*Auckland Optotypes (en)">
-					description = <"*Auckland  optotypes were used (en)">
+					text = <"Auckland-optotyper">
+					description = <"Auckland-optotyper ble brukt.">
 				>
 				["at0210"] = <
-					text = <"*Amsterdam pictures (en)">
-					description = <"*Amsterdam picture optotypes were used. (en)">
+					text = <"Amsterdam-bilder">
+					description = <"Amsterdam-bildeoptotyper ble brukt.">
 				>
 				["at0211"] = <
-					text = <"*Landolt C (en)">
-					description = <"*Landolt C optotypes were used (en)">
+					text = <"Landolt C">
+					description = <"Landolt C-optotyper ble brukt.">
 				>
 				["at0212"] = <
-					text = <"*Tumbling E (en)">
-					description = <"*Tumbling E optotypes were used (en)">
+					text = <"Tumbling E">
+					description = <"Tumbling E-optotyper ble brukt.">
 				>
 				["at0213"] = <
-					text = <"*Numbers (en)">
-					description = <"*Number optotypes were used (en)">
+					text = <"Tall">
+					description = <"Talloptotyper ble brukt.">
 				>
 				["at0215"] = <
-					text = <"*Lea numbers (en)">
-					description = <"*Lea number optotypes were used. (en)">
+					text = <"Lea-tall">
+					description = <"Lea-talloptotyper ble brukt.">
 				>
 				["at0216"] = <
-					text = <"*Sloan letters (en)">
-					description = <"*Sloan letter optotypes were used. (en)">
+					text = <"Sloan-bokstaver">
+					description = <"Sloan-bokstavoptotyper ble brukt.">
 				>
 				["at0217"] = <
-					text = <"*Cyrillic letters (en)">
-					description = <"*Cyrillic letter optotypes were used. (en)">
+					text = <"Kyrilliske bokstaver">
+					description = <"Kyrilliske bokstavoptotyper ble brukt.">
 				>
 				["at0218"] = <
-					text = <"*Snellen letters (en)">
-					description = <"*Snellen letter optotypes were used. (en)">
+					text = <"Snellen-bokstaver">
+					description = <"Snellen-bokstavoptotyper ble brukt.">
 				>
 				["at0219"] = <
-					text = <"*HOTV letters (en)">
-					description = <"*HOTV letter optotypes were used. (en)">
+					text = <"HOTV-bokstaver">
+					description = <"HOTV-bokstavoptotyper ble brukt.">
 				>
 				["at0220"] = <
-					text = <"*LRVC letters (en)">
-					description = <"*LRVC letter optotypes were used. (en)">
+					text = <"LRVC-bokstaver">
+					description = <"LRVC-bokstavoptotyper ble brukt.">
 				>
 				["at0221"] = <
-					text = <"*British letters (2003) (en)">
-					description = <"*British letter (2003) optotypes were used. (en)">
+					text = <"Britiske bokstaver (2003)">
+					description = <"Britiske bokstavoptotyper (2003) ble brukt.">
 				>
 				["at0222"] = <
-					text = <"*European-wide letters (en)">
-					description = <"*European-wide letter optotypes were used. (en)">
+					text = <"Europeiske bokstaver">
+					description = <"Europeiske bokstavoptotyper ble brukt.">
 				>
 				["at0223"] = <
-					text = <"*Near (en)">
-					description = <"*The test was performed at near distance. (en)">
+					text = <"Nær">
+					description = <"Undersøkelsen ble utført på nær avstand.">
 				>
 				["at0224"] = <
-					text = <"*Intermediate (en)">
-					description = <"*The test was performed at intermediate distance. (en)">
+					text = <"Mellomavstand">
+					description = <"Undersøkelsen ble utført på mellomavstand.">
 				>
 				["at0225"] = <
-					text = <"*Far (en)">
-					description = <"*The test was performed at far distance. (en)">
+					text = <"Lang">
+					description = <"Undersøkelsen ble utført på lang avstand.">
 				>
 				["at0226"] = <
-					text = <"*Stimulus method (en)">
-					description = <"*Information on the way the visual stimulus is displayed. (en)">
-					comment = <"*Allows for the capture of basic information where additional detail about the type or device name of the stimulus are unknown. (en)">
+					text = <"Stimulusmetode">
+					description = <"Informasjon om måten den visuelle stimulusen presenteres på.">
+					comment = <"Gjør det mulig å registrere grunnleggende informasjon når ytterligere detaljer om type eller utstyrsnavn for stimulusen er ukjent.">
 				>
 				["at0227"] = <
-					text = <"*Electronic chart display (en)">
-					description = <"*An electronic display. (en)">
+					text = <"Elektronisk tavleskjerm">
+					description = <"En elektronisk skjerm.">
 				>
 				["at0231"] = <
-					text = <"*Printed chart or card (en)">
-					description = <"*A printed chart or card. (en)">
+					text = <"Trykt tavle eller kort">
+					description = <"En trykt tavle eller et trykt kort.">
 				>
 				["at0239"] = <
-					text = <"*Golovin-Sitsev table (en)">
-					description = <"*A Golovin-Sitsev table was used. (en)">
+					text = <"Golovin-Sivtsev-tavle">
+					description = <"En Golovin-Sivtsev-tavle ble brukt.">
 				>
 				["at0240"] = <
-					text = <"*Monoyer chart (en)">
-					description = <"*A Monoyer chart was used. (en)">
+					text = <"Monoyer-tavle">
+					description = <"En Monoyer-tavle ble brukt.">
 				>
 				["at0242"] = <
-					text = <"*Keeler acuity cards (en)">
-					description = <"*Keeler acuity cards were used, a type of  grating-based preferential looking test. (en)">
+					text = <"Keeler-visuskort">
+					description = <"Keeler-visuskort ble brukt, en type gitterbasert blikkpreferansetest.">
 				>
 				["at0244"] = <
-					text = <"*Background luminance (en)">
-					description = <"*Background luminance of the visual stimulus, such as the white background on a chart. (en)">
-					comment = <"*Candela per square meter is equivalent the non-SI unit 'nit'. (en)">
+					text = <"Bakgrunnsluminans">
+					description = <"Luminansen i bakgrunnen til den visuelle stimulusen, for eksempel den hvite bakgrunnen på en tavle.">
+					comment = <"Candela per kvadratmeter tilsvarer den ikke-SI-baserte enheten 'nit'.">
 				>
 				["at0245"] = <
-					text = <"*Weber contrast (en)">
-					description = <"">
+					text = <"Weber-kontrast">
+					description = <"Differansen mellom luminansen til stimulusen og bakgrunnen, delt på bakgrunnsluminansen.">
 				>
 				["at0248"] = <
-					text = <"*Michelson contrast (en)">
-					description = <"">
+					text = <"Michelson-kontrast">
+					description = <"Differansen mellom høyeste og laveste luminans i stimulusen, delt på summen av dem.">
 				>
 				["at0256"] = <
-					text = <"*Ambient illuminance (en)">
-					description = <"*The ambient illuminance in the room where the visual acuity testing is taking place. (en)">
+					text = <"Belysningsstyrke i omgivelsene">
+					description = <"Belysningsstyrken i rommet der visusundersøkelsen utføres.">
 				>
 				["at0262"] = <
-					text = <"*Visual aid per eye (en)">
-					description = <"*A cluster describing what type of visual aid was used during the test, and which eye it was positioned in front of. 
- (en)">
-					comment = <"*Where multiple devices are positioned in front of the same eye, this cluster is expected to be used once for each. (en)">
+					text = <"Synshjelpemiddel per øye">
+					description = <"Et cluster som beskriver hvilken type synshjelpemiddel som ble brukt under undersøkelsen, og hvilket øye det var plassert foran.">
+					comment = <"Når flere hjelpemidler er plassert foran samme øye, forventes dette clusteret brukt én gang for hvert av dem.">
 				>
 				["at0294"] = <
-					text = <"*Decimal notation result (en)">
-					description = <"*The visual acuity measured and expressed as a decimal notation. (en)">
+					text = <"Resultat i desimalnotasjon">
+					description = <"Visus målt og uttrykt i desimalnotasjon.">
 				>
 				["at0295"] = <
-					text = <"*Metre ratio result (en)">
-					description = <"*The visual acuity measured and expressed as a metre Snellen ratio or M-Scale ratio. (en)">
-					comment = <"*For Snellen ratio notation, the numerator is typically a reference distance of six meters, regardless of the real testing distance. 
-For M-Scale notation, the numerator should be equal to to the real testing distance. 
-To avoid ambiguity, populate the 'Testing distance' element, especially if the M-Scale notation is used.
- (en)">
+					text = <"Resultat som meterbrøk">
+					description = <"Visus målt og uttrykt som en Snellen-brøk i meter eller en brøk på M-skalaen.">
+					comment = <"For Snellen-brøk er telleren vanligvis en referanseavstand på seks meter, uavhengig av den faktiske undersøkelsesavstanden.
+For notasjon på M-skalaen skal telleren være lik den faktiske undersøkelsesavstanden.
+Fyll ut elementet 'Undersøkelsesavstand' for å unngå tvetydighet, særlig dersom M-skalaen brukes.
+">
 				>
 				["at0296"] = <
-					text = <"*Feet ratio result (en)">
-					description = <"*The visual acuity measured and expressed as a feet Snellen ratio. (en)">
-					comment = <"*A reference distance of 20 feet is often used as the default numerator.
-Usethe 'Testing distance' element to avoid ambiguity. 
-  (en)">
+					text = <"Resultat som fotbrøk">
+					description = <"Visus målt og uttrykt som en Snellen-brøk i fot.">
+					comment = <"En referanseavstand på 20 fot brukes ofte som standard teller.
+Bruk elementet 'Undersøkelsesavstand' for å unngå tvetydighet.
+">
 				>
 				["at0297"] = <
-					text = <"*logMAR result (en)">
-					description = <"*The visual acuity measured and expressed as the base-10 logarithm of the minimum angle of resolution (MAR). (en)">
-					comment = <"*Sometimes referred to as 'logRAD' in reading acuity tests.  (en)">
+					text = <"logMAR-resultat">
+					description = <"Visus målt og uttrykt som titallslogaritmen til minste oppløsningsvinkel (MAR).">
+					comment = <"Omtales noen ganger som 'logRAD' ved lesevisusundersøkelser.">
 				>
 				["at0299"] = <
-					text = <"*N point font size notation result (en)">
-					description = <"*The N point font size of the smallest recognized line or text. (en)">
-					comment = <"*Strictly not a unit of visual acuity but a measure of stimulus size. (en)">
+					text = <"Resultat i N-skriftstørrelse">
+					description = <"N-skriftstørrelsen til den minste linjen eller teksten som ble gjenkjent.">
+					comment = <"Strengt tatt ikke en visusenhet, men et mål på stimulusstørrelse.">
 				>
 				["at0302"] = <
-					text = <"*Jaeger font size notation result (en)">
-					description = <"*The Jaeger font size of the smallest recognized line of text. (en)">
-					comment = <"*Strictly not a unit of visual acuity but a measure of stimulus size. (en)">
+					text = <"Resultat i Jaeger-skriftstørrelse">
+					description = <"Jaeger-skriftstørrelsen til den minste tekstlinjen som ble gjenkjent.">
+					comment = <"Strengt tatt ikke en visusenhet, men et mål på stimulusstørrelse.">
 				>
 				["at0319"] = <
-					text = <"*Derived decimal notation result (en)">
-					description = <"*Visual acuity in decimal notation, derived from the primary recording. (en)">
+					text = <"Avledet resultat i desimalnotasjon">
+					description = <"Visus i desimalnotasjon, avledet fra den primære registreringen.">
 				>
 				["at0320"] = <
-					text = <"*Derived meter ratio result (en)">
-					description = <"*Visual acuity in metre ratio (Snellen or M-Score) notation, derived from the primary recording. (en)">
+					text = <"Avledet resultat som meterbrøk">
+					description = <"Visus som meterbrøk (Snellen eller M-skala), avledet fra den primære registreringen.">
 				>
 				["at0321"] = <
-					text = <"*Derived feet ratio result (en)">
-					description = <"*Visual acuity in feet (Snellen) ratio notation, derived from the primary recording. (en)">
+					text = <"Avledet resultat som fotbrøk">
+					description = <"Visus som Snellen-brøk i fot, avledet fra den primære registreringen.">
 				>
 				["at0322"] = <
-					text = <"*Derived logMAR result (en)">
-					description = <"*Visual acuity in logMAR notation, derived from the primary recording. (en)">
+					text = <"Avledet logMAR-resultat">
+					description = <"Visus i logMAR-notasjon, avledet fra den primære registreringen.">
 				>
 				["at0333"] = <
-					text = <"*Interpretation (en)">
-					description = <"*Interpretation of the results. (en)">
-					comment = <"*Not to be used for information about how the test was performed or patient circumstances affecting result. (en)">
+					text = <"Tolkning">
+					description = <"Tolkning av resultatene.">
+					comment = <"Brukes ikke for informasjon om hvordan undersøkelsen ble utført, eller om pasientforhold som påvirker resultatet.">
 				>
 				["at0355"] = <
-					text = <"*5-Score notation result (en)">
-					description = <"*The visual acuity measured and expressed using the logarithmic 5-score notation, widely used in China. (en)">
-					comment = <"*Defined as 5 minus the LogMAR result, part of the Chinese national standard GB11533-1989. (en)">
+					text = <"Resultat i 5-skår-notasjon">
+					description = <"Visus målt og uttrykt med den logaritmiske 5-skår-notasjonen, som er mye brukt i Kina.">
+					comment = <"Definert som 5 minus logMAR-resultatet, og inngår i den kinesiske nasjonale standarden GB11533-1989.">
 				>
 				["at0356"] = <
-					text = <"*ETDRS letter score (en)">
-					description = <"*The visual acuity measured and expressed as the ETDRS letter score. (en)">
-					comment = <"*Caution: The ETDRS score is inclusive of the 30 letters that may be presented at 1m distance, which are added to the results of testing at 4m distance. 
-See ETDRS report number 7 in References. 
-A letter score of 85 is equivalent to 20/20, 1.0 decimal, 0.0 logMAR. 
- (en)">
+					text = <"ETDRS-bokstavskår">
+					description = <"Visus målt og uttrykt som ETDRS-bokstavskår.">
+					comment = <"Merk: ETDRS-skåren inkluderer de 30 bokstavene som kan presenteres på 1 m avstand, og som legges til resultatene fra undersøkelsen på 4 m avstand.
+Se ETDRS-rapport nummer 7 i referansene.
+En bokstavskår på 85 tilsvarer 20/20, 1,0 desimal og 0,0 logMAR.
+">
 				>
 				["at0357"] = <
-					text = <"*Derived ETDRS letter score result (en)">
-					description = <"*Visual acuity as ETDRS notation, derived from the primary recording. (en)">
-					comment = <"*Caution: The ETDRS score is inclusive of the 30 letters that may be presented at 1m distance, which are added to the results of testing at 4m distance. 
-See ETDRS report number 7 in References. 
-A letter score of 85 is equivalent to 20/20, 1.0 decimal, 0.0 logMAR.  (en)">
+					text = <"Avledet resultat som ETDRS-bokstavskår">
+					description = <"Visus i ETDRS-notasjon, avledet fra den primære registreringen.">
+					comment = <"Merk: ETDRS-skåren inkluderer de 30 bokstavene som kan presenteres på 1 m avstand, og som legges til resultatene fra undersøkelsen på 4 m avstand.
+Se ETDRS-rapport nummer 7 i referansene.
+En bokstavskår på 85 tilsvarer 20/20, 1,0 desimal og 0,0 logMAR.">
 				>
 				["at0370"] = <
-					text = <"*Comparative label (en)">
-					description = <"*Classification of the test and its result as 'best corrected', 'best recorded' visual acuity, or similar statements. (en)">
-					comment = <"*These classifiers do not contain information on the actual correction used.
-It is encouraged to record the specific aids used within 'Visual aid per eye' clusters.
- (en)">
+					text = <"Sammenlignende merkelapp">
+					description = <"Klassifisering av undersøkelsen og resultatet som 'best korrigerte' eller 'best registrerte' visus, eller lignende utsagn.">
+					comment = <"Disse klassifikatorene inneholder ikke informasjon om den faktiske korreksjonen som ble brukt.
+Det oppfordres til å registrere de spesifikke hjelpemidlene som ble brukt i clusteret 'Synshjelpemiddel per øye'.
+">
 				>
 				["at0371"] = <
-					text = <"*BCVA (en)">
-					description = <"*This result is classified as a Best Corrected Visual Acuity. (en)">
+					text = <"BCVA">
+					description = <"Dette resultatet er klassifisert som best korrigerte visus (Best Corrected Visual Acuity).">
 				>
 				["at0372"] = <
-					text = <"*BRVA (en)">
-					description = <"*This result is classified as a Best Recorded Visual Acuity. (en)">
+					text = <"BRVA">
+					description = <"Dette resultatet er klassifisert som best registrerte visus (Best Recorded Visual Acuity).">
 				>
 				["at0373"] = <
-					text = <"*Visual aid type (en)">
-					description = <"*Information specifying the type of device, or lack of a device positioned in front of one of the eyes. (en)">
-					comment = <"*Avoid using the generic value \"Corrected\" where the device or provenance of corrective values are known. 
+					text = <"Type synshjelpemiddel">
+					description = <"Informasjon som angir typen utstyr, eller fravær av utstyr, plassert foran ett av øynene.">
+					comment = <"Unngå å bruke den generiske verdien \"Korrigert\" når utstyret eller opphavet til korreksjonsverdiene er kjent.
 
-Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available.
- (en)">
+Koding med en terminologi anbefales. Fritekst bør kun tillates dersom det ikke finnes en egnet kodet verdi.">
 				>
 				["at0374"] = <
-					text = <"*Autorefraction-based correction (en)">
-					description = <"*A correction with powers based on an autorefraction test. (en)">
+					text = <"Korreksjon basert på autorefraksjon">
+					description = <"En korreksjon med styrker basert på en autorefraksjonsmåling.">
 				>
 				["at0375"] = <
-					text = <"*Subjective refraction-based correction (en)">
-					description = <"*A correction with powers based on a subjective refraction. (en)">
+					text = <"Korreksjon basert på subjektiv refraksjon">
+					description = <"En korreksjon med styrker basert på en subjektiv refraksjon.">
 				>
 				["at0376"] = <
-					text = <"*Glasses (en)">
-					description = <"*Eyeglasses. (en)">
+					text = <"Briller">
+					description = <"Briller.">
 				>
 				["at0377"] = <
-					text = <"*Rigid contact lens (en)">
-					description = <"*A contact lens with a rigid optical center, including hybrid lenses. (en)">
+					text = <"Hard kontaktlinse">
+					description = <"En kontaktlinse med hardt optisk senter, inkludert hybridlinser.">
 				>
 				["at0378"] = <
-					text = <"*Soft contact lens (en)">
-					description = <"*A soft contact lens with a soft optical center. (en)">
+					text = <"Myk kontaktlinse">
+					description = <"En kontaktlinse med mykt optisk senter.">
 				>
 				["at0381"] = <
-					text = <"*Retinoscopy based correction (en)">
-					description = <"*A correction with powers based on a retinoscopy test. (en)">
+					text = <"Korreksjon basert på retinoskopi">
+					description = <"En korreksjon med styrker basert på en retinoskopiundersøkelse.">
 				>
 				["at0382"] = <
-					text = <"*Corrected (en)">
-					description = <"*Lenses without a known provenance or source of the powers. (en)">
+					text = <"Korrigert">
+					description = <"Linser der opphavet til eller kilden for styrkene ikke er kjent.">
 				>
 				["at0383"] = <
-					text = <"Fogging lens">
-					description = <"*A lens used to intentionally blur the vision in that eye while the other eye ist tested. (en)">
+					text = <"Tåkeleggingslinse">
+					description = <"En linse som brukes for bevisst å gjøre synet uskarpt på det ene øyet mens det andre øyet undersøkes.">
 				>
 				["at0384"] = <
-					text = <"*Pinhole occluder (en)">
-					description = <"*A device with one or multiple small holes that acting apertures. (en)">
+					text = <"Pinhole-okkluder">
+					description = <"Utstyr med ett eller flere små hull som fungerer som blenderåpninger.">
 				>
 				["at0385"] = <
-					text = <"*Subjective overrefraction-based correction (en)">
-					description = <"*A correction with values based on subjective overrefraction was used. (en)">
+					text = <"Korreksjon basert på subjektiv overrefraksjon">
+					description = <"En korreksjon med verdier basert på subjektiv overrefraksjon ble brukt.">
 				>
 				["at0386"] = <
-					text = <"*Unaided (en)">
-					description = <"*There is explicitly nothing in front of the eye during the visual acuity testing, also referred to as \"uncorrected\". (en)">
+					text = <"Uten korreksjon">
+					description = <"Det er eksplisitt ingenting foran øyet under visusundersøkelsen, også omtalt som \"ukorrigert\".">
 				>
 				["at0395"] = <
-					text = <"*Ancillary lighting details (en)">
-					description = <"*Details on the use of ancillary lighting sources, including brightness acuity testing and glare lights. (en)">
+					text = <"Detaljer om tilleggsbelysning">
+					description = <"Detaljer om bruk av tilleggslyskilder, inkludert blendingstesting og blendingslys.">
 				>
 				["at0404"] = <
-					text = <"*Projected chart (en)">
-					description = <"*A chart projector. (en)">
+					text = <"Projisert tavle">
+					description = <"En tavleprojektor.">
 				>
 				["at0405"] = <
-					text = <"*Aided eye (en)">
-					description = <"*The eye in front of which the visual aid was positioned. (en)">
-					comment = <"*For monocular tests where the partner eye is fully occluded, the assumption is that the visual aid is positioned in front of the eye being tested. 
-In these circumstances automated population from the 'Eye examined' element is possible.
- (en)">
+					text = <"Øye med hjelpemiddel">
+					description = <"Øyet som synshjelpemiddelet var plassert foran.">
+					comment = <"Ved monokulære undersøkelser der det andre øyet er helt tildekket, antas det at synshjelpemiddelet er plassert foran øyet som undersøkes.
+Under disse omstendighetene er automatisk utfylling fra elementet 'Undersøkt øye' mulig.
+">
 				>
 				["at0410"] = <
-					text = <"*Missed or additional optotypes (en)">
-					description = <"*Information on single optotypes where the main score was based on a whole line of optotypes. 
-Negative: Number incorrect optotypes in the last line that was marked as correct.
-Positive: The number of correct optotypes in the first line that was marked as incorrect.
-\"Partial\" code indicates some unspecified number of optotypes were missed in the smallest scored line. (en)">
+					text = <"Bommede eller ekstra optotyper">
+					description = <"Informasjon om enkeltoptotyper der hovedskåren var basert på en hel linje med optotyper.
+Negativ: Antall uriktige optotyper i den siste linjen som ble markert som korrekt.
+Positiv: Antall korrekte optotyper i den første linjen som ble markert som ikke korrekt.
+Koden \"Delvis\" angir at et uspesifisert antall optotyper ble bommet i den minste skårede linjen.">
 				>
 				["at0411"] = <
-					text = <"*partial (en)">
-					description = <"*Some symbols were not read correctly in the smallest line that was scored as being successfully read. (en)">
+					text = <"Delvis">
+					description = <"Enkelte symboler ble ikke lest korrekt i den minste linjen som ble skåret som korrekt lest.">
 				>
 				["at0412"] = <
-					text = <"*Testing distance (en)">
-					description = <"*The distance between the tested eye and the (apparent) location of the stimulus. (en)">
-					comment = <"*The stimulus may be a virtual image. (en)">
+					text = <"Undersøkelsesavstand">
+					description = <"Avstanden mellom øyet som undersøkes og den (tilsynelatende) plasseringen av stimulusen.">
+					comment = <"Stimulusen kan være et virtuelt bilde.">
 				>
 				["at0415"] = <
-					text = <"*No improvement note (en)">
-					description = <"*A note indicating that the addition or use of another type of aid did not result in a better test result. (en)">
-					comment = <"*Used where a determination of the exact visual acuity with the additional correction (in another event) was not performed, typically because it was deemed irrelevant for lack of improvement.
-Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available. (en)">
+					text = <"Merknad om ingen bedring">
+					description = <"En merknad som angir at tillegg eller bruk av en annen type hjelpemiddel ikke ga et bedre undersøkelsesresultat.">
+					comment = <"Brukes når nøyaktig visus med den ekstra korreksjonen (i en annen hendelse) ikke ble bestemt, vanligvis fordi det ble vurdert som irrelevant siden det ikke ga bedring.
+Koding med en terminologi anbefales. Fritekst bør kun tillates dersom det ikke finnes en egnet kodet verdi.">
 				>
 				["at0416"] = <
-					text = <"*NI with additional pinhole (en)">
-					description = <"*No improvement with an additional pinhole placed in front of the tested eye. (en)">
+					text = <"Ingen bedring med ekstra pinhole">
+					description = <"Ingen bedring med en ekstra pinhole plassert foran øyet som undersøkes.">
 				>
 				["at0417"] = <
-					text = <"*NI with subjective refraction-based correction (en)">
-					description = <"*No improvement with corrective lenses based on subjective refraction. (en)">
+					text = <"Ingen bedring med korreksjon basert på subjektiv refraksjon">
+					description = <"Ingen bedring med korreksjonslinser basert på subjektiv refraksjon.">
 				>
 				["at0418"] = <
 					text = <"Pupilltilstand">
-					description = <"*Statement describing the condition of the individual's pupils during the test. (en)">
-					comment = <"*The physical examination of the eye will be recorded using the CLUSTER.exam-eye family of archetypes. 
-Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available. (en)">
+					description = <"Utsagn som beskriver tilstanden til individets pupiller under undersøkelsen.">
+					comment = <"Den fysiske undersøkelsen av øyet registreres ved hjelp av arketypefamilien CLUSTER.exam-eye.
+Koding med en terminologi anbefales. Fritekst bør kun tillates dersom det ikke finnes en egnet kodet verdi.">
 				>
 				["at0419"] = <
 					text = <"Normal">
 					description = <"Pupillen er i sin naturlige fysiologiske tilstand uten farmakologisk påvirkning eller patologiske endringer.">
 				>
 				["at0420"] = <
-					text = <"Medisinsk indusert mydriase">
-					description = <"Pupillen er utvidet på grunn av administrasjon av mydriatiske midler.">
+					text = <"Medikamentelt indusert mydriasis">
+					description = <"Pupillen var utvidet på grunn av tidligere administrasjon av mydriatiske midler.">
 				>
 				["at0421"] = <
-					text = <"Medisinsk indusert miose">
-					description = <"Pupillen er innsnevret på grunn av administrasjon av miotiske midler.">
+					text = <"Medikamentelt indusert miose">
+					description = <"Pupillen var innsnevret på grunn av tidligere administrasjon av miotiske midler.">
 				>
 				["at0422"] = <
 					text = <"Patologisk pupilltilstand">
-					description = <"Pupillen var i en unormal fysiologisk tilstand på grunn av sykdom, traume eller strukturelle avvik.">
+					description = <"Pupillen var i en ikke-fysiologisk tilstand på grunn av sykdom, traume eller strukturelle avvik.">
 				>
 				["at0461"] = <
-					text = <"*Result (en)">
-					description = <"*A grouping of data elements to represent the primary notation of the visual acuity assessment result. (en)">
-					comment = <"*Typically, only one result should be populated.  
-Converted or derived values should be stored in the appropriate element in the 'Derived result' cluster. (en)">
+					text = <"Resultat">
+					description = <"En gruppering av dataelementer som representerer den primære notasjonen for resultatet av visusundersøkelsen.">
+					comment = <"Vanligvis skal kun ett resultat fylles ut.
+Omregnede eller avledede verdier skal lagres i det egnede elementet i clusteret 'Avledet resultat'.">
 				>
 				["at0464"] = <
-					text = <"*Power of sphere (en)">
-					description = <"*The refractive power that is equal in all meridians. (en)">
-					comment = <"*Used as the base correction upon which cylinder and axis are applied. (en)">
+					text = <"Sfærisk styrke">
+					description = <"Brytningsstyrken som er lik i alle meridianer.">
+					comment = <"Brukes som grunnkorreksjonen som sylinder og akse legges til.">
 				>
 				["at0465"] = <
-					text = <"*Visual aid details (en)">
-					description = <"">
+					text = <"Detaljer om synshjelpemiddel">
+					description = <"Strukturerte detaljer om utstyret som ble brukt som synshjelpemiddel under undersøkelsen, for eksempel en foropter, en prøvebrille, briller eller kontaktlinser.">
 				>
 				["at0466"] = <
-					text = <"*Power of cylinder (en)">
-					description = <"*The refractive power added to the spherical correction at the meridian 90° from the cylinder axis to compensate for astigmatism. (en)">
+					text = <"Sylinderstyrke">
+					description = <"Brytningsstyrken som legges til den sfæriske korreksjonen i meridianen 90° fra sylinderaksen for å kompensere for astigmatisme.">
 				>
 				["at0467"] = <
-					text = <"*Axis of cylinder (en)">
-					description = <"*The orientation of the cylinder in degrees. (en)">
-					comment = <"*By convention, the axis of the cylinder is defined by its medirian of zero power. (en)">
+					text = <"Sylinderakse">
+					description = <"Sylinderens orientering i grader.">
+					comment = <"Etter konvensjon defineres sylinderaksen av meridianen uten styrke.">
 				>
 				["at0468"] = <
-					text = <"*Near addition (en)">
-					description = <"*The additional spherical lens power for near vision. (en)">
+					text = <"Nærtillegg">
+					description = <"Den ekstra sfæriske linsestyrken for syn på nært hold.">
 				>
 				["at0471"] = <
-					text = <"*Physical object (en)">
-					description = <"*Physical objects other than charts or cards. (en)">
+					text = <"Fysisk objekt">
+					description = <"Andre fysiske objekter enn tavler eller kort.">
 				>
 				["at0472"] = <
-					text = <"*Berkeley rudimentary vision test (en)">
-					description = <"*Berkeley rudimentary vision test (BRVT) was used. (en)">
+					text = <"Berkeley rudimentary vision test">
+					description = <"Berkeley rudimentary vision test (BRVT) ble brukt.">
 				>
 				["at0473"] = <
-					text = <"*Near reading card (en)">
-					description = <"*A near reading card with segments of text was used. (en)">
+					text = <"Lesekort for nær avstand">
+					description = <"Et lesekort for nær avstand med tekstavsnitt ble brukt.">
 				>
 				["at0474"] = <
-					text = <"*LEA gratings acuity test (en)">
-					description = <"*LEA gratings were used, a type of a grating-based preferential looking test. (en)">
+					text = <"LEA gratings visustest">
+					description = <"LEA-gitre ble brukt, en type gitterbasert blikkpreferansetest.">
 				>
 				["at0475"] = <
-					text = <"*Teller acuity cards (en)">
-					description = <"*Teller acuity cards were used, a type of grating-based preferential looking test. (en)">
+					text = <"Teller-visuskort">
+					description = <"Teller-visuskort ble brukt, en type gitterbasert blikkpreferansetest.">
 				>
 				["at0476"] = <
-					text = <"*Cardiff acuity test (en)">
-					description = <"*The Cardiff acuity test was used, a type of vanishing optotype-based preferential looking test. (en)">
+					text = <"Cardiff-visustest">
+					description = <"Cardiff-visustesten ble brukt, en type blikkpreferansetest basert på forsvinnende optotyper.">
 				>
 				["at0483"] = <
-					text = <"*Allen picture test. (en)">
-					description = <"*An Allen picture test was used. (en)">
+					text = <"Allen-bildetest">
+					description = <"En Allen-bildetest ble brukt.">
 				>
 				["at0484"] = <
-					text = <"*Sheridan-Gardner test (en)">
-					description = <"*A Sheridan-Gardner test was used. (en)">
+					text = <"Sheridan-Gardner-test">
+					description = <"En Sheridan-Gardner-test ble brukt.">
 				>
 				["at0485"] = <
-					text = <"*Cambridge crowding cards (en)">
-					description = <"*A Cambridge crowding card test was used. (en)">
+					text = <"Cambridge crowding cards">
+					description = <"En test med Cambridge crowding cards ble brukt.">
 				>
 				["at0486"] = <
-					text = <"*MNREAD chart (en)">
-					description = <"*A Minnesota Low Vision Reading (MNREAD) reading acuity chart was used. (en)">
+					text = <"MNREAD-tavle">
+					description = <"En MNREAD-lesevisustavle (Minnesota Low Vision Reading) ble brukt.">
 				>
 				["at0487"] = <
-					text = <"*Radner reading chart (en)">
-					description = <"*A Radner reading chart was used. (en)">
+					text = <"Radner-lesetavle">
+					description = <"En Radner-lesetavle ble brukt.">
 				>
 				["at0488"] = <
-					text = <"*Freiburg visual acuity test (en)">
-					description = <"*A Freiburg visual acuity test (FrACT) was used. (en)">
+					text = <"Freiburg visusundersøkelse">
+					description = <"En Freiburg visusundersøkelse (FrACT) ble brukt.">
 				>
 				["at0489"] = <
-					text = <"*Sheridan Gardiner test (en)">
-					description = <"*A Sheridan Gardiner test was used. (en)">
+					text = <"Sheridan Gardiner-test">
+					description = <"En Sheridan Gardiner-test ble brukt.">
 				>
 				["at0490"] = <
-					text = <"*Integrated virtual chart display (en)">
-					description = <"*A chart presented as a virtual image inside a device, such as an autorefractor. (en)">
+					text = <"Integrert virtuell tavlevisning">
+					description = <"En tavle presentert som et virtuelt bilde inne i et instrument, for eksempel en autorefraktor.">
 				>
 				["at0491"] = <
-					text = <"*Cycles per centimetre result (en)">
-					description = <"*The number of cycles (line pairs) per centimetre of the finest grating pattern recognized by the individual. (en)">
-					comment = <"*Strictly not a unit of visual acuity but a measure of stimulus size. (en)">
+					text = <"Resultat i perioder per centimeter">
+					description = <"Antall perioder (linjepar) per centimeter i det fineste gittermønsteret individet gjenkjente.">
+					comment = <"Strengt tatt ikke en visusenhet, men et mål på stimulusstørrelse.">
 				>
 				["at0492"] = <
-					text = <"*Cycles per degree result (en)">
-					description = <"*The visual acuity measured and expressed as the number of pairs of black and white lines (cycles) that subtend an angle of one degree at the tested eye. (en)">
-					comment = <"*Used in grating based tests such as Teller acuity cards.  (en)">
+					text = <"Resultat i perioder per grad">
+					description = <"Visus målt og uttrykt som antall par av svarte og hvite linjer (perioder) som spenner over en vinkel på én grad ved øyet som undersøkes.">
+					comment = <"Brukes i gitterbaserte tester, som Teller-visuskort.">
 				>
 				["at0493"] = <
-					text = <"*Derived cycles per degree (en)">
-					description = <"*Visual acuity as cycles per degree, derived by conversion from the primary recording. (en)">
+					text = <"Avledet resultat i perioder per grad">
+					description = <"Visus i perioder per grad, avledet ved omregning fra den primære registreringen.">
 				>
 				["at0494"] = <
-					text = <"*NI with autorefraction-based correction (en)">
-					description = <"*No improvement withf corrective lenses based on an autorefraction test. (en)">
+					text = <"Ingen bedring med korreksjon basert på autorefraksjon">
+					description = <"Ingen bedring med korreksjonslinser basert på en autorefraksjonsmåling.">
 				>
 				["at0495"] = <
-					text = <"*NI with glasses (en)">
-					description = <"*No improvement with eyeglasses. (en)">
+					text = <"Ingen bedring med briller">
+					description = <"Ingen bedring med briller.">
 				>
 				["at0496"] = <
-					text = <"*NI with soft contact lens (en)">
-					description = <"*No improvement with a soft contact lens. (en)">
+					text = <"Ingen bedring med myk kontaktlinse">
+					description = <"Ingen bedring med en myk kontaktlinse.">
 				>
 				["at0497"] = <
-					text = <"*NI with retinoscopy-based correction (en)">
-					description = <"*No improvement with corrective lenses based on retinoscopy. (en)">
+					text = <"Ingen bedring med korreksjon basert på retinoskopi">
+					description = <"Ingen bedring med korreksjonslinser basert på retinoskopi.">
 				>
 				["at0498"] = <
-					text = <"*NI with rigid contact lens (en)">
-					description = <"*No improvement with a hard contact lens (en)">
+					text = <"Ingen bedring med hard kontaktlinse">
+					description = <"Ingen bedring med en hard kontaktlinse.">
 				>
 				["at0499"] = <
-					text = <"*Sonksen Silver test (en)">
-					description = <"*A Sonksen Silver test was used. (en)">
+					text = <"Sonksen Silver-test">
+					description = <"En Sonksen Silver-test ble brukt.">
 				>
 				["at0500"] = <
-					text = <"*Cycloplegia during refraction (en)">
-					description = <"*Information on whether the correction used was based on a measurement of the refractive error in a cycloplegic state. (en)">
+					text = <"Cykloplegi under refraksjon">
+					description = <"Informasjon om hvorvidt korreksjonen som ble brukt var basert på en måling av refraksjonsfeilen i cykloplegisk tilstand.">
 				>
 				["at0501"] = <
-					text = <"*Cycloplegic refraction (en)">
-					description = <"*The correction used was based on a measurement of refractive error in a cycloplegic state. (en)">
+					text = <"Cykloplegisk refraksjon">
+					description = <"Korreksjonen som ble brukt var basert på en måling av refraksjonsfeil i cykloplegisk tilstand.">
 				>
 				["at0502"] = <
-					text = <"*Non-cycloplegic refraction (en)">
-					description = <"*The correction used was based on a measurement of refractive error in a non-cycloplegic state. (en)">
+					text = <"Ikke-cykloplegisk refraksjon">
+					description = <"Korreksjonen som ble brukt var basert på en måling av refraksjonsfeil i ikke-cykloplegisk tilstand.">
 				>
 				["at0510"] = <
-					text = <"*NI with further correction (en)">
-					description = <"*No improvement with an unspecified further correction. (en)">
+					text = <"Ingen bedring med ytterligere korreksjon">
+					description = <"Ingen bedring med en uspesifisert ytterligere korreksjon.">
 				>
 				["at0512"] = <
-					text = <"*Supplementary results (en)">
-					description = <"*Additional structured details on visual acuity test result not captured in other data elements. (en)">
-					comment = <"*Examples include specifying the card scored in a Cardiff acuity test, or supplementary results on reading visual acuity tests.  (en)">
+					text = <"Supplerende resultater">
+					description = <"Ytterligere strukturerte detaljer om resultatet av visusundersøkelsen som ikke fanges opp av andre dataelementer.">
+					comment = <"Eksempler er å angi hvilket kort som ble skåret i en Cardiff-visustest, eller supplerende resultater fra lesevisusundersøkelser.">
 				>
 				["at0513"] = <
-					text = <"*Contrast category (en)">
-					description = <"*A statement on the contrast level of the test. (en)">
-					comment = <"*Note that the majority of visual acuity tests are performed under high contrast conditions.
-Where possible, population of quantitative elements on contrast is encouraged. (en)">
+					text = <"Kontrastkategori">
+					description = <"Et utsagn om kontrastnivået i undersøkelsen.">
+					comment = <"Merk at de fleste visusundersøkelser utføres under forhold med høy kontrast.
+Der det er mulig, oppfordres det til å fylle ut kvantitative elementer om kontrast.">
 				>
 				["at0514"] = <
-					text = <"*High-contrast (en)">
-					description = <"*The test was performed with high contrast. (en)">
+					text = <"Høy kontrast">
+					description = <"Undersøkelsen ble utført med høy kontrast.">
 				>
 				["at0515"] = <
-					text = <"*Low-contrast (en)">
-					description = <"*The test was performed with low contrast. (en)">
+					text = <"Lav kontrast">
+					description = <"Undersøkelsen ble utført med lav kontrast.">
 				>
 				["at0516"] = <
-					text = <"*Optotype presentation details (en)">
-					description = <"*Details on how the optotypes were presented, including statements on crowding. (en)">
+					text = <"Detaljer om presentasjon av optotyper">
+					description = <"Detaljer om hvordan optotypene ble presentert, inkludert utsagn om crowding.">
 				>
 				["at0517"] = <
-					text = <"*Defocus lens (en)">
-					description = <"*A lens used with the intention of adding refractive error. (en)">
+					text = <"Defokuslinse">
+					description = <"En linse som brukes med den hensikt å tilføre refraksjonsfeil.">
 				>
 				["at0518"] = <
-					text = <"*N 1 (en)">
-					description = <"">
+					text = <"N 1">
+					description = <"N-skriftstørrelse 1.">
 				>
 				["at0519"] = <
-					text = <"*N 1.5 (en)">
-					description = <"*N font size 1.5 (en)">
+					text = <"N 1.5">
+					description = <"N-skriftstørrelse 1,5.">
 				>
 				["at0520"] = <
-					text = <"*N 2 (en)">
-					description = <"*N font size (en)">
+					text = <"N 2">
+					description = <"N-skriftstørrelse 2.">
 				>
 				["at0521"] = <
-					text = <"*N 2.5 (en)">
-					description = <"*N font size (en)">
+					text = <"N 2.5">
+					description = <"N-skriftstørrelse 2,5.">
 				>
 				["at0522"] = <
-					text = <"*N 3 (en)">
-					description = <"*N font size (en)">
+					text = <"N 3">
+					description = <"N-skriftstørrelse 3.">
 				>
 				["at0523"] = <
-					text = <"*N 3.5 (en)">
-					description = <"*N font size (en)">
+					text = <"N 3.5">
+					description = <"N-skriftstørrelse 3,5.">
 				>
 				["at0524"] = <
-					text = <"*N 4 (en)">
-					description = <"*N font size (en)">
+					text = <"N 4">
+					description = <"N-skriftstørrelse 4.">
 				>
 				["at0525"] = <
-					text = <"*N 4.5 (en)">
-					description = <"*N font size (en)">
+					text = <"N 4.5">
+					description = <"N-skriftstørrelse 4,5.">
 				>
 				["at0526"] = <
-					text = <"*N 5 (en)">
-					description = <"*N font size (en)">
+					text = <"N 5">
+					description = <"N-skriftstørrelse 5.">
 				>
 				["at0527"] = <
-					text = <"*N 5.5 (en)">
-					description = <"*N font size (en)">
+					text = <"N 5.5">
+					description = <"N-skriftstørrelse 5,5.">
 				>
 				["at0528"] = <
-					text = <"*N 6 (en)">
-					description = <"*N font size (en)">
+					text = <"N 6">
+					description = <"N-skriftstørrelse 6.">
 				>
 				["at0529"] = <
-					text = <"*N 6.5 (en)">
-					description = <"*N font size (en)">
+					text = <"N 6.5">
+					description = <"N-skriftstørrelse 6,5.">
 				>
 				["at0530"] = <
-					text = <"*N 7.5 (en)">
-					description = <"*N font size (en)">
+					text = <"N 7.5">
+					description = <"N-skriftstørrelse 7,5.">
 				>
 				["at0531"] = <
-					text = <"*N 8 (en)">
-					description = <"*N font size (en)">
+					text = <"N 8">
+					description = <"N-skriftstørrelse 8.">
 				>
 				["at0532"] = <
-					text = <"*N 9 (en)">
-					description = <"*N font size (en)">
+					text = <"N 9">
+					description = <"N-skriftstørrelse 9.">
 				>
 				["at0533"] = <
-					text = <"*N 10 (en)">
-					description = <"*N font size (en)">
+					text = <"N 10">
+					description = <"N-skriftstørrelse 10.">
 				>
 				["at0534"] = <
-					text = <"*N 11 (en)">
-					description = <"*N font size (en)">
+					text = <"N 11">
+					description = <"N-skriftstørrelse 11.">
 				>
 				["at0535"] = <
-					text = <"*N 12 (en)">
-					description = <"*N font size (en)">
+					text = <"N 12">
+					description = <"N-skriftstørrelse 12.">
 				>
 				["at0536"] = <
-					text = <"*N 13 (en)">
-					description = <"*N font size (en)">
+					text = <"N 13">
+					description = <"N-skriftstørrelse 13.">
 				>
 				["at0537"] = <
-					text = <"*N 14 (en)">
-					description = <"*N font size (en)">
+					text = <"N 14">
+					description = <"N-skriftstørrelse 14.">
 				>
 				["at0538"] = <
-					text = <"*N 15 (en)">
-					description = <"*N font size (en)">
+					text = <"N 15">
+					description = <"N-skriftstørrelse 15.">
 				>
 				["at0539"] = <
-					text = <"*N 16 (en)">
-					description = <"*N font size (en)">
+					text = <"N 16">
+					description = <"N-skriftstørrelse 16.">
 				>
 				["at0540"] = <
-					text = <"*N 18 (en)">
-					description = <"*N font size (en)">
+					text = <"N 18">
+					description = <"N-skriftstørrelse 18.">
 				>
 				["at0541"] = <
-					text = <"*N 20 (en)">
-					description = <"*N font size (en)">
+					text = <"N 20">
+					description = <"N-skriftstørrelse 20.">
 				>
 				["at0542"] = <
-					text = <"*N 22 (en)">
-					description = <"*N font size (en)">
+					text = <"N 22">
+					description = <"N-skriftstørrelse 22.">
 				>
 				["at0543"] = <
-					text = <"*N 24 (en)">
-					description = <"*N font size (en)">
+					text = <"N 24">
+					description = <"N-skriftstørrelse 24.">
 				>
 				["at0544"] = <
-					text = <"*N 26 (en)">
-					description = <"*N font size (en)">
+					text = <"N 26">
+					description = <"N-skriftstørrelse 26.">
 				>
 				["at0545"] = <
-					text = <"*N 28 (en)">
-					description = <"*N font size (en)">
+					text = <"N 28">
+					description = <"N-skriftstørrelse 28.">
 				>
 				["at0546"] = <
-					text = <"*N 30 (en)">
-					description = <"*N font size (en)">
+					text = <"N 30">
+					description = <"N-skriftstørrelse 30.">
 				>
 				["at0547"] = <
-					text = <"*N 32 (en)">
-					description = <"*N font size (en)">
+					text = <"N 32">
+					description = <"N-skriftstørrelse 32.">
 				>
 				["at0548"] = <
-					text = <"*N 36 (en)">
-					description = <"*N font size (en)">
+					text = <"N 36">
+					description = <"N-skriftstørrelse 36.">
 				>
 				["at0549"] = <
-					text = <"*N 40 (en)">
-					description = <"*N font size (en)">
+					text = <"N 40">
+					description = <"N-skriftstørrelse 40.">
 				>
 				["at0550"] = <
-					text = <"*N 42 (en)">
-					description = <"*N font size (en)">
+					text = <"N 42">
+					description = <"N-skriftstørrelse 42.">
 				>
 				["at0551"] = <
-					text = <"*N 44 (en)">
-					description = <"*N font size (en)">
+					text = <"N 44">
+					description = <"N-skriftstørrelse 44.">
 				>
 				["at0552"] = <
-					text = <"*N 48 (en)">
-					description = <"*N font size (en)">
+					text = <"N 48">
+					description = <"N-skriftstørrelse 48.">
 				>
 				["at0553"] = <
-					text = <"*N 54 (en)">
-					description = <"*N font size (en)">
+					text = <"N 54">
+					description = <"N-skriftstørrelse 54.">
 				>
 				["at0554"] = <
-					text = <"*N 56 (en)">
-					description = <"*N font size (en)">
+					text = <"N 56">
+					description = <"N-skriftstørrelse 56.">
 				>
 				["at0555"] = <
-					text = <"*N 60 (en)">
-					description = <"*N font size (en)">
+					text = <"N 60">
+					description = <"N-skriftstørrelse 60.">
 				>
 				["at0556"] = <
-					text = <"*N 66 (en)">
-					description = <"*N font size (en)">
+					text = <"N 66">
+					description = <"N-skriftstørrelse 66.">
 				>
 				["at0557"] = <
-					text = <"*N 72 (en)">
-					description = <"*N font size (en)">
+					text = <"N 72">
+					description = <"N-skriftstørrelse 72.">
 				>
 				["at0558"] = <
-					text = <"*Crowdedness (en)">
-					description = <"*A categorical statement on whether a crowding effect is expected to be induced by the visual stimulus. (en)">
-					comment = <"*Additional detail on the degree of crowding, and presence of crowding bars can be recorded using the 'Optotype presentation details' SLOT. (en)">
+					text = <"Crowding">
+					description = <"Et kategorisk utsagn om hvorvidt den visuelle stimulusen forventes å framkalle en crowding-effekt.">
+					comment = <"Ytterligere detaljer om graden av crowding og forekomst av crowding-streker kan registreres ved hjelp av SLOT-en 'Detaljer om presentasjon av optotyper'.">
 				>
 				["at0560"] = <
-					text = <"*Crowded (en)">
-					description = <"">
+					text = <"Med crowding">
+					description = <"Stimulusen ble presentert på en måte som antas å framkalle en crowding-effekt.">
 				>
 				["at0561"] = <
-					text = <"*Not Crowded (en)">
-					description = <"">
+					text = <"Uten crowding">
+					description = <"Stimulusen ble presentert på en måte som antas ikke å framkalle en crowding-effekt.">
 				>
 				["at0562"] = <
-					text = <"*Type of ancillary lighting used (en)">
-					description = <"*Type of light sources used in addition to the typical room, stimulus or chart lighting. (en)">
-					comment = <"*Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available. (en)">
+					text = <"Type tilleggsbelysning som ble brukt">
+					description = <"Typen lyskilder som ble brukt i tillegg til vanlig rom-, stimulus- eller tavlebelysning.">
+					comment = <"Koding med en terminologi anbefales. Fritekst bør kun tillates dersom det ikke finnes en egnet kodet verdi.">
 				>
 				["at0563"] = <
-					text = <"*Glare light (en)">
-					description = <"*A light source, or multiple light sources were directed at the eye to induce glare. (en)">
+					text = <"Blendingslys">
+					description = <"En eller flere lyskilder ble rettet mot øyet for å framkalle blending.">
 				>
 				["at0564"] = <
-					text = <"*Brightness Acuity Test (en)">
-					description = <"*A handheld ganzfeld illumination device was used to simulate environmental brightness. (en)">
+					text = <"Brightness Acuity Test">
+					description = <"Et håndholdt ganzfeld-belysningsinstrument ble brukt for å simulere lysstyrke i omgivelsene.">
 				>
 				["at0565"] = <
-					text = <"*Comment (en)">
-					description = <"*Narrative comment about the specific visual aid used. (en)">
+					text = <"Kommentar">
+					description = <"Fritekstkommentar om det spesifikke synshjelpemiddelet som ble brukt.">
 				>
 				["at0566"] = <
-					text = <"*J1 (en)">
-					description = <"*Jaeger font size 1. (en)">
+					text = <"J1">
+					description = <"Jaeger-skriftstørrelse 1.">
 				>
 				["at0567"] = <
-					text = <"*J2 (en)">
-					description = <"*Jaeger font size 2. (en)">
+					text = <"J2">
+					description = <"Jaeger-skriftstørrelse 2.">
 				>
 				["at0568"] = <
-					text = <"*J3 (en)">
-					description = <"*Jaeger font size 3. (en)">
+					text = <"J3">
+					description = <"Jaeger-skriftstørrelse 3.">
 				>
 				["at0569"] = <
-					text = <"*J4 (en)">
-					description = <"*Jaeger font size 4. (en)">
+					text = <"J4">
+					description = <"Jaeger-skriftstørrelse 4.">
 				>
 				["at0570"] = <
-					text = <"*J5 (en)">
-					description = <"*Jaeger font size 5. (en)">
+					text = <"J5">
+					description = <"Jaeger-skriftstørrelse 5.">
 				>
 				["at0571"] = <
-					text = <"*J6 (en)">
-					description = <"*Jaeger font size 6. (en)">
+					text = <"J6">
+					description = <"Jaeger-skriftstørrelse 6.">
 				>
 				["at0572"] = <
-					text = <"*J7 (en)">
-					description = <"*Jaeger font size 7. (en)">
+					text = <"J7">
+					description = <"Jaeger-skriftstørrelse 7.">
 				>
 				["at0573"] = <
-					text = <"*J8 (en)">
-					description = <"*Jaeger font size 8. (en)">
+					text = <"J8">
+					description = <"Jaeger-skriftstørrelse 8.">
 				>
 				["at0574"] = <
-					text = <"*J9 (en)">
-					description = <"*Jaeger font size 9. (en)">
+					text = <"J9">
+					description = <"Jaeger-skriftstørrelse 9.">
 				>
 				["at0575"] = <
-					text = <"*J10 (en)">
-					description = <"*Jaeger font size 10. (en)">
+					text = <"J10">
+					description = <"Jaeger-skriftstørrelse 10.">
 				>
 				["at0576"] = <
-					text = <"*J11 (en)">
-					description = <"*Jaeger font size 11. (en)">
+					text = <"J11">
+					description = <"Jaeger-skriftstørrelse 11.">
 				>
 				["at0577"] = <
-					text = <"*J12 (en)">
-					description = <"*Jaeger font size 12. (en)">
+					text = <"J12">
+					description = <"Jaeger-skriftstørrelse 12.">
 				>
 				["at0578"] = <
-					text = <"*J13 (en)">
-					description = <"*Jaeger font size 13. (en)">
+					text = <"J13">
+					description = <"Jaeger-skriftstørrelse 13.">
 				>
 				["at0579"] = <
-					text = <"*J14 (en)">
-					description = <"*Jaeger font size 14. (en)">
+					text = <"J14">
+					description = <"Jaeger-skriftstørrelse 14.">
 				>
 				["at0580"] = <
-					text = <"*J15 (en)">
-					description = <"*Jaeger font size 15. (en)">
+					text = <"J15">
+					description = <"Jaeger-skriftstørrelse 15.">
 				>
 				["at0581"] = <
-					text = <"*J16 (en)">
-					description = <"*Jaeger font size 16. (en)">
+					text = <"J16">
+					description = <"Jaeger-skriftstørrelse 16.">
 				>
 				["at0582"] = <
-					text = <"*J17 (en)">
-					description = <"*Jaeger font size 17. (en)">
+					text = <"J17">
+					description = <"Jaeger-skriftstørrelse 17.">
 				>
 				["at0583"] = <
-					text = <"*J18 (en)">
-					description = <"*Jaeger font size 18. (en)">
+					text = <"J18">
+					description = <"Jaeger-skriftstørrelse 18.">
 				>
 				["at0584"] = <
-					text = <"*J19 (en)">
-					description = <"*Jaeger font size 19. (en)">
+					text = <"J19">
+					description = <"Jaeger-skriftstørrelse 19.">
 				>
 				["at0585"] = <
-					text = <"*J20 (en)">
-					description = <"*Jaeger font size 20. (en)">
+					text = <"J20">
+					description = <"Jaeger-skriftstørrelse 20.">
 				>
 				["at0586"] = <
-					text = <"*Perceptual task (en)">
-					description = <"*The type of perceptual task  endpoint that the result represents. (en)">
-					comment = <"*Reading visual acuity expressed LogMAR is sometimes referred to as LogRAD. 
-Supplementary results of reading visual acuity tests can be recorded via the 'supplementary results' slot.  (en)">
+					text = <"Perseptuell oppgave">
+					description = <"Typen perseptuelt endepunkt som resultatet representerer.">
+					comment = <"Lesevisus uttrykt i logMAR omtales noen ganger som logRAD.
+Supplerende resultater fra lesevisusundersøkelser kan registreres via SLOT-en 'Supplerende resultater'.">
 				>
 				["at0587"] = <
-					text = <"*Minimum resolvable visual acuity (en)">
-					description = <"*A measurement of the ability to distinguish two separate objects as distinct. (en)">
+					text = <"Minste oppløsbare visus">
+					description = <"Et mål på evnen til å skille to atskilte objekter fra hverandre.">
 				>
 				["at0588"] = <
-					text = <"*Reading acuity (en)">
-					description = <"*A measurement of the smallest visual angle at which text can be read. (en)">
+					text = <"Lesevisus">
+					description = <"Et mål på den minste synsvinkelen der tekst kan leses.">
 				>
 				["at0589"] = <
-					text = <"*Light adaptation state (en)">
-					description = <"*The presumed adaptation state of the visual system during testing. (en)">
-					comment = <"*This is a categorical description of the individual's presumed retinal adaptation state, not a measurement of the ambient lighting. (en)">
+					text = <"Lysadaptasjonstilstand">
+					description = <"Den antatte adaptasjonstilstanden til synssystemet under undersøkelsen.">
+					comment = <"Dette er en kategorisk beskrivelse av individets antatte netthinneadaptasjon, ikke en måling av belysningen i omgivelsene.">
 				>
 				["at0590"] = <
-					text = <"*Photopic (en)">
-					description = <"*The individual is adapted to high luminance conditions. (en)">
+					text = <"Fotopisk">
+					description = <"Individet er adaptert til forhold med høy luminans.">
 				>
 				["at0591"] = <
-					text = <"*Mesopic (en)">
-					description = <"*The individual is in a transitional adaptation state between photopic and scotopic. (en)">
+					text = <"Mesopisk">
+					description = <"Individet er i en overgangstilstand mellom fotopisk og skotopisk adaptasjon.">
 				>
 				["at0592"] = <
-					text = <"*Scotopic (en)">
-					description = <"*The individual is adapted to low luminance conditions. (en)">
+					text = <"Skotopisk">
+					description = <"Individet er adaptert til forhold med lav luminans.">
 				>
 				["at0593"] = <
-					text = <"*N 7 (en)">
-					description = <"*N font size 7 (en)">
+					text = <"N 7">
+					description = <"N-skriftstørrelse 7.">
 				>
 				["at0594"] = <
-					text = <"*No light perception (en)">
-					description = <"*The individual was unable to identify the absence or presence of light. (en)">
+					text = <"Ingen lyssans">
+					description = <"Individet klarte ikke å identifisere fravær eller tilstedeværelse av lys.">
 				>
 				["at0595"] = <
-					text = <"*Light perception (en)">
-					description = <"*The individual correctly identified the absence or presence of light. (en)">
+					text = <"Lyssans">
+					description = <"Individet identifiserte korrekt fravær eller tilstedeværelse av lys.">
 				>
 				["at0596"] = <
-					text = <"*Hand Movement (en)">
-					description = <"*The individual perceived hand movements. (en)">
+					text = <"Håndbevegelser">
+					description = <"Individet oppfattet håndbevegelser.">
 				>
 				["at0597"] = <
-					text = <"*Count Fingers (en)">
-					description = <"*The individual correctly counted fingers. (en)">
+					text = <"Fingertelling">
+					description = <"Individet telte fingre korrekt.">
 				>
 				["at0598"] = <
-					text = <"*Bailey-Lovie chart (en)">
-					description = <"*A Bailey-Lovie chart was used. (en)">
+					text = <"Bailey-Lovie-tavle">
+					description = <"En Bailey-Lovie-tavle ble brukt.">
 				>
 				["at0599"] = <
-					text = <"*E-ETDRS test (en)">
-					description = <"*An electronic or computerized ETRDS testing protocol was used. (en)">
+					text = <"E-ETDRS-test">
+					description = <"En elektronisk eller datamaskinbasert ETDRS-undersøkelsesprotokoll ble brukt.">
 				>
 				["at0600"] = <
-					text = <"*ATS-HOTV test (en)">
-					description = <"*The Amblyopia Treatment Study HOTV testing protocol was used. (en)">
+					text = <"ATS-HOTV-test">
+					description = <"Undersøkelsesprotokollen HOTV fra Amblyopia Treatment Study ble brukt.">
 				>
 				["at0601"] = <
-					text = <"*Minimum detectable visual acuity (en)">
-					description = <"*A measurement of the ability to detect a visual object. (en)">
+					text = <"Minste synbare visus">
+					description = <"Et mål på evnen til å oppdage et visuelt objekt.">
 				>
 				["at0602"] = <
-					text = <"*Minimum recognizable visual acuity (en)">
-					description = <"*A measurement of the ability to recognize and identify a visual object. (en)">
+					text = <"Minste gjenkjennbare visus">
+					description = <"Et mål på evnen til å gjenkjenne og identifisere et visuelt objekt.">
 				>
 				["at0603"] = <
-					text = <"*Left eye (en)">
-					description = <"*The aid was positioned in front of the left eye. (en)">
+					text = <"Venstre øye">
+					description = <"Hjelpemiddelet var plassert foran venstre øye.">
 				>
 				["at0604"] = <
-					text = <"*Right eye (en)">
-					description = <"*The aid was positioned in front of the left eye. (en)">
+					text = <"Høyre øye">
+					description = <"Hjelpemiddelet var plassert foran høyre øye.">
 				>
 			>
 		>

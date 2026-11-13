@@ -326,7 +326,7 @@ services:
   # base as the audience, and the scope asked for. NOT for anything real: name
   # your own https issuer in [pixm.endpoint.credentials.oauth] and in FerroPIX's [[auth.issuer]].
   identity-issuer:
-    image: ghcr.io/navikt/mock-oauth2-server:6.1.3@sha256:2a813381bf282da46ff36ff386059e7903e25865056af8149f4fb3f1441916b8
+    image: ghcr.io/navikt/mock-oauth2-server:6.1.5@sha256:d88e445d55c4ff6eed59b02d86adfece47d985233b1616fb712669b98328c8a2
     networks:
       default:
         aliases: [ferroehr, ferropix]
@@ -401,7 +401,7 @@ services:
   # below names the client `ferroehr`). Pinned by tag and by the digest of its
   # image index.
   ferropix:
-    image: ghcr.io/ferrohealth/ferropix:0.0.18@sha256:6fb622b5b9ade34c8a4053112c8f166ff495d8b32bf99f35529d01e512b7cc42
+    image: ghcr.io/ferrohealth/ferropix:0.0.26@sha256:85d40e6fdcdb39f782007eff91eb059861a4e039ca3f8fb56e37f2fa0f28d78a
     network_mode: service:identity-issuer
     depends_on:
       identity-issuer:
@@ -455,11 +455,6 @@ services:
       # to start while it does not answer.
       ferropix:
         condition: service_healthy
-      # The professional PERSON and ROLE templates the party mapping names
-      # are in the definition store before the server boots, which refuses a
-      # mapping whose templates it lacks.
-      ferroehr-definitions:
-        condition: service_completed_successfully
       # Inert without the s3 profile (required: false). With it, this edge does
       # two jobs: the server starts only after the bucket initializer exits 0,
       # and `up -d --wait` learns the initializer is a one-shot — Compose v5.4
@@ -569,21 +564,18 @@ services:
       retries: 5
       start_period: 20s
 
-  # Loads the professional PERSON and ROLE templates the party mapping names
-  # into the definition store, then exits (`ferroehr definitions load`). A
-  # template stored with the same text is left alone, so it runs at every
-  # `up`. The templates travel inline as the two `ferroehr-definition-*`
-  # configs below, copies of deploy/definitions/professional/.
-  ferroehr-definitions:
+  # Grants the `quickstart-scim` client scim_provision in the CDR, on the
+  # operator's authority (`ferroehr party-binding grant`), since no
+  # administrator can log in before the quickstart user it provisions exists:
+  # an AGENT carrying the client identifier and a ROLE whose capability names
+  # the binding issuer and the token scope. A client that holds the grant
+  # already gets nothing, so it runs again on a kept volume.
+  ferroehr-grant:
     image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:main}
+    network_mode: service:identity-issuer
     depends_on:
-      ferroehr-postgres:
+      ferroehr:
         condition: service_healthy
-    command:
-      - definitions
-      - load
-      - /etc/ferroehr/definitions/person.adls
-      - /etc/ferroehr/definitions/role.adls
     environment:
       FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
       FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
@@ -591,11 +583,21 @@ services:
     configs:
       - source: ferroehr-config${FERROEHR_EHR_INDEX:+-${FERROEHR_EHR_INDEX}}
         target: /etc/ferroehr/ferroehr.toml
-      - source: ferroehr-definition-person
-        target: /etc/ferroehr/definitions/person.adls
-      - source: ferroehr-definition-role
-        target: /etc/ferroehr/definitions/role.adls
-    # NOT `read_only: true`, for the inline configs (the ferroehr service says why).
+    command:
+      - party-binding
+      - grant
+      - --issuer
+      - http://localhost:8180/quickstart
+      - --client-id
+      - quickstart-scim
+      - --operation
+      - scim_provision
+      - --element
+      - binding_issuer=urn:ferroehr:basic-user
+      - --element
+      - token_scope=ferroehr/scim
+    tmpfs:
+      - /tmp
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true
@@ -605,15 +607,15 @@ services:
   # FerroEHR's SCIM endpoint (RFC 7644 §3.3), so the Basic login is bound to
   # a demographic party: the development issuer signs the `quickstart-scim`
   # client a token for the scope ferroehr/scim, and the User is created with
-  # the binding key `ferroehr`. A User that exists already (409) is kept. It
-  # then stays up and reports healthy, so `up --wait` returns once the login
-  # is bound.
-  ferroehr-provision:
+  # the binding key `ferroehr`. A User that exists already (409) is kept.
+  ferroehr-provision-user:
     image: ${FERROEHR_CURL_IMAGE:-curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777}
     network_mode: service:identity-issuer
     depends_on:
       ferroehr:
         condition: service_healthy
+      ferroehr-grant:
+        condition: service_completed_successfully
     entrypoint:
       - sh
       - -c
@@ -627,12 +629,77 @@ services:
         --data '{"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User"],"userName":"ferroehr","urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User":{"loginIdentifier":"ferroehr"}}'
         http://localhost:8080/scim/v2/Users);
         case $$status in 201|409) ;; *) echo "provisioning ferroehr answered $$status" >&2; cat /tmp/answer >&2; exit 1;; esac;
-        touch /tmp/provisioned; echo 'ferroehr is provisioned'; exec sleep infinity
+        echo 'ferroehr is provisioned'
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+
+  # Grants the PERSON of the quickstart user `ferroehr` the SMART on openEHR
+  # scopes of every resource family in the CDR (hold_scopes), on the
+  # operator's authority (`ferroehr party-binding grant --basic-user`): a
+  # Basic user is a credential alone, and what it may do is a grant on its
+  # PERSON. A PERSON that holds the grant already gets nothing, so it runs
+  # again on a kept volume.
+  ferroehr-hold:
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:main}
+    network_mode: service:identity-issuer
+    depends_on:
+      ferroehr-provision-user:
+        condition: service_completed_successfully
+    environment:
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
+      FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
+      FERROEHR__USAGE_REPORT__ENABLED: "false"
+    configs:
+      - source: ferroehr-config${FERROEHR_EHR_INDEX:+-${FERROEHR_EHR_INDEX}}
+        target: /etc/ferroehr/ferroehr.toml
+    command:
+      - party-binding
+      - grant
+      - --basic-user
+      - ferroehr
+      - --operation
+      - hold_scopes
+      - --element
+      - scope=user/composition-*.cruds
+      - --element
+      - scope=user/template-*.cruds
+      - --element
+      - scope=user/aql-*.cruds
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+
+  # Reports healthy once the quickstart login `ferroehr` is bound and holds
+  # its scopes: it waits until the login reads a template and then stays up,
+  # so `up --wait` returns once the login works.
+  ferroehr-provision:
+    image: ${FERROEHR_CURL_IMAGE:-curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777}
+    network_mode: service:identity-issuer
+    depends_on:
+      ferroehr-hold:
+        condition: service_completed_successfully
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        tries=0;
+        until curl -fsS -o /dev/null -u ferroehr:ferroehr
+        http://localhost:8080/ferroehr/rest/openehr/v1/definition/template/adl1.4; do
+        tries=$$((tries + 1)); if [ $$tries -ge 60 ]; then echo 'ferroehr holds no scopes' >&2; exit 1; fi; sleep 2; done;
+        touch /tmp/provisioned; echo 'ferroehr is provisioned and granted'; exec sleep infinity
     healthcheck:
       test: ["CMD", "test", "-f", "/tmp/provisioned"]
       interval: 2s
       timeout: 2s
-      retries: 30
+      retries: 90
     read_only: true
     tmpfs:
       - /tmp
@@ -828,9 +895,6 @@ configs:
       [api.cors]
       allow_origins = ["*"]
 
-      [auth]
-      enabled = true
-
       # The issuer the Basic users bind under. A Basic user is a person and
       # maps to the PERSON carrying its binding key, which [[auth.party]]
       # places under the identifier issuer of a persons issuer. This one signs
@@ -846,21 +910,24 @@ configs:
       issuer = "https://basic-users.ferroehr.invalid"
       identifier_issuer = "urn:ferroehr:basic-user"
       identifier_type = "login"
+      group_claim = "groups"
+      group_identifier_issuer = "urn:ferroehr:groups"
 
       # The quickstart user: ferroehr / ferroehr (the hash is Argon2id of
       # "ferroehr"). Replace with your own users — or an [auth] issuer — before
-      # exposing the server to anything real. Every route checks the SMART on
-      # openEHR scopes a user holds: these grant every resource family, and
-      # the product scope admits the ADMIN and DEMOGRAPHIC APIs.
+      # exposing the server to anything real. A Basic user is a credential
+      # alone: as the first administrator below it holds ADMIN and the product
+      # scope, which admits the ADMIN and DEMOGRAPHIC APIs, and the
+      # ferroehr-hold one-shot grants its PERSON the SMART on openEHR scopes of
+      # every resource family in the CDR (hold_scopes).
       [[auth.basic.users]]
       user = "ferroehr"
       password_hash = "$$argon2id$$v=19$$m=19456,t=2,p=1$$ZmVycm9laHJEZXZTYWx0$$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
-      scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
-      roles = ["ADMIN", "USER"]
 
       # The healthcare provider the quickstart acts for (an example id under
       # the OID arc 2.999, which ITU-T X.660 reserves for examples), and the
-      # binding key of the quickstart user.
+      # binding key of the quickstart user. The party mapping is the default
+      # one, over the demographic definitions the server stores at boot.
       [authz.party_binding]
       provider = { issuer = "urn:oid:2.999.7.9", id = "quickstart" }
 
@@ -868,37 +935,6 @@ configs:
       user = "ferroehr"
       key_issuer = "urn:ferroehr:basic-user"
       key = "ferroehr"
-
-      # The party mapping over the professional PERSON and ROLE pair the
-      # ferroehr-definitions one-shot loads (deploy/definitions/professional/):
-      # the binding key, `userName` and `externalId` share the identifier element
-      # and are told apart by type.
-      [[authz.party_binding.person.template]]
-      template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
-      default = true
-      key = { path = "/details[id2]/items[id3]", type = "login" }
-      user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
-      external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
-
-      [[authz.party_binding.person.attribute]]
-      scim = "name.formatted"
-      name = true
-      path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
-
-      [[authz.party_binding.person.attribute]]
-      scim = "name.givenName"
-      path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id7]" }
-
-      [[authz.party_binding.person.attribute]]
-      scim = "name.familyName"
-      path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id8]" }
-
-      [[authz.party_binding.person.attribute]]
-      scim = 'emails[type eq "work"].value'
-      path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/contacts[id9]/addresses[id10]/details[id11]/items[id12]" }
-
-      [authz.party_binding.professional_role]
-      template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
 
       # The SCIM endpoint the ferroehr-provision one-shot provisions the quickstart
       # user through, with a client credentials token of the development issuer,
@@ -909,19 +945,25 @@ configs:
       audience = ["ferroehr-scim"]
       token_types = ["JWT"]
 
-      [auth.scim]
+      # The URL clients reach the server at, which every SCIM location names.
+      [server]
       public_base_url = "http://localhost:8080"
 
-      [[auth.scim.client]]
-      issuer = "http://localhost:8180/quickstart"
-      client_id = "quickstart-scim"
-      scope = "ferroehr/scim"
-      binding_issuer = "urn:ferroehr:basic-user"
+      [auth.scim]
+
+      # The ferroehr-grant one-shot grants that client scim_provision in the
+      # CDR, and ferroehr-hold the quickstart user its scopes, which the grant
+      # ceiling admits beside a system client's commit.
+      [authz.grants]
+      allowed = ["commit_composition", "scim_provision", "hold_scopes"]
 
       # Quickstart: authentication only, no role gate — the one user above can
-      # use the clinical API, the admin API and the management endpoints.
+      # use the clinical API, the admin API and the management endpoints. It is
+      # the first administrator, the Basic user holding ADMIN before any
+      # policy party grants anything.
       [authz.rbac]
       enabled = false
+      first_admin = "ferroehr"
 
       # The admin API (DELETE /admin/...) — on for the quickstart so the
       # optional viewer's panels work; keep off in production unless
@@ -992,9 +1034,6 @@ configs:
       [api.cors]
       allow_origins = ["*"]
 
-      [auth]
-      enabled = true
-
       # The issuer the Basic users bind under. A Basic user is a person and
       # maps to the PERSON carrying its binding key, which [[auth.party]]
       # places under the identifier issuer of a persons issuer. This one signs
@@ -1010,21 +1049,24 @@ configs:
       issuer = "https://basic-users.ferroehr.invalid"
       identifier_issuer = "urn:ferroehr:basic-user"
       identifier_type = "login"
+      group_claim = "groups"
+      group_identifier_issuer = "urn:ferroehr:groups"
 
       # The quickstart user: ferroehr / ferroehr (the hash is Argon2id of
       # "ferroehr"). Replace with your own users — or an [auth] issuer — before
-      # exposing the server to anything real. Every route checks the SMART on
-      # openEHR scopes a user holds: these grant every resource family, and
-      # the product scope admits the ADMIN and DEMOGRAPHIC APIs.
+      # exposing the server to anything real. A Basic user is a credential
+      # alone: as the first administrator below it holds ADMIN and the product
+      # scope, which admits the ADMIN and DEMOGRAPHIC APIs, and the
+      # ferroehr-hold one-shot grants its PERSON the SMART on openEHR scopes of
+      # every resource family in the CDR (hold_scopes).
       [[auth.basic.users]]
       user = "ferroehr"
       password_hash = "$$argon2id$$v=19$$m=19456,t=2,p=1$$ZmVycm9laHJEZXZTYWx0$$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
-      scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
-      roles = ["ADMIN", "USER"]
 
       # The healthcare provider the quickstart acts for (an example id under
       # the OID arc 2.999, which ITU-T X.660 reserves for examples), and the
-      # binding key of the quickstart user.
+      # binding key of the quickstart user. The party mapping is the default
+      # one, over the demographic definitions the server stores at boot.
       [authz.party_binding]
       provider = { issuer = "urn:oid:2.999.7.9", id = "quickstart" }
 
@@ -1032,37 +1074,6 @@ configs:
       user = "ferroehr"
       key_issuer = "urn:ferroehr:basic-user"
       key = "ferroehr"
-
-      # The party mapping over the professional PERSON and ROLE pair the
-      # ferroehr-definitions one-shot loads (deploy/definitions/professional/):
-      # the binding key, `userName` and `externalId` share the identifier element
-      # and are told apart by type.
-      [[authz.party_binding.person.template]]
-      template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
-      default = true
-      key = { path = "/details[id2]/items[id3]", type = "login" }
-      user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
-      external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
-
-      [[authz.party_binding.person.attribute]]
-      scim = "name.formatted"
-      name = true
-      path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
-
-      [[authz.party_binding.person.attribute]]
-      scim = "name.givenName"
-      path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id7]" }
-
-      [[authz.party_binding.person.attribute]]
-      scim = "name.familyName"
-      path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id8]" }
-
-      [[authz.party_binding.person.attribute]]
-      scim = 'emails[type eq "work"].value'
-      path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/contacts[id9]/addresses[id10]/details[id11]/items[id12]" }
-
-      [authz.party_binding.professional_role]
-      template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
 
       # The SCIM endpoint the ferroehr-provision one-shot provisions the quickstart
       # user through, with a client credentials token of the development issuer,
@@ -1073,19 +1084,25 @@ configs:
       audience = ["ferroehr-scim"]
       token_types = ["JWT"]
 
-      [auth.scim]
+      # The URL clients reach the server at, which every SCIM location names.
+      [server]
       public_base_url = "http://localhost:8080"
 
-      [[auth.scim.client]]
-      issuer = "http://localhost:8180/quickstart"
-      client_id = "quickstart-scim"
-      scope = "ferroehr/scim"
-      binding_issuer = "urn:ferroehr:basic-user"
+      [auth.scim]
+
+      # The ferroehr-grant one-shot grants that client scim_provision in the
+      # CDR, and ferroehr-hold the quickstart user its scopes, which the grant
+      # ceiling admits beside a system client's commit.
+      [authz.grants]
+      allowed = ["commit_composition", "scim_provision", "hold_scopes"]
 
       # Quickstart: authentication only, no role gate — the one user above can
-      # use the clinical API, the admin API and the management endpoints.
+      # use the clinical API, the admin API and the management endpoints. It is
+      # the first administrator, the Basic user holding ADMIN before any
+      # policy party grants anything.
       [authz.rbac]
       enabled = false
+      first_admin = "ferroehr"
 
       # The admin API (DELETE /admin/...) — on for the quickstart so the
       # optional viewer's panels work; keep off in production unless
@@ -1130,13 +1147,17 @@ configs:
       url_file = "/etc/ferropix/db-url"
       data_key_file = "/var/lib/ferropix-key/data-key"
 
-      [auth]
-      audience = ["http://localhost:8090/fhir"]
-
-      # The development issuer signs plain JWTs (`typ` JWT), hence `jwt`.
+      # The development issuer signs only client credentials tokens, of the
+      # Source and of FerroEHR, so it is a `machines` issuer. It signs plain
+      # JWTs (`typ` JWT) rather than the `at+jwt` of RFC 9068 and names the
+      # client in `client_id`, so the issuer takes the claims it carries.
       [[auth.issuer]]
       issuer = "http://localhost:8180/quickstart"
-      token_profile = "jwt"
+      kind = "machines"
+      audience = ["http://localhost:8090/fhir"]
+      token_types = ["JWT"]
+      required_claims = ["iss", "exp", "aud", "sub"]
+      client_claims = ["client_id", "azp"]
 
       # The clients the issuer signs for that may act as a Patient Identity
       # Source.
@@ -1171,158 +1192,6 @@ configs:
       CREATE ROLE ferropix LOGIN PASSWORD 'ferropix';
       GRANT CREATE ON DATABASE ferropix TO ferropix;
       SQL
-
-  # The professional PERSON and ROLE templates the ferroehr-definitions one-shot
-  # loads: copies of deploy/definitions/professional/ (CC-BY-SA 3.0, adapted
-  # from openEHR CKM archetypes; that directory's PROVENANCE.md names each
-  # source and change), held equal to the files by a test of the loader.
-  ferroehr-definition-person:
-    content: |
-      archetype (adl_version=2.0.6; rm_release=1.1.0)
-          openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0
-
-      language
-          original_language = <[ISO_639-1::en]>
-
-      description
-          original_author = <
-              ["name"] = <"FerroEHR">
-              ["organisation"] = <"Cadasto B.V.">
-          >
-          lifecycle_state = <"unmanaged">
-          details = <
-              ["en"] = <
-                  language = <[ISO_639-1::en]>
-                  purpose = <"A healthcare professional's PERSON, whose login identifiers bind the person to their sign-ins.">
-                  use = <"Adapted from the openEHR CKM archetypes the derived_from entry names: the person's identifiers in details, the name in identities and a work email in contacts, every element optional so a person provisioned without one is complete.">
-                  copyright = <"© openEHR Foundation">
-              >
-          >
-          other_details = <
-              ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
-              ["derived_from"] = <"openEHR-DEMOGRAPHIC-PERSON.person.v0, openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v0, openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0, openEHR-DEMOGRAPHIC-ADDRESS.electronic_communication.v0 (openEHR CKM)">
-          >
-
-      definition
-          PERSON[id1] matches {
-              details matches {
-                  ITEM_TREE[id2] matches {
-                      items matches {
-                          ELEMENT[id3] occurrences matches {0..*} matches {
-                              value matches { DV_IDENTIFIER[id13] }
-                          }
-                      }
-                  }
-              }
-              identities matches {
-                  PARTY_IDENTITY[id4] matches {
-                      details matches {
-                          ITEM_TREE[id5] matches {
-                              items matches {
-                                  ELEMENT[id6] occurrences matches {0..1} matches {
-                                      value matches { DV_TEXT[id14] }
-                                  }
-                                  ELEMENT[id7] occurrences matches {0..1} matches {
-                                      value matches { DV_TEXT[id15] }
-                                  }
-                                  ELEMENT[id8] occurrences matches {0..1} matches {
-                                      value matches { DV_TEXT[id16] }
-                                  }
-                              }
-                          }
-                      }
-                  }
-              }
-              contacts matches {
-                  CONTACT[id9] occurrences matches {0..1} matches {
-                      addresses matches {
-                          ADDRESS[id10] matches {
-                              details matches {
-                                  ITEM_TREE[id11] matches {
-                                      items matches {
-                                          ELEMENT[id12] occurrences matches {0..1} matches {
-                                              value matches { DV_TEXT[id17] }
-                                          }
-                                      }
-                                  }
-                              }
-                          }
-                      }
-                  }
-              }
-          }
-
-      terminology
-          term_definitions = <
-              ["en"] = <
-                  ["id1"] = <text = <"Healthcare professional"> description = <"A person who provides healthcare.">>
-                  ["id2"] = <text = <"Person identifiers"> description = <"The identifiers of the person.">>
-                  ["id3"] = <text = <"Identifier main data"> description = <"An identifier of the person, such as a login identifier.">>
-                  ["id4"] = <text = <"Person name"> description = <"The name of the person.">>
-                  ["id5"] = <text = <"Name"> description = <"The structure of the name.">>
-                  ["id6"] = <text = <"Full name"> description = <"The name as it is written in full.">>
-                  ["id7"] = <text = <"Given name"> description = <"The given name of the person.">>
-                  ["id8"] = <text = <"Family name"> description = <"The family name of the person.">>
-                  ["id9"] = <text = <"Contacts"> description = <"The contacts of the person.">>
-                  ["id10"] = <text = <"Electronic communication"> description = <"An electronic address of the person.">>
-                  ["id11"] = <text = <"Electronic communication details"> description = <"The structure of the address.">>
-                  ["id12"] = <text = <"Email address"> description = <"The work email address of the person.">>
-              >
-          >
-
-  ferroehr-definition-role:
-    content: |
-      archetype (adl_version=2.0.6; rm_release=1.1.0)
-          openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0
-
-      language
-          original_language = <[ISO_639-1::en]>
-
-      description
-          original_author = <
-              ["name"] = <"FerroEHR">
-              ["organisation"] = <"Cadasto B.V.">
-          >
-          lifecycle_state = <"unmanaged">
-          details = <
-              ["en"] = <
-                  language = <[ISO_639-1::en]>
-                  purpose = <"The professional ROLE a healthcare professional's PERSON performs, which makes the person bindable.">
-                  use = <"Adapted from the openEHR CKM archetype the derived_from entry names, with its name the only content and that optional.">
-                  copyright = <"© openEHR Foundation">
-              >
-          >
-          other_details = <
-              ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
-              ["derived_from"] = <"openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0, openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0 (openEHR CKM)">
-          >
-
-      definition
-          ROLE[id1] matches {
-              identities matches {
-                  PARTY_IDENTITY[id2] matches {
-                      details matches {
-                          ITEM_TREE[id3] matches {
-                              items matches {
-                                  ELEMENT[id4] occurrences matches {0..1} matches {
-                                      value matches { DV_TEXT[id5] }
-                                  }
-                              }
-                          }
-                      }
-                  }
-              }
-          }
-
-      terminology
-          term_definitions = <
-              ["en"] = <
-                  ["id1"] = <text = <"Healthcare professional role"> description = <"The role of a person who provides healthcare.">>
-                  ["id2"] = <text = <"Role name"> description = <"The name of the role.">>
-                  ["id3"] = <text = <"Name"> description = <"The structure of the name.">>
-                  ["id4"] = <text = <"Full name"> description = <"The name of the role as it is written in full.">>
-              >
-          >
 
 volumes:
   ferroehr-pgdata:

@@ -1,1 +1,0 @@
-- A `refused-key-claim-missing` access record names the key claim the issuer's binding reads (its `person_key`) in `binding_detail.claim`, so an operator sees which claim the token lacked. It records the name only, never a claim value.

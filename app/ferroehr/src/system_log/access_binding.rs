@@ -350,6 +350,7 @@ fn relayed(
     let point_of_care = one(take("point_of_care"));
     let identity_assertion_id = one(take("assertion.id"));
     let trc_assertion_id = one(take("trc.id"));
+    let message_id = one(take("message_id"));
     let consent = one(take("consent.reference"));
     let organisation = record.code == BindingCode::Organisation;
     let access_class = match agreement.access_class.as_deref() {
@@ -380,7 +381,7 @@ fn relayed(
         point_of_care,
         identity_assertion_id,
         trc_assertion_id,
-        message_id: None,
+        message_id,
         gateways: Gateways::default(),
         asserted: fields,
     };
@@ -562,6 +563,43 @@ pub(crate) mod tests {
         ] {
             assert!(relayed.contains(&expected), "{expected:?} in {relayed:?}");
         }
+    }
+
+    /// A contact point's relayed request message id is written as the
+    /// request's `MessageID`, never as an asserted field (eHDSI Audit Trail
+    /// Profile 10.1.0 §2.3.12 to §2.3.32), beside its two assertion ids.
+    #[test]
+    fn a_contact_points_message_id_is_written_as_the_request_message_id() {
+        let fields = BTreeMap::from([
+            ("assertion.id".to_owned(), vec!["urn:uuid:ida-1".to_owned()]),
+            ("trc.id".to_owned(), vec!["urn:uuid:trc-1".to_owned()]),
+            ("message_id".to_owned(), vec!["urn:uuid:msg-1".to_owned()]),
+        ]);
+        let agreement = AgreementRecord {
+            name: "MyHealth@EU".to_owned(),
+            version: "1".to_owned(),
+            legal_ground: None,
+            accessor: "person".to_owned(),
+            access_class: None,
+            correlation_id: None,
+            correlation_source: None,
+        };
+        let record = BindingRecord::external(false, fields, agreement, None);
+        let members = members(&record, Some("https://ncp.example.org")).expect("members");
+        let relayed = pairs(&entities(members, "hp-1".to_owned()), "ehds-relayed");
+        for expected in [
+            pair("identity-assertion-id", "urn:uuid:ida-1"),
+            pair("trc-assertion-id", "urn:uuid:trc-1"),
+            pair("request-message-id", "urn:uuid:msg-1"),
+        ] {
+            assert!(relayed.contains(&expected), "{expected:?} in {relayed:?}");
+        }
+        assert!(
+            !relayed
+                .iter()
+                .any(|(_, value)| value.starts_with("message_id=")),
+            "the message id is no asserted field: {relayed:?}"
+        );
     }
 
     #[test]

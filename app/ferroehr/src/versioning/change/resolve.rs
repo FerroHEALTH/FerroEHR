@@ -15,12 +15,12 @@ use sqlx::PgConnection;
 
 use super::{
     ResolvedWrite, canonical_body_text, next_version, reject_deleted_with_data, resolve_lifecycle,
-    retire_protected_identifiers, seal_protected_identifiers, stamp_version_uid,
-    validate_transition,
+    stamp_version_uid, validate_transition,
 };
 use crate::error::ServiceError;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
 use crate::storage::codec::decompose;
+use crate::storage::identifier_repo;
 use crate::storage::row::NodeRow;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::{
@@ -207,10 +207,10 @@ async fn prepare_body(
         &object_version_id(vo_id, &ctx.system_id, tree),
     )?;
     let stable_compatible = profile::stable_compatible(ctx.spec_profile, kind, &canonical);
-    let origins = crate::versioning::origins::origins(&ctx.direct_origin, &canonical);
+    let origins = ctx.direct_origin.stamp(&canonical)?;
     let canonical_text = Some(canonical_body_text(&canonical)?);
     let content_digest = content_digest(&canonical)?;
-    let party_facts = kind.is_party().then(|| {
+    let party_facts = kind.is_demographic().then(|| {
         Box::new(crate::party_binding::derive::Facts::of(
             kind,
             &canonical,
@@ -342,4 +342,68 @@ pub(super) async fn resolve_modify(
         is_first_folder: false,
         time_committed: at.known_now.unwrap_or(next.now),
     })
+}
+
+/// Seal every protected national identifier of a demographic body into rows
+/// of this version, on the commit transaction `tx`, before the body is
+/// decomposed and signed.
+///
+/// Runs on the demographic kinds only: a party's identifiers are the point of
+/// that domain, and clinical content carrying one is a different rule
+/// altogether ([`crate::privacy`] refuses it outright rather than sealing it).
+/// A demographic kind's commit transaction is always on the party domain's
+/// pool, the one database that holds `national_identifier` in every layout,
+/// so the sealed rows commit or roll back with the version that references
+/// them and no compensating cleanup is needed.
+///
+/// Placed before `decompose` and the signature for the same reason the
+/// multimedia offload is: the stored, signed and served body must be one form,
+/// which is what lets a later read verify a signature against the bytes it
+/// actually holds. No openEHR spec governs identifier protection — our own
+/// design/extension.
+///
+/// # Errors
+/// The [`ServiceError`] the store's refusal maps to: `409` for a
+/// value another party holds, `422` for a body the store cannot hold, `500`
+/// for a configuration or storage fault. The commit fails rather than
+/// proceeding, because proceeding would store the body with the identifier
+/// still in it.
+async fn seal_protected_identifiers(
+    tx: &mut PgConnection,
+    ctx: &SigningCtx<'_>,
+    kind: Kind,
+    vo_id: VoId,
+    canonical: &mut Value,
+) -> Result<(), ServiceError> {
+    let Some(engine) = ctx.identifiers else {
+        return Ok(());
+    };
+    if !kind.is_demographic() {
+        return Ok(());
+    }
+    engine.externalize(tx, vo_id.0, canonical).await?;
+    Ok(())
+}
+
+/// Take a logically deleted party's identifiers out of resolution, on the
+/// commit transaction `tx`.
+///
+/// A deleted version carries no data (RM common
+/// `master06-change_control_package.adoc` §Logical Deletion), so the party
+/// holds no identifier from it on; the earlier versions keep their rows. No
+/// openEHR spec governs identifier protection — our own design/extension.
+///
+/// # Errors
+/// The [`ServiceError`] a failed update maps to: a `500` for a storage fault.
+async fn retire_protected_identifiers(
+    tx: &mut PgConnection,
+    ctx: &SigningCtx<'_>,
+    kind: Kind,
+    vo_id: VoId,
+) -> Result<(), ServiceError> {
+    if ctx.identifiers.is_none() || !kind.is_demographic() {
+        return Ok(());
+    }
+    identifier_repo::retire_live(tx, vo_id).await?;
+    Ok(())
 }

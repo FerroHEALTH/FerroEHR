@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -260,8 +260,7 @@ Brukes ikke for å registrere informasjon om arbeid /rolle for et individ på en
         </terminology_id>
         <code_string>pt</code_string>
       </language>
-      <purpose>Registrar detalhes sobre um único trabalho ou função executada por um indivíduo durante um período especificado.&#xD;
-</purpose>
+      <purpose>Registrar detalhes sobre um único trabalho ou função executada por um indivíduo durante um período especificado.</purpose>
       <keywords>emprego</keywords>
       <keywords>Empregador</keywords>
       <keywords>trabalho</keywords>
@@ -295,8 +294,7 @@ Se os atributos de ocupação mudarem significativamente, como uma mudança de f
 Esse arquétipo foi projetado especificamente para ser usado no SLOT 'Episódio de ocupação' dentro do arquétipo EVALUATION.occupation_summary, mas também pode ser usado em qualquer outro arquétipo ENTRY ou CLUSTER, onde for clinicamente apropriado.&#xD;
 &#xD;
 Pode haver alguma sobreposição aparente ou real entre os elementos de dados neste arquétipo e os detalhes de ocupação / emprego que podem ser armazenados como detalhes demográficos em sistemas clínicos ou administrativos. Esses elementos de dados foram projetados especificamente para apoiar fins clínicos, incluindo a geração de um atestado médico para um empregador atual.</use>
-      <misuse>	&#xD;
-Não deve ser usado para gravar alterações ou episódios temporários em um registro único de ocupação, como estar de licença. Isso está fora do escopo desse arquétipo e deve fazer parte do sistema de recursos humanos de um empregador.&#xD;
+      <misuse>Não deve ser usado para gravar alterações ou episódios temporários em um registro único de ocupação, como estar de licença. Isso está fora do escopo desse arquétipo e deve fazer parte do sistema de recursos humanos de um empregador.&#xD;
 &#xD;
 Não deve ser usado para descrições detalhadas de riscos para a saúde ou exposição a substâncias perigosas no local de trabalho. Use os arquétipos EVALUATION.health_risk ou EVALUATION.exposure para essa finalidade.&#xD;
 &#xD;
@@ -437,7 +435,7 @@ Non utilizzare per descrizioni dettagliate dei rischi per la salute o dell'espos
 &#xD;
 Non utilizzare per memorizzare informazioni sulle fonti o dettagli del reddito dell'individuo. Per questo scopo, utilizzare l'archetipo EVALUATION.income_summary.&#xD;
 &#xD;
-Non utilizzare per memorizzare informazioni sull'occupazione di un individuo in uno specifico punto nel tempo (ad esempio, il 16 giugno 2014) o durante un intervallo di tempo (ad esempio 'negli ultimi 30 giorni'). Per questo scopo, usare un appropriato archetipo di tipo OBSERVATION. </misuse>
+Non utilizzare per memorizzare informazioni sull'occupazione di un individuo in uno specifico punto nel tempo (ad esempio, il 16 giugno 2014) o durante un intervallo di tempo (ad esempio 'negli ultimi 30 giorni'). Per questo scopo, usare un appropriato archetipo di tipo OBSERVATION.</misuse>
       <copyright />
     </details>
     <details>
@@ -1550,18 +1548,18 @@ Ad esempio: Responsabile delle vendite o ingegnere del software.</items>
       </items>
       <items code="at0013">
         <items id="text">Equivalente a tempo pieno</items>
-        <items id="description">La porzione di tempo dedicato a questa professione/ruolo rispetto al tempo pieno.  </items>
+        <items id="description">La porzione di tempo dedicato a questa professione/ruolo rispetto al tempo pieno.</items>
         <items id="comment">L' equivalente a tempo pieno è anche conosciuto come 'FTE' - Full time equivalent.&#xD;
 &#xD;
-Ad esempio:  0.5; 50 %; o "part time". </items>
+Ad esempio:  0.5; 50 %; o "part time".</items>
       </items>
       <items code="at0014">
         <items id="text">Commento</items>
-        <items id="description">Note aggiuntive sull'occupazione non rilevate dagli altri campi. </items>
+        <items id="description">Note aggiuntive sull'occupazione non rilevate dagli altri campi.</items>
       </items>
       <items code="at0016">
         <items id="text">Descrizione</items>
-        <items id="description">Descrizione narrativa della professione svolta o del ruolo ricoperto dall'individuo. </items>
+        <items id="description">Descrizione narrativa della professione svolta o del ruolo ricoperto dall'individuo.</items>
       </items>
       <items code="at0018">
         <items id="text">Ulteriori dettagli</items>
@@ -1872,8 +1870,7 @@ Por exemplo: Gerente de vendas ou engenheiro de software.</items>
       </items>
       <items code="at0002">
         <items id="text">Categoria Industrial</items>
-        <items id="description">O tipo de indústria em que o indivíduo trabalha.&#xD;
-</items>
+        <items id="description">O tipo de indústria em que o indivíduo trabalha.</items>
         <items id="comment">Por exemplo: Mineração, fabricação, construção. É desejável codificar com uma terminologia, sempre que possível.</items>
       </items>
       <items code="at0004">
@@ -1887,8 +1884,7 @@ Por exemplo: Gerente de vendas ou engenheiro de software.</items>
       </items>
       <items code="at0006">
         <items id="text">Categoria ocupacional</items>
-        <items id="description">O tipo de ocupação realizada pelo indivíduo.&#xD;
-</items>
+        <items id="description">O tipo de ocupação realizada pelo indivíduo.</items>
         <items id="comment">É desejável codificar com uma terminologia, sempre que possível, como o ISCO-08. Por exemplo: Gerente de vendas ou engenheiro de software.</items>
       </items>
       <items code="at0007">
@@ -1919,8 +1915,7 @@ Por exemplo: Gerente de vendas ou engenheiro de software.</items>
       </items>
       <items code="at0019">
         <items id="text">Tempo alocado</items>
-        <items id="description">A quantidade de tempo que um indivíduo é alocado para realizar o trabalho ou função por período especificado desse registro de ocupação.&#xD;
-</items>
+        <items id="description">A quantidade de tempo que um indivíduo é alocado para realizar o trabalho ou função por período especificado desse registro de ocupação.</items>
         <items id="comment">Por exemplo: '3 dias por semana', '10 dias por mês' ou '2 horas por dia'.</items>
       </items>
       <items code="at0020">
@@ -2004,4 +1999,3 @@ Till exempel: försäljningschef eller programvarutekniker.</items>
     </term_definitions>
   </ontology>
 </archetype>
-

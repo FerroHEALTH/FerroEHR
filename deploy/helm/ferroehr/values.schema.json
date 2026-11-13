@@ -605,61 +605,6 @@
                   "default": null
                 }
               }
-            },
-            "categories": {
-              "description": "[audit.categories]: the national categories, and template id and root archetype id to the EHDS categories each holds, classified by ehds-logging. Empty by default. The category vocabulary is the server's and is judged at boot; only the shape is typed here.",
-              "type": [
-                "object",
-                "null"
-              ],
-              "default": {
-                "templates": {},
-                "archetypes": {}
-              },
-              "properties": {
-                "national": {
-                  "description": "The national categories (EHDS Art. 14(1) third subparagraph), each <system>|<code>.",
-                  "type": [
-                    "array",
-                    "null"
-                  ],
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "templates": {
-                  "type": [
-                    "object",
-                    "null"
-                  ],
-                  "additionalProperties": {
-                    "description": "A list of categories, or the word none for data of no category.",
-                    "type": [
-                      "array",
-                      "string"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "archetypes": {
-                  "type": [
-                    "object",
-                    "null"
-                  ],
-                  "additionalProperties": {
-                    "description": "A list of categories, or the word none for data of no category.",
-                    "type": [
-                      "array",
-                      "string"
-                    ],
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
             }
           }
         },

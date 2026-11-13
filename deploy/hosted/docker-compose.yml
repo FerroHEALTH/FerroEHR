@@ -73,46 +73,12 @@ services:
     depends_on:
       identity-issuer:
         condition: service_started
-      ferroehr-definitions:
-        condition: service_completed_successfully
       ferroterm:
         condition: service_healthy
       # The CDR reads FerroPIX's CapabilityStatement at boot and refuses to
       # start while it does not answer.
       ferropix:
         condition: service_healthy
-
-  # Loads the professional PERSON and ROLE templates the party mapping names
-  # into the definition store before the CDR starts (`ferroehr definitions
-  # load`), since boot refuses a mapping whose templates the store lacks. A
-  # template stored with the same text is left alone, so it runs at every
-  # deploy. It reads the CDR's own configuration and database string, in the
-  # issuer's namespace as the CDR does.
-  ferroehr-definitions:
-    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:latest}
-    command:
-      - definitions
-      - load
-      - /etc/ferroehr/definitions/person.adls
-      - /etc/ferroehr/definitions/role.adls
-    environment:
-      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set in /opt/ferroehr-sandbox/.env}
-    volumes:
-      - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
-    configs:
-      - source: ferroehr-definition-person
-        target: /etc/ferroehr/definitions/person.adls
-      - source: ferroehr-definition-role
-        target: /etc/ferroehr/definitions/role.adls
-    network_mode: service:identity-issuer
-    depends_on:
-      identity-issuer:
-        condition: service_started
-    cap_drop: [ALL]
-    security_opt:
-      - no-new-privileges:true
-    restart: "no"
 
   # The development OpenID Provider (NAV's mock-oauth2-server), and the owner
   # of the network namespace the CDR and FerroPIX join. It signs any client
@@ -121,7 +87,7 @@ services:
   # only the containers on this box can ask it, and FerroPIX, the one server
   # that trusts its tokens, answers on loopback alone.
   identity-issuer:
-    image: ${FERROEHR_ISSUER_IMAGE:-ghcr.io/navikt/mock-oauth2-server:6.1.3@sha256:2a813381bf282da46ff36ff386059e7903e25865056af8149f4fb3f1441916b8}
+    image: ${FERROEHR_ISSUER_IMAGE:-ghcr.io/navikt/mock-oauth2-server:6.1.5@sha256:d88e445d55c4ff6eed59b02d86adfece47d985233b1616fb712669b98328c8a2}
     container_name: ferroehr-sandbox-issuer
     restart: unless-stopped
     networks:
@@ -170,6 +136,86 @@ services:
         curl -fsS -o /dev/null http://localhost:8180/sandbox/.well-known/openid-configuration && exit 0;
         sleep 1; done; echo 'the issuer did not answer in 120 s' >&2; exit 1
     read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  # Grants the `sandbox-scim` client scim_provision in the CDR, on the
+  # operator's authority (`ferroehr party-binding grant`), since no
+  # administrator can log in before the demo user it provisions exists. A
+  # client that holds the grant already gets nothing; the nightly wipe drops
+  # it with every other party, and the deploy after it starts this service
+  # again.
+  ferroehr-grant:
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:latest}
+    container_name: ferroehr-sandbox-grant
+    restart: on-failure
+    depends_on:
+      ferroehr:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    environment:
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set in /opt/ferroehr-sandbox/.env}
+      FERROEHR__USAGE_REPORT__ENABLED: "false"
+    volumes:
+      - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
+    command:
+      - party-binding
+      - grant
+      - --issuer
+      - http://localhost:8180/sandbox
+      - --client-id
+      - sandbox-scim
+      - --operation
+      - scim_provision
+      - --element
+      - binding_issuer=urn:ferroehr:basic-user
+      - --element
+      - token_scope=ferroehr/scim
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  # Grants the PERSON of the demo user `ferroehr` the SMART on openEHR scopes
+  # of every resource family in the CDR (hold_scopes), on the operator's
+  # authority (`ferroehr party-binding grant --basic-user`): a Basic user is a
+  # credential alone. It fails until ferroehr-provision has created that
+  # PERSON and runs again until it has; a PERSON that holds the grant already
+  # gets nothing, and the deploy after the nightly wipe starts it again.
+  ferroehr-hold:
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:latest}
+    container_name: ferroehr-sandbox-hold
+    restart: on-failure
+    depends_on:
+      ferroehr-grant:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    environment:
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set in /opt/ferroehr-sandbox/.env}
+      FERROEHR__USAGE_REPORT__ENABLED: "false"
+    volumes:
+      - ./ferroehr.sandbox.toml:/etc/ferroehr/ferroehr.toml:ro
+    command:
+      - party-binding
+      - grant
+      - --basic-user
+      - ferroehr
+      - --operation
+      - hold_scopes
+      - --element
+      - scope=user/composition-*.cruds
+      - --element
+      - scope=user/template-*.cruds
+      - --element
+      - scope=user/aql-*.cruds
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true
@@ -230,7 +276,7 @@ services:
   # below its only callers. Its database is on the DB box; the URL and the
   # sealing key are compose secrets read from `.env`.
   ferropix:
-    image: ${FERROPIX_IMAGE:-ghcr.io/ferrohealth/ferropix:0.0.18@sha256:6fb622b5b9ade34c8a4053112c8f166ff495d8b32bf99f35529d01e512b7cc42}
+    image: ${FERROPIX_IMAGE:-ghcr.io/ferrohealth/ferropix:0.0.26@sha256:85d40e6fdcdb39f782007eff91eb059861a4e039ca3f8fb56e37f2fa0f28d78a}
     container_name: ferroehr-sandbox-ferropix
     restart: unless-stopped
     network_mode: service:identity-issuer
@@ -319,7 +365,7 @@ services:
   # 1536m cap also fits the Netherlands edition (889 MB).
   # The CDR's cap moved from 4096m to 3072m to make room on the 8 GB box.
   ferroterm:
-    image: ${FERROTERM_IMAGE:-ghcr.io/ferrohealth/ferroterm:0.4.1@sha256:b7f10609992377a7b8bca666254bceca79fe4366e2e54fc5fbce079eb9abf619}
+    image: ${FERROTERM_IMAGE:-ghcr.io/ferrohealth/ferroterm:0.4.5@sha256:7c20d39e1989fce1dfb92e6ddfd853dfa9a52bb9b7b973fbba42430963ef75bd}
     container_name: ferroehr-sandbox-ferroterm
     restart: unless-stopped
     # The image is its own health probe (`ferroterm healthcheck`, readiness
@@ -412,157 +458,6 @@ configs:
     content: ${FERROPIX_DATABASE_URL:?FERROPIX_DATABASE_URL must be set in /opt/ferroehr-sandbox/.env}
   ferropix-data-key:
     content: ${FERROPIX_DATA_KEY:?FERROPIX_DATA_KEY must be set in /opt/ferroehr-sandbox/.env}
-
-  # The professional PERSON and ROLE templates the ferroehr-definitions one-shot
-  # loads: copies of deploy/definitions/professional/ (CC-BY-SA 3.0, adapted
-  # from openEHR CKM archetypes; that directory's PROVENANCE.md names each
-  # source and change), held equal to the files by a test of the loader.
-  ferroehr-definition-person:
-    content: |
-      archetype (adl_version=2.0.6; rm_release=1.1.0)
-          openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0
-
-      language
-          original_language = <[ISO_639-1::en]>
-
-      description
-          original_author = <
-              ["name"] = <"FerroEHR">
-              ["organisation"] = <"Cadasto B.V.">
-          >
-          lifecycle_state = <"unmanaged">
-          details = <
-              ["en"] = <
-                  language = <[ISO_639-1::en]>
-                  purpose = <"A healthcare professional's PERSON, whose login identifiers bind the person to their sign-ins.">
-                  use = <"Adapted from the openEHR CKM archetypes the derived_from entry names: the person's identifiers in details, the name in identities and a work email in contacts, every element optional so a person provisioned without one is complete.">
-                  copyright = <"© openEHR Foundation">
-              >
-          >
-          other_details = <
-              ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
-              ["derived_from"] = <"openEHR-DEMOGRAPHIC-PERSON.person.v0, openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v0, openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0, openEHR-DEMOGRAPHIC-ADDRESS.electronic_communication.v0 (openEHR CKM)">
-          >
-
-      definition
-          PERSON[id1] matches {
-              details matches {
-                  ITEM_TREE[id2] matches {
-                      items matches {
-                          ELEMENT[id3] occurrences matches {0..*} matches {
-                              value matches { DV_IDENTIFIER[id13] }
-                          }
-                      }
-                  }
-              }
-              identities matches {
-                  PARTY_IDENTITY[id4] matches {
-                      details matches {
-                          ITEM_TREE[id5] matches {
-                              items matches {
-                                  ELEMENT[id6] occurrences matches {0..1} matches {
-                                      value matches { DV_TEXT[id14] }
-                                  }
-                                  ELEMENT[id7] occurrences matches {0..1} matches {
-                                      value matches { DV_TEXT[id15] }
-                                  }
-                                  ELEMENT[id8] occurrences matches {0..1} matches {
-                                      value matches { DV_TEXT[id16] }
-                                  }
-                              }
-                          }
-                      }
-                  }
-              }
-              contacts matches {
-                  CONTACT[id9] occurrences matches {0..1} matches {
-                      addresses matches {
-                          ADDRESS[id10] matches {
-                              details matches {
-                                  ITEM_TREE[id11] matches {
-                                      items matches {
-                                          ELEMENT[id12] occurrences matches {0..1} matches {
-                                              value matches { DV_TEXT[id17] }
-                                          }
-                                      }
-                                  }
-                              }
-                          }
-                      }
-                  }
-              }
-          }
-
-      terminology
-          term_definitions = <
-              ["en"] = <
-                  ["id1"] = <text = <"Healthcare professional"> description = <"A person who provides healthcare.">>
-                  ["id2"] = <text = <"Person identifiers"> description = <"The identifiers of the person.">>
-                  ["id3"] = <text = <"Identifier main data"> description = <"An identifier of the person, such as a login identifier.">>
-                  ["id4"] = <text = <"Person name"> description = <"The name of the person.">>
-                  ["id5"] = <text = <"Name"> description = <"The structure of the name.">>
-                  ["id6"] = <text = <"Full name"> description = <"The name as it is written in full.">>
-                  ["id7"] = <text = <"Given name"> description = <"The given name of the person.">>
-                  ["id8"] = <text = <"Family name"> description = <"The family name of the person.">>
-                  ["id9"] = <text = <"Contacts"> description = <"The contacts of the person.">>
-                  ["id10"] = <text = <"Electronic communication"> description = <"An electronic address of the person.">>
-                  ["id11"] = <text = <"Electronic communication details"> description = <"The structure of the address.">>
-                  ["id12"] = <text = <"Email address"> description = <"The work email address of the person.">>
-              >
-          >
-  ferroehr-definition-role:
-    content: |
-      archetype (adl_version=2.0.6; rm_release=1.1.0)
-          openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0
-
-      language
-          original_language = <[ISO_639-1::en]>
-
-      description
-          original_author = <
-              ["name"] = <"FerroEHR">
-              ["organisation"] = <"Cadasto B.V.">
-          >
-          lifecycle_state = <"unmanaged">
-          details = <
-              ["en"] = <
-                  language = <[ISO_639-1::en]>
-                  purpose = <"The professional ROLE a healthcare professional's PERSON performs, which makes the person bindable.">
-                  use = <"Adapted from the openEHR CKM archetype the derived_from entry names, with its name the only content and that optional.">
-                  copyright = <"© openEHR Foundation">
-              >
-          >
-          other_details = <
-              ["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
-              ["derived_from"] = <"openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0, openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0 (openEHR CKM)">
-          >
-
-      definition
-          ROLE[id1] matches {
-              identities matches {
-                  PARTY_IDENTITY[id2] matches {
-                      details matches {
-                          ITEM_TREE[id3] matches {
-                              items matches {
-                                  ELEMENT[id4] occurrences matches {0..1} matches {
-                                      value matches { DV_TEXT[id5] }
-                                  }
-                              }
-                          }
-                      }
-                  }
-              }
-          }
-
-      terminology
-          term_definitions = <
-              ["en"] = <
-                  ["id1"] = <text = <"Healthcare professional role"> description = <"The role of a person who provides healthcare.">>
-                  ["id2"] = <text = <"Role name"> description = <"The name of the role.">>
-                  ["id3"] = <text = <"Name"> description = <"The structure of the name.">>
-                  ["id4"] = <text = <"Full name"> description = <"The name of the role as it is written in full.">>
-              >
-          >
 
 volumes:
   caddy_data:

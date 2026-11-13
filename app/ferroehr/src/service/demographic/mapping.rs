@@ -6,15 +6,15 @@
 //! Every template and archetype the mapping names must be in the definition
 //! store, rooted at its class (`PERSON`, `ROLE`, `GROUP` or
 //! `PARTY_RELATIONSHIP`), with every mapped path present and of an RM type
-//! that can carry its source: a selector a `DV_IDENTIFIER`, a name a
-//! `DV_TEXT`. Every relationship type code of the representation archetype
+//! that can carry its source: a selector or a patient's identifier a
+//! `DV_IDENTIFIER`, a name a `DV_TEXT`. Every relationship type code of the representation archetype
 //! must be mapped to a `subject_relationship` code. No openEHR spec governs a
 //! mapping from SCIM or OpenID Connect to a demographic template: our own
 //! design.
 
 use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 
-use crate::config::binding::person::{Sections, Source};
+use crate::config::binding::person::{PatientSection, Sections, Source};
 use crate::error::ServiceError;
 use crate::party_binding::check::{CheckError, CheckInput, Report};
 use crate::party_binding::fill::{FillError, Lease};
@@ -132,29 +132,36 @@ impl FerroEhrService {
             )
             .await?;
         }
-        if let Some(representation) = sections.representation {
-            let at = "authz.party_binding.representation";
-            if let Some(wt) = self
-                .mapped_definition_of(
-                    at,
-                    &representation.archetype_id,
-                    "PARTY_RELATIONSHIP",
-                    &mut errors,
-                )
-                .await?
-            {
-                for code in relationship_codes(&wt) {
-                    if !representation.relationship_codes.contains_key(&code) {
-                        errors.push(format!(
-                            "{at}.relationship_codes maps no subject_relationship code to the \
-                             relationship type {code:?} of {:?}",
-                            representation.archetype_id
-                        ));
-                    }
-                }
-            }
+        if let Some(patient) = sections.patient {
+            self.patient_errors(patient, &mut errors).await?;
         }
         Ok(errors)
+    }
+
+    /// Pushes the refusals of the patient section to `errors`.
+    async fn patient_errors(
+        &self,
+        patient: &PatientSection,
+        errors: &mut Vec<String>,
+    ) -> Result<(), ServiceError> {
+        let at = "authz.party_binding.patient";
+        if let Some(wt) = self
+            .mapped_definition_of(at, &patient.template_id, "PERSON", errors)
+            .await?
+        {
+            path_errors(
+                &wt,
+                at,
+                "identifier",
+                &patient.identifier,
+                Carries::Identifier,
+                errors,
+            );
+            if let Some(path) = &patient.name {
+                path_errors(&wt, at, "name", path, Carries::Text, errors);
+            }
+        }
+        Ok(())
     }
 
     /// The definition `id` resolves to when it is stored and rooted at
@@ -275,19 +282,6 @@ fn base_type(rm_type: &str) -> String {
     rm_type.split('<').next().unwrap_or(rm_type).to_owned()
 }
 
-/// The codes the root `name` of a relationship archetype is constrained to:
-/// its relationship types.
-fn relationship_codes(wt: &WebTemplate) -> Vec<String> {
-    wt.tree
-        .children
-        .iter()
-        .filter(|child| child.id == "name" || child.aql_path == "/name")
-        .flat_map(|name| name.inputs.iter())
-        .flat_map(|input| input.list.iter())
-        .map(|coded| coded.value.clone())
-        .collect()
-}
-
 impl FerroEhrService {
     /// Prepares the binding side table for the replica `replica` and takes
     /// its lease; `None` when the installed mapping derives no row.
@@ -308,16 +302,62 @@ impl FerroEhrService {
     }
 
     /// Refills the binding side table under the installed mapping once no
-    /// replica's lease was renewed within `ttl` ([`crate::party_binding::fill::refill`]).
+    /// replica's lease was renewed within `ttl` ([`crate::party_binding::fill::refill`]),
+    /// or, with no mapping installed, the grant rows alone
+    /// ([`crate::party_binding::fill::refill_grants`]).
     ///
     /// # Errors
-    /// [`FillError::Unmapped`] when no mapping is installed, and the
-    /// [`crate::party_binding::fill::refill`] refusals.
+    /// The [`crate::party_binding::fill::refill`] and
+    /// [`crate::party_binding::fill::refill_grants`] refusals.
     pub async fn refill_binding(&self, ttl: std::time::Duration) -> Result<(), FillError> {
         if self.binding.is_empty() {
-            return Err(FillError::Unmapped);
+            return crate::party_binding::fill::refill_grants(&self.demographic_pool).await;
         }
         crate::party_binding::fill::refill(&self.demographic_pool, &self.binding, ttl).await
+    }
+
+    /// Honour the policy grants under `ceiling`, `[authz.grants] allowed`:
+    /// a commit of a capability above it is refused and a stored one is
+    /// never honoured.
+    #[must_use]
+    pub fn with_grant_ceiling(
+        self,
+        ceiling: crate::party_binding::grants::operation::GrantCeiling,
+    ) -> Self {
+        self.grants.set_ceiling(ceiling);
+        self
+    }
+
+    /// Judge the federation agreements against `trust`: a commit of one that
+    /// breaks a rule is refused, and a request is admitted only under one that
+    /// keeps them.
+    #[must_use]
+    pub fn with_federation_trust(
+        self,
+        trust: crate::party_binding::grants::trust::FederationTrust,
+    ) -> Self {
+        self.grants.set_federation(trust);
+        self
+    }
+
+    /// The policy grants in force on this replica.
+    #[must_use]
+    pub fn grants(&self) -> &std::sync::Arc<crate::party_binding::grants::live::LiveGrants> {
+        &self.grants
+    }
+
+    /// Fills the grant rows when they were never filled, then reads them, as
+    /// a boot does before the replica takes traffic.
+    ///
+    /// # Errors
+    /// [`FillError::Storage`] when the party store fails, two `AGENT`s
+    /// naming one client included.
+    pub async fn read_grants(&self) -> Result<(), FillError> {
+        crate::party_binding::fill::fill_grants_once(&self.demographic_pool).await?;
+        self.grants
+            .refresh()
+            .await
+            .map_err(|unavailable| FillError::Storage(unavailable.into_inner()))
     }
 
     /// Runs the pre-flight of a migration to party binding under the installed

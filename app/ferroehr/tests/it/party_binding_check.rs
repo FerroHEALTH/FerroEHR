@@ -496,9 +496,9 @@ async fn a_key_just_in_time_creation_introduced_passes_on_a_jit_issuer() {
     assert_eq!(
         verdict(&svc, &input).await,
         None,
-        "no issuer has jit = true"
+        "no persons issuer is bound"
     );
-    input.jit_issuers = vec![JIT_ISSUER.to_owned()];
+    input.jit_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(JIT_ISSUER)];
     assert_eq!(verdict(&svc, &input).await, Some(Origin::Jit));
     input.provisional_report_after = ferrohealth_config::units::Duration::ZERO;
     let report = svc.check_binding(&input).await.expect("the check runs");
@@ -512,7 +512,7 @@ async fn a_creation_naming_another_committer_is_no_jit_creation() {
     let (_db, svc) = service().await;
     jit_created(&svc, JIT_ISSUER, Some(VoId(Uuid::now_v7()))).await;
     let mut input = input();
-    input.jit_issuers = vec![JIT_ISSUER.to_owned()];
+    input.jit_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(JIT_ISSUER)];
 
     assert_eq!(verdict(&svc, &input).await, None);
 }

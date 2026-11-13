@@ -19,12 +19,6 @@
 [deployment]
 profile = "sandbox"
 
-[server]
-# The image's own port; Caddy terminates TLS in front of it.
-listen = "0.0.0.0:8080"
-# Template uploads and the /message imports, up to 64 MiB.
-body_limit = "64MiB"
-
 [api]
 # The public API reference the documentation links to; the default asks for the
 # API credential.
@@ -32,9 +26,6 @@ openapi_ui = "public"
 
 admin = true
 terminology = true
-[auth]
-enabled = true
-
 # The issuer the Basic users bind under. A Basic user is a person and maps to
 # the PERSON carrying its binding key, which [[auth.party]] places under the
 # identifier issuer of a persons issuer. This one signs nothing: its key set,
@@ -51,6 +42,8 @@ jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
 issuer = "https://basic-users.ferroehr.invalid"
 identifier_issuer = "urn:ferroehr:basic-user"
 identifier_type = "login"
+group_claim = "groups"
+group_identifier_issuer = "urn:ferroehr:groups"
 
 # The whole admin group behind the demo credential — no partial enablement,
 # no separate admin user (owner ruling, #2965).
@@ -58,12 +51,13 @@ identifier_type = "login"
 # The demo user: ferroehr / ferroehr (the hash is Argon2id of "ferroehr").
 # Public by design; the sandbox holds demo data only and is wiped on a
 # schedule.
-# Its scopes grant every SMART on openEHR resource family, and the product
-# scope admits the ADMIN and DEMOGRAPHIC APIs.
+# A Basic user is a credential alone. As the first administrator below it
+# holds ADMIN and the product scope, which admits the ADMIN and DEMOGRAPHIC
+# APIs, and the ferroehr-hold service of the box's compose file grants its
+# PERSON the scopes of every SMART on openEHR resource family in the CDR.
 [[auth.basic.users]]
 user = "ferroehr"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
-scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
 
 # The healthcare provider the sandbox acts for (an example id under the OID
 # arc 2.999), and the binding key of the demo user.
@@ -75,29 +69,11 @@ user = "ferroehr"
 key_issuer = "urn:ferroehr:basic-user"
 key = "ferroehr"
 
-# The party mapping over the professional PERSON and ROLE pair the
-# ferroehr-definitions one-shot loads (deploy/definitions/professional/): the
-# key is written under the identifier_type the [[auth.party]] table above
-# looks logins up under, beside `userName` and `externalId` at one element.
-[[authz.party_binding.person.template]]
-template_id = "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0"
-default = true
-key = { path = "/details[id2]/items[id3]", type = "login" }
-user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
-external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
-
-[[authz.party_binding.person.attribute]]
-scim = "name.formatted"
-name = true
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
-
-[authz.party_binding.professional_role]
-template_id = "openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0"
-
 # The SCIM endpoint the demo PERSON is provisioned through (RFC 7644 §3.3), as
-# an identity provider provisions people: the ferroehr-provision service of the
-# box's compose file holds the `sandbox-scim` client's client credentials
-# token (RFC 6749 §4.4) from the development issuer, trusted here as a machines
+# an identity provider provisions people: the ferroehr-grant service of the
+# box's compose file grants the `sandbox-scim` client scim_provision in the
+# CDR, and the ferroehr-provision service holds its client credentials token
+# (RFC 6749 §4.4) from the development issuer, trusted here as a machines
 # issuer for that one client, and creates the User whose binding key
 # `ferroehr` the Basic user above is mapped by. The issuer publishes no port,
 # so only the containers on the box obtain its tokens.
@@ -107,31 +83,33 @@ kind = "machines"
 audience = ["ferroehr-scim"]
 token_types = ["JWT"]
 
-[scim]
-enabled = true
+# The URL clients reach the server at, which every SCIM location names.
+[server]
 public_base_url = "https://sandbox.ferroehr.eu"
 
-[[scim.client]]
-issuer = "http://localhost:8180/sandbox"
-client_id = "sandbox-scim"
-scope = "ferroehr/scim"
-binding_issuer = "urn:ferroehr:basic-user"
+[auth.scim]
+
+# The operations the party store may grant: beside a system client's commit,
+# the scim_provision the ferroehr-grant service grants `sandbox-scim` and the
+# demo user's scopes the ferroehr-hold service grants.
+[authz.grants]
+allowed = ["commit_composition", "scim_provision", "hold_scopes"]
 
 # Authentication only, no role gate — the one demo user deliberately reaches
-# every enabled surface, the admin group included (#2965).
+# every enabled surface, the admin group included (#2965). It is the first
+# administrator, the Basic user holding ADMIN before any policy party grants
+# anything.
 [authz.rbac]
 enabled = false
+first_admin = "ferroehr"
 
 # FerroTERM beside the CDR (#3304). The read-only /terminology/* routes are on so
 # the viewer's terminology browser and code picker work; the terminology server
 # is FerroTERM at its compose-network name, the only address it answers on, and
-# every terminology the bundle does not carry goes to it. Fail-open is the
-# shipped default and the posture this sandbox declares (register AMB-172): a
-# binding the server cannot resolve is accepted, a binding it resolves as a
-# non-member is refused with 422.
-
-[terminology]
-on_error = "accept"
+# every terminology the bundle does not carry goes to it. The sandbox keeps the
+# shipped fail-open default (register AMB-172): a binding the server cannot
+# resolve is accepted, a binding it resolves as a non-member is refused with
+# 422.
 
 [terminology.endpoint]
 url = "http://ferroterm:8080/r4b"

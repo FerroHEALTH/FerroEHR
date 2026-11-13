@@ -1,0 +1,238 @@
+﻿<!DOCTYPE HTML>
+  <!-- template-vs.html --><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>Valueset-consent-policy - FHIR v4.0.1</title>
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="http://hl7.org/fhir"/>
+
+  <link rel="stylesheet" href="fhir.css"/>
+  <link rel="Prev" href="http://hl7.org/fhir/valueset-consent-policy.html"/>
+
+    <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="./dist/css/bootstrap.css"/>
+  <link rel="stylesheet" href="./assets/css/bootstrap-fhir.css"/>
+
+    <!-- Project extras -->
+  <link rel="stylesheet" href="./assets/css/project.css"/>
+  <link rel="stylesheet" href="fhir-pub.css"/>
+  <link rel="stylesheet" href="./assets/css/pygments-manni.css"/>
+	<link rel="stylesheet" href="jquery-ui.css"/>
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- [if lt IE 9]>
+  <script src="./assets/js/html5shiv.js"></script>
+  <script src="./assets/js/respond.min.js"></script>
+  <![endif] -->
+
+    <!-- Favicons -->
+  <link sizes="144x144" rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-144-precomposed.png"/>
+  <link sizes="114x114" rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-114-precomposed.png"/>
+  <link sizes="72x72" rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-72-precomposed.png"/>
+  <link rel="apple-touch-icon-precomposed" href="./assets/ico/apple-touch-icon-57-precomposed.png"/>
+  <link rel="shortcut icon" href="./assets/ico/favicon.png"/>
+
+</head>
+<body>
+	<div id="segment-header" class="segment">  <!-- segment-header -->	
+		<div class="container">  <!-- container -->
+			<a no-external="true" id="logo" href="http://hl7.org/fhir"><img src="./assets/images/fhir-logo-www.png" alt="logo fhir" width="249" height="60"/> </a>
+			<div id="hl7-status">
+				<b>Release 4</b>
+			</div>       	
+			
+			<div id="hl7-nav">
+				 <a no-external="true" id="hl7-logo" href="http://www.hl7.org">
+					<img src="./assets/images/hl7-logo.png" width="42" alt="visit the hl7 website" height="50"/>
+				</a> 
+			</div>       	
+			<div id="hl7-nav"><a no-external="true" id="hl7-logo" href="http://hl7.org/fhir/R4/searchform.html"><img src="./assets/images/search.png" alt="Search FHIR"/></a></div> 
+		</div>
+		<div class="container">  <!-- container -->
+	</div></div>  <!-- /segment-header -->	
+
+
+	<div id="segment-navbar" class="segment">  <!-- segment-navbar -->
+		<div id="stripe"> </div>
+		<div class="container">  <!-- container -->
+   <!-- HEADER CONTENT -->
+ 	      		 	      		      		
+			<nav class="navbar navbar-inverse">
+				<div class="container">
+					<button data-target=".navbar-inverse-collapse" data-toggle="collapse" type="button" class="navbar-toggle">
+						<span class="icon-bar"> </span>
+						<span class="icon-bar"> </span>
+						<span class="icon-bar"> </span>
+					</button>
+					<a href="index.html" class="navbar-brand hidden">FHIR</a>
+					<div class="nav-collapse collapse navbar-inverse-collapse">
+						<ul class="nav navbar-nav">
+              <li><a href="./index.html">Home</a></li>
+              <li><a href="./modules.html">Getting Started</a></li>
+              <li><a href="./documentation.html">Documentation</a></li>
+              <li><a href="./resourcelist.html">Resources</a></li>
+              <li><a href="./profilelist.html">Profiles</a></li>
+              <li><a href="./extensibility-registry.html">Extensions</a></li>
+              <li><a href="./operationslist.html">Operations</a></li>
+              <li><a href="./terminologies-systems.html">Terminologies</a></li>
+						</ul>
+					</div>  <!-- /.nav-collapse -->
+				</div>  <!-- /.container -->
+			</nav>  <!-- /.navbar -->
+      		
+  <!-- /HEADER CONTENT -->				
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-navbar -->
+	
+
+	<div id="segment-breadcrumb" class="segment">  <!-- segment-breadcrumb -->
+		<div class="container">  <!-- container -->	
+			<ul class="breadcrumb">
+        <li><a href="terminology-module.html"><img src="terminology.png"/> Terminology</a></li>        <li><a href="terminologies-valuesets.html">Value Sets</a></li>        <li><b>Value Set</b></li>          <!-- valueset-consent-policy.html / valueSet / Value Set -->
+
+			</ul>	
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-breadcrumb -->
+	
+
+	<div id="segment-content" class="segment">  <!-- segment-content -->
+	<div class="container">  <!-- container -->
+            <div class="row">
+            	<div class="inner-wrapper">
+  <!-- CONTENT CONTENT -->
+
+
+<div class="col-12">  <!-- ReleaseHeader --><p id="publish-box-past">This page is part of the FHIR Specification (v4.0.1: R4 - Mixed <a href="https://confluence.hl7.org/display/HL7/HL7+Balloting" title="Normative Standard">Normative</a> and <a href="https://confluence.hl7.org/display/HL7/HL7+Balloting" title="Standard for Trial-Use">STU</a>) in it's permanent home (it will always be available at this URL). The current version which supercedes this version is <a href="http://hl7.org/fhir/index.html">5.0.0</a>. For a full list of available versions, see the <a href="http://hl7.org/fhir/directory.html">Directory of published versions <img src="external.png" style="text-align: baseline"></a>. <!--pxl-->Page versions: <a href="http://hl7.org/fhir/R5/valueset-consent-policy.html">R5</a> <a href="http://hl7.org/fhir/R4B/valueset-consent-policy.html">R4B</a> <b>R4</b></p>  <!-- EndReleaseHeader -->
+
+<ul class="nav nav-tabs"><li><a href="terminologies.html">Using Codes</a></li><li><a href="terminologies-systems.html">Code Systems</a></li><li><a href="terminologies-valuesets.html">Value Sets</a></li><li><a href="terminologies-conceptmaps.html">Concept Maps</a></li><li><a href="identifier-registry.html">Identifier Systems</a></li></ul>
+
+
+<a name="vs"></a>
+<h1 class="self-link-parent"><span class="sectioncount">4.4.1.439<a name="4.4.1.439"> </a></span> Value Set http://hl7.org/fhir/ValueSet/consent-policy <a href="valueset-consent-policy.html#4.4.1.439" title="link to here" class="self-link"><svg viewBox="0 0 1792 1792" width="20" class="self-link" height="20"><path d="M1520 1216q0-40-28-68l-208-208q-28-28-68-28-42 0-72 32 3 3 19 18.5t21.5 21.5 15 19 13 25.5 3.5 27.5q0 40-28 68t-68 28q-15 0-27.5-3.5t-25.5-13-19-15-21.5-21.5-18.5-19q-33 31-33 73 0 40 28 68l206 207q27 27 68 27 40 0 68-26l147-146q28-28 28-67zm-703-705q0-40-28-68l-206-207q-28-28-68-28-39 0-68 27l-147 146q-28 28-28 67 0 40 28 68l208 208q27 27 68 27 42 0 72-31-3-3-19-18.5t-21.5-21.5-15-19-13-25.5-3.5-27.5q0-40 28-68t68-28q15 0 27.5 3.5t25.5 13 19 15 21.5 21.5 18.5 19q33-31 33-73zm895 705q0 120-85 203l-147 146q-83 83-203 83-121 0-204-85l-206-207q-83-83-83-203 0-123 88-209l-88-88q-86 88-208 88-120 0-204-84l-208-208q-84-84-84-204t85-203l147-146q83-83 203-83 121 0 204 85l206 207q83 83 83 203 0 123-88 209l88 88q86-88 208-88 120 0 204 84l208 208q84 84 84 204z" fill="navy"></path></svg></a></h1>
+<table class="colstu">
+ <tr><td><a href="http://www.hl7.org/Special/committees/homehealth/index.cfm">Community Based Collaborative Care <img src="external.png" style="text-align: baseline"/></a> Work Group</td><td>&nbsp;<a href="versions.html#maturity" title="Maturity Level">Maturity Level</a>: 2</td><td><a href="versions.html#std-process">Trial Use</a></td>  <!-- !ns! --><td><a href="metadatatypes.html#UsageContext">Use Context</a>: Any</td></tr>
+</table>
+
+
+<p>
+This is a value set defined by the FHIR project. 
+</p>
+
+<p><b>Summary</b></p>
+<table class="grid">
+ <tr><td>Defining URL:</td><td>http://hl7.org/fhir/ValueSet/consent-policy</td></tr>
+ <tr><td>Version:</td><td>4.0.1</td></tr>
+ <tr><td>Name:</td><td>ConsentPolicyRuleCodes</td></tr>
+ <tr><td>Title:</td><td>Consent PolicyRule Codes</td></tr>
+ <tr><td>Definition:</td><td><p>This value set includes sample Regulatory consent policy types from the US and other regions.</p>
+</td></tr>
+ <tr><td>Committee:</td><td><a href="http://www.hl7.org/Special/committees/homehealth/index.cfm" _target="blank">Community Based Collaborative Care <img src="external.png" style="text-align: baseline"/></a> Work Group</td></tr>
+ <tr><td>OID:</td><td>2.16.840.1.113883.4.642.3.1014 (for OID based terminology systems)</td></tr>
+
+ <tr><td>Source Resource</td><td><a href="valueset-consent-policy.xml.html">XML</a> / <a href="valueset-consent-policy.json.html">JSON</a></td></tr>
+</table>
+
+
+
+
+
+<p>
+This value set is used in the following places:
+</p>
+<ul>
+ <li>CodeSystem: This value set is the designated 'entire code system' value set for <a href="codesystem-consent-policy.html">ConsentPolicyRuleCodes</a> </li>
+ <li>Resource: <a href="consent-definitions.html#Consent.policyRule">Consent.policyRule</a> (CodeableConcept / <a href="terminologies.html#extensible">Extensible</a>)</li>
+</ul>
+
+
+<a name="definition"></a>
+<h2 class="self-link-parent"><span class="sectioncount">4.4.1.439.1</span> Content Logical Definition <a href="valueset-consent-policy.html#definition" title="link to here" class="self-link"><svg viewBox="0 0 1792 1792" width="20" class="self-link" height="20"><path d="M1520 1216q0-40-28-68l-208-208q-28-28-68-28-42 0-72 32 3 3 19 18.5t21.5 21.5 15 19 13 25.5 3.5 27.5q0 40-28 68t-68 28q-15 0-27.5-3.5t-25.5-13-19-15-21.5-21.5-18.5-19q-33 31-33 73 0 40 28 68l206 207q27 27 68 27 40 0 68-26l147-146q28-28 28-67zm-703-705q0-40-28-68l-206-207q-28-28-68-28-39 0-68 27l-147 146q-28 28-28 67 0 40 28 68l208 208q27 27 68 27 42 0 72-31-3-3-19-18.5t-21.5-21.5-15-19-13-25.5-3.5-27.5q0-40 28-68t68-28q15 0 27.5 3.5t25.5 13 19 15 21.5 21.5 18.5 19q33-31 33-73zm895 705q0 120-85 203l-147 146q-83 83-203 83-121 0-204-85l-206-207q-83-83-83-203 0-123 88-209l-88-88q-86 88-208 88-120 0-204-84l-208-208q-84-84-84-204t85-203l147-146q83-83 203-83 121 0 204 85l206 207q83 83 83 203 0 123-88 209l88 88q86-88 208-88 120 0 204 84l208 208q84 84 84 204z" fill="navy"></path></svg></a></h2>
+
+<hr/>
+<div xmlns="http://www.w3.org/1999/xhtml"><p>This value set includes codes from the following code systems:</p><ul><li>Include all codes defined in <a href="codesystem-consent-policy.html"><code>http://terminology.hl7.org/CodeSystem/consentpolicycodes</code></a></li></ul></div>
+
+<p>&nbsp;</p>
+<a name="expansion"> </a>
+<h2 class="self-link-parent"><span class="sectioncount">4.4.1.439.2</span> Expansion <a href="valueset-consent-policy.html#expansion" title="link to here" class="self-link"><svg viewBox="0 0 1792 1792" width="20" class="self-link" height="20"><path d="M1520 1216q0-40-28-68l-208-208q-28-28-68-28-42 0-72 32 3 3 19 18.5t21.5 21.5 15 19 13 25.5 3.5 27.5q0 40-28 68t-68 28q-15 0-27.5-3.5t-25.5-13-19-15-21.5-21.5-18.5-19q-33 31-33 73 0 40 28 68l206 207q27 27 68 27 40 0 68-26l147-146q28-28 28-67zm-703-705q0-40-28-68l-206-207q-28-28-68-28-39 0-68 27l-147 146q-28 28-28 67 0 40 28 68l208 208q27 27 68 27 42 0 72-31-3-3-19-18.5t-21.5-21.5-15-19-13-25.5-3.5-27.5q0-40 28-68t68-28q15 0 27.5 3.5t25.5 13 19 15 21.5 21.5 18.5 19q33-31 33-73zm895 705q0 120-85 203l-147 146q-83 83-203 83-121 0-204-85l-206-207q-83-83-83-203 0-123 88-209l-88-88q-86 88-208 88-120 0-204-84l-208-208q-84-84-84-204t85-203l147-146q83-83 203-83 121 0 204 85l206 207q83 83 83 203 0 123-88 209l88 88q86-88 208-88 120 0 204 84l208 208q84 84 84 204z" fill="navy"></path></svg></a></h2>
+<p>This expansion generated 01 Nov 2019</p>
+<hr/>
+<div xmlns="http://www.w3.org/1999/xhtml"><p>This value set contains 26 concepts</p><p style="border: black 1px dotted; background-color: #EEEEEE; padding: 8px">Expansion based on http://terminology.hl7.org/CodeSystem/consentpolicycodes version 4.0.1</p><p>All codes from system <a href="codesystem-consent-policy.html"><code>http://terminology.hl7.org/CodeSystem/consentpolicycodes</code></a></p><table class="codes"><tr><td style="white-space:nowrap"><b>Code</b></td><td><b>Display</b></td><td><b>Definition</b></td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-cric"> </a><a href="codesystem-consent-policy.html#consent-policy-cric">cric</a></td><td>Common Rule Informed Consent</td><td>45 CFR part 46 &sect;46.116 General requirements for informed consent; and &sect;46.117 Documentation of informed consent. https://www.gpo.gov/fdsys/pkg/FR-2017-01-19/pdf/2017-01058.pdf</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-illinois-minor-procedure"> </a><a href="codesystem-consent-policy.html#consent-policy-illinois-minor-procedure">illinois-minor-procedure</a></td><td>Illinois Consent by Minors to Medical Procedures</td><td>The consent to the performance of a medical or surgical procedure by a physician licensed to practice medicine and surgery, a licensed advanced practice nurse, or a licensed physician assistant executed by a married person who is a minor, by a parent who is a minor, by a pregnant woman who is a minor, or by any person 18 years of age or older, is not voidable because of such minority, and, for such purpose, a married person who is a minor, a parent who is a minor, a pregnant woman who is a minor, or any person 18 years of age or older, is deemed to have the same legal capacity to act and has the same powers and obligations as has a person of legal age. Consent by Minors to Medical Procedures Act. (410 ILCS 210/0.01) (from Ch. 111, par. 4500) Sec. 0.01. Short title. This Act may be cited as the Consent by Minors to Medical Procedures Act. (Source: P.A. 86-1324.) http://www.ilga.gov/legislation/ilcs/ilcs3.asp?ActID=1539&amp;ChapterID=35</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-hipaa-auth"> </a><a href="codesystem-consent-policy.html#consent-policy-hipaa-auth">hipaa-auth</a></td><td>HIPAA Authorization</td><td>HIPAA 45 CFR Section 164.508 Uses and disclosures for which an authorization is required. (a) Standard: Authorizations for uses and disclosures. (1) Authorization required: General rule. Except as otherwise permitted or required by this subchapter, a covered entity SHALL not use or disclose protected health information without an authorization that is valid under this section. When a covered entity obtains or receives a valid authorization for its use or disclosure of protected health information, such use or disclosure must be consistent with such authorization. Usage Note: Authorizations governed under this regulation meet the definition of an opt in class of consent directive.</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-hipaa-npp"> </a><a href="codesystem-consent-policy.html#consent-policy-hipaa-npp">hipaa-npp</a></td><td>HIPAA Notice of Privacy Practices</td><td>164.520  Notice of privacy practices for protected health information. (1) Right to notice. Except as provided by paragraph (a)(2) or (3) of this section, an individual has a right to adequate notice of the uses and disclosures of protected health information that may be made by the covered entity, and of the individual's rights and the covered entity's legal duties with respect to protected health information. Usage Note: Restrictions governed under this regulation meet the definition of an implied with an opportunity to dissent class of consent directive.</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-hipaa-restrictions"> </a><a href="codesystem-consent-policy.html#consent-policy-hipaa-restrictions">hipaa-restrictions</a></td><td>HIPAA Restrictions</td><td>HIPAA 45 CFR 164.510 - Uses and disclosures requiring an opportunity for the individual to agree or to object. A covered entity may use or disclose protected health information, provided that the individual is informed in advance of the use or disclosure and has the opportunity to agree to or prohibit or restrict the use or disclosure, in accordance with the applicable requirements of this section. The covered entity may orally inform the individual of and obtain the individual's oral agreement or objection to a use or disclosure permitted by this section. Usage Note: Restrictions governed under this regulation meet the definition of an opt out with exception class of consent directive.</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-hipaa-research"> </a><a href="codesystem-consent-policy.html#consent-policy-hipaa-research">hipaa-research</a></td><td>HIPAA Research Authorization</td><td>HIPAA 45 CFR 164.508 - Uses and disclosures for which an authorization is required. (a) Standard: Authorizations for uses and disclosures. (3) Compound authorizations. An authorization for use or disclosure of protected health information SHALL NOT be combined with any other document to create a compound authorization, except as follows: (i) An authorization for the use or disclosure of protected health information for a research study may be combined with any other type of written permission for the same or another research study. This exception includes combining an authorization for the use or disclosure of protected health information for a research study with another authorization for the same research study, with an authorization for the creation or maintenance of a research database or repository, or with a consent to participate in research. Where a covered health care provider has conditioned the provision of research-related treatment on the provision of one of the authorizations, as permitted under paragraph (b)(4)(i) of this section, any compound authorization created under this paragraph must clearly differentiate between the conditioned and unconditioned components and provide the individual with an opportunity to opt in to the research activities described in the unconditioned authorization. Usage Notes: See HHS http://www.hhs.gov/hipaa/for-professionals/special-topics/research/index.html and OCR http://www.hhs.gov/hipaa/for-professionals/special-topics/research/index.html</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-hipaa-self-pay"> </a><a href="codesystem-consent-policy.html#consent-policy-hipaa-self-pay">hipaa-self-pay</a></td><td>HIPAA Self-Pay Restriction</td><td>HIPAA 45 CFR 164.522(a) Right To Request a Restriction of Uses and Disclosures. (vi) A covered entity must agree to the request of an individual to restrict disclosure of protected health information about the individual to a health plan if: (A) The disclosure is for the purpose of carrying out payment or health care operations and is not otherwise required by law; and (B) The protected health information pertains solely to a health care item or service for which the individual, or person other than the health plan on behalf of the individual, has paid the covered entity in full. Usage Note: Restrictions governed under this regulation meet the definition of an opt out with exception class of consent directive. Opt out is limited to disclosures to a payer for payment and operations purpose of use. See HL7 HIPAA Self-Pay code in ActPrivacyLaw (2.16.840.1.113883.1.11.20426).</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-mdhhs-5515"> </a><a href="codesystem-consent-policy.html#consent-policy-mdhhs-5515">mdhhs-5515</a></td><td>Michigan MDHHS-5515 Consent to Share Behavioral Health Information for Care Coordination Purposes</td><td>On January 1, 2015, the Michigan Department of Health and Human Services (MDHHS) released a standard consent form for the sharing of health information specific to behavioral health and substance use treatment in accordance with Public Act 129 of 2014. In Michigan, while providers are not required to use this new standard form (MDHHS-5515), they are required to accept it. Note: Form is available at http://www.michigan.gov/documents/mdhhs/Consent_to_Share_Behavioral_Health_Information_for_Care_Coordination_Purposes_548835_7.docx For more information see http://www.michigan.gov/documents/mdhhs/Behavioral_Health_Consent_Form_Background_Information_548864_7.pdf</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-nyssipp"> </a><a href="codesystem-consent-policy.html#consent-policy-nyssipp">nyssipp</a></td><td>New York State Surgical and Invasive Procedure Protocol</td><td>The New York State Surgical and Invasive Procedure Protocol (NYSSIPP) applies to all operative and invasive procedures including endoscopy, general surgery or interventional radiology. Other procedures that involve puncture or incision of the skin, or insertion of an instrument or foreign material into the body are within the scope of the protocol. This protocol also applies to those anesthesia procedures either prior to a surgical procedure or independent of a surgical procedure such as spinal facet blocks. Example: Certain 'minor' procedures such as venipuncture, peripheral IV placement, insertion of nasogastric tube and foley catheter insertion are not within the scope of the protocol. From http://www.health.ny.gov/professionals/protocols_and_guidelines/surgical_and_invasive_procedure/nyssipp_faq.htm Note: HHC 100B-1 Form is available at http://www.downstate.edu/emergency_medicine/documents/Consent_CT_with_contrast.pdf</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-va-10-0484"> </a><a href="codesystem-consent-policy.html#consent-policy-va-10-0484">va-10-0484</a></td><td>VA Form 10-0484</td><td>VA Form 10-0484 Revocation for Release of Individually-Identifiable Health Information enables a veteran to revoke authorization for the VA to release specified copies of individually-identifiable health information with the non-VA health care provider organizations participating in the eHealth Exchange and partnering with VA. Comment: Opt-in Consent Directive with status = rescinded (aka 'revoked'). Note: Form is available at http://www.va.gov/vaforms/medical/pdf/vha-10-0484-fill.pdf</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-va-10-0485"> </a><a href="codesystem-consent-policy.html#consent-policy-va-10-0485">va-10-0485</a></td><td>VA Form 10-0485</td><td>VA Form 10-0485 Request for and Authorization to Release Protected Health Information to eHealth Exchange enables a veteran to request and authorize a VA health care facility to release protected health information (PHI) for treatment purposes only to the communities that are participating in the eHealth Exchange, VLER Directive, and other Health Information Exchanges with who VA has an agreement. This information may consist of the diagnosis of Sickle Cell Anemia, the treatment of or referral for Drug Abuse, treatment of or referral for Alcohol Abuse or the treatment of or testing for infection with Human Immunodeficiency Virus. This authorization covers the diagnoses that I may have upon signing of the authorization and the diagnoses that I may acquire in the future including those protected by 38 U.S.C. 7332. Comment: Opt-in Consent Directive. Note: Form is available at http://www.va.gov/vaforms/medical/pdf/10-0485-fill.pdf</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-va-10-5345"> </a><a href="codesystem-consent-policy.html#consent-policy-va-10-5345">va-10-5345</a></td><td>VA Form 10-5345</td><td>VA Form 10-5345 Request for and Authorization to Release Medical Records or Health Information enables a veteran to request and authorize the VA to release specified copies of protected health information (PHI), such as hospital summary or outpatient treatment notes, which may include information about conditions governed under Title 38 Section 7332 (drug abuse, alcoholism or alcohol abuse, testing for or infection with HIV, and sickle cell anemia). Comment: Opt-in Consent Directive. Note: Form is available at http://www.va.gov/vaforms/medical/pdf/vha-10-5345-fill.pdf</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-va-10-5345a"> </a><a href="codesystem-consent-policy.html#consent-policy-va-10-5345a">va-10-5345a</a></td><td>VA Form 10-5345a</td><td>VA Form 10-5345a Individuals' Request for a Copy of Their Own Health Information enables a veteran to request and authorize the VA to release specified copies of protected health information (PHI), such as hospital summary or outpatient treatment notes. Note: Form is available at http://www.va.gov/vaforms/medical/pdf/vha-10-5345a-fill.pdf</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-va-10-5345a-mhv"> </a><a href="codesystem-consent-policy.html#consent-policy-va-10-5345a-mhv">va-10-5345a-mhv</a></td><td>VA Form 10-5345a-MHV</td><td>VA Form 10-5345a-MHV Individual's Request for a Copy of their own health information from MyHealtheVet enables a veteran to receive a copy of all available personal health information to be delivered through the veteran's My HealtheVet account. Note: Form is available at http://www.va.gov/vaforms/medical/pdf/vha-10-5345a-MHV-fill.pdf</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-va-10-10116"> </a><a href="codesystem-consent-policy.html#consent-policy-va-10-10116">va-10-10116</a></td><td>VA Form 10-10-10116</td><td>VA Form 10-10116 Revocation of Authorization for Use and Release of Individually Identifiable Health Information for Veterans Health Administration Research. Comment: Opt-in with Restriction Consent Directive with status = 'completed'. Note: Form is available at http://www.northerncalifornia.va.gov/northerncalifornia/services/rnd/docs/vha-10-10116.pdf </td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-va-21-4142"> </a><a href="codesystem-consent-policy.html#consent-policy-va-21-4142">va-21-4142</a></td><td>VA Form 21-4142</td><td>VA Form 21-4142 (Authorization and Consent to Release Information to the Department of Veterans Affairs (VA) enables a veteran to authorize the US Veterans Administration [VA] to request veteran's health information from non-VA providers. Aka VA Compensation Application Note: Form is available at http://www.vba.va.gov/pubs/forms/VBA-21-4142-ARE.pdf . For additional information regarding VA Form 21-4142, refer to the following website: www.benefits.va.gov/compensation/consent_privateproviders</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-ssa-827"> </a><a href="codesystem-consent-policy.html#consent-policy-ssa-827">ssa-827</a></td><td>SSA Authorization to Disclose</td><td>SA Form SSA-827 (Authorization to Disclose Information to the Social Security Administration (SSA)). Form is available at https://www.socialsecurity.gov/forms/ssa-827-inst-sp.pdf</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-dch-3927"> </a><a href="codesystem-consent-policy.html#consent-policy-dch-3927">dch-3927</a></td><td>Michigan behavior and mental health consent</td><td>Michigan DCH-3927 Consent to Share Behavioral Health Information for Care Coordination Purposes, which combines 42 CFR Part 2 and Michigan Mental Health Code, Act 258 of 1974. Form is available at http://www.michigan.gov/documents/mdch/DCH-3927_Consent_to_Share_Health_Information_477005_7.docx</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-squaxin"> </a><a href="codesystem-consent-policy.html#consent-policy-squaxin">squaxin</a></td><td>Squaxin Indian behavioral health and HIPAA consent</td><td>Squaxin Indian HIPAA and 42 CFR Part 2 Consent for Release and Exchange of Confidential Information, which permits consenter to select healthcare record type and types of treatment purposes.  This consent requires disclosers and recipients to comply with 42 C.F.R. Part 2, and HIPAA 45 C.F.R. parts 160 and 164. It includes patient notice of the refrain policy not to disclose without consent, and revocation rights. https://www.ncsacw.samhsa.gov/files/SI_ConsentForReleaseAndExchange.PDF</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-nl-lsp"> </a><a href="codesystem-consent-policy.html#consent-policy-nl-lsp">nl-lsp</a></td><td>NL LSP Permission</td><td>LSP (National Exchange Point) requires that providers, hospitals and pharmacy obtain explicit permission [opt-in] from healthcare consumers to submit and retrieve all or only some of a subject of care’s health information collected by the LSP for purpose of treatment, which can be revoked.  Without permission, a provider cannot access LSP information even in an emergency. The LSP provides healthcare consumers with accountings of disclosures. https://www.vzvz.nl/uploaded/FILES/htmlcontent/Formulieren/TOESTEMMINGSFORMULIER.pdf, https://www.ikgeeftoestemming.nl/en, https://www.ikgeeftoestemming.nl/en/registration/find-healthcare-provider</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-at-elga"> </a><a href="codesystem-consent-policy.html#consent-policy-at-elga">at-elga</a></td><td>AT ELGA Opt-in Consent</td><td>Pursuant to Sec. 2 no. 9 Health Telematics Act 2012, ELGA Health Data ( “ELGA-Gesundheitsdaten”) = Medical documents. Austria opted for an opt-out approach. This means that a person is by default ‘ELGA participant’ unless he/she objects. ELGA participants have the following options: General opt out: No participation in ELGA, Partial opt-out: No participation in a particular ELGA application, e.g. eMedication and Case-specific opt-out: No participation in ELGA only regarding a particular case/treatment. There is the possibility to opt-in again. ELGA participants can also exclude the access of a particular ELGA healthcare provider to a particular piece of or all of their ELGA data. http://ec.europa.eu/health/ehealth/docs/laws_austria_en.pdf</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-nih-hipaa"> </a><a href="codesystem-consent-policy.html#consent-policy-nih-hipaa">nih-hipaa</a></td><td>HHS NIH HIPAA Research Authorization</td><td>Guidance and template form https://privacyruleandresearch.nih.gov/pdf/authorization.pdf</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-nci"> </a><a href="codesystem-consent-policy.html#consent-policy-nci">nci</a></td><td>NCI Cancer Clinical Trial consent</td><td>see http://ctep.cancer.gov/protocolDevelopment/docs/Informed_Consent_Template.docx</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-nih-grdr"> </a><a href="codesystem-consent-policy.html#consent-policy-nih-grdr">nih-grdr</a></td><td>NIH Global Rare Disease Patient Registry and Data Repository consent</td><td>Global Rare Disease Patient Registry and Data Repository (GRDR) consent is an agreement of a healthcare consumer to permit collection, access, use and disclosure of de-identified rare disease information and collection of bio-specimens, medical information, family history and other related information from patients to permit the registry collection of health and genetic information, and specimens for pseudonymized disclosure for research purpose of use. https://rarediseases.info.nih.gov/files/informed_consent_template.pdf</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-nih-527"> </a><a href="codesystem-consent-policy.html#consent-policy-nih-527">nih-527</a></td><td>NIH Authorization for the Release of Medical Information</td><td>NIH Authorization for the Release of Medical Information is a patient’s consent for the National Institutes of Health Clinical Center to release medical information to care providers, which can be revoked. Note: Consent Form available @ http://cc.nih.gov/participate/_pdf/NIH-527.pdf</td></tr><tr><td style="white-space:nowrap"><a name="http---terminology.hl7.org-CodeSystem-consentpolicycodes-ga4gh"> </a><a href="codesystem-consent-policy.html#consent-policy-ga4gh">ga4gh</a></td><td>Population origins and ancestry research consent</td><td>Global Alliance for Genomic Health Data Sharing Consent Form is an example of the GA4GH Population origins and ancestry research consent form. Consenters agree to permitting a specified research project to collect ancestry and genetic information in controlled-access databases, and to allow other researchers to use deidentified information from those databases. http://www.commonaccord.org/index.php?action=doc&amp;file=Wx/org/genomicsandhealth/REWG/Demo/Roberta_Robinson_US</td></tr></table></div>
+
+<p>&nbsp;</p>
+
+
+
+<p>
+See <a href="terminologies-valuesets.html">the full registry of value sets</a> defined as part of FHIR.
+</p>
+
+<hr/>
+
+<p>
+Explanation of the columns that may appear on this page:
+</p>
+<table class="grid">
+ <tr><td>Lvl</td><td>A few code lists that FHIR defines are hierarchical - each code is assigned a level. For value sets, levels are mostly used to organize codes for user convenience, but may follow
+   code system hierarchy - see <a href="codesystem.html#hierarchy">Code System</a> for further information</td></tr> 
+ <tr><td>Source</td><td>The source of the definition of the code (when the value set draws in codes defined elsewhere)</td></tr>
+ <tr><td>Code</td><td>The code (used as the code in the resource instance). If the code is in italics, this indicates that the code is not selectable ('Abstract')</td></tr>
+ <tr><td>Display</td><td>The display (used in the <i>display</i> element of a <a href="datatypes.html#Coding">Coding</a>). If there is no display, implementers should not simply display the code, but map the concept into their application</td></tr>
+ <tr><td>Definition</td><td>An explanation of the meaning of the concept</td></tr>
+ <tr><td>Comments</td><td>Additional notes about how to use the code</td></tr>
+</table>
+
+</div>
+
+
+				</div>  <!-- /inner-wrapper -->
+            </div>  <!-- /row -->
+        </div>  <!-- /container -->
+        
+    </div>  <!-- /segment-content -->
+
+
+	<div id="segment-footer" class="segment">  <!-- segment-footer -->
+		<div class="container">  <!-- container -->
+			<div class="inner-wrapper">
+				<p>
+        &reg;&copy; HL7.org 2011+. FHIR Release 4 (Technical Correction #1) (v4.0.1) generated on Fri, Nov 1, 2019 09:33+1100. <a style="color: #ffffff" href="qa.html">QA Page</a>
+        <br/>
+        <span style="color: #FFFF77">
+        Links: <a style="color: #b8dcf9" href="http://hl7.org/fhir/search.cfm">Search <img src="external.png" style="text-align: baseline"/></a> | 
+               <a style="color: #b8dcf9" href="history.html">Version History</a> | 
+               <a style="color: #b8dcf9" href="toc.html">Table of Contents</a> | 
+               <a style="color: #b8dcf9" href="credits.html">Credits</a> | 
+               <a style="color: #b8dcf9" href="https://www.fhir.org/perl/htmldiff.pl?oldfile=http%3A%2F%2Fhl7.org%2Ffhir%2FSTU3%2Fvalueset-consent-policy.html&amp;newfile=http%3A%2F%2Fhl7.org%2Ffhir%2FR4%2Fvalueset-consent-policy.html">Compare to R3 <img src="external.png" style="text-align: baseline"/></a> |                
+               <a rel="license" style="color: #b8dcf9" href="license.html"><img src="cc0.png" alt="CC0" style="border-style: none;"/></a> | 
+               <a style="color: #b8dcf9" href="http://hl7.org/fhir-issues" target="_blank">Propose a change <img src="external.png" style="text-align: baseline"/></a>   
+        </span>
+        </p>
+			</div>  <!-- /inner-wrapper -->
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-footer -->
+  <!-- disqus thread -->
+  <!-- disqus -->
+  <!-- end disqus -->        
+	
+	<div id="segment-post-footer" class="segment hidden">  <!-- segment-post-footer -->
+		<div class="container">  <!-- container -->
+		</div>  <!-- /container -->
+	</div>  <!-- /segment-post-footer -->
+    
+      <!-- JS and analytics only. -->
+      <!-- Bootstrap core JavaScript
+================================================== -->
+  <!-- Placed at the end of the document so the pages load faster -->
+<script src="./assets/js/jquery.js"> </script>     <!-- note keep space here, otherwise it will be transformed to empty tag -> fails -->
+<script src="./dist/js/bootstrap.min.js"> </script>
+<script src="./assets/js/respond.min.js"> </script>
+
+<script src="./assets/js/fhir.js"> </script>
+
+  <!-- Analytics Below
+================================================== -->
+
+    
+</body>
+</html>

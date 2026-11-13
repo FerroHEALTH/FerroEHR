@@ -6,9 +6,13 @@ language = "en"
 src = "src"
 
 [output.html]
-default-theme = "rust"
-preferred-dark-theme = "coal"
-additional-css = ["theme/custom.css"]
+# The two themes theme/ferroehr.css recolours with the "Oxide & Iron" palette,
+# and theme/fonts/fonts.css keeps mdBook's bundled web fonts out. The tab icon
+# is a theme override: theme/favicon.svg and theme/favicon.png are copies of
+# assets/brand/favicon.svg and favicon-32.png.
+default-theme = "light"
+preferred-dark-theme = "navy"
+additional-css = ["theme/ferroehr.css"]
 additional-js = ["theme/mermaid.min.js", "theme/mermaid-init.js", "theme/version-picker.js"]
 git-repository-url = "https://github.com/FerroHEALTH/FerroEHR"
 edit-url-template = "https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/{path}"

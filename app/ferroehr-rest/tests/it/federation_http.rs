@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! A verified external person or organisation of a `federation` issuer is
-//! admitted only within the `[[authz.federation.agreement]]` of its issuer
-//! and accessor (#5101), driven through the assembled router over a real
-//! `FerroEhrService` on a real `PostgreSQL` 18.
+//! admitted only within the federation agreement its partner holds in the CDR
+//! for its accessor (#5101, #5440), driven through the assembled router over
+//! a real `FerroEhrService` on a real `PostgreSQL` 18.
 //!
 //! Its reads are `patient/` scopes, confined to the token's launch-context EHR
 //! (SMART on openEHR `master07` §Context Selection and `master08-scopes.adoc`
@@ -17,17 +17,14 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use axum::Router;
-use ferroehr::config::agreement::{
-    AccessClass, Accessor, Agreement, ConsentSource, LegalGround, Purpose,
-};
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr::system_log::config::AuditConfig;
+use ferroehr::system_log::config::Retention;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
-use ferrohealth_server::section::CallerRate;
 use ferrohealth_smart::assurance::{AssuranceLevel, AssuranceSection};
 use ferrohealth_smart::config::{AuthSection, IssuerEntry};
 use ferrohealth_smart::federation::{FederationSection, Field, Mapping, Source};
@@ -37,6 +34,7 @@ use ferrohealth_smart::sender::{ClientCertificate, SenderConstraint};
 use http::StatusCode;
 use serde_json::{Value, json};
 
+use crate::agreement_parties::{Accessor, Terms};
 use crate::common::{self, BASE};
 
 /// The `federation` issuer.
@@ -69,7 +67,7 @@ const EMPLOYEE_CREDENTIAL: &str = "NutsEmployeeCredential";
 /// reference, and the organisation statement with its correlation id.
 fn federation_table() -> FederationSection {
     FederationSection {
-        issuer: FEDERATION.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(FEDERATION),
         contact_point: Some(false),
         mapping: Some(Mapping::Iua),
         fields: BTreeMap::from([
@@ -113,35 +111,55 @@ fn federation_table() -> FederationSection {
     }
 }
 
-/// An agreement of [`FEDERATION`] for `accessor`, reading [`READ`].
-fn agreement(accessor: Accessor) -> Agreement {
-    Agreement {
-        issuer: FEDERATION.to_owned(),
-        accessor: Some(accessor),
-        name: "Regional exchange".to_owned(),
-        version: "1".to_owned(),
-        legal_ground: Some(LegalGround {
-            gdpr_6_1: "e".to_owned(),
-            gdpr_9_2: "h".to_owned(),
-            national: String::new(),
-        }),
-        reads: vec![READ.to_owned()],
-        access_class: (accessor == Accessor::Organisation).then_some(AccessClass::Automated),
-        ..Agreement::default()
+/// An agreement of [`FEDERATION`]'s partner for `accessor`, reading [`READ`].
+fn agreement(accessor: Accessor) -> Terms {
+    let terms = Terms::new(accessor, FEDERATION)
+        .text("agreement_name", "Regional exchange")
+        .text("agreement_version", "1")
+        .text("gdpr_art_6_1", "e")
+        .text("gdpr_art_9_2", "h")
+        .text("read_scope", READ);
+    if accessor == Accessor::Organisation {
+        terms.text("access_class", "automated")
+    } else {
+        terms
     }
 }
 
-/// The router trusting [`FEDERATION`] under `agreements`, with `ETREAT`
-/// agreed as an emergency purpose; returns it with its service.
-async fn serve(agreements: Vec<Agreement>) -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
+/// The clients the partner of `issuer` carries: every client the tokens
+/// below name.
+fn clients(issuer: &str) -> Vec<&'static str> {
+    if issuer == CONTACT_POINT {
+        vec!["ncpeh-b"]
+    } else {
+        vec![
+            "remote-portal",
+            "remote-system",
+            "did:web:requester.example",
+        ]
+    }
+}
+
+/// The router trusting [`FEDERATION`] with its partner holding `agreements`,
+/// with `ETREAT` agreed as an emergency purpose; returns it with its service.
+async fn serve(agreements: Vec<Terms>) -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     Box::pin(serve_also(agreements, None)).await
 }
 
 /// [`serve`], also trusting `issuer` with its `[[auth.federation]]` table and
 /// the `[auth.dpop]` table a sender-constrained issuer needs.
 async fn serve_also(
-    agreements: Vec<Agreement>,
+    agreements: Vec<Terms>,
     issuer: Option<(IssuerEntry, FederationSection, DpopSection)>,
+) -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
+    Box::pin(serve_observed(agreements, issuer, Observability::default())).await
+}
+
+/// [`serve_also`] under `observability`.
+async fn serve_observed(
+    agreements: Vec<Terms>,
+    issuer: Option<(IssuerEntry, FederationSection, DpopSection)>,
+    observability: Observability,
 ) -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     let (db, pool) = common::migrated_pool().await;
     let audit = AuditConfig {
@@ -158,7 +176,7 @@ async fn serve_also(
             .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone())),
     );
     let mut entries = vec![IssuerEntry {
-        issuer: FEDERATION.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(FEDERATION),
         kind: Some(IssuerKind::Federation),
         audience: vec![AUDIENCE.to_owned()],
         jwks_file: common::jwks_file().display().to_string(),
@@ -184,15 +202,25 @@ async fn serve_also(
         ..AuthSection::default()
     });
     auth.shared.enabled = true;
+    svc.grants()
+        .set_ceiling(crate::agreement_parties::ceiling());
+    svc.grants()
+        .set_federation(ferroehr::config::federation::trust(
+            &auth.shared,
+            Retention::Years(10),
+        ));
+    crate::agreement_parties::commit_all(&svc, &agreements, clients).await;
     let mut config = AppConfig {
         auth,
-        agreements,
         ..common::api_config(true)
     };
-    config.auth.smart.patient_issuers = vec![FEDERATION.to_owned()];
-    let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
-        .await
-        .expect("build app");
+    config.auth.smart.patient_issuers =
+        vec![ferrohealth_secret::secret_url::SecretUrl::new(FEDERATION)];
+    config.public_root = Some(
+        ferroehr::config::server::PublicRoot::new("https://ehr.example", "")
+            .expect("a public root"),
+    );
+    let app = common::build_full(config, Arc::clone(&svc), None, observability).await;
     (db, svc, app)
 }
 
@@ -349,10 +377,7 @@ async fn an_external_caller_is_admitted_only_under_its_accessors_agreement() {
 
 #[tokio::test]
 async fn a_consent_conditioned_read_without_a_decision_reference_is_refused() {
-    let conditioned = Agreement {
-        consent: Some(ConsentSource::Local),
-        ..agreement(Accessor::Person)
-    };
+    let conditioned = agreement(Accessor::Person).text("consent", "local");
     let (_db, svc, app) = serve(vec![conditioned]).await;
     let target = ehr(&svc).await.to_string();
     assert_eq!(
@@ -374,10 +399,7 @@ async fn a_consent_conditioned_read_without_a_decision_reference_is_refused() {
 /// design, #5007).
 #[tokio::test]
 async fn a_consent_conditioned_read_without_a_decision_reference_is_recorded() {
-    let conditioned = Agreement {
-        consent: Some(ConsentSource::Local),
-        ..agreement(Accessor::Person)
-    };
+    let conditioned = agreement(Accessor::Person).text("consent", "local");
     let (db, svc, app) = serve(vec![conditioned]).await;
     let target = ehr(&svc).await.to_string();
     let refused = professional(Some(&target), &json!({}));
@@ -405,10 +427,7 @@ async fn a_consent_conditioned_read_without_a_decision_reference_is_recorded() {
 
 #[tokio::test]
 async fn a_consent_conditioned_read_carrying_its_decision_reference_is_served_and_recorded() {
-    let conditioned = Agreement {
-        consent: Some(ConsentSource::Local),
-        ..agreement(Accessor::Person)
-    };
+    let conditioned = agreement(Accessor::Person).text("consent", "local");
     let (db, svc, app) = serve(vec![conditioned]).await;
     let target = ehr(&svc).await.to_string();
     let reference = "https://consent.example/fhir/Consent/c-1";
@@ -449,10 +468,7 @@ async fn a_consent_conditioned_read_carrying_its_decision_reference_is_served_an
 
 #[tokio::test]
 async fn an_opted_out_ehr_reads_as_absent_to_every_external_caller() {
-    let overriding = Agreement {
-        opt_out_override: true,
-        ..agreement(Accessor::Person)
-    };
+    let overriding = agreement(Accessor::Person).overriding();
     let (_db, svc, app) = serve(vec![overriding, agreement(Accessor::Organisation)]).await;
     let target = ehr(&svc).await;
     svc.record_access_opt_out(target, None)
@@ -546,12 +562,10 @@ async fn every_external_record_carries_its_binding_agreement_and_provider() {
 const CORRELATION: &str = "5f0c6a1e-correlation-1";
 
 /// A `chained` organisation agreement whose requester keeps its log 30 years.
-fn chained() -> Agreement {
-    Agreement {
-        access_class: Some(AccessClass::Chained),
-        chained_log_retention: Some(ferroehr::config::retention::RetentionPeriod::Years(30)),
-        ..agreement(Accessor::Organisation)
-    }
+fn chained() -> Terms {
+    agreement(Accessor::Organisation)
+        .text("access_class", "chained")
+        .text("requester_log_retention", "P30Y")
 }
 
 /// The organisation's token in the launch context of `ehr`, its statement
@@ -629,14 +643,8 @@ async fn a_chained_organisation_request_is_served_only_with_an_attested_correlat
 
 /// `agreement(accessor)` admitting each caller two requests at once and one
 /// a second after.
-fn limited(accessor: Accessor) -> Agreement {
-    Agreement {
-        caller_rate: Some(CallerRate {
-            requests_per_second: std::num::NonZeroU32::MIN,
-            burst: std::num::NonZeroU32::MIN.saturating_add(1),
-        }),
-        ..agreement(accessor)
-    }
+fn limited(accessor: Accessor) -> Terms {
+    agreement(accessor).rate(1, 2)
 }
 
 /// Reads the EHR `ehr` as `credential` over a connection that presented
@@ -704,7 +712,7 @@ const CONTACT_POINT: &str = "https://ncpeh-a.example";
 /// eHDSI mapping, and the `[auth.dpop]` table its sender constraint needs.
 fn contact_point() -> (IssuerEntry, FederationSection, DpopSection) {
     let entry = IssuerEntry {
-        issuer: CONTACT_POINT.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(CONTACT_POINT),
         kind: Some(IssuerKind::Federation),
         audience: vec![AUDIENCE.to_owned()],
         jwks_file: common::jwks_file().display().to_string(),
@@ -712,7 +720,7 @@ fn contact_point() -> (IssuerEntry, FederationSection, DpopSection) {
         ..IssuerEntry::default()
     };
     let table = FederationSection {
-        issuer: CONTACT_POINT.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(CONTACT_POINT),
         contact_point: Some(true),
         mapping: Some(Mapping::Ehdsi),
         fields: BTreeMap::from([
@@ -728,10 +736,7 @@ fn contact_point() -> (IssuerEntry, FederationSection, DpopSection) {
         countries: vec!["BE".to_owned()],
         ..FederationSection::default()
     };
-    let dpop = DpopSection {
-        external_url: "https://ehr.example".to_owned(),
-        ..DpopSection::default()
-    };
+    let dpop = DpopSection::default();
     (entry, table, dpop)
 }
 
@@ -772,11 +777,10 @@ fn contact_point_token(certificate: &ClientCertificate) -> String {
 
 #[tokio::test]
 async fn a_contact_point_caller_above_its_caller_rate_is_refused_too() {
-    let professional_agreement = Agreement {
-        issuer: CONTACT_POINT.to_owned(),
-        reads: vec!["patient/*.rs".to_owned()],
-        ..limited(Accessor::Person)
-    };
+    let mut professional_agreement = limited(Accessor::Person)
+        .text("read_scope", "patient/*.rs")
+        .text("ehdsi_service", "patient_summary");
+    professional_agreement.issuer = CONTACT_POINT.to_owned();
     let (_db, svc, app) = Box::pin(serve_also(
         vec![professional_agreement],
         Some(contact_point()),
@@ -830,11 +834,9 @@ async fn an_external_caller_outside_its_agreement_is_recorded_with_its_code() {
 #[tokio::test]
 async fn an_external_persons_write_records_its_committer_and_names_its_provider() {
     let write = "patient/composition-*.c";
-    let writer = Agreement {
-        reads: vec![READ.to_owned(), write.to_owned()],
-        writes: vec!["International Patient Summary".to_owned()],
-        ..agreement(Accessor::Person)
-    };
+    let writer = agreement(Accessor::Person)
+        .also("read_scope", write)
+        .text("template", "International Patient Summary");
     let (_db, svc, app) = serve(vec![writer]).await;
     svc.template_adl14_upload(&common::ips_opt_xml())
         .await
@@ -891,13 +893,11 @@ async fn an_external_persons_write_records_its_committer_and_names_its_provider(
 }
 
 /// An NL agreement of `accessor` for care, conditioned on the local consent.
-fn nl(accessor: Accessor) -> Agreement {
-    Agreement {
-        jurisdiction: "NL".to_owned(),
-        consent: Some(ConsentSource::Local),
-        purpose: Some(Purpose::Care),
-        ..agreement(accessor)
-    }
+fn nl(accessor: Accessor) -> Terms {
+    agreement(accessor)
+        .text("jurisdiction", "NL")
+        .text("consent", "local")
+        .text("purpose", "care")
 }
 
 /// The consent decision reference an NL read carries beside `claims`.
@@ -1112,4 +1112,71 @@ async fn a_federation_token_that_fits_no_caller_is_refused_naming_why() {
             );
         }
     }
+}
+
+/// `/management/info` lists every agreement in force, read from the CDR on
+/// the request: an agreement committed after the server started is listed
+/// with no restart (#5440).
+#[tokio::test]
+async fn management_info_lists_the_agreements_read_from_the_cdr() {
+    use ferroehr::config::management::{AccessLevel, EndpointLevels, ManagementConfig};
+
+    let observability = Observability {
+        management: ManagementConfig {
+            enabled: true,
+            endpoints: EndpointLevels {
+                info: AccessLevel::Public,
+                ..EndpointLevels::default()
+            },
+            ..ManagementConfig::default()
+        },
+        build_info: ferroehr::telemetry::build_info::BuildInfo::for_config(
+            &ferroehr::config::FerroEhrConfig::default(),
+        ),
+        ..Observability::default()
+    };
+    let (_db, svc, app) = Box::pin(serve_observed(
+        vec![agreement(Accessor::Organisation)],
+        None,
+        observability,
+    ))
+    .await;
+    let info = || async {
+        let (status, body) = common::send_json(
+            &app,
+            common::req("GET", "/management/info")
+                .accept("application/json")
+                .build(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        body["binding"]["agreements"].clone()
+    };
+    let listed = info().await;
+    let rows = listed.as_array().expect("a list of agreements");
+    assert_eq!(rows.len(), 3, "one per client of the partner: {listed}");
+    assert!(
+        rows.iter().all(|row| row["issuer"] == FEDERATION
+            && row["accessor"] == "organisation"
+            && row["name"] == "Regional exchange"
+            && row["legal_ground"] == "GDPR Art. 6(1)(e), Art. 9(2)(h)"),
+        "{listed}"
+    );
+    crate::agreement_parties::commit(
+        &svc,
+        "https://federation.example",
+        &["another-portal"],
+        &[agreement(Accessor::Person)],
+    )
+    .await
+    .expect("a second partner's agreement commits");
+    let listed = info().await;
+    assert!(
+        listed
+            .as_array()
+            .expect("a list of agreements")
+            .iter()
+            .any(|row| row["client_id"] == "another-portal" && row["accessor"] == "person"),
+        "{listed}"
+    );
 }

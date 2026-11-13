@@ -93,7 +93,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache-save-if: false
       - name: Non-durable test tuning
@@ -103,9 +103,19 @@ jobs:
           sudo apt-get update && sudo apt-get install -y postgresql-client libxml2-utils
           PGPASSWORD=openehr psql -h localhost -U openehr -d postgres \
             -c "ALTER SYSTEM SET fsync = off" -c "ALTER SYSTEM SET synchronous_commit = off" -c "ALTER SYSTEM SET full_page_writes = off" -c "SELECT pg_reload_conf()"
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-nextest
+      - id: nl-role-codes
+        name: The pin the cache-only test inputs are kept under
+        run: echo "key=$(bash scripts/vendor/nl-role-codes.sh --cache-key)" >> "$GITHUB_OUTPUT"
+      # The package comes from the cache on a hit, so a registry outage costs
+      # nothing; the script checks every file against its pin either way and
+      # downloads, with retries, only what the cache lacks (#5398).
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .vendor-cache/nl-role-codes
+          key: ${{ steps.nl-role-codes.outputs.key }}
       - name: Fetch the cache-only test inputs
         # The UZI role code CodeSystem is cache only (CIBG copyright), so the
         # Wabvpz tests read it from .vendor-cache/, which this fetches by pin.

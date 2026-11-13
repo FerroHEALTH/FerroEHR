@@ -1,0 +1,260 @@
+﻿archetype (adl_version=1.4; uid=26d02eaf-a3a3-4e76-8ac1-26605c54c8b6)
+	openEHR-EHR-EVALUATION.pregnancy_precautions.v0
+
+concept
+	[at0000]	-- Pregnancy precautions
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			author = <
+				["name"] = <"Ciprian Gerstenberger, Vebjørn Arntzen, Marte Vassli Gullesen, John Tore Valand">
+				["organisation"] = <"Helse Nord IKT, Oslo University Hospital, Helse Vest IKT">
+				["email"] = <"ciprian-virgil.gerstenberger@hnikt.no, varntzen@ous-hf.no, marte.vassli.gullesen@hnikt.no, john.tore.valand@helse-vest-ikt.no">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Atomica Informatics">
+		["email"] = <"heather.leslie@atomicainformatics.com">
+		["date"] = <"2026-02-23">
+	>
+	details = <
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			purpose = <"For å registrere hvilken kategori av svangerskapsrelaterte forholdsregler som for øyeblikket gjelder for et individ.">
+			use = <"Brukes til å registrere hvilken kategori av svangerskapsrelaterte forholdsregler som for tiden gjelder for et individ, som grunnlag for helsehjelpen. Arketypen svarer på spørsmålet: «Hvilken kategori av svangerskapsrelaterte forholdsregler gjelder for dette individet nå?» Hva som gjelder bør vurderes ut fra individets fysiologi, uten antakelser basert på kjønnsidentitet eller kjønn registrert ved fødsel.
+
+\"Kategori av forholdsregler\" er et grunnlag for påfølgende beslutninger om helsehjelp, men representerer ikke i seg selv slike beslutninger. Uten en eksplisitt kategori registrert som strukturerte, kodede data, forblir svangerskapsrelaterte forholdsregler implisitte i klinikerens vurderinger og kan ikke deles på en pålitelig måte med andre klinikere eller benyttes i klinisk beslutningsstøtte.
+
+Når svangerskap er fysiologisk mulig og ingen kategori er registrert, bør \"Standard\" gjelde som standardverdi. En ukjent eller manglende kategori kan hindre at svangerskapsrelatert klinisk beslutningsstøtte blir brukt, noe som kan medføre en risiko for pasientsikkerheten. \"Standard\" gir et grunnleggende nivå av forholdsregler som kan trappes opp ved klinisk behov, eller endres til \"Ikke aktuelt\" dersom det er fastslått at svangerskap ikke er fysiologisk mulig.
+
+\"Standard\" og \"Økt\" synliggjør hvilke forholdsregler som gjelder når et uoppdaget svangerskap er mulig, særlig ved potensiell eksponering for teratogene legemidler, ioniserende stråling eller andre tiltak som er potensielt skadelige. \"Kjent svangerskap\" synliggjør klinisk relevante forhold under et svangerskap, også når disse ellers ikke er åpenbare eller kjent for det aktuelle behandlingsteamet. \"Ikke aktuelt\" synliggjør at svangerskapsrelaterte forholdsregler ikke er relevante for individet, og kan brukes for å unngå unødvendige svangerskapsrelaterte spørsmål eller påminnelser, særlig når gjentatte spørsmål kan være belastende eller traumatiske.
+
+\"Kategori av forholdsregler\" skal vurderes på nytt når kliniske forhold endrer seg og oppdateres ved behov. Den gjeldende kategorien vedvarer til den erstattes av en ny. En ny kategori kan registreres direkte av en kliniker eller foreslås av et klinisk system som følge av kliniske hendelser, som menarke, en beslutning om å aktivt planlegge svangerskap, embryooverføring, bekreftelse av svangerskap, fødsel, svangerskapstap, menopause eller hysterektomi. Når et svangerskap slutter, settes kategorien tilbake til \"Standard\", \"Økt\" eller \"Ikke aktuelt\" etter hva som er gjeldende. En kategori foreslått av et system skal bekreftes av en kliniker før den lagres.
+
+Enkelte kategorier, eller en endring av dem, kan avsløre sensitive opplysninger. \"Økt\" kan avsløre fertilitetsbehandling eller beslutninger om familieplanlegging, og en endring fra \"Kjent svangerskap\" kan avsløre svangerskapstap. I enkelte jurisdiksjoner kan utlevering av slike opplysninger få alvorlige rettslige konsekvenser for individet. Tilgang til og deling av disse opplysningene bør derfor være underlagt egnede mekanismer for personvern, samtykke og informasjonsforvaltning.
+
+Arketypen \"Forholdsregler ved svangerskap\" er ment å brukes sammen med OBSERVATION.pregnancy_assertion (Utsagn om graviditet). \"Kategori av forholdsregler\" støtter kliniske beslutninger samtidig som den tillater en klinisk akseptabel grad av usikkerhet om svangerskap. Når en klinisk beslutning krever at denne usikkerheten avklares, kan videre undersøkelser gi grunnlag for å fastslå \"Gravid\" eller \"Ikke gravid\" på et bestemt tidspunkt, registrert med OBSERVATION.pregnancy_assertion (Utsagn om graviditet). Til sammen skiller disse to modellene mellom ulike kliniske betydninger som ofte blandes sammen i ett enkelt begrep, \"Svangerskapsstatus\".">
+			keywords = <"svangerskap", "forholdsregel", "risiko", "antenatal", "graviditet">
+			misuse = <"Skal ikke brukes til å registrere en forholdsregel knyttet til en annen tilstand hos individet enn svangerskap, inkludert perioden etter svangerskap. Bruk EVALUATION.precaution (Forholdsregel) til dette formålet.
+
+Skal ikke brukes til å registrere et øyeblikksbilde om et individ er gravid eller ikke gravid, og som skal brukes til en spesifikk klinisk avgjørelse. Bruk arketypen OBSERVATION.pregnancy_assertion (Utsagn om graviditet) til dette formålet.
+
+Skal ikke brukes til å registrere mistanke om svangerskap eller graden av diagnostisk sikkerhet om svangerskap. Når det er klinisk relevant, kan mistanke om svangerskap registreres i en problemliste med EVALUATION.problem_diagnosis (Problem/diagnose) med en passende grad av diagnostisk sikkerhet, slik at opplysningen kan inngå i klinisk beslutningsstøtte inntil svangerskap er bekreftet eller utelukket.
+
+Skal ikke brukes til å registrere oppsummerende informasjon om ett enkelt svangerskap. Bruk arketypen EVALUATION.pregnancy_summary (Graviditetssammenfatning) til dette formålet.
+
+Skal ikke brukes til å registrere laktasjons- eller ammestatus. Bruk arketypen EVALUATION.breast_feeding_summary til dette formålet.
+
+Skal ikke brukes til å registrere den konkrete helsehjelpen, veiledningen eller de forholdsreglene et individ trenger under et svangerskap. Bruk spesifikke arketyper til disse formålene.">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record the category of pregnancy-related precautions currently applicable to an individual.">
+			use = <"Use to record the pregnancy precaution category currently applicable to an individual, to inform their care. It answers the question: 'What category of pregnancy-related precautions currently applies to this person?' Applicability should be assessed from the individual's physiology, without assumptions based on gender identity or sex assigned at birth.
+
+The 'Precaution category' informs, but does not itself represent, subsequent care decisions. Without an explicit category recorded as structured, coded data, pregnancy-related precautions remain implicit in the clinician's reasoning and are unavailable for reliable sharing with other clinicians or use by clinical decision support.
+
+Where pregnancy is physiologically possible and no category has been recorded, 'Routine' should apply by default. An unknown or absent category may prevent pregnancy-related clinical decision support from being applied, creating a potential clinical safety risk. 'Routine' provides a precautionary baseline that can be escalated as clinically necessary, or changed to 'Not applicable' where pregnancy is determined not to be physiologically possible.
+
+'Routine' and 'Elevated' make explicit the precautions that apply when an unrecognised pregnancy is possible, particularly in relation to potential exposure to teratogenic medications, ionising radiation or other potentially harmful interventions. 'Known pregnancy' makes a clinically relevant pregnancy explicit, including where this may not otherwise be apparent or known to the current care team. 'Not applicable' makes explicit that pregnancy-related precautions are not relevant to the individual and may be used to avoid unnecessary pregnancy-related questioning or prompts, particularly where repeated questioning may be distressing or traumatic.
+
+The 'Precaution category' should be reassessed as clinical circumstances change and updated where necessary. The current category persists until superseded by a new instance. A new category may be entered directly by a clinician or proposed by a clinical system in response to clinical events, such as menarche, a decision to actively plan pregnancy, embryo transfer, confirmation of pregnancy, birth, pregnancy loss, menopause or hysterectomy. When a pregnancy ends, the category returns to 'Routine', 'Elevated' or 'Not applicable' as appropriate. A system-proposed category should be confirmed by a clinician before being recorded.
+
+Some categories, or a change between them, may inadvertently reveal sensitive information. 'Elevated' may reveal fertility treatment or family planning decisions, and a change from 'Known pregnancy' may reveal pregnancy loss. In some jurisdictions, inappropriate disclosure of such information may have serious legal consequences for the individual. Access to and sharing of this information should therefore be subject to appropriate privacy, consent and governance controls.
+
+This 'Pregnancy precautions' archetype is intended to be used alongside OBSERVATION.pregnancy_assertion. The 'Precaution category' supports clinical decision-making while carrying a clinically acceptable level of uncertainty about pregnancy. Where a clinical decision requires that uncertainty to be resolved, further investigation can provide the basis for a point-in-time 'Pregnant' or 'Not pregnant' assertion, recorded using OBSERVATION.pregnancy_assertion. Together, these two models separate the distinct clinical meanings often conflated within a single 'Pregnancy status' concept.">
+			keywords = <"pregnancy", "precaution", "risk", "antenatal">
+			misuse = <"Not to be used to record precautions for any other health condition or state, including the post-pregnancy period. Use the EVALUATION.precaution archetype for this purpose.
+
+Not to be used to record a point-in-time assertion of whether an individual is pregnant or not pregnant, made to inform a specific clinical decision. Use the OBSERVATION.pregnancy_assertion archetype for this purpose.
+
+Not to be used to record a suspected pregnancy or the level of diagnostic certainty about pregnancy. Where clinically relevant, a suspected pregnancy may be recorded in the Problem List using EVALUATION.problem_diagnosis with an appropriate level of diagnostic certainty, allowing it to inform clinical decision support until pregnancy is confirmed or excluded.
+
+Not to be used to record summary information about a single pregnancy. Use the EVALUATION.pregnancy_summary archetype for this purpose.
+
+Not to be used to record lactation or breastfeeding status. Use the EVALUATION.breast_feeding_summary archetype for this purpose.
+
+Not to be used to record the specific care, education or precautions required by an individual during a pregnancy. Use specific archetypes for these purposes.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"in_development">
+	other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway", "Sparked AU, CSIRO, Australia (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "kim Drever, Kudos Paediatrics, Australia", "William Goossen, Results 4 Care, Netherlands", "Evelyn Hovenga, EJSH Consulting, Australia", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Patrick Fergal McSharry, MSMS(I) and SESLHD, Australia", "Martin Milde, Helse Vest IKT, Norway", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Ana Pascual Segura, Catsalut, Spain", "Anton Pichugin, GKU IAC at Department of Information Technologies of the city of Moscow (DIT Moscow), Russia", "Daniel Rodrigues, VirtualCare, Portugal", "Averil Tam, CSIRO, Australia", "Nyree Taylor, CSIRO, Australia (openEHR Editor)">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"6AE27B76F6A0FFDB45EAB2514354C4E4">
+		["build_uid"] = <"80c535af-cd24-4eff-8708-4a3b22e0c53d">
+		["revision"] = <"0.0.1-alpha">
+	>
+
+definition
+	EVALUATION[at0000] matches {    -- Pregnancy precautions
+		data matches {
+			ITEM_TREE[at0001] matches {    -- Item tree
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0002] matches {    -- Precaution category
+						value matches {
+							DV_TEXT matches {*}
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0004,    -- Routine
+									at0005,    -- Elevated
+									at0006,    -- Known pregnancy
+									at0016]    -- Not applicable
+								}
+							}
+						}
+					}
+					ELEMENT[at0010] occurrences matches {0..1} matches {    -- Review date
+						value matches {
+							DV_DATE_TIME matches {*}
+						}
+					}
+					ELEMENT[at0012] occurrences matches {0..1} matches {    -- Comment
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0013] matches {    -- Item tree
+				items cardinality matches {0..*; unordered} matches {
+					ELEMENT[at0015] occurrences matches {0..1} matches {    -- Last updated
+						value matches {
+							DV_DATE_TIME matches {*}
+						}
+					}
+					allow_archetype CLUSTER[at0014] occurrences matches {0..*} matches {    -- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Pregnancy precautions">
+					description = <"The category of pregnancy-related precautions currently applicable to an individual, to inform their care.">
+				>
+				["at0001"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Precaution category">
+					description = <"The category of pregnancy-related precautions that currently applies to the individual.">
+					comment = <"The category may be recorded by a clinician or proposed by a clinical system when a relevant clinical event is documented. ‘Elevated’ may apply, for example, when an individual is sexually active without contraception, planning pregnancy, following embryo transfer, or has a suspected pregnancy pending confirmation. ‘Not applicable’ may apply to individuals who are premenarchal or postmenopausal, or to those unable to carry a pregnancy following surgery, such as hysterectomy.">
+				>
+				["at0004"] = <
+					text = <"Routine">
+					description = <"Applies when pregnancy is physiologically possible and an unrecognised pregnancy cannot be excluded without further investigation. This is the default where no category has been recorded.">
+				>
+				["at0005"] = <
+					text = <"Elevated">
+					description = <"Applies when the likelihood of an unrecognised pregnancy is increased.">
+				>
+				["at0006"] = <
+					text = <"Known pregnancy">
+					description = <"Applies when pregnancy has been established by clinical assessment or investigation.">
+				>
+				["at0010"] = <
+					text = <"Review date">
+					description = <"The date when the category should be reassessed.">
+					comment = <"Review of the current 'Precaution category' may confirm that the category remains applicable or result in a change to a different category. For example: a scheduled review of an 'Elevated' category following embryo transfer.">
+				>
+				["at0012"] = <
+					text = <"Comment">
+					description = <"Additional narrative about the pregnancy precautions not captured in other fields.">
+				>
+				["at0013"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0014"] = <
+					text = <"Extension">
+					description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+					comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+				>
+				["at0015"] = <
+					text = <"Last updated">
+					description = <"The date when these pregnancy precautions were last updated.">
+				>
+				["at0016"] = <
+					text = <"Not applicable">
+					description = <"Applies when pregnancy is physiologically not possible.">
+				>
+			>
+		>
+		["nb"] = <
+			items = <
+				["at0000"] = <
+					text = <"Forholdsregler ved svangerskap">
+					description = <"Kategorien av svangerskapsrelaterte forholdsregler som for tiden gjelder for et individ, som grunnlag for helsehjelpen.">
+				>
+				["at0001"] = <
+					text = <"Elementtre">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Kategori av forholdsregler">
+					description = <"Kategorien av svangerskapsrelaterte forholdsregler som for tiden gjelder for individet.">
+					comment = <"Kategorien kan registreres av en kliniker eller foreslås av et klinisk system når en relevant klinisk hendelse dokumenteres. \"Økt\" kan for eksempel gjelde når et individ er seksuelt aktiv uten prevensjon, planlegger svangerskap, har gjennomgått embryooverføring eller har et antatt svangerskap som ennå ikke er bekreftet. \"Ikke aktuelt\" kan gjelde for individer før menarke eller etter menopause, eller for individer som ikke kan gjennomføre et svangerskap etter kirurgi, som hysterektomi.">
+				>
+				["at0004"] = <
+					text = <"Standard">
+					description = <"Gjelder når svangerskap er fysiologisk mulig og et uoppdaget svangerskap ikke kan utelukkes uten videre undersøkelser. Dette er standardkategorien når ingen kategori er registrert.">
+				>
+				["at0005"] = <
+					text = <"Økt">
+					description = <"Gjelder når sannsynligheten for et uoppdaget svangerskap er økt.">
+				>
+				["at0006"] = <
+					text = <"Kjent svangerskap">
+					description = <"Gjelder når svangerskap er fastslått ved klinisk vurdering eller undersøkelse.">
+				>
+				["at0010"] = <
+					text = <"Dato for ny vurdering">
+					description = <"Datoen da kategorien skal vurderes på nytt.">
+					comment = <"En ny vurdering av gjeldende \"Kategori av forholdsregler\" kan bekrefte at kategorien fortsatt gjelder, eller føre til at den endres til en annen kategori. For eksempel: en planlagt ny vurdering av kategorien \"Skjerpede\" etter embryooverføring.">
+				>
+				["at0012"] = <
+					text = <"Kommentar">
+					description = <"Ytterligere fritekst om forholdsreglene ved svangerskap som ikke er dekket av andre felt.">
+				>
+				["at0013"] = <
+					text = <"Elementtre">
+					description = <"@ internal @">
+				>
+				["at0014"] = <
+					text = <"Tilleggsinformasjon">
+					description = <"Ytterligere informasjon som er nødvendig for å utvide modellen med lokalt innhold eller tilpasse den til andre referansemodeller eller formalismer.">
+					comment = <"For eksempel: lokale informasjonskrav eller ytterligere metadata for å tilpasse modellen til FHIR.">
+				>
+				["at0015"] = <
+					text = <"Sist oppdatert">
+					description = <"Datoen da disse forholdsreglene ved svangerskap sist ble oppdatert.">
+				>
+				["at0016"] = <
+					text = <"Ikke aktuelt">
+					description = <"Gjelder når svangerskap ikke er fysiologisk mulig.">
+				>
+			>
+		>
+	>

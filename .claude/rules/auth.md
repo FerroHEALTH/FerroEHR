@@ -48,8 +48,8 @@ governs maintenance and extension, not initial build.
   their `kind` and profile, `[[auth.party]]`, `[[auth.federation]]`,
   `[auth.dpop]`, the Basic user store, the product scope), FerroEHR's
   `[auth.idp]` beside it (`config::auth_section`), FerroEHR's `[authz]`
-  (`party_binding`, `system_client`, `federation.agreement`, `import`,
-  `rbac.role_issuers`) and `[smart]`. Every person is bound to a party with
+  (`party_binding`, `federation.agreement`, `import`, `grants`,
+  `rbac.role_issuers`); system clients are policy parties in the CDR and `[smart]`. Every person is bound to a party with
   no switch; a Basic user is a person, mapped by its key. Config changes are
   user-visible → same-PR website-book + changelog entries.
 - **Layer order is load-bearing:** authn → `access` (RBAC/ABAC) → SMART

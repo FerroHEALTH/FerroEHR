@@ -34,7 +34,7 @@ The checks, in the order the plan job runs them:
 | No fragment is left under `changelog.d/`: the cut assembled every one (`scripts/release/changelog.sh --assemble X.Y.Z YYYY-MM-DD`). At a pre-release tag (`vX.Y.Z-rcN`) the fragments stay for the stable cut, and the section must carry each of them. CI runs this check (`plan.sh fragments vX.Y.Z`) in the merge queue on every change that moves the workspace version, so a fragment merged ahead of the release PR fails the PR before the tag, and again on the push to `main`, so a release commit merged past the queue turns `main` red before the tag | `plan.sh`, `scripts/release/changelog.sh --check`, `--covered` |
 | The technical documentation and the CRA risk assessment follow their paths since the previous release | `scripts/checks/technical-documentation.sh`, `scripts/checks/cra-risk-assessment.sh` |
 | The changelog section becomes the notes, with the support period and the CRA user-information link | `plan.sh notes`, `scripts/checks/release-notes.sh` |
-| The chart's `appVersion`, its unpublished version, the party statement, `CITATION.cff`, `.zenodo.json`, the compose image tags and the documented keys | the scripts `plan.sh` names |
+| The chart's `appVersion`, its unpublished version, the party statement, `CITATION.cff`, `.zenodo.json`, the compose image tags, the default demographic definitions' release assets and the documented keys | the scripts `plan.sh` names |
 
 The previous release is resolved the way the plan job resolves it: from
 `git ls-remote --tags origin 'v*'`, by version order. A tag that was pushed but
@@ -67,6 +67,12 @@ job writes the tag's version in place of `:main` in the copy it attaches
 image still names `:main` or another version. The plan job runs the same
 rewrite on a scratch copy, so a tag whose quickstart cannot be pinned is
 refused before anything is published.
+
+The default demographic definitions under `deploy/definitions/` ride every
+release as well, one asset per `.adls` file with a `.sha256sum` beside it
+(`scripts/release/definition-assets.sh`). The `github-release` job stages
+them, the plan job stages them on a scratch directory first, and
+`finalize-release` refuses to publish a draft that lacks one of them.
 
 ## Recovering the chart leg
 

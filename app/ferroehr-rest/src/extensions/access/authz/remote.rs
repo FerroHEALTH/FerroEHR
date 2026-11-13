@@ -5,8 +5,9 @@
 
 use ferroehr::config::authz::AbacConfig;
 use ferrohealth_authz::engine::AuthzError;
-use ferrohealth_authz::remote::{Binding, RemotePdp, RemoteSettings};
-use ferrohealth_config::units::Duration;
+use ferrohealth_authz::remote::{Binding, RemotePdp};
+use ferrohealth_smart::client::outbound::OutboundClient;
+use ferrohealth_smart::config::ServerTls;
 
 use crate::extensions::access::authz::request;
 
@@ -14,17 +15,19 @@ use crate::extensions::access::authz::request;
 /// describe.
 ///
 /// Each resource kind is bound to its policy, and the point is called over
-/// the endpoint's HTTP client and `retry`, with the client credentials token
-/// of `[authz.abac.remote.endpoint.credentials.oauth]` when one is set.
+/// `ferrohealth-smart`'s outbound client of `[authz.abac.remote.endpoint]`:
+/// its HTTP client, its `retry`, and its Basic credential or client
+/// credentials token.
 ///
 /// # Errors
 /// [`AuthzError::Load`] when the server is unset or no URL, a policy names an
 /// unknown resource kind, or the grant does not resolve; [`AuthzError::Remote`]
 /// when the settings are refused.
 pub fn remote_pdp(config: &AbacConfig) -> Result<RemotePdp, AuthzError> {
-    let endpoint = ferroehr::outbound::Endpoint::connect(
-        "authz.abac.remote.endpoint",
+    let outbound = OutboundClient::build(
         &config.remote.endpoint,
+        "authz.abac.remote.endpoint",
+        &ServerTls,
     )
     .map_err(|e| AuthzError::Load(Box::new(e)))?;
     let mut bindings = std::collections::BTreeMap::new();
@@ -44,19 +47,5 @@ pub fn remote_pdp(config: &AbacConfig) -> Result<RemotePdp, AuthzError> {
             },
         );
     }
-    RemotePdp::with_client(
-        RemoteSettings {
-            server: endpoint.url().clone(),
-            bindings,
-            connect_timeout: config
-                .remote
-                .endpoint
-                .connect_timeout
-                .map_or(endpoint.timeout(), Duration::get),
-            request_timeout: endpoint.timeout(),
-        },
-        endpoint.http(),
-        endpoint.retry(),
-        endpoint.token(),
-    )
+    RemotePdp::from_outbound(bindings, &outbound)
 }

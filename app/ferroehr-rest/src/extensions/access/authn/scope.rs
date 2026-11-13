@@ -8,6 +8,7 @@
 //! governs access logging or the committer of a request: our own design.
 
 use axum::response::Response;
+use ferroehr::party_binding::grants::capabilities::Capabilities;
 
 use super::{Authenticator, Principal, party, record};
 
@@ -19,8 +20,9 @@ impl Authenticator {
     where
         F: Future<Output = Response>,
     {
-        let committer = party::committer_identity(&principal, &self.declared.system_clients);
-        let binding = record::of_request(&principal, &committer);
+        let granted = Capabilities::default();
+        let committer = party::committer_identity(&principal, &granted);
+        let binding = record::of_request(&principal, &committer, &granted, Some(self));
         let mut resp = ferroehr::system_log::access_context::with_roles(
             principal.roles.clone(),
             record::recorded(

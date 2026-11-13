@@ -1,0 +1,336 @@
+﻿archetype (adl_version=1.4; uid=b333937c-a492-4078-973d-0d29227cb4e9)
+	openEHR-EHR-CLUSTER.palpation_of_cervix.v0
+
+concept
+	[at0000]	-- Palpation of Cervix
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"heather.leslie@oceaninformatics.com">
+		["date"] = <"2011-04-02">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record clinical examination findings on palpation of the cervix.">
+			use = <"Use to record examination findings on palpation of the cervix, including findings during pregnancy and labour.
+
+This archetype has been designed to be nested inside the OBSERVATION.exam archetype (and its specialisations) or other relevant CLUSTER archetypes. For example, this archetype may be used as one component of a complete record of a bimanual pelvic examination - either nested within, or placed alongside, CLUSTER.palpation_of_uterus, as required by the specific clinical scenario being modelled.">
+			keywords = <"examination", "physical", "cervix", "uterine">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Rita Apelt, Department of Health,NT, Australia", "Stephen Chu, NEHTA, Australia", "Tim Garden, NTG Department of Health, Australia", "Tanya Gardner, CAAC, Australia", "Sam Heard, Ocean Informatics, Australia (Editor)", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Chunlan Ma, Ocean Informatics, Australia", "Ian McNicoll, Ocean Informatics UK, United Kingdom", "Jeremy Oats, NT Health, Australia", "Jo Wright, NT Dept of Health, Australia (Editor)">
+	other_details = <
+		["custodian_organisation"] = <"openEHR Foundation">
+		["references"] = <"Derived from: Palpation of Cervix, Draft Archetype [Internet]. Digital Health Agency, Australian Digital Health Agency Clinical Knowledge Manager. No longer available.
+openEHR Clinical Knowledge Manager [Internet]. London: openEHR Foundation. [Draft CLUSTER archetype] Examination of the cervix; [authored 2007 Apr 02, cited 2011 Aug 17]. Available from: http://www.openehr.org/knowledge/OKM.html#showArchetype_1013.1.217_4.">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"C5912B7BC4F93960608BF9272E2CCDC6">
+		["build_uid"] = <"0c1aedb7-1b73-475b-96a9-752de94541d7">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	CLUSTER[at0000] matches {	-- Palpation of Cervix
+		items cardinality matches {1..*; unordered} matches {
+			ELEMENT[at0001] occurrences matches {0..1} matches {	-- Clinical Description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0002] occurrences matches {0..1} matches {	-- Relative Position
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0006, 	-- Anterior
+							at0003, 	-- Intermediate
+							at0007, 	-- Posterior
+							at0004, 	-- Right
+							at0005]	-- Left
+						}
+					}
+				}
+			}
+			ELEMENT[at0008] occurrences matches {0..1} matches {	-- Consistency
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0010, 	-- Firm
+							at0041, 	-- Intermediate
+							at0009]	-- Soft
+						}
+					}
+				}
+			}
+			ELEMENT[at0011] occurrences matches {0..1} matches {	-- Surface
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0012, 	-- Regular/smooth
+							at0013]	-- Irregular
+						}
+					}
+				}
+			}
+			ELEMENT[at0042] occurrences matches {0..1} matches {	-- Mobility
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0043] occurrences matches {0..1} matches {	-- Tenderness
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0027] occurrences matches {0..1} matches {	-- Thickness
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0028, 	-- Thick
+							at0029, 	-- Thin
+							at0030, 	-- Paper-thin
+							at0031]	-- Oedematous
+						}
+					}
+				}
+			}
+			ELEMENT[at0014] occurrences matches {0..1} matches {	-- Effacement
+				value matches {
+					DV_PROPORTION matches {
+						numerator matches {|0.0..100.0|}
+						is_integral matches {False}
+						type matches {2}
+					}
+				}
+			}
+			ELEMENT[at0045] occurrences matches {0..1} matches {	-- Cervical Length
+				value matches {
+					C_DV_QUANTITY <
+						property = <[openehr::122]>
+						list = <
+							["1"] = <
+								units = <"cm">
+								magnitude = <|0.0..<10.0|>
+								precision = <|0|>
+							>
+						>
+					>
+				}
+			}
+			ELEMENT[at0032] occurrences matches {0..1} matches {	-- Application to Presenting Part
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0033, 	-- Loosely applied
+							at0034]	-- Tightly applied
+						}
+					}
+				}
+			}
+			ELEMENT[at0044] occurrences matches {0..1} matches {	-- Anterior Lip?
+				value matches {
+					DV_BOOLEAN matches {
+						value matches {True, False}
+					}
+				}
+			}
+			CLUSTER[at0035] occurrences matches {0..2} matches {	-- Cervical Os
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0036] occurrences matches {0..1} matches {	-- Site
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0037, 	-- External Os
+									at0038]	-- Internal Os
+								}
+							}
+						}
+					}
+					ELEMENT[at0039] occurrences matches {0..1} matches {	-- Dilation
+						value matches {
+							C_DV_QUANTITY <
+								property = <[openehr::122]>
+								list = <
+									["1"] = <
+										units = <"cm">
+										magnitude = <|0.0..10.0|>
+										precision = <|0|>
+									>
+								>
+							>
+						}
+					}
+					ELEMENT[at0040] occurrences matches {0..1} matches {	-- Description
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Palpation of Cervix">
+					description = <"Examination of the uterine cervix by palpation.">
+				>
+				["at0001"] = <
+					text = <"Clinical Description">
+					description = <"Narrative description of findings on examination of the cervix.">
+					comment = <"May include identification of any abnormalities or presence of trauma post-partum.">
+				>
+				["at0002"] = <
+					text = <"Relative Position">
+					description = <"Actual cervical position in relation to the expected, central anatomical position.">
+				>
+				["at0003"] = <
+					text = <"Intermediate">
+					description = <"The cervix is located centrally, in the typical anatomical position.">
+				>
+				["at0004"] = <
+					text = <"Right">
+					description = <"The cervix is located in the right side of the pelvis.">
+				>
+				["at0005"] = <
+					text = <"Left">
+					description = <"The cervix is located on the left side of the pelvis.">
+				>
+				["at0006"] = <
+					text = <"Anterior">
+					description = <"The cervix is located anteriorly, towards the pubis.">
+				>
+				["at0007"] = <
+					text = <"Posterior">
+					description = <"The cervix is located posteriorly, towards the sacrum.">
+				>
+				["at0008"] = <
+					text = <"Consistency">
+					description = <"Consistency of the cervix.">
+					comment = <"Values for Bishop score.">
+				>
+				["at0009"] = <
+					text = <"Soft">
+					description = <"Cervix feels soft.">
+				>
+				["at0010"] = <
+					text = <"Firm">
+					description = <"Cervix feels firm.">
+				>
+				["at0011"] = <
+					text = <"Surface">
+					description = <"Surface of the cervix.">
+				>
+				["at0012"] = <
+					text = <"Regular/smooth">
+					description = <"Cervix feels smooth and regular.">
+				>
+				["at0013"] = <
+					text = <"Irregular">
+					description = <"Cervix feels irregular.">
+				>
+				["at0014"] = <
+					text = <"Effacement">
+					description = <"Estimation of the proportion of cervical effacement, in late pregnancy or during labour.">
+					comment = <"Most commonly assessed in late pregnancy or during labour.">
+				>
+				["at0027"] = <
+					text = <"Thickness">
+					description = <"Thickness of the cervix.">
+					comment = <"Most commonly assessed in late pregnancy or during labour.">
+				>
+				["at0028"] = <
+					text = <"Thick">
+					description = <"Cervix is thick.">
+				>
+				["at0029"] = <
+					text = <"Thin">
+					description = <"Cervix is thin.">
+				>
+				["at0030"] = <
+					text = <"Paper-thin">
+					description = <"Cervix is very thin.">
+				>
+				["at0031"] = <
+					text = <"Oedematous">
+					description = <"Cervix is thickened and swollen.">
+				>
+				["at0032"] = <
+					text = <"Application to Presenting Part">
+					description = <"Application of the cervix to the presenting part of the fetus.">
+					comment = <"Most commonly assessed in late pregnancy or during labour.">
+				>
+				["at0033"] = <
+					text = <"Loosely applied">
+					description = <"Cervix is not moulded to the fetal presenting part.">
+				>
+				["at0034"] = <
+					text = <"Tightly applied">
+					description = <"Cervis is moulded to the fetal presenting part.">
+				>
+				["at0035"] = <
+					text = <"Cervical Os">
+					description = <"Findings on palpation of the specified part of the cervical os.">
+					comment = <"Most commonly assessed in late pregnancy or during labour.">
+				>
+				["at0036"] = <
+					text = <"Site">
+					description = <"Identification of the part of cervix which is being palpated.">
+				>
+				["at0037"] = <
+					text = <"External Os">
+					description = <"External opening of the cervix to the vagina.">
+				>
+				["at0038"] = <
+					text = <"Internal Os">
+					description = <"Internal opening of the cervix to the uterus.">
+				>
+				["at0039"] = <
+					text = <"Dilation">
+					description = <"Diameter of cervical os.">
+				>
+				["at0040"] = <
+					text = <"Description">
+					description = <"Narrative description of findings on palpation of cervical os.">
+				>
+				["at0041"] = <
+					text = <"Intermediate">
+					description = <"Cervix feels neither firm nor soft, but in between.">
+				>
+				["at0042"] = <
+					text = <"Mobility">
+					description = <"Narrative description of the mobility of the cervix.">
+				>
+				["at0043"] = <
+					text = <"Tenderness">
+					description = <"Narrative description of the tenderness of the cervix, especially on movement.">
+				>
+				["at0044"] = <
+					text = <"Anterior Lip?">
+					description = <"Is an anterior lip of the cervix present?">
+					comment = <"True, if an anterior lip is identified as present.">
+				>
+				["at0045"] = <
+					text = <"Cervical Length">
+					description = <"Estimation of the length of the cervix.">
+				>
+			>
+		>
+	>

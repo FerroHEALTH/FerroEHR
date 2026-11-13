@@ -26,6 +26,8 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::error::ServiceError;
+use crate::party_binding::grants::admission::Admission;
+use crate::party_binding::grants::live::GrantsUnavailable;
 use crate::party_binding::lookup::{self, KeyRow};
 use crate::service::FerroEhrService;
 use crate::service::demographic::jit::ProvisionalPerson;
@@ -46,6 +48,21 @@ pub trait BindingSource: PartySource {
         _party: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<Option<String>, SourceError>> + Send + 'a>> {
         Box::pin(async { Ok(None) })
+    }
+
+    /// The admission rules in force for the first logins of the token issuer
+    /// `issuer`: the `create_at_login` grants naming it
+    /// ([`crate::party_binding::grants::live::LiveGrants::admissions`]). A
+    /// source that creates no `PERSON` holds none.
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when the grants must be read and the party store
+    /// cannot answer.
+    fn admissions<'a>(
+        &'a self,
+        _issuer: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<Admission>, GrantsUnavailable>> + Send + 'a>> {
+        Box::pin(async { Ok(Vec::new()) })
     }
 
     /// Creates the provisional `PERSON` `person` a first login with no party
@@ -286,6 +303,20 @@ impl BindingSource for LocalPartySource {
                 return Ok(None);
             };
             self.name(id).await.map_err(SourceError::new)
+        })
+    }
+
+    fn admissions<'a>(
+        &'a self,
+        issuer: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<Admission>, GrantsUnavailable>> + Send + 'a>> {
+        Box::pin(async move {
+            let Some(service) = &self.creator else {
+                return Ok(Vec::new());
+            };
+            let grants = service.grants();
+            grants.refresh_if_stale().await?;
+            Ok(grants.admissions(issuer, jiff::Timestamp::now()))
         })
     }
 

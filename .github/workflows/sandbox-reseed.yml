@@ -2,14 +2,14 @@
 # SPDX-License-Identifier: BUSL-1.1
 #
 # The sandbox reset (#2710; Hetzner posture #2974; dedicated database box
-# #3015): wipe the sandbox database's schemas, restart the CDR container so a
-# fresh boot re-runs the migrations, register the demo patients with FerroPIX
-# on the box (#4242), then seed demo data through the PUBLIC API
-# (scripts/sandbox/reseed.sh). Visitors can create, change and delete
-# anything; every night the demo returns to a known state.
+# #3015): wipe the sandbox database's schemas, bring the CDR back up through
+# the box's deploy so a fresh boot re-runs the migrations, register the demo
+# patients with FerroPIX on the box (#4242), then seed demo data through the
+# PUBLIC API (scripts/sandbox/reseed.sh). Visitors can create, change and
+# delete anything; every night the demo returns to a known state.
 #
-# Both the wipe and the restart run through the SAME restricted deploy key
-# (SSH_ORIGINAL_COMMAND verbs `wipe` and `restart`;
+# Both the wipe and the bring-up run through the SAME restricted deploy key
+# (SSH_ORIGINAL_COMMAND verbs `wipe` and `deploy`;
 # deploy/hosted/cloud-init.yaml): the database is a dedicated box on the
 # Hetzner private network with no public port, so no runner can open a SQL
 # connection to it, and CI holds no database credential at all. The verb
@@ -17,9 +17,11 @@
 # to the database the sandbox actually runs on — the structural replacement
 # for the old runner-side psql and its Neon-endpoint fence.
 #
-# The restart replaces the Vercel-era "promote a fresh deployment" dance
-# (#2941/#2948): the server runs its migrations only at boot, and on one box
-# a fresh boot is one `docker compose restart ferroehr` away.
+# The bring-up is the box's `deploy` verb, the same one the release's
+# `sandbox` job runs after its own wipe (#5406). The wipe empties the
+# definition store, and the CDR stores its default demographic and policy
+# definitions again as it boots. The deploy reinstalls the image the box's
+# .env names and must serve the release the box served before the wipe.
 #
 # The release pipeline calls this seed-only (#3467): its `sandbox` job wipes
 # BEFORE the deploy, so the deploy's recreate is the fresh boot. The v4.3.1
@@ -32,10 +34,11 @@
 # (#4333 moved the terminology route the seed probes, and the 5.5.0 sandbox
 # answered the probe 404). The identities job reads `solution_version` from
 # the ITS-REST system OPTIONS and both jobs check out `v<version>`, so the
-# seed always addresses the deployed version. The env contract between this
+# seed always addresses the deployed version. The version is read first, before
+# any wipe, and the bring-up must serve it again. The env contract between this
 # file and reseed.sh (SANDBOX_IDENTITIES) must stay readable by the scripts
 # of the release the box runs.
-# The verbs this file calls on the box's deploy.sh (`wipe`, `restart`,
+# The verbs this file calls on the box's deploy.sh (`wipe`, `deploy`,
 # `identities`) are asked for first (.github/actions/deploy-verbs): deploy.sh
 # does not update itself, so the box can hold an older release's copy.
 #
@@ -50,16 +53,26 @@ name: Sandbox reseed
 on:
   schedule:
     - cron: "0 0 * * *" # nightly, around midnight UTC
-  workflow_dispatch: {}
+  # A manual run takes the same input, so a release candidate the box serves
+  # can be reseeded by hand without a wipe (#5406).
+  workflow_dispatch:
+    inputs:
+      seed-only:
+        description: >-
+          Skip the wipe and the bring-up and only seed the release the box
+          serves.
+        required: false
+        type: boolean
+        default: false
   # The release pipeline calls this after the hosted deploy (#2724), seed-only
   # since #3467: the release's own `sandbox` job wipes before it deploys, so
   # the deploy is the fresh boot. The nightly run stays as the janitor and
-  # keeps its wipe and restart.
+  # keeps its wipe and bring-up.
   workflow_call:
     inputs:
       seed-only:
         description: >-
-          Skip the wipe and the restart and only seed. The release pipeline
+          Skip the wipe and the bring-up and only seed. The release pipeline
           passes this: its `sandbox` job wipes before it deploys, and the
           deploy's recreate is the fresh boot that migrates (#3467).
         required: false
@@ -73,9 +86,45 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ITS-REST 1.1.0 System API, OPTIONS on the base URL
+  # (specifications/schemas/others/Options.yaml): the one route no FerroEHR
+  # release moves. Read before the wipe, so the bring-up can require the same
+  # release back. A version with no tag in this repository is a hard failure:
+  # nothing else says which scripts the box can serve.
+  served:
+    name: read the release the sandbox serves
+    if: github.repository == 'FerroHEALTH/FerroEHR'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {}
+    outputs:
+      version: ${{ steps.deployed.outputs.version }}
+      ref: ${{ steps.deployed.outputs.ref }}
+    steps:
+      - name: Read the release the sandbox serves
+        id: deployed
+        run: |
+          set -euo pipefail
+          options="$(curl -sS --fail -m 30 --retry 10 --retry-all-errors --retry-delay 15 \
+            -X OPTIONS https://sandbox.ferroehr.eu/ferroehr/rest/openehr/v1)"
+          version="$(jq -r '.solution_version // empty' <<< "$options")"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::the sandbox's OPTIONS answered solution_version '${version}', which names no FerroEHR release; the seed cannot pick the scripts the box serves." >&2
+            exit 1
+          fi
+          ref="v$version"
+          if ! git ls-remote --exit-code --tags "https://github.com/$GITHUB_REPOSITORY" "refs/tags/$ref" > /dev/null; then
+            echo "::error::the sandbox serves FerroEHR $version, and this repository has no tag $ref to seed it from." >&2
+            exit 1
+          fi
+          echo "the sandbox serves FerroEHR $version; seeding with the scripts of $ref"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
   wipe:
     name: wipe the sandbox schemas (on the box)
-    if: github.repository == 'FerroHEALTH/FerroEHR' && !inputs.seed-only
+    needs: served
+    if: ${{ !inputs.seed-only }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: hosted
@@ -109,9 +158,9 @@ jobs:
           ssh-key: ${{ secrets.HOSTED_SSH_KEY }}
           known-hosts: ${{ secrets.HOSTED_KNOWN_HOSTS }}
 
-  restart:
-    name: restart the CDR (fresh boot re-runs the migrations)
-    needs: wipe
+  bring-up:
+    name: bring the CDR up through the deploy (fresh boot re-runs the migrations)
+    needs: [served, wipe]
     if: ${{ !inputs.seed-only }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -123,22 +172,27 @@ jobs:
         with:
           persist-credentials: false
 
-      # The wipe already happened, so a restart that cannot run leaves the
-      # sandbox serving an honest readiness DOWN — fail loudly, by name.
+      # The wipe already happened, so a bring-up that cannot run leaves the
+      # sandbox serving an honest readiness DOWN: fail loudly, by name.
       - name: The deploy key exists
         env:
           KEY: ${{ secrets.HOSTED_SSH_KEY }}
         run: |
           set -euo pipefail
           if [ -z "$KEY" ]; then
-            echo "::error::HOSTED_SSH_KEY is empty in the hosted environment — the reset needs it to restart the CDR after the wipe." >&2
+            echo "::error::HOSTED_SSH_KEY is empty in the hosted environment; the reset needs it to bring the CDR up after the wipe." >&2
             exit 1
           fi
 
-      - name: Restart the CDR
+      # The deploy verb, as the release's `sandbox` job runs it after its own
+      # wipe (#5406): the CDR boots fresh on the emptied store, and the action
+      # requires the release the box served before the wipe.
+      - name: Bring the CDR up through the deploy
         uses: ./.github/actions/hosted-deploy # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
-          verb: restart
+          verb: deploy
+          expected-version: ${{ needs.served.outputs.version }}
+          same-release: "true"
           ssh-key: ${{ secrets.HOSTED_SSH_KEY }}
           known-hosts: ${{ secrets.HOSTED_KNOWN_HOSTS }}
 
@@ -151,7 +205,7 @@ jobs:
           deadline=$(( $(date +%s) + 600 ))
           until code=$(curl -sS -m 30 -o /dev/null -w '%{http_code}' https://sandbox.ferroehr.eu/health/readiness); [ "$code" = "200" ]; do
             if [ "$(date +%s)" -ge "$deadline" ]; then
-              echo "::error::the sandbox did not become ready within 10 minutes of the wipe + restart — the wipe already succeeded, so the suspect is the boot-time migration run; read the container log on the box." >&2
+              echo "::error::the sandbox did not become ready within 10 minutes of the wipe and the deploy; the wipe already succeeded, so the suspect is the boot-time migration run; read the container log on the box." >&2
               exit 1
             fi
             echo "readiness answered ${code:-nothing}; waiting"
@@ -165,14 +219,15 @@ jobs:
   # stdin and answers each pseudonym, which the seed below writes into
   # EHR_STATUS. FerroPIX keeps its identities across the CDR's wipe, so every
   # night answers the same pseudonyms and the CDR's EHRs and FerroPIX agree.
-  # Under the in-instance map the verb answers `provider local` and the seed
-  # names the subjects themselves. Plain ssh, not the deploy action: the verb
-  # reads stdin and its answer is the job's output. The pseudonyms are
-  # synthetic and every visitor reads them on EHR_STATUS, so they are no secret.
+  # The answer is held to the served release's privacy.subject_namespaces
+  # before the seed sends anything, on every path (#5409). Plain ssh, not the
+  # deploy action: the verb reads stdin and its answer is the job's output.
+  # The pseudonyms are synthetic and every visitor reads them on EHR_STATUS,
+  # so they are no secret.
   identities:
     name: register the demo patients with FerroPIX (on the box)
-    needs: restart
-    if: ${{ !cancelled() && github.repository == 'FerroHEALTH/FerroEHR' && (inputs.seed-only || needs.restart.result == 'success') }}
+    needs: [served, bring-up]
+    if: ${{ !cancelled() && needs.served.result == 'success' && (inputs.seed-only || needs.bring-up.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: hosted
@@ -180,31 +235,7 @@ jobs:
       contents: read
     outputs:
       identities: ${{ steps.register.outputs.identities }}
-      ref: ${{ steps.deployed.outputs.ref }}
     steps:
-      # ITS-REST 1.1.0 System API, OPTIONS on the base URL
-      # (specifications/schemas/others/Options.yaml): the one route no
-      # FerroEHR release moves. A version with no tag in this repository is
-      # a hard failure: nothing else says which scripts the box can serve.
-      - name: Read the release the sandbox serves
-        id: deployed
-        run: |
-          set -euo pipefail
-          options="$(curl -sS --fail -m 30 --retry 10 --retry-all-errors --retry-delay 15 \
-            -X OPTIONS https://sandbox.ferroehr.eu/ferroehr/rest/openehr/v1)"
-          version="$(jq -r '.solution_version // empty' <<< "$options")"
-          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
-            echo "::error::the sandbox's OPTIONS answered solution_version '${version}', which names no FerroEHR release; the seed cannot pick the scripts the box serves." >&2
-            exit 1
-          fi
-          ref="v$version"
-          if ! git ls-remote --exit-code --tags "https://github.com/$GITHUB_REPOSITORY" "refs/tags/$ref" > /dev/null; then
-            echo "::error::the sandbox serves FerroEHR $version, and this repository has no tag $ref to seed it from." >&2
-            exit 1
-          fi
-          echo "the sandbox serves FerroEHR $version; seeding with the scripts of $ref"
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
-
       # The verb contract is read with this workflow's own revision, which
       # carries the action; the tag checkout below then replaces the tree.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -219,7 +250,7 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ steps.deployed.outputs.ref }}
+          ref: ${{ needs.served.outputs.ref }}
           persist-credentials: false
 
       - name: Register the demo patients and read their pseudonyms
@@ -246,20 +277,32 @@ jobs:
                 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$dir/known_hosts" \
                 "deploy@$HOST" identities > "$dir/identities"
           provider="$(sed -n 's/^provider //p' "$dir/identities")"
-          case "$provider" in
-            local | ihe) ;;
-            *)
-              echo "::error::the box's identities verb answered no provider line; read the deploy script's output on the box." >&2
-              exit 1
-              ;;
-          esac
-          echo "the box resolves subjects through: $provider ($(grep -c '^subject ' "$dir/identities" || true) pseudonyms)"
+          if [ "$provider" != ihe ]; then
+            echo "::error::the box's identities verb answered provider '${provider}'; the sandbox runs FerroPIX, so the box holds a deploy.sh older than #5409, which decided from a configuration key the 5.7.0 CDR no longer has. Install /opt/ferroehr-sandbox/deploy.sh from deploy/hosted/cloud-init.yaml on the box." >&2
+            exit 1
+          fi
+          # Every subject the seed sends must name a pseudonym namespace the
+          # served release's sandbox configuration declares, with a UUID id:
+          # the CDR refuses any other EHR_STATUS subject (privacy.subject_namespaces).
+          namespace="$(sed -n 's/^pseudonym_namespace //p' "$dir/identities")"
+          declared="$(yq -p toml -o json '.privacy.subject_namespaces // []' deploy/hosted/ferroehr.sandbox.toml)"
+          if ! jq -e --arg ns "$namespace" 'any(.[]; . == $ns)' <<< "$declared" > /dev/null; then
+            echo "::error::the box answered the pseudonym namespace '${namespace}', which the served release's privacy.subject_namespaces does not declare: $(jq -c . <<< "$declared")." >&2
+            exit 1
+          fi
+          wanted="$(jq -r '.ehrs[].subject, .marker.subject' scripts/sandbox/seed/manifest.json | sort -u)"
+          answered="$(grep -E '^subject [A-Za-z0-9._-]+ [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' "$dir/identities" | cut -d' ' -f2 | sort -u || true)"
+          if [ "$wanted" != "$answered" ]; then
+            echo "::error::the box answered no UUID pseudonym for: $(comm -23 <(printf '%s\n' "$wanted") <(printf '%s\n' "$answered") | paste -sd' ' -)" >&2
+            exit 1
+          fi
+          echo "the box resolves subjects through FerroPIX: $(grep -c '^subject ' "$dir/identities") pseudonyms in $namespace"
           echo "identities=$(base64 -w0 < "$dir/identities")" >> "$GITHUB_OUTPUT"
 
   seed:
     name: seed the demo data
-    needs: [restart, identities]
-    # Seed-only skips the wipe and the restart; a skipped `needs` would
+    needs: [served, identities]
+    # Seed-only skips the wipe and the bring-up; a skipped ancestor would
     # otherwise skip this one too.
     if: ${{ !cancelled() && needs.identities.result == 'success' }}
     runs-on: ubuntu-latest
@@ -269,7 +312,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.identities.outputs.ref }}
+          ref: ${{ needs.served.outputs.ref }}
           persist-credentials: false
       - name: Seed the demo data
         env:

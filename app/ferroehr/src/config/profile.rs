@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 /// generated crates' own [`openehr_rm::Generation`]-family values, so the
 /// profile can never name a generation the crates do not emit.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum SpecProfile {
     /// The latest RELEASED generations: RM 1.1.0 + BASE 1.2.0.
@@ -105,11 +106,14 @@ impl std::str::FromStr for SpecProfile {
 
 /// The `[deployment]` table: what this deployment is.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct DeploymentConfig {
     /// `profile` — the declared posture (`sandbox` | `production`; default
     /// `sandbox`). `production` refuses to start while a separation it
     /// asserts is missing and not accepted by name (#3226).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = true)))]
     pub profile: crate::config::deployment::DeploymentProfile,
     /// `accepts` — the [`DeploymentGap`](crate::config::deployment::DeploymentGap)s a `production` deployment runs
     /// without, each stated on every boot and on `/management/status`.

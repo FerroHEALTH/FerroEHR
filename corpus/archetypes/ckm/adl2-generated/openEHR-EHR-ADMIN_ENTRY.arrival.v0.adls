@@ -1,0 +1,85 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=bed2270b-d334-4636-a297-49ed55df3b71; build_uid=a68f4412-3a15-407a-9c95-0f48cc6ab838)
+    openEHR-EHR-ADMIN_ENTRY.arrival.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Gail Simms">
+        ["organisation"] = <"Ministry of Health and Wellness, Jamaica">
+        ["email"] = <"kphhealthrecords@gmail.com">
+        ["date"] = <"2019-08-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"MOHW team Jamaica", ...>
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"9556B9AE41DB64676874A0C2386FE56A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Arrival
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Arrival mode
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Entry mode
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Referral source
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Arrival">
+                description = <"Details about the arrival of an individual at a health care facility.">
+            >
+            ["at0002"] = <
+                text = <"Arrival mode">
+                description = <"Method of transport  the individual used to arrive at facility.">
+                comment = <"For example: ambulance; helicopter; walked or private car.
+Coding with an external terminology is preferred, where possible.">
+            >
+            ["at0003"] = <
+                text = <"Entry mode">
+                description = <"Method used by the individual to enter the facility on arrival.">
+                comment = <"For example: ambulatory; wheel chair; stretcher; or carried/lifted. 
+Coding with an external terminology is preferred, where possible.">
+            >
+            ["at0004"] = <
+                text = <"Referral source">
+                description = <"The source of referral for the individual.">
+                comment = <"For example: self; police; medical practitioner; or school.
+Coding with an external terminology is preferred, where possible.">
+            >
+        >
+    >

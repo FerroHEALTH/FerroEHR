@@ -174,7 +174,7 @@ the authority and the wording below is a paraphrase.
 |---|---|---|---|---|
 | (a) the healthcare provider or other individuals having accessed | `organisation` | — (no such attribute) | an `agent` whose `who` is a logical reference to an `Organization` | Recorded |
 | (b) the specific natural person or persons having accessed | `principal` (+ `token_id`, `client_ip`), and `professional_id` + `acting_mode` for a caller its issuer classifies as a person or a delegate | `ActiveParticipant/@UserID` (the professional; a client application acting for one is a second, non-requesting participant; the token subject is `@AlternativeUserID` when it differs) | the `agent:user` slice, `who` the token's issuer and subject, the professional's identifier as its `ihe-otherId`, and the client application as an agent of its own (BALP 1.1.4 §3:5.7.5.4) | Recorded |
-| (c) the categories of data accessed | `categories` + `category_basis` + `category_evidence` + `category_map_digest`, classified by `ehds-logging` through the `[audit.categories]` map (beside `resource_class`, `domain` and `result_count`) | none (no such element) | the `entity` named `ehds-categories`, with one `ehds-category` detail per category and its basis, each id the classification read and the map digest; each category is also a `meta.security` label | Recorded |
+| (c) the categories of data accessed | `categories` + `category_basis` + `category_evidence` + `category_map_digest`, classified by `ehds-logging` through the audit category register (beside `resource_class`, `domain` and `result_count`) | none (no such element) | the `entity` named `ehds-categories`, with one `ehds-category` detail per category and its basis, each id the classification read and the map digest; each category is also a `meta.security` label | Recorded |
 | (d) the time and date of access | `recorded_at` | `EventIdentification/@EventDateTime` | `recorded` | Recorded |
 | (e) the origin or origins of data | `origins` + `origin_count` (the `FEEDER_AUDIT` originating systems of the served version bodies, or the server that created them, derived at commit onto `version.origins`) | — (no such element) | one `entity` named `origin` per origin, its `system-id` detail the originating system | Recorded |
 
@@ -226,7 +226,8 @@ dispensations, medical imaging, medical test results and discharge reports,
 plus any category a Member State adds in national law. AQL selects archetypes
 and templates, never categories, and no openEHR specification maps the one
 onto the other, so the deployment declares the mapping in
-[`[audit.categories]`](installation/config-audit.md#auditcategories): a
+[the audit category register](installation/config-audit.md#the-audit-category-register), an
+[admin register](operational-policy.md#the-admin-registers): a
 template id, or failing that the root archetype id, maps to a set of categories
 (a priority category by its code in HL7 Europe's
 `EEHRxFDocumentPriorityCategoryCS`, such as `Patient-Summaries` or
@@ -234,7 +235,7 @@ template id, or failing that the root archetype id, maps to a set of categories
 `none` for content that holds no data of any category. While you declare no
 template and no archetype, the map FerroEHR ships applies: the published CKM
 templates and COMPOSITION archetypes whose data sit in one priority category
-([the shipped map](installation/config-audit.md#auditcategories)). Your own
+([the shipped map](installation/config-audit.md#the-audit-category-register)). Your own
 map replaces it, and `ehds-logging` classifies each access through the map in
 force.
 
@@ -357,7 +358,7 @@ beside it hold what each outcome needs:
 | `provisional` | a person bound to an `incomplete` `PERSON` | `party`, `party_groups`, `provider` |
 | `external` | a verified external person of a `federation` issuer | `external_fields`, `agreement`, `provider` |
 | `organisation` | an organisation under an agreement with `accessor = "organisation"` | `external_fields`, `agreement` (with its legal ground and access class, and for a `chained` request `correlation_id` and `correlation_source`), `provider` |
-| `system` | a client acting for nobody | `provider` of its `[[authz.system_client]]`, `facilities` of the compositions it committed |
+| `system` | a client acting for nobody | `party`, the client's `ACTOR` in the policy parties; `provider`, the identifier of the `ORGANISATION` its acts-for relationship targets; `facilities` of the compositions it committed |
 | `self` | a patient token of a `patients` issuer | the principal |
 | `refused-*` | a refusal of the binding or of a caller kind: `unbound`, `ambiguous`, `inactive`, `abandoned`, `deprovisioned`, `wrong-marker`, `representation-unrecorded`, `key-claim-missing`, `groups-unavailable`, `guest`, `external-incomplete`, `trc-patient-mismatch`, `trc-missing`; and of a caller kind, `system-personal-scope` (a system caller holding a `user/` or `patient/` scope), `no-agreement` (no federation agreement admits the accessor) and `scope-beyond-agreement` (an external caller holding a scope its agreement does not read) and `correlation-missing` (a `chained` organisation request without an attested correlation id) | `party` for a party refused for its state or marker, `binding_detail` for what else the refusal names (`represented`, the subject a representative asserted; `claim`, the name of the key claim a token lacked, never its value) |
 
@@ -574,8 +575,10 @@ Two routes, and they answer different questions.
 
 There is no patient-facing route in the product: a portal that shows a person
 who accessed their record builds on ITI-81 and authenticates the person itself.
-What the product gives that portal is a grant of its own size:
-`authz.rbac.subject_audit_role` reads the log for one subject at a time, with
+What the product gives that portal is a grant of its own size: a
+`read_subject_audit` grant in the CDR
+([Operational policy](operational-policy.md#what-the-grants-decide)) reads
+the log for one subject at a time, with
 the `patient` parameter required, so the portal never holds an admin credential
 over every patient's log ([GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj)
 Art. 15 with Recital 63, under which the controller "should be able to provide
@@ -600,7 +603,7 @@ Emission never blocks the request path: a record is handed to a bounded queue
 
 ### While a composition is held from the person
 
-With [`[privacy.access_delay]`](security.md#delayed-access-by-the-person-ehds-art-33)
+With [the access-delay register](security.md#delayed-access-by-the-person-ehds-art-33)
 on, a new composition can be held from the person under
 [EHDS](https://eur-lex.europa.eu/eli/reg/2025/327/oj) Art. 3(3) until a
 professional releases it or its period passes. Only one route honours the
@@ -663,7 +666,7 @@ release joins the digest in the same release.
 The store keeps a record's facts in columns and renders its FHIR `AuditEvent`
 from them when the record is read (ITI-81) or delivered (the FHIR feed). What
 the rendering takes from the configuration (`source_id`, `enterprise_site_id`,
-`server_host`, `value_if_missing`, the store horizon, `[audit.categories]` and
+`server_host`, `value_if_missing`, the store horizon, the audit category register and
 `emergency_purpose_codes`) is kept once per distinct configuration in
 `audit.audit_render_policy`, keyed by the SHA-256 of its text, and every record
 names the policy it was written under. A record therefore renders the same
@@ -792,8 +795,8 @@ A malformed value is a `400` carrying a FHIR `OperationOutcome` with
 not ask for, is a `400` with `not-supported`; a parameter the crate does not
 know is ignored
 (§3.81.4.1.3). Under RBAC the
-unscoped retrieval is **admin-only**; a caller holding the configured
-`authz.rbac.subject_audit_role` reads it **scoped to one subject**: one
+unscoped retrieval is **admin-only**; a caller holding a
+`read_subject_audit` grant reads it **scoped to one subject**: one
 `patient` or `patient.identifier` with one value is required, and the caller
 is refused with a `403` that names the parameter when it omits
 it. Reading a subject's log is itself recorded as an access naming that

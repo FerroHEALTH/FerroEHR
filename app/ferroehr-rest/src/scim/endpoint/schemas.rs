@@ -49,6 +49,7 @@ pub(crate) const EXTENSION_URN: &str =
 /// schema it sits in, or the base URL is not absolute.
 pub(crate) fn discovery(
     scim: &ScimConfig,
+    base_url: String,
     binding: &PartyBindingConfig,
 ) -> Result<Discovery, DiscoveryError> {
     let mut core = Vec::new();
@@ -58,7 +59,7 @@ pub(crate) fn discovery(
     let ours = EXTENSION_URN;
     let intrinsic = ["userName", "active"].into_iter().map(str::to_owned);
     let mapped = binding
-        .person
+        .person()
         .attribute
         .iter()
         .filter_map(|attribute| attribute.scim.clone());
@@ -99,7 +100,7 @@ pub(crate) fn discovery(
         });
     }
     Discovery::build(DiscoveryConfig {
-        base_url: scim.base_url().unwrap_or_default(),
+        base_url,
         documentation_uri: None,
         patch: true,
         etag: true,
@@ -262,7 +263,7 @@ mod tests {
 
     fn mapped(paths: &[&str]) -> PartyBindingConfig {
         let mut binding = PartyBindingConfig::default();
-        binding.person.attribute = paths
+        binding.person.get_or_insert_default().attribute = paths
             .iter()
             .map(|scim| PersonAttribute {
                 scim: Some((*scim).to_owned()),
@@ -273,10 +274,12 @@ mod tests {
     }
 
     fn enabled() -> ScimConfig {
-        ScimConfig {
-            public_base_url: Some("https://cdr.example.com".to_owned()),
-            ..ScimConfig::default()
-        }
+        ScimConfig::default()
+    }
+
+    /// The base URL of a server whose public URL is `https://cdr.example.com`.
+    fn base() -> String {
+        "https://cdr.example.com/scim/v2".to_owned()
     }
 
     #[test]
@@ -288,7 +291,7 @@ mod tests {
             "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier",
             "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:bigNumber",
         ]);
-        let discovery = discovery(&enabled(), &binding).expect("the documents build");
+        let discovery = discovery(&enabled(), base(), &binding).expect("the documents build");
         let user = discovery.schema(urn::CORE_USER).expect("the User schema");
         let names: Vec<&str> = user.attributes.iter().map(|a| a.name.as_str()).collect();
         assert_eq!(names, ["userName", "name", "active", "emails"]);
@@ -311,7 +314,7 @@ mod tests {
     #[test]
     fn a_value_filtered_attribute_keeps_its_type_and_ignores_primary() {
         let binding = mapped(&["emails[type eq \"work\"].value"]);
-        let discovery = discovery(&enabled(), &binding).expect("the documents build");
+        let discovery = discovery(&enabled(), base(), &binding).expect("the documents build");
         let user = discovery.schema(urn::CORE_USER).expect("the User schema");
         let emails = user.attribute("emails").expect("emails");
         let subs: Vec<(&str, Mutability)> = emails
@@ -342,7 +345,7 @@ mod tests {
     fn an_enterprise_attribute_brings_its_extension() {
         let binding =
             mapped(&["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:employeeNumber"]);
-        let discovery = discovery(&enabled(), &binding).expect("the documents build");
+        let discovery = discovery(&enabled(), base(), &binding).expect("the documents build");
         let enterprise = discovery
             .schema(urn::ENTERPRISE_USER)
             .expect("the Enterprise User extension");
@@ -352,6 +355,6 @@ mod tests {
     #[test]
     fn an_unknown_core_attribute_is_refused() {
         let binding = mapped(&["favouriteColour"]);
-        assert!(discovery(&enabled(), &binding).is_err());
+        assert!(discovery(&enabled(), base(), &binding).is_err());
     }
 }

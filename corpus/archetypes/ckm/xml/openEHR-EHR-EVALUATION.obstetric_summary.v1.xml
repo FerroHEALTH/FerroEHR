@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -199,12 +199,10 @@ Utilizar, se adequado, como a base de relatórios legais sobre nascimentos.&#xD;
 &#xD;
 Usar para registrar a visão geral de uma história obstétrica, se necessário - o número de nascimentos a termo, nascimento prematuro, abortos e nascidos vivos. Algumas variações adicionam o número de gestações e o número de nascimentos múltiplos.&#xD;
 &#xD;
-Alguns dados podem ser calculados ou derivados de registros de gravidez individuais, se disponíveis.&#xD;
-</use>
+Alguns dados podem ser calculados ou derivados de registros de gravidez individuais, se disponíveis.</use>
       <misuse>Não utilizar para registrar informações de resumo sobre uma única gravidez – neste caso utilize EVALUATION.pregnancy_summary.&#xD;
 &#xD;
-Não utilizar para registrar informações detalhadas sobre episódios individuais de gravidez, abortos ou partos. Estas informação deverão ser registradas através de arquétipos específicos, baseados nos dados do evento.&#xD;
-</misuse>
+Não utilizar para registrar informações detalhadas sobre episódios individuais de gravidez, abortos ou partos. Estas informação deverão ser registradas através de arquétipos específicos, baseados nos dados do evento.</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
     <details>
@@ -1530,7 +1528,7 @@ No es para registrar la información detallada sobre cada uno de los individuale
       <items code="at0015">
         <items id="text">Term births</items>
         <items id="description">Number of births at or after term.</items>
-        <items id="comment">The definition of a term birth is a viable birth at or after 37 weeks and 0 days of gestation. </items>
+        <items id="comment">The definition of a term birth is a viable birth at or after 37 weeks and 0 days of gestation.</items>
       </items>
       <items code="at0016">
         <items id="text">Preterm births</items>
@@ -1574,15 +1572,13 @@ Depending on local definitions, missed abortions may be captured in this data el
       <items code="at0028">
         <items id="text">Neonatal deaths</items>
         <items id="description">The number of neonatal deaths.</items>
-        <items id="comment">The neonatal period begins at birth and ends at 28 completed days of life </items>
+        <items id="comment">The neonatal period begins at birth and ends at 28 completed days of life</items>
       </items>
     </term_definitions>
     <term_definitions language="pt-br">
       <items code="at0000">
         <items id="text">*Obstetric summary(en)</items>
-        <items id="description">Uma visão geral da história obstétrica de uma mulher, incluindo um resumo de todas as gestações seus resultados ou as intervenções associadas.&#xD;
-&#xD;
-</items>
+        <items id="description">Uma visão geral da história obstétrica de uma mulher, incluindo um resumo de todas as gestações seus resultados ou as intervenções associadas.</items>
       </items>
       <items code="at0001">
         <items id="text">Tree</items>
@@ -1637,7 +1633,7 @@ Depending on local definitions, missed abortions may be captured in this data el
         <items id="description">O número de semanas de gestação que diferencia entre um aborto espontâneo e um nascimento viável, usado na coleta de dados.</items>
         <items id="comment">Se o bebê nascer antes da definição da gestação ou menor que o peso definido, ele será gravado usando o elemento de dados 'Aborto'. Se o bebê nascer após a gestação definida ou maior que o peso definido, ele será gravado usando o elemento de dados 'Paridade'. Se o bebê nascer morto após a gestação definida ou maior que o peso definido, ele também poderá ser gravado usando o elemento de dados 'Natimorto'.&#xD;
 &#xD;
-Dependendo das definições locais, abortos perdidos podem ser capturados nesse elemento de dados. Talvez seja útil registrar ao comparar dados de diferentes regiões, pois as definições de aborto espontâneo podem variar. </items>
+Dependendo das definições locais, abortos perdidos podem ser capturados nesse elemento de dados. Talvez seja útil registrar ao comparar dados de diferentes regiões, pois as definições de aborto espontâneo podem variar.</items>
       </items>
       <items code="at0024">
         <items id="text">Extensão</items>
@@ -1879,9 +1875,7 @@ Avhengig av lokale definisjoner kan missed abortion inngå i dette dataelementet
     <term_definitions language="pt">
       <items code="at0000">
         <items id="text">Sumário obstétrico</items>
-        <items id="description">Uma visão geral da história obstétrica de uma mulher, incluindo um resumo de todas as gestações seus resultados ou as intervenções associadas.&#xD;
-&#xD;
-</items>
+        <items id="description">Uma visão geral da história obstétrica de uma mulher, incluindo um resumo de todas as gestações seus resultados ou as intervenções associadas.</items>
       </items>
       <items code="at0001">
         <items id="text">Tree</items>
@@ -1936,7 +1930,7 @@ Avhengig av lokale definisjoner kan missed abortion inngå i dette dataelementet
         <items id="description">O número de semanas de gestação que diferencia entre um aborto espontâneo e um nascimento viável, usado na coleta de dados.</items>
         <items id="comment">Se o bebê nascer antes da definição da gestação ou menor que o peso definido, ele será gravado usando o elemento de dados 'Aborto'. Se o bebê nascer após a gestação definida ou maior que o peso definido, ele será gravado usando o elemento de dados 'Paridade'. Se o bebê nascer morto após a gestação definida ou maior que o peso definido, ele também poderá ser gravado usando o elemento de dados 'Natimorto'.&#xD;
 &#xD;
-Dependendo das definições locais, abortos perdidos podem ser capturados nesse elemento de dados. Talvez seja útil registrar ao comparar dados de diferentes regiões, pois as definições de aborto espontâneo podem variar. </items>
+Dependendo das definições locais, abortos perdidos podem ser capturados nesse elemento de dados. Talvez seja útil registrar ao comparar dados de diferentes regiões, pois as definições de aborto espontâneo podem variar.</items>
       </items>
       <items code="at0024">
         <items id="text">Extensão</items>
@@ -1979,4 +1973,3 @@ Dependendo das definições locais, abortos perdidos podem ser capturados nesse 
     </term_definitions>
   </ontology>
 </archetype>
-

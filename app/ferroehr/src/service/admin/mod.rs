@@ -20,6 +20,9 @@
 //!   our own extension.
 //! - [`access_repair`] — the repair of an EHR held closed by `EHR_ACCESS`
 //!   settings that do not parse; our own extension.
+//! - [`policy_register`] — the operational-policy admin registers (the audit
+//!   category map, the access delay and the Cedar policy set); our own
+//!   extension.
 //! - [`opt_out`] — the EHDS Art. 10 opt-out from access through the access
 //!   services; our own extension.
 //! - `dump_load` — `export_ehrs` / `load_ehrs`.
@@ -49,6 +52,7 @@ pub mod access_repair;
 pub mod integrity;
 pub mod marks;
 pub mod opt_out;
+pub mod policy_register;
 pub mod types;
 
 use crate::error::ServiceError;

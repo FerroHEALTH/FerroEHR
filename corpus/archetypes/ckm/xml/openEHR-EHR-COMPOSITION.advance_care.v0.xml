@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -18,9 +18,31 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">25A207093B9E4A32A7F2A9463F5D434F</other_details>
-    <other_details id="build_uid">6fb8d70b-2a61-4dca-957b-665b5cffaba6</other_details>
+    <other_details id="MD5-CAM-1.0.1">8DF84A7856DED7EAB026E030722C508B</other_details>
+    <other_details id="build_uid">9547b630-7b02-4d29-b0c2-00aa40054052</other_details>
     <other_details id="revision">0.0.1-alpha</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zum Erfassen von Informationen über einen Plan zur Versorgung zukünftiger gesundheitlicher und sozialer Bedürfnisse, einschließlich chronischer Erkrankungen und der Versorgung am Lebensende.</purpose>
+      <keywords>vorausschauende Versorgungsplanung, Patientenverfügung, Intervention, Entscheidung</keywords>
+      <use>Als Container zur Erfassung von Informationen über einen Plan zur Versorgung zukünftiger gesundheitlicher und sozialer Bedürfnisse, einschließlich chronischer Erkrankungen und der Versorgung am Lebensende. Der Inhalt sollte die individuelle gesundheitliche Situation und die persönlichen Umstände der betroffenen Person widerspiegeln.&#xD;
+&#xD;
+Dieser Archetyp wurde speziell dafür entwickelt, einen oder mehrere der folgenden Inhalte aufzunehmen:&#xD;
+- den Archetyp EVALUATION.advance_care_directive, der die Präferenzen einer Person hinsichtlich ihrer zukünftigen Versorgung aus Sicht der Person selbst oder ihrer gesetzlichen Vertretung abbildet;&#xD;
+- den Archetyp EVALUATION.advance_intervention_decisions, der aus Sicht einer klinischen Fachperson Entscheidungen über die allgemeine Behandlungsabsicht sowie über mögliche Behandlungen, Maßnahmen und diagnostische oder therapeutische Verfahren abbildet, die lebensrettend oder lebensverlängernd sein oder unerwünschte Nebenwirkungen verursachen können;&#xD;
+- weitere Archetypen, die klinisch relevant sowie für die integrierte Versorgung oder die Versorgungsplanung am Lebensende von Bedeutung sind.&#xD;
+&#xD;
+Dieser Archetyp kann als einzelne COMPOSITION verwendet werden, um Informationen zu vorausschauenden Versorgungspräferenzen oder -entscheidungen abzufragen. Dabei wird die Herkunft der Informationen – von der betroffenen Person oder von einer klinischen Fachperson – durch unterschiedliche Archetypen klar unterschieden.</use>
+      <misuse>Nicht zu verwenden für die Erfassung von Archetypen, die sich auf Anordnungen oder die Behandlung einer akuten oder Notfallsituation beziehen.&#xD;
+&#xD;
+Nicht zu verwenden für die Erfassung von Archetypen, die Versorgungspläne zur Behandlung aktueller gesundheitlicher und sozialer Bedürfnisse abbilden. Verwenden Sie hierfür COMPOSITION.care_plan.</misuse>
+      <copyright />
+    </details>
     <details>
       <language>
         <terminology_id>
@@ -44,6 +66,18 @@ Not to be used to carry archetypes that are related to care plans related to man
       <copyright>© openEHR Foundation</copyright>
     </details>
   </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Olha Nikolaieva</author>
+    <author id="organisation">University Hospital Basel</author>
+    <author id="email">olha.nikolaieva@usb.ch</author>
+    <other_details id="other_contributors">Maren Diepenbruck, University Hospital Basel, Switzerland</other_details>
+  </translations>
   <uid>
     <value>1d9417b0-2abe-4cb6-b725-eeaa5b493f8b</value>
   </uid>
@@ -219,11 +253,11 @@ Not to be used to carry archetypes that are related to care plans related to man
       </items>
       <items code="at0001">
         <items id="text">Coded text</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0002">
         <items id="text">Event Context</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0003">
         <items id="text">Item tree</items>
@@ -235,6 +269,28 @@ Not to be used to carry archetypes that are related to care plans related to man
         <items id="comment">For example: local information requirements; or additional metadata to align with FHIR.</items>
       </items>
     </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Vorausschauende Versorgung</items>
+        <items id="description">Ein Plan zur Versorgung zukünftiger gesundheitlicher und sozialer Bedürfnisse, einschließlich chronischer Erkrankungen und der Versorgung am Lebensende.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Coded text</items>
+        <items id="description" />
+      </items>
+      <items code="at0002">
+        <items id="text">Ereigniskontext</items>
+        <items id="description" />
+      </items>
+      <items code="at0003">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Erweiterung</items>
+        <items id="description">Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.</items>
+        <items id="comment">Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.</items>
+      </items>
+    </term_definitions>
   </ontology>
 </archetype>
-

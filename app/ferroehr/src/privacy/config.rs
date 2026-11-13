@@ -24,6 +24,7 @@ use crate::privacy::detect::built_in_rules;
 /// What the identifier scanner does with a clinical write that carries a value
 /// one of its rules claims.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum ScanMode {
     /// Refuse the write, naming the RM path and the rule that matched. The
@@ -48,7 +49,9 @@ impl ScanMode {
 
 /// The identifier scanner (`[privacy.identifier_scan]`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct IdentifierScanConfig {
     /// `strict` (refuse) or `warn` (accept and record)
     /// (`FERROEHR__PRIVACY__IDENTIFIER_SCAN__MODE`).
@@ -95,7 +98,9 @@ impl Default for IdentifierScanConfig {
 
 /// The clinical-side data-minimisation policy (`[privacy]`).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct PrivacyConfig {
     /// The namespaces an `EHR_STATUS.subject.external_ref` may name
     /// (`FERROEHR__PRIVACY__SUBJECT_NAMESPACES`, comma-separated in the
@@ -108,6 +113,7 @@ pub struct PrivacyConfig {
     /// Declaring one is the same act as turning the rule on: from then on a
     /// subject reference must name a listed namespace and carry a UUID as its
     /// `id.value`.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = true)))]
     pub subject_namespaces: Vec<String>,
     /// Accept `PARTY_IDENTIFIED` / `PARTY_RELATED` carrying `name` or
     /// `identifiers` in clinical content
@@ -133,8 +139,6 @@ pub struct PrivacyConfig {
         Option<crate::identifier_protection::config::IdentifierProtectionConfig>,
     /// `[privacy.cohort]` — the cross-domain cohort-query allow-list and
     /// limits.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub cohort: crate::service::linkage::cohort::config::CohortConfig,
-    /// `[privacy.access_delay]` — the EHDS Art. 3(3) delay of the person's
-    /// own access; absent, off.
-    pub access_delay: Option<crate::config::access_delay::AccessDelayConfig>,
 }

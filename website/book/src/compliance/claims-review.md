@@ -444,10 +444,10 @@ cut, after the texts in scope have been read.
 | 2026-10-24 | 5.4.1, after `9fdd36091` | 2 claims, in two book pages: the compliance index named `[terminology.external]` and a terminology route, and the crates page pinned `0.0.97` | nothing |
 | 2026-10-25 | 5.4.2, after `2333f98ba` | none; the changes of this release updated their own pages in the pull requests that made them | nothing |
 | 2026-10-27 | 5.5.0, after `bed3543e3` | 1 claim, in the hazard log: H2 named a middleware test renamed by #4192 | the conformance chapter bars counted the CNF TDD cases until the Veredictum 0.3.3 record, which carries none, replaced them (#4204) |
-| 2026-11-04 | 5.6.0, after `25db5c69c` | 4 claims, in the README, the landing page and two book pages: each said FerroBRIDGE's broker delivery was in progress, which FerroBRIDGE 0.0.15 ships | the canonical-XML `reverse_relationships` left open by the 5.6.0-rc8 review shipped (#4778); a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
-| 2026-11-05 | 5.6.1, after `75262e1ce` | 1 claim, in the Kubernetes installation: it said the chart pins FerroPIX 0.0.15, which the 5.6.1 pins moved to 0.0.16 | a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
-| 2026-11-05 | 5.6.2, after `ea1190926` | none; the texts in scope make no claim this release changes | a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
-| 2026-11-05 | 5.6.3, after `6b2ff1644` | none; the texts in scope make no claim this release changes | a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
+| 2026-11-04 | 5.6.0, after `25db5c69c` | 4 claims, in the README, the landing page and two book pages: each said FerroBRIDGE's broker delivery was in progress, which FerroBRIDGE 0.0.15 ships | the canonical-XML `reverse_relationships` left open by the 5.6.0-rc8 review shipped (#4778); a v2-namespace OPT 1.4 ordinal list stays tracked on #5258 |
+| 2026-11-05 | 5.6.1, after `75262e1ce` | 1 claim, in the Kubernetes installation: it said the chart pins FerroPIX 0.0.15, which the 5.6.1 pins moved to 0.0.16 | a v2-namespace OPT 1.4 ordinal list stays tracked on #5258 |
+| 2026-11-05 | 5.6.2, after `ea1190926` | none; the texts in scope make no claim this release changes | a v2-namespace OPT 1.4 ordinal list stays tracked on #5258 |
+| 2026-11-05 | 5.6.3, after `6b2ff1644` | none; the texts in scope make no claim this release changes | a v2-namespace OPT 1.4 ordinal list stays tracked on #5258 |
 
 ## The review of 2026-10-20, for 5.2.0
 
@@ -1140,7 +1140,7 @@ in a stable-profile canonical-JSON party read (#4775); chart 21.0.0-rc8 with
 ### Left open on 2026-11-02, for 5.6.0-rc8
 
 - The development-profile run, shown beside the record and never counted
-  toward it, fails the row tracked on #4777; its badges show the run as it
+  toward it, fails the row tracked on #5258; its badges show the run as it
   stands, and no text claims it green. The two rows #4776 tracked pass: under
   the development profile an ADL 2 description without an author or a
   lifecycle state is refused.
@@ -1241,7 +1241,7 @@ read on every route as RFC 7240 §2 defines it (#4722); chart
 - Broker delivery waits on a FerroBRIDGE release (FerroHEALTH/FerroBRIDGE
   issue 1367), as the change-events page says.
 - Everything the 5.6.0-rc8 review left open: the development-profile run's
-  failed row tracked on #4777, the canonical-XML `reverse_relationships`
+  failed row tracked on #5258, the canonical-XML `reverse_relationships`
   (#4778), the 5.5.0 sandbox and the performance page's earlier figures.
 
 ## The review of 2026-11-04, for 5.6.0
@@ -1296,7 +1296,7 @@ conformance record of Veredictum 0.4.1 (#4971); chart 21.0.0 with `appVersion`
 ### Left open on 2026-11-04, for 5.6.0
 
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
-  accepted, tracked on #4777 for the next release.
+  accepted, tracked on #5258 for the next release.
 - The performance page keeps its earlier figures until a record measured on
   the reference host replaces them.
 
@@ -1338,7 +1338,7 @@ change no behaviour (#4987); chart 21.0.1 with `appVersion` 5.6.1.
 ### Left open on 2026-11-05, for 5.6.1
 
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
-  accepted, tracked on #4777 for 5.7.0.
+  accepted, tracked on #5258 for 5.7.0.
 - The performance page keeps its earlier figures until a record measured on
   the reference host replaces them.
 
@@ -1371,7 +1371,7 @@ in scope: CVE-2026-76844 in the zlib package of the three images, judged
 ### Left open on 2026-11-05, for 5.6.2
 
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
-  accepted, tracked on #4777 for 5.7.0.
+  accepted, tracked on #5258 for 5.7.0.
 - The performance page keeps its earlier figures until a record measured on
   the reference host replaces them.
 
@@ -1408,7 +1408,7 @@ with `appVersion` 5.6.3.
 ### Left open on 2026-11-05, for 5.6.3
 
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
-  accepted, tracked on #4777 for 5.7.0.
+  accepted, tracked on #5258 for 5.7.0.
 - The performance page keeps its earlier figures until a record measured on
   the reference host replaces them.
 
@@ -1447,7 +1447,7 @@ Read on the tree after commit `a6ce1927d`, for the FerroEHR release candidate
 ### Left open on 2026-11-10, for 5.7.0-rc1
 
 - The public sandbox runs 5.6.3 until the owner moves it to 5.7.0-rc1 for the reseed #5009 asks of the candidate. The release legs move it to 5.7.0 at the stable cut.
-- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #4777, now for 5.9.0.
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #5258, now for 5.9.0.
 - The performance page keeps its earlier figures until a record measured on the reference host replaces them.
 
 ## The review of 2026-11-10, for 5.7.0-rc2
@@ -1469,5 +1469,113 @@ added since, checked in every text in scope:
 ### Left open on 2026-11-10, for 5.7.0-rc2
 
 - The public sandbox runs 5.6.3 until the owner moves it to 5.7.0-rc2 for the reseed #5009 asks of the candidate. The release legs move it to 5.7.0 at the stable cut.
-- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #4777 for 5.9.0.
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #5258 for 5.9.0.
+- The performance page keeps its earlier figures until a record measured on the reference host replaces them.
+
+## The review of 2026-11-11, for 5.7.0-rc3
+
+Read on the tree after commit `1b79e7f5c`, for the FerroEHR release candidate
+5.7.0-rc3. The reviews of 2026-11-10 for 5.7.0-rc1 and 5.7.0-rc2 stand for
+everything those candidates carried. The facts added since, checked in every
+text in scope:
+
+- The configuration is redacted by its secret types alone, and every URL and issuer renders with its credentials masked (#5322). [Administration APIs](../operations-admin-apis.md) says so and names the URL keys.
+- The annotated default configuration is generated from the configuration types, and the reference page includes it (#5316).
+- The family crates move to their newest releases, and every outbound client is built from the family endpoint table (#5320, #5324, #5325). The quickstart, the hosted sandbox and the chart pin FerroPIX 0.0.26 and FerroTERM 0.4.5 (#5351).
+- The audit record takes the purpose of use and the professional role from an IHE IUA token (#5323) and records a contact point's request message id (#5011).
+- The [crates](../crates.md) page says the `openehr-*` crates follow Cargo SemVer, judged by `cargo-semver-checks`, and that their next publish moves the line to 0.1.0 (#5353).
+- The quickstart compose file attached to a release carries a checksum.
+- Chart 25.0.1-rc4 carries `appVersion` 5.7.0-rc3.
+
+### Read and kept on 2026-11-11, for 5.7.0-rc3
+
+- **The configuration pages:** [configuration](../installation/configuration.md) includes the generated reference, which `config-reference.sh` holds to the types, and `docs-claims` resolves every documented key.
+- **The installation pins:** the [Kubernetes installation](../installation/kubernetes.md), the chart README and [verifying releases](../verifying-releases.md) name chart 25.0.1-rc4 and image 5.7.0-rc3 in the book of main. The [Kubernetes installation](../installation/kubernetes.md) names FerroPIX 0.0.26.
+- **The landing page and the README** were aligned with the FerroPIX site in #5382 and make no claim this release changes beyond it.
+- **`SECURITY.md`, the crate READMEs, the [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the chart description** make no claim this release changes.
+
+### Left open on 2026-11-11, for 5.7.0-rc3
+
+- The public sandbox runs 5.6.3 until the owner moves it to 5.7.0-rc3 for the reseed #5009 asks of the candidate. The release legs move it to 5.7.0 at the stable cut.
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #5258 for 5.9.0.
+- The performance page keeps its earlier figures until a record measured on the reference host replaces them.
+
+## The review of 2026-11-11, for 5.7.0-rc4
+
+Read on the tree after commit `43bb17040`, for the FerroEHR release candidate
+5.7.0-rc4. The reviews for 5.7.0-rc1 to 5.7.0-rc3 stand for everything those
+candidates carried. The facts added since, checked in every text in scope:
+
+- The hosted sandbox's configuration declares its SCIM service provider under `[auth.scim]`, and CI reads every server and viewer configuration the repository ships through the program built from the change (#5396). The [hosted sandbox README](https://github.com/FerroHEALTH/FerroEHR/blob/main/deploy/hosted/README.md) and the [bootstrap and migration](../installation/party-binding-migration.md) page name `[[auth.scim.client]]`.
+- The viewer's OpenID Provider issuer and redirect URIs render with their credentials masked, through `ferrohealth-session` 0.13.0 (#5394).
+- Chart 25.0.1-rc5 carries `appVersion` 5.7.0-rc4.
+
+### Read and kept on 2026-11-11, for 5.7.0-rc4
+
+- **The installation pins:** the [Kubernetes installation](../installation/kubernetes.md), the chart README and [verifying releases](../verifying-releases.md) name chart 25.0.1-rc5 and image 5.7.0-rc4 in the book of main.
+- **The landing page, the README, `SECURITY.md`, the crate READMEs, the [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the chart description** make no claim this release changes.
+
+### Left open on 2026-11-11, for 5.7.0-rc4
+
+- The public sandbox runs 5.6.3 until the owner moves it to 5.7.0-rc4 for the reseed #5009 asks of the candidate. The release legs move it to 5.7.0 at the stable cut.
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #5258 for 5.9.0.
+- The performance page keeps its earlier figures until a record measured on the reference host replaces them.
+
+## The review of 2026-11-11, for 5.7.0
+
+Read on the tree after commit `52733869b`, for the FerroEHR release 5.7.0.
+The reviews for 5.7.0-rc1 to 5.7.0-rc4 stand for everything those candidates
+carried. The facts added since, checked in every text in scope:
+
+- A `PERSON` binds a login only while it performs a professional `ROLE` of the party mapping's role template, and `ferroehr party-binding adopt` gives an existing `PERSON` its `ROLE` (#5004). The [bootstrap and migration](../installation/party-binding-migration.md) page says so and orders `adopt` before the first SCIM run.
+- The hosted sandbox's reseed brings the CDR up through the deploy script's `deploy` verb and names its EHR subjects by FerroPIX pseudonym (#5406, #5409).
+- Chart 25.0.1 carries `appVersion` 5.7.0.
+
+### Changed on 2026-11-11, for 5.7.0
+
+- **The [bootstrap and migration](../installation/party-binding-migration.md) page** named FerroFED v0.0.17 as the release whose gateway reaches the CDR under the caller, and said it would follow this release. FerroFED v0.0.17 was tagged without that change, FerroFED v0.0.19 does not carry it either, and FerroHEALTH/FerroFED#1615, which carries it, is open in the FerroFED milestone v0.0.20. The page now says no FerroFED release up to v0.0.19 reaches the CDR under the caller and names the issue, and the 5.7.0 changelog section says the same.
+
+### Read and kept on 2026-11-11, for 5.7.0
+
+- **The installation pins:** the [Kubernetes installation](../installation/kubernetes.md), the chart README and [verifying releases](../verifying-releases.md) name chart 25.0.1 and image 5.7.0 in the book of main, which the release freezes under `/docs/v5.7.0/`.
+- **The landing page, the README, `SECURITY.md`, the crate READMEs, the [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the chart description** make no claim this release changes.
+
+### Left open on 2026-11-11, for 5.7.0
+
+- The public sandbox follows the `latest` image tags, which the release legs move to 5.7.0 once its images are scanned and tagged.
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #5258 for 5.8.0.
+- The performance page keeps its earlier figures until a record measured on the reference host replaces them.
+
+## The review of 2026-11-13, for 5.7.1-rc1
+
+Read on the tree after commit `de48ac5a8`, for the FerroEHR release candidate
+5.7.1-rc1. The reviews for 5.7.0-rc1 to 5.7.0 stand for everything 5.7.0
+carried. The facts added since, checked in every text in scope:
+
+- **Operational policy lives in the CDR** (#5433): who may do what is coded content of demographic parties, read on every request with no restart, under `[authz.grants] allowed`. System clients with their imports and exports (#5432, #5436, #5530), the backend and DEMOGRAPHIC clients and the clients a token is classified through (#5437), Basic users' roles and scopes, with `[authz.rbac] first_admin` as the first administrator (#5438), trusted import systems, origins, change-feed readers and SCIM clients (#5439), federation agreements (#5440), just-in-time admission (#5441) and the four privileges beyond clinical access (#5521) are grants; the audit category map, the access delay and the Cedar policy set are admin registers (#5442). A policy party is recognised by the codes it holds, in any archetype, and only an administrator reads or writes one (#5434, #5450, #5474, #5485).
+- **The configuration** lists 855 keys, 920 in 5.7.0, and names the 10 a deployment must set (#5455); one public URL takes the place of three (#5465), and the party mapping defaults to the shipped demographic definitions (#5428, #5462).
+- **Representatives in the patient portal** read the patient's record under a representation the deployment or the patient records, and a former representative is never taken for the patient (#5446, #5532).
+- **The demographic write rules** refuse a relationship sourced elsewhere and a reference of the wrong kind, and `reverse_relationships` reads as it stood at a version (#5471, #5472, #5473).
+- **The security fix** GHSA-gwh2-7hjm-4pj4: every issuer FerroEHR's own keys name renders its userinfo masked (#5418).
+- **The family crates** move to `ferrohealth-smart` 0.24.1 and its siblings, `ihe-atna` and `ehds-logging` 0.18.0 among them (#5417, #5422, #5465, #5437).
+- **Chart 32.0.0-rc1** carries `appVersion` 5.7.1-rc1.
+
+### Changed on 2026-11-13, for 5.7.1-rc1
+
+- **The 5.7.1-rc1 changelog section** said a policy party is recognised by its archetype, answered `403` naming the archetype, and that no check read a grant yet; a later change of the same release recognises it by its codes and every check reads the grants. It said a Basic user holds its granted roles beside its `[[auth.basic.users]]` table, which no longer holds roles, and that demographic AQL hides a party by its root archetype. The four entries (#5434, #5435, #5438, #5450) now say what 5.7.1 does.
+- **The key counts** of the release notes said 868 keys, 921 in 5.7.0. The generated reference lists 855 at this commit, and the 5.7.0 reference listed 920: the 921st key, `[auth] described_issuer`, came after 5.7.0 (#5425). The #5455 entries, the CRA risk assessment and this review give 855 and 920.
+- **The CRA risk assessment:** revision 31 and C13 name the client standing, the first administrator, the four privileges #5521 moved, the import and export reach of #5530 and the portal representations, and the crates of #5437. The technical documentation and the hazard log name the FerroAUDIT pins 0.18.0, and both record the ITI-81 subject read and the access-service mark coming from grants (#5521); H6 already names the grant and its test.
+
+### Read and kept on 2026-11-13, for 5.7.1-rc1
+
+- **The [Operational policy](../operational-policy.md) page** describes each kind of policy party with a worked example and labels each of its own-design decisions; `docs/architecture.md` records the model with its citations.
+- **The configuration pages:** [configuration](../installation/configuration.md) includes the generated reference, and the auth, audit and privacy pages, [security](../security.md) and [identity providers](../identity-providers.md) name the 5.7.1 keys and the grants that replaced the removed ones. `docs-claims` resolves every documented key.
+- **The installation pins:** the [Kubernetes installation](../installation/kubernetes.md), the chart README and [verifying releases](../verifying-releases.md) name chart 32.0.0-rc1 and image 5.7.1-rc1 in the book of main.
+- **The landing page, the README, `SECURITY.md`, the crate READMEs, the [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the image labels and the chart description** make no claim this release changes.
+
+### Left open on 2026-11-13, for 5.7.1-rc1
+
+- **The [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html)** at the pinned revision (2026-10-26) name keys 5.7.0 and 5.7.1 refuse at start: `deployment_profile`, `[audit.store] retention_years`, `[audit.syslog] host`, `[authz.professional]` and `[audit.categories]`, and say FerroEHR ships no category map. The page lives in the FerroHEALTH book, whose repository is paused, so it is tracked on #5534 for the owner's call.
+- The public sandbox follows the `latest` image tags and stays on 5.7.0, since a pre-release moves no tag.
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #5258 for 5.8.0.
 - The performance page keeps its earlier figures until a record measured on the reference host replaces them.

@@ -1,0 +1,192 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-EVALUATION.excluded-intervention.v1
+specialise
+	openEHR-EHR-EVALUATION.excluded.v1
+
+concept
+	[at0000.1]	-- Statement of exclusions regarding interventions
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"Sam Heard">
+		["organisation"] = <"Ocean Informatics">
+		["email"] = <"sam.heard@oceaninformatics.com">
+		["date"] = <"23/04/2006">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"For recording issues and health problems that are excluded from being relevant now or in the past.">
+			use = <"This is for recording negative statements about issues in the record.">
+			keywords = <"no", "significant", "family", "history", "surgery", "hospitalisations", "relevant", "allergies", "negation">
+			misuse = <"">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"Rejected">
+	other_contributors = <>
+	other_details = <
+		["references"] = <"">
+		["MD5-CAM-1.0.1"] = <"BD013399454EE59EAD64B19090F60CC9">
+	>
+
+definition
+	EVALUATION[at0000.1] matches {	-- Statement of exclusions regarding interventions
+		data matches {
+			ITEM_TREE[at0001] matches {	-- Tree
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0002] occurrences matches {1..*} matches {	-- Statement
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0.9, 	-- No previous
+									at0.10, 	-- Not given
+									at0.11, 	-- Not requested
+									at0.13, 	-- Not required
+									at0.18, 	-- Not indicated
+									at0.28, 	-- Not performed
+									at0.29]	-- Contraindicated
+								}
+							}
+						}
+					}
+					ELEMENT[at0.22] occurrences matches {0..1} matches {	-- Intervention
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0.23, 	-- Treatment
+									at0.24, 	-- Analgesia
+									at0.25, 	-- Medical intervention
+									at0.26, 	-- Surgical procedure
+									at0.27]	-- Investigation
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.10"] = <
+					text = <"Not given">
+					description = <"No intervention has been given">
+				>
+				["at0.11"] = <
+					text = <"Not requested">
+					description = <"No intervention is requested">
+				>
+				["at0.13"] = <
+					text = <"Not required">
+					description = <"No intervention is required">
+				>
+				["at0.18"] = <
+					text = <"Not indicated">
+					description = <"The intervention is not indicated">
+				>
+				["at0.22"] = <
+					text = <"Intervention">
+					description = <"The type of intervention">
+				>
+				["at0.23"] = <
+					text = <"Treatment">
+					description = <"A treatment for a condition or symptom">
+				>
+				["at0.24"] = <
+					text = <"Analgesia">
+					description = <"Pain relief">
+				>
+				["at0.25"] = <
+					text = <"Medical intervention">
+					description = <"An intervention of a medical nature">
+				>
+				["at0.26"] = <
+					text = <"Surgical procedure">
+					description = <"An intervention of a surgical nature">
+				>
+				["at0.27"] = <
+					text = <"Investigation">
+					description = <"An investigative intervention or test">
+				>
+				["at0.28"] = <
+					text = <"Not performed">
+					description = <"The intervention has not been performed">
+				>
+				["at0.29"] = <
+					text = <"Contraindicated">
+					description = <"The intervention is contraindicated">
+				>
+				["at0.9"] = <
+					text = <"No previous">
+					description = <"There has been no previous intervention">
+				>
+				["at0000"] = <
+					text = <"General statement of exclusions or states">
+					description = <"A category of conditions or states which have been excluded">
+				>
+				["at0000.1"] = <
+					text = <"Statement of exclusions regarding interventions">
+					description = <"A category of conditions or states which have been excluded!">
+				>
+				["at0001"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Statement">
+					description = <"The statement about what is excluded.">
+				>
+				["at0003"] = <
+					text = <"No significant illness">
+					description = <"The person has no significant medical condition">
+				>
+				["at0004"] = <
+					text = <"No significant past history">
+					description = <"The person has no significant past medical history">
+				>
+				["at0005"] = <
+					text = <"No significant family history">
+					description = <"The person has no relatives with significant health problems">
+				>
+				["at0006"] = <
+					text = <"No known adverse reactions">
+					description = <"The person has had no adverse reactions, including intolerances, sensitivities or allergies, to medications, food, animals or chemicals">
+				>
+				["at0007"] = <
+					text = <"No known sensitivities">
+					description = <"No sensitivity to any medications, foods or substances">
+				>
+				["at0008"] = <
+					text = <"No known intolerances">
+					description = <"No known or recorded intolerances to medications, foods or other substances">
+				>
+				["at0009"] = <
+					text = <"No relevant past history">
+					description = <"No past problems or procedures relevant to the current situation">
+				>
+				["at0010"] = <
+					text = <"No hospitalisations">
+					description = <"No admissions to hospital">
+				>
+				["at0011"] = <
+					text = <"No major surgery">
+					description = <"No major operations or procedures">
+				>
+				["at0012"] = <
+					text = <"No relevant family history">
+					description = <"No family history relevant to the current situation">
+				>
+				["at0013"] = <
+					text = <"No known allergies">
+					description = <"No allergies known to any medications, foods or substances">
+				>
+			>
+		>
+	>

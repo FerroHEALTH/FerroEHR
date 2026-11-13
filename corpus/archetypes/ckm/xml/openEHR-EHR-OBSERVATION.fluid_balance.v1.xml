@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -101,8 +101,7 @@ Ein Diagramm über den Flüssigkeitshaushalt erfordert normalerweise eine Kombin
       </language>
       <purpose>Att registrera de ackumulerade eller totala volymerna av vätskeintag och vätskeutsöndring, samt en statusuppskattning på vätskebalansen för en person under angivna tidsintervallet.&#xD;
 &#xD;
-Att registrera en uppskattning av skillnaden mellan vätskeintag och vätskeutsöndring under ett angivet tidsintervall.&#xD;
-</purpose>
+Att registrera en uppskattning av skillnaden mellan vätskeintag och vätskeutsöndring under ett angivet tidsintervall.</purpose>
       <keywords>vätska</keywords>
       <keywords>balans</keywords>
       <keywords>intag</keywords>
@@ -114,8 +113,7 @@ Att registrera en uppskattning av skillnaden mellan vätskeintag och vätskeuts�
       <keywords>transpiration</keywords>
       <use>Används för att registrera ackumulerade eller totala volymer av vätskeintag och vätskeutsöndring, samt för en statusuppskattning på vätskebalansen för en person under angivna tidsperioder.&#xD;
 &#xD;
-Ett vätskebalansdiagram kräver vanligtvis en kombination av flera *fall* av både OBSERVATION.fluid_output arketypen och OBSERVATION.fluid_input arketypen för att fånga alla de olika vätskeintag och utsöndringar, samt ett *fall* av OBSERVATION. fluid_balance för att registrera den totala vätskestatusen.&#xD;
-</use>
+Ett vätskebalansdiagram kräver vanligtvis en kombination av flera *fall* av både OBSERVATION.fluid_output arketypen och OBSERVATION.fluid_input arketypen för att fånga alla de olika vätskeintag och utsöndringar, samt ett *fall* av OBSERVATION. fluid_balance för att registrera den totala vätskestatusen.</use>
       <misuse>Används inte för att registrera enskilda mätningar av vätskeintag och vätskeutsöndringar. Använd OBSERVATION.fluid_input or OBSERVATION.fluid_output arketyper för dessa ändamål.</misuse>
       <copyright />
     </details>
@@ -984,8 +982,7 @@ A fluid balance chart will typically require a combination of multiple instances
       <items code="at0010">
         <items id="text">Insensible loss formula</items>
         <items id="description">The formula used to calculate the amount of insensible loss.</items>
-        <items id="comment">For example: "10 ml/kg/day when not intubated"; "5 ml/kg/day when intubated"; and "+10% per degree celcius over 37C". &#xD;
-</items>
+        <items id="comment">For example: "10 ml/kg/day when not intubated"; "5 ml/kg/day when intubated"; and "+10% per degree celcius over 37C".</items>
       </items>
       <items code="at0011">
         <items id="text">Extension</items>
@@ -996,8 +993,7 @@ A fluid balance chart will typically require a combination of multiple instances
     <term_definitions language="nb">
       <items code="at0000">
         <items id="text">Væskebalanse</items>
-        <items id="description">Forskjellen mellom væskeinntak og væsketap i et spesifisert tidsintervall. &#xD;
-</items>
+        <items id="description">Forskjellen mellom væskeinntak og væsketap i et spesifisert tidsintervall.</items>
       </items>
       <items code="at0001">
         <items id="text">Event Series</items>
@@ -1202,8 +1198,7 @@ A fluid balance chart will typically require a combination of multiple instances
       <items code="at0010">
         <items id="text">Näkymättömän menetyksen kaava</items>
         <items id="description">Näkymättömän menetyksen laskennassa käytettävä kaava.</items>
-        <items id="comment">For example: "10 ml/kg/day when not intubated"; "5 ml/kg/day when intubated"; and "+10% per degree celcius over 37C". &#xD;
-</items>
+        <items id="comment">For example: "10 ml/kg/day when not intubated"; "5 ml/kg/day when intubated"; and "+10% per degree celcius over 37C".</items>
       </items>
       <items code="at0011">
         <items id="text">Laajennus</items>
@@ -1267,4 +1262,3 @@ A fluid balance chart will typically require a combination of multiple instances
     </term_definitions>
   </ontology>
 </archetype>
-

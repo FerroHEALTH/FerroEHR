@@ -1,0 +1,1072 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2008-11-10</original_author>
+    <original_author id="name">Heather Leslie</original_author>
+    <original_author id="organisation">Ocean Informatics</original_author>
+    <original_author id="email">heather.leslie@oceaninformatics.com</original_author>
+    <other_contributors>Tomas Alme, DIPS, Norway</other_contributors>
+    <other_contributors>Vebjoern Arntzen, Oslo university hospital, Norway</other_contributors>
+    <other_contributors>Koray Atalag, University of Auckland, New Zealand</other_contributors>
+    <other_contributors>Gustavo Bacelar-Silva, Healthcare Designs, Brazil (openEHR Editor)</other_contributors>
+    <other_contributors>Silje Ljosland Bakke, Bergen Hospital Trust, Norway</other_contributors>
+    <other_contributors>Lars Bitsch-Larsen, Haukeland University hospital, Norway</other_contributors>
+    <other_contributors>Aitor Eguzkitza, UPNA (Public University of Navarre) - CHN (Complejo Hospitalario de Navarra), Spain</other_contributors>
+    <other_contributors>Shahla Foozonkhah, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway</other_contributors>
+    <other_contributors>Sebastian Garde, Ocean Informatics, Germany</other_contributors>
+    <other_contributors>Heather Grain, Llewelyn Grain Informatics, Australia</other_contributors>
+    <other_contributors>Dunmail Hodkinson, Black Pear Software Ltd, UK</other_contributors>
+    <other_contributors>Lars Karlsen, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Shinji Kobayashi, Kyoto University, Japan</other_contributors>
+    <other_contributors>Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway</other_contributors>
+    <other_contributors>Heather Leslie, Ocean Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Vesna Levasic, Orthopaedic Hospital Valdoltra, Slovenia</other_contributors>
+    <other_contributors>Hallvard Lærum, Oslo University Hospital, Norway</other_contributors>
+    <other_contributors>Luis Marco Ruiz, Norwegian Center for Integrated Care and Telemedicine, Norway</other_contributors>
+    <other_contributors>Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)</other_contributors>
+    <other_contributors>Bjoern Naess, DIPS ASA, Norway</other_contributors>
+    <other_contributors>Andrej Orel, Marand d.o.o., Slovenia</other_contributors>
+    <other_contributors>Rowan Thomas, St. Vincent's Hospital Melbourne, Australia</other_contributors>
+    <other_contributors>Richard Townley-O'Neill, NEHTA, Australia</other_contributors>
+    <other_contributors>John Tore Valand, Helse Bergen, Norway</other_contributors>
+    <other_contributors>Dmitri Wall, Irish Skin Foundation, Ireland</other_contributors>
+    <lifecycle_state>deprecated</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">C19B8D648EE83B840B9F8B59B52CE1CD</other_details>
+    <other_details id="build_uid">d7dc3c6f-02bf-4bf8-ab8a-961aa0e4c732</other_details>
+    <other_details id="revision">1.0.2</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For registrering av detaljer om et anatomisk sted.</purpose>
+      <keywords>sted</keywords>
+      <keywords>lokasjon</keywords>
+      <keywords>anatomisk</keywords>
+      <keywords>site</keywords>
+      <use />
+      <misuse>Anvendes ikke for spesifisering av unilateral/bilateral forekomst - dette relateres til en vurdering som kanskje omfatter flere steder.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>pt-br</code_string>
+      </language>
+      <purpose>Identificar and registras detalhes estruturados sobre um único local físico dentro ou fora do corpo humano, a partir das suas relações com outros pontos macroscópicos de referência anatômica.</purpose>
+      <keywords>localização</keywords>
+      <keywords>local</keywords>
+      <keywords>anatômico</keywords>
+      <keywords>relativo</keywords>
+      <keywords>aproximado</keywords>
+      <keywords>região anatômica</keywords>
+      <keywords>Anatomia topográfica</keywords>
+      <keywords>Anatomia macroscópica</keywords>
+      <keywords>macroscópico</keywords>
+      <keywords>anatômico</keywords>
+      <keywords>anatomia</keywords>
+      <use>Utilizar para registrar os detalhes estruturados e consistentes sobre um único local físico identificado no corpo humano ou dentro dele, descrevendo sua localização em relação a marcos anatômicos macroscópicos identificados. Pode ser necessário descrever a localização física única usando mais de uma localização relativa - por exemplo, 2 cm inferior a "marco A" E 3 cm medial para 'marco B'.&#xD;
+&#xD;
+Na prática, alguns arquétipos possuem um único elemento de dados para representar uma descrição simples do local do corpo - por exemplo, OBSERVATION.blood_pressure e CLUSTER.smpto quando descreve a dor nos ouvidos. Nessa situação, onde o conjunto de valores é previsível e simples de definir, este elemento de dados único é uma maneira muito precisa e pragmática de gravar o local do corpo e consultar posteriormente. No entanto, na situação em que a localização anatômica não está bem definida ou precisa ser determinada em tempo de execução, pode ser mais flexível usar este arquétipo estruturado.&#xD;
+&#xD;
+Este arquétipo é projetado especificamente para ser usado no contexto de qualquer arquétipo ENTRY ou CLUSTER apropriado que forneça o contexto do local do corpo identificado, incluindo a inserção dentro da localização CLUSTER.anatomical se "Nome do site do corpo" ou outros elementos de dados também forem necessários.&#xD;
+&#xD;
+Casos de uso clínico:&#xD;
+- 5 cm inferior à tuberosidade tibial esquerda&#xD;
+- 2 cm medial ao mamilo direito&#xD;
+- aspecto medial da unha do dedo indicador da mão.&#xD;
+&#xD;
+Na situação em que o CLUSTER.anatomical_location só pode ser usado para nomear uma parte do corpo grande e / ou não específica, o uso deste arquétipo dentro do SLOT 'Estrutura alternativa' suportará a gravação de uma localização mais precisa - por exemplo, 2 Cm anterior à fossa cubital do antebraço esquerdo ou 4 cm abaixo da margem costal R na parede torácica na linha médio clavicular.</use>
+      <misuse>Não utilizar para especificar ocorrências de características anatômicas de lateralidade.&#xD;
+Não utilizar para especificar um local simples de locais do corpo já nominados, tais como, femur esquerdo ou a fossa medial do nariz. Utilize neste caso o CLUSTER.anatomical_location.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ar-sy</code_string>
+      </language>
+      <purpose>تسجيل المكان التشريحي بالتفصيل</purpose>
+      <keywords>الموقع</keywords>
+      <keywords>المكان</keywords>
+      <keywords>تشريحي</keywords>
+      <use />
+      <misuse>لا يستخدم لتحديد حالات الحدوث في جانب واحد أو في الجانبين - حيث إن ذلك متعلق بتقييم قد يتضمن العديد من الأماكن</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sl</code_string>
+      </language>
+      <purpose>*To record details about anatomical location.(en)</purpose>
+      <keywords>*location(en)</keywords>
+      <keywords>*site(en)</keywords>
+      <keywords>*anatomical(en)</keywords>
+      <use />
+      <misuse>*Not for specifiying unilateral/bilateral occurence - this is related to an evaluation which perhaps includes multiple locations.(en)</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To identify and record structured details about a single physical site on, or within, the human body in terms of its relationship to other macroscopic anatomical landmarks.</purpose>
+      <keywords>location</keywords>
+      <keywords>site</keywords>
+      <keywords>anatomical</keywords>
+      <keywords>relative</keywords>
+      <keywords>approximate</keywords>
+      <keywords>anatomic region</keywords>
+      <keywords>topographic anatomy</keywords>
+      <keywords>macroscopic anatomy</keywords>
+      <keywords>macroscopic</keywords>
+      <keywords>anatomic</keywords>
+      <keywords>anatomy</keywords>
+      <use>Use to record structured and consistent details about a single identified physical site on, or within, the human body by describing its location in relation to identified macroscopic anatomical landmarks. It may be necessary to describe the single physical location using more than one relative location - for example, 2 cm inferior to 'landmark A' AND 3 cm medial to 'landmark B'. &#xD;
+&#xD;
+In practice, some archetypes carry a single data element for carrying a simple description of body site - for example, OBSERVATION.blood_pressure and CLUSTER.symptom when describing ear pain. In this situation, where the value set is predictable and simple to define, this single data element is a very accurate and pragmatic way to record the site in the body and to query at a later date. However in the situation where the anatomical location is not well defined or needs to be determined at run-time, it may be more flexible to use this structured archetype.&#xD;
+&#xD;
+This archetype is specifically designed to be used within the context of any appropriate ENTRY or CLUSTER archetypes which supply the context of the identified body site, including insertion within the CLUSTER.anatomical_location if 'Body site name' or other data elements are also required.&#xD;
+&#xD;
+Clinical use cases: &#xD;
+- 5 cm inferior to the left tibial tuberosity&#xD;
+- 2 cm medial to the right nipple&#xD;
+- medial aspect of R great toe nail.&#xD;
+&#xD;
+In the situation where the CLUSTER.anatomical_location can only be used to name a large and/or non-specific body part, the use of this archetype within the 'Alternative Structure' SLOT will support recording of a more precise location - for example, 2 cm anterior to the cubital fossa of the left forearm or 4 cm below R costal margin on the chest wall in the mid-clavicular line.</use>
+      <misuse>Not to be used for specifying unilateral/bilateral occurrences of an anatomical feature.&#xD;
+&#xD;
+Not to be used to specify a simple location of a named physical site in the body, such as left femur or medial aspect of nose. Use the CLUSTER.anatomical_location archetype for this purpose.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Lars Bitsch-Larsen</author>
+    <author id="organisation">Haukeland University Hospital of Bergen, Norway</author>
+    <accreditation>MD, DEAA, MBA, spec in anesthesia, spec in tropical medicine.</accreditation>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>pt-br</code_string>
+    </language>
+    <author id="name">Beatriz de Faria Leao</author>
+    <author id="organisation">BLEAO INFORMÁTICA EM SAÚDE</author>
+    <author id="email">bfleao@terra.com.br</author>
+    <accreditation>MD, PhD</accreditation>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sl</code_string>
+    </language>
+    <author id="name">Biljana Princic</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ar-sy</code_string>
+    </language>
+    <author id="name">Mona Saleh</author>
+  </translations>
+  <uid>
+    <value>cf6935cb-7093-41eb-ac6d-b0319ff7a3c4</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-CLUSTER.anatomical_location_relative.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0020</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>1</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0021</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0062</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0022</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_DV_QUANTITY">
+                <rm_type_name>DV_QUANTITY</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <property>
+                  <terminology_id>
+                    <value>openehr</value>
+                  </terminology_id>
+                  <code_string>122</code_string>
+                </property>
+                <list>
+                  <magnitude>
+                    <lower_included>true</lower_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>true</upper_unbounded>
+                    <lower>0.0</lower>
+                  </magnitude>
+                  <precision>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </precision>
+                  <units>cm</units>
+                </list>
+                <list>
+                  <magnitude>
+                    <lower_included>true</lower_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>true</upper_unbounded>
+                    <lower>0.0</lower>
+                  </magnitude>
+                  <precision>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </precision>
+                  <units>in</units>
+                </list>
+                <list>
+                  <magnitude>
+                    <lower_included>true</lower_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>true</upper_unbounded>
+                    <lower>0.0</lower>
+                  </magnitude>
+                  <precision>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </precision>
+                  <units>mm</units>
+                </list>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>6</upper>
+            </occurrences>
+            <node_id>at0006</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_CODED_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>defining_code</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_CODE_PHRASE">
+                    <rm_type_name>CODE_PHRASE</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <terminology_id>
+                      <value>local</value>
+                    </terminology_id>
+                    <code_list>at0007</code_list>
+                    <code_list>at0008</code_list>
+                    <code_list>at0009</code_list>
+                    <code_list>at0010</code_list>
+                    <code_list>at0012</code_list>
+                    <code_list>at0013</code_list>
+                    <code_list>at0055</code_list>
+                    <code_list>at0056</code_list>
+                    <code_list>at0057</code_list>
+                    <code_list>at0058</code_list>
+                    <code_list>at0059</code_list>
+                    <code_list>at0060</code_list>
+                    <code_list>at0063</code_list>
+                    <code_list>at0064</code_list>
+                  </children>
+                </attributes>
+              </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0023</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0054</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>1</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="ar-sy">
+      <items code="at0000">
+        <items id="text">*Relative anatomical location(en)</items>
+        <items id="description">*A physical site on or within the human body that is described in terms of its relationship to other body parts.(en)</items>
+      </items>
+      <items code="at0006">
+        <items id="text">*Direction(en)</items>
+        <items id="description">*Detail about the relative direction of the body site to the landmark.(en)</items>
+        <items id="comment">*Common aspects have been included as a value set, which can be extended over time, plus a free text option. Assumes that the body is being described while in the anatomical position. Occurrences are set to allow for a maximum of six directions to be recorded. Within this value set, clinicians will recognise that there are six mutually exclusive directional pairs - for example, a body site cannot be simultaneously 'medial to' and 'lateral to' an identical landmark. Other mutually exclusive pairs are 'Superior to' and 'Inferior to'; 'Anterior to' and 'Posterior to'; 'Proximal to' and 'Distal to'; 'Superficial to' and 'Deep to'; and 'Within' and 'External to'. Combinations made from one selection from within each of the six pair sets is potentially valid, although in clinical practice it will be very unlikely to need to simultaneously record more than two directions to describe a specified body site.(en)</items>
+      </items>
+      <items code="at0007">
+        <items id="text">إنسيّ/ وسطي</items>
+        <items id="description">المكان النسبي هو متوسط للمَعْلَم</items>
+      </items>
+      <items code="at0008">
+        <items id="text">جانبي</items>
+        <items id="description">المكان النسبي هو جانبي بالنسبة للمَعْلَم</items>
+      </items>
+      <items code="at0009">
+        <items id="text">عُلْوي</items>
+        <items id="description">المكان النسبي هو علويّ بالنسبة للمَعْلَم</items>
+      </items>
+      <items code="at0010">
+        <items id="text">سُفْلي</items>
+        <items id="description">المكان النسبي هو سفلي بالنسبة للمَعْلَم</items>
+      </items>
+      <items code="at0012">
+        <items id="text">أمامي</items>
+        <items id="description">المكان النسبي هو أمام المَعْلَم</items>
+      </items>
+      <items code="at0013">
+        <items id="text">خلفي</items>
+        <items id="description">المكان النسبي هو خلف المَعْلَم</items>
+      </items>
+      <items code="at0020">
+        <items id="text">*Relative location(en)</items>
+        <items id="description">*Detail to identify a single physical site either on, or within, the human body in terms of its relationship to other macroscopic anatomical landmarks.(en)</items>
+        <items id="comment">*More than one relative location may be required to provide an accurate cross reference.(en)</items>
+      </items>
+      <items code="at0021">
+        <items id="text">*Landmark name(en)</items>
+        <items id="description">*Identified body site used as a reference point for the actual body site.(en)</items>
+        <items id="comment">*'Landmark name' can identify an anatomical structure (such as the umbilicus), an anatomical line (such as the mid-clavicular line), a well defined anatomical point (such as McBurney's point). This data element should be coded with a terminology capable of triggering decision support, where possible - an appropriate termset for use here could comprise individual concepts or a list of precoordinated terms. Free text should be used only if there is no appropriate terminology available. It is strongly recommended that 'Landmark name' be recorded as specifically as is anatomically possible. For example: record 'upper eyelid' rather than recording 'eyelid' with 'upper' as a qualifier; 'fifth rib' rather than 'rib' with a numeric qualifier.(en)</items>
+      </items>
+      <items code="at0022">
+        <items id="text">المسافة من المَعْلَم</items>
+        <items id="description">المسافة بين المكان و المَعْلَم المعروف</items>
+      </items>
+      <items code="at0023">
+        <items id="text">*Description(en)</items>
+        <items id="description">*Narrative description that can be used to further refine and support the relative location structured data.(en)</items>
+        <items id="comment">*For example: a tattoo covers the bottom half of this area.(en)</items>
+      </items>
+      <items code="at0054">
+        <items id="text">*Cluster(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0055">
+        <items id="text">*Proximal to(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0056">
+        <items id="text">*Distal to(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0057">
+        <items id="text">*Superficial to(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0058">
+        <items id="text">*Deep to(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0059">
+        <items id="text">*Within(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0060">
+        <items id="text">*External to(en)</items>
+        <items id="description">*Outside the landmark.(en)</items>
+      </items>
+      <items code="at0062">
+        <items id="text">*Laterality(en)</items>
+        <items id="description">*The side of the body on which the identified landmark is located.(en)</items>
+        <items id="comment">*If the identified landmark has no laterality, this data element should not have a value. If the 'Landmark name' data element uses pre-coordinated terms that include laterality, then this data element is redundant.(en)</items>
+      </items>
+      <items code="at0063">
+        <items id="text">*Oral to(en)</items>
+        <items id="description">*Towards the mouth. Usually used to describe locations within the digestive system.(en)</items>
+      </items>
+      <items code="at0064">
+        <items id="text">*Anal to(en)</items>
+        <items id="description">*Towards the anus. Usually used to describe locations within the digestive system.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="sl">
+      <items code="at0000">
+        <items id="text">*Relative anatomical location(en)</items>
+        <items id="description">*A physical site on or within the human body that is described in terms of its relationship to other body parts.(en)</items>
+      </items>
+      <items code="at0006">
+        <items id="text">*Direction(en)</items>
+        <items id="description">*Detail about the relative direction of the body site to the landmark.(en)</items>
+        <items id="comment">*Common aspects have been included as a value set, which can be extended over time, plus a free text option. Assumes that the body is being described while in the anatomical position. Occurrences are set to allow for a maximum of six directions to be recorded. Within this value set, clinicians will recognise that there are six mutually exclusive directional pairs - for example, a body site cannot be simultaneously 'medial to' and 'lateral to' an identical landmark. Other mutually exclusive pairs are 'Superior to' and 'Inferior to'; 'Anterior to' and 'Posterior to'; 'Proximal to' and 'Distal to'; 'Superficial to' and 'Deep to'; and 'Within' and 'External to'. Combinations made from one selection from within each of the six pair sets is potentially valid, although in clinical practice it will be very unlikely to need to simultaneously record more than two directions to describe a specified body site.(en)</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Srednji</items>
+        <items id="description">*Relative location medial to the landmark.(en)</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Stranski</items>
+        <items id="description">*Relative location lateral to the landmark.(en)</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Višje</items>
+        <items id="description">*Relative location superior to the landmark.(en)</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Nižje</items>
+        <items id="description">*Relative location inferior to the landmark.(en)</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Spredaj</items>
+        <items id="description">*Relative location anterior to the landmark.(en)</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Zadaj</items>
+        <items id="description">*Relative location posterior to the landmark.(en)</items>
+      </items>
+      <items code="at0020">
+        <items id="text">*Relative location(en)</items>
+        <items id="description">*Detail to identify a single physical site either on, or within, the human body in terms of its relationship to other macroscopic anatomical landmarks.(en)</items>
+        <items id="comment">*More than one relative location may be required to provide an accurate cross reference.(en)</items>
+      </items>
+      <items code="at0021">
+        <items id="text">*Landmark name(en)</items>
+        <items id="description">*Identified body site used as a reference point for the actual body site.(en)</items>
+        <items id="comment">*'Landmark name' can identify an anatomical structure (such as the umbilicus), an anatomical line (such as the mid-clavicular line), a well defined anatomical point (such as McBurney's point). This data element should be coded with a terminology capable of triggering decision support, where possible - an appropriate termset for use here could comprise individual concepts or a list of precoordinated terms. Free text should be used only if there is no appropriate terminology available. It is strongly recommended that 'Landmark name' be recorded as specifically as is anatomically possible. For example: record 'upper eyelid' rather than recording 'eyelid' with 'upper' as a qualifier; 'fifth rib' rather than 'rib' with a numeric qualifier.(en)</items>
+      </items>
+      <items code="at0022">
+        <items id="text">*Distance from landmark(en)</items>
+        <items id="description">*Distance of location from the identified landmark.(en)</items>
+      </items>
+      <items code="at0023">
+        <items id="text">*Description(en)</items>
+        <items id="description">*Narrative description that can be used to further refine and support the relative location structured data.(en)</items>
+        <items id="comment">*For example: a tattoo covers the bottom half of this area.(en)</items>
+      </items>
+      <items code="at0054">
+        <items id="text">*Cluster(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0055">
+        <items id="text">*Proximal to(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0056">
+        <items id="text">*Distal to(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0057">
+        <items id="text">*Superficial to(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0058">
+        <items id="text">*Deep to(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0059">
+        <items id="text">*Within(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0060">
+        <items id="text">*External to(en)</items>
+        <items id="description">*Outside the landmark.(en)</items>
+      </items>
+      <items code="at0062">
+        <items id="text">*Laterality(en)</items>
+        <items id="description">*The side of the body on which the identified landmark is located.(en)</items>
+        <items id="comment">*If the identified landmark has no laterality, this data element should not have a value. If the 'Landmark name' data element uses pre-coordinated terms that include laterality, then this data element is redundant.(en)</items>
+      </items>
+      <items code="at0063">
+        <items id="text">*Oral to(en)</items>
+        <items id="description">*Towards the mouth. Usually used to describe locations within the digestive system.(en)</items>
+      </items>
+      <items code="at0064">
+        <items id="text">*Anal to(en)</items>
+        <items id="description">*Towards the anus. Usually used to describe locations within the digestive system.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Relative anatomical location</items>
+        <items id="description">A physical site on or within the human body that is described in terms of its relationship to other body parts.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Direction</items>
+        <items id="description">Detail about the relative direction of the body site to the landmark.</items>
+        <items id="comment">Common aspects have been included as a value set, which can be extended over time, plus a free text option. Assumes that the body is being described while in the anatomical position. Occurrences are set to allow for a maximum of six directions to be recorded. Within this value set, clinicians will recognise that there are six mutually exclusive directional pairs - for example, a body site cannot be simultaneously 'medial to' and 'lateral to' an identical landmark. Other mutually exclusive pairs are 'Superior to' and 'Inferior to'; 'Anterior to' and 'Posterior to'; 'Proximal to' and 'Distal to'; 'Superficial to' and 'Deep to'; and 'Within' and 'External to'. Combinations made from one selection from within each of the six pair sets is potentially valid, although in clinical practice it will be very unlikely to need to simultaneously record more than two directions to describe a specified body site.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Medial to</items>
+        <items id="description">Towards the middle, from the landmark.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Lateral to</items>
+        <items id="description">Towards the side, from the landmark.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Superior to</items>
+        <items id="description">Above the landmark, often referring towards the head.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Inferior to</items>
+        <items id="description">Below the landmark, often referring towards the feet.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Anterior to</items>
+        <items id="description">Towards the front, or ventral aspect, from the landmark.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Posterior to</items>
+        <items id="description">Towards the back, or dorsal aspect, from the landmark.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Relative location</items>
+        <items id="description">Detail to identify a single physical site either on, or within, the human body in terms of its relationship to other macroscopic anatomical landmarks.</items>
+        <items id="comment">More than one relative location may be required to provide an accurate cross reference.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Landmark name</items>
+        <items id="description">Identified body site used as a reference point for the actual body site.</items>
+        <items id="comment">'Landmark name' can identify an anatomical structure (such as the umbilicus), an anatomical line (such as the mid-clavicular line), a well defined anatomical point (such as McBurney's point). This data element should be coded with a terminology capable of triggering decision support, where possible - an appropriate termset for use here could comprise individual concepts or a list of precoordinated terms. Free text should be used only if there is no appropriate terminology available. It is strongly recommended that 'Landmark name' be recorded as specifically as is anatomically possible. For example: record 'upper eyelid' rather than recording 'eyelid' with 'upper' as a qualifier; 'fifth rib' rather than 'rib' with a numeric qualifier.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Distance from landmark</items>
+        <items id="description">Distance of location from the identified landmark.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Description</items>
+        <items id="description">Narrative description that can be used to further refine and support the relative location structured data.</items>
+        <items id="comment">For example: a tattoo covers the bottom half of this area.</items>
+      </items>
+      <items code="at0054">
+        <items id="text">Multimedia representation</items>
+        <items id="description">Image or other media used to support identification of the location on the body.</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Proximal to</items>
+        <items id="description">Closer to the body, relative to the landmark.</items>
+      </items>
+      <items code="at0056">
+        <items id="text">Distal to</items>
+        <items id="description">Further from the body, relative to the landmark.</items>
+      </items>
+      <items code="at0057">
+        <items id="text">Superficial to</items>
+        <items id="description">Nearer the outer surface, relative to the landmark.</items>
+      </items>
+      <items code="at0058">
+        <items id="text">Deep to</items>
+        <items id="description">Further away from the outer surface, relative to the landmark.</items>
+      </items>
+      <items code="at0059">
+        <items id="text">Within</items>
+        <items id="description">Inside the landmark.</items>
+      </items>
+      <items code="at0060">
+        <items id="text">External to</items>
+        <items id="description">Outside the landmark.</items>
+      </items>
+      <items code="at0062">
+        <items id="text">Laterality</items>
+        <items id="description">The side of the body on which the identified landmark is located.</items>
+        <items id="comment">If the identified landmark has no laterality, this data element should not have a value. If the 'Landmark name' data element uses pre-coordinated terms that include laterality, then this data element is redundant.</items>
+      </items>
+      <items code="at0063">
+        <items id="text">Oral to</items>
+        <items id="description">Towards the mouth. Usually used to describe locations within the digestive system.</items>
+      </items>
+      <items code="at0064">
+        <items id="text">Anal to</items>
+        <items id="description">Towards the anus. Usually used to describe locations within the digestive system.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">*Relative anatomical location(en)</items>
+        <items id="description">*A physical site on or within the human body that is described in terms of its relationship to other body parts.(en)</items>
+      </items>
+      <items code="at0006">
+        <items id="text">*Direction(en)</items>
+        <items id="description">*Detail about the relative direction of the body site to the landmark.(en)</items>
+        <items id="comment">*Common aspects have been included as a value set, which can be extended over time, plus a free text option. Assumes that the body is being described while in the anatomical position. Occurrences are set to allow for a maximum of six directions to be recorded. Within this value set, clinicians will recognise that there are six mutually exclusive directional pairs - for example, a body site cannot be simultaneously 'medial to' and 'lateral to' an identical landmark. Other mutually exclusive pairs are 'Superior to' and 'Inferior to'; 'Anterior to' and 'Posterior to'; 'Proximal to' and 'Distal to'; 'Superficial to' and 'Deep to'; and 'Within' and 'External to'. Combinations made from one selection from within each of the six pair sets is potentially valid, although in clinical practice it will be very unlikely to need to simultaneously record more than two directions to describe a specified body site.(en)</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Medialt</items>
+        <items id="description">Det relative sted medialt til landemerket.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Lateralt</items>
+        <items id="description">Det relative sted lateralt for landemerket.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Superiort</items>
+        <items id="description">Det relative sted superiort til landemerket.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Inferiort</items>
+        <items id="description">Det relative sted inferiort til landemerket.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Anteriort</items>
+        <items id="description">Det relative sted anteriort til landemerket.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Posteriort</items>
+        <items id="description">Det relative sted posteriort til landemerket.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">*Relative location(en)</items>
+        <items id="description">*Detail to identify a single physical site either on, or within, the human body in terms of its relationship to other macroscopic anatomical landmarks.(en)</items>
+        <items id="comment">*More than one relative location may be required to provide an accurate cross reference.(en)</items>
+      </items>
+      <items code="at0021">
+        <items id="text">*Landmark name(en)</items>
+        <items id="description">*Identified body site used as a reference point for the actual body site.(en)</items>
+        <items id="comment">*'Landmark name' can identify an anatomical structure (such as the umbilicus), an anatomical line (such as the mid-clavicular line), a well defined anatomical point (such as McBurney's point). This data element should be coded with a terminology capable of triggering decision support, where possible - an appropriate termset for use here could comprise individual concepts or a list of precoordinated terms. Free text should be used only if there is no appropriate terminology available. It is strongly recommended that 'Landmark name' be recorded as specifically as is anatomically possible. For example: record 'upper eyelid' rather than recording 'eyelid' with 'upper' as a qualifier; 'fifth rib' rather than 'rib' with a numeric qualifier.(en)</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Avstand til landemerket</items>
+        <items id="description">Avstanden til det identifiserte landemerke.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">*Description(en)</items>
+        <items id="description">*Narrative description that can be used to further refine and support the relative location structured data.(en)</items>
+        <items id="comment">*For example: a tattoo covers the bottom half of this area.(en)</items>
+      </items>
+      <items code="at0054">
+        <items id="text">*Cluster(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0055">
+        <items id="text">*Proximal to(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0056">
+        <items id="text">*Distal to(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0057">
+        <items id="text">*Superficial to(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0058">
+        <items id="text">*Deep to(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0059">
+        <items id="text">*Within(en)</items>
+        <items id="description">**(en)</items>
+      </items>
+      <items code="at0060">
+        <items id="text">*External to(en)</items>
+        <items id="description">*Outside the landmark.(en)</items>
+      </items>
+      <items code="at0062">
+        <items id="text">*Laterality(en)</items>
+        <items id="description">*The side of the body on which the identified landmark is located.(en)</items>
+        <items id="comment">*If the identified landmark has no laterality, this data element should not have a value. If the 'Landmark name' data element uses pre-coordinated terms that include laterality, then this data element is redundant.(en)</items>
+      </items>
+      <items code="at0063">
+        <items id="text">*Oral to(en)</items>
+        <items id="description">*Towards the mouth. Usually used to describe locations within the digestive system.(en)</items>
+      </items>
+      <items code="at0064">
+        <items id="text">*Anal to(en)</items>
+        <items id="description">*Towards the anus. Usually used to describe locations within the digestive system.(en)</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="pt-br">
+      <items code="at0000">
+        <items id="text">Localização anatômica relativa</items>
+        <items id="description">Loca físico fora ou dentro do corpo humano que pode ser descrito em termos de seus relacionamentos com outras partes do corpo.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Direção</items>
+        <items id="description">Detalhe sobre a direção relativa do local do corpo para o ponto de referência.</items>
+        <items id="comment">Aspectos comuns foram incluídos no domínio deste campo, com possibilidades de extensão ao longo do tempo, além de uma opção de texto livre. Assumiu-se que o corpo está sendo descrito enquanto estiver na posição anatômica. Várias ocorrências são permitidas para permitir que um máximo de seis direções sejam registradas. Dentro deste conjunto de valores, os clínicos reconhecerão que existem seis pares direcionais mutuamente exclusivos - por exemplo, um local do corpo não pode ser simultaneamente "medial em relação" e "lateral a" um mesmo ponto de referência. Outros pares mutuamente exclusivos são "Superior a" e "Inferior a"; 'Anterior' e 'Posterior a'; 'Proximal a' e 'Distal a'; "Superficial para" e "Profundo"; E "Interno" e "Externo". As combinações feitas a partir de uma seleção dentro de cada um dos conjuntos de seis pares são potencialmente válidas, embora na prática clínica seja muito improvável que se precise gravar simultaneamente mais do que duas direções para descrever um determinado local do corpo.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Medial a(ao)</items>
+        <items id="description">Em direção ao meio do ponto de referência</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Lateral a (ao)</items>
+        <items id="description">Lateral ao ponto de referência.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Superior a(ao)</items>
+        <items id="description">Superior ao ponto de referência.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Inferior a(ao)</items>
+        <items id="description">Inferior ao ponto de referência.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Anterior a (ao)</items>
+        <items id="description">Na frente, ou ventralmente, em relação ao ponto de referência.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Posterior a (ao)</items>
+        <items id="description">Para trás, ou dorsalmente, em relação ao ponto de referência.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Localização relativa</items>
+        <items id="description">Detalhe para identificar um único local físico, seja dentro ou dentro do corpo humano em termos de sua relação com outros marcos anatômicos macroscópicos.</items>
+        <items id="comment">Mais de uma localização relativa pode ser necessária para fornecer uma referência cruzada precisa.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Nome do ponto de referência</items>
+        <items id="description">Site do corpo identificado usado como ponto de referência para o local em questão do corpo.</items>
+        <items id="comment">O "nome do ponto de referência" pode ser uma estrutura anatômica (como o umbigo), uma linha anatômica (como a linha médio clavicular), um ponto anatômico bem definido (como o ponto de McBurney). Sempre que possível, este elemento deve ser codificado com uma terminologia capaz de desencadear o suporte à decisão - um termo apropriado para uso aqui pode incluir conceitos individuais ou uma lista de termos pré-coordenados. O texto livre deve ser usado somente se não houver uma terminologia apropriada disponível. É altamente recomendável que o "nome do ponto de referência" seja registrado tão especificamente como for anatomicamente possível. Por exemplo: registre a "pálpebra superior" ao invés de registrar 'pálpebra' com 'superior' como qualificador; "Quinta costela" em vez de "costela" com um qualificador numérico.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Distância do ponto de referência</items>
+        <items id="description">Distância da localização ao ponto de referência identificado.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Descrição</items>
+        <items id="description">Descrição narrativa que pode ser utilizada para refinar e apoiar os dados estruturados da localização relativa.</items>
+        <items id="comment">Por exemplo: uma tatuagem cobre a metade inferior desta área.</items>
+      </items>
+      <items code="at0054">
+        <items id="text">Representação mulimídia</items>
+        <items id="description">Imagem ou outra mídia usada para suportar a identificação da localização no corpo.</items>
+      </items>
+      <items code="at0055">
+        <items id="text">Proximal a</items>
+        <items id="description">Proximal em relação ao ponto de referência</items>
+      </items>
+      <items code="at0056">
+        <items id="text">Distal a (ao),</items>
+        <items id="description">Distal em relação ao ponto de referência.</items>
+      </items>
+      <items code="at0057">
+        <items id="text">Superficial a(ao)</items>
+        <items id="description">Próximo a superfície externa com relação ao ponto de referência.</items>
+      </items>
+      <items code="at0058">
+        <items id="text">Em profundidade a</items>
+        <items id="description">Distante da superfície externa com relação ao ponto de referência.</items>
+      </items>
+      <items code="at0059">
+        <items id="text">Dentro</items>
+        <items id="description">Dentro do ponto de referência.</items>
+      </items>
+      <items code="at0060">
+        <items id="text">Externo a(ao)</items>
+        <items id="description">Fora do ponto de referência.</items>
+      </items>
+      <items code="at0062">
+        <items id="text">Lateralidade</items>
+        <items id="description">O lado do corpo no qual o ponto de referência está localizado.</items>
+        <items id="comment">Se o ponto de referência identificado não tiver lateralidade, este elemento de dados não deve ser preenchido. Se o elemento 'nome do ponto de referência' usar termos pré-coordenados que incluam lateralidade, esse elemento de dados é redundante.</items>
+      </items>
+      <items code="at0063">
+        <items id="text">Para a cavidade oral</items>
+        <items id="description">Em direção a boca. Utilizado geralmente para descrever localizações do sistema digestivo.</items>
+      </items>
+      <items code="at0064">
+        <items id="text">Em direção ao ânus.</items>
+        <items id="description">Em direção ao ânus. Utilizado para descrever localizações do sistema digestivo.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

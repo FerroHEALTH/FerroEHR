@@ -6,8 +6,8 @@
 //! Regulation (EU) 2025/327 Art. 3(3) lets a Member State delay a person's
 //! access to their data "for a limited period of time until a health
 //! professional is able to properly communicate and explain" it
-//! (`docs/law/eu/ehds/text.html`). On a deployment that enables
-//! `[privacy.access_delay]`, a request that acts for the person runs with the delay
+//! (`docs/law/eu/ehds/text.html`). On a deployment whose access-delay register
+//! is on, a request that acts for the person runs with the delay
 //! enforced, published to the platform layer through
 //! `ferroehr::system_log::access_context`, where the version reads, the AQL
 //! builder, the exports and the write guard treat withheld data as absent.
@@ -26,8 +26,8 @@ use crate::state::AppState;
 
 /// Whether the EHDS Art. 3(3) delay holds for `op` from the current caller.
 ///
-/// It holds on a deployment that enables `[privacy.access_delay]`, for a caller that
-/// acts for the person, on every operation but the controller's own
+/// It holds on a deployment whose access-delay register is on, for a caller
+/// that acts for the person, on every operation but the controller's own
 /// (`admin_*`).
 pub(crate) fn applies(state: &AppState, op: &str) -> bool {
     if op.starts_with("admin_") || !state.backend().access_delay_enabled() {
@@ -38,13 +38,18 @@ pub(crate) fn applies(state: &AppState, op: &str) -> bool {
 
 /// Whether `principal` may be the person's own access: a caller
 /// `ferrohealth-smart` classifies as the patient, or one representing the
-/// person.
+/// person, through a `persons` or a `patients` issuer.
 pub(crate) fn acts_for_the_person(principal: &Principal) -> bool {
     // NOTE: EHDS Art. 3(3), the owner's ruling of 2026-10-31: a mixed token is withheld
     // from, so the person never reads held data early; the rule is the family crate's.
-    principal.access.caller().is_some_and(|caller| {
-        caller.is_the_person() || matches!(caller.kind(), CallerKind::Representative { .. })
-    })
+    let portal = principal
+        .represented
+        .as_ref()
+        .is_some_and(|represented| represented.portal.is_some());
+    portal
+        || principal.access.caller().is_some_and(|caller| {
+            caller.is_the_person() || matches!(caller.kind(), CallerKind::Representative { .. })
+        })
 }
 
 /// Answer, as an unknown object would be answered, a request whose path names

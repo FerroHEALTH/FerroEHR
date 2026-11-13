@@ -1,0 +1,413 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=38dc73ba-4e9d-44f9-9c14-ddb55b2f5bda; build_uid=338e8a91-7a97-43af-8dc5-0e1c8c247343)
+    openEHR-EHR-OBSERVATION.tendon_babinski_reflexes.v0.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.biz">
+        ["date"] = <"2004-05-18">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"AFE2C57B8420BFF824EC92E7472284C7">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Recording of the assessment of tendon reflexes">
+            keywords = <"reflexes", "tendon">
+            use = <"Use to record tendon reflexes and babinski response">
+            misuse = <"">
+            copyright = <"© 2011 openEHR Foundation, openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"تسجيل تقييم (تقدير) منعكسات الأوتار">
+            keywords = <"*reflexes(en)", "*tendon(en)">
+            use = <"استخدمه لتسجيل منعكسات الأوتار و استجابة بابينسكي">
+            misuse = <"">
+            copyright = <"© 2011 openEHR Foundation, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Tendon and Babinski reflexes
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TABLE[at0003] matches {
+                                rotated matches {True}
+                                number_key_columns matches {1}
+                                rows cardinality matches {0..1; unordered} matches {
+                                    CLUSTER[at0050] occurrences matches {0..2} matches {    -- row
+                                        items cardinality matches {7} matches {
+                                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- row_head
+                                                value matches {
+                                                    DV_CODED_TEXT[at9003] matches {
+                                                        defining_code matches {[ac9000]}    -- row_head (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Biceps
+                                                value matches {
+                                                    DV_ORDINAL[at9004] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0005]}],    -- Absent
+                                                            [{1}, {[at0006]}],    -- +/-
+                                                            [{2}, {[at0007]}],    -- +
+                                                            [{3}, {[at0008]}],    -- ++
+                                                            [{4}, {[at0009]}],    -- +++
+                                                            [{5}, {[at0010]}]    -- ++++
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Triceps
+                                                value matches {
+                                                    DV_ORDINAL[at9005] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0005]}],    -- Absent
+                                                            [{1}, {[at0006]}],    -- +/-
+                                                            [{2}, {[at0007]}],    -- +
+                                                            [{3}, {[at0008]}],    -- ++
+                                                            [{4}, {[at0009]}],    -- +++
+                                                            [{5}, {[at0010]}]    -- ++++
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Supinator
+                                                value matches {
+                                                    DV_ORDINAL[at9006] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0005]}],    -- Absent
+                                                            [{1}, {[at0006]}],    -- +/-
+                                                            [{2}, {[at0007]}],    -- +
+                                                            [{3}, {[at0008]}],    -- ++
+                                                            [{4}, {[at0009]}],    -- +++
+                                                            [{5}, {[at0010]}]    -- ++++
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Knee
+                                                value matches {
+                                                    DV_ORDINAL[at9007] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0005]}],    -- Absent
+                                                            [{1}, {[at0006]}],    -- +/-
+                                                            [{2}, {[at0007]}],    -- +
+                                                            [{3}, {[at0008]}],    -- ++
+                                                            [{4}, {[at0009]}],    -- +++
+                                                            [{5}, {[at0010]}]    -- ++++
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0035] occurrences matches {0..1} matches {    -- Ankle
+                                                value matches {
+                                                    DV_ORDINAL[at9008] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0005]}],    -- Absent
+                                                            [{1}, {[at0006]}],    -- +/-
+                                                            [{2}, {[at0007]}],    -- +
+                                                            [{3}, {[at0008]}],    -- ++
+                                                            [{4}, {[at0009]}],    -- +++
+                                                            [{5}, {[at0010]}]    -- ++++
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0042] occurrences matches {0..1} matches {    -- Babinski response
+                                                value matches {
+                                                    DV_ORDINAL[at9009] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0043]}],    -- Strongly down-going
+                                                            [{1}, {[at0044]}],    -- down-going
+                                                            [{2}, {[at0045]}],    -- equivocal
+                                                            [{3}, {[at0046]}],    -- up-going
+                                                            [{4}, {[at0047]}]    -- strongly up-going
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_LIST[at0048] matches {
+                                items cardinality matches {0..1} matches {
+                                    ELEMENT[at0049] matches {    -- With recruitment
+                                        value matches {
+                                            DV_BOOLEAN[at9010] matches {
+                                                value matches {True, False}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Tendon and Babinski reflexes">
+                description = <"Reflexes tested during routine neurological examination">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Any recording event">
+            >
+            ["at0004"] = <
+                text = <"Biceps">
+                description = <"Reflex of the biceps tendon">
+            >
+            ["at0005"] = <
+                text = <"Absent">
+                description = <"Reflex not evident">
+            >
+            ["at0006"] = <
+                text = <"+/-">
+                description = <"Reflex possibly present - markedly reduced amplitude">
+            >
+            ["at0007"] = <
+                text = <"+">
+                description = <"Reflex present but reduced amplitude">
+            >
+            ["at0008"] = <
+                text = <"++">
+                description = <"Reflex normal">
+            >
+            ["at0009"] = <
+                text = <"+++">
+                description = <"Reflex increased">
+            >
+            ["at0010"] = <
+                text = <"++++">
+                description = <"Reflex markedly increased">
+            >
+            ["at0011"] = <
+                text = <"Left">
+                description = <"Reflexes on the left side of the body">
+            >
+            ["at0012"] = <
+                text = <"row_head">
+                description = <"@internal@">
+            >
+            ["at0013"] = <
+                text = <"Right">
+                description = <"Reflexes on the right side of the body">
+            >
+            ["at0014"] = <
+                text = <"Triceps">
+                description = <"Reflex of the triceps tendon">
+            >
+            ["at0021"] = <
+                text = <"Supinator">
+                description = <"Reflex of supinator muscle">
+            >
+            ["at0028"] = <
+                text = <"Knee">
+                description = <"Quadriceps tendon reflex">
+            >
+            ["at0035"] = <
+                text = <"Ankle">
+                description = <"Archilles tendon reflex">
+            >
+            ["at0042"] = <
+                text = <"Babinski response">
+                description = <"The babinski reflex">
+            >
+            ["at0043"] = <
+                text = <"Strongly down-going">
+                description = <"Babinski response is strongly towards the sole of the foot">
+            >
+            ["at0044"] = <
+                text = <"down-going">
+                description = <"Babinski response is towards the sole of the foot">
+            >
+            ["at0045"] = <
+                text = <"equivocal">
+                description = <"Babinski response is neither up-going or down-going">
+            >
+            ["at0046"] = <
+                text = <"up-going">
+                description = <"Babinski response is towards the dorsum of the foot">
+            >
+            ["at0047"] = <
+                text = <"strongly up-going">
+                description = <"Babinski response is strongly towards the dorsum of the foot">
+            >
+            ["at0049"] = <
+                text = <"With recruitment">
+                description = <"Using muscle recruitment elsewhere in the body">
+            >
+            ["at0050"] = <
+                text = <"row">
+                description = <"@internal@">
+            >
+            ["ac9000"] = <
+                text = <"row_head (synthesised)">
+                description = <"@internal@ (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Biceps (synthesised)">
+                description = <"Reflex of the biceps tendon (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Babinski response (synthesised)">
+                description = <"The babinski reflex (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"مُنعَكَس بابنسكي و المنعكس الوتري">
+                description = <"المنعكسات التي يتم اختبارها في أثناء الفحص العصبي الروتيني">
+            >
+            ["at0002"] = <
+                text = <"إحدى الوقائع">
+                description = <"أي واقعة تسجيل">
+            >
+            ["at0004"] = <
+                text = <"عضلة ذات الرأسين">
+                description = <"منعكس وتر العضلة ذات الرأسين">
+            >
+            ["at0005"] = <
+                text = <"غائب - لا يوجد">
+                description = <"المنعكس غير بيِّن">
+            >
+            ["at0006"] = <
+                text = <"+/-">
+                description = <"من المحتمل وجود المنعكس - بمدى مُختَزَل (قليل) بشكل ملحوظ">
+            >
+            ["at0007"] = <
+                text = <"+">
+                description = <"المنعكس موجود بالفعل و لكن بمدى (مُختَزَل) قليل">
+            >
+            ["at0008"] = <
+                text = <"++">
+                description = <"المنعكس طبيعي">
+            >
+            ["at0009"] = <
+                text = <"+++">
+                description = <"المنعكس زائد">
+            >
+            ["at0010"] = <
+                text = <"++++">
+                description = <"المنعكس زائد بشكل ملحوظ">
+            >
+            ["at0011"] = <
+                text = <"الأيسر">
+                description = <"المنعكسات على الجانب الأيسر من الجسم">
+            >
+            ["at0012"] = <
+                text = <"رأس السطر">
+                description = <"*@internal@(en)">
+            >
+            ["at0013"] = <
+                text = <"الأيمن">
+                description = <"المنعكسات على الجانب الأيمن من الجسم">
+            >
+            ["at0014"] = <
+                text = <"العضلة ثلاثية الرؤوس">
+                description = <"منعكس وتر العضلة ثلاثية الرؤوس">
+            >
+            ["at0021"] = <
+                text = <"العضلة الباسطة">
+                description = <"منعكس العضلة الباسطة">
+            >
+            ["at0028"] = <
+                text = <"الركبة">
+                description = <"منعكس وتر العضلة رباعية الرؤوس">
+            >
+            ["at0035"] = <
+                text = <"الكاحل">
+                description = <"منعكس وتر نقطة الضعف">
+            >
+            ["at0042"] = <
+                text = <"استجابة - منعكس بابينسكي">
+                description = <"منعكس بابينسكي">
+            >
+            ["at0043"] = <
+                text = <"متجه للأسفل بشكل قوي">
+                description = <"استجابة بابينسكي تتجه بقوة نحو أخمص القدم">
+            >
+            ["at0044"] = <
+                text = <"متجه للأسفل">
+                description = <"استجابة بابينسكي تتجه نحو أخمص القدم">
+            >
+            ["at0045"] = <
+                text = <"ملتبس - غير قابل للتحديد">
+                description = <"منعكس بابينسكي ليس متجها للأسفل و لا للأعلى">
+            >
+            ["at0046"] = <
+                text = <"متجه للأعلى">
+                description = <"منعكس بابينسكي متجه نحو ظهر القدم">
+            >
+            ["at0047"] = <
+                text = <"متجه للأعلى بشكل قوي">
+                description = <"استجابة بابينسكي تتجه بقوة نحو ظهر القدم">
+            >
+            ["at0049"] = <
+                text = <"بالإجلاب">
+                description = <"باستخدام إجلاب العضلة ( الزيادة التدريجية في شدة المنعكس عند استمرار التنبيه) في أي مكان آخر بالجسم">
+            >
+            ["at0050"] = <
+                text = <"*row(en)">
+                description = <"*@internal@(en)">
+            >
+            ["ac9000"] = <
+                text = <"رأس السطر (synthesised)">
+                description = <"*@internal@(en) (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"عضلة ذات الرأسين (synthesised)">
+                description = <"منعكس وتر العضلة ذات الرأسين (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"استجابة - منعكس بابينسكي (synthesised)">
+                description = <"منعكس بابينسكي (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0011", "at0013">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0043", "at0044", "at0045", "at0046", "at0047">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009", "at0010">
+        >
+    >

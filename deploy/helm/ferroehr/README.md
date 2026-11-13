@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment.profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
 
-![Version: 25.0.1-rc2](https://img.shields.io/badge/Version-25.0.1--rc2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.7.0-rc2](https://img.shields.io/badge/AppVersion-5.7.0--rc2-informational?style=flat-square)
+![Version: 32.0.0-rc1](https://img.shields.io/badge/Version-32.0.0--rc1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.7.1-rc1](https://img.shields.io/badge/AppVersion-5.7.1--rc1-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,11 +44,11 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 25.0.1-rc2 \
+  --version 32.0.0-rc1 \
   --namespace ferroehr --create-namespace \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
-  --set image.tag=5.7.0-rc2
+  --set image.tag=5.7.1-rc1
 ```
 
 `sandbox` is for a trial; a deployment holding patient data starts from
@@ -62,8 +62,8 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `25.0.1-rc2` |
-| the **server image** | `image.tag` | `5.7.0-rc2` |
+| the **chart** (templates, defaults, this document) | `--version` | `32.0.0-rc1` |
+| the **server image** | `image.tag` | `5.7.1-rc1` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
 is what keeps an upgrade of one from silently moving the other.
@@ -74,7 +74,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:25.0.1-rc2 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:32.0.0-rc1 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -82,9 +82,9 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:25.0.1-rc2 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:25.0.1-rc2 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:32.0.0-rc1 \
   -R FerroHEALTH/FerroEHR
-gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.7.0-rc2 \
+gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.7.1-rc1 \
   -R FerroHEALTH/FerroEHR
 ```
 
@@ -152,6 +152,40 @@ port. Set `ingressFrom` to your ingress controller, or set
 open state at all. And note that **none of it does anything unless your CNI
 enforces NetworkPolicy**. Check yours; several do not.
 
+## Demographic definitions and the party mapping
+
+The server stores FerroEHR's default demographic definitions as it boots,
+each one whose id the definition store does not hold, and with no mapping
+key set `config.authz.party_binding` maps them: the professional `PERSON`
+and `ROLE`, a care-team `GROUP`, the membership and representation
+`PARTY_RELATIONSHIP` archetypes and the patient `PERSON`. SCIM Users,
+Groups and representation work with no mapping key. A deployment with
+templates of its own sets the mapping section that names them and lists
+the files in `definitions.files`, which the `definitions` init container
+stores before the server starts; the list is empty by default.
+
+A deployment whose people log in under another identifier type sets the
+`person` section, whose key carries that type:
+
+```yaml
+config:
+  authz:
+    party_binding:
+      person:
+        template:
+          - template_id: openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0
+            default: true
+            key: { path: "/details[id2]/items[id3]", type: uuid }
+            user_name: { path: "/details[id2]/items[id3]", type: scim_user_name }
+            external_id: { path: "/details[id2]/items[id3]", type: scim_external_id }
+```
+
+Set the mapping before the first start: the binding side table is filled
+under its digest then, and a server whose mapping differs refuses to start
+until `ferroehr party-binding refill` has run with every replica stopped.
+The whole set is described at
+<https://ferroehr.eu/docs/latest/installation/default-demographic-definitions.html>.
+
 ## FerroBRIDGE alongside the CDR
 
 `bridge.enabled=true` deploys [FerroBRIDGE](https://github.com/FerroHEALTH/FerroBRIDGE),
@@ -178,7 +212,7 @@ Kubernetes: `>=1.36.0-0`
 
 | Repository | Name | Version |
 |------------|------|---------|
-| oci://ghcr.io/ferrohealth/charts | ferropix | 0.3.10 |
+| oci://ghcr.io/ferrohealth/charts | ferropix | 0.3.19 |
 
 > [!NOTE]
 > Rows under `config.*` carry no description here on purpose. Those keys are the
@@ -266,46 +300,16 @@ Kubernetes: `>=1.36.0-0`
 | bridge.tolerations | list | `[]` | Tolerations. |
 | bridge.topologySpreadConstraints | list | `[]` | Topology spread for FerroBRIDGE's pods. Empty uses the chart's default: one replica per node, `ScheduleAnyway`, scoped to the ReplicaSet being rolled. Set it to replace that wholesale. |
 | bridge.usageReport.enabled | string | `nil` | FerroBRIDGE's usage report. Empty follows the top-level `usageReport.enabled`; true or false decides for FerroBRIDGE alone. The chart writes it into `[usage_report]` of config.toml, with the deployment `helm`, for a FerroBRIDGE release from 0.0.7 on; a release before it sends no report and refuses the section, so it gets none. |
-| config.api.admin | bool | `false` |  |
 | config.api.base_path | string | `"/ferroehr/rest/openehr/v1"` |  |
 | config.api.body_limit | string | `"16MiB"` |  |
-| config.api.openapi_ui | string | `"private"` |  |
-| config.api.terminology | bool | `false` |  |
-| config.audit.categories.archetypes | object | `{}` |  |
-| config.audit.categories.templates | object | `{}` |  |
 | config.audit.enabled | bool | `true` |  |
-| config.audit.store.enabled | bool | `true` |  |
-| config.audit.store.retention | string | unset |  |
 | config.auth.enabled | bool | `true` |  |
-| config.authz.abac.enabled | bool | `false` |  |
-| config.authz.federation.agreement | list | `[]` |  |
-| config.authz.party_binding.namespace | string | `"demographic"` |  |
-| config.authz.rbac.admin_role | string | `"ADMIN"` |  |
-| config.authz.rbac.enabled | bool | `true` |  |
-| config.authz.rbac.role_issuers | list | `[]` |  |
-| config.authz.system_client | list | `[]` |  |
-| config.database.acquire_timeout | string | `"30s"` |  |
 | config.database.max_connections | int | `10` |  |
-| config.database.migrations | string | `"apply"` |  |
 | config.database.min_connections | int | `0` |  |
-| config.database.statement_timeout | string | `"1min"` |  |
 | config.deployment.profile | string | unset: the chart refuses to render |  |
-| config.deployment.spec_profile | string | `"development"` |  |
 | config.files | object | `{}` |  |
 | config.management.base_path | string | `"/management"` |  |
 | config.management.enabled | bool | `true` |  |
-| config.management.endpoints.env | string | `"off"` |  |
-| config.management.endpoints.flamegraph | string | `"off"` |  |
-| config.management.endpoints.info | string | `"off"` |  |
-| config.management.endpoints.loggers | string | `"off"` |  |
-| config.management.endpoints.metrics | string | `"off"` |  |
-| config.management.endpoints.prometheus | string | `"off"` |  |
-| config.record.multimedia.bucket | string | `"openehr-multimedia"` |  |
-| config.record.multimedia.enabled | bool | `false` |  |
-| config.record.multimedia.region | string | `"us-east-1"` |  |
-| config.record.signing.enabled | bool | `true` |  |
-| config.record.signing.mode | string | `"digest"` |  |
-| config.record.signing.verify_on_read | string | `"strict"` |  |
 | config.server.caller_rate.burst | int | `2048` |  |
 | config.server.caller_rate.requests_per_second | int | `1024` |  |
 | config.server.max_concurrent_requests | int | `256` |  |
@@ -340,8 +344,8 @@ Kubernetes: `>=1.36.0-0`
 | extraVolumes | list | `[]` | Extra volumes / volumeMounts (e.g. an external secret store for the PGP key). |
 | ferropix.config.server.base_path | string | `""` | FerroPIX's `[server] base_path`, read here to build the FHIR base the CDR is pointed at. |
 | ferropix.enabled | bool | `true` | Deploy FerroPIX beside the CDR and point config.pixm at it. |
-| ferropix.image.digest | string | `"sha256:6fb622b5b9ade34c8a4053112c8f166ff495d8b32bf99f35529d01e512b7cc42"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
-| ferropix.image.tag | string | `"0.0.18"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
+| ferropix.image.digest | string | `"sha256:85d40e6fdcdb39f782007eff91eb059861a4e039ca3f8fb56e37f2fa0f28d78a"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
+| ferropix.image.tag | string | `"0.0.26"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
 | ferropix.service.port | int | `8080` | FerroPIX's Service port, read here to build the FHIR base the CDR is pointed at. |
 | ferropix.usageReport.enabled | bool | `true` | FerroPIX's own usage report switch, read by the dependency chart. A dependency chart cannot read this chart's `usageReport.enabled`, so with that set to false, set this false too: the render refuses the pair `usageReport.enabled=false` and `ferropix.usageReport.enabled=true`. |
 | fullnameOverride | string | `""` | Override the full resource name. |
@@ -415,7 +419,7 @@ Kubernetes: `>=1.36.0-0`
 | replicaCount | int | `2` | Number of replicas (ignored when autoscaling.enabled is true). |
 | resources | object | `{"limits":{"cpu":"2","ephemeral-storage":"1Gi","memory":"1Gi"},"requests":{"cpu":"250m","ephemeral-storage":"128Mi","memory":"256Mi"}}` | Resource requests/limits. Sized for a modest API replica; tune for load. ephemeral-storage is bounded too: the container writes only logs/tmp (the root filesystem is read-only), and an unbounded default would let runaway local writes evict the pod's node neighbours (https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#setting-requests-and-limits-for-local-ephemeral-storage). |
 | secrets.auditFhirFeedUrl | string | `""` | FHIR base URL of the external Audit Record Repository for [audit.fhir_feed.endpoint] (may carry basic-auth credentials in its userinfo) → FERROEHR__AUDIT__FHIR_FEED__ENDPOINT__URL env: audit.fhir_feed.endpoint.url has no `*_file` sibling either. |
-| secrets.basicUserPasswordHashes | object | `{}` | Argon2id password hashes for [[auth.basic.users]], keyed by user-id. Each is MOUNTED as /etc/ferroehr-secrets/auth.basic.users.<user>.password_hash and the chart injects the matching `password_hash_file` into the rendered TOML. Declare the user itself — `user`, `scopes`, `roles` — under config.auth.basic.users; a user-id with no matching entry is a render error. A hash under `config:` is refused: it would reach the ConfigMap. |
+| secrets.basicUserPasswordHashes | object | `{}` | Argon2id password hashes for [[auth.basic.users]], keyed by user-id. Each is MOUNTED as /etc/ferroehr-secrets/auth.basic.users.<user>.password_hash and the chart injects the matching `password_hash_file` into the rendered TOML. Declare the user itself — `user` — under config.auth.basic.users; a user-id with no matching entry is a render error. A hash under `config:` is refused: it would reach the ConfigMap. |
 | secrets.ehrIndexClientSecret | string | `""` | The client secret of the identity source's OAuth2 grant ([pixm.endpoint.credentials.oauth]). MOUNTED as /etc/ferroehr-secrets/ehr_index.oauth.client_secret, and the chart injects the matching `client_secret_file` into the rendered TOML. Declare the grant itself (token_endpoint or issuer, client_id, scope) under config.pixm.endpoint.credentials.oauth; a secret with no such declaration is a render error. |
 | secrets.multimediaAccessKeyId | string | `""` | S3 access key id for [multimedia] → FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID env. Not a secret in the server's own model (it is reported unredacted by /management/env); prefer IRSA/Workload-Identity (leave empty) on cloud. |
 | secrets.multimediaSecretAccessKey | string | `""` | S3 secret access key for [multimedia]. MOUNTED as /etc/ferroehr-secrets/multimedia.secret_access_key (multimedia.secret_access_key_file). |
@@ -449,10 +453,10 @@ Kubernetes: `>=1.36.0-0`
 | terminology.enabled | bool | `false` | Deploy FerroTERM alongside the CDR. |
 | terminology.extraEnv | list | `[]` | Extra environment for FerroTERM (escape hatch). |
 | terminology.failOnError | bool | `false` | What the CDR does when the terminology server cannot answer. `false` (the server's own shipped default) accepts the binding; `true` turns an unreachable server into a 422 refusal. No released openEHR text decides between the two. |
-| terminology.image.digest | string | `"sha256:b7f10609992377a7b8bca666254bceca79fe4366e2e54fc5fbce079eb9abf619"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
+| terminology.image.digest | string | `"sha256:7c20d39e1989fce1dfb92e6ddfd853dfa9a52bb9b7b973fbba42430963ef75bd"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
 | terminology.image.pullPolicy | string | `"IfNotPresent"` | Pull policy. |
 | terminology.image.repository | string | `"ghcr.io/ferrohealth/ferroterm"` | FerroTERM image repository. A separate product on its own release line (https://github.com/FerroHEALTH/FerroTERM), BUSL-1.1 from the same Licensor as FerroEHR. |
-| terminology.image.tag | string | `""` | Image tag. Empty falls back to the FerroTERM release this chart is pinned to (0.4.1) — never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert while the values file claimed otherwise. Clear `digest` to deploy a tag. |
+| terminology.image.tag | string | `""` | Image tag. Empty falls back to the FerroTERM release this chart is pinned to (0.4.5) — never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert while the values file claimed otherwise. Clear `digest` to deploy a tag. |
 | terminology.index.mountPath | string | `"/data/index"` | Directory the index claim is mounted at, read-only. Rendered as `FERROTERM__TERMINOLOGY__INDEX` only when a claim is named. |
 | terminology.index.persistentVolumeClaim | string | `""` | Name of an EXISTING PersistentVolumeClaim holding a built index for a release you hold a licence for. Empty means the shaped seed is served alone. The chart provisions no storage and renders no build Job: build the index off-cluster with `ferroterm-build --rf2 <release.zip> --out <dir>` and fill the claim from that output. |
 | terminology.logFormat | string | `"json"` | Log format (`json` or `pretty`), passed as `FERROTERM__TELEMETRY__FORMAT`. |

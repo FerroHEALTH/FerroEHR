@@ -52,21 +52,25 @@ fn rest_config(auth_enabled: bool) -> AppConfig {
         },
         ..Default::default()
     };
-    common::with_basic_users(
-        &mut config,
-        &[
-            ("alice", &[]),
-            ("bob", &[]),
-            ("carol", &[]),
-            ("nadia", &["NURSE"]),
-        ],
-    );
+    common::basic_users(&mut config, USERS);
     config.auth.shared.enabled = auth_enabled;
     config
 }
 
-fn committer(name: &str) -> Value {
-    json!({ "_type": "PARTY_IDENTIFIED", "name": name })
+/// The Basic users: three granted no role and a nurse.
+const USERS: &[(&str, &[&str])] = &[
+    ("alice", &[]),
+    ("bob", &[]),
+    ("carol", &[]),
+    ("nadia", &["NURSE"]),
+];
+
+/// The committer a contribution names: the placeholder naming the Basic user
+/// `alice` by its login, since a Basic user commits as its bound `PERSON`,
+/// which the server writes.
+fn committer() -> Value {
+    json!({ "_type": "PARTY_IDENTIFIED",
+            "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": "alice" }] })
 }
 
 fn coded(code: &str, value: &str) -> Value {
@@ -100,7 +104,7 @@ fn access_contribution(ehr: &Value, scheme: &Value) -> Value {
         "_type": "CONTRIBUTION",
         "versions": [ {
             "_type": "ORIGINAL_VERSION",
-            "commit_audit": { "change_type": coded("251", "modification"), "committer": committer("alice") },
+            "commit_audit": { "change_type": coded("251", "modification"), "committer": committer() },
             "lifecycle_state": coded("532", "complete"),
             "preceding_version_uid": { "value": preceding },
             "data": {
@@ -117,7 +121,7 @@ fn access_contribution(ehr: &Value, scheme: &Value) -> Value {
                 "settings": scheme
             }
         } ],
-        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer("alice") }
+        "audit": { "change_type": { "_type": "DV_CODED_TEXT", "value": "modification", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "251" } },  "committer": committer() }
     })
 }
 
@@ -135,14 +139,14 @@ async fn app(auth_enabled: bool, scheme: Option<Value>) -> (testkit::TestDb, Rou
     if let Some(scheme) = scheme {
         seed_scheme(&svc, ehr_id, &scheme).await;
     }
-    let app = ferroehr_rest::build_full(
+    common::grant_basic_users(&svc, &pool, USERS).await;
+    let app = common::build_full(
         rest_config(auth_enabled),
         Arc::new(svc),
         None,
         Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     (pg, app)
 }
 
@@ -435,14 +439,14 @@ async fn query_app_with(stored_default_access: Option<&str>) -> (testkit::TestDb
         .await
         .expect("store settings that do not parse");
     }
-    let app = ferroehr_rest::build_full(
+    common::grant_basic_users(&svc, &pool, USERS).await;
+    let app = common::build_full(
         rest_config(true),
         Arc::new(svc),
         None,
         Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     (pg, app)
 }
 
@@ -579,6 +583,8 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
     let mut config = rest_config(true);
     common::with_basic_users(
         &mut config,
+        &svc,
+        &pool,
         &[
             ("alice", &[]),
             ("bob", &[]),
@@ -586,7 +592,8 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
             ("nadia", &["NURSE"]),
             ("root", &["SUPERADMIN"]),
         ],
-    );
+    )
+    .await;
     let mut authz = ferroehr::config::authz::AuthzConfig::default();
     authz.rbac.enabled = false;
     authz.rbac.ehr_access_default = ferroehr::config::authz::EhrAccessDefault::Restricted;
@@ -602,9 +609,7 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
         handle.as_ref().is_some_and(|h| !h.rbac_active()),
         "a restricted default is carried with the coarse gate off"
     );
-    let app = ferroehr_rest::build_full(config, Arc::new(svc), handle, Observability::default())
-        .await
-        .expect("build app");
+    let app = common::build_full(config, Arc::new(svc), handle, Observability::default()).await;
 
     assert_eq!(
         status(
@@ -872,14 +877,14 @@ async fn a_manifest_export_by_subject_id_passes_the_gate() {
         "access_list": [ { "principal": "user:bob", "access": "full" } ]
     });
     seed_scheme(&svc, ehr_id, &scheme).await;
-    let app = ferroehr_rest::build_full(
+    common::grant_basic_users(&svc, &pool, USERS).await;
+    let app = common::build_full(
         rest_config(true),
         Arc::new(svc),
         None,
         Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     let by_subject = || {
         vec![json!({
             "_type": "EXTRACT_ENTITY_MANIFEST", "extract_id_key": SUBJECT, "subject_id": SUBJECT

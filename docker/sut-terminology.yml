@@ -32,7 +32,6 @@ services:
   ferroehr:
     environment:
       FERROEHR__TERMINOLOGY__ENDPOINT__URL: http://terminology:8080/r4b
-      FERROEHR__TERMINOLOGY__ON_ERROR: accept
     depends_on:
       # FerroTERM reports healthy only once the mounted seed is served, so the
       # first binding a composition carries finds the value set

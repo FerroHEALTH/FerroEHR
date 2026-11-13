@@ -42,6 +42,7 @@ use crate::extensions::access::authn::Authenticator;
 use crate::state::AppState;
 
 use ferroehr::config::smart::SmartConfig;
+use ferrohealth_secret::secret_url::SecretUrl;
 
 /// The capability of the EHR launch context the `ehrId` claim conveys
 /// (master04 §Capabilities), which the route table binds `patient/` grants to.
@@ -93,7 +94,7 @@ pub fn options(cfg: &AppConfig) -> SmartOptions {
     services.insert(
         OPENEHR_REST_SERVICE.to_owned(),
         serde_json::json!({
-            "baseUrl": absolute_base(smart, &cfg.api.base_path),
+            "baseUrl": absolute_base(cfg, &cfg.api.base_path),
             "description": "The openEHR REST API baseUrl",
         }),
     );
@@ -106,18 +107,18 @@ pub fn options(cfg: &AppConfig) -> SmartOptions {
     }
 }
 
-/// Make a base path absolute by prefixing the configured external origin
-/// (master04 §Services: `baseUrl` is an "Absolute URL"). An already-absolute
-/// value passes through; a missing origin (impossible on a validated enabled
-/// config) leaves the path as-is rather than fabricating one.
-fn absolute_base(cfg: &SmartConfig, base: &str) -> String {
+/// Make a base path absolute under the server's public root, `[server]
+/// public_base_url` with `server.base_path` (master04 §Services: `baseUrl` is
+/// an "Absolute URL"). An already-absolute value passes through; a missing
+/// root (impossible on a validated enabled config) leaves the path as-is
+/// rather than fabricating one.
+fn absolute_base(cfg: &AppConfig, base: &str) -> String {
     if base.starts_with("http://") || base.starts_with("https://") {
         return base.to_owned();
     }
-    match cfg.public_base_url.as_deref() {
-        Some(origin) => format!("{}{base}", origin.trim_end_matches('/')),
-        None => base.to_owned(),
-    }
+    cfg.public_root
+        .as_ref()
+        .map_or_else(|| base.to_owned(), |root| root.at(base))
 }
 
 /// The advertised `scopes_supported`: `[auth] scopes_supported` when set, else
@@ -170,8 +171,8 @@ fn scopes_supported(cfg: &AppConfig) -> Vec<String> {
 pub fn discovery_path(cfg: &SmartConfig, rest_root: &str) -> String {
     let base = cfg
         .platform_base_url
-        .as_deref()
-        .unwrap_or(rest_root)
+        .as_ref()
+        .map_or(rest_root, SecretUrl::expose)
         .trim_end_matches('/');
     format!("{base}/.well-known/smart-configuration")
 }
@@ -240,7 +241,7 @@ pub fn router(cfg: &AppConfig, rest_root: &str, authenticator: &Authenticator) -
                         and `code_challenge_methods_supported` always carries \
                         `S256` and never `plain`. The `services` map carries \
                         `org.openehr.rest` with an absolute `baseUrl` built from \
-                        `smart.public_base_url`. `capabilities` advertises what \
+                        `server.public_base_url`. `capabilities` advertises what \
                         this server enforces: `context-openehr-ehr` and \
                         `openehr-permission-v1` always, `permission-user`, \
                         `permission-patient` only with `smart.patient_issuers`, \
@@ -310,15 +311,28 @@ pub(crate) fn openapi(cfg: &AppConfig, rest_root: &str) -> utoipa::openapi::Open
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ferroehr::config::server::PublicRoot;
 
     fn enabled_cfg() -> AppConfig {
         let mut cfg = AppConfig::default();
         cfg.auth.smart = SmartConfig {
             discovery: true,
-            public_base_url: Some("https://cdr.example.com".to_owned()),
             ..SmartConfig::default()
         };
+        cfg.public_root = Some(PublicRoot::new("https://cdr.example.com", "").expect("a root"));
         cfg
+    }
+
+    #[test]
+    fn the_base_url_hangs_off_the_public_url_and_the_mount_path() {
+        let mut cfg = enabled_cfg();
+        cfg.public_root =
+            Some(PublicRoot::new("https://gw.example.com/cdr", "/ehr").expect("a root"));
+        let options = options(&cfg);
+        assert_eq!(
+            options.services[OPENEHR_REST_SERVICE]["baseUrl"],
+            "https://gw.example.com/cdr/ehr/ferroehr/rest/openehr/v1"
+        );
     }
 
     #[test]
@@ -371,7 +385,7 @@ mod tests {
     #[test]
     fn a_bound_issuer_declares_the_patient_capability_and_scopes() {
         let mut cfg = enabled_cfg();
-        cfg.auth.smart.patient_issuers = vec!["https://as.example".to_owned()];
+        cfg.auth.smart.patient_issuers = vec![SecretUrl::new("https://as.example")];
         let options = options(&cfg);
         assert!(options.permissions.contains(&PermissionCapability::Patient));
         assert!(
@@ -445,7 +459,7 @@ mod tests {
     #[test]
     fn discovery_path_honours_platform_base() {
         let mut c = SmartConfig {
-            platform_base_url: Some("/gateway/v1".to_owned()),
+            platform_base_url: Some(SecretUrl::new("/gateway/v1")),
             ..SmartConfig::default()
         };
         assert_eq!(
@@ -453,7 +467,7 @@ mod tests {
             "/gateway/v1/.well-known/smart-configuration"
         );
         // Trailing slash normalised.
-        c.platform_base_url = Some("/gateway/v1/".to_owned());
+        c.platform_base_url = Some(SecretUrl::new("/gateway/v1/"));
         assert_eq!(
             discovery_path(&c, "/ferroehr/rest"),
             "/gateway/v1/.well-known/smart-configuration"

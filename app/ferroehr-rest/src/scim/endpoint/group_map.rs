@@ -4,24 +4,23 @@
 //! A SCIM Group and the `GROUP` that holds it, both ways.
 //!
 //! A Group's `displayName` is its `GROUP`'s `PARTY_IDENTITY`, its `externalId`
-//! a `DV_IDENTIFIER` under the client's group issuer, the
-//! `group_identifier_issuer` of the `[[auth.party]]` table whose
-//! `identifier_issuer` is the client's `binding_issuer`, so the token's group
-//! claim of that client's people matches it. Each member is served with its
+//! a `DV_IDENTIFIER` under the client's group issuer
+//! ([`ferroehr::config::scim::group_issuer`]): the `group_identifier_issuer` of the
+//! `[[auth.party]]` table whose `identifier_issuer` is the client's
+//! `binding_issuer`, so the token's group claim of that client's people
+//! matches it, or one derived from the `binding_issuer` when the table sets
+//! none. Each member is served with its
 //! `value`, the member User's `id`, its `$ref` and its `type`, and no
 //! `display`, which RFC 7643 §4.2 leaves optional. No openEHR spec governs
 //! SCIM: our own design.
 
-use std::collections::BTreeMap;
-
-use ferroehr::config::scim::ScimClient;
 use ferroehr::ids::VoId;
 use ferroehr::party_binding::provisioned::GroupClient;
 use ferroehr::service::demographic::group_provision::{GroupState, GroupWriter, ProvisionedGroup};
 use serde_json::{Map, Value, json};
 
 use crate::config::AppConfig;
-use crate::scim::endpoint::schemas;
+use crate::scim::endpoint::{ScimClient, schemas};
 use crate::scim::protocol::error::{ScimError, ScimType};
 use crate::scim::protocol::etag::EntityTag;
 use crate::scim::protocol::resource::{Container, Resource};
@@ -31,7 +30,6 @@ use crate::scim::protocol::urn;
 #[derive(Debug, Clone)]
 pub(crate) struct GroupMap {
     namespace: String,
-    group_issuers: BTreeMap<String, String>,
     max_members: usize,
 }
 
@@ -41,7 +39,7 @@ impl GroupMap {
     ///
     /// # Errors
     /// The refusal naming what a mapped group lacks: the group template's
-    /// `display_name`, the membership archetype, or a client's group issuer.
+    /// `display_name` or the membership archetype.
     pub(crate) fn new(
         config: &AppConfig,
         scim: &ferroehr::config::scim::ScimConfig,
@@ -68,29 +66,8 @@ impl GroupMap {
                     .to_owned(),
             );
         }
-        let mut group_issuers = BTreeMap::new();
-        for client in &scim.client {
-            let issuer = config
-                .auth
-                .shared
-                .party
-                .iter()
-                .find(|party| party.identifier_issuer == client.binding_issuer)
-                .map(|party| party.group_identifier_issuer.trim())
-                .filter(|issuer| !issuer.is_empty())
-                .ok_or_else(|| {
-                    format!(
-                        "the [[auth.scim.client]] {:?} writes each Group's externalId under the \
-                         group_identifier_issuer of the [[auth.party]] table whose \
-                         identifier_issuer is its binding_issuer {:?}, and that table sets none",
-                        client.client_id, client.binding_issuer
-                    )
-                })?;
-            group_issuers.insert(client.binding_issuer.clone(), issuer.to_owned());
-        }
         Ok(Some(Self {
             namespace: binding.namespace.clone(),
-            group_issuers,
             max_members: usize::try_from(scim.max_group_members).unwrap_or(usize::MAX),
         }))
     }
@@ -98,21 +75,18 @@ impl GroupMap {
     /// The writer of `client`'s Groups.
     pub(crate) fn writer<'a>(&'a self, client: &'a ScimClient) -> GroupWriter<'a> {
         GroupWriter {
-            client: self.client(client),
+            client: client_of(client),
             namespace: &self.namespace,
             max_members: self.max_members,
         }
     }
+}
 
-    /// Who `client`'s Group queries ask for.
-    pub(crate) fn client<'a>(&'a self, client: &'a ScimClient) -> GroupClient<'a> {
-        GroupClient {
-            binding_issuer: &client.binding_issuer,
-            group_issuer: self
-                .group_issuers
-                .get(&client.binding_issuer)
-                .map_or("", String::as_str),
-        }
+/// Who `client`'s Group queries ask for.
+pub(crate) fn client_of(client: &ScimClient) -> GroupClient<'_> {
+    GroupClient {
+        binding_issuer: &client.binding_issuer,
+        group_issuer: &client.group_issuer,
     }
 }
 

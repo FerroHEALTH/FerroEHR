@@ -1,0 +1,773 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">12/11/2007</original_author>
+    <original_author id="name">Ian McNicoll</original_author>
+    <original_author id="organisation">Ocean Informatics</original_author>
+    <original_author id="email">ian.mcnicoll@oceaninformatics.com</original_author>
+    <other_contributors>Heather Leslie, Ocean Informatics, Australia</other_contributors>
+    <lifecycle_state>rejected</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Some aspects from NHS Scotland SCI-XML messaging standards http://www.isdscotland.org/isd/files/general-v2-7.xsd NHS Scotland Interoperability Working Group http://www.isdscotland.org/isd/5194.htm originally based on: A structure for identifying a Health Care Professional using full details.  ENV 13606 - 4:2000 7.10.11</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">94ED106F7CD62155E0C4A77CC5C4490E</other_details>
+    <other_details id="build_uid">23d67501-84a5-4668-8c7c-6764fc15957c</other_details>
+    <other_details id="revision">0.0.1</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>de</code_string>
+      </language>
+      <purpose>Zur Dokumentation persönlicher Daten wie Name(n), Adresse(n) und Kontaktmöglichkeit(en) einer Person, die nicht eindeutig einer elektronischen Gesundheitsakte zugeordnet werden können.</purpose>
+      <keywords>Person</keywords>
+      <keywords>Persönliche Daten</keywords>
+      <keywords>Name</keywords>
+      <keywords>Heilberufler</keywords>
+      <use>Zur Dokumentation persönlicher Daten von Heilberuflern, die nicht eindeutig Registern mit demografischen Daten (z.B. einer elektronischen Krankenakte, einem Master Patient Index, etc.) zugeordnet werden können. Um die mehrfache Erstellung von eingebetteten Clustern zu vermeiden, ist es sinnvoll, Templates für spezielle Anwendungsfälle zu erstellen.</use>
+      <misuse>Nicht zur Identifikation von Individuen zu benutzen, die eindeutig Registern mit demografischen Daten zugeordnet werden können (z.B. einer elektronischen Krankenakte, einem Master Patient Index, etc.).</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>pt-br</code_string>
+      </language>
+      <purpose>Para gravar dados demográficos profissionais incluindo, nome(s), endereço(s) ou contatos de uma pessoa não identificada individualmente dentro do registro eletrônico de saúde.</purpose>
+      <keywords>pessoa</keywords>
+      <keywords>demográfico</keywords>
+      <keywords>nome</keywords>
+      <keywords>profissional</keywords>
+      <use>Para gravar detalhes de profissionais externos que não podem ser referenciados individualmente dentro do registro eletrônico de saúde. Pode beneficiar-se da modelagem deste para casos de uso específicos para eviar a construção de cluster aninhados a cada vez.</use>
+      <misuse>Não deve ser usado para identificar os indivíduos que podem ser individualmente referenciados de registros demográficos, p.e., dentro do registro eletrônico de saúde, registros de pacientes, etc.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record professional demographics including name(s), Address(es) or telecoms contacts for a person not uniquely identifiied within the electronic health record.</purpose>
+      <keywords>person</keywords>
+      <keywords>demographics</keywords>
+      <keywords>name</keywords>
+      <keywords>professional</keywords>
+      <use>To record details of external professionals who cannot be referenced uniquely within the electronic health record. Would benefit from templating this for specific use-cases to avoid having to construct the nested clusters each time.</use>
+      <misuse>Not to be used to identify the individuals who can be uniquely referenced from registers of demographic details eg within the electronic health record, master patient indexes etc.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>ar-sy</code_string>
+      </language>
+      <purpose>لتسجيل المعلومات الديموغرافية لشخص مهني, بما في ذلك الأسماء, العناوين أو جهات الاتصال السلكي و اللاسلكي لشخص لا يتم تعريفه بشكل فريد في السجل الطبي الإلكتروني</purpose>
+      <keywords>الشخص</keywords>
+      <keywords>المعلومات الديموغرافية</keywords>
+      <keywords>الاسم</keywords>
+      <keywords>الشخص المهني</keywords>
+      <use>لتسجيل تفاصيل الأشخاص المهنيين الخارجيين الذين لا يمكن الرجوع إليهم بشكل فريد في السجل الطبي الإلكتروني. &#xD;
+و تكون الفائدة بوضع هذه المعلومات في قالب لحالات الاستخدام المعينة لتجنب بناء عناقيد متتالية في كل مرة.</use>
+      <misuse>لا يستخدم لتعريف الأفراد الذين يمكن الرجوع إليهم بشكل فريد من سجلات التفاصيل الديموغرافية, مثلا: في داخل السجل الطبي الإلكتروني, و فهرس المرضى الرئيسي, إلى آخره</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>de</code_string>
+    </language>
+    <author id="name">Hans Demski, Nina Schewe</author>
+    <author id="organisation">Helmholtz Zentrum München, Medizinische Hochschule Hannover</author>
+    <author id="email">demski@helmholtz-muenchen.de, schewe.nina@mh-hannover.de</author>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>pt-br</code_string>
+    </language>
+    <author id="name">Adriana Kitajima, Débora Farage, Fernanda Maia, Laíse Figueiredo, Marivan Abrahão</author>
+    <author id="organisation">Core Consulting</author>
+    <author id="email">contato@coreconsulting.com.br</author>
+    <accreditation>Hospital Alemão Oswaldo Cruz (HAOC)</accreditation>
+  </translations>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>ar-sy</code_string>
+    </language>
+    <author id="name">Mona Saleh</author>
+  </translations>
+  <uid>
+    <value>e54e8349-05de-45cf-8843-7affa3ee46f6</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-CLUSTER.individual_professional.v0</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0015</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.person_name\.v1|openEHR-EHR-CLUSTER\.person_name\.v0/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>openEHR-EHR-CLUSTER\.person_name\.v1|openEHR-EHR-CLUSTER\.person_name\.v0</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0003</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>1</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0016</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.professional_role\.v1|openEHR-EHR-CLUSTER\.professional_role\.v0/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>openEHR-EHR-CLUSTER\.professional_role\.v1|openEHR-EHR-CLUSTER\.professional_role\.v0</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0013</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_INTERVAL&lt;DV_DATE_TIME&gt;</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>upper</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_DATE_TIME</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>lower</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>0</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_COMPLEX_OBJECT">
+                    <rm_type_name>DV_DATE_TIME</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                  </children>
+                </attributes>
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0005</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0006</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0012</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>0</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id>at0011</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0017</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.telecom_details(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.telecom_details\.v0/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>openEHR-EHR-CLUSTER\.telecom_details(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.telecom_details\.v0</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0019</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.address(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.address\.v0/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>openEHR-EHR-CLUSTER\.address(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.address\.v0</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <children xsi:type="ARCHETYPE_SLOT">
+            <rm_type_name>CLUSTER</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0018</node_id>
+            <includes>
+              <string_expression>archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation\.v0|openEHR-EHR-CLUSTER\.organisation\.v1/}</string_expression>
+              <expression xsi:type="EXPR_BINARY_OPERATOR">
+                <type>Boolean</type>
+                <operator>2007</operator>
+                <precedence_overridden>false</precedence_overridden>
+                <left_operand xsi:type="EXPR_LEAF">
+                  <type>String</type>
+                  <item xsi:type="xsd:string">archetype_id/value</item>
+                  <reference_type>attribute</reference_type>
+                </left_operand>
+                <right_operand xsi:type="EXPR_LEAF">
+                  <type>C_STRING</type>
+                  <item xsi:type="C_STRING">
+                    <pattern>openEHR-EHR-CLUSTER\.organisation\.v0|openEHR-EHR-CLUSTER\.organisation\.v1</pattern>
+                  </item>
+                  <reference_type>constraint</reference_type>
+                </right_operand>
+              </expression>
+            </includes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>1</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Professional Individual demographics</items>
+        <items id="description">Professional demographics details including name(s) , addresse(s) and telecommunication contact details.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Professional details</items>
+        <items id="description">Details of a professional carer.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Grade</items>
+        <items id="description">The employment grade or position of the carer.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Specialty</items>
+        <items id="description">The speciality of the carer.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Professional Identifier</items>
+        <items id="description">Professional identifier of the individual.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Team</items>
+        <items id="description">Team to which the individual belongs.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Period of involvement</items>
+        <items id="description">The period during which this professional was involved in care of the subject.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Name</items>
+        <items id="description">Personal name details of the individual.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Professional Role</items>
+        <items id="description">Professional role details of the individual.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Telecoms</items>
+        <items id="description">Telecommunication details of the individual.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Organisation</items>
+        <items id="description">Organisation details to which the individual is attached.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Address</items>
+        <items id="description">Address details of the individual.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="de">
+      <items code="at0000">
+        <items id="text">Persönliche Daten Heilberufler</items>
+        <items id="description">Persönliche Daten eines Heilberuflers wie Name(n), Adresse(n) und Kontaktmöglichkeit(en)</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Persönliche Daten</items>
+        <items id="description">Weitere Angaben zu einem Heilberufler.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Position</items>
+        <items id="description">Gibt das Beschäftigungsverhältnis bzw. die Position des Heilberuflers an.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Fachbezeichnung</items>
+        <items id="description">Gibt die Fachbezeichnung des Heilberuflers an.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Identifikationsnummer</items>
+        <items id="description">Berufliche Kennung der Person.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Arbeitsgruppe</items>
+        <items id="description">Beschreibt die Zugehörigkeit zu einer Gruppe.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Zeitdauer der Betreuung</items>
+        <items id="description">Die Zeitspanne in der eine Betreuung durch den Heilberufler stattfand.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Name</items>
+        <items id="description">Detaillierte Angaben zum Namen der Person.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Rolle</items>
+        <items id="description">Angaben zur beruflichen Rolle der Person.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Kontaktdaten</items>
+        <items id="description">Telekommunikationsdetails der Person.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Einrichtung</items>
+        <items id="description">Angaben zur Organisation, der die Person angehört.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Adressdaten</items>
+        <items id="description">Adressdaten der Person.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="ar-sy">
+      <items code="at0000">
+        <items id="text">المعلومات الديموغرافية للشخص المهني</items>
+        <items id="description">المعلومات الديموغرافية للشخص المهني, بما في ذلك الاسم/الأسماء, العنوان/العناوين, و تفاصيل جهات الاتصال السلكية و اللاسلكية.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">تفاصيل الشخص المهني</items>
+        <items id="description">تفاصيل مقدم الرعاية المهني</items>
+      </items>
+      <items code="at0005">
+        <items id="text">الدرجة</items>
+        <items id="description">درجة التوظيف أو مركز من يقوم بتقديم الرعاية</items>
+      </items>
+      <items code="at0006">
+        <items id="text">التخصص</items>
+        <items id="description">تخصص مقدم الرعاية</items>
+      </items>
+      <items code="at0011">
+        <items id="text">العنصر التعريفي الخاص بالشخص المهني</items>
+        <items id="description">العنصر التعريفي الخاص بالشخص المهني</items>
+      </items>
+      <items code="at0012">
+        <items id="text">الفريق</items>
+        <items id="description">الفريق الذي ينتمي إليه الفرد</items>
+      </items>
+      <items code="at0013">
+        <items id="text">فترة الاكتناف</items>
+        <items id="description">الفترة التي كان فيها الشخص المهني مكتنفا في رعاية المريض</items>
+      </items>
+      <items code="at0015">
+        <items id="text">الاسم</items>
+        <items id="description">تفاصيل الاسم الشخصي للفرد</items>
+      </items>
+      <items code="at0016">
+        <items id="text">دور الشخص المهني</items>
+        <items id="description">تفاصيل دور الشخص المهني لهذا الفرد</items>
+      </items>
+      <items code="at0017">
+        <items id="text">وسائل الاتصال السلكي و اللاسلكي</items>
+        <items id="description">تفاصيل الاتصال السلكي و اللاسلكي للفرد</items>
+      </items>
+      <items code="at0018">
+        <items id="text">المؤسسة</items>
+        <items id="description">تفاصيل المؤسسة التي ينتمي إليها الفرد</items>
+      </items>
+      <items code="at0019">
+        <items id="text">العنوان</items>
+        <items id="description">تفاصيل عنوان الفرد</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="pt-br">
+      <items code="at0000">
+        <items id="text">Dados demográficos profissionais individuais</items>
+        <items id="description">Detalhes demográficos profissionais incluindo nome(s), endereço(s) e detalhes de contato de telecomunicação.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Detalhes profissionais</items>
+        <items id="description">Detalhes do profissional.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Grau</items>
+        <items id="description">O cargo ou posição do profissional.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Especialidade</items>
+        <items id="description">A especialidade do profissional.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Identificador profissional</items>
+        <items id="description">Identificador profissional do indivíduo.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Time</items>
+        <items id="description">Time ao qual o indivíduo é integrante.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Período de envolvimento</items>
+        <items id="description">O período no qual o profissional esteve envolvido no cuidado do indivíduo.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Nome</items>
+        <items id="description">Detalhes do nome do indivíduo.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Atuação profissional</items>
+        <items id="description">Detalhes da atuação profissional do indivíduo.</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Telecomunicação</items>
+        <items id="description">Detalhes de telecomunicação do indivíduo.</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Organização</items>
+        <items id="description">Detalhes da organização a qual o indivíduo faz parte.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Endereço</items>
+        <items id="description">Detalhes do endereço do indivíduo.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

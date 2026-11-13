@@ -1,0 +1,557 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">2017-11-30</original_author>
+    <original_author id="name">Vebjørn Arntzen</original_author>
+    <original_author id="organisation">Oslo University Hospital</original_author>
+    <original_author id="email">varntzen@ous-hf.no</original_author>
+    <other_contributors>Amund Aakerholt, Helse Stavanger, KORFOR, Norway</other_contributors>
+    <other_contributors>Morten Aas, Oslo Universitetssykehus, Norway</other_contributors>
+    <other_contributors>Tomas Alme, Norway</other_contributors>
+    <other_contributors>Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)</other_contributors>
+    <other_contributors>Silje Ljosland Bakke, Nasjonal IKT HF, Norway (Nasjonal IKT redaktør)</other_contributors>
+    <other_contributors>SB Bhattacharyya, Sudisa Consultancy Services, India</other_contributors>
+    <other_contributors>Simon Chapman, King's College Hospital, United Kingdom</other_contributors>
+    <other_contributors>Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway</other_contributors>
+    <other_contributors>Are Edvardsen, SKDE, Helse Nord RHF, Norway</other_contributors>
+    <other_contributors>Rupert Fawdry, WISDAM Enterprises &amp; Electronic Encyclopaedia of Perinatal Data, United Kingdom</other_contributors>
+    <other_contributors>Shahla Foozonkhah, Iran ministry of health and education, Iran</other_contributors>
+    <other_contributors>Heather Grain, Llewelyn Grain Informatics, Australia</other_contributors>
+    <other_contributors>Ira Haraldsen, Oslo universitetssykehus HF, Norway</other_contributors>
+    <other_contributors>Ingrid Heitmann, Oslo universitetssykehus HF, Norway</other_contributors>
+    <other_contributors>Hilde Hollås, DIPS AS, Norway</other_contributors>
+    <other_contributors>Evelyn Hovenga, EJSH Consulting, Australia</other_contributors>
+    <other_contributors>henrik haaland jahren, Tankeboksen AS, Norway</other_contributors>
+    <other_contributors>Mikkel Johan Gaup Grønmo, Helse Nord RHF, Norway</other_contributors>
+    <other_contributors>Pétur Júlíusson, Barneklinikken, HUS og K2, UIB, Norway</other_contributors>
+    <other_contributors>Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway</other_contributors>
+    <other_contributors>Christian Jasmine Karud-Lund, Forbundet for Transpersoner i Norge, Norway</other_contributors>
+    <other_contributors>Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway</other_contributors>
+    <other_contributors>Heather Leslie, Atomica Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Hallvard Lærum, Direktoratet for e-helse, Norway</other_contributors>
+    <other_contributors>Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom</other_contributors>
+    <other_contributors>Ian McNicoll, freshEHR Clinical Informatics, United Kingdom</other_contributors>
+    <other_contributors>Andrej Orel, Marand d.o.o., Slovenia</other_contributors>
+    <other_contributors>Phuong Pedersen, DIPS, Norway</other_contributors>
+    <other_contributors>Vladimir Pizzo, Hospital Sírio Libanês, Brazil</other_contributors>
+    <other_contributors>Norwegian Review Summary, Nasjonal IKT HF, Norway</other_contributors>
+    <other_contributors>Ragnhild Sandvold, Vestre Viken HF, Norway</other_contributors>
+    <other_contributors>Danielle Santos Alves, Federal University of Pernambuco, Brazil</other_contributors>
+    <other_contributors>Anoop Shah, University College London, United Kingdom</other_contributors>
+    <other_contributors>Line Silsand, Universitetssykehuset i Nord-Norge, Norway</other_contributors>
+    <other_contributors>Trine Strand, Oslo Universitetssykehus (OUS), Norway</other_contributors>
+    <other_contributors>Nyree Taylor, Ocean Informatics, Australia</other_contributors>
+    <other_contributors>Tesfay Teame, Folkehelseinstituttet, Norway</other_contributors>
+    <other_contributors>Jon Tysdahl, Furst medlab AS, Norway</other_contributors>
+    <other_contributors>John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)</other_contributors>
+    <lifecycle_state>deprecated</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Derived from: Kjønn, Draft archetype [Internet]. Nasjonal IKT, Nasjonal IKT Clinical Knowledge Manager [cited: 2017-12-01]. Available from: http://arketyper.no/ckm/#showArchetype_1078.36.1426&#xD;
+&#xD;
+University of California, Santa Barbara (2018), UCSB SexInfo, http://www.soc.ucsb.edu/sexinfo/article/glossary-sexual-orientationgender-terminology&#xD;
+&#xD;
+It's Pronounced Metrosexual, (2015), The Genderbread Person v3, http://itspronouncedmetrosexual.com/2015/03/the-genderbread-person-v3</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">1FB61A73AFB781B15D813F7B699D17BA</other_details>
+    <other_details id="build_uid">5d0ce087-5cc0-4dfd-b204-23de485c7df4</other_details>
+    <other_details id="revision">1.0.2</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>nb</code_string>
+      </language>
+      <purpose>For å registrere individets kjønn.</purpose>
+      <keywords>kjønn</keywords>
+      <keywords>mann</keywords>
+      <keywords>kvinne</keywords>
+      <keywords>androgyn</keywords>
+      <keywords>gutt</keywords>
+      <keywords>jente</keywords>
+      <keywords>pike</keywords>
+      <keywords>trans</keywords>
+      <keywords>transmann</keywords>
+      <keywords>transkvinne</keywords>
+      <keywords>transseksuell</keywords>
+      <use>Brukes for å angi individets kjønn, inkludert administrativt, juridisk, og anatomisk kjønn. I tillegg kjønnsidentitet, fremtoning og foretrukne pronomen.&#xD;
+&#xD;
+Arketypen er laget for å brukes innenfor en ENTRY-arketype der det er relevant, f.eks. i OBSERVATION.story (Anamnese), INSTRUCTION.laboratory_test (Laboratorierekvisisjon) eller CLUSTER.interpreter.&#xD;
+&#xD;
+Ambisjonen til denne arketypen er å gjøre det mulig å registrere et bredere spekter av detaljer som er knyttet til kjønnet til et individ, som gjenspeiler moderne tenkning om kjønn så vel som ny kunnskap om hvordan kjønn manifesterer seg psykologisk, biologisk og sosialt.&#xD;
+&#xD;
+I Norge er det niende sifferet i fødselsnummeret en markering på kjønn. De fleste systemer i Norge benytter dette til å utlede individets kjønn. Med denne arketypen kan man skille mellom det juridiske kjønnet, slik det fremkommer i fødselsnummeret og det kjønnet man administrativt vil tilordne et individ, for eksempel for praktiske formål som å planlegge hvilket rom et individ skal legges på. Det er opp til leverandørene og implementasjon om man som utgangspunkt skal benytte "Administrativt kjønn" eller "Juridisk kjønn", eller om man vil sette verdien i disse to elementene likt og åpne for å kunne endre manuelt i de tilfellene man trenger det. Eksempel på dette siste er om juridisk kjønn ikke er oppdatert i henhold til hvordan et individ fremstår.&#xD;
+&#xD;
+Denne arketypen kan på et senere utvides til å inneholde informasjon om kjønn som ennå ikke er vanlig brukt, eller dette kan legges inn i SLOT'et "Detaljer".</use>
+      <misuse>Skal ikke brukes til å registrere informasjon relatert til seksuell orientering eller adferd.&#xD;
+&#xD;
+Skal ikke brukes til å registrere genetisk kjønn. Per i dag registeres dette som regel som en diagnose eller et laboratoriesvar. Verdisett for et dataelement som "Genetisk kjønn" er heller ennå ikke godt definert, og kan bestå av kombinasjoner av forskjellige akser, inkludert data knyttet til kromosomer og reseptorkjønn, mosaikktilstander og diagnoser.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record the gender of an individual.</purpose>
+      <keywords>sex</keywords>
+      <keywords>male</keywords>
+      <keywords>female</keywords>
+      <keywords>androgynous</keywords>
+      <keywords>boy</keywords>
+      <keywords>girl</keywords>
+      <keywords>man</keywords>
+      <keywords>woman</keywords>
+      <keywords>transsexual</keywords>
+      <keywords>bigender</keywords>
+      <keywords>agender</keywords>
+      <keywords>transgender</keywords>
+      <keywords>transman</keywords>
+      <keywords>transwoman</keywords>
+      <use>Use to record the individual's gender, including administrative and legal gender and anatomical sex, in addition to gender identity, expression and preferred pronoun.&#xD;
+&#xD;
+This archetype has been designed to be used within an ENTRY archetype where relevant, for example within OBSERVATION.story, INSTRUCTION.laboratory_test or CLUSTER.interpreter.&#xD;
+&#xD;
+The ambition of this archetype is to allow to register a broader range of details connected to the gender of an individual, due to modern thinking of gender as well as new knowledge of psychological, biological and social manifestations of gender. &#xD;
+&#xD;
+This archetype allows also the recording and differentiation between legal and administrative gender.&#xD;
+In most use cases the administrative gender will be used, as equivalent of the traditional definition of "Sex" in legacy systems.&#xD;
+&#xD;
+This archetype can later be expanded to include information on areas not yet commonly used, or can be added in the SLOT for additional structured details about the individual's gender.</use>
+      <misuse>Not to be used for recording information relating to sexual orientation or practice of an individual.&#xD;
+&#xD;
+Not to be used for recording genetic sex. Currently this is usually recorded as either a diagnosis or a laboratory test result. Value sets for 'Genetic sex' are not yet well defined and may involve the combination of information axes, including chromosomal and receptor data, mosaic variants and diagnoses.</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Vebjørn Arntzen/Mikkel Johan Gaup Grønmo</author>
+    <author id="organisation">Nasjonal IKT HF/Helse Nord, Norway</author>
+  </translations>
+  <uid>
+    <value>7be9ad61-de67-4e53-871f-28f01b746b2e</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-CLUSTER.gender.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000</concept>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0022</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0026</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0019</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0025</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0001</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0020</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="ARCHETYPE_SLOT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>0</lower>
+        </occurrences>
+        <node_id>at0023</node_id>
+        <includes>
+          <string_expression>archetype_id/value matches {/.*/}</string_expression>
+          <expression xsi:type="EXPR_BINARY_OPERATOR">
+            <type>Boolean</type>
+            <operator>2007</operator>
+            <precedence_overridden>false</precedence_overridden>
+            <left_operand xsi:type="EXPR_LEAF">
+              <type>String</type>
+              <item xsi:type="xsd:string">archetype_id/value</item>
+              <reference_type>attribute</reference_type>
+            </left_operand>
+            <right_operand xsi:type="EXPR_LEAF">
+              <type>C_STRING</type>
+              <item xsi:type="C_STRING">
+                <pattern>.*</pattern>
+              </item>
+              <reference_type>constraint</reference_type>
+            </right_operand>
+          </expression>
+        </includes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0014</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>1</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Kjønn</items>
+        <items id="description">Detaljert beskrivelse av et individs kjønn.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Kjønnsidentitet</items>
+        <items id="description">Individets oppfatning av eget kjønn.</items>
+        <items id="comment">For eksempel 'kvinne', 'mann', 'ikke-binær', 'transmann', 'transkvinne' eller 'flerkjønnet'. Det bør om mulig benyttes terminologi for å angi kjønnsidentitet.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Kommentar</items>
+        <items id="description">Ytterligere fritekst om kjønn som ikke er dekket av andre felt.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Anatomisk kjønn</items>
+        <items id="description">Kjønnet til et individ, bestemt på bakgrunn av anatomiske karakteristika.</items>
+        <items id="comment">For eksempel: 'Mann', 'Kvinne',' Ubestemmelig' eller 'Ikke spesifisert'. Det bør om mulig benyttes terminologi for å angi anatomisk kjønn. Skal man angi anatomisk eller biologisk kjønn ytterligere, for eksempel om 'hormonelt kjønn', kan man benytte elementet "Kommentar" eller SLOT'et "Detaljer" for dette. Hvordan elementet skal brukes, bør tydeliggjøres i brukergrensesnittet til systemer som tar denne arketypen i bruk.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Foretrukket pronomen</items>
+        <items id="description">Pronomenet som individet ønsker å identifiseres med og brukt når andre snakker om individet.</items>
+        <items id="comment">For eksempel: 'Hun', 'Han,' Hen'. Det bør om mulig benyttes terminologi for å angi pronomen.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Administrativt kjønn</items>
+        <items id="description">Et individs kjønn til administrativt bruk.</items>
+        <items id="comment">Dette elementet tilsvarer det systemer flest bruker for å beskrive 'Kjønn' per i dag. For eksempel 'Mann', 'Kvinne', 'Annet'. I Norge vil det være "Juridisk kjønn" som skal brukes, siden det som regel er samsvar mellom personnummerts kjønn og administrativt kjønn. Begge de to kan bli brukt til praktiske formål, så som rapportering eller tildele sengeplass på en sengepost. "Administrativt kjønn" sammenfaller med HL7 FHIRs 'Person.gender'. Det bør om mulig benyttes terminologi for å angi administrativt kjønn.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Detaljer</items>
+        <items id="description">Tilleggsinformasjon om et individs kjønn.</items>
+        <items id="comment">Flere detaljer om kjønn.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Kjønnsuttrykk</items>
+        <items id="description">Individets kjønnsmessige fremtoning og kjønnsuttrykk, basert på oppførsel, tale, i klesveien eller andre ytre karakteristika.</items>
+        <items id="comment">For eksempel 'Maskulin', 'Feminin' eller 'Androgyn'. Eller en fritekstbeskrivelse.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Juridisk kjønn</items>
+        <items id="description">Et individs kjønn brukt til offentlige eller rettslige formål. I Norge vil det normalt også bli brukt til administrative formål.</items>
+        <items id="comment">For eksempel identifikasjonspapirer som fødselsattest eller pass.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="en">
+      <items code="at0000">
+        <items id="text">Gender</items>
+        <items id="description">Detailed description of the gender of an individual.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Gender identity</items>
+        <items id="description">The personal perception of the individual’s own gender.</items>
+        <items id="comment">For example: 'woman'; 'man'; 'non-binary'; 'trans man'; 'trans woman' or 'pangender'. Coding with a terminology is recommended, where possible.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Comment</items>
+        <items id="description">Additional narrative about the gender not captured in other data elements.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Anatomical sex</items>
+        <items id="description">The sex of an individual determined by anatomical characteristics.</items>
+        <items id="comment">For example: 'Male', 'Female', 'Intersex'. Coding with a terminology is recommended, where possible. Use the element 'Comment' or the SLOT 'Details' if needed to register more specific details of the individuals gender.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Preferred pronoun</items>
+        <items id="description">The pronoun an individual chooses to identify with, and would prefer others to use when talking to or about that individual.</items>
+        <items id="comment">For example: 'she'; 'he'; 'ze'. Coding with a terminology is recommended, where possible.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Administrative gender</items>
+        <items id="description">The gender of an individual used for administrative purposes.</items>
+        <items id="comment">This element is what most systems today describes as 'Sex' or 'Gender'. For example 'Male', 'Female', 'Other'. This will normally be used for practical purposes such as reporting or assigning a bed in a hospital ward. This aligns with HL7 FHIR 'Person.gender'. Coding with a terminology is recommended, where possible.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Details</items>
+        <items id="description">Additional structured details about the individuals gender.</items>
+        <items id="comment">Additional details about gender.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Gender expression</items>
+        <items id="description">The expression of the gender by the individual as demonstrated by behaviour, speech, clothes or other external characteristics.</items>
+        <items id="comment">For example 'Masculine', 'Feminine' or 'Androgynous'. Or a narrative description.</items>
+      </items>
+      <items code="at0026">
+        <items id="text">Legal gender</items>
+        <items id="description">The gender of an individual used for official or legal purposes.</items>
+        <items id="comment">For example: identification documents such as birth certificate or passport.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

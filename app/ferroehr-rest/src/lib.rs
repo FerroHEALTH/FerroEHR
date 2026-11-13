@@ -62,10 +62,12 @@ pub mod system_log;
 use std::future::Future;
 use std::sync::Arc;
 
+use ferroehr::party_binding::grants::standing::GrantStanding;
 use ferroehr::party_binding::source::BindingSource;
 use ferroehr::service::FerroEhrService;
 use ferroehr::storage::dpop_replay::PgReplayStore;
 use ferrohealth_server::serve::{Drained, Listener};
+use ferrohealth_smart::kind::standing::Standing;
 use ferrohealth_smart::sender::replay::ReplayStore;
 use tokio::net::TcpListener;
 
@@ -108,13 +110,7 @@ pub async fn build_with(
     config: AppConfig,
     backend: Arc<FerroEhrService>,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = build_authenticator(
-        &config,
-        None,
-        Some(party_source(&config, &backend)),
-        Arc::new(PgReplayStore::of(&backend)),
-    )
-    .await?;
+    let authenticator = authenticator_over(&config, None, &backend).await?;
     let state = AppState::with_backend(config, backend);
     state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
@@ -135,13 +131,7 @@ pub async fn build_full(
     authz: Option<Arc<AuthzHandle>>,
     observability: Observability,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = build_authenticator(
-        &config,
-        authz.as_deref(),
-        Some(party_source(&config, &backend)),
-        Arc::new(PgReplayStore::of(&backend)),
-    )
-    .await?;
+    let authenticator = authenticator_over(&config, authz.as_deref(), &backend).await?;
     let state = AppState::with_parts(config, backend, authz, observability);
     state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
@@ -163,11 +153,12 @@ async fn build_authenticator(
     authz: Option<&AuthzHandle>,
     source: Option<Arc<dyn BindingSource>>,
     replay: Arc<dyn ReplayStore>,
+    standing: Arc<dyn Standing>,
 ) -> Result<Arc<Authenticator>, ServeError> {
     let claim = authz
         .and_then(AuthzHandle::abac)
         .and_then(|abac| abac.patient_claim.as_deref());
-    let authenticator = Authenticator::new(config, claim, source, replay)
+    let authenticator = Authenticator::new(config, claim, source, replay, standing)
         .await
         .map_err(ServeError::Auth)?;
     if config.auth.smart.discovery
@@ -186,6 +177,28 @@ async fn build_authenticator(
     }
     scim::endpoint::check(config).map_err(ServeError::Scim)?;
     Ok(authenticator)
+}
+
+/// Builds the [`Authenticator`] of `config` over `backend`: every caller
+/// looked up in its party source, its accepted `DPoP` proofs recorded in its
+/// store, and the standing of a client, a delegate actor and a scopeless
+/// subject read from its policy grants.
+///
+/// # Errors
+/// As [`build_authenticator`].
+async fn authenticator_over(
+    config: &AppConfig,
+    authz: Option<&AuthzHandle>,
+    backend: &Arc<FerroEhrService>,
+) -> Result<Arc<Authenticator>, ServeError> {
+    build_authenticator(
+        config,
+        authz,
+        Some(party_source(config, backend)),
+        Arc::new(PgReplayStore::of(backend)),
+        Arc::new(GrantStanding::new(Arc::clone(backend.grants()))),
+    )
+    .await
 }
 
 /// The local party source over `backend`'s party pool, naming each party
@@ -260,13 +273,7 @@ pub async fn serve_on<F>(
 where
     F: Future<Output = ()> + Send + 'static,
 {
-    let authenticator = build_authenticator(
-        &config,
-        authz.as_deref(),
-        Some(party_source(&config, &backend)),
-        Arc::new(PgReplayStore::of(&backend)),
-    )
-    .await?;
+    let authenticator = authenticator_over(&config, authz.as_deref(), &backend).await?;
     let section = config.server.clone();
     let state = AppState::with_parts(config, backend, authz, observability);
     let lifecycle = state.observability().lifecycle.clone();
@@ -304,11 +311,12 @@ pub(crate) mod test_support {
     )]
 
     use std::path::PathBuf;
-    use std::sync::OnceLock;
+    use std::sync::{Arc, OnceLock};
 
     use ferroehr::config::auth_section::AuthConfig;
     use ferrohealth_smart::config::{AuthSection, IssuerEntry};
-    use ferrohealth_smart::kind::IssuerKind;
+    use ferrohealth_smart::kind::standing::{Answer, ClientStanding, Issued, Standing};
+    use ferrohealth_smart::kind::{Actor, IssuerKind};
     use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 
     /// The issuer the test tokens name.
@@ -340,13 +348,45 @@ pub(crate) mod test_support {
     /// test audience, admitting the test client.
     pub(crate) fn entry(issuer: &str) -> IssuerEntry {
         IssuerEntry {
-            issuer: issuer.to_owned(),
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
             kind: Some(IssuerKind::Persons),
             audience: vec![AUDIENCE.to_owned()],
             role_claims: Some(keycloak_role_claims()),
-            first_party_clients: Some(vec!["unit-test-client".to_owned()]),
             ..IssuerEntry::default()
         }
+    }
+
+    /// The test client every test token comes through.
+    pub(crate) const CLIENT: &str = "unit-test-client";
+
+    /// The standing of the unit tests, which hold no policy grants: the test
+    /// client is first party, and no actor is a delegate and no subject
+    /// scopeless.
+    #[derive(Debug)]
+    pub(crate) struct TestStanding;
+
+    impl Standing for TestStanding {
+        fn client<'a>(&'a self, client: Issued<'a>) -> Answer<'a, ClientStanding> {
+            let standing = if client.id == CLIENT {
+                ClientStanding::FirstParty
+            } else {
+                ClientStanding::Unlisted
+            };
+            Box::pin(async move { Ok(standing) })
+        }
+
+        fn delegate<'a>(&'a self, _issuer: &'a str, _actor: &'a Actor) -> Answer<'a, bool> {
+            Box::pin(async { Ok(false) })
+        }
+
+        fn scopeless<'a>(&'a self, _subject: Issued<'a>) -> Answer<'a, bool> {
+            Box::pin(async { Ok(false) })
+        }
+    }
+
+    /// The [`TestStanding`] an authenticator under test asks.
+    pub(crate) fn standing() -> Arc<dyn Standing> {
+        Arc::new(TestStanding)
     }
 
     /// The `[auth]` table trusting the one issuer `entry`.
@@ -438,6 +478,7 @@ mod tests {
             None,
             None,
             Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+            test_support::standing(),
         )
         .await
         .expect("authenticator");

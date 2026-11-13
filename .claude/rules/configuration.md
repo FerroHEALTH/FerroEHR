@@ -5,6 +5,7 @@ paths:
   - "app/ferroehr-rest/src/config.rs"
   - "app/ferroehr-rest/src/**/config.rs"
   - "app/ferroehr/assets/ferroehr.default.toml"
+  - "tools/config-reference/**"
 ---
 
 # Configuration discipline — one `ferroehr.toml`, one loader
@@ -12,7 +13,7 @@ paths:
 No openEHR spec governs configuration — this is entirely our own design.
 The implementation contract is the loader itself
 (`app/ferroehr/src/config/`) + the documented default file
-(`app/ferroehr/assets/ferroehr.default.toml`) + the user book page; this rule
+(`app/ferroehr/assets/ferroehr.default.toml`) + the user book pages; this rule
 is the standing guard. **Cite the openEHR spec only where a config value is
 spec-adjacent** (e.g. signing modes → RM common master06 §Digital Signature);
 everywhere else flag "no openEHR spec governs configuration — our own design".
@@ -61,22 +62,43 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
 
 1. Edit the section struct in its owning crate (`#[serde(default,
    deny_unknown_fields)]`, `Default` is the source of truth).
-2. If you add/rename a key, update the annotated template
-   `app/ferroehr/assets/ferroehr.default.toml` **in the same change** — the
-   template-sync tests (`config::tests`) fail otherwise. A key is never read
+2. Run `cargo run -p config-reference` and commit what it writes **in the
+   same change** (#5316): the shipped `app/ferroehr/assets/ferroehr.default.toml`,
+   every key with its default under its description (only the must-set keys
+   as live lines, every other as a `#?` line), which the book page
+   `website/book/src/installation/config-keys.md` includes whole. It is
+   generated from the types' JSON Schema (`schemars`, the `schema` feature of `ferroehr`), so
+   a new section type derives `JsonSchema` behind that feature, and its doc
+   comments are the reference text. There is one file, never a second
+   trimmed copy (owner ruling, 2026-11-10). `scripts/checks/config-reference.sh`
+   fails on drift and the template-sync tests (`config::tests`) on a key the
+   template misses. A key is never read
    under two names: no alias layer, no remapping table. A renamed or removed
-   key keeps a `ferrohealth_config::removed::Removed` field that
-   `config::retired::removals` refuses at load naming its replacement, for ONE
-   release only (owner hard rule 2026-11-09, `.claude/memory/no-compat-shims.md`):
-   the refusal records the release that introduced it, ships in that release
-   with the upgrade step in the changelog fragment, and the next release
-   deletes it so `deny_unknown_fields` takes over.
-3. If the change is user-visible, update
+   key is deleted from its struct and nothing else: FerroEHR is greenfield
+   (owner ruling, #5463), so `deny_unknown_fields` refuses the old spelling as
+   an unknown key, with the loader's did-you-mean, and the changelog fragment
+   names the replacement. No `ferrohealth_config::removed::Removed` field and
+   no refusal table naming a replacement (the 5.7.0 ones were deleted in
+   5.7.1, `.claude/memory/no-compat-shims.md`).
+3. Classify every key you add (#5455): `x-ferroehr-class` through
+   `#[cfg_attr(feature = "schema", schemars(extend(...)))]`, on the struct
+   (its own keys) or on the field: `infrastructure` or `trust` for a key that
+   stays in the file for that reason, `optional` for a key with a built-in
+   default. A field holding a family crate's type classifies its whole
+   subtree; a struct may instead map relative key paths to classes, as
+   `AuthConfig` does for the flattened `ferrohealth-smart` keys and the
+   root does for the family sections and the database pool. `x-ferroehr-must-set` marks the few keys of the "What
+   you must set" block. The generator refuses an unclassified key, an
+   `optional` key with no default and a relative entry that names no key.
+   A new key is infrastructure or trust, or it is not added (owner,
+   2026-11-12).
+4. If the change is user-visible, update
    `website/book/src/installation/configuration.md`, the Helm `values.yaml`
    `config:` block + golden renders (`deploy/helm/validate.sh --update`), and
    a `changelog.d/` fragment — same PR.
-4. The default TOML + the book page are the schema of record; reconcile
-   the deployment/compose spellings against them.
+5. The configuration types are the schema of record, and the generated
+   template is their rendering; reconcile the deployment/compose
+   spellings against them.
 
 ## Tests
 

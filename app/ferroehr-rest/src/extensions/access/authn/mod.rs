@@ -41,8 +41,10 @@ pub(crate) mod assurance;
 mod build;
 pub(crate) mod declared;
 mod gates;
+pub(crate) mod grants;
 mod issuer;
 mod party;
+pub(crate) mod portal;
 pub(crate) mod purpose;
 pub(crate) mod record;
 pub(crate) mod refusal;
@@ -59,8 +61,7 @@ use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::refusal::Refusal;
 use ferrohealth_smart::resource::configuration::SmartOptions;
-use ferrohealth_smart::resource::introspection::Introspector;
-use ferrohealth_smart::resource::{Access, Honoured, ResourceServer, Via};
+use ferrohealth_smart::resource::{Access, Honoured, Via};
 use http::request::Parts;
 use http::{HeaderValue, StatusCode};
 use openehr_its::rest::runtime::ApiError;
@@ -70,6 +71,8 @@ use crate::extensions::access::authz::AuthzHandle;
 use crate::overview::error::RestError;
 use crate::smart::routes::SmartRoutes;
 use assurance::PatientDataGate;
+use build::Primary;
+use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::system_log::event::ActorAuthentication;
 use gates::patient_data_refusal;
 
@@ -115,12 +118,13 @@ pub struct Principal {
     /// checks read.
     pub access: Access,
     /// What FerroEHR honours for the caller beyond a `user/` grant: whether it
-    /// is a listed backend client and whether its issuer's `patient/` grants
-    /// count (`[auth.smart] backend_clients`, `[auth.smart] patient_issuers`).
+    /// is a backend client, a client the CDR grants `query_system_wide`, and
+    /// whether its issuer's `patient/` grants count
+    /// (`[auth.smart] patient_issuers`).
     pub honoured: Honoured,
     /// The EHR a bound representative is confined to, `None` for every other
     /// caller (#5086).
-    pub represented: Option<RepresentedEhr>,
+    pub represented: Option<portal::RepresentedEhr>,
 }
 
 impl Principal {
@@ -159,18 +163,6 @@ impl Principal {
             represented: None,
         }
     }
-}
-
-/// The EHR a bound representative is confined to: the one whose
-/// `EHR_STATUS.subject.external_ref` names the subject the token asserts and the
-/// party source records a live representation of.
-///
-/// No openEHR spec governs resolving a login to a party: our own design.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RepresentedEhr {
-    /// That EHR's id, or `None` when no EHR names the subject, so the
-    /// representative reaches no EHR.
-    pub ehr_id: Option<String>,
 }
 
 /// The mechanism that authenticated a [`Principal`].
@@ -378,16 +370,6 @@ impl AuthError {
     }
 }
 
-/// The check of the described issuer, whose metadata the SMART discovery
-/// document is built from.
-enum Primary {
-    /// A JWT access token checked against the issuer's keys.
-    Jwt(Arc<ResourceServer>),
-    /// An opaque access token checked by the issuer's introspection endpoint
-    /// (RFC 7662).
-    Introspection(Arc<Introspector>),
-}
-
 /// The configured authenticator: the crate's gate and the role sources.
 pub struct Authenticator {
     /// `[auth] enabled`.
@@ -403,8 +385,11 @@ pub struct Authenticator {
     /// The party binding every admitted caller is looked up in, when an
     /// `[[auth.party]]` table binds an issuer.
     party: Option<Arc<party::Binding>>,
-    /// The system clients and the federation agreements.
+    /// The federation agreements' caller limits.
     declared: declared::Declared,
+    /// `[authz.party_binding] namespace`, under which a patient-portal
+    /// representative's `PERSON` is named.
+    namespace: String,
 }
 
 impl std::fmt::Debug for Authenticator {
@@ -485,7 +470,6 @@ impl Authenticator {
         if let Some(refusal) = access.caller().and_then(party::kind_refusal) {
             return Err(refusal);
         }
-        let access = self.declared.admit(access)?;
         let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
         let roles = self.role_issuers.roles(caller);
         let honoured = self.gate.honoured(&access);
@@ -564,7 +548,7 @@ pub(crate) async fn middleware(
     req: Request,
     next: Next,
 ) -> Response {
-    let auth = &layer.authenticator;
+    let (auth, live) = (&layer.authenticator, layer.service.grants());
     if !auth.enabled() {
         return REQUEST_PRINCIPAL.scope(None, next.run(req)).await;
     }
@@ -572,10 +556,15 @@ pub(crate) async fn middleware(
     let outcome = auth.authenticate(&parts).await;
     let mut req = Request::from_parts(parts, body);
     match outcome {
-        Ok(Authenticated {
-            mut principal,
-            fresh,
-        }) => {
+        Ok(Authenticated { principal, fresh }) => {
+            let granted = match grants::resolve(live, &principal).await {
+                Ok(granted) => granted,
+                Err(e) => return refusal::response(auth, req.headers(), &e),
+            };
+            let mut principal = match grants::bound(&layer, principal, &granted, req.headers()) {
+                Ok(principal) => principal,
+                Err(refusal) => return *refusal,
+            };
             if let Some(refusal) = purpose::mismatch(&layer, &principal, &req) {
                 return refusal;
             }
@@ -593,6 +582,13 @@ pub(crate) async fn middleware(
                 refusal.extensions_mut().insert(principal);
                 return refusal;
             }
+            let granted = match grants::resolve(live, &principal).await {
+                Ok(granted) => granted,
+                Err(e) => return refusal::response(auth, req.headers(), &e),
+            };
+            // NOTE: master08 §Resource Scopes, a `system/aql-*` grant reaches every
+            // query, so it counts only for a client the CDR grants `query_system_wide`.
+            principal.honoured.backend = grants::client_holds(&granted, Operation::QuerySystemWide);
             // How the person authenticated is judged before what they may do:
             // a step-up refusal is an authentication outcome (RFC 9470 §3).
             let actor = match layer.patient_data.as_deref() {
@@ -614,25 +610,23 @@ pub(crate) async fn middleware(
                 refusal.extensions_mut().insert(actor);
                 return refusal;
             }
-            if let Some(mut refusal) = gates::smart_refusal(&layer, &req, &principal) {
+            if let Some(mut refusal) = gates::smart_refusal(&layer, &req, &principal, &granted) {
                 refusal.extensions_mut().insert(actor);
                 return refusal;
             }
+            let patient = gates::patient_person(&layer, &req, &principal).await;
             req.extensions_mut().insert(principal.clone());
             let for_audit = principal.clone();
-            let mut committer =
-                party::committer_identity(&for_audit, &auth.declared.system_clients);
-            if let Some(binding) = auth.party.as_deref() {
-                match binding.details(&for_audit).await {
-                    Ok(details) => committer.bound = details,
+            let (committer, patient) =
+                match portal::committer(auth, &for_audit, &granted, patient).await {
+                    Ok(committer) => committer,
                     Err(e) => return refusal::response(auth, req.headers(), &e),
-                }
-            }
+                };
             // The roles ride beside the committer identity for the request
             // scope, so a record the service layer emits by itself carries
             // them too (#3239).
             let roles = for_audit.roles.clone();
-            let binding = record::of_request(&for_audit, &committer);
+            let binding = record::of_request(&for_audit, &committer, &granted, Some(auth));
             let mut resp = REQUEST_PRINCIPAL
                 .scope(
                     Some(principal),
@@ -642,7 +636,10 @@ pub(crate) async fn middleware(
                             binding,
                             ferroehr::versioning::committer::with_committer(
                                 Some(committer),
-                                next.run(req),
+                                Box::pin(portal::as_patient(
+                                    patient,
+                                    grants::scoped(live, granted, next.run(req)),
+                                )),
                             ),
                         ),
                     ),
@@ -661,7 +658,7 @@ pub(crate) async fn middleware(
     }
 }
 
-/// The client a request came through, which the `[[authz.origin]]` register maps to.
+/// The client a request came through: the Basic user, or the token's client.
 ///
 /// The Basic user, or the client the token's issuer profile reads from
 /// `client_claims`, never another client claim the token carries (#5194).
@@ -670,49 +667,6 @@ pub fn client_of(principal: &Principal) -> Option<String> {
     match principal.method {
         AuthMethod::Basic => Some(principal.subject.clone()),
         AuthMethod::Bearer => principal.access.caller()?.client_id().map(str::to_owned),
-    }
-}
-
-/// The status each refusal outcome answers with.
-#[cfg(test)]
-mod outcome_status_tests {
-    use super::AuthError;
-
-    /// RFC 9110 §15.6.4: an unreachable issuer means the server cannot decide,
-    /// which is a 503 — never a 401 telling a caller its valid token was
-    /// rejected.
-    #[test]
-    fn unreachable_issuer_is_503_not_401() {
-        let api = AuthError::KeyResolution.to_api_error();
-        assert_eq!(api.status(), http::StatusCode::SERVICE_UNAVAILABLE);
-    }
-
-    /// A malformed header is a request defect (400), not a credential decision
-    /// (401) — RFC 6750 §3.1 `invalid_request`.
-    #[test]
-    fn malformed_authorization_header_is_400_invalid_request() {
-        let api = AuthError::MalformedRequest("bad".to_owned()).to_api_error();
-        assert_eq!(api.status(), http::StatusCode::BAD_REQUEST);
-    }
-
-    #[test]
-    fn verification_unavailable_is_500_not_401() {
-        // A failed blocking verification is a SERVER fault: it must surface as
-        // 500 Internal, never as 401 — a server failure misreported as a client
-        // error is the silent-wrong-answer class this mapping exists to prevent.
-        let err = AuthError::VerificationUnavailable("task panicked".to_owned());
-        assert_eq!(
-            err.to_api_error().status(),
-            http::StatusCode::INTERNAL_SERVER_ERROR
-        );
-    }
-}
-
-/// The `mechanism` metric label for a known authenticated principal.
-fn mechanism_label(method: AuthMethod) -> &'static str {
-    match method {
-        AuthMethod::Basic => "basic",
-        AuthMethod::Bearer => "bearer",
     }
 }
 
@@ -787,8 +741,6 @@ mod tests {
                             user: "alice".to_owned(),
                             password_hash: Some(SecretString::from(hash("pw"))),
                             password_hash_file: None,
-                            scopes: vec!["user/composition-*.cruds".to_owned()],
-                            roles: Vec::new(),
                         }],
                         cache_ttl: ferrohealth_config::units::Duration::from_secs(cache_ttl),
                     }),
@@ -840,6 +792,7 @@ mod tests {
             None,
             None,
             memory(),
+            test_support::standing(),
         )
         .await
         .expect("an introspecting authenticator");
@@ -865,7 +818,9 @@ mod tests {
         ca_file: Option<std::path::PathBuf>,
     ) -> AppConfig {
         let grant = ferrohealth_smart::config::credentials::OauthSection {
-            token_endpoint: format!("{issuer}/token"),
+            token_endpoint: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+                "{issuer}/token"
+            )),
             client_id: "ferroehr".to_owned(),
             client_secret: Some(SecretString::from("synthetic-secret")),
             tls: ferrohealth_config::tls::TlsClientSection {
@@ -882,7 +837,9 @@ mod tests {
         let mut auth = test_support::trusting(ferrohealth_smart::config::IssuerEntry {
             mode: ferrohealth_smart::config::AuthMode::Introspection,
             introspection: Some(ferrohealth_smart::config::IntrospectionSection {
-                endpoint: format!("{issuer}/introspect"),
+                endpoint: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+                    "{issuer}/introspect"
+                )),
                 client,
                 bearer,
                 ..ferrohealth_smart::config::IntrospectionSection::default()
@@ -913,22 +870,29 @@ mod tests {
         for bearer in [false, true] {
             let config =
                 introspecting_through(&issuer.base_url, bearer, Some(issuer.ca_file.clone()));
-            Authenticator::new(&config, None, None, memory())
+            Authenticator::new(&config, None, None, memory(), test_support::standing())
                 .await
                 .unwrap_or_else(|e| panic!("bearer={bearer}: read trusting the roots file: {e}"));
             let untrusted = introspecting_through(&issuer.base_url, bearer, None);
-            let refused = Authenticator::new(&untrusted, None, None, memory())
-                .await
-                .expect_err("the platform roots alone do not trust the private authority");
+            let refused =
+                Authenticator::new(&untrusted, None, None, memory(), test_support::standing())
+                    .await
+                    .expect_err("the platform roots alone do not trust the private authority");
             assert!(
                 refused.contains("could not be read"),
                 "bearer={bearer}: {refused}"
             );
             let no_certificate =
                 introspecting_through(&issuer.base_url, bearer, Some(empty.clone()));
-            let refused = Authenticator::new(&no_certificate, None, None, memory())
-                .await
-                .expect_err("a roots file without a certificate refuses the start");
+            let refused = Authenticator::new(
+                &no_certificate,
+                None,
+                None,
+                memory(),
+                test_support::standing(),
+            )
+            .await
+            .expect_err("a roots file without a certificate refuses the start");
             assert!(refused.contains("tls"), "bearer={bearer}: {refused}");
         }
     }
@@ -982,9 +946,15 @@ mod tests {
     }
 
     async fn basic_only() -> Arc<Authenticator> {
-        Authenticator::new(&basic_config(60), None, None, memory())
-            .await
-            .expect("a Basic-only authenticator")
+        Authenticator::new(
+            &basic_config(60),
+            None,
+            None,
+            memory(),
+            test_support::standing(),
+        )
+        .await
+        .expect("a Basic-only authenticator")
     }
 
     async fn bearer_only() -> Arc<Authenticator> {
@@ -996,6 +966,7 @@ mod tests {
             None,
             None,
             memory(),
+            test_support::standing(),
         )
         .await
         .expect("a bearer authenticator")
@@ -1022,9 +993,15 @@ mod tests {
     #[tokio::test]
     async fn a_cached_credential_never_admits_a_wrong_password() {
         for ttl in [60, 0] {
-            let auth = Authenticator::new(&basic_config(ttl), None, None, memory())
-                .await
-                .unwrap();
+            let auth = Authenticator::new(
+                &basic_config(ttl),
+                None,
+                None,
+                memory(),
+                test_support::standing(),
+            )
+            .await
+            .unwrap();
             let h = headers("Basic YWxpY2U6cHc="); // alice:pw
             let first = auth.authenticate(&h).await.expect("first verifies");
             let second = auth.authenticate(&h).await.expect("second verifies");
@@ -1101,51 +1078,6 @@ mod tests {
             .expect_err("reject");
         assert!(matches!(err, AuthError::MissingCredentials));
         assert_eq!(err.to_api_error().status(), StatusCode::UNAUTHORIZED);
-    }
-
-    #[tokio::test]
-    async fn valid_basic() {
-        let p = basic_only()
-            .await
-            .authenticate(&headers("Basic YWxpY2U6cHc="))
-            .await
-            .expect("ok");
-        assert_eq!(p.principal.subject, "alice");
-        assert_eq!(p.principal.method, AuthMethod::Basic);
-        assert_eq!(
-            p.principal.scopes,
-            vec!["user/composition-*.cruds".to_owned()]
-        );
-        assert_eq!(
-            p.principal.roles,
-            Vec::<String>::new(),
-            "a Basic user granted no role holds none"
-        );
-        assert!(
-            p.fresh,
-            "a first Basic verification is a genuine authentication"
-        );
-    }
-
-    #[tokio::test]
-    async fn configured_basic_roles_are_upper_cased() {
-        let mut config = basic_config(60);
-        if let Some(basic) = config.auth.shared.basic.as_mut()
-            && let Some(alice) = basic.users.first_mut()
-        {
-            alice.roles = vec!["admin".to_owned(), "user".to_owned()];
-        }
-        let auth = Authenticator::new(&config, None, None, memory())
-            .await
-            .unwrap();
-        let p = auth
-            .authenticate(&headers("Basic YWxpY2U6cHc="))
-            .await
-            .expect("ok");
-        assert_eq!(
-            p.principal.roles,
-            vec!["ADMIN".to_owned(), "USER".to_owned()]
-        );
     }
 
     /// RFC 6750 §3.1: a request that "attempted using an unsupported
@@ -1358,6 +1290,7 @@ mod tests {
             None,
             None,
             memory(),
+            test_support::standing(),
         )
         .await
         .expect("authenticator");
@@ -1598,15 +1531,20 @@ mod tests {
             ..AppConfig::default()
         };
         let layer = AuthLayer {
-            authenticator: Authenticator::new(&config, None, None, memory())
-                .await
-                .expect("authenticator"),
+            authenticator: Authenticator::new(
+                &config,
+                None,
+                None,
+                memory(),
+                test_support::standing(),
+            )
+            .await
+            .expect("authenticator"),
             authz: None,
             patient_data: None,
             smart: Arc::new(SmartRoutes::new(
                 &crate::api::Namespaces::of(&ferroehr::config::rest::ApiConfig::default()),
                 "__ferroehr.platform",
-                Vec::new(),
             )),
             served: Arc::new(ServedMethods::default()),
             service: Arc::new(ferroehr::service::FerroEhrService::new(
@@ -1694,14 +1632,15 @@ mod tests {
         }
     }
 
-    /// A `jwks_file` issuer authenticator reading `[auth.smart] issuer_metadata_file`.
+    /// A `jwks_file` issuer authenticator serving discovery from `issuer_metadata_file`.
     async fn with_metadata_file(file: Option<&MetadataFile>) -> Result<Arc<Authenticator>, String> {
         let mut config = AppConfig {
             auth: test_support::bearer_auth(),
             ..AppConfig::default()
         };
+        config.auth.smart.discovery = true;
         config.auth.smart.issuer_metadata_file = file.map(|file| file.0.display().to_string());
-        Authenticator::new(&config, None, None, memory()).await
+        Authenticator::new(&config, None, None, memory(), test_support::standing()).await
     }
 
     /// SMART App Launch 2.2.0, Conformance, §Metadata requires a
@@ -1711,9 +1650,12 @@ mod tests {
     #[tokio::test]
     async fn a_jwks_file_issuer_takes_its_metadata_from_the_configured_file() {
         let options = SmartOptions::default();
-        let without = with_metadata_file(None).await.expect("authenticator");
-        let document = without.smart_configuration(&options).expect("a document");
-        assert!(document.get("token_endpoint").is_none(), "{document}");
+        let without = with_metadata_file(None)
+            .await
+            .expect_err("no issuer to describe");
+        assert!(
+            without.contains("can describe no issuer") && without.contains("issuer_metadata_file")
+        );
 
         let good = MetadataFile::new(
             "good",
@@ -1782,5 +1724,8 @@ mod tests {
         assert!(message.contains("repeats a member name"), "{message}");
     }
 
+    mod basic;
+    mod described;
+    mod outcome_status;
     mod remote_issuer;
 }

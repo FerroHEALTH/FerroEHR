@@ -15,8 +15,11 @@
 //! `Patient`, which FerroEHR would only discard (GDPR Art. 5(1)(c), data
 //! minimisation), and its `$match` is patient matching.
 
+use std::time::Duration;
+
+use ferrohealth_smart::client::outbound::{OutboundClient, OutboundError};
+use ferrohealth_smart::config::ServerTls;
 use ihe_atna::user::OnBehalfOf;
-use ihe_iti::authorizer::Authorizable as _;
 use ihe_iti::pixm::capabilities::CapabilitiesError;
 use ihe_iti::pixm::error::{InvalidInput, PixmError};
 use ihe_iti::pixm::identifier::{CrossReference, SourceIdentifier, TargetSystem};
@@ -31,7 +34,7 @@ pub enum IdentitySourceError {
     /// `[pixm.endpoint]` is refused: its URL, its TLS material, its
     /// credential or the HTTP client built from it.
     #[error("the identity source's endpoint is refused")]
-    Endpoint(#[from] crate::outbound::EndpointError),
+    Endpoint(#[from] OutboundError),
     /// The base URL, the assigning authority or a subject is no valid ITI-83
     /// input.
     #[error("the request to the identity source is not valid ITI-83 input")]
@@ -53,16 +56,6 @@ pub enum IdentitySourceError {
     Capabilities(#[from] CapabilitiesError),
 }
 
-/// Whether an ITI-83 exchange that failed with `error` may be asked again:
-/// no answer arrived, or the Manager answered a server error.
-fn transient(error: &PixmError) -> bool {
-    match error {
-        PixmError::Timeout | PixmError::Transport(_) => true,
-        PixmError::Rejected { status, .. } => status.is_server_error(),
-        _ => false,
-    }
-}
-
 /// The PIX Manager of the configured clinical domain.
 #[derive(Debug, Clone)]
 pub struct IheIdentitySource {
@@ -70,40 +63,34 @@ pub struct IheIdentitySource {
     pixm: PixmClient,
     /// The assigning authority of the clinical domain.
     domain: TargetSystem,
-    /// The endpoint: how long one exchange may take and how a failed one is
-    /// tried again.
-    endpoint: crate::outbound::Endpoint,
+    /// How long one exchange may take, its tries and their waits together.
+    timeout: Duration,
 }
 
 impl IheIdentitySource {
     /// The identity source `config` names.
     ///
-    /// The HTTP client follows no redirect, because the request carries a
-    /// patient identifier (the `PixmClient::new` contract), and trusts the
-    /// `[pixm.tls]` roots beside the platform's. With `[pixm.oauth]`
-    /// every ITI-83 request carries that grant's access token (IUA ITI-72
+    /// The client is `ferrohealth-smart`'s outbound client of
+    /// `[pixm.endpoint]`: it follows no redirect, because the request carries
+    /// a patient identifier (the `PixmClient::new` contract), trusts the
+    /// `[pixm.endpoint.tls]` roots beside the platform's, and tries a failed
+    /// exchange again as the table's `retry` says. With a client credentials
+    /// grant every ITI-83 request carries its access token (IUA ITI-72
     /// §3.72.4.2), renewed once after a `401`.
     ///
     /// # Errors
     /// [`IdentitySourceError`] when the trust roots, the client, the base URL
     /// or the assigning authority are unusable.
     pub fn new(config: &PixmConfig) -> Result<Self, IdentitySourceError> {
-        let endpoint = crate::outbound::Endpoint::connect("pixm.endpoint", &config.endpoint)?;
+        let client = OutboundClient::build(&config.endpoint, "pixm.endpoint", &ServerTls)?;
         let invocation = match config.method {
             PixmInvocation::Get => Invocation::Get,
             PixmInvocation::Post => Invocation::Post,
         };
-        let mut pixm =
-            PixmClient::new(endpoint.url().clone(), endpoint.http())?.invoked_by(invocation);
-        if let Some(token) = endpoint.token() {
-            pixm = pixm.with_authorizer(std::sync::Arc::new(
-                ihe_iti::authorizer::smart::TokenAuthorizer::new(token),
-            ));
-        }
         Ok(Self {
-            pixm,
+            pixm: PixmClient::new(client)?.invoked_by(invocation),
             domain: TargetSystem::new(config.assigning_authority.trim())?,
-            endpoint,
+            timeout: config.endpoint.timeout.get(),
         })
     }
 
@@ -121,18 +108,7 @@ impl IheIdentitySource {
     /// # Errors
     /// [`IdentitySourceError::Capabilities`] carrying the client's refusal.
     pub async fn probe(&self) -> Result<(), IdentitySourceError> {
-        let timeout = self.endpoint.timeout();
-        self.endpoint
-            .retrying(
-                |error| {
-                    matches!(
-                        error,
-                        CapabilitiesError::Timeout | CapabilitiesError::Transport(_)
-                    )
-                },
-                || self.pixm.capabilities(timeout),
-            )
-            .await?;
+        self.pixm.capabilities(self.timeout).await?;
         Ok(())
     }
 
@@ -151,17 +127,14 @@ impl IheIdentitySource {
         value: &str,
     ) -> Result<Option<SecretString>, IdentitySourceError> {
         let source = SourceIdentifier::new(system, SecretString::from(value.to_owned()))?;
-        let timeout = self.endpoint.timeout();
         let answer = self
-            .endpoint
-            .retrying(transient, || {
-                self.pixm.cross_reference(
-                    &source,
-                    std::slice::from_ref(&self.domain),
-                    &OnBehalfOf::System,
-                    timeout,
-                )
-            })
+            .pixm
+            .cross_reference(
+                &source,
+                std::slice::from_ref(&self.domain),
+                &OnBehalfOf::System,
+                self.timeout,
+            )
             .await?;
         let CrossReference::Matched(found) = answer else {
             return Ok(None);

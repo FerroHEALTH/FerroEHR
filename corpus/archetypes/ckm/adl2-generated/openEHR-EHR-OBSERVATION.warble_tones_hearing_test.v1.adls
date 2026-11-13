@@ -1,0 +1,385 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-OBSERVATION.warble_tones_hearing_test.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["date"] = <"10/11/2007">
+    >
+    lifecycle_state = <"Rejected">
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A structure to record the results of testing the hearing thresholds of patients with developmental age between seven months and 18 months of age">
+            keywords = <"hearing", "warble", "tones">
+            use = <"To assess hearing thresholds of patients with developmental age between seven months and 18 months of age">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"هي بِنية لتسجيل نتائج اختبار عَتَبات السمع لدى المرضى الذين تتراوح أعمارهم النمائية ما بين سبعة أشهر و ثمانية عشرة شهرا">
+            keywords = <"السماع", "اللُّحمَوية", "النغمات">
+            use = <"لتقييم العتبات السمعية للمرضى الذين تترواح أعمارهم ما بين سبعة أشهر و ثمانية عشرا شهرا">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Warble Tones Hearing Test
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Side
+                                        value matches {
+                                            DV_CODED_TEXT[at9011] matches {
+                                                defining_code matches {[ac9000]}    -- Side (synthesised)
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0018] occurrences matches {0..1} matches {    -- Details
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Frequency
+                                                value matches {
+                                                    DV_QUANTITY[at9012] matches {
+                                                        property matches {[at9001]}    -- Frequency
+                                                        [units] matches {
+                                                            [{"Hz"}],
+                                                            [{"kHz"}]
+                                                        }
+                                                    }
+                                                    DV_CODED_TEXT[at9013] matches {
+                                                        defining_code matches {[ac9002]}    -- Frequency (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Hearing Threshold
+                                                value matches {
+                                                    DV_QUANTITY[at9014] matches {
+                                                        property matches {[at9003]}    -- Loudness
+                                                        units matches {"dB"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Response
+                                                value matches {
+                                                    DV_CODED_TEXT[at9015] matches {
+                                                        defining_code matches {[ac9004]}    -- Response (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Image
+                                                value matches {
+                                                    DV_MULTIMEDIA[at9016] matches {
+                                                        media_type matches {[ac9010]}    -- Image (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Reliability
+                                        value matches {
+                                            DV_TEXT[at9017]
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9018]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Warble Tones Hearing Test">
+                description = <"A paediatric behavioural test, for assessing hearing thresholds of patients with developmental age between seven months and 18 months of age">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Side">
+                description = <"Side being tested">
+            >
+            ["at0005"] = <
+                text = <"Left">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Right">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Frequency">
+                description = <"Record frequency of Warble tone stimulus presented">
+            >
+            ["at0018"] = <
+                text = <"Details">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Response">
+                description = <"Consistent response of infant to stimulus">
+            >
+            ["at0020"] = <
+                text = <"Hearing Threshold">
+                description = <"Record of hearing threshold in dB">
+            >
+            ["at0021"] = <
+                text = <"Positive">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Negative">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"Comment">
+                description = <"Comment on test">
+            >
+            ["at0024"] = <
+                text = <"Image">
+                description = <"Image of test result">
+            >
+            ["at0025"] = <
+                text = <"Reliability">
+                description = <"Estimation of the reliability of the test result - indicated by behaviour of child eg cooperative etc.">
+            >
+            ["at0026"] = <
+                text = <"4kHz">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"2kHz">
+                description = <"*">
+            >
+            ["at0028"] = <
+                text = <"1kHz">
+                description = <"*">
+            >
+            ["at0029"] = <
+                text = <"0,5kHz">
+                description = <"*">
+            >
+            ["at9005"] = <
+                text = <"image/cgm">
+                description = <"image/cgm">
+            >
+            ["at9006"] = <
+                text = <"image/gif">
+                description = <"image/gif">
+            >
+            ["at9007"] = <
+                text = <"image/png">
+                description = <"image/png">
+            >
+            ["at9008"] = <
+                text = <"image/tiff">
+                description = <"image/tiff">
+            >
+            ["at9009"] = <
+                text = <"image/jpeg">
+                description = <"image/jpeg">
+            >
+            ["at9003"] = <
+                text = <"Loudness">
+                description = <"Loudness">
+            >
+            ["at9001"] = <
+                text = <"Frequency">
+                description = <"Frequency">
+            >
+            ["ac9000"] = <
+                text = <"Side (synthesised)">
+                description = <"Side being tested (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Frequency (synthesised)">
+                description = <"Record frequency of Warble tone stimulus presented (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Response (synthesised)">
+                description = <"Consistent response of infant to stimulus (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Image (synthesised)">
+                description = <"Image of test result (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"اختبار النغمات اللُّحمَوية السمعي">
+                description = <"اختبار سلوكي متعلق بطب الأطفال, من أجل تقييم عَتَبَات السمع لدى المرضى الذين تتراوح أعمارهم النَّمائية ما بين سبعة أشهر و ثمانية عشر شهرا ">
+            >
+            ["at0002"] = <
+                text = <"إحدى الوقائع">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"الجانب">
+                description = <"الجانب الذي يتم اختباره">
+            >
+            ["at0005"] = <
+                text = <"الأيسر">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"الأيمن">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"التكرار/ التردد">
+                description = <"تسجيل تكرار/تردد مُنَبِّه النغمات اللُّحموية التي يتم تقديمها">
+            >
+            ["at0018"] = <
+                text = <"التفاصيل">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"الاستجابة">
+                description = <"الاستجابة المُتَّسِقة من الطفل للمُنبِّه">
+            >
+            ["at0020"] = <
+                text = <"عتبة السمع">
+                description = <"تسجيل عتبة السمع بالديسي بِل">
+            >
+            ["at0021"] = <
+                text = <"إيجابي">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"سلبي">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"التعليق">
+                description = <"تعليق على الاختبار">
+            >
+            ["at0024"] = <
+                text = <"الصورة">
+                description = <"صورة نتيجة الاختبار">
+            >
+            ["at0025"] = <
+                text = <"المُعَوَّلية">
+                description = <"تقدير مُعَوَّلية نتيجة الاختبار - الذي تتم الإشارة إليه بسلوك الطفل, مثلا تعاونيّ, إلى آخره ">
+            >
+            ["at0026"] = <
+                text = <"4 كيلو هرتز">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"2 كيلو هرتز">
+                description = <"*">
+            >
+            ["at0028"] = <
+                text = <"1 كيلو هرتز">
+                description = <"*">
+            >
+            ["at0029"] = <
+                text = <"0.5 كيلو هرتز">
+                description = <"*">
+            >
+            ["at9005"] = <
+                text = <"* image/cgm (en)">
+                description = <"* image/cgm (en)">
+            >
+            ["at9006"] = <
+                text = <"* image/gif (en)">
+                description = <"* image/gif (en)">
+            >
+            ["at9007"] = <
+                text = <"* image/png (en)">
+                description = <"* image/png (en)">
+            >
+            ["at9008"] = <
+                text = <"* image/tiff (en)">
+                description = <"* image/tiff (en)">
+            >
+            ["at9009"] = <
+                text = <"* image/jpeg (en)">
+                description = <"* image/jpeg (en)">
+            >
+            ["at9003"] = <
+                text = <"* Loudness (en)">
+                description = <"* Loudness (en)">
+            >
+            ["at9001"] = <
+                text = <"* Frequency (en)">
+                description = <"* Frequency (en)">
+            >
+            ["ac9000"] = <
+                text = <"الجانب (synthesised)">
+                description = <"الجانب الذي يتم اختباره (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"التكرار/ التردد (synthesised)">
+                description = <"تسجيل تكرار/تردد مُنَبِّه النغمات اللُّحموية التي يتم تقديمها (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"الاستجابة (synthesised)">
+                description = <"الاستجابة المُتَّسِقة من الطفل للمُنبِّه (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"الصورة (synthesised)">
+                description = <"صورة نتيجة الاختبار (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9003"] = <http://openehr.org/id/123>
+            ["at9001"] = <http://openehr.org/id/382>
+        >
+        ["openEHR"] = <
+            ["at9005"] = <http://openehr.org/id/425>
+            ["at9006"] = <http://openehr.org/id/426>
+            ["at9007"] = <http://openehr.org/id/427>
+            ["at9008"] = <http://openehr.org/id/428>
+            ["at9009"] = <http://openehr.org/id/429>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0026", "at0027", "at0028", "at0029">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at9005", "at9006", "at9007", "at9008", "at9009">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0021", "at0022">
+        >
+    >

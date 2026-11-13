@@ -1,0 +1,898 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a7d81bdd-2974-4193-b525-42619aecba4b; build_uid=79c085ca-c666-4d96-b56d-0bfac30a634c)
+    openEHR-EHR-CLUSTER.exam_pupils.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"Biljana Prinčič">
+                ["organisation"] = <"Marand d.o.o., Ljubljana">
+                ["email"] = <"biljana.princic@marand.si">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, United Kingdom">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2012-12-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sam Heard, Ocean Informatics, Australia", "Gustavo M Bacelar-Silva, Brazil">
+    lifecycle_state = <"rejected">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"IHE Eye Care Domain. General Eye Evaluation (GEE) [Internet]. IHE; 2012. Available from: http://www.ihe.net/Technical_Framework/upload/IHE_EyeCare_Supp_GEE_Rev1-1_TI_2012-06-29.pdf">
+        ["2"] = <"Royal College of Opthalmologists. Cataract National Dataset for Adults [Internet]. 2011. Available from: http://www.rcophth.ac.uk/page.asp?section=583&sectionTitle=Cataract+National+Data+Set+for+Adults">
+        ["3"] = <"CfH, UK. Do Once & Share - Glaucoma [Internet]. [cited 2012 Sep 26]. Available from: http://www.doasglaucoma.org/">
+        ["4"] = <"Eye Color [Internet]. Wikipedia. Available from: http://en.wikipedia.org/wiki/Eye_color">
+        ["5"] = <"Pupillary abnormalities [Internet], openEyes Project.  Available from: http://www.openeyes.org.uk/elements/pupil/pupil.html">
+    >
+    other_details = <
+        ["current_contact"] = <"Ian McNicoll, Ocean Informatics, UK, ian.mcnicoll@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"C06E257E1727425BD7860593BF00DFF4">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording the findings on physical examination of the pupils.">
+            keywords = <"eye", "pupil", "reflex", "PERL", "PERLA", "inspection", "examination">
+            use = <"Use to record the findings on physical examination of the pupils.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.
+
+Specifically designed to be used within the OBSERVATION.exam archetype, but may be used within any clinically appropriate ENTRY or CLUSTER archetype.">
+            misuse = <"Not to be used to record findings of the physical examination of other parts of the eye, such as the retina - use other specific archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"Za dokumentiranje opazovanj zenic v ZN">
+            keywords = <"zenice", "refleks", "oči">
+            use = <"Uporablja se za opazovanje zenic v ZN">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination Findings  - Pupils
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0069] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9028]
+                }
+            }
+            ELEMENT[at0071] occurrences matches {0..1} matches {    -- Symmetry
+                value matches {
+                    DV_CODED_TEXT[at9029] matches {
+                        defining_code matches {[ac9000]}    -- Symmetry (synthesised)
+                    }
+                }
+            }
+            CLUSTER[at0075] occurrences matches {0..2} matches {    -- Per Pupil
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0015] occurrences matches {1} matches {    -- Pupil Examined
+                        value matches {
+                            DV_CODED_TEXT[at9030] matches {
+                                defining_code matches {[ac9001]}    -- Pupil Examined (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Shape
+                        value matches {
+                            DV_CODED_TEXT[at9031] matches {
+                                defining_code matches {[ac9002]}    -- Shape (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Measured Size
+                        value matches {
+                            DV_QUANTITY[at9032] matches {
+                                property matches {[at9003]}    -- Length
+                                magnitude matches {|0.0..30.0|}
+                                units matches {"mm"}
+                                precision matches {0}
+                            }
+                        }
+                    }
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Estimated Size
+                        value matches {
+                            DV_CODED_TEXT[at9033] matches {
+                                defining_code matches {[ac9004]}    -- Estimated Size (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Direct Light Reflex
+                        value matches {
+                            DV_CODED_TEXT[at9034] matches {
+                                defining_code matches {[ac9005]}    -- Direct Light Reflex (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Consensual Light Reflex
+                        value matches {
+                            DV_CODED_TEXT[at9035] matches {
+                                defining_code matches {[ac9006]}    -- Consensual Light Reflex (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Accommodation Reflex
+                        value matches {
+                            DV_CODED_TEXT[at9036] matches {
+                                defining_code matches {[ac9007]}    -- Accommodation Reflex (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0053] occurrences matches {0..1} matches {    -- Relative Afferent Pupillary Defect
+                        value matches {
+                            DV_CODED_TEXT[at9037] matches {
+                                defining_code matches {[ac9008]}    -- Relative Afferent Pupillary Defect (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0078] matches {    -- Examination detail
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0076] matches {    -- Interpretation
+                        value matches {
+                            DV_TEXT[at9038]
+                        }
+                    }
+                    ELEMENT[at0070] matches {    -- Image
+                        value matches {
+                            DV_MULTIMEDIA[at9039] matches {
+                                media_type matches {[ac9027]}    -- Image (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0068] matches {    -- Interpretation
+                value matches {
+                    DV_TEXT[at9040]
+                }
+            }
+            ELEMENT[at0077] matches {    -- Image
+                value matches {
+                    DV_MULTIMEDIA[at9041] matches {
+                        media_type matches {[ac9027]}    -- Image (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9042]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Examination Findings  - Pupils">
+                description = <"Findings on physical examination of the pupils.">
+            >
+            ["at0002"] = <
+                text = <"Measured Size">
+                description = <"Measured size of the pupil.">
+            >
+            ["at0003"] = <
+                text = <"Direct Light Reflex">
+                description = <"Pupil constricts with light shone into that eye.">
+            >
+            ["at0004"] = <
+                text = <"Consensual Light Reflex">
+                description = <"Findings of the consensual pupillary light reflex.">
+            >
+            ["at0005"] = <
+                text = <"Shape">
+                description = <"The shape of the pupil.">
+            >
+            ["at0006"] = <
+                text = <"Accommodation Reflex">
+                description = <"Findings of the pupillary accommodation reflex.">
+            >
+            ["at0015"] = <
+                text = <"Pupil Examined">
+                description = <"Identification of the pupil under examination.">
+            >
+            ["at0016"] = <
+                text = <"Left">
+                description = <"The left pupil.">
+            >
+            ["at0017"] = <
+                text = <"Right">
+                description = <"The right pupil.">
+            >
+            ["at0018"] = <
+                text = <"Both pupils">
+                description = <"Both pupils.">
+            >
+            ["at0020"] = <
+                text = <"Estimated Size">
+                description = <"A text description of the estimated pupil size.">
+            >
+            ["at0021"] = <
+                text = <"Normal sized pupil">
+                description = <"The pupil size is normal (3-5mm).">
+            >
+            ["at0022"] = <
+                text = <"Constricted pupil.">
+                description = <"The pupil is constricted, relative to normal (1.5-2.5mm).">
+            >
+            ["at0023"] = <
+                text = <"Pin-point pupil">
+                description = <"The pupil is heavily constricted (<= 1mm).">
+            >
+            ["at0024"] = <
+                text = <"Dilated pupil">
+                description = <"The pupil is dilated, relative to normal (>= 5.5mm).">
+            >
+            ["at0025"] = <
+                text = <"Present">
+                description = <"The direct light reflex is present.">
+            >
+            ["at0026"] = <
+                text = <"Absent">
+                description = <"The direct light reflex is absent.">
+            >
+            ["at0027"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the physical examination findings of the pupil, not captured in other fields.">
+            >
+            ["at0033"] = <
+                text = <"Sluggish/slow (-)">
+                description = <"The direct light reflex is slow or sluggish (-).">
+            >
+            ["at0034"] = <
+                text = <"Normal speed (+/-)">
+                description = <"The direct light reflex is of normal speed (+/-).">
+            >
+            ["at0035"] = <
+                text = <"Brisk(+)">
+                description = <"The direct light reflex is brisk (+).">
+            >
+            ["at0036"] = <
+                text = <"Very brisk (++)">
+                description = <"The direct light reflex is very brisk (++).">
+            >
+            ["at0037"] = <
+                text = <"Present">
+                description = <"The consensual light reflex is present.">
+            >
+            ["at0038"] = <
+                text = <"Absent">
+                description = <"The consensual light reflex is absent.">
+            >
+            ["at0039"] = <
+                text = <"Sluggish/slow (-)">
+                description = <"The consensual light reflex is sluggish or slow (-).">
+            >
+            ["at0040"] = <
+                text = <"Normal (+/-)">
+                description = <"The consensual light reflex is of normal speed (+/-).">
+            >
+            ["at0041"] = <
+                text = <"Brisk (+)">
+                description = <"The consensual light reflex is brisk (+).">
+            >
+            ["at0043"] = <
+                text = <"Present">
+                description = <"The accomodation light reflex is present.">
+            >
+            ["at0044"] = <
+                text = <"Absent">
+                description = <"The accommodation light reflex is absent.">
+            >
+            ["at0045"] = <
+                text = <"Sluggish/slow (-)">
+                description = <"The accommodation light reflex is slow or sluggish (-).">
+            >
+            ["at0046"] = <
+                text = <"Normal (-/+)">
+                description = <"The accommodation light reflex is of normal speed (+/-).">
+            >
+            ["at0047"] = <
+                text = <"Brisk (+)">
+                description = <"The accommodation light reflex is brisk (+).">
+            >
+            ["at0049"] = <
+                text = <"Normal, circular">
+                description = <"The pupil is a normal, circular shape.">
+            >
+            ["at0050"] = <
+                text = <"Abnormal">
+                description = <"The pupil is an abnormal shape.">
+            >
+            ["at0051"] = <
+                text = <"Oval">
+                description = <"The pupil is an oval shape.">
+            >
+            ["at0052"] = <
+                text = <"Irregular">
+                description = <"The pupil is irregular.">
+            >
+            ["at0053"] = <
+                text = <"Relative Afferent Pupillary Defect">
+                description = <"Findings of the relative afferent pupillary defect.">
+            >
+            ["at0054"] = <
+                text = <"Absent">
+                description = <"A relative afferent afferent pupillary defect (RAPD) is absent.">
+            >
+            ["at0055"] = <
+                text = <"Present">
+                description = <"A relative afferent afferent pupillary defect (RAPD) is present.">
+            >
+            ["at0056"] = <
+                text = <"Sectoral abnormaility">
+                description = <"A sectoral abnormality is present.">
+            >
+            ["at0057"] = <
+                text = <"Teardrop">
+                description = <"The pupil is tear-drop shaped.">
+            >
+            ["at0058"] = <
+                text = <"Keyhole">
+                description = <"The pupil is keyhole-shaped.">
+            >
+            ["at0068"] = <
+                text = <"Interpretation">
+                description = <"Single word, phrase or brief description representing a summary of the examination findings applying to both puplis.">
+                comment = <"Coding with a terminology is preferred, if possible. For example, SNOMED-CT|386667005| Pupils equal, react to light and accommodation|.">
+            >
+            ["at0069"] = <
+                text = <"Description">
+                description = <"Narrative description of findings observed during a physical examination of the pupil.">
+                comment = <"Use this data element to provide additional, narrative description of any data elements that are represented only by structured values.">
+            >
+            ["at0070"] = <
+                text = <"Image">
+                description = <"Multimedia image taken during examination of the identified pupil.">
+            >
+            ["at0071"] = <
+                text = <"Symmetry">
+                description = <"An estimate of the equality of the size and shape of the pupils.">
+            >
+            ["at0072"] = <
+                text = <"Equal">
+                description = <"The pupils are of equal size.">
+            >
+            ["at0073"] = <
+                text = <"Unequal">
+                description = <"The puils are of unequal size.">
+            >
+            ["at0075"] = <
+                text = <"Per Pupil">
+                description = <"Physical examination findings of an identified pupil.">
+            >
+            ["at0076"] = <
+                text = <"Interpretation">
+                description = <"Single word, phrase or brief description representing a summary of the examination findings applying to a single pupil.">
+            >
+            ["at0077"] = <
+                text = <"Image">
+                description = <"Multimedia image taken during examination of both pupils.">
+            >
+            ["at0078"] = <
+                text = <"Examination detail">
+                description = <"Further detailed examination.">
+            >
+            ["at9014"] = <
+                text = <"video/BT656">
+                description = <"video/BT656">
+            >
+            ["at9015"] = <
+                text = <"video/CelB">
+                description = <"video/CelB">
+            >
+            ["at9016"] = <
+                text = <"video/H261">
+                description = <"video/H261">
+            >
+            ["at9017"] = <
+                text = <"video/H263">
+                description = <"video/H263">
+            >
+            ["at9018"] = <
+                text = <"video/H263-1998">
+                description = <"video/H263-1998">
+            >
+            ["at9019"] = <
+                text = <"video/H263-2000">
+                description = <"video/H263-2000">
+            >
+            ["at9020"] = <
+                text = <"video/quicktime">
+                description = <"video/quicktime">
+            >
+            ["at9009"] = <
+                text = <"image/cgm">
+                description = <"image/cgm">
+            >
+            ["at9010"] = <
+                text = <"image/gif">
+                description = <"image/gif">
+            >
+            ["at9011"] = <
+                text = <"image/png">
+                description = <"image/png">
+            >
+            ["at9012"] = <
+                text = <"image/tiff">
+                description = <"image/tiff">
+            >
+            ["at9013"] = <
+                text = <"image/jpeg">
+                description = <"image/jpeg">
+            >
+            ["at9021"] = <
+                text = <"application/msword">
+                description = <"application/msword">
+            >
+            ["at9022"] = <
+                text = <"application/pdf">
+                description = <"application/pdf">
+            >
+            ["at9023"] = <
+                text = <"application/rtf">
+                description = <"application/rtf">
+            >
+            ["at9024"] = <
+                text = <"application/dicom">
+                description = <"application/dicom">
+            >
+            ["at9025"] = <
+                text = <"application/vnd.oasis.opendocument.text">
+                description = <"application/vnd.oasis.opendocument.text">
+            >
+            ["at9026"] = <
+                text = <"application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                description = <"application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+            >
+            ["at9003"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9000"] = <
+                text = <"Symmetry (synthesised)">
+                description = <"An estimate of the equality of the size and shape of the pupils. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Pupil Examined (synthesised)">
+                description = <"Identification of the pupil under examination. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Shape (synthesised)">
+                description = <"The shape of the pupil. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Estimated Size (synthesised)">
+                description = <"A text description of the estimated pupil size. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Direct Light Reflex (synthesised)">
+                description = <"Pupil constricts with light shone into that eye. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Consensual Light Reflex (synthesised)">
+                description = <"Findings of the consensual pupillary light reflex. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Accommodation Reflex (synthesised)">
+                description = <"Findings of the pupillary accommodation reflex. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Relative Afferent Pupillary Defect (synthesised)">
+                description = <"Findings of the relative afferent pupillary defect. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Image (synthesised)">
+                description = <"Multimedia image taken during examination of the identified pupil. (synthesised)">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"*Examination - Pupil(en)">
+                description = <"*Physical examination of the pupil.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Measured Size(en)">
+                description = <"*Measured size of the pupil.(en)">
+            >
+            ["at0003"] = <
+                text = <"*Direct Light Reflex(en)">
+                description = <"*Pupil constricts with light shone into that eye.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Consensual Light Reflex(en)">
+                description = <"*Findings of the consensual pupillary light reflex.(en)">
+            >
+            ["at0005"] = <
+                text = <"Obilka">
+                description = <"Obilka zenice">
+            >
+            ["at0006"] = <
+                text = <"*Accommodation Reflex(en)">
+                description = <"*Findings of the pupillary accommodation reflex.(en)">
+            >
+            ["at0015"] = <
+                text = <"*Pupil Examined(en)">
+                description = <"*Identification of the pupil under examination.(en)">
+            >
+            ["at0016"] = <
+                text = <"*Left(en)">
+                description = <"*The left pupil.(en)">
+            >
+            ["at0017"] = <
+                text = <"*Right(en)">
+                description = <"*The right pupil.(en)">
+            >
+            ["at0018"] = <
+                text = <"*Both pupils(en)">
+                description = <"*Both pupils.(en)">
+            >
+            ["at0020"] = <
+                text = <"*Estimated Size(en)">
+                description = <"*A text description of the estimated pupil size.(en)">
+            >
+            ["at0021"] = <
+                text = <"*Normal sized pupil(en)">
+                description = <"*The pupil size is normal (3-5mm).(en)">
+            >
+            ["at0022"] = <
+                text = <"*Constricted pupil.(en)">
+                description = <"*The pupil is constricted, relative to normal (1.5-2.5mm).(en)">
+            >
+            ["at0023"] = <
+                text = <"*Pin-point pupil(en)">
+                description = <"*The pupil is heavily constricted (<= 1mm).(en)">
+            >
+            ["at0024"] = <
+                text = <"*Dilated pupil(en)">
+                description = <"*The pupil is dilated, relative to normal (>= 5.5mm).(en)">
+            >
+            ["at0025"] = <
+                text = <"Da">
+                description = <"Refleks na direktno svetlobo je prisoten">
+            >
+            ["at0026"] = <
+                text = <"Ne">
+                description = <"Refleks na direktno svetlobo ni prisoten">
+            >
+            ["at0027"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the physical examination findings of the pupil, not captured in other fields.(en)">
+            >
+            ["at0033"] = <
+                text = <"Počasen (-)">
+                description = <"Refleks na direktno svetlobo je počasen (-)">
+            >
+            ["at0034"] = <
+                text = <"*Normal speed (+/-)(en)">
+                description = <"*The direct light reflex is of normal speed (+/-).(en)">
+            >
+            ["at0035"] = <
+                text = <"Hiter(+)">
+                description = <"Refleks na direktno svetlobo je hiter (+)">
+            >
+            ["at0036"] = <
+                text = <"Zelo hiter (++)">
+                description = <"Refleks na direktno svetlobo je zelo hiter (++)">
+            >
+            ["at0037"] = <
+                text = <"Da">
+                description = <"Refleks na indirektno svetlobo je prisoten">
+            >
+            ["at0038"] = <
+                text = <"Ne">
+                description = <"Refleks na indirektno svetlobo ni prisoten">
+            >
+            ["at0039"] = <
+                text = <"Počasen (-)">
+                description = <"Refleks na indirektno svetlobo je počasen (-)">
+            >
+            ["at0040"] = <
+                text = <"Normalen (+/-)">
+                description = <"Refleks na indirektno svetlobo je normalno hiter (+/-)">
+            >
+            ["at0041"] = <
+                text = <"Hiter(+)">
+                description = <"Refleks na indirektno svetlobo je hiter (+)">
+            >
+            ["at0043"] = <
+                text = <"Da">
+                description = <"Akomodacijski refleks je prisoten">
+            >
+            ["at0044"] = <
+                text = <"Ne">
+                description = <"Akomodacijski refleks ni prisoten">
+            >
+            ["at0045"] = <
+                text = <"Počasen (-)">
+                description = <"Akomodacija leče je počasna (-)">
+            >
+            ["at0046"] = <
+                text = <"Normalen (+/-)">
+                description = <"Akomodacija leče je normalno hitra (+,-)">
+            >
+            ["at0047"] = <
+                text = <"Hiter(+)">
+                description = <"Akomodacija leče je hitra (+)">
+            >
+            ["at0049"] = <
+                text = <"Normalna, okrogla">
+                description = <"Oblika zenice je normalna, okrogla">
+            >
+            ["at0050"] = <
+                text = <"Nepravilna">
+                description = <"Zenica je nepravilne oblike">
+            >
+            ["at0051"] = <
+                text = <"Ovalna">
+                description = <"Zenica je ovalne oblike">
+            >
+            ["at0052"] = <
+                text = <"Nepravilna">
+                description = <"Zenica je nepravilne oblike">
+            >
+            ["at0053"] = <
+                text = <"*Relative Afferent Pupillary Defect(en)">
+                description = <"*Findings of the relative afferent pupillary defect.(en)">
+            >
+            ["at0054"] = <
+                text = <"*Absent(en)">
+                description = <"*A relative afferent afferent pupillary defect (RAPD) is absent.(en)">
+            >
+            ["at0055"] = <
+                text = <"*Present(en)">
+                description = <"*A relative afferent afferent pupillary defect (RAPD) is present.(en)">
+            >
+            ["at0056"] = <
+                text = <"*Sectoral abnormaility(en)">
+                description = <"*A sectoral abnormality is present.(en)">
+            >
+            ["at0057"] = <
+                text = <"V obliki solze">
+                description = <"Zenica je v obliki solze">
+            >
+            ["at0058"] = <
+                text = <"V obliki ključavnice">
+                description = <"Zenica je v obliki ključavnice">
+            >
+            ["at0068"] = <
+                text = <"*Interpretation(en)">
+                description = <"*Single word, phrase or brief description representing a summary of the examination findings.(en)">
+                comment = <"*Coding with a terminology is preferred, if possible. For example, SNOMED-CT|386667005| Pupils equal, react to light and accommodation|.(en)">
+            >
+            ["at0069"] = <
+                text = <"*Description(en)">
+                description = <"*Narrative description of findings observed by a clinician during a physical examination of the pupil.(en)">
+                comment = <"*Use this data element to provide additional, narrative description of any data elements that are represented only by structured values.(en)">
+            >
+            ["at0070"] = <
+                text = <"*Image(en)">
+                description = <"*Multimedia image taken during examination of the pupil.(en)">
+            >
+            ["at0071"] = <
+                text = <"*Equality(en)">
+                description = <"*An estimate of the equality of the size of the pupils.(en)">
+            >
+            ["at0072"] = <
+                text = <"*Equal(en)">
+                description = <"*The pupils are of equal size.(en)">
+            >
+            ["at0073"] = <
+                text = <"*Unequal(en)">
+                description = <"*The puils are of unequal size.(en)">
+            >
+            ["at0075"] = <
+                text = <"*New cluster(en)">
+                description = <"**(en)">
+            >
+            ["at0076"] = <
+                text = <"*New element(en)">
+                description = <"**(en)">
+            >
+            ["at0077"] = <
+                text = <"*New element(en)">
+                description = <"**(en)">
+            >
+            ["at0078"] = <
+                text = <"*Examination detail(en)">
+                description = <"*Further detailed examination.(en)">
+            >
+            ["at9014"] = <
+                text = <"* video/BT656 (en)">
+                description = <"* video/BT656 (en)">
+            >
+            ["at9015"] = <
+                text = <"* video/CelB (en)">
+                description = <"* video/CelB (en)">
+            >
+            ["at9016"] = <
+                text = <"* video/H261 (en)">
+                description = <"* video/H261 (en)">
+            >
+            ["at9017"] = <
+                text = <"* video/H263 (en)">
+                description = <"* video/H263 (en)">
+            >
+            ["at9018"] = <
+                text = <"* video/H263-1998 (en)">
+                description = <"* video/H263-1998 (en)">
+            >
+            ["at9019"] = <
+                text = <"* video/H263-2000 (en)">
+                description = <"* video/H263-2000 (en)">
+            >
+            ["at9020"] = <
+                text = <"* video/quicktime (en)">
+                description = <"* video/quicktime (en)">
+            >
+            ["at9009"] = <
+                text = <"* image/cgm (en)">
+                description = <"* image/cgm (en)">
+            >
+            ["at9010"] = <
+                text = <"* image/gif (en)">
+                description = <"* image/gif (en)">
+            >
+            ["at9011"] = <
+                text = <"* image/png (en)">
+                description = <"* image/png (en)">
+            >
+            ["at9012"] = <
+                text = <"* image/tiff (en)">
+                description = <"* image/tiff (en)">
+            >
+            ["at9013"] = <
+                text = <"* image/jpeg (en)">
+                description = <"* image/jpeg (en)">
+            >
+            ["at9021"] = <
+                text = <"* application/msword (en)">
+                description = <"* application/msword (en)">
+            >
+            ["at9022"] = <
+                text = <"* application/pdf (en)">
+                description = <"* application/pdf (en)">
+            >
+            ["at9023"] = <
+                text = <"* application/rtf (en)">
+                description = <"* application/rtf (en)">
+            >
+            ["at9024"] = <
+                text = <"* application/dicom (en)">
+                description = <"* application/dicom (en)">
+            >
+            ["at9025"] = <
+                text = <"* application/vnd.oasis.opendocument.text (en)">
+                description = <"* application/vnd.oasis.opendocument.text (en)">
+            >
+            ["at9026"] = <
+                text = <"* application/vnd.openxmlformats-officedocument.wordprocessingml.document (en)">
+                description = <"* application/vnd.openxmlformats-officedocument.wordprocessingml.document (en)">
+            >
+            ["at9003"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9000"] = <
+                text = <"*Equality(en) (synthesised)">
+                description = <"*An estimate of the equality of the size of the pupils.(en) (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"*Pupil Examined(en) (synthesised)">
+                description = <"*Identification of the pupil under examination.(en) (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Obilka (synthesised)">
+                description = <"Obilka zenice (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"*Estimated Size(en) (synthesised)">
+                description = <"*A text description of the estimated pupil size.(en) (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"*Direct Light Reflex(en) (synthesised)">
+                description = <"*Pupil constricts with light shone into that eye.(en) (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"*Consensual Light Reflex(en) (synthesised)">
+                description = <"*Findings of the consensual pupillary light reflex.(en) (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"*Accommodation Reflex(en) (synthesised)">
+                description = <"*Findings of the pupillary accommodation reflex.(en) (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"*Relative Afferent Pupillary Defect(en) (synthesised)">
+                description = <"*Findings of the relative afferent pupillary defect.(en) (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"*Image(en) (synthesised)">
+                description = <"*Multimedia image taken during examination of the pupil.(en) (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9003"] = <http://openehr.org/id/122>
+        >
+        ["openEHR"] = <
+            ["at9014"] = <http://openehr.org/id/401>
+            ["at9015"] = <http://openehr.org/id/402>
+            ["at9016"] = <http://openehr.org/id/404>
+            ["at9017"] = <http://openehr.org/id/405>
+            ["at9018"] = <http://openehr.org/id/406>
+            ["at9019"] = <http://openehr.org/id/407>
+            ["at9020"] = <http://openehr.org/id/414>
+            ["at9009"] = <http://openehr.org/id/425>
+            ["at9010"] = <http://openehr.org/id/426>
+            ["at9011"] = <http://openehr.org/id/427>
+            ["at9012"] = <http://openehr.org/id/428>
+            ["at9013"] = <http://openehr.org/id/429>
+            ["at9021"] = <http://openehr.org/id/517>
+            ["at9022"] = <http://openehr.org/id/518>
+            ["at9023"] = <http://openehr.org/id/519>
+            ["at9024"] = <http://openehr.org/id/637>
+            ["at9025"] = <http://openehr.org/id/682>
+            ["at9026"] = <http://openehr.org/id/683>
+        >
+        ["SNOMED-CT"] = <
+            ["at0002"] = <http://snomed.info/id/363953003>
+            ["at0003"] = <http://snomed.info/id/113147002>
+            ["at0020"] = <http://snomed.info/id/363953003>
+            ["at0071"] = <http://snomed.info/id/363955005>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0049", "at0050", "at0051", "at0052", "at0056", "at0057", "at0058">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0016", "at0017", "at0018">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0072", "at0073">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0037", "at0038", "at0039", "at0040", "at0041">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0025", "at0026", "at0033", "at0034", "at0035", "at0036">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at9009", "at9010", "at9011", "at9012", "at9013", "at9014", "at9015", "at9016", "at9017", "at9018", "at9019", "at9020", "at9021", "at9022", "at9023", "at9024", "at9025", "at9026">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0023", "at0022", "at0021", "at0024">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0055", "at0054">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0043", "at0044", "at0045", "at0046", "at0047">
+        >
+    >

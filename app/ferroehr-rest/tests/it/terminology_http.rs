@@ -20,6 +20,8 @@ use serde_json::Value;
 
 use ferroehr_rest::config::AppConfig;
 
+use std::sync::Arc;
+
 use crate::common;
 use crate::common::EXT;
 use crate::common::{get, send_body};
@@ -46,9 +48,7 @@ async fn app(terminology_enabled: bool) -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
     (
         pg,
-        ferroehr_rest::build_with(config(terminology_enabled), service)
-            .await
-            .expect("router builds"),
+        common::build_with(config(terminology_enabled), service).await,
     )
 }
 
@@ -75,11 +75,10 @@ async fn disabled_terminology_is_404() {
 #[tokio::test]
 async fn disabled_group_answers_401_before_404_when_unauthenticated() {
     let mut cfg = config(false);
-    common::with_basic_users(&mut cfg, &[("alice", &["USER"])]);
-    let (_pg, service) = common::test_service().await;
-    let app = ferroehr_rest::build_with(cfg, service)
-        .await
-        .expect("router builds");
+    let (_pg, pool) = common::migrated_pool().await;
+    let service = Arc::new(common::binding_service(&pool));
+    common::with_basic_users(&mut cfg, &service, &pool, &[("alice", &["USER"])]).await;
+    let app = common::build_with(cfg, service).await;
 
     let (status, _) = send_body(&app, get(&format!("{EXT}/terminology"))).await;
     assert_eq!(
@@ -95,11 +94,10 @@ async fn disabled_group_answers_401_before_404_when_unauthenticated() {
 #[tokio::test]
 async fn disabled_group_answers_404_when_authenticated() {
     let mut cfg = config(false);
-    common::with_basic_users(&mut cfg, &[("alice", &["USER"])]);
-    let (_pg, service) = common::test_service().await;
-    let app = ferroehr_rest::build_with(cfg, service)
-        .await
-        .expect("router builds");
+    let (_pg, pool) = common::migrated_pool().await;
+    let service = Arc::new(common::binding_service(&pool));
+    common::with_basic_users(&mut cfg, &service, &pool, &[("alice", &["USER"])]).await;
+    let app = common::build_with(cfg, service).await;
 
     let req = common::req("GET", format!("{EXT}/terminology"))
         .header(
@@ -266,7 +264,7 @@ async fn enabled_terminology_group_serves_real_bundle() {
 async fn app_with_server(base: &str) -> (testkit::TestDb, Router) {
     let cfg = ferroehr::service::terminology::config::TerminologyServerConfig {
         endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-            url: base.to_owned(),
+            url: ferrohealth_secret::secret_url::SecretUrl::new(base),
             timeout: ferrohealth_config::units::Duration::from_millis(800),
             ..ferrohealth_smart::config::endpoint::EndpointSection::default()
         },
@@ -278,10 +276,8 @@ async fn app_with_server(base: &str) -> (testkit::TestDb, Router) {
     let service = ferroehr::service::FerroEhrService::new(
         &ferroehr::db::domain::DomainPools::from_shared(&pg.pool()),
     )
-    .with_terminology_server(std::sync::Arc::new(provider));
-    let app = ferroehr_rest::build_with(config(true), std::sync::Arc::new(service))
-        .await
-        .expect("router builds");
+    .with_terminology_server(Arc::new(provider));
+    let app = common::build_with(config(true), Arc::new(service)).await;
     (pg, app)
 }
 

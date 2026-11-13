@@ -33,9 +33,9 @@ measures it on every release, is on
 ## The component and the surface it records
 
 The component is, in the code: the FerroHEALTH products' shared crates
-`ehds-logging` 0.2.7 (the Annex II 3.2 access record, the Art. 14(1)
+`ehds-logging` 0.18.0 (the Annex II 3.2 access record, the Art. 14(1)
 categories and their classification, the Art. 9(2) retention floor and the
-emergency mark) and `ihe-atna` 0.2.7 (the BALP and DICOM renderings and the
+emergency mark) and `ihe-atna` 0.18.0 (the BALP and DICOM renderings and the
 ATNA sender), from FerroAUDIT; `ferroehr::system_log` (the access-event model,
 the audit store, what each rendering says and the sinks),
 `ferroehr-rest::system_log` (the middleware that records every API access and
@@ -181,7 +181,7 @@ local store's column.
 ## H3: the category of the data is not recorded
 
 **Cause:** a template or archetype missing from the deployment's
-`[audit.categories]` map; a record type the classifier does not reach.
+audit category register; a record type the classifier does not reach.
 
 **Effect:** a record cannot say whether the access reached a patient
 summary, a prescription or a test result, which Annex II 3.2(c) asks for
@@ -195,10 +195,10 @@ composition it holds, a `CONTRIBUTION` read (with or without
 `Prefer: resolve_refs`) by the versions it committed, and an EHR Extract
 export or import by the versions it carried or landed. `EHR`, `EHR_STATUS`,
 `EHR_ACCESS` and the directory are recorded `none` by resource kind. While
-the deployment declares no template and no archetype, the map FerroEHR ships
-for the published CKM templates and COMPOSITION archetypes of one priority
-category applies, and `deployment.profile = "production"` refuses a
-deployment that switches it off with nothing declared. An access the map
+the audit category register declares no template and no archetype, the map
+FerroEHR ships for the published CKM templates and COMPOSITION archetypes of
+one priority category applies, and `deployment.profile = "production"`
+refuses a register write that switches it off with nothing declared. An access the map
 cannot classify is recorded `unclassified`, with the ids as evidence, and is
 never refused. Each record carries the digest of the map that classified it.
 
@@ -217,6 +217,8 @@ never refused. Each record carries the digest of the map that classified it.
   `the_shipped_map_classifies_an_undeclared_deployment`;
 - `app/ferroehr/tests/it/service_message_audit.rs`:
   `the_extract_records_carry_the_categories_of_the_data`;
+- `app/ferroehr/src/config/deployment/tests.rs`:
+  `production_requires_a_category_map_unless_accepted`;
 - `app/ferroehr/tests/it/audit_ehds_mapping.rs`:
   `element_c_the_priority_category_is_recorded_and_rendered_in_fhir_only`.
 
@@ -225,8 +227,8 @@ archetypes whose data sit in one priority category, and a deployment's own
 map replaces it whole, so a map that misses a template the deployment uses
 yields `unclassified` records. Records in the
 demographic domain carry no classification, because no priority category
-lives there. The Helm chart carries a deployment's own map as
-`config.audit.categories`, empty by default, so the shipped map applies.
+lives there. A deployment's own map is the audit category register, an admin
+register at the shipped map until it is written.
 
 ## H4: a record misstates where the data came from
 
@@ -237,15 +239,15 @@ origins taken from one row only.
 data that was read (Annex II 3.2(e)).
 
 **Control:** each committed version records the distinct originating systems
-of its body; a body with none records the origin of the registered client that
-committed it directly (`[[authz.origin]]`), or this server; a read records the origins of
+of its body; a body with none records the origin of the committer's
+`data_origin` grant in the CDR, or this server; a read records the origins of
 what it served, an AQL page the union, with the true count beside a capped
 set. The FHIR `AuditEvent` of a read or a query carries the origins of the
 data it served.
 
 **Shown by:** `app/ferroehr/tests/it/access_origins.rs`:
 `a_body_without_feeder_audit_has_this_server_as_its_origin`,
-`a_registered_client_stamps_its_origin_on_a_direct_commit`,
+`a_granted_origin_stamps_a_direct_commit`,
 `feeder_audits_anywhere_in_the_body_count_once_each`,
 `an_aql_page_records_the_union_of_the_origins_it_served`,
 `an_unstamped_row_is_assessed_from_the_body_at_read`;
@@ -307,12 +309,12 @@ retrieval scoped to one patient.
 **Effect:** the information EHDS Art. 9 gives a patient cannot be produced.
 
 **Control:** ITI-81 `GET /fhir/r4/AuditEvent` searches the log by patient,
-agent, action and date, and a configured subject audit role reads one
-subject's records and nothing else. EHDS Art. 9(2) has the information
+agent, action and date, and a caller holding a `read_subject_audit` grant in
+the CDR reads one subject's records and nothing else. EHDS Art. 9(2) has the information
 provided "through electronic health data access services", which the Member
 States establish (Art. 4(1)); FerroEHR serves the log to such a service and
 has no patient-facing interface of its own. Where a deployment turns on the
-EHDS Art. 3(3) delay (`[privacy.access_delay]`), the subject-scoped read leaves out
+EHDS Art. 3(3) delay (the access-delay register), the subject-scoped read leaves out
 the records about a held composition until a professional releases it or the
 hold expires, and then serves them with their original times
 (`ehds-logging` 0.3.3); the syslog and FHIR feeds and the event stream are
@@ -320,7 +322,7 @@ controller feeds and carry those records unfiltered.
 
 **Shown by:** `app/ferroehr-rest/tests/it/audit_iti81.rs`:
 `searchset_bundle_with_filters_and_paging`,
-`the_subject_audit_role_reads_one_subjects_log_and_nothing_else`,
+`a_subject_audit_grant_reads_one_subjects_log_and_nothing_else`,
 `rbac_gates_the_audit_surface_to_admins`;
 `app/ferroehr-rest/tests/it/access_delay_trail.rs`:
 `a_record_about_a_held_composition_appears_in_the_persons_trail_at_release`,
@@ -330,8 +332,9 @@ controller feeds and carry those records unfiltered.
 `the_fhir_feed_carries_a_record_about_a_held_composition`,
 `the_event_stream_carries_the_commit_of_a_held_composition`.
 
-**Remains:** the subject audit role is unset by default, so the log is
-admin-only until the deployment configures it. A deployment that passes a
+**Remains:** `[authz.grants] allowed` does not allow `read_subject_audit` by
+default, so the log is admin-only until the deployment allows it and grants
+it to the service that serves the person. A deployment that passes a
 controller feed to the person shows them the records about a held composition
 before its release.
 
@@ -351,7 +354,7 @@ its content; `UPDATE`, `DELETE`
 and `TRUNCATE` on the log are refused; the application role cannot run DDL
 or rewrite the log; `audit.verify_audit_chain()` names any record that
 changed or went missing; the server runs that verification one minute after
-boot and then every `[audit.store] verify_interval` (default one day),
+boot and then every `[audit.store] verify_interval` (default one hour),
 logs a finding at `ERROR`, counts it in `atna_audit_chain_findings` and shows
 it on the `audit_chain` readiness indicator; forwarding puts copies off the
 box.
@@ -416,9 +419,10 @@ happened.
 
 **Control:** a deployment names the purpose-of-use codes its callers declare
 for an emergency (`[audit] emergency_purpose_codes`, each also on
-`purpose_codes`). An access declaring one carries the emergency mark in its
-access record: the `emergency_access` column, and in the FHIR `AuditEvent` the
-`ehds-logging` entity `ehds-emergency-access`, which states the mark in plain
+`purpose_codes`). An access declaring one, in the `[audit] purpose_header` or
+as a purpose of use its IHE IUA access token states (#5323), carries the
+emergency mark in its access record: the `emergency_access` column, and in the
+FHIR `AuditEvent` the `ehds-logging` entity `ehds-emergency-access`, which states the mark in plain
 words and names the purposes that marked it.
 The person's own subject-scoped ITI-81 retrieval serves that document. The
 mark lifts no restriction: an object restricted under GDPR Art. 18 is refused
@@ -436,15 +440,17 @@ names that EHR adds an `access-opt-out-override` record against it.
 `app/ferroehr/tests/it/audit_store.rs`:
 `both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten`;
 `app/ferroehr-rest/tests/it/access_opt_out_http.rs`:
-`the_vital_interest_override_reads_the_ehr_and_is_recorded`.
+`the_vital_interest_override_reads_the_ehr_and_is_recorded`;
+`app/ferroehr/src/system_log/event.rs`:
+`a_purpose_the_token_states_is_named_beside_the_declared_one`.
 
 **Remains:** the Art. 8 restriction hides restricted data from every
 professional route, query and export, and only a caller holding
 `authz.rbac.emergency_access_role` that declares an emergency purpose reads it
 (`app/ferroehr-rest/tests/it/access_restriction_http.rs`:
 `only_an_emergency_access_reads_restricted_data_and_is_marked`). The mark rests
-on the purpose the caller declares, and an emergency the caller does not
-declare is not marked. The DICOM syslog rendering has no purpose element and
+on the purpose the caller declares or its token states, and an emergency
+neither names is not marked. The DICOM syslog rendering has no purpose element and
 does not carry the mark.
 
 ## When the log is reviewed
@@ -479,3 +485,5 @@ EHDS-side risk assessment of the component.
 | 19 | 2026-11-04 | Reviewed for release 5.6.0 (changes since the 5.6.0-rc10 review: the logging component's modules changed only by refactors that change no record: one macro declares every guarded REST handler (#4887), every route calls its operation's handler with no operation-string match (#4662), the last REST and service forwarders go (#4663), and the committer context, the audit borrows and the service error move below the service (#4835); outside them, a manifest export under the EHDS Art. 10(2) override records the override against the EHR it exports (#4870), and the scope of the logging component names FerroBRIDGE's recording of its FHIR facade's accesses from FerroBRIDGE 0.0.16 (#4822)); every named test exists; no hazard added |
 | 20 | 2026-11-05 | Reviewed for release 5.6.1 (changes since the 5.6.0 review: no module of the logging component changed; the application code is unchanged and a viewer test reads the hosted sandbox posture (#4985); the deployment artifacts pin FerroPIX 0.0.16, FerroBRIDGE 0.0.20 and four FerroSYS crate releases that change no behaviour (#4987)); every named test exists; no hazard added |
 | 21 | 2026-11-10 | Reviewed for release candidate 5.7.0-rc1 (changes since the 5.6.1 review; 5.6.2 and 5.6.3 changed no module of the logging component: every access record of an authenticated request carries the outcome of the party binding with the bound party, its groups, the provider acted for and the representation, and the FHIR `AuditEvent`, the DICOM message and the syslog feed render them (#5043, #5118, audit migration 0023); a delegated access records `acting_mode = "delegated"` where it recorded `client`, and a system caller's `system` (#5118); every refused request is an access record through the gated path, with the `refused-*` code of a binding or caller-kind refusal, its own code per caller kind and the name of a missing key claim, and the refusals of tokens that failed verification are budgeted by source network (#5119, #5139, #5140, audit migrations 0024 and 0025); the recorded client is the one the issuer profile admitted, never another `client_id` claim (#5194); `[audit.syslog]` reads its TLS from `[audit.syslog.tls]` (#5217); the family crates move to `ehds-logging` and `ihe-atna` 0.9.1, and the FHIR feed tries a delivery again as `[audit.fhir_feed.endpoint] retry` states while its outbox still keeps every record until the sink takes it, as H5 states (#5209, #5259, #5331); H5 named its four floor tests in `config/mod.rs`, which #5259 moved to `config/audit_tests.rs`, and its member-state test in `system_log/config.rs`, which moves with the retention bounds to `system_log/retention.rs` (#5331), so it names both files; the audit keys take the 5.7.0 configuration tree (#5259); H2 named two assurance tests #5003 renamed, so it names `a_person_token_through_an_unlisted_client_is_refused` and `a_delegate_acting_for_a_professional_passes_and_is_recorded`); every named test exists; no hazard added |
+| 22 | 2026-11-11 | Reviewed for release candidate 5.7.0-rc3 (changes since the 5.7.0-rc1 review; 5.7.0-rc2 changed no module of the logging component: the access record takes the purposes of use and the professional roles an IHE IUA access token states, in the new `token_attributes` column (audit migration 0026, chain digest version 3), renders them in the EHDS access record and the BALP `AuditEvent`, and refuses and records a request whose `[audit] purpose_header` names a purpose the token does not state (#5323); a purpose the token states marks an emergency access as a declared one does, so H9 names it and its test; a contact point's request message id is recorded (#5011); `[audit.syslog] url` renders with its credentials masked (#5322); the component moves to `ehds-logging` and `ihe-atna` 0.12.0 (#5320)); every named test exists; no hazard added |
+| 23 | 2026-11-13 | Reviewed for release candidate 5.7.1-rc1 (changes since the 5.7.0-rc3 review; 5.7.0-rc4 and 5.7.0 changed no module of the logging component: FerroEHR takes `ehds-logging` and `ihe-atna` 0.16.0 (#5417, #5422, #5465) and then 0.18.0 with `ferrohealth-smart` 0.24.1 (#5437, #5438); the category map is the audit category register, an admin register written by `[authz.rbac] admin_role` with every version kept and every read and write recorded, and a new version classifies the next access on every replica, so H3 states the register and names `production_requires_a_category_map_unless_accepted`, the test that a production deployment refuses a register write leaving the map empty (#5442); a body without `FEEDER_AUDIT` records the origin of the committer's `data_origin` grant in the CDR in place of the `[[authz.origin]]` register, and H4 names the test under its new name, `a_granted_origin_stamps_a_direct_commit` (#5439); the recorded client is the one the policy grants admitted (#5436); the ITI-81 retrieval reads one subject's log for a caller holding a `read_subject_audit` grant in the CDR, and an access-service caller is one holding an `access_service` grant, in place of the removed `[authz.rbac] subject_audit_role` and `access_service_roles`, so H6 states the grant, names `a_subject_audit_grant_reads_one_subjects_log_and_nothing_else` and says the ceiling keeps the log admin-only until the deployment allows the grant (#5521); every access of a representative in the patient portal is recorded bound to the representative's `PERSON`, naming the subject and the relationship, and a former representative is refused and never recorded as the patient (#5446, #5532); the v5.7.0 removal aids of the audit keys are deleted (#5463)); H7 states the shipped `verify_interval` of one hour; every named test exists and asserts its control; no hazard added |

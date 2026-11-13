@@ -26,6 +26,13 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+# A newer push to a pull request cancels its running analysis (#5380). On main
+# a running analysis finishes, and a queued one gives way to the newer merge,
+# so main is analyzed at its latest commit.
+concurrency:
+  group: sonar-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions: {}
 
 env:
@@ -174,14 +181,24 @@ jobs:
           sudo apt-get update && sudo apt-get install -y postgresql-client libxml2-utils
           PGPASSWORD=openehr psql -h localhost -U openehr -d postgres \
             -c "ALTER SYSTEM SET fsync = off" -c "ALTER SYSTEM SET synchronous_commit = off" -c "ALTER SYSTEM SET full_page_writes = off" -c "SELECT pg_reload_conf()"
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           components: llvm-tools-preview
           cache-shared-key: sonar
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-llvm-cov,cargo-nextest
+      - id: nl-role-codes
+        name: The pin the cache-only test inputs are kept under
+        run: echo "key=$(bash scripts/vendor/nl-role-codes.sh --cache-key)" >> "$GITHUB_OUTPUT"
+      # The package comes from the cache on a hit, so a registry outage costs
+      # nothing; the script checks every file against its pin either way and
+      # downloads, with retries, only what the cache lacks (#5398).
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .vendor-cache/nl-role-codes
+          key: ${{ steps.nl-role-codes.outputs.key }}
       - name: Fetch the cache-only test inputs
         # The UZI role code CodeSystem is cache only (CIBG copyright), so the
         # Wabvpz tests read it from .vendor-cache/, which this fetches by pin.
@@ -214,12 +231,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           components: llvm-tools-preview
           cache-shared-key: sonar-viewer
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-llvm-cov,cargo-nextest
       - run: cargo llvm-cov --no-report nextest --locked -p ferroehr-viewer --no-tests=pass --profile ci
@@ -263,7 +280,7 @@ jobs:
       # Build cache for the analyzer's own Clippy run. This lane publishes
       # nothing, so restoring a cache is inside the reliability.md rule
       # (only publishing lanes must run cache-free).
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
         with:
           cache-shared-key: sonar
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -310,7 +327,7 @@ jobs:
         run: |
           v="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
           echo "sonar.projectVersion=$v" >> sonar-project.properties
-      - uses: SonarSource/sonarqube-scan-action@4d1dc0c91ee400dcf8a6dddf2f705ac36542e304 # v8.4.0
+      - uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -333,7 +350,7 @@ jobs:
           bash scripts/sonar/issues-to-sarif.sh "$project_key" sonar-findings.sarif
       - name: Upload the findings to code scanning
         if: github.event_name == 'push'
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: sonar-findings.sarif
           category: sonarcloud

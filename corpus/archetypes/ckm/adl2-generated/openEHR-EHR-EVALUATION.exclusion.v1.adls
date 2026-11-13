@@ -1,0 +1,131 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=01cb82ba-0c99-441b-83b8-f4bed3105585; build_uid=780d5e9c-a3f5-40b4-9bb6-f900ada31130)
+    openEHR-EHR-EVALUATION.exclusion.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2010-02-03">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nadim Anani, Karolinska Institutet, Sweden", "Vebjoern Arntzen, Oslo university hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Gustavo Bacelar-Silva, Healthcare Designs, Brazil (openEHR Editor)", "Silje Ljosland Bakke, Bergen Hospital Trust, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Stephen Chu, NEHTA, Australia", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Sebastian Garde, Ocean Informatics, Germany", "Heather Grain, Llewelyn Grain Informatics, Australia", "Sam Heard, Ocean Informatics, Australia", "Lars Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Heather Leslie, Ocean Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjoern Naess, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Jussara Rotzsch, UNB, Brazil", "Stephen Royce, NEHTA, Australia", "Norwegian Review Summary, Nasjonal IKT, Norway", "Richard Townley-O'Neill, NEHTA, Australia">
+    lifecycle_state = <"deprecated">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Exclusion Statement, Draft Archetype [Internet]. NEHTA, Australia, NEHTA Clinical Knowledge Manager [cited: 2015-09-16]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1301">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"F1C3965D6D6E69533D6EA02F9EB4B08A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a statement about clinical conditions, issues or concerns that are either not currently present, or have not been present in the past.">
+            keywords = <"exclusion", ...>
+            use = <"Use to record a specific statement that clinical conditions, issues or concerns are not currently present, or have not been present in the past. 
+
+This archetype has been specifically designed to make a clear and unambiguous statement of exclusion of a type of clinical item from the health record. This approach is used in preference to relying on flags or terminology to express negation.
+
+This archetype has been designed to be used in a variety of ways. The primary intent is to:
+- represent multiple 'Exclusion statements' in one archetype instance; and
+- link one 'Exclusion statement' with multiple 'Specific items', for example 'No past adverse reaction to' 'penicillin' and 'erythromicin'.
+
+There is also the possibility to use the archetype for the following purposes, although clear and safe clinical use cases have not yet been identified:
+- to link multiple 'Exclusion statements' with one 'Specific item'. 
+
+If the clinical requirement is to link multiple 'Exclusion statements' with multiple 'Specific items' then this should be represented using multiple instances of this archetype to ensure correct alignment of each 'Exclusion statement' with each 'Specific item'.
+
+Specialisations of this archetype have been developed to capture specific and more detailed information about common exclusions, such as problems or diagnoses. 
+
+Please note that exclusion statements can only be considered to be current and accurate at the point-in-time of recording. It is possible for a record to be able to state that an individual has NO KNOWN history of XYZ (using an exclusion statement) at the same time as recording the evidence of their first experience of XYZ (using the corresponding archetype that records the first experience eg via an EVALUATION for a diagnosis or adverse reaction). In future record statements, the individual may subsequently have a KNOWN history of XYZ recorded in their problem list.">
+            misuse = <"Not to be used to record the exclusion or absence of clinical information for which there is a purpose-built specialisation. This includes, but is not limited to the following:
+- Do not use this archetype to record the exclusion  of medication use - use the EVALUATION.exclusion-medication archetype for this purpose.
+- Do not use this archetype to record the exclusion of procedures - use the EVALUATION.exclusion-procedure archetype for this purpose.
+- Do not use this archetype to record the exclusion of problems or diagnoses - use the EVALUATION.exclusion-problem_diagnosis archetype for this purpose.
+- Do not use this archetype to record the exclusion of family history - use the EVALUATION.exclusion-family_history archetype for this purpose.
+
+Not to be used to record the exclusion of any component of physical examination - use the CLUSTER.exclusion_exam archetype within an appropriate OBSERVATION or CLUSTER archetype.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Exclusion statement
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1..*} matches {    -- Exclusion statement
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    ELEMENT[at0003] matches {    -- Specific item
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0006] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9002]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0008] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Exclusion statement">
+                description = <"Statement about clinical conditions, issues or concerns that are either not currently present and/or have not been present in the past.">
+            >
+            ["at0002"] = <
+                text = <"Exclusion statement">
+                description = <"Statement of exclusion of a condition, issue or concern.">
+                comment = <"Use to capture any health information that needs to be explicitly recorded in the health record as not currently present and/or not present in the past. This statement can support recording general statements  such as \"No previous/past ...\" or \" No known ...\". Or it can support more exacting statements about a specified object such as \"No known history of ...\" where the 'Specific Item' identifies the precise condition, issue or concern. See specialisations for Medications, Adverse Reactions, Family History, Problem/Diagnosis and Procedures as common examples that have been modelled explicitly for common use.">
+            >
+            ["at0003"] = <
+                text = <"Specific item">
+                description = <"Identification of the specific clinical item to which the 'Exclusion statement' applies.">
+                comment = <"In this generic context of this parent archetype it is not easy to identify a commonly used example, however in context of the specialisations from this archetype, this data element would be used to enable exact statements that include: corticosteriods have never been used; there has never been an adverse reaction to penicillin; there is no family history of heart disease; or there is no past history of diabetes for the individual. In these examples, 'corticosteroids', 'penicillin', 'heart disease', 'diabetes' would be examples of the 'Specific item' and the rest of the example phrase would be carried in the 'Exclusion statement'. Other possible use cases might be: exclusion of pregnancy, never X-rayed, or received a blood transfusion. Please note: if precoordinated phrases such as  'No known allergy to penicillin' is available, then this can be used as an alternative in the 'Exclusion statement' alone.">
+            >
+            ["at0004"] = <
+                text = <"Last updated">
+                description = <"The date on which this exclusion was last updated.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the Exclusion not captured in other fields.">
+            >
+            ["at0008"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+        >
+    >

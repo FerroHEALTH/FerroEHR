@@ -28,6 +28,7 @@ use crate::ids::AllocatedVoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::support;
 use crate::service::demographic::types::PartyKind;
+use crate::service::demographic::validate::Container;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{self, Change, CommittedContribution, WriteEnvelope};
 use crate::versioning::contribution::typed_decode_gate;
@@ -82,9 +83,14 @@ impl FerroEhrService {
             let incomplete = party.lifecycle_state.as_deref() == Some(lifecycle::state::INCOMPLETE);
             typed_decode_gate(kind, &party.body, incomplete)
                 .map_err(|e| e.for_version_member(index))?;
-            self.validate_for_commit(kind, &party.body, incomplete)
-                .await
-                .map_err(|e| e.for_version_member(index))?;
+            self.demographic_commit_check(
+                kind,
+                &party.body,
+                incomplete,
+                Some(Container::New(party.id.id())),
+            )
+            .await
+            .map_err(|e| e.for_version_member(index))?;
             let envelope = WriteEnvelope {
                 lifecycle_state: party.lifecycle_state,
                 ..WriteEnvelope::default()

@@ -1,0 +1,225 @@
+﻿archetype (adl_version=1.4; uid=247aa357-b1ae-40eb-a78c-1b2243e336cf)
+	openEHR-EHR-OBSERVATION.menstrual_cycles.v0
+
+concept
+	[at0000]	-- Menstrual cycles
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			author = <
+				["name"] = <"Marit Alice Venheim, John Tore Valand">
+				["organisation"] = <"Helse Vest IKT, Helse Bergen">
+				["email"] = <"marit.alice.venheim@helse-vest-ikt.no, john.tore.valand@helse-bergen.no">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Marit Alice Venheim">
+		["organisation"] = <"Helse Vest IKT AS">
+		["date"] = <"2021-02-22">
+	>
+	details = <
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			purpose = <"For å registrere detaljer om to eller flere menstruasjonssykluser i løpet av et spesifisert tidsintervall.">
+			use = <"Brukes for å registrere detaljer om to eller flere menstruasjonssykluser i løpet av et spesifisert tidsintervall.
+
+Brukes til å representere \"Hendelser\" som er ment å representere enten to eller flere sykluser, eller et annet tidsintervall, for eksempel antall sykluser over et år.">
+			misuse = <"Brukes ikke for å registrere generell informasjon om menstruasjon eller relaterte symptomer i en syklus, bruk arketypen OBSERVATION.menstruation for dette formålet.
+
+Brukes ikke for å registrere dato for siste normale menstruasjon, bruk EVALUATION.last_normal_menstrual_period arketypen til dette formålet.
+
+Brukes ikke for å registrere informasjon om en spesifikk dag i menstruasjonssyklusen, bruk arketypen OBSERVATION.menstrual_diary til dette formålet.
+
+Brukes ikke for å registrere informasjon om typiske eller vanlige menstruasjonssykluser eller mønstre - bruk arketypen EVALUATION.menstruation_summary for dette formålet.">
+			copyright = <"© openEHR Foundation">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record details about two or more menstrual cycles during a specified interval of time.">
+			use = <"Use to record details about two or more menstrual cycles during a specified interval of time.
+
+Use to represent 'Events' that are intended to represent either two or more cycles, or another interval of time, for example a year.">
+			misuse = <"Not to be used to record the Last normal menstrual period (LNMP) use the EVALUATION.last_normal_menstrual_period archetype for this purpose.
+
+Not to be used to record information about menses or related symptoms, use the OBSERVATION.menstruation archetype for this purpose. 
+
+Not to be used to record information about a specific day in a menstrual cycle, use the OBSERVATION.menstrual_diary archetype for this purpose.
+
+Not to be used to record information about an individual's menstruation history events or patterns of menstruation over time, use the EVALUATION.menstruation_summary archetype for this purpose.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <>
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"E340E1B032CDB17435B585B3CC9F2F61">
+		["build_uid"] = <"f5e009f2-06e0-4ec3-ab18-41abf95dec3f">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	OBSERVATION[at0000] matches {    -- Menstrual cycles
+		data matches {
+			HISTORY[at0001] matches {    -- History
+				events cardinality matches {0..*; unordered} matches {
+					INTERVAL_EVENT[at0002] occurrences matches {0..*} matches {    -- Any interval event
+						data matches {
+							ITEM_TREE[at0003] matches {    -- Tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0005] occurrences matches {0..1} matches {    -- Number of cycles
+										value matches {
+											DV_COUNT matches {*}
+										}
+									}
+									ELEMENT[at0006] occurrences matches {0..1} matches {    -- Description
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+									ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+						state matches {
+							ITEM_TREE[at0022] matches {    -- Item tree
+								items cardinality matches {0..*; unordered} matches {
+									ELEMENT[at0026] occurrences matches {0..*} matches {    -- Confounding factors
+										value matches {
+											DV_TEXT matches {*}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		protocol matches {
+			ITEM_TREE[at0008] matches {    -- Item tree
+				items cardinality matches {0..*; unordered} matches {
+					allow_archetype CLUSTER[at0027] occurrences matches {0..*} matches {    -- Extension
+						include
+							archetype_id/value matches {/.*/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Menstrual cycles">
+					description = <"Details about two or more menstrual cycles during a specified interval of time.">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Any interval event">
+					description = <"Default, unspecified interval event which may be explicitly defined in a template or at run-time.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Number of cycles">
+					description = <"Number of cycles in a defined interval, for excample a year.">
+				>
+				["at0006"] = <
+					text = <"Description">
+					description = <"Narrative description about the menstruation cycles.">
+				>
+				["at0007"] = <
+					text = <"Comment">
+					description = <"Additional narrative about the overall menstruation cycles not captured in other fields.">
+				>
+				["at0008"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0022"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0026"] = <
+					text = <"Confounding factors">
+					description = <"Confounding factors that may affect the menstruation cycles.">
+					comment = <"For example: stress, hormonal contraception, postnatal period, perimenopausal or HRT use, known fibroids or IUD contraception (non-hormonal). Coding with a terminology is preferred, where possible.">
+				>
+				["at0027"] = <
+					text = <"Extension">
+					description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+					comment = <"For example: local information requirements or additional metadata to align with FHIR.">
+				>
+			>
+		>
+		["nb"] = <
+			items = <
+				["at0000"] = <
+					text = <"Menstruasjonssykluser">
+					description = <"Detaljer om to eller flere menstruasjonssykluser i løpet av et spesifisert tidsintervall.">
+				>
+				["at0001"] = <
+					text = <"History">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Uspesifisert hendelse">
+					description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0005"] = <
+					text = <"Antall sykluser">
+					description = <"Antall sykluser i et definert tidsintervall, for eksempel ett år.">
+				>
+				["at0006"] = <
+					text = <"Beskrivelse av menstruasjonssyklusene">
+					description = <"Fritekstbeskrivelse av menstruasjonssyklusene.">
+				>
+				["at0007"] = <
+					text = <"Kommentar">
+					description = <"Ytterligere fritekst om menstruasjonssyklusene som ikke er omfattet av andre felt.">
+				>
+				["at0008"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0022"] = <
+					text = <"Item tree">
+					description = <"@ internal @">
+				>
+				["at0026"] = <
+					text = <"Konfunderende faktorer">
+					description = <"Bakenforliggende faktorer som kan ha innvirkning på menstruasjonssyklusene.">
+					comment = <"For eksempel: stress, hormonell antikonsepsjon, postpartum perioden, perimenopausal eller hormonerstatningsterapi (HRT), kjente fibromyomer, intrauterin antikonsepsjon (ikke hormonell) eller medisiner. Koding med en terminologi foretrekkes der det er mulig.">
+				>
+				["at0027"] = <
+					text = <"Tilleggsinformasjon">
+					description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+					comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+				>
+			>
+		>
+	>

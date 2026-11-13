@@ -1,0 +1,845 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <original_language>
+    <terminology_id>
+      <value>ISO_639-1</value>
+    </terminology_id>
+    <code_string>en</code_string>
+  </original_language>
+  <is_controlled>false</is_controlled>
+  <description>
+    <original_author id="date">27/07/2009</original_author>
+    <original_author id="name">Dr Ian McNicoll</original_author>
+    <original_author id="organisation">Ocean Informatics Scotland</original_author>
+    <original_author id="email">ian.mcnicoll@oceaninformatics.com</original_author>
+    <other_contributors>Heather Leslie Ocean Informatics Australia</other_contributors>
+    <other_contributors>Sam Heard Ocean Informatics Australia</other_contributors>
+    <other_contributors>Koray Atalag, University of Auckland, New Zealand</other_contributors>
+    <lifecycle_state>rejected</lifecycle_state>
+    <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.</other_details>
+    <other_details id="custodian_organisation">openEHR Foundation</other_details>
+    <other_details id="references">Sobin LH. TNM Classification of Malignant Tumours 7th Edition.  John Wiley and Sons; 2009.</other_details>
+    <other_details id="original_namespace">org.openehr</other_details>
+    <other_details id="original_publisher">openEHR Foundation</other_details>
+    <other_details id="custodian_namespace">org.openehr</other_details>
+    <other_details id="MD5-CAM-1.0.1">461497070666001E182C7A6B17A058E6</other_details>
+    <other_details id="build_uid">2adab98c-5106-48b0-8c43-124f208561a6</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record the classification and grading of primary cutaneous melanoma using the TNM classification 7th Edition.</purpose>
+      <keywords>tumour</keywords>
+      <keywords>TNM</keywords>
+      <keywords>malignancy</keywords>
+      <keywords>cancer</keywords>
+      <keywords>staging</keywords>
+      <keywords>classification</keywords>
+      <keywords>grade</keywords>
+      <keywords>grading</keywords>
+      <keywords>stage</keywords>
+      <keywords>lymph node</keywords>
+      <keywords>metastasis</keywords>
+      <keywords>melanoma</keywords>
+      <keywords>skin</keywords>
+      <use />
+      <misuse>Should not normally be used for TNM classification without specialisation or template-constraints</misuse>
+      <copyright>© openEHR Foundation</copyright>
+    </details>
+  </description>
+  <uid>
+    <value>d15349b8-7d9d-4528-900d-869229f13c3d</value>
+  </uid>
+  <archetype_id>
+    <value>openEHR-EHR-CLUSTER.tnm_staging_7th-melanoma.v1</value>
+  </archetype_id>
+  <adl_version>1.4</adl_version>
+  <concept>at0000.1</concept>
+  <parent_archetype_id>
+    <value>openEHR-EHR-CLUSTER.tnm_staging_7th.v1</value>
+  </parent_archetype_id>
+  <definition>
+    <rm_type_name>CLUSTER</rm_type_name>
+    <occurrences>
+      <lower_included>true</lower_included>
+      <upper_included>true</upper_included>
+      <lower_unbounded>false</lower_unbounded>
+      <upper_unbounded>false</upper_unbounded>
+      <lower>1</lower>
+      <upper>1</upper>
+    </occurrences>
+    <node_id>at0000.1</node_id>
+    <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+      <rm_attribute_name>items</rm_attribute_name>
+      <existence>
+        <lower_included>true</lower_included>
+        <upper_included>true</upper_included>
+        <lower_unbounded>false</lower_unbounded>
+        <upper_unbounded>false</upper_unbounded>
+        <lower>1</lower>
+        <upper>1</upper>
+      </existence>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0003</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_CODE_PHRASE">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <terminology_id>
+                  <value>local</value>
+                </terminology_id>
+                <code_list>at0.52</code_list>
+                <code_list>at0.53</code_list>
+                <code_list>at0.54</code_list>
+                <code_list>at0.55</code_list>
+                <code_list>at0.56</code_list>
+                <code_list>at0.57</code_list>
+                <code_list>at0.58</code_list>
+                <code_list>at0.59</code_list>
+                <code_list>at0.60</code_list>
+                <code_list>at0.61</code_list>
+                <code_list>at0.62</code_list>
+                <code_list>at0.63</code_list>
+                <code_list>at0.64</code_list>
+                <code_list>at0.65</code_list>
+                <code_list>at0.66</code_list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0004</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_CODE_PHRASE">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <terminology_id>
+                  <value>local</value>
+                </terminology_id>
+                <code_list>at0.67</code_list>
+                <code_list>at0.68</code_list>
+                <code_list>at0.69</code_list>
+                <code_list>at0.70</code_list>
+                <code_list>at0.71</code_list>
+                <code_list>at0.72</code_list>
+                <code_list>at0.73</code_list>
+                <code_list>at0.74</code_list>
+                <code_list>at0.75</code_list>
+                <code_list>at0.76</code_list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0005</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_CODE_PHRASE">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <terminology_id>
+                  <value>local</value>
+                </terminology_id>
+                <code_list>at0.77</code_list>
+                <code_list>at0.78</code_list>
+                <code_list>at0.79</code_list>
+                <code_list>at0.80</code_list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0025</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0046</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_CODE_PHRASE">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <terminology_id>
+                  <value>local</value>
+                </terminology_id>
+                <code_list>at0047</code_list>
+                <code_list>at0048</code_list>
+                <code_list>at0049</code_list>
+                <code_list>at0050</code_list>
+                <code_list>at0051</code_list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0010</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>CLUSTER</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0052</node_id>
+        <attributes xsi:type="C_MULTIPLE_ATTRIBUTE">
+          <rm_attribute_name>items</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>1</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>ELEMENT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>0</lower>
+            </occurrences>
+            <node_id>at0053</node_id>
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>value</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>0</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
+            </attributes>
+          </children>
+          <cardinality>
+            <is_ordered>false</is_ordered>
+            <is_unique>false</is_unique>
+            <interval>
+              <lower_included>true</lower_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>true</upper_unbounded>
+              <lower>1</lower>
+            </interval>
+          </cardinality>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0014</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_CODED_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+            <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+              <rm_attribute_name>defining_code</rm_attribute_name>
+              <existence>
+                <lower_included>true</lower_included>
+                <upper_included>true</upper_included>
+                <lower_unbounded>false</lower_unbounded>
+                <upper_unbounded>false</upper_unbounded>
+                <lower>1</lower>
+                <upper>1</upper>
+              </existence>
+              <children xsi:type="C_CODE_PHRASE">
+                <rm_type_name>CODE_PHRASE</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+                <terminology_id>
+                  <value>local</value>
+                </terminology_id>
+                <code_list>at0.81</code_list>
+                <code_list>at0.82</code_list>
+                <code_list>at0.83</code_list>
+                <code_list>at0.84</code_list>
+                <code_list>at0.85</code_list>
+                <code_list>at0.86</code_list>
+                <code_list>at0.87</code_list>
+                <code_list>at0.88</code_list>
+                <code_list>at0.89</code_list>
+                <code_list>at0.90</code_list>
+              </children>
+            </attributes>
+          </children>
+        </attributes>
+      </children>
+      <children xsi:type="C_COMPLEX_OBJECT">
+        <rm_type_name>ELEMENT</rm_type_name>
+        <occurrences>
+          <lower_included>true</lower_included>
+          <upper_included>true</upper_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>false</upper_unbounded>
+          <lower>0</lower>
+          <upper>1</upper>
+        </occurrences>
+        <node_id>at0012</node_id>
+        <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+          <rm_attribute_name>value</rm_attribute_name>
+          <existence>
+            <lower_included>true</lower_included>
+            <upper_included>true</upper_included>
+            <lower_unbounded>false</lower_unbounded>
+            <upper_unbounded>false</upper_unbounded>
+            <lower>0</lower>
+            <upper>1</upper>
+          </existence>
+          <children xsi:type="C_COMPLEX_OBJECT">
+            <rm_type_name>DV_TEXT</rm_type_name>
+            <occurrences>
+              <lower_included>true</lower_included>
+              <upper_included>true</upper_included>
+              <lower_unbounded>false</lower_unbounded>
+              <upper_unbounded>false</upper_unbounded>
+              <lower>1</lower>
+              <upper>1</upper>
+            </occurrences>
+            <node_id />
+          </children>
+        </attributes>
+      </children>
+      <cardinality>
+        <is_ordered>false</is_ordered>
+        <is_unique>false</is_unique>
+        <interval>
+          <lower_included>true</lower_included>
+          <lower_unbounded>false</lower_unbounded>
+          <upper_unbounded>true</upper_unbounded>
+          <lower>1</lower>
+        </interval>
+      </cardinality>
+    </attributes>
+  </definition>
+  <ontology>
+    <term_definitions language="en">
+      <items code="at0.52">
+        <items id="text">TX</items>
+        <items id="description">Primsry tumour cannot be assessed.</items>
+      </items>
+      <items code="at0.53">
+        <items id="text">T0</items>
+        <items id="description">No evidence of primary tumour.</items>
+      </items>
+      <items code="at0.54">
+        <items id="text">Tis</items>
+        <items id="description">Melanoma in situ</items>
+      </items>
+      <items code="at0.55">
+        <items id="text">T1</items>
+        <items id="description">T1 - as defined by AJCC/UICC TNM system (7th edition) Prostate cancer.</items>
+      </items>
+      <items code="at0.56">
+        <items id="text">T1a</items>
+        <items id="description">T1a - as defined by AJCC/UICC TNM system (7th edition) Melanoma.</items>
+      </items>
+      <items code="at0.57">
+        <items id="text">T1b</items>
+        <items id="description">T1b - as defined by AJCC/UICC TNM system (7th edition) Melanoma.</items>
+      </items>
+      <items code="at0.58">
+        <items id="text">T2</items>
+        <items id="description">T2 - as defined by AJCC/UICC TNM system (7th edition) Melanoma.</items>
+      </items>
+      <items code="at0.59">
+        <items id="text">T2a</items>
+        <items id="description">T2a - as defined by AJCC/UICC TNM system (7th edition) Melanoma.</items>
+      </items>
+      <items code="at0.60">
+        <items id="text">T2b</items>
+        <items id="description">T2b - as defined by AJCC/UICC TNM system (7th edition) Melanoma.</items>
+      </items>
+      <items code="at0.61">
+        <items id="text">T3</items>
+        <items id="description">T3 - as defined by AJCC/UICC TNM system (7th edition) Melanoma.</items>
+      </items>
+      <items code="at0.62">
+        <items id="text">T3a</items>
+        <items id="description">T3a - as defined by AJCC/UICC TNM system (7th edition) Melanoma.</items>
+      </items>
+      <items code="at0.63">
+        <items id="text">T3b</items>
+        <items id="description">T3b - as defined by AJCC/UICC TNM system (7th edition) Melanoma.</items>
+      </items>
+      <items code="at0.64">
+        <items id="text">T4</items>
+        <items id="description">T4 - as defined by AJCC/UICC TNM system (7th edition) Melanoma.</items>
+      </items>
+      <items code="at0.65">
+        <items id="text">T4a</items>
+        <items id="description">T4a - as defined by AJCC/UICC TNM system (7th edition) Melanoma.</items>
+      </items>
+      <items code="at0.66">
+        <items id="text">T4b</items>
+        <items id="description">T4b - as defined by AJCC/UICC TNM system (7th edition) Melanoma.</items>
+      </items>
+      <items code="at0.67">
+        <items id="text">NX</items>
+        <items id="description">Regional lymph nodes cannot be assessed.</items>
+      </items>
+      <items code="at0.68">
+        <items id="text">N0</items>
+        <items id="description">No regional lymph node metastasis.</items>
+      </items>
+      <items code="at0.69">
+        <items id="text">N1</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.70">
+        <items id="text">N1a</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.71">
+        <items id="text">N1b</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.72">
+        <items id="text">N2</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.73">
+        <items id="text">N2a</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.74">
+        <items id="text">N2b</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.75">
+        <items id="text">N2c</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.76">
+        <items id="text">N3</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.77">
+        <items id="text">M0</items>
+        <items id="description">No distant metastasis.</items>
+      </items>
+      <items code="at0.78">
+        <items id="text">M1a</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.79">
+        <items id="text">M1b</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.80">
+        <items id="text">M1c</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.81">
+        <items id="text">Stage 0</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.82">
+        <items id="text">Stage IA</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.83">
+        <items id="text">Stage IB</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.84">
+        <items id="text">Stage IIA</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.85">
+        <items id="text">Stage IIB</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.86">
+        <items id="text">Stage IIC</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.87">
+        <items id="text">Stage IIIA</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.88">
+        <items id="text">Stage IIIB</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.89">
+        <items id="text">Stage IIIC</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0.90">
+        <items id="text">Stage IV</items>
+        <items id="description">*</items>
+      </items>
+      <items code="at0000">
+        <items id="text">Tumour - TNM Cancer staging 7th Edition</items>
+        <items id="description">A framework for the classification and grading of malignancies using the TNM classification system 7th Edition.</items>
+      </items>
+      <items code="at0000.1">
+        <items id="text">Tumour - Primary Cutaneous Melanoma TNM staging 7th Edition</items>
+        <items id="description">For the classification and grading of primary cutaneous melanom using the TNM classification 7th Edition.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Primary tumour (T)</items>
+        <items id="description">Assessment of the primary tumour.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Regional lymph nodes (N)</items>
+        <items id="description">Assessment of the regional lymph nodes.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Distant metastasis (M)</items>
+        <items id="description">Assessment of distant metastasis.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Overall staging</items>
+        <items id="description">The overall staging derived from each T, N and M component e.g T1aM0NX. May include additional TNM descriptors.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Comment</items>
+        <items id="description">A text comment on the staging.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Stage grouping</items>
+        <items id="description">The TNM Stage grouping.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Residual tumour (R)</items>
+        <items id="description">Assessment of post-treatment residual tumour.</items>
+      </items>
+      <items code="at0046">
+        <items id="text">Histopathological grading (G)</items>
+        <items id="description">TNM histopathological grading classification.</items>
+      </items>
+      <items code="at0047">
+        <items id="text">GX</items>
+        <items id="description">Grade of differentiation cannot be assessed.</items>
+      </items>
+      <items code="at0048">
+        <items id="text">G1</items>
+        <items id="description">Well differentiated.</items>
+      </items>
+      <items code="at0049">
+        <items id="text">G2</items>
+        <items id="description">Moderately differentiated.</items>
+      </items>
+      <items code="at0050">
+        <items id="text">G3</items>
+        <items id="description">Poorly differentiated.</items>
+      </items>
+      <items code="at0051">
+        <items id="text">G4</items>
+        <items id="description">Undifferentiated.</items>
+      </items>
+      <items code="at0052">
+        <items id="text">Descriptors</items>
+        <items id="description">Additional tumour specific TNM descriptors.</items>
+      </items>
+      <items code="at0053">
+        <items id="text">Descriptor</items>
+        <items id="description">Additional tumour specific TNM descriptor.</items>
+      </items>
+    </term_definitions>
+  </ontology>
+</archetype>

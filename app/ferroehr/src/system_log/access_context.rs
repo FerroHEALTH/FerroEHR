@@ -197,9 +197,9 @@ where
 /// whose person opted out of access through the access services then reads as
 /// absent.
 ///
-/// The protocol adapter publishes `true` for a caller the deployment declares
-/// an access-service caller (`[authz.rbac] access_service_roles`), unless it
-/// declares a vital interest under Art. 10(2), and `false` for every other
+/// The protocol adapter publishes `true` for an access-service caller, one
+/// holding an `access_service` grant, unless it declares a vital interest
+/// under Art. 10(2), and `false` for every other
 /// caller, the controller's own surfaces among them. Outside a request scope
 /// it is `false` (`docs/law/eu/ehds/text.html` Art. 10). No openEHR spec
 /// governs an opt-out: our own design/extension.

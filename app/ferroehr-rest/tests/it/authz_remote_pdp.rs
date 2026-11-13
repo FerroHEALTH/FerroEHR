@@ -36,7 +36,7 @@ fn config(server: &str, name: &str, parameters: Vec<AbacParam>) -> AbacConfig {
         engine: AbacEngineKind::Remote,
         remote: RemoteConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                url: server.to_owned(),
+                url: ferrohealth_secret::secret_url::SecretUrl::new(server),
                 connect_timeout: Some(ferrohealth_config::units::Duration::from_millis(500)),
                 timeout: ferrohealth_config::units::Duration::from_millis(1000),
                 retry: ferrohealth_smart::config::endpoint::RetrySection {
@@ -45,7 +45,6 @@ fn config(server: &str, name: &str, parameters: Vec<AbacParam>) -> AbacConfig {
                 },
                 ..ferrohealth_smart::config::endpoint::EndpointSection::default()
             },
-            ..RemoteConfig::default()
         },
         policy,
         ..AbacConfig::default()
@@ -308,7 +307,7 @@ fn deny_for_patient(who: &'static str) -> impl Fn(&Request) -> bool {
 /// A client-credentials grant at `as_uri`'s token endpoint.
 fn grant(as_uri: &str) -> ferrohealth_smart::config::credentials::OauthSection {
     ferrohealth_smart::config::credentials::OauthSection {
-        token_endpoint: format!("{as_uri}/token"),
+        token_endpoint: ferrohealth_secret::secret_url::SecretUrl::new(format!("{as_uri}/token")),
         client_id: "ferroehr-pep".to_owned(),
         client_secret: Some(secrecy::SecretString::from("s3cret")),
         scope: "pdp.decide".to_owned(),

@@ -26,8 +26,8 @@ key = "clinician"                        # the binding key the PERSON carries
 ```
 
 A Basic user with no mapping refuses the start, naming the user. A machine,
-read-only included, authenticates with OAuth 2.0 client credentials under
-a declared `[[authz.system_client]]`. A Basic credential carries no
+read-only included, authenticates with OAuth 2.0 client credentials and
+is granted in the CDR ([Operational policy](../operational-policy.md#what-a-system-client-may-do)). A Basic credential carries no
 assurance level, so with `[authz.assurance] minimum` set it is refused on
 patient data, and the server logs a `warn` naming every mapped Basic user
 while no minimum is set.
@@ -37,18 +37,25 @@ while no minimum is set.
 With Basic users persons only, a new deployment has no machine login to
 start from, so it starts in this order:
 
-1. **Declare the identity provider's SCIM client.** It is an OAuth 2.0
+1. **Store the definitions the party mapping names.** The server stores
+   FerroEHR's [default demographic definitions](default-demographic-definitions.md)
+   as it boots, which the default mapping names. A mapping that names
+   templates of your own needs them stored first: run
+   `ferroehr definitions load` on them before the server starts, since boot
+   refuses a mapping whose templates the store lacks.
+2. **Grant the identity provider's SCIM client.** It is an OAuth 2.0
    client-credentials client (RFC 6749 §4.4) of the deployment's
    authorization server with the provisioning scope: an `[[auth.issuer]]`
-   of kind `machines` that issues its tokens, and a `[[scim.client]]`
-   naming that issuer, the client, the scope and the `binding_issuer` its
-   Users' keys are written under.
-2. **Provision the first person through `/scim/v2/`.** The identity
+   of kind `machines` issues its tokens, and `ferroehr party-binding grant`
+   grants it `scim_provision` in the CDR with the scope as `token_scope` and
+   the `binding_issuer` its Users' keys are written under
+   ([The first grant](../operational-policy.md#the-first-grant)).
+3. **Provision the first person through `/scim/v2/`.** The identity
    provider, or you through that client, sends `POST /scim/v2/Users`
    (RFC 7644 §3.3). FerroEHR creates the `PERSON` and its professional
    `ROLE`, and issues the `PERSON`'s id itself (RFC 7643 §3.1: the `id` "is
    always issued by the service provider").
-3. **Only then map a Basic user**, by that person's binding key. A Basic
+4. **Only then map a Basic user**, by that person's binding key. A Basic
    user mapped before its `PERSON` exists is refused at its first request.
 
 The first administrator is a provisioned person whose token carries the
@@ -88,6 +95,9 @@ ferroehr party-binding adopt --admin <ADMIN_PARTY_ID> \
   --migration "<committer name of the migration>" <PARTY_ID>...
 ```
 
+Under Docker Compose or the Helm chart, run it in the server's container
+([Where the binary runs](config-cli.md#where-the-binary-runs)).
+
 It refuses, naming them, every `PERSON` whose binding key was introduced
 by a committer the provenance rule does not accept (step 3), so a key a
 demographic writer planted before the upgrade is never adopted silently.
@@ -98,6 +108,12 @@ At its next start, the server fills the binding side table from the party
 versions and refuses to start on any duplicate key, naming the parties.
 
 ### 2. Upgrade, then provision through SCIM
+
+Check the upgraded configuration before the server starts on it with
+`ferroehr config check`, which runs the boot validation and touches no
+database ([Where the binary runs](config-cli.md#where-the-binary-runs)
+shows it on the new image under Docker and for the configuration a Helm
+release refuses).
 
 Start the upgraded deployment with only the SCIM client's issuer
 configured; the `persons` issuers come in step 4, so no clinician meets a
@@ -115,6 +131,10 @@ ferroehr party-binding check --admin <ADMIN_PARTY_ID> \
   --expected assigned-users.txt
 ```
 
+Under Docker Compose or the Helm chart, run it in the server's container,
+with the `--expected` file at a path inside it
+([Where the binary runs](config-cli.md#where-the-binary-runs)).
+
 `ferroehr party-binding check` reads the party versions and writes
 nothing, so it runs before any boot fill. Per key issuer it reports the
 persons that carry a key, duplicates, inactive and abandoned persons, the
@@ -123,9 +143,10 @@ persons that perform no professional `ROLE` (which `adopt` has not
 reached), and every mapped Basic user with the `PERSON` it binds.
 
 For each key it reports the committer of the version that introduced the
-key, and fails unless that committer was a `[[scim.client]]`, an
+key, and fails unless that committer was a SCIM client (one whose `ACTOR`
+holds or held a `scim_provision` grant), an
 administrator you name, a migration you declare, or just-in-time creation
-on an issuer with `jit = true`. A stored version records no role its
+on a `persons` issuer an `[[auth.party]]` table binds. A stored version records no role its
 committer held, so you name the administrators (`--admin`, `--admin-key`),
 and the report repeats them.
 
@@ -157,7 +178,8 @@ committer rule.
 | Product | What it needs | Release |
 |---|---|---|
 | FerroBRIDGE | Writes to the CDR under the facade caller's exchanged token (FerroHEALTH/FerroBRIDGE#1582) | FerroBRIDGE v0.0.23 |
-| FerroFED | The gateway reaches the CDR under the caller (FerroHEALTH/FerroFED#1615) | FerroFED v0.0.17 |
+| FerroFED | The gateway reaches the CDR under the caller (FerroHEALTH/FerroFED#1615) | none as of FerroFED v0.0.19; the issue's FerroFED milestone is v0.0.20 |
 
-FerroFED v0.0.17 follows this release, so a deployment with a FerroFED
-gateway adds its `persons` issuers only once that release is out.
+No FerroFED release up to v0.0.19 reaches the CDR under the caller, so a
+deployment with a FerroFED gateway adds its `persons` issuers only once a
+FerroFED release carries that change (FerroHEALTH/FerroFED#1615).

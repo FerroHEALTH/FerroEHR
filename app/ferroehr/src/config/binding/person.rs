@@ -6,14 +6,14 @@
 //!
 //! Its sections are `[authz.party_binding.person]`,
 //! `[authz.party_binding.professional_role]`, `[authz.party_binding.group]`,
-//! `[authz.party_binding.membership]` and
-//! `[authz.party_binding.representation]`.
+//! `[authz.party_binding.membership]` and `[authz.party_binding.patient]`.
 //!
-//! It names the templates a professional's `PERSON`, the professional `ROLE`
-//! and a group's `GROUP` are valid against, the identifier selectors of the
+//! It names the templates a professional's `PERSON`, the professional `ROLE`,
+//! a group's `GROUP` and a patient's `PERSON` are valid against, the identifier selectors of the
 //! binding key, `userName` and `externalId`, which SCIM attribute and which
-//! OpenID Connect claim goes to which path, and the representation
-//! relationship a representative acts through. Names go in `identities` and
+//! OpenID Connect claim goes to which path. A representation needs no
+//! section: it is recognised by its code in any archetype
+//! ([`crate::party_binding::policy_mark::REPRESENTS`]). Names go in `identities` and
 //! identifiers in `details` (RM demographic `master02-demographic_package.adoc`
 //! §Names and Addresses, §Party Identification). This module holds the
 //! rules a configuration can be judged by alone; the rules that read the
@@ -59,6 +59,7 @@ pub(crate) const NEVER_A_KEY: [&str; 7] = [
 
 /// `[authz.party_binding.person]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct PersonSection {
     /// `[[authz.party_binding.person.template]]`, one per template a
@@ -68,9 +69,18 @@ pub struct PersonSection {
     pub attribute: Vec<PersonAttribute>,
 }
 
+/// The person section of a table that sets `[authz.party_binding.person]`
+/// with no template and no attribute: no person is mapped.
+pub static NO_PERSON: PersonSection = PersonSection {
+    template: Vec::new(),
+    attribute: Vec::new(),
+};
+
 /// One `[[authz.party_binding.person.template]]` table.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct PersonTemplate {
     /// An operational template in the definition store rooted at `PERSON`.
     pub template_id: String,
@@ -88,7 +98,9 @@ pub struct PersonTemplate {
 /// An identifier selector: the path of the `ELEMENT` holding the
 /// `DV_IDENTIFIER`, and its `type`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct Selector {
     /// The openEHR path.
     pub path: String,
@@ -99,7 +111,9 @@ pub struct Selector {
 
 /// One `[[authz.party_binding.person.attribute]]` table: a mapped value.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct PersonAttribute {
     /// A SCIM attribute path, with the RFC 7644 §3.4.2.2 `valuePath` filter
     /// form (`emails[type eq "work"].value`).
@@ -180,7 +194,9 @@ impl PersonAttribute {
 
 /// `[authz.party_binding.professional_role]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct RoleSection {
     /// An operational template rooted at `ROLE`.
     pub template_id: String,
@@ -188,7 +204,9 @@ pub struct RoleSection {
 
 /// `[authz.party_binding.group]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct GroupSection {
     /// An operational template rooted at `GROUP`.
     pub template_id: String,
@@ -200,22 +218,28 @@ pub struct GroupSection {
 
 /// `[authz.party_binding.membership]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct MembershipSection {
     /// A `PARTY_RELATIONSHIP` archetype.
     pub archetype_id: String,
 }
 
-/// `[authz.party_binding.representation]`.
+/// `[authz.party_binding.patient]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
-pub struct RepresentationSection {
-    /// A `PARTY_RELATIONSHIP` archetype whose `source` is the representative
-    /// and whose `target` is the subject.
-    pub archetype_id: String,
-    /// Each relationship type code of the archetype, mapped to a code of the
-    /// openEHR `subject_relationship` group.
-    pub relationship_codes: BTreeMap<String, String>,
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
+pub struct PatientSection {
+    /// An operational template rooted at `PERSON`: the subject of an EHR and
+    /// the target of a representation.
+    pub template_id: String,
+    /// The path of the `ELEMENT` holding the patient's identifiers, each a
+    /// `DV_IDENTIFIER` in `details` of any type and issuer.
+    pub identifier: String,
+    /// The path of the patient's name, a `DV_TEXT` in `identities`.
+    pub name: Option<String>,
 }
 
 /// The mapping sections of `[authz.party_binding]`.
@@ -229,8 +253,8 @@ pub struct Sections<'a> {
     pub group: Option<&'a GroupSection>,
     /// `membership`.
     pub membership: Option<&'a MembershipSection>,
-    /// `representation`.
-    pub representation: Option<&'a RepresentationSection>,
+    /// `patient`.
+    pub patient: Option<&'a PatientSection>,
 }
 
 impl Sections<'_> {
@@ -242,7 +266,7 @@ impl Sections<'_> {
             && self.professional_role.is_none()
             && self.group.is_none()
             && self.membership.is_none()
-            && self.representation.is_none()
+            && self.patient.is_none()
     }
 
     /// The boot refusals a configuration can be judged by alone, each naming
@@ -283,8 +307,8 @@ impl Sections<'_> {
         {
             errors.push("authz.party_binding.membership.archetype_id is empty".to_owned());
         }
-        if let Some(representation) = self.representation {
-            representation_errors(representation, &mut errors);
+        if let Some(patient) = self.patient {
+            patient_errors(patient, &mut errors);
         }
         errors
     }
@@ -419,8 +443,8 @@ impl Sections<'_> {
     }
 
     /// Returns the mapping the side table is derived under, with the key
-    /// selectors held to `key_issuers` and the protected parties writable by
-    /// `admin_role`.
+    /// selectors held to `key_issuers`, the built-in policy parties
+    /// recognised, and the protected parties writable by `admin_role`.
     ///
     /// # Errors
     /// [`SelectorError`] when a selector path does not compile, which
@@ -469,17 +493,11 @@ impl Sections<'_> {
         if let Some(membership) = self.membership {
             mapping = mapping.with_membership(&membership.archetype_id);
         }
-        if let Some(representation) = self.representation {
-            mapping = mapping.with_representation(
-                &representation.archetype_id,
-                representation.relationship_codes.clone(),
-            );
-        }
-        Ok(mapping)
+        Ok(mapping.with_policy())
     }
 
     /// Returns the definitions a demographic write of a mapped node is
-    /// validated against.
+    /// validated against, the built-in policy definitions included.
     #[must_use]
     pub fn mapped_templates(&self) -> MappedPartyTemplates {
         let mut templates = MappedPartyTemplates::default();
@@ -495,7 +513,10 @@ impl Sections<'_> {
         if let Some(membership) = self.membership {
             templates = templates.with_membership_archetype(membership.archetype_id.clone());
         }
-        templates
+        if let Some(patient) = self.patient {
+            templates = templates.with_patient_template(patient.template_id.clone());
+        }
+        templates.with_policy()
     }
 }
 
@@ -553,18 +574,21 @@ fn placement_errors(
     }
 }
 
-/// The refusals of the representation section.
-fn representation_errors(representation: &RepresentationSection, errors: &mut Vec<String>) {
-    if representation.archetype_id.trim().is_empty() {
-        errors.push("authz.party_binding.representation.archetype_id is empty".to_owned());
+/// The refusals of the patient section.
+fn patient_errors(patient: &PatientSection, errors: &mut Vec<String>) {
+    if patient.template_id.trim().is_empty() {
+        errors.push("authz.party_binding.patient.template_id is empty".to_owned());
     }
-    let terminology = openehr_term::bundle::openehr();
-    for (code, mapped) in &representation.relationship_codes {
-        if !terminology.is_valid_code("subject_relationship", mapped) {
-            errors.push(format!(
-                "authz.party_binding.representation.relationship_codes maps {code:?} to \
-                 {mapped:?}, which is no code of the openEHR subject_relationship group"
-            ));
-        }
+    if !crate::party_binding::parses(&patient.identifier) {
+        errors.push(format!(
+            "authz.party_binding.patient.identifier {:?} is not an absolute path of attribute \
+             steps with an optional node id predicate each",
+            patient.identifier
+        ));
+    }
+    if let Some(path) = &patient.name
+        && let Err(e) = NameSelector::new(path.clone())
+    {
+        errors.push(format!("authz.party_binding.patient.name: {e}"));
     }
 }

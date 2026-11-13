@@ -70,7 +70,6 @@ pub(super) fn validate_against_flat_parent<'a>(
         repo,
         referrer_namespace: cv.archetype_id.namespace.as_deref(),
         child_level: cv.specialisation_level(),
-        parent_root: pv.definition,
         child_value_sets: value_set_members(cv.terminology),
         parent_value_sets: value_set_members(pv.terminology),
         issues: Vec::new(),
@@ -105,7 +104,6 @@ pub(super) struct ParentScan<'a> {
     /// The child's namespace, which a reference without one takes.
     pub(super) referrer_namespace: Option<&'a str>,
     child_level: usize,
-    parent_root: &'a CComplexObject,
     /// The child archetype's value-set membership (`ac-code` → members).
     child_value_sets: std::collections::BTreeMap<String, Vec<String>>,
     /// The flat parent's value-set membership (`ac-code` → members).
@@ -181,7 +179,7 @@ impl<'a> ParentScan<'a> {
         base_path: &str,
     ) {
         let attr_path = match attr.differential_path.as_deref() {
-            Some(diff) => full_attr_path(diff, &attr.rm_attribute_name),
+            Some(diff) => full_attr_path(base_path, diff, &attr.rm_attribute_name),
             None => format!("{base_path}/{}", attr.rm_attribute_name),
         };
 
@@ -216,10 +214,10 @@ impl<'a> ParentScan<'a> {
     /// Resolve the parent object a child attribute redefines within, together
     /// with its reference-model type name.
     ///
-    /// The owner is reached through the differential path when the attribute
-    /// carries one, else it is the current parent object. `None` records VDIFP
-    /// — a differential path must exist in the flat parent (`master04.5`
-    /// §`C_ATTRIBUTE`, VDIFP L139-140).
+    /// The owner is the current parent object, or the object a differential
+    /// path reaches from it (AOM2 `C_ATTRIBUTE.path` is relative to the owning
+    /// `C_OBJECT`). `None` records VDIFP — a differential path must exist in
+    /// the flat parent (`master04.5` §`C_ATTRIBUTE`, VDIFP L139-140).
     fn resolve_owner(
         &mut self,
         attr: &'a CAttribute,
@@ -230,7 +228,7 @@ impl<'a> ParentScan<'a> {
         let Some(diff) = attr.differential_path.as_deref() else {
             return Some((current_parent, current_parent_rm.to_owned()));
         };
-        if let Some(o) = self.resolve_object(diff) {
+        if let Some(o) = resolve_object(current_parent, diff) {
             return Some((o, complex_rm_type(o).to_owned()));
         }
         push_issue(
@@ -238,7 +236,7 @@ impl<'a> ParentScan<'a> {
             ValidationCode::Vdifp,
             format!(
                 "differential path {:?} does not resolve in the flat parent",
-                full_attr_path(diff, &attr.rm_attribute_name)
+                full_attr_path(base_path, diff, &attr.rm_attribute_name)
             ),
             base_path,
         );
@@ -787,24 +785,25 @@ impl<'a> ParentScan<'a> {
             );
         }
     }
+}
 
-    /// Resolve a differential path to its target object in the flat parent, using
-    /// path congruence (`codes_conformant`) for the node-id predicates.
-    fn resolve_object(&self, path: &str) -> Option<&'a CComplexObject> {
-        let segments = parse_path(path);
-        let mut current: &'a CComplexObject = self.parent_root;
-        for seg in &segments {
-            let attr = complex_attributes(current)
-                .iter()
-                .find(|a| a.rm_attribute_name == seg.attribute)?;
-            let child = pick_child(attr, seg)?;
-            match child {
-                CObject::CComplexObject(cco) => current = cco,
-                _ => return None,
-            }
+/// Resolve a differential path from `start`, the flat-parent object that owns
+/// the attribute carrying it, to its target object, using path congruence
+/// (`codes_conformant`) for the node-id predicates.
+fn resolve_object<'a>(start: &'a CComplexObject, path: &str) -> Option<&'a CComplexObject> {
+    let segments = parse_path(path);
+    let mut current = start;
+    for seg in &segments {
+        let attr = complex_attributes(current)
+            .iter()
+            .find(|a| a.rm_attribute_name == seg.attribute)?;
+        let child = pick_child(attr, seg)?;
+        match child {
+            CObject::CComplexObject(cco) => current = cco,
+            _ => return None,
         }
-        Some(current)
     }
+    Some(current)
 }
 
 /// Choose the child object of `attr` matching a path segment's node-id predicate
@@ -884,14 +883,10 @@ fn bounds_intersect(a: Bounds, b: Bounds) -> bool {
     a_ok && b_ok
 }
 
-/// The full attribute path of a differential-path attribute (`diff` prefix +
-/// attribute name).
-fn full_attr_path(diff: &str, name: &str) -> String {
-    if diff.is_empty() {
-        format!("/{name}")
-    } else {
-        format!("{diff}/{name}")
-    }
+/// The full attribute path of a differential-path attribute: the owning
+/// object's `base` path, the `diff` prefix and the attribute name.
+fn full_attr_path(base: &str, diff: &str, name: &str) -> String {
+    format!("{base}{diff}/{name}")
 }
 
 // ── the parent-dependent phase-1 header checks (VACSD / VASID / VALC) ─────

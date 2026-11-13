@@ -298,7 +298,7 @@ jobs:
       # docker/Dockerfile and release-build.yml; the action fetches the
       # prebuilt binary and installs curl and jq into the slim container itself.
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-auditable@0.7.5
 
@@ -408,7 +408,7 @@ jobs:
       # The viewer binary carries its dependency list too (#3675): the same
       # pinned `cargo auditable` as the app binary job above.
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-auditable@0.7.5
 
@@ -574,7 +574,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -646,7 +646,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}

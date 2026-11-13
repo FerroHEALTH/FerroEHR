@@ -16,13 +16,13 @@
 //! NOTE: no openEHR spec governs the transport, the authentication or the
 //! configuration of that client — our own design.
 
-use ferrohealth_config::removed::Removed;
 use ferrohealth_smart::config::endpoint::EndpointSection;
 use serde::{Deserialize, Serialize};
 
 /// What a composition gets when the terminology server cannot resolve one of
 /// its bindings (unreachable, an error, an unknown value set).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum OnError {
     /// The composition is accepted (fail-open), the default.
@@ -34,29 +34,26 @@ pub enum OnError {
 
 /// The one FHIR R4B terminology server (`[terminology]`).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct TerminologyServerConfig {
     /// `[terminology.endpoint]`, the family's outbound endpoint: the FHIR R4B
     /// base URL (`url`, such as `http://ferroterm:8080/r4b`, required), the
     /// timeouts, the `retry` of a call, the TLS and the credential. Any
     /// `userinfo` in the URL is masked in every rendering.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
     pub endpoint: EndpointSection,
     /// On a binding the server cannot resolve: `accept` (the default) or
     /// `refuse`. A resolved non-member is refused under either setting.
     pub on_error: OnError,
-    /// Retired in v5.7.0: refused at load, naming `api.terminology`.
-    #[serde(skip_serializing)]
-    pub api_enabled: Removed,
-    /// Retired in v5.7.0: refused at load, naming the keys of `[terminology]`.
-    #[serde(skip_serializing)]
-    pub server: Removed,
 }
 
 impl TerminologyServerConfig {
     /// The server's URL with any `userinfo` masked, for a log line.
     #[must_use]
     pub fn masked_url(&self) -> String {
-        ferrohealth_smart::config::mask_userinfo(&self.endpoint.url)
+        self.endpoint.url.redacted()
     }
 
     /// Whether an unresolvable binding refuses the composition.
@@ -74,7 +71,7 @@ mod tests {
     fn the_defaults_accept_on_error() {
         let c = TerminologyServerConfig::default();
         assert!(!c.refuses_on_error());
-        assert_eq!(c.endpoint.url, "");
+        assert_eq!(c.endpoint.url.expose(), "");
         assert!(c.endpoint.credentials.oauth.is_none());
         assert_eq!(
             c.endpoint.timeout,

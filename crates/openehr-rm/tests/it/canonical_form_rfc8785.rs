@@ -10,8 +10,8 @@
 
 //! The RFC 8785 canonical form `VERSION.canonical_form()` signs (#5220): the
 //! samples of RFC 8785 §3.2 and Appendix B, and a differential test holding
-//! it byte-equal to the `serde_jcs` crate over the vendored corpora and a
-//! generated corpus, on both emitted generations.
+//! it byte-equal to the `serde_json_canonicalizer` crate over the vendored
+//! corpora and a generated corpus, on both emitted generations.
 
 use std::path::{Path, PathBuf};
 
@@ -30,10 +30,11 @@ fn canonical(value: &Value) -> String {
     current
 }
 
-/// Asserts the canonical form of `value` is the one `serde_jcs` writes, alone
-/// and as a version whose `signature` the canonical form leaves out.
+/// Asserts the canonical form of `value` is the one `serde_json_canonicalizer`
+/// writes, alone and as a version whose `signature` the canonical form leaves
+/// out.
 fn agrees_with_the_oracle(value: &Value, origin: &str) {
-    let oracle = serde_jcs::to_string(value).expect("serde_jcs canonicalises");
+    let oracle = serde_json_canonicalizer::to_string(value).expect("the oracle canonicalises");
     assert_eq!(canonical(value), oracle, "{origin}");
     let mut version = json!({ "_type": "ORIGINAL_VERSION", "signature": "sig", "data": value });
     let form =
@@ -44,7 +45,7 @@ fn agrees_with_the_oracle(value: &Value, origin: &str) {
     }
     assert_eq!(
         form,
-        serde_jcs::to_string(&version).expect("serde_jcs canonicalises"),
+        serde_json_canonicalizer::to_string(&version).expect("the oracle canonicalises"),
         "{origin} as a version"
     );
     let envelope = json!({ "_type": "ORIGINAL_VERSION", "signature": "sig" });
@@ -54,11 +55,11 @@ fn agrees_with_the_oracle(value: &Value, origin: &str) {
         )
         .expect("a version canonicalises");
     let expected = if value.is_null() {
-        serde_jcs::to_string(&json!({ "_type": "ORIGINAL_VERSION" }))
+        serde_json_canonicalizer::to_string(&json!({ "_type": "ORIGINAL_VERSION" }))
     } else {
-        serde_jcs::to_string(&version)
+        serde_json_canonicalizer::to_string(&version)
     }
-    .expect("serde_jcs canonicalises");
+    .expect("the oracle canonicalises");
     assert_eq!(joined, expected, "{origin} joined by reference");
 }
 

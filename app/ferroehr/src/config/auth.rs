@@ -17,7 +17,11 @@
 //! own design, with the IETF OAuth and JOSE RFCs as the authority for every
 //! rule enforced here.
 
-use ferrohealth_smart::config::{AuthSection, ConfigError, Resolved};
+use std::sync::Arc;
+
+use ferrohealth_smart::config::{AuthSection, ConfigError, ProductStandingSection, Resolved};
+use ferrohealth_smart::kind::Actor;
+use ferrohealth_smart::kind::standing::{Answer, ClientStanding, Issued, Standing, StandingError};
 
 /// The protection space every challenge names when `[auth] realm` is empty
 /// (RFC 6750 §3, RFC 7617 §2).
@@ -84,18 +88,64 @@ pub fn product_scope(section: &AuthSection) -> &str {
     }
 }
 
-/// Resolves `[auth]` into the issuers and the Basic store the crate checks
-/// credentials against.
+/// Resolves `[auth]` for a reader that classifies no token.
+///
+/// The boot checks, the party mapping and the federation trust read the
+/// issuers and the Basic store; a standing question asked of the result fails
+/// ([`Unasked`]).
+///
+/// # Errors
+/// [`AuthConfigError::Section`] when the crate refuses the section.
+pub fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
+    resolve_with(section, Arc::new(Unasked))
+}
+
+/// Resolves `[auth]` with every issuer's standing questions answered by
+/// `standing`.
+///
+/// The questions are which clients a `persons` issuer's people sign in
+/// through or are acted for by, which RFC 8693 actors are delegates, and
+/// which system subjects are admitted without a scope.
 ///
 /// An enabled section with Basic users and no issuer resolves to a Basic-only
 /// surface; one that admits no credential at all is refused.
 ///
 /// # Errors
 /// [`AuthConfigError::Section`] when the crate refuses the section.
-pub fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
-    section
-        .resolve_with_tls(&ferrohealth_smart::config::ServerTls)
+pub fn resolve_with(
+    section: &AuthSection,
+    standing: Arc<dyn Standing>,
+) -> Result<Resolved, AuthConfigError> {
+    ProductStandingSection(section.clone())
+        .resolve_with_tls(&ferrohealth_smart::config::ServerTls, standing)
         .map_err(|source| AuthConfigError::Section { source })
+}
+
+/// The standing of a resolution that classifies no token: every question
+/// fails, so a token classified through it is refused with `503`, never
+/// admitted or refused on a list no one read.
+#[derive(Debug, Clone, Copy)]
+pub struct Unasked;
+
+/// The failure of a standing question asked of [`Unasked`].
+#[derive(Debug, thiserror::Error)]
+#[error(
+    "this [auth] resolution answers no standing question; the server's gate reads the policy grants"
+)]
+pub struct NoStanding;
+
+impl Standing for Unasked {
+    fn client<'a>(&'a self, _client: Issued<'a>) -> Answer<'a, ClientStanding> {
+        Box::pin(async { Err(StandingError::new(NoStanding)) })
+    }
+
+    fn delegate<'a>(&'a self, _issuer: &'a str, _actor: &'a Actor) -> Answer<'a, bool> {
+        Box::pin(async { Err(StandingError::new(NoStanding)) })
+    }
+
+    fn scopeless<'a>(&'a self, _subject: Issued<'a>) -> Answer<'a, bool> {
+        Box::pin(async { Err(StandingError::new(NoStanding)) })
+    }
 }
 
 /// Validates `[auth]` at boot through the crate's resolution.
@@ -158,7 +208,7 @@ mod tests {
     fn section(issuer: &str) -> AuthSection {
         AuthSection {
             issuer: vec![IssuerEntry {
-                issuer: issuer.to_owned(),
+                issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer.to_owned()),
                 kind: Some(IssuerKind::Machines),
                 audience: vec!["ferroehr".to_owned()],
                 ..IssuerEntry::default()
@@ -351,8 +401,6 @@ mod tests {
                     user: "clinician".to_owned(),
                     password_hash: Some(SecretString::from(hash.to_owned())),
                     password_hash_file: None,
-                    scopes: vec!["user/composition-*.cruds".to_owned()],
-                    roles: Vec::new(),
                 }],
                 cache_ttl: ferrohealth_config::units::Duration::ZERO,
             }),
@@ -558,20 +606,27 @@ mod tests {
         assert!(require_mechanism(&disabled).is_ok());
     }
 
-    /// The crate honours the scopeless allowlist on every SMART on openEHR
-    /// requirement, so a configured allowlist boots.
+    /// The policy grants answer which subjects are admitted without a scope
+    /// and which clients a person signs in through, so a list set in code
+    /// beside them is refused at boot, never read in two places.
     #[test]
-    fn a_scopeless_subject_allowlist_boots() {
-        let mut cfg = valid();
-        cfg.scopeless_subjects = vec![ScopelessSubject {
-            issuer: "https://idp.example/realms/ferroehr".to_owned(),
+    fn a_client_list_beside_the_policy_grants_is_refused() {
+        let mut scopeless = valid();
+        scopeless.scopeless_subjects = vec![ScopelessSubject {
+            issuer: ferrohealth_secret::secret_url::SecretUrl::new(
+                "https://idp.example/realms/ferroehr",
+            ),
             sub: "svc".to_owned(),
         }];
-        assert!(validate(&cfg).is_ok(), "{:?}", validate(&cfg));
-        assert!(
-            toml::from_str::<AuthSection>("scopeless_subjects = [\"svc\"]").is_err(),
-            "the bare string form is not an entry"
-        );
+        let mut first_party = valid();
+        entry(&mut first_party).first_party_clients = Some(vec!["portal".to_owned()]);
+        for cfg in [scopeless, first_party] {
+            assert!(
+                matches!(validate(&cfg), Err(AuthConfigError::Section { .. })),
+                "{:?}",
+                validate(&cfg)
+            );
+        }
     }
 
     /// An enabled section with Basic users and no issuer resolves to a

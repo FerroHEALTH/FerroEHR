@@ -33,7 +33,6 @@
               dump, management env, validity-checker input, OpenAPI schema literals)"
 )]
 
-mod env;
 pub mod flamegraph;
 pub(crate) mod guard;
 mod info_routes;
@@ -101,6 +100,8 @@ pub struct ManagementState {
     pub licence: LicenceStatus,
     /// The evaluated deployment posture, as `/status` reports it.
     pub deployment: DeploymentPosture,
+    /// The policy grants, whose federation agreements `/info` lists.
+    pub grants: Arc<ferroehr::party_binding::grants::live::LiveGrants>,
 }
 
 impl std::fmt::Debug for ManagementState {
@@ -140,6 +141,7 @@ impl ManagementState {
             lifecycle: obs.lifecycle,
             licence: state.backend().licence().status(),
             deployment: state.backend().deployment().clone(),
+            grants: Arc::clone(state.backend().grants()),
         }
     }
 }
@@ -400,7 +402,8 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 /// Access-level gated by the `info` endpoint's configured [`AccessLevel`];
 /// absent (a router `404`) unless opted in — and that `404` is answered
 /// **before authentication**, because a non-opted-in endpoint is simply not a
-/// route. Body: the [`BuildInfo`] record.
+/// route. Body: the [`BuildInfo`] record, whose binding lists the federation
+/// agreements in force, read from the CDR on the request.
 #[utoipa::path(
     get, path = "/management/info", tag = "management",
     responses(
@@ -410,7 +413,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     )
 )]
 async fn info_view(State(s): State<ManagementState>) -> Json<BuildInfo> {
-    info_routes::info(s.build_info)
+    info_routes::info(s.build_info, &s.grants).await
 }
 
 /// Prometheus text exposition (`GET /management/prometheus`).
@@ -507,7 +510,7 @@ async fn metrics_detail(State(s): State<ManagementState>, path: Path<String>) ->
     )
 )]
 async fn env_view(State(s): State<ManagementState>) -> Json<Value> {
-    env::env(&s.env_snapshot)
+    Json(s.env_snapshot.as_ref().clone())
 }
 
 /// The effective log-filter directives + boot filter (`GET /management/loggers`).

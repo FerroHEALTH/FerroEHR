@@ -9,12 +9,16 @@
 //! `sub`, each under its own `identifier_issuer` and audience, so the same
 //! identifier value under one issuer never reaches the other's party. A login
 //! whose caller kind needs the other marker than its party carries is refused
-//! with `403` (`refused-wrong-marker`). No openEHR spec governs resolving a
-//! login to a party: our own design.
+//! with `403` (`refused-wrong-marker`). A GUID key stored in upper case binds
+//! its claim in lower case. Every bound access record names the declared
+//! healthcare provider, per tenant where the deployment declares one per
+//! tenant. No openEHR spec governs resolving a login to a party: our own
+//! design.
 
 use std::sync::Arc;
 
 use axum::Router;
+use ferroehr::config::binding::{ProviderId, Providers, TenantProvider};
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
@@ -27,7 +31,9 @@ use http::StatusCode;
 use serde_json::{Value, json};
 
 use crate::common;
-use crate::party_binding_http::{list, professional, professional_of, refused, service, token};
+use crate::party_binding_http::{
+    audited_service, list, professional, professional_of, refused, service, token, vo,
+};
 
 const ENTRA: &str = "https://login.entra.example/tenant/v2.0";
 const ENTRA_AUDIENCE: &str = "ferroehr-entra";
@@ -45,7 +51,7 @@ const SHARED: &str = "6c7d8e9f-0a1b-4c2d-8e3f-4a5b6c7d8e9f";
 /// `identifier_issuer`.
 fn party(issuer: &str, identifier_issuer: &str) -> PartySection {
     PartySection {
-        issuer: issuer.to_owned(),
+        issuer: ferrohealth_secret::secret_url::SecretUrl::new(issuer),
         identifier_issuer: identifier_issuer.to_owned(),
         identifier_type: "guid".to_owned(),
         ..PartySection::default()
@@ -91,11 +97,13 @@ fn two_issuers() -> AppConfig {
 /// party source.
 async fn router(svc: Arc<FerroEhrService>, config: AppConfig) -> Router {
     let source = Arc::new(svc.party_source("demographic"));
+    common::first_party(&svc, &config).await;
     let authenticator = Authenticator::new(
         &config,
         None,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        common::standing(&svc),
     )
     .await
     .expect("the authenticator builds");
@@ -185,6 +193,167 @@ async fn the_same_identifier_under_the_other_issuer_does_not_bind() {
         !body.contains("refused-inactive"),
         "an Entra login is bound on oid, never on sub: {body}"
     );
+}
+
+#[tokio::test]
+async fn an_upper_case_guid_key_binds_its_lower_case_claim() {
+    let (_db, svc) = service().await;
+    // NOTE: RFC 9562 §4: a UUID is case-insensitive on input and output
+    // in lower case, so a key typed `guid` matches its claim in any case.
+    let entra_key = "7E8F9A0B-1C2D-4E3F-9A4B-5C6D7E8F9A0B";
+    let keycloak_key = "8F9A0B1C-2D3E-4F4A-8B5C-6D7E8F9A0B1C";
+    professional_of(&svc, ENTRA_LOGIN, entra_key, "532").await;
+    professional_of(&svc, KEYCLOAK_LOGIN, keycloak_key, "532").await;
+    let app = router(Arc::clone(&svc), two_issuers()).await;
+
+    let (status, body) = list(&app, &entra(&entra_key.to_lowercase())).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "a lower-case oid binds the upper-case key: {body}"
+    );
+    let (status, body) = list(&app, &keycloak(&keycloak_key.to_lowercase())).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "a lower-case sub binds the upper-case key: {body}"
+    );
+}
+
+/// The issuer of the healthcare provider identifiers the tests declare.
+const PROVIDER_ISSUER: &str = "urn:oid:2.16.528.1.1007.3.3";
+
+/// An Entra-shaped issuer of the tenant `tenant`, bound on `oid` under its
+/// own `identifier_issuer`; returns the issuer entry and its party table.
+fn entra_tenant(tenant: &str) -> (IssuerEntry, PartySection) {
+    let issuer = format!("https://login.entra.example/{tenant}/v2.0");
+    let entry = IssuerEntry {
+        profile: Preset::Entra,
+        person_key: Some("oid".to_owned()),
+        jwks_file: common::jwks_file().display().to_string(),
+        token_types: Some(vec!["at+jwt".to_owned()]),
+        ..common::entry(&issuer, &format!("ferroehr-{tenant}"))
+    };
+    let table = party(&issuer, &format!("https://login.entra.example/{tenant}"));
+    (entry, table)
+}
+
+/// An Entra member token of the tenant `tenant` whose `oid` is `oid`.
+fn entra_of(tenant: &str, oid: &str) -> String {
+    bearer(
+        &format!("https://login.entra.example/{tenant}/v2.0"),
+        &format!("ferroehr-{tenant}"),
+        &json!({ "sub": "pairwise-subject", "oid": oid, "tid": tenant, "uti": "u1", "ver": "2.0",
+                 "acct": 0, "azp": common::TEST_CLIENT, "scp": common::FULL_SCOPES }),
+    )
+}
+
+/// Creates an EHR as `credential`, asserting it is created.
+async fn create_ehr(app: &Router, credential: &str) {
+    let (status, body) = common::send_body(
+        app,
+        common::req("POST", format!("{}/ehr", common::BASE))
+            .auth(credential)
+            .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+}
+
+/// The `(issuer, id)` of the provider on the `bound` access records of the
+/// `PERSON` `person`, waiting for `count`.
+async fn bound_providers(
+    pool: &sqlx::PgPool,
+    person: &str,
+    count: usize,
+) -> Vec<(Option<String>, Option<String>)> {
+    for _ in 0..50 {
+        let rows: Vec<(Option<String>, Option<String>)> = sqlx::query_as(
+            "SELECT provider ->> 'issuer', provider ->> 'id' FROM audit.audit_event \
+             WHERE binding = 'bound' AND party ->> 'id' = $1 ORDER BY recorded_at",
+        )
+        .bind(person)
+        .fetch_all(pool)
+        .await
+        .expect("query");
+        if rows.len() >= count {
+            return rows;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    panic!("fewer than {count} bound records of {person} were stored");
+}
+
+/// A deployment acting for one healthcare provider names it on every bound
+/// record (EHDS Annex II 3.2(a), "identification of the healthcare
+/// provider"; the record's fields are our own design).
+#[tokio::test]
+async fn a_bound_record_names_the_declared_provider() {
+    let (db, _audit, svc) = audited_service().await;
+    let key = "9a0b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d";
+    let (uid, _) = professional(&svc, key, "532").await;
+    let mut config = crate::party_binding_http::config(None);
+    config.party_binding.provider = Some(Providers::One(ProviderId {
+        issuer: PROVIDER_ISSUER.to_owned(),
+        id: "90000010".to_owned(),
+    }));
+    let app = router(Arc::clone(&svc), config).await;
+
+    create_ehr(&app, &token(key, &json!({}))).await;
+    let person = vo(&uid).0.to_string();
+    assert_eq!(
+        bound_providers(&db.pool(), &person, 1).await,
+        vec![(
+            Some(PROVIDER_ISSUER.to_owned()),
+            Some("90000010".to_owned())
+        )]
+    );
+}
+
+/// On a deployment with one provider per tenant, each tenant's person is
+/// recorded with its own tenant's provider.
+#[tokio::test]
+async fn each_tenants_person_is_recorded_with_its_own_provider() {
+    let (db, _audit, svc) = audited_service().await;
+    let (a_entry, a_table) = entra_tenant("tenant-a");
+    let (b_entry, b_table) = entra_tenant("tenant-b");
+    let a_key = "0b1c2d3e-4f5a-4b6c-9d7e-8f9a0b1c2d3e";
+    let b_key = "1c2d3e4f-5a6b-4c7d-8e8f-9a0b1c2d3e4f";
+    let (a_uid, _) = professional_of(&svc, &a_table.identifier_issuer, a_key, "532").await;
+    let (b_uid, _) = professional_of(&svc, &b_table.identifier_issuer, b_key, "532").await;
+    let mut auth = common::auth(AuthSection {
+        issuer: vec![a_entry, b_entry],
+        party: vec![a_table, b_table],
+        ..AuthSection::default()
+    });
+    auth.shared.enabled = true;
+    let mut config = AppConfig {
+        server: common::server(),
+        auth,
+        ..AppConfig::default()
+    };
+    config.party_binding.provider = Some(Providers::ByTenant(
+        [("tenant-a", "90000011"), ("tenant-b", "90000012")]
+            .into_iter()
+            .map(|(tenant, id)| TenantProvider {
+                tenant: tenant.to_owned(),
+                issuer: PROVIDER_ISSUER.to_owned(),
+                id: id.to_owned(),
+            })
+            .collect(),
+    ));
+    let app = router(Arc::clone(&svc), config).await;
+
+    create_ehr(&app, &entra_of("tenant-a", a_key)).await;
+    create_ehr(&app, &entra_of("tenant-b", b_key)).await;
+    for (uid, id) in [(&a_uid, "90000011"), (&b_uid, "90000012")] {
+        let person = vo(uid).0.to_string();
+        assert_eq!(
+            bound_providers(&db.pool(), &person, 1).await,
+            vec![(Some(PROVIDER_ISSUER.to_owned()), Some(id.to_owned()))],
+            "{person}"
+        );
+    }
 }
 
 /// The claim naming the subject a representative acts for.

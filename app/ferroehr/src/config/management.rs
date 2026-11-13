@@ -26,6 +26,7 @@ use serde::{Deserialize, Serialize};
 /// The access level of a single management endpoint. Maps onto the existing
 /// authentication layer (the same authenticator the API surface uses).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum AccessLevel {
     /// Not mounted at all — the route returns `404` (the default for every
@@ -65,7 +66,9 @@ impl AccessLevel {
 
 /// Per-endpoint access levels. Each defaults to [`AccessLevel::Off`].
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct EndpointLevels {
     /// `/management/info`.
     #[serde(default)]
@@ -102,21 +105,15 @@ pub struct EndpointLevels {
 /// request may ask for; a request outside them is refused with `400`, never
 /// silently clamped.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
-#[expect(
-    clippy::struct_field_names,
-    reason = "each key is a ceiling a request is held to, and the `max_` names are the keys \
-              an operator writes"
-)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct ProfilingConfig {
     /// The longest sample window a single request may ask for, in whole
     /// seconds.
     pub max_duration: ferrohealth_config::units::Duration,
     /// The highest sampling frequency a request may ask for, in Hz.
     pub max_frequency: i32,
-    /// Retired in v5.7.0: refused at load, naming `max_duration`.
-    #[serde(skip_serializing)]
-    pub max_seconds: ferrohealth_config::removed::Removed,
 }
 
 impl ProfilingConfig {
@@ -132,14 +129,15 @@ impl Default for ProfilingConfig {
         Self {
             max_duration: ferrohealth_config::units::Duration::from_secs(30),
             max_frequency: 999,
-            max_seconds: ferrohealth_config::removed::Removed::default(),
         }
     }
 }
 
 /// The management surface configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct ManagementConfig {
     /// Master switch. When `false`, no management routes are mounted at all.
     #[serde(default)]
@@ -165,9 +163,6 @@ pub struct ManagementConfig {
     /// file, for `inferno-flamegraph` to render offline. Unset, nothing is
     /// captured.
     pub flame_file: Option<std::path::PathBuf>,
-    /// Retired in v5.7.0: refused at load, naming `listen`.
-    #[serde(skip_serializing)]
-    pub port: ferrohealth_config::removed::Removed,
 }
 
 impl Default for ManagementConfig {
@@ -179,7 +174,6 @@ impl Default for ManagementConfig {
             endpoints: EndpointLevels::default(),
             profiling: ProfilingConfig::default(),
             flame_file: None,
-            port: ferrohealth_config::removed::Removed::default(),
         }
     }
 }

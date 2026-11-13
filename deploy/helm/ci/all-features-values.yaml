@@ -46,13 +46,15 @@ config:
   # The chart has no default posture and refuses to render without one.
   deployment:
     profile: sandbox
+  # The URL clients reach the server at, named once: the SMART baseUrl and
+  # every SCIM location hang off it.
+  server:
+    public_base_url: https://ferroehr.example.com
   # The clinical domain FerroPIX mints pseudonyms in, and the grant the EHR
   # index asks it with; the chart injects the provider and the in-cluster
   # PIXm URL. The client secret is secrets.ehrIndexClientSecret.
   privacy:
     subject_namespaces: [urn:oid:2.999.7.1]
-  server:
-    listen: "0.0.0.0:8080"
   telemetry:
     format: json
     filter: info,ferroehr=debug
@@ -60,20 +62,16 @@ config:
     otlp:
       endpoint: http://otel-collector:4317
       sample_ratio: 0.1
-      metrics: true
   auth:
-    enabled: true
     # A token issuer, the mechanism a real deployment supplies; the server reads
     # its metadata and key set at boot and accepts asymmetric algorithms only.
     issuer:
-      # One table per issuer: `kind` says whose tokens it signs, `profile`
-      # the preset of their shape, and a persons token is admitted only
-      # through a client in `first_party_clients`.
+      # One table per issuer: `kind` says whose tokens it signs, and a
+      # persons token is admitted only through a client the CDR
+      # grants `sign_in_persons`.
       - issuer: https://keycloak.example.com/realms/ferroehr
         kind: persons
-        profile: rfc9068
         audience: [ferroehr]
-        first_party_clients: [ferroehr-viewer]
       # The machines issuer FerroBRIDGE's client credentials tokens come from
       # (RFC 6749 §4.4): the CDR trusts its tokens, and bridge.cdr.oauth
       # names FerroBRIDGE's client at it.
@@ -92,19 +90,10 @@ config:
       # Serves the discovery document, built at boot from the [auth] issuer's
       # metadata, so it needs no endpoint list of its own.
       discovery: true
-      # Required whenever SMART is on: the launch context's service URLs are
-      # absolute, so the server has to be told the origin clients reach it at;
-      # it cannot infer one from a request. Matches the ingress host below.
-      public_base_url: https://ferroehr.example.com
-      demographic_clients: [ferroehr-mpi]
       patient_issuers: [https://keycloak.example.com/realms/ferroehr]
-    scim:
-      public_base_url: https://ferroehr.example.com
-      client:
-        - issuer: https://machines.example.org/realms/ferroehr
-          client_id: entra-provisioning
-          scope: ferroehr/scim
-          binding_issuer: urn:example:ferroehr-login
+    # Who provisions is a scim_provision grant in the CDR, written through the
+    # Demographic API; the table only serves the endpoint.
+    scim: {}
   authz:
     party_binding:
       # The healthcare provider this deployment acts for (an example id
@@ -130,30 +119,19 @@ config:
             path: { "FerroEHR professional": "/contacts[at0005]/addresses[at0006]/details[at0007]/items[at0008]" }
       professional_role:
         template_id: FerroEHR professional role
-    # FerroBRIDGE commits what $toopenehr maps, relaying the record of
-    # another system, as the healthcare provider this deployment acts for.
-    system_client:
-      - issuer: https://machines.example.org/realms/ferroehr
-        client_id: ferrobridge
-        provider: { issuer: "urn:oid:2.999.7.9", id: "all-features" }
-        origins: [relay]
     rbac:
       role_issuers: [https://keycloak.example.com/realms/ferroehr]
-      enabled: true
-      admin_role: ADMIN
+    # The operations the party store may grant: FerroBRIDGE reads the change
+    # feed and Entra ID provisions under grants in the CDR.
+    grants:
+      allowed: [commit_composition, read_change_feed, scim_provision]
     abac:
       enabled: true
-      engine: cedar
-      organization_claim: organization_id
-      patient_claim: patient_id
-      cedar:
-        policy_dir: /etc/ferroehr
   # Microsoft Entra ID provisions the professionals through SCIM with a
   # token of the machines issuer; the logins of the persons issuer then bind
   # to the PERSON carrying their key under the same identifier issuer.
   management:
     enabled: true
-    base_path: /management
     listen: "0.0.0.0:9100"
     endpoints:
       info: admin_only
@@ -162,12 +140,10 @@ config:
       env: admin_only
       loggers: admin_only
   audit:
-    enabled: true
     source_id: ferroehr-prod
     fail_mode: closed
     enterprise_site_id: site-1
     store:
-      enabled: true
       # Five years in days: the default identifier rules name NL, whose
       # access-log floor is five years (Besluit vaststelling bewaartermijn
       # logging), and the server refuses a shorter retention at boot.
@@ -191,30 +167,23 @@ config:
           client_id: ferroehr
           scope: system/Patient.rs
   api:
-    base_path: /ferroehr/rest/openehr/v1
     openapi_ui: public
     admin: true
     terminology: true
   database:
     max_connections: 10
     min_connections: 0
-    acquire_timeout: "30s"
   record:
     signing:
-      enabled: true
       mode: pgp
       key_file: /etc/ferroehr/signing.asc
       verify_on_read: strict
     query:
-      plan_cache_capacity: 256
       timeout: "30000ms"
-    change_feed:
-      readers: [ferrobridge]
     multimedia:
       enabled: true
       threshold: "262144B"
       url: https://s3.example.com
-      bucket: openehr-multimedia
       region: eu-west-1
   terminology:
     # `endpoint.url` and `on_error` are INJECTED by the chart from the
@@ -391,9 +360,10 @@ ferropix:
   config:
     public_base_url: https://pix.example.com
     auth:
-      audience: [https://pix.example.com/fhir]
       issuer:
         - issuer: https://idp.example.com/realms/pix
+          kind: machines
+          audience: [https://pix.example.com/fhir]
     # The clients the issuer signs for that may act as a Patient Identity
     # Source.
     trust:

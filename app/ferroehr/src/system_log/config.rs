@@ -13,8 +13,8 @@
 //! default** with only the local store active: compliance out of the box,
 //! nothing leaves the node.
 
-use ferrohealth_config::removed::Removed;
 use ferrohealth_config::units::{ByteSize, Duration};
+use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::config::endpoint::EndpointSection;
 use serde::{Deserialize, Serialize};
 
@@ -23,6 +23,7 @@ use ferrohealth_config::tls::TlsClientSection;
 
 /// Behaviour when an audit record cannot be enqueued/delivered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum FailMode {
     /// Log + meter the drop and let the request succeed (common ATNA default).
@@ -37,7 +38,9 @@ pub enum FailMode {
 /// The local Audit Record Repository (`[audit.store]`) — the PG-backed store
 /// ([`crate::system_log::store`]), the durability anchor of the subsystem.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct StoreConfig {
     /// Persist every record locally (`FERROEHR__AUDIT__STORE__ENABLED`).
     /// **On by default** (owner posture: compliance out of the box).
@@ -76,25 +79,15 @@ pub struct StoreConfig {
     /// counted and reported by the `audit_chain` health indicator
     /// (`docs/law/eu/cra/text.html Annex I Part I(2)(f)`: "report on
     /// corruptions").
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub verify_interval: Duration,
     /// The time between two scheduled full passes over the hash chain
     /// (`FERROEHR__AUDIT__STORE__FULL_VERIFY_INTERVAL`), which also recompute
     /// the records before the checkpoint; `"0s"` leaves the full pass to
     /// `SELECT * FROM audit.verify_audit_chain()` on demand. Default one week.
     /// A run that found damage is always followed by a full pass.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub full_verify_interval: Duration,
-    /// Retired in v5.7.0: refused at load, naming `retention`.
-    #[serde(skip_serializing)]
-    pub retention_days: Removed,
-    /// Retired in v5.7.0: refused at load, naming `retention`.
-    #[serde(skip_serializing)]
-    pub retention_years: Removed,
-    /// Retired in v5.7.0: refused at load, naming `verify_interval`.
-    #[serde(skip_serializing)]
-    pub verify_interval_seconds: Removed,
-    /// Retired in v5.7.0: refused at load, naming `full_verify_interval`.
-    #[serde(skip_serializing)]
-    pub full_verify_interval_seconds: Removed,
 }
 
 impl Default for StoreConfig {
@@ -108,10 +101,6 @@ impl Default for StoreConfig {
             // unreported; a week bounds it for older records.
             verify_interval: Duration::from_hours(1),
             full_verify_interval: Duration::from_days(7),
-            retention_days: Removed::default(),
-            retention_years: Removed::default(),
-            verify_interval_seconds: Removed::default(),
-            full_verify_interval_seconds: Removed::default(),
         }
     }
 }
@@ -158,7 +147,9 @@ impl StoreConfig {
 /// between two delivery attempts. A sink's forwarder retries until the record
 /// is delivered, so the table has no attempt count.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
 pub struct SinkRetry {
     /// The longest wait between two delivery attempts after a failure.
     pub max_backoff: Duration,
@@ -176,73 +167,45 @@ impl Default for SinkRetry {
 /// record over syslog (IHE ITI TF-2 ITI-20; the RFC 5424 message over RFC 5425
 /// TLS, sent through `ihe-atna`). Present, records are shipped.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct SyslogConfig {
     /// The Audit Record Repository, `tls://host:port`
     /// (`FERROEHR__AUDIT__SYSLOG__URL`): RFC 5425 TLS, on the §4.1 port 6514
     /// by default.
-    pub url: String,
+    pub url: SecretUrl,
     /// The TLS material of the connection to the ARR
     /// (`[audit.syslog.tls]`): the family's outbound TLS keys, the client
     /// identity for mutual TLS and the trust roots beside the platform's.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
     pub tls: TlsClientSection,
     /// The directory of the `ihe-atna` spool every record is stored in before
     /// it is sent (`FERROEHR__AUDIT__SYSLOG__SPOOL_DIR`), owner-only; unset,
     /// the spool is held in memory and a restart loses what it holds.
     pub spool_dir: Option<std::path::PathBuf>,
     /// The most records the spool holds (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_EVENTS`).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub spool_max_events: usize,
     /// The most the spool holds in size (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_SIZE`).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub spool_max_size: ByteSize,
     /// `[audit.syslog.retry]`: the wait between two delivery attempts.
     pub retry: SinkRetry,
-    /// Retired in v5.7.0: refused at load, naming `[audit.syslog.tls] trust_roots_file`.
-    #[serde(skip_serializing)]
-    pub tls_ca_file: Removed,
-    /// Retired in v5.7.0: refused at load, naming `[audit.syslog.tls] client_identity_file`.
-    #[serde(skip_serializing)]
-    pub tls_identity_cert_file: Removed,
-    /// Retired in v5.7.0: refused at load, naming `[audit.syslog.tls] client_identity_file`.
-    #[serde(skip_serializing)]
-    pub tls_identity_key_file: Removed,
-    /// Retired in v5.7.0: refused at load, naming the table's presence.
-    #[serde(skip_serializing)]
-    pub enabled: Removed,
-    /// Retired in v5.7.0: refused at load, naming `url`.
-    #[serde(skip_serializing)]
-    pub host: Removed,
-    /// Retired in v5.7.0: refused at load, naming `url`.
-    #[serde(skip_serializing)]
-    pub port: Removed,
-    /// Retired in v5.7.0: refused at load, naming `spool_max_events`.
-    #[serde(skip_serializing)]
-    pub spool_max_messages: Removed,
-    /// Retired in v5.7.0: refused at load, naming `spool_max_size`.
-    #[serde(skip_serializing)]
-    pub spool_max_bytes: Removed,
-    /// Retired in v5.7.0: refused at load, naming `retry.max_backoff`.
-    #[serde(skip_serializing)]
-    pub retry_max_ms: Removed,
 }
 
 impl Default for SyslogConfig {
     fn default() -> Self {
         Self {
-            url: format!("tls://localhost:{}", ihe_atna::atna::syslog::TLS_PORT),
+            url: SecretUrl::new(format!(
+                "tls://localhost:{}",
+                ihe_atna::atna::syslog::TLS_PORT
+            )),
             tls: TlsClientSection::default(),
             spool_dir: None,
             spool_max_events: 100_000,
             spool_max_size: ByteSize::from_mib(256),
             retry: SinkRetry::default(),
-            tls_ca_file: Removed::default(),
-            tls_identity_cert_file: Removed::default(),
-            tls_identity_key_file: Removed::default(),
-            enabled: Removed::default(),
-            host: Removed::default(),
-            port: Removed::default(),
-            spool_max_messages: Removed::default(),
-            spool_max_bytes: Removed::default(),
-            retry_max_ms: Removed::default(),
         }
     }
 }
@@ -258,10 +221,10 @@ impl SyslogConfig {
             format!(
                 "audit.syslog.url ({}) must be a tls://host:port URL, such as tls://arr.example:6514 \
                  (RFC 5425 TLS)",
-                self.url
+                self.url.redacted()
             )
         };
-        let Ok(url) = url::Url::parse(self.url.trim()) else {
+        let Ok(url) = url::Url::parse(self.url.expose().trim()) else {
             return Err(refused());
         };
         if url.scheme() != "tls" || url.host_str().is_none_or(str::is_empty) || url.port().is_none()
@@ -281,7 +244,9 @@ impl SyslogConfig {
 /// from the store (`audit.fhir_feed_outbox`), so a down ARR loses
 /// nothing; with the store off it delivers from an in-memory spool.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct FhirFeedConfig {
     /// `[audit.fhir_feed.endpoint]`, the family's outbound endpoint: the ARR's
     /// FHIR base URL (`url`; the `AuditEvent` endpoint is
@@ -289,26 +254,13 @@ pub struct FhirFeedConfig {
     /// delivery, the TLS and the credential, such as the OAuth 2.0 client
     /// credentials grant of the IHE IUA authorized client. Credentials in the
     /// URL are masked in every rendering.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
     pub endpoint: EndpointSection,
     /// How long the forwarder waits for a new record before it reads the
     /// store again (`FERROEHR__AUDIT__FHIR_FEED__POLL_INTERVAL`); at least
     /// 100 ms is waited.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub poll_interval: Duration,
-    /// Retired in v5.7.0: refused at load, naming the table's presence.
-    #[serde(skip_serializing)]
-    pub enabled: Removed,
-    /// Retired in v5.7.0: refused at load, naming `poll_interval`.
-    #[serde(skip_serializing)]
-    pub poll_interval_ms: Removed,
-    /// Retired in v5.7.0: refused at load, naming `endpoint.retry.max_backoff`.
-    #[serde(skip_serializing)]
-    pub retry_max_ms: Removed,
-    /// Retired in v5.7.0: refused at load, naming `endpoint.url`.
-    #[serde(skip_serializing)]
-    pub url: Removed,
-    /// Retired in v5.7.0: refused at load, naming `endpoint.credentials.oauth`.
-    #[serde(skip_serializing)]
-    pub oauth: Removed,
 }
 
 impl Default for FhirFeedConfig {
@@ -324,11 +276,6 @@ impl Default for FhirFeedConfig {
                 ..EndpointSection::default()
             },
             poll_interval: Duration::from_secs(2),
-            enabled: Removed::default(),
-            poll_interval_ms: Removed::default(),
-            retry_max_ms: Removed::default(),
-            url: Removed::default(),
-            oauth: Removed::default(),
         }
     }
 }
@@ -336,7 +283,9 @@ impl Default for FhirFeedConfig {
 /// ATNA audit configuration (`[audit]`). Every field has a default; the
 /// all-defaults tree is **auditing on with only the local store active**.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct AuditConfig {
     /// Master switch (`FERROEHR__AUDIT__ENABLED`). **On by default** — every
     /// deployment gets a queryable audit trail with zero external
@@ -350,21 +299,26 @@ pub struct AuditConfig {
     pub source_id: String,
     /// Fill value for empty mandatory fields
     /// (`FERROEHR__AUDIT__VALUE_IF_MISSING`).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub value_if_missing: String,
     /// Skip successful-login records (`FERROEHR__AUDIT__SUPPRESS_LOGIN_EVENTS`).
     /// Rejected accesses (401/403) are always recorded.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub suppress_login_events: bool,
     /// Failure mode (`FERROEHR__AUDIT__FAIL_MODE`): `open` | `closed`.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub fail_mode: FailMode,
     /// Enrich the patient participant via a background indexed lookup of
     /// `ehr.subject_id` (`FERROEHR__AUDIT__RESOLVE_SUBJECT`). On by default —
     /// the IHE BALP `Patient*` patterns and the patient-centric audit search
     /// need the subject; the lookup runs only on the background drain.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub resolve_subject: bool,
     /// Bounded audit queue capacity (`FERROEHR__AUDIT__QUEUE_CAPACITY`).
     /// Sized for write-path bursts: the drain persists in multi-row batches,
     /// so the queue only needs to ride out sink latency spikes, but a loaded
     /// write path can enqueue thousands per second.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub queue_capacity: usize,
     /// This node's advertised network address → the destination
     /// network-access-point (`FERROEHR__AUDIT__SERVER_HOST`); the
@@ -378,6 +332,7 @@ pub struct AuditConfig {
     /// it and the trail records what was declared. No openEHR spec governs
     /// this and IHE carries the equivalent in a SAML attribute rather than a
     /// header, so the header is our own design.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub purpose_header: String,
     /// The request header carrying the data permit the caller acts under
     /// (`FERROEHR__AUDIT__PERMIT_HEADER`), recorded on every access record.
@@ -388,6 +343,7 @@ pub struct AuditConfig {
     /// permit's identifier, 1 to 128 characters of letters, digits and
     /// `.` `_` `:` `/` `#` `-`; anything else is recorded as absent. No
     /// specification names a header for it: our own design.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub permit_header: String,
     /// The purpose codes this deployment accepts
     /// (`FERROEHR__AUDIT__PURPOSE_CODES`).
@@ -396,6 +352,7 @@ pub struct AuditConfig {
     /// list records a declared code only when it is on the list, so a
     /// deployment that has agreed a vocabulary does not accumulate a trail of
     /// free text that means nothing at review time.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub purpose_codes: Vec<String>,
     /// The declared purpose codes that mark an access as an emergency access
     /// (`FERROEHR__AUDIT__EMERGENCY_PURPOSE_CODES`). Empty (the default) marks
@@ -410,6 +367,7 @@ pub struct AuditConfig {
     /// The mark records; it lifts no restriction. Every code must also be on
     /// `purpose_codes`, so the mark never keys on free text; the boot
     /// validation refuses anything else.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub emergency_purpose_codes: Vec<String>,
     /// The legal basis this deployment processes under
     /// (`FERROEHR__AUDIT__LEGAL_BASIS`), recorded on every access record.
@@ -419,11 +377,6 @@ pub struct AuditConfig {
     /// (<https://eur-lex.europa.eu/eli/reg/2016/679/oj>) and every access under
     /// this deployment carries it. Unset records nothing rather than a guess.
     pub legal_basis: Option<String>,
-    /// `[audit.categories]` — the template and archetype map every access is
-    /// classified through by EHDS priority category (Annex II 3.2(c)). Empty by
-    /// default, so the map FerroEHR ships applies; an unmapped access is
-    /// recorded `unclassified`.
-    pub categories: crate::system_log::categories::CategoryMapConfig,
     /// `[audit.store]` — the local Audit Record Repository.
     pub store: StoreConfig,
     /// `[audit.syslog]` — the classic DICOM-over-syslog feed; absent, off.
@@ -450,7 +403,6 @@ impl Default for AuditConfig {
             purpose_codes: Vec::new(),
             emergency_purpose_codes: Vec::new(),
             legal_basis: None,
-            categories: crate::system_log::categories::CategoryMapConfig::default(),
             store: StoreConfig::default(),
             syslog: None,
             fhir_feed: None,
@@ -480,10 +432,6 @@ pub struct AuditPosture {
     /// Calendar years the local store keeps records, when the horizon is stated
     /// in years.
     pub retention_years: Option<u32>,
-    /// The digest of the `[audit.categories]` map every access record is
-    /// classified through and carries (EHDS Annex II 3.2(c)); `None` only for a
-    /// map the boot validation refuses.
-    pub category_map: Option<crate::system_log::categories::MapDigest>,
 }
 
 impl AuditPosture {
@@ -502,8 +450,6 @@ impl AuditPosture {
                 Retention::Years(years) => Some(years),
                 Retention::Forever | Retention::Days(_) => None,
             },
-            // NOTE: an invalid map has no digest; `FerroEhrConfig::validate` refuses to boot on it.
-            category_map: config.categories.compile().ok().map(|map| map.digest()),
         }
     }
 
@@ -573,7 +519,6 @@ mod tests {
             FhirFeedConfig::default().endpoint.retry.max_backoff,
             Duration::from_mins(1)
         );
-        assert!(c.categories.templates.is_empty() && c.categories.archetypes.is_empty());
     }
 
     /// The store states one horizon: forever, days or years.
@@ -590,7 +535,7 @@ mod tests {
     #[test]
     fn the_syslog_address_is_a_tls_url_with_a_port() {
         let with = |url: &str| SyslogConfig {
-            url: url.to_owned(),
+            url: SecretUrl::new(url),
             ..SyslogConfig::default()
         };
         assert!(with("tls://arr.example:6514").address().is_ok());

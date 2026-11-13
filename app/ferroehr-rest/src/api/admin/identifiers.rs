@@ -13,8 +13,8 @@
 //! Gating: mounted under `/admin/`, so the route inherits the group's RBAC
 //! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
 //! (`405` with an empty `Allow` when off). Beside that it needs its own
-//! permission, `[authz.rbac] identifier_reader_role`, so holding the admin role
-//! alone reveals no national identifier. Every read writes an access record
+//! permission, a policy grant of `read_identifiers` in the CDR, so holding the
+//! admin role alone reveals no national identifier. Every read writes an access record
 //! per scheme expanded, naming the reader, the party and the scheme, never the
 //! value (`ferroehr::service::demographic::identifier`).
 
@@ -33,6 +33,8 @@ use utoipa_axum::routes;
 use openehr_its::rest::runtime::ApiError;
 
 use ferroehr::error::ServiceError;
+use ferroehr::party_binding::grants::capabilities::Capabilities;
+use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::versioning::object_version_id::parse_version_uid;
 
 use crate::api::{RequestParts, guarded_handler};
@@ -73,9 +75,8 @@ guarded_handler! {
                                           configures no identifier protection.",
              body = serde_json::Value),
             (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-            (status = 403, description = "Not in the Admin class, or not holding \
-                                          `authz.rbac.identifier_reader_role` (unset: \
-                                          nobody holds it).",
+            (status = 403, description = "Not in the Admin class, or holding no \
+                                          policy grant of `read_identifiers`.",
              body = serde_json::Value),
             (status = 404, description = "No party holds that version.",
              body = serde_json::Value),
@@ -94,16 +95,10 @@ guarded_handler! {
 
 /// The `admin_party_identifiers` operation.
 async fn party_identifiers(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
-    let roles = crate::extensions::access::authn::current_principal()
-        .map(|principal| principal.roles)
-        .unwrap_or_default();
-    if !holds_identifier_reader_role(
-        state.config().rbac.identifier_reader_role.as_deref(),
-        &roles,
-    ) {
+    if !Capabilities::current().holds(Operation::ReadIdentifiers) {
         return Err(RestError::from(ApiError::Forbidden(
-            "reading a party's protected identifiers needs the role \
-             `authz.rbac.identifier_reader_role` names"
+            "reading a party's protected identifiers needs a policy grant of \
+             ferroehr-operations::read_identifiers"
                 .to_owned(),
         )));
     }
@@ -132,30 +127,4 @@ async fn party_identifiers(state: AppState, parts: RequestParts) -> Result<Respo
             "version": version,
         }),
     ))
-}
-
-/// Whether `roles` holds `role`, compared ASCII-case-insensitively like every
-/// other role; an unset role is held by nobody.
-fn holds_identifier_reader_role(role: Option<&str>, roles: &[String]) -> bool {
-    role.is_some_and(|role| roles.iter().any(|held| held.eq_ignore_ascii_case(role)))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::holds_identifier_reader_role;
-
-    #[test]
-    fn an_unset_role_is_held_by_nobody_and_a_set_one_by_its_holders() {
-        let admin = vec!["ADMIN".to_owned()];
-        assert!(!holds_identifier_reader_role(None, &admin));
-        assert!(!holds_identifier_reader_role(
-            Some("IDENTIFIER_READER"),
-            &admin
-        ));
-        let reader = vec!["ADMIN".to_owned(), "IDENTIFIER_READER".to_owned()];
-        assert!(holds_identifier_reader_role(
-            Some("identifier_reader"),
-            &reader
-        ));
-    }
 }

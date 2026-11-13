@@ -29,7 +29,6 @@ use uuid::Uuid;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
-use crate::storage::identifier_repo;
 use crate::storage::row::NodeRow;
 use crate::storage::version_repo::commit::{Folded, FoldedRows, commit_folded};
 use crate::versioning::attestation::{self, PendingAttest};
@@ -656,70 +655,6 @@ struct CommitScope<'a> {
     preplaced: Option<crate::storage::version_repo::placement::Placement>,
 }
 
-/// Seal every protected national identifier of a demographic body into rows
-/// of this version, on the commit transaction `tx`, before the body is
-/// decomposed and signed.
-///
-/// Runs on the demographic kinds only: a party's identifiers are the point of
-/// that domain, and clinical content carrying one is a different rule
-/// altogether ([`crate::privacy`] refuses it outright rather than sealing it).
-/// A demographic kind's commit transaction is always on the party domain's
-/// pool, the one database that holds `national_identifier` in every layout,
-/// so the sealed rows commit or roll back with the version that references
-/// them and no compensating cleanup is needed.
-///
-/// Placed before `decompose` and the signature for the same reason the
-/// multimedia offload is: the stored, signed and served body must be one form,
-/// which is what lets a later read verify a signature against the bytes it
-/// actually holds. No openEHR spec governs identifier protection — our own
-/// design/extension.
-///
-/// # Errors
-/// The [`ServiceError`] the store's refusal maps to: `409` for a
-/// value another party holds, `422` for a body the store cannot hold, `500`
-/// for a configuration or storage fault. The commit fails rather than
-/// proceeding, because proceeding would store the body with the identifier
-/// still in it.
-async fn seal_protected_identifiers(
-    tx: &mut PgConnection,
-    ctx: &SigningCtx<'_>,
-    kind: Kind,
-    vo_id: VoId,
-    canonical: &mut Value,
-) -> Result<(), ServiceError> {
-    let Some(engine) = ctx.identifiers else {
-        return Ok(());
-    };
-    if !kind.is_demographic() {
-        return Ok(());
-    }
-    engine.externalize(tx, vo_id.0, canonical).await?;
-    Ok(())
-}
-
-/// Take a logically deleted party's identifiers out of resolution, on the
-/// commit transaction `tx`.
-///
-/// A deleted version carries no data (RM common
-/// `master06-change_control_package.adoc` §Logical Deletion), so the party
-/// holds no identifier from it on; the earlier versions keep their rows. No
-/// openEHR spec governs identifier protection — our own design/extension.
-///
-/// # Errors
-/// The [`ServiceError`] a failed update maps to: a `500` for a storage fault.
-async fn retire_protected_identifiers(
-    tx: &mut PgConnection,
-    ctx: &SigningCtx<'_>,
-    kind: Kind,
-    vo_id: VoId,
-) -> Result<(), ServiceError> {
-    if ctx.identifiers.is_none() || !kind.is_demographic() {
-        return Ok(());
-    }
-    identifier_repo::retire_live(tx, vo_id).await?;
-    Ok(())
-}
-
 async fn apply_change(
     tx: &mut PgConnection,
     scope: CommitScope<'_>,
@@ -815,7 +750,7 @@ async fn apply_change(
     // future over the size the lint allows.
     let committed = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
     crate::versioning::access_delay::hold_on_creation(tx, ctx, ehr_id, &committed.0).await?;
-    if committed.0.kind.is_party() {
+    if committed.0.kind.is_demographic() {
         Box::pin(crate::party_binding::store::reindex_committed(
             tx,
             ctx,
@@ -1101,6 +1036,10 @@ pub(crate) async fn commit(
         known_now,
         placement,
     } = write;
+    let references: Vec<_> = crate::versioning::party_refs::of_change(&change)
+        .into_iter()
+        .map(|reference| (None, reference))
+        .collect();
     let (committed, contribution_id) = apply_change(
         tx,
         CommitScope {
@@ -1115,6 +1054,7 @@ pub(crate) async fn commit(
         ctx.skip_identical_resend,
     )
     .await?;
+    crate::versioning::party_refs::check(tx, &references).await?;
     if !committed.skipped {
         write_single_outbox(tx, ctx, contribution_id, ehr_id, &committed).await?;
     }
@@ -1184,6 +1124,15 @@ pub(crate) async fn commit_contribution(
         Folded::Contribution { id: uid, ehr_id },
     )
     .await?;
+    let references: Vec<_> = changes
+        .iter()
+        .enumerate()
+        .flat_map(|(index, (_, change))| {
+            crate::versioning::party_refs::of_change(change)
+                .into_iter()
+                .map(move |reference| (Some(index), reference))
+        })
+        .collect();
     let mut committed = Vec::with_capacity(changes.len() + attests.len());
     for (version_audit, change) in changes {
         // Each change writes its own `commit_audit` + `version` under the
@@ -1206,6 +1155,7 @@ pub(crate) async fn commit_contribution(
         .await?;
         committed.push(change_committed);
     }
+    crate::versioning::party_refs::check(tx, &references).await?;
     // Standalone 666 attestations of existing versions (no new version) —
     // completed with the contribution's commit-act time.
     for item in attests {

@@ -1,0 +1,651 @@
+﻿archetype (adl_version=1.4; uid=b3dc06e6-f78d-4a9e-a452-d16a4ea3aab3)
+	openEHR-EHR-CLUSTER.exam-auscultation-breath_sounds.v0
+specialise
+	openEHR-EHR-CLUSTER.exam-auscultation.v0
+
+concept
+	[at0000.1.1]	-- Auscultation of breath sounds
+language
+	original_language = <[ISO_639-1::en]>
+	translations = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			author = <
+				["name"] = <"Maximilian Meixner">
+				["organisation"] = <"Berlin Institute of Health - BIH @ Charité">
+				["email"] = <"maximilian.meixner@bih-charite.de">
+			>
+		>
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			author = <
+				["name"] = <"Silje Ljosland Bakke">
+				["organisation"] = <"Nasjonal IKT HF">
+			>
+		>
+	>
+description
+	original_author = <
+		["name"] = <"Heather Leslie">
+		["organisation"] = <"Atomica Informatics">
+		["email"] = <"heather.leslie@atomicainformatics.com">
+		["date"] = <"2015-06-23">
+	>
+	details = <
+		["de"] = <
+			language = <[ISO_639-1::de]>
+			purpose = <"Zur Aufzeichnung einer narrativen Beschreibung und klinischen Interpretation von beobachteten Befunden bei der Auskultation von Atemgeräuschen im Brust- oder Bauchraum.">
+			use = <"Der Archetyp kann verwendet werden, um eine narrative Beschreibung und klinische Interpretation der Befunde aufzuzeichnen, die während der Auskultation von Atemgeräuschen in Brust oder Bauch beobachtet wurden.
+
+Dieser Archetyp wurde speziell für die Verwendung im SLOT „Untersuchungsdetails“ innerhalb der Archetypen OBSERVATION.exam, CLUSTER.exam-lung oder CLUSTER.exam-abdomen entwickelt, kann aber auch innerhalb anderer ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern dies klinisch angemessen ist.
+
+Der Archetyp kann verwendet werden, um einen Rahmen bereitzustellen, in dem CLUSTER-Archetypen im SLOT „Untersuchungsergebnisse“ verschachtelt werden können, um zusätzliche strukturierte Befunde aus körperlichen Untersuchungen aufzuzeichnen.
+
+Der Archetyp CLUSTER.exclusion_exam kann im SLOT „Untersuchung nicht durchgeführt“ verschachtelt werden, um optional explizite Details über die nicht durchgeführte Untersuchung aufzuzeichnen.
+
+Der Archetyp kann verwendet werden, um die narrativen Beschreibungen klinischer Befunde innerhalb bestehender oder älterer klinischer Systeme mithilfe des Datenelements „Klinische Beschreibung“ in ein archetypisiertes Format zu integrieren.">
+			misuse = <"Nicht zur Aufzeichnung der Krankengeschichte zu verwenden – hier sollten spezifische OBSERVATION- und CLUSTER-Archetypen verwendet werden. Zum Beispiel OBSERVATION.story und CLUSTER.symptom_sign.">
+		>
+		["nb"] = <
+			language = <[ISO_639-1::nb]>
+			purpose = <"For å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.">
+			use = <"Brukes til å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et spesifisert organsystem eller anatomisk struktur. Denne arketypen består kun av kjerneelementene av mønsteret for undersøkelser, og kan utvides ved hjelp av andre CLUSTER-arketyper eller brukes som grunnlag for undersøkelsesarketyper for spesifikke kroppssystemer eller anatomiske strukturer. 
+
+Eksempler på detaljer som kan beskrives ved hjelp av dette CLUSTER er inspeksjon, palpasjon, auskultasjon, perkusjon og bevegelser i kroppssystemer eller anatomiske strukturer. Undersøkelsen kan støttes av enkle hjelpemidler som stetoskop, otoskop eller reflekshammer. Også funn ved mer avanserte undersøkelser kan registreres her, som ved endoskopi. I de tilfellene vil informasjon om hvilket hjelpemiddel eller utstyr brukt bli registrert i OBSERVATION.exam, elementet \"Detaljer om medisinsk utstyr\", i ACTION.procedure \"Prosedyredetaljer\" eller tilsvarende i egnet ENTRY- eller ACTION-arketype.
+
+Arketypen er laget spesifikt for å brukes i \"Undersøkelsesdetaljer\"-SLOTet i arketypen OBSERVATION.exam, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende.
+
+Denne arketypen kan benyttes for alle typer undersøkelser, alt fra enkle undersøkelser som undersøkelse av et hudområde, inspeksjon av ører og til artroskopi av et kne.
+
+Kan for eksempel nøstes i SLOTet \"Undersøkelsesdetaljer\" i arketypen OBSERVATION.exam (Norsk Funn ved fysisk undersøkelse) for å registrere ytterligere strukturerte funn ved fysiske undersøkelser.
+
+Arketypen CLUSTER.exclusion_exam kan nøstes i SLOTet \"Undersøkelse ikke utført\" der en har behov for å registrere informasjon om at en undersøkelse ikke ble utført.
+
+Brukes for å videreføre fritekstbeskrivelser av kliniske funn fra tidligere systemer inn i et arketypeformat, ved å bruke elementet \"Klinisk beskrivelse\".">
+			misuse = <"Skal ikke brukes til å ta opp frittstående klinisk observasjoner eller testresultater - bruk spesifikke OBSERVATION arketyper, for eksempel OBSERVATION.head_circumference eller OBSERVATION.glasgow_coma_scale.
+
+Skal ikke brukes til å ta opp anamnese - bruk da spesifikke OBSERVATION og CLUSTER arketyper. For eksempel OBSERVATION.story og CLUSTER.symptom_sign.">
+		>
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"To record a narrative description and clinical interpretation of the findings observed during the auscultation of breath sounds in the chest or abdomen.">
+			use = <"Use to record a narrative description and clinical interpretation of the findings observed during the auscultation of breath sounds in the chest or abdomen.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam, CLUSTER.exam-lung or CLUSTER.exam-abdomen archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+			misuse = <"Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.">
+			copyright = <"© openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"rejected">
+	other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom (openEHR Editor)", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Hilde Hollås, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Lars Morgan Karlsen, DIPS ASA, Norway", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Jussara Rotzsch, UNB, Brazil", "Anoop Shah, University College London, United Kingdom", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia (openEHR Editor)", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+	other_details = <
+		["licence"] = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+		["custodian_organisation"] = <"openEHR Foundation">
+		["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+		["original_namespace"] = <"org.openehr">
+		["original_publisher"] = <"openEHR Foundation">
+		["custodian_namespace"] = <"org.openehr">
+		["MD5-CAM-1.0.1"] = <"7BA0C4B6525C26FF3F3F934A5A486553">
+		["build_uid"] = <"6fc9b2e4-ce2f-45e4-bd10-34b6bff6c580">
+		["ip_acknowledgements"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+		["revision"] = <"0.0.1">
+	>
+
+definition
+	CLUSTER[at0000.1.1] matches {	-- Auscultation of breath sounds
+		items cardinality matches {1..*; unordered} matches {
+			ELEMENT[at0001.0.1] matches {	-- System or structure examined
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0.0.1, 	-- Chest
+							at0.0.2]	-- Abdomen
+						}
+					}
+				}
+			}
+			ELEMENT[at0012] occurrences matches {0..1} matches {	-- Body site
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			allow_archetype CLUSTER[at0011] occurrences matches {0..*} matches {	-- Structured body site
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.anatomical_location_circle(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v1/}
+			}
+			ELEMENT[at0.0.3] occurrences matches {0..1} matches {	-- Presence
+				value matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0.0.4, 	-- Present
+							at0.0.5]	-- Absent
+						}
+					}
+				}
+			}
+			ELEMENT[at0002.0.1] occurrences matches {0..1} matches {	-- No abnormality detected
+				name matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0.0.6, 	-- No abnormality detected
+							at0.0.7]	-- Normal breath sounds
+						}
+					}
+				}
+				value matches {
+					DV_BOOLEAN matches {
+						value matches {True}
+					}
+				}
+			}
+			ELEMENT[at0003] occurrences matches {0..1} matches {	-- Clinical description
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			CLUSTER[at0.0.8] occurrences matches {0..*} matches {	-- Abnormal breath sounds
+				items cardinality matches {1..*; unordered} matches {
+					ELEMENT[at0.0.9] matches {	-- Breath sound
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0.0.10, 	-- Wheezing
+									at0.0.11]	-- Crackles
+								}
+							}
+						}
+					}
+					ELEMENT[at0.0.12] occurrences matches {0..1} matches {	-- Phase
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0.0.13, 	-- Inspiratory
+									at0.0.14, 	-- Expiratory
+									at0.0.15]	-- Inspiratory and expiratory
+								}
+							}
+						}
+					}
+					ELEMENT[at0.0.16] occurrences matches {0..1} matches {	-- Presence
+						value matches {
+							DV_CODED_TEXT matches {
+								defining_code matches {
+									[local::
+									at0.0.17, 	-- Present
+									at0.0.18]	-- Absent
+								}
+							}
+						}
+					}
+					ELEMENT[at0.0.19] occurrences matches {0..1} matches {	-- Clinical description
+						value matches {
+							DV_TEXT matches {*}
+						}
+					}
+				}
+			}
+			allow_archetype CLUSTER[at0004] occurrences matches {0..*} matches {	-- Examination findings
+				include
+					archetype_id/value matches {/.*/}
+			}
+			allow_archetype CLUSTER[at0005] occurrences matches {0..*} matches {	-- Multimedia representation
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1|openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v0/}
+			}
+			ELEMENT[at0006] occurrences matches {0..*} matches {	-- Clinical interpretation
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			ELEMENT[at0007] occurrences matches {0..1} matches {	-- Comment
+				value matches {
+					DV_TEXT matches {*}
+				}
+			}
+			allow_archetype CLUSTER[at0008] occurrences matches {0..*} matches {	-- Examination not done
+				include
+					archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1/}
+			}
+		}
+	}
+
+ontology
+	terminologies_available = <"SNOMED-CT", ...>
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0.0.1"] = <
+					text = <"Chest">
+					description = <"The chest is examined.">
+				>
+				["at0.0.10"] = <
+					text = <"Wheezing">
+					description = <"Whistling noises produced in the airways during breathing. Also referred to as rhonchi.">
+				>
+				["at0.0.11"] = <
+					text = <"Crackles">
+					description = <"Clicking, rattling or crackling noises produced in the airways during breathing. Also referred to as crepitations.">
+				>
+				["at0.0.12"] = <
+					text = <"Phase">
+					description = <"Phase of the breathing cycle.">
+				>
+				["at0.0.13"] = <
+					text = <"Inspiratory">
+					description = <"On inspiration only.">
+				>
+				["at0.0.14"] = <
+					text = <"Expiratory">
+					description = <"On expiration only.">
+				>
+				["at0.0.15"] = <
+					text = <"Inspiratory and expiratory">
+					description = <"On both inspiration and expiration.">
+				>
+				["at0.0.16"] = <
+					text = <"Presence">
+					description = <"Presence of the abnormal breath sound.">
+				>
+				["at0.0.17"] = <
+					text = <"Present">
+					description = <"The abnormal breath sound is present.">
+				>
+				["at0.0.18"] = <
+					text = <"Absent">
+					description = <"The abnormal breath sound is not present.">
+				>
+				["at0.0.19"] = <
+					text = <"Clinical description">
+					description = <"Narrative description about the abnormal breath sound.">
+				>
+				["at0.0.2"] = <
+					text = <"Abdomen">
+					description = <"The abdomen is examined.">
+				>
+				["at0.0.3"] = <
+					text = <"Presence">
+					description = <"The presence of breath sounds.">
+				>
+				["at0.0.4"] = <
+					text = <"Present">
+					description = <"Breath sounds are heard.">
+				>
+				["at0.0.5"] = <
+					text = <"Absent">
+					description = <"Breath sounds are not heard.">
+				>
+				["at0.0.6"] = <
+					text = <"No abnormality detected">
+					description = <"Statement that no abnormality was detected (NAD) on physical examination.">
+				>
+				["at0.0.7"] = <
+					text = <"Normal breath sounds">
+					description = <"Statement that the breath sounds were heard and of normal character.">
+				>
+				["at0.0.8"] = <
+					text = <"Abnormal breath sounds">
+					description = <"Details about abnormal breath sounds heard on auscultation.">
+				>
+				["at0.0.9"] = <
+					text = <"Breath sound">
+					description = <"Name of the breath sound.">
+				>
+				["at0000.1.1"] = <
+					text = <"Auscultation of breath sounds">
+					description = <"Findings observed during the auscultation of breath sounds in the chest or abdomen.">
+				>
+				["at0001"] = <
+					text = <"System or structure examined">
+					description = <"Identification of the examined body system or anatomical structure.">
+					comment = <"Coding of the system or structure examined with a terminology is preferred, where possible.">
+				>
+				["at0001.0.1"] = <
+					text = <"System or structure examined">
+					description = <"Identification of the examined body system or anatomical structure.">
+					comment = <"Coding of the system or structure examined with a terminology is preferred, where possible.">
+				>
+				["at0002"] = <
+					text = <"No abnormality detected">
+					description = <"Statement that no abnormality was detected (NAD) on physical examination.">
+					comment = <"Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element. If 'No abnormality detected' is selected, then recording of other examination data elements becomes redundant, with the exception of only the 'Clinical interpretation' data element, which may be useful if a normal statement is desired for recording, for example 'Normal examination'.">
+				>
+				["at0002.0.1"] = <
+					text = <"No abnormality detected">
+					description = <"Statement that no abnormality was detected (NAD) on physical examination.">
+					comment = <"Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element. If 'No abnormality detected' is selected, then recording of other examination data elements becomes redundant, with the exception of only the 'Clinical interpretation' data element, which may be useful if a normal statement is desired for recording, for example 'Normal examination'.">
+				>
+				["at0003"] = <
+					text = <"Clinical description">
+					description = <"Narrative description of the overall findings observed during the physical examination.">
+				>
+				["at0004"] = <
+					text = <"Examination findings">
+					description = <"Structured details about the physical examination findings.">
+				>
+				["at0005"] = <
+					text = <"Multimedia representation">
+					description = <"Digital image, video or diagram representing the physical examination findings.">
+				>
+				["at0006"] = <
+					text = <"Clinical interpretation">
+					description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings.">
+					comment = <"Coding of the 'Clinical interpretation' with a terminology is preferred, where possible.">
+				>
+				["at0007"] = <
+					text = <"Comment">
+					description = <"Additional narrative about the physical examination findings, not captured in other fields.">
+				>
+				["at0008"] = <
+					text = <"Examination not done">
+					description = <"Details to explicitly record that this examination was not performed.">
+				>
+				["at0011"] = <
+					text = <"Structured body site">
+					description = <"A structured description of the area of the body under examination.">
+					comment = <"If the body site has been fully identified in the 'System or structure examined' or the 'Body site' data element, this SLOT becomes redundant.">
+				>
+				["at0012"] = <
+					text = <"Body site">
+					description = <"Identification of the area of the body under examination.">
+					comment = <"If the body site has been fully identified in the 'System or structure examined' data element, this data element becomes redundant.">
+				>
+			>
+		>
+		["nb"] = <
+			items = <
+				["at0.0.1"] = <
+					text = <"*Chest (en)">
+					description = <"*The chest is examined. (en)">
+				>
+				["at0.0.10"] = <
+					text = <"*Wheezing (en)">
+					description = <"*Whistling noises produced in the airways during breathing. Also referred to as rhonchi. (en)">
+				>
+				["at0.0.11"] = <
+					text = <"*Crackles (en)">
+					description = <"*Clicking, rattling or crackling noises produced in the airways during breathing. Also referred to as crepitations. (en)">
+				>
+				["at0.0.12"] = <
+					text = <"*Phase (en)">
+					description = <"*Phase of the breathing cycle. (en)">
+				>
+				["at0.0.13"] = <
+					text = <"*Inspiratory (en)">
+					description = <"*On inspiration only. (en)">
+				>
+				["at0.0.14"] = <
+					text = <"*Expiratory (en)">
+					description = <"*On expiration only. (en)">
+				>
+				["at0.0.15"] = <
+					text = <"*Inspiratory and expiratory (en)">
+					description = <"*On both inspiration and expiration. (en)">
+				>
+				["at0.0.16"] = <
+					text = <"*Presence (en)">
+					description = <"*Presence of the abnormal breath sound. (en)">
+				>
+				["at0.0.17"] = <
+					text = <"*Present (en)">
+					description = <"*The abnormal breath sound is present. (en)">
+				>
+				["at0.0.18"] = <
+					text = <"*Absent (en)">
+					description = <"*The abnormal breath sound is not present. (en)">
+				>
+				["at0.0.19"] = <
+					text = <"*Clinical description (en)">
+					description = <"*narrative description about the abnormal breath sound. (en)">
+				>
+				["at0.0.2"] = <
+					text = <"*Abdomen (en)">
+					description = <"*The abdomen is examined. (en)">
+				>
+				["at0.0.3"] = <
+					text = <"*Presence (en)">
+					description = <"*">
+				>
+				["at0.0.4"] = <
+					text = <"*Present (en)">
+					description = <"*Breath sounds are heard. (en)">
+				>
+				["at0.0.5"] = <
+					text = <"*Absent (en)">
+					description = <"*Breath sounds are not heard. (en)">
+				>
+				["at0.0.6"] = <
+					text = <"*No abnormality detected (en)">
+					description = <"*Statement that no abnormality was detected (NAD) on physical examination. (en)">
+				>
+				["at0.0.7"] = <
+					text = <"*Normal breath sounds (en)">
+					description = <"*Statement that the breath sounds were heard and of normal character. (en)">
+				>
+				["at0.0.8"] = <
+					text = <"*Abnormal breath sounds (en)">
+					description = <"*">
+				>
+				["at0.0.9"] = <
+					text = <"*Breath sound (en)">
+					description = <"*Name of the breath sound. (en)">
+				>
+				["at0000.1.1"] = <
+					text = <"*Auscultation of breath sounds (en)">
+					description = <"Funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.">
+				>
+				["at0001"] = <
+					text = <"Undersøkt organsystem eller struktur">
+					description = <"Identifisering av det undersøkte organsystemet eller anatomiske strukturen.">
+					comment = <"*Coding of the system or structure examined with a terminology is preferred, where possible. (en)">
+				>
+				["at0001.0.1"] = <
+					text = <"Undersøkt organsystem eller struktur">
+					description = <"Identifisering av det undersøkte organsystemet eller anatomiske strukturen.">
+					comment = <"*Coding of the system or structure examined with a terminology is preferred, where possible. (en)">
+				>
+				["at0002"] = <
+					text = <"Uten anmerkning">
+					description = <"Utsagn om at ingen avvik var oppdaget ved undersøkelsen (U.a.).">
+					comment = <"*Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element. If 'No abnormality detected' is selected, then recording of other examination data elements becomes redundant, with the exception of only the 'Clinical interpretation' data element, which may be useful if a normal statement is desired for recording, for example 'Normal examination'. (en)">
+				>
+				["at0002.0.1"] = <
+					text = <"Uten anmerkning">
+					description = <"Utsagn om at ingen avvik var oppdaget ved undersøkelsen (U.a.).">
+					comment = <"*Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element. If 'No abnormality detected' is selected, then recording of other examination data elements becomes redundant, with the exception of only the 'Clinical interpretation' data element, which may be useful if a normal statement is desired for recording, for example 'Normal examination'. (en)">
+				>
+				["at0003"] = <
+					text = <"Klinisk beskrivelse">
+					description = <"Fritekstbeskrivelse av de overordnede funnene ved den fysiske undersøkelsen.">
+				>
+				["at0004"] = <
+					text = <"Spesifikke funn">
+					description = <"Ytterligere strukturerte detaljer om undersøkelsesfunnene.">
+				>
+				["at0005"] = <
+					text = <"Multimediarepresentasjon">
+					description = <"Digitale bilder, video eller diagram som representerer undersøkelsesfunnene.">
+				>
+				["at0006"] = <
+					text = <"Fortolkning">
+					description = <"Enkelt ord, setning, frase eller kort beskrivelse som representerer den kliniske betydning og viktigheten av funnene ved den kliniske undersøkelsen.">
+					comment = <"Koding med terminologi foretrekkes når mulig. For eksempel \"normal undersøkelse\" eller \"tympanisk membran perforasjon\".">
+				>
+				["at0007"] = <
+					text = <"Kommentar">
+					description = <"Ytterligere fritekst om funn ved undersøkelsen, som ikke dekkes av andre elementer.">
+				>
+				["at0008"] = <
+					text = <"Undersøkelse ikke utført">
+					description = <"Detaljer for å eksplisitt registrere at denne undersøkelsen ikke ble utført.">
+				>
+				["at0011"] = <
+					text = <"Strukturert anatomisk lokalisasjon">
+					description = <"Angivelse av en strukturert anatomisk lokalisering av det undersøkte organsystemet eller anatomiske strukturen.">
+					comment = <"Hvis anatomisk lokalisasjon er entydig identifisert i elementet \"Undersøkt organsystem eller struktur\" er dette SLOTet ikke nødvendig å benytte.">
+				>
+				["at0012"] = <
+					text = <"Anatomisk lokalisasjon">
+					description = <"Identifisering av et enkelt fysisk sted enten på eller i menneskekroppen.">
+					comment = <"*If the body site has been fully identified in the 'System or structure examined' data element, this data element becomes redundant. (en)">
+				>
+			>
+		>
+		["de"] = <
+			items = <
+				["at0.0.1"] = <
+					text = <"Brustkorb">
+					description = <"Der Brustkorb wird untersucht.">
+				>
+				["at0.0.10"] = <
+					text = <"Keuchen">
+					description = <"Pfeifgeräusche, die beim Atmen in den Atemwegen entstehen. Auch als „Rhonchi“ bezeichnet.">
+				>
+				["at0.0.11"] = <
+					text = <"Knistern">
+					description = <"Klickende, rasselnde oder knisternde Geräusche, die beim Atmen in den Atemwegen entstehen. Auch als Krepitationen bezeichnet.">
+				>
+				["at0.0.12"] = <
+					text = <"Phase">
+					description = <"Phase des Atemzyklus.">
+				>
+				["at0.0.13"] = <
+					text = <"Inspiratorisch">
+					description = <"Nur beim Einatmen.">
+				>
+				["at0.0.14"] = <
+					text = <"Exspiratorisch">
+					description = <"Nur beim Ausatmen.">
+				>
+				["at0.0.15"] = <
+					text = <"Inspiratorisch und exspiratorisch">
+					description = <"Sowohl beim Einatmen als auch beim Ausatmen.">
+				>
+				["at0.0.16"] = <
+					text = <"Vorhandensein">
+					description = <"Vorhandensein eines abnormalen Atemgeräusches.">
+				>
+				["at0.0.17"] = <
+					text = <"Vorhanden">
+					description = <"Das abnormale Atemgeräusch ist vorhanden.">
+				>
+				["at0.0.18"] = <
+					text = <"Fehlend">
+					description = <"Das abnormale Atemgeräusch ist nicht vorhanden.">
+				>
+				["at0.0.19"] = <
+					text = <"Klinische Beschreibung">
+					description = <"Narrative Beschreibung des abnormalen Atemgeräusches.">
+				>
+				["at0.0.2"] = <
+					text = <"Bauch">
+					description = <"Der Bauch wird untersucht.">
+				>
+				["at0.0.3"] = <
+					text = <"Vorhandensein">
+					description = <"Das Vorhandensein von Atemgeräuschen.">
+				>
+				["at0.0.4"] = <
+					text = <"Vorhanden">
+					description = <"Es sind Atemgeräusche zu hören.">
+				>
+				["at0.0.5"] = <
+					text = <"Fehlend">
+					description = <"Atemgeräusche sind nicht zu hören.">
+				>
+				["at0.0.6"] = <
+					text = <"Ohne Befund">
+					description = <"Erklärung, dass bei der körperlichen Untersuchung keine Anomalien festgestellt wurden.">
+				>
+				["at0.0.7"] = <
+					text = <"Normale Atemgeräusche">
+					description = <"Aussage, dass die Atemgeräusche hörbar waren und einen normalen Charakter hatten.">
+				>
+				["at0.0.8"] = <
+					text = <"Abnormale Atemgeräusche">
+					description = <"Einzelheiten zu abnormalen Atemgeräuschen, die bei der Auskultation zu hören sind.">
+				>
+				["at0.0.9"] = <
+					text = <"Atemgeräusch">
+					description = <"Name des Atemgeräusches.">
+				>
+				["at0000.1.1"] = <
+					text = <"Auskultation von Atemgeräuschen">
+					description = <"Befunde, die bei der Auskultation von Atemgeräuschen im Brust- oder Bauchraum beobachtet werden.">
+				>
+				["at0001"] = <
+					text = <"Untersuchtes System oder untersuchte Struktur">
+					description = <"Identifizierung des untersuchten Körpersystems oder der anatomischen Struktur.">
+					comment = <"Eine Kodierung des untersuchten Systems bzw. der untersuchten Struktur mit einer Terminologie ist, soweit möglich, zu bevorzugen.">
+				>
+				["at0001.0.1"] = <
+					text = <"Untersuchtes System oder untersuchte Struktur">
+					description = <"Identifizierung des untersuchten Körpersystems oder der anatomischen Struktur.">
+					comment = <"Eine Kodierung des untersuchten Systems bzw. der untersuchten Struktur mit einer Terminologie ist, soweit möglich, zu bevorzugen.">
+				>
+				["at0002"] = <
+					text = <"Ohne Befund">
+					description = <"Erklärung, dass bei der körperlichen Untersuchung keine Anomalien festgestellt wurden.">
+					comment = <"Als „Wahr“ aufzeichnen, wenn bei der Untersuchung keine Anomalie festgestellt wurde. Spezifische Aussagen zur Untersuchung können in das Datenelement „Klinische Interpretation“ aufgenommen werden. Wenn „Keine Anomalie festgestellt“ ausgewählt ist, wird die Aufzeichnung anderer Untersuchungsdatenelemente überflüssig, mit Ausnahme des Datenelements „Klinische Interpretation“, das nützlich sein kann, wenn eine normale Aussage zur Aufzeichnung gewünscht wird, z. B. „Normale Untersuchung“.">
+				>
+				["at0002.0.1"] = <
+					text = <"Ohne Befund">
+					description = <"Erklärung, dass bei der körperlichen Untersuchung keine Anomalien festgestellt wurden.">
+					comment = <"Als „Wahr“ aufzeichnen, wenn bei der Untersuchung keine Anomalie festgestellt wurde. Spezifische Aussagen zur Untersuchung können in das Datenelement „Klinische Interpretation“ aufgenommen werden. Wenn „Keine Anomalie festgestellt“ ausgewählt ist, wird die Aufzeichnung anderer Untersuchungsdatenelemente überflüssig, mit Ausnahme des Datenelements „Klinische Interpretation“, das nützlich sein kann, wenn eine normale Aussage zur Aufzeichnung gewünscht wird, z. B. „Normale Untersuchung“.">
+				>
+				["at0003"] = <
+					text = <"Klinische Beschreibung">
+					description = <"Narrative Beschreibung der gesamten bei der körperlichen Untersuchung festgestellten Befunde.">
+				>
+				["at0004"] = <
+					text = <"Untersuchungsergebnisse">
+					description = <"Strukturierte Angaben zu den Befunden der körperlichen Untersuchung.">
+				>
+				["at0005"] = <
+					text = <"Multimediale Darstellung">
+					description = <"Digitales Bild, Video oder Diagramm, das die Ergebnisse der körperlichen Untersuchung darstellt.">
+				>
+				["at0006"] = <
+					text = <"Klinische Interpretation">
+					description = <"Einzelnes Wort, Ausdruck oder Kurzbeschreibung der klinischen Bedeutung und Aussagekraft der körperlichen Untersuchungsbefunde.">
+					comment = <"Wenn möglich, sollte die „Klinische Interpretation“ vorzugsweise mit einer Terminologie kodiert werden.">
+				>
+				["at0007"] = <
+					text = <"Kommentar">
+					description = <"Zusätzlicher Freitext über die allgemeinen körperlichen Untersuchungsergebnisse, die in anderen Bereichen nicht erfasst werden konnten.">
+				>
+				["at0008"] = <
+					text = <"Untersuchung nicht durchgeführt">
+					description = <"Details, um explizit zu erfassen, dass diese Untersuchung nicht durchgeführt wurde.">
+				>
+				["at0011"] = <
+					text = <"Körperstelle strukturiert">
+					description = <"Strukturierte Beschreibung des untersuchten Körperbereichs.">
+					comment = <"Wenn die Körperstelle im Datenelement „Untersuchtes System oder untersuchte Struktur“ oder „Körperstelle“ vollständig identifiziert wurde, wird dieser SLOT überflüssig.">
+				>
+				["at0012"] = <
+					text = <"Körperstelle">
+					description = <"Identifizierung des zu untersuchenden Körperbereichs.">
+					comment = <"Wenn die Körperstelle im Datenelement „Untersuchtes System oder untersuchte Struktur“ vollständig identifiziert wurde, wird dieses Datenelement überflüssig.">
+				>
+			>
+		>
+	>
+	term_bindings = <
+		["SNOMED-CT"] = <
+			items = <
+				["at0.0.1"] = <[SNOMED-CT::51185008]>
+				["at0.0.2"] = <[SNOMED-CT::113345001]>
+			>
+		>
+	>

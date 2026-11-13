@@ -21,8 +21,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use ferroehr::config::binding::Providers;
-use ferroehr::config::clients::SystemClient;
 use ferroehr::error::ServiceError;
+use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::party_binding::source::BindingSource;
 use ferroehr::versioning::committer::bound::BoundDetails;
 
@@ -33,7 +33,7 @@ use ferrohealth_smart::party::binding::PartyBinding;
 use ferrohealth_smart::party::{GroupsCause, Outcome, PartyRef, Represented};
 use ferrohealth_smart::resource::{Access, Caller};
 
-use super::{AuthError, RepresentedEhr};
+use super::AuthError;
 
 mod jit;
 
@@ -57,8 +57,9 @@ pub(crate) struct Binding {
     /// Each issuer's `identifier_issuer`s, which a `refused-unbound` problem
     /// names so the operator can provision the person.
     identifier_issuers: BTreeMap<String, Vec<String>>,
-    /// The just-in-time creation of each issuer that sets `jit = true`.
-    jit: BTreeMap<String, jit::Jit>,
+    /// The just-in-time creation of each bound `persons` issuer, or why the
+    /// mapping cannot write a provisional `PERSON`.
+    jit: Result<BTreeMap<String, jit::Jit>, Vec<String>>,
     /// `[authz.assurance]`, which an `admit_assurance` condition reads.
     assurance: AssuranceSection,
 }
@@ -92,34 +93,42 @@ impl std::fmt::Debug for Binding {
     }
 }
 
+/// Why the party binding of `[[auth.party]]` and `[authz.party_binding]`
+/// cannot be built.
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum BindingRefused {
+    /// `[[auth.party]]` tables bind logins, but no party source was given to
+    /// look them up in, so every caller would be served unbound.
+    #[error(
+        "[[auth.party]] binds logins to parties, but no party source was given to look them up in"
+    )]
+    NoSource,
+    /// The shared crate refuses the binding.
+    #[error("authz.party_binding")]
+    Shared(#[source] ferroehr::config::binding::BindingError),
+}
+
 /// Returns the party binding of `config`'s `[[auth.party]]` tables and
-/// `[authz.party_binding]`, looking logins up in `source`; `None` without a
-/// source, or when `[auth]` is off or binds no issuer.
+/// `[authz.party_binding]`, looking logins up in `source`; `None` when
+/// `[auth]` is off or binds no issuer.
 ///
 /// # Errors
-/// A message naming what the shared crate refuses in the binding.
+/// [`BindingRefused::NoSource`] for `[[auth.party]]` tables without a
+/// `source`, and [`BindingRefused::Shared`] for a binding the shared crate
+/// refuses.
 pub(super) fn binding(
     config: &crate::config::AppConfig,
     resolved: &ferrohealth_smart::config::Resolved,
     source: Option<Arc<dyn BindingSource>>,
-) -> Result<Option<Arc<Binding>>, String> {
-    let Some(source) = source.filter(|_| resolved.enabled && !resolved.party.is_empty()) else {
+) -> Result<Option<Arc<Binding>>, BindingRefused> {
+    if !resolved.enabled || resolved.party.is_empty() {
         return Ok(None);
-    };
+    }
+    let source = source.ok_or(BindingRefused::NoSource)?;
     let lookup: Arc<dyn ferrohealth_smart::party::source::PartySource> =
         Arc::<dyn BindingSource>::clone(&source);
-    let binding = ferroehr::config::binding::party_binding(
-        &config.auth,
-        &config.party_binding,
-        resolved,
-        lookup,
-    )
-    .map_err(|e| {
-        format!(
-            "authz.party_binding: {}",
-            ferroehr::error::ErrorChain::new(&e)
-        )
-    })?;
+    let binding = ferroehr::config::binding::party_binding(&config.party_binding, resolved, lookup)
+        .map_err(BindingRefused::Shared)?;
     let tenant_claims = resolved
         .issuers
         .iter()
@@ -136,7 +145,7 @@ pub(super) fn binding(
     let mut identifier_issuers: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for party in &resolved.party {
         identifier_issuers
-            .entry(party.issuer.clone())
+            .entry(party.issuer.expose().to_owned())
             .or_default()
             .push(party.identifier_issuer.clone());
     }
@@ -185,12 +194,13 @@ impl Binding {
             name,
             provider: self.provider_of(caller),
             namespace: self.namespace.clone(),
+            portal: None,
         }))
     }
 
     /// The healthcare provider `caller` acts for, as `(issuer, id)`: the one
     /// provider, or the table of the tenant its token names.
-    fn provider_of(&self, caller: &Caller) -> Option<(String, String)> {
+    pub(super) fn provider_of(&self, caller: &Caller) -> Option<(String, String)> {
         match self.provider.as_ref()? {
             Providers::One(one) => Some((one.issuer.clone(), one.id.clone())),
             Providers::ByTenant(tables) => {
@@ -225,13 +235,38 @@ impl Binding {
         roles: &[String],
     ) -> Result<Option<Outcome>, AuthError> {
         let issuer = caller.issuer().unwrap_or("-");
-        let Some(jit) = self.jit.get(issuer).filter(|jit| jit.creates(caller)) else {
+        if jit::candidate(caller).is_none() {
             return Ok(None);
+        }
+        let admissions = self.source.admissions(issuer).await.map_err(|error| {
+            tracing::warn!(
+                error = %ferroehr::error::ErrorChain::new(&error),
+                "the admission rules of just-in-time creation could not be read"
+            );
+            AuthError::PartyUnavailable { retry_after: None }
+        })?;
+        if admissions.is_empty() {
+            return Ok(None);
+        }
+        let jit = match &self.jit {
+            Ok(tables) => match tables.get(issuer) {
+                Some(jit) => jit,
+                None => return Ok(None),
+            },
+            Err(reasons) => {
+                tracing::warn!(
+                    issuer,
+                    reasons = %reasons.join("; "),
+                    "a create_at_login grant admits this issuer's logins, and the party mapping \
+                     cannot write a provisional PERSON"
+                );
+                return Ok(None);
+            }
         };
         let person = match jit.person(
             caller,
-            roles,
-            &self.assurance,
+            &admissions,
+            (roles, &self.assurance),
             (&self.namespace, self.provider_of(caller)),
         ) {
             Ok(person) => person,
@@ -391,7 +426,10 @@ pub(super) const fn unrecorded() -> AuthError {
 /// `represented` claim names, matched on the party id without regard to case.
 // NOTE: no openEHR spec governs resolving a login to a party, our own design: the
 // claim is a bare string, and the source names a subject by its container id.
-fn represented_subject<'a>(outcome: &'a Outcome, represented: &str) -> Option<&'a PartyRef> {
+pub(super) fn represented_subject<'a>(
+    outcome: &'a Outcome,
+    represented: &str,
+) -> Option<&'a PartyRef> {
     let represented = represented.trim();
     outcome
         .bound()?
@@ -399,43 +437,6 @@ fn represented_subject<'a>(outcome: &'a Outcome, represented: &str) -> Option<&'
         .iter()
         .map(Represented::subject)
         .find(|subject| subject.id().eq_ignore_ascii_case(represented))
-}
-
-/// The EHR the representative of `access` is confined to, `None` for any
-/// other caller: the EHR whose `EHR_STATUS.subject.external_ref` names the
-/// represented subject (#5086), looked up through `service`, which records the
-/// resolution on the access log.
-///
-/// # Errors
-/// [`AuthError::PartyRefused`] when the bound party represents no such
-/// subject, and [`AuthError::PartyUnavailable`] when the store cannot answer.
-pub(super) async fn represented_ehr(
-    service: &ferroehr::service::FerroEhrService,
-    access: &Access,
-) -> Result<Option<RepresentedEhr>, AuthError> {
-    let Some(caller) = access.caller() else {
-        return Ok(None);
-    };
-    let CallerKind::Representative { represented, .. } = caller.kind() else {
-        return Ok(None);
-    };
-    let subject = caller
-        .party()
-        .and_then(|outcome| represented_subject(outcome, represented))
-        .ok_or_else(unrecorded)?;
-    let found = service
-        .ehr_id_for_subject(subject.id(), subject.namespace())
-        .await
-        .map_err(|error| {
-            tracing::warn!(
-                error = %ferroehr::error::ErrorChain::new(&error),
-                "the EHR of the represented subject could not be read"
-            );
-            AuthError::PartyUnavailable { retry_after: None }
-        })?;
-    Ok(Some(RepresentedEhr {
-        ehr_id: found.map(|ehr| ehr.to_string()),
-    }))
 }
 
 /// The refusal `outcome` answers, or `None` for an outcome the request
@@ -525,24 +526,9 @@ pub(super) fn detail(code: &str, named: Option<&Named>) -> String {
 /// Returns the refusal of a caller its kind does not admit to the request
 /// at all: a system caller holding a `user/` or `patient/` scope, which names
 /// a person the token does not carry (SMART on openEHR `master08-scopes`
-/// §Resource Scopes; RFC 9068 §2.2), and someone acting for a patient on a
-/// `patients` issuer (RFC 8693 §4.1 `act`), whom FerroEHR binds to no party
-/// of its own. No openEHR spec governs what a caller kind may do: our own
-/// design.
+/// §Resource Scopes; RFC 9068 §2.2). No openEHR spec governs what a caller
+/// kind may do: our own design.
 pub(super) fn kind_refusal(caller: &Caller) -> Option<AuthError> {
-    let inner = match caller.kind() {
-        CallerKind::Guest(inner) => inner.as_ref(),
-        kind => kind,
-    };
-    if matches!(inner, CallerKind::PatientRepresentative { .. }) {
-        return Some(AuthError::KindRefused {
-            code: "refused-patient-representative",
-            message: "a token acting for a patient is not admitted: the representative is bound \
-                      to no party of this deployment"
-                .to_owned(),
-            principal: None,
-        });
-    }
     let personal = caller
         .scope()
         .iter()
@@ -561,24 +547,21 @@ pub(super) fn kind_refusal(caller: &Caller) -> Option<AuthError> {
 /// (`AUDIT_DETAILS.committer` 1..1 — RM common master04 §Audit Details). A
 /// Bearer subject was minted by the identity provider, so the audit records the
 /// validated token issuer; Basic credentials are local and carry none. A
-/// system caller carries the `[[authz.system_client]]` table of `clients`
-/// that declares its issuer and client, when one does.
+/// system caller's client `ACTOR` is `granted`'s client, the party its issuer
+/// and `client_id` name in the policy parties, when one does. A patient-portal
+/// representative commits as the representative, writing through a
+/// patient-context credential, their `PERSON` in the details.
 pub(super) fn committer_identity(
     principal: &super::Principal,
-    clients: &[Arc<SystemClient>],
+    granted: &Capabilities,
 ) -> ferroehr::versioning::committer::CommitterIdentity {
     let caller = principal.access.caller();
     let system = caller.is_some_and(|caller| matches!(caller.kind(), CallerKind::System));
     let client = super::client_of(principal);
-    let system_client = caller.filter(|_| system).and_then(|caller| {
-        let named = caller.client_id().or(client.as_deref())?;
-        clients
-            .iter()
-            .find(|table| {
-                Some(table.issuer.as_str()) == caller.issuer() && table.client_id == named
-            })
-            .cloned()
-    });
+    let portal = principal
+        .represented
+        .as_ref()
+        .and_then(|represented| represented.portal.as_ref());
     ferroehr::versioning::committer::CommitterIdentity {
         subject: principal.subject.clone(),
         id_type: match principal.method {
@@ -594,18 +577,31 @@ pub(super) fn committer_identity(
                 .map(str::to_owned),
         },
         client,
-        person: crate::smart::acts_as_person(principal),
+        person: crate::smart::acts_as_person(principal) || portal.is_some(),
         party: principal
             .access
             .caller()
             .and_then(Caller::party)
             .and_then(Outcome::bound)
             .cloned(),
-        representative: caller
-            .is_some_and(|caller| matches!(caller.kind(), CallerKind::Representative { .. })),
-        bound: None,
+        representative: portal.is_some()
+            || caller
+                .is_some_and(|caller| matches!(caller.kind(), CallerKind::Representative { .. })),
+        bound: portal.map(|portal| BoundDetails {
+            namespace: portal.namespace.clone(),
+            portal: Some(ferroehr::versioning::committer::bound::PortalParty {
+                person: portal.person,
+                relationship: portal.relationship.clone(),
+                login_issuer: portal.login_issuer.clone(),
+                login: portal.login.clone(),
+            }),
+            ..BoundDetails::default()
+        }),
         system,
-        system_client,
+        agent: granted
+            .client()
+            .filter(|_| system)
+            .map(|client| client.party),
         external: super::declared::committing(&principal.access),
     }
 }
@@ -702,5 +698,69 @@ mod tests {
                 ..
             })
         ));
+    }
+
+    /// An `[auth]` section with one `persons` issuer and its `[[auth.party]]`
+    /// table.
+    fn bound_section() -> ferrohealth_smart::config::AuthSection {
+        let issuer = ferrohealth_secret::secret_url::SecretUrl::new("https://login.example");
+        ferrohealth_smart::config::AuthSection {
+            enabled: true,
+            issuer: vec![ferrohealth_smart::config::IssuerEntry {
+                issuer: issuer.clone(),
+                kind: Some(ferrohealth_smart::kind::IssuerKind::Persons),
+                audience: vec!["ferroehr".to_owned()],
+                ..ferrohealth_smart::config::IssuerEntry::default()
+            }],
+            party: vec![ferrohealth_smart::party::config::PartySection {
+                issuer,
+                identifier_issuer: "urn:login".to_owned(),
+                identifier_type: "guid".to_owned(),
+                ..ferrohealth_smart::party::config::PartySection::default()
+            }],
+            ..ferrohealth_smart::config::AuthSection::default()
+        }
+    }
+
+    #[test]
+    fn party_tables_without_a_source_are_refused_naming_the_source() {
+        let config = crate::config::AppConfig::default();
+        let resolved =
+            ferroehr::config::auth::resolve(&bound_section()).expect("the [auth] section resolves");
+        let refused = binding(&config, &resolved, None);
+        assert!(
+            matches!(refused, Err(BindingRefused::NoSource)),
+            "{refused:?}"
+        );
+        let unbound = ferrohealth_smart::config::AuthSection {
+            party: Vec::new(),
+            ..bound_section()
+        };
+        let resolved =
+            ferroehr::config::auth::resolve(&unbound).expect("the [auth] section resolves");
+        assert!(
+            matches!(binding(&config, &resolved, None), Ok(None)),
+            "no [[auth.party]] table needs no source"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_authenticator_refuses_party_tables_without_a_source() {
+        let mut config = crate::config::AppConfig::default();
+        *config.auth.shared = bound_section();
+        let replay: Arc<dyn ferrohealth_smart::sender::replay::ReplayStore> =
+            Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new());
+        let Err(message) = super::super::Authenticator::new(
+            &config,
+            None,
+            None,
+            replay,
+            crate::test_support::standing(),
+        )
+        .await
+        else {
+            panic!("[[auth.party]] without a party source builds no authenticator");
+        };
+        assert!(message.contains("no party source"), "{message}");
     }
 }

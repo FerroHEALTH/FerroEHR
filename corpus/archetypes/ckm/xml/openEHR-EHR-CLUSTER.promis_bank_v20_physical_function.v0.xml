@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -513,23 +513,23 @@ vacuuming or yard work?</items>
       </items>
       <items code="at0002">
         <items id="text">Without any difficulty</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0003">
         <items id="text">With a little difficulty</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0004">
         <items id="text">With some difficulty</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">With much difficulty</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Unable to do</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Are you able to go up and down stairs at a normal pace?</items>
@@ -560,23 +560,23 @@ vacuuming or yard work?</items>
       </items>
       <items code="at0002">
         <items id="text">Ohne jede Schwierigkeit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0003">
         <items id="text">Mit geringen Schwierigkeiten</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0004">
         <items id="text">Mit einigen Schwierigkeiten</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0005">
         <items id="text">Mit großen Schwierigkeiten</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0006">
         <items id="text">Kann ich gar nicht</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0007">
         <items id="text">Können Sie mit normaler Geschwindigkeit Treppen hoch- und runtergehen?</items>
@@ -596,4 +596,3 @@ vacuuming or yard work?</items>
     </term_definitions>
   </ontology>
 </archetype>
-

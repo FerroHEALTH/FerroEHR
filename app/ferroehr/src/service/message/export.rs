@@ -142,7 +142,7 @@ impl FerroEhrService {
                 format!("no EHR with id {an_ehr_id}"),
             ));
         }
-        self.refuse_objected_export(an_ehr_id).await?;
+        self.admit_export(an_ehr_id).await?;
         let mut served = Vec::new();
         let extract = self.export_whole_ehr(an_ehr_id, 1, &mut served).await?;
         self.emit_extract_audit(
@@ -189,7 +189,7 @@ impl FerroEhrService {
                 resolve_entity_ehr(self, entity.ehr_id.as_deref(), entity.subject_id.as_deref())
                     .await?;
 
-            self.refuse_objected_export(ehr_id).await?;
+            self.admit_export(ehr_id).await?;
 
             let vo_kinds = self
                 .entity_primary_set(ehr_id, entity, criteria_present, &extract_spec)
@@ -461,7 +461,7 @@ impl FerroEhrService {
     /// # Errors
     /// [`ServiceError::Restricted`] (`403`) when either mark stands; the
     /// storage read error of the mark read.
-    async fn refuse_objected_export(&self, ehr_id: EhrId) -> Result<(), ServiceError> {
+    pub(super) async fn refuse_objected_export(&self, ehr_id: EhrId) -> Result<(), ServiceError> {
         let Some(marks) = crate::storage::marks::ehr_marks(&self.pool, ehr_id).await? else {
             return Ok(());
         };

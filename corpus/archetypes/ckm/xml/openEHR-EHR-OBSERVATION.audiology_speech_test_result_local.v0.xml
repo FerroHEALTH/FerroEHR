@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -9,8 +9,8 @@
   <is_controlled>false</is_controlled>
   <description>
     <original_author id="date">2025-12-01</original_author>
-    <original_author id="name">Mareike Buhl </original_author>
-    <original_author id="organisation">Hearing Institute, Institut Pasteur, Paris, France </original_author>
+    <original_author id="name">Mareike Buhl</original_author>
+    <original_author id="organisation">Hearing Institute, Institut Pasteur, Paris, France</original_author>
     <original_author id="email">mareike.buhl@pasteur.fr</original_author>
     <other_contributors>Stephen Chu, NEHTA, Australia</other_contributors>
     <other_contributors>Kathy Currie, Northern Territory Health, Australia</other_contributors>
@@ -2495,7 +2495,7 @@ Not to be used to record audiological speech tests where the presentaton level i
       <items code="at0010">
         <items id="text">Measurement</items>
         <items id="description">The obtained performance result (speech intelligibility in percent) for a test list, sentence or word presented at the given stimulus level.</items>
-        <items id="comment">Can be used for any speech intelligibility result in fixed or adaptive measurements. </items>
+        <items id="comment">Can be used for any speech intelligibility result in fixed or adaptive measurements.</items>
       </items>
       <items code="at0011">
         <items id="text">Stimulus level</items>
@@ -2631,7 +2631,7 @@ Not to be used to record audiological speech tests where the presentaton level i
       <items code="at0091">
         <items id="text">Starting level of varied stimulus</items>
         <items id="description">The initial presentation level of the stimulus varied during the measurement.</items>
-        <items id="comment">Speech level for measurements in quiet and varied stimulus level for measurements in noise. </items>
+        <items id="comment">Speech level for measurements in quiet and varied stimulus level for measurements in noise.</items>
       </items>
       <items code="at0093">
         <items id="text">Presented sensory modalities</items>
@@ -2681,7 +2681,7 @@ Not to be used to record audiological speech tests where the presentaton level i
       <items code="at0107">
         <items id="text">Adaptive test procedure details</items>
         <items id="description">The parameters of the adaptive test procedure.</items>
-        <items id="comment">Applicable for adaptive measurements. </items>
+        <items id="comment">Applicable for adaptive measurements.</items>
       </items>
       <items code="at0109">
         <items id="text">Final step size</items>
@@ -2748,7 +2748,7 @@ Not to be used to record audiological speech tests where the presentaton level i
         <items id="comment">Use published name (including a reference) if possible.&#xD;
 &#xD;
 &#xD;
--&gt; Q for review: should a list of coded text options be added? Is it needed or even plausible since many different speech are available? If yes, which tests should be listed? </items>
+-&gt; Q for review: should a list of coded text options be added? Is it needed or even plausible since many different speech are available? If yes, which tests should be listed?</items>
       </items>
       <items code="at0153">
         <items id="text">Language proficiency of the listener</items>
@@ -2889,7 +2889,7 @@ Not to be used to record audiological speech tests where the presentaton level i
       </items>
       <items code="at0192">
         <items id="text">...</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0194">
         <items id="text">Target speech intelligibility</items>
@@ -2912,28 +2912,28 @@ Not to be used to record audiological speech tests where the presentaton level i
       <items code="at0200">
         <items id="text">Training condition</items>
         <items id="description">Indicates if the measurement was performed for training or test purposes.</items>
-        <items id="comment">Applicable if the speech intelligibility test requires training, for example: Matrix test. </items>
+        <items id="comment">Applicable if the speech intelligibility test requires training, for example: Matrix test.</items>
       </items>
       <items code="at0201">
         <items id="text">SRT calculation method</items>
         <items id="description">Description of SRT calculation method.</items>
         <items id="comment">For example: mean of a certain numbers of reversals in an adaptive measurement, or psychometric function fit for several 'Measurements' at fixed levels. &#xD;
 &#xD;
-Include reference if applicable. </items>
+Include reference if applicable.</items>
       </items>
       <items code="at0202">
         <items id="text">Number of test list</items>
         <items id="description">The number of the used test list.</items>
         <items id="comment">If applicable for the specific test, for example: Matrix sentence test or German monosyllabic speech test. &#xD;
 &#xD;
-Specify in cluster 'Speech recognition threshold' if one test list is used in an adaptive measurement. </items>
+Specify in cluster 'Speech recognition threshold' if one test list is used in an adaptive measurement.</items>
       </items>
       <items code="at0203">
         <items id="text">Number of test list</items>
         <items id="description">The number of the used test list.</items>
         <items id="comment">If applicable for the specific test, for example: Matrix sentence test or German monosyllabic speech test. &#xD;
 &#xD;
-Specify in cluster 'Measurement' if the SRT is calculated from several test lists presented at fixed level or SNR. </items>
+Specify in cluster 'Measurement' if the SRT is calculated from several test lists presented at fixed level or SNR.</items>
       </items>
       <items code="at0204">
         <items id="text">Synthetic female</items>
@@ -2946,4 +2946,3 @@ Specify in cluster 'Measurement' if the SRT is calculated from several test list
     </term_definitions>
   </ontology>
 </archetype>
-

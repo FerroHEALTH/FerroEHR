@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -12,33 +12,50 @@
     <original_author id="name">Heather Leslie</original_author>
     <original_author id="organisation">Atomica Informatics</original_author>
     <original_author id="email">heather.leslie@atomicainformatics.com</original_author>
-    <other_contributors>Nyree Taylor, Sparked FHIR accelerator, Australia</other_contributors>
+    <other_contributors>Vebjørn Arntzen, Oslo University Hospital, Norway</other_contributors>
+    <other_contributors>Sparked AU, CSIRO, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>SB Bhattacharyya, Bhattacharyyas Clinical Records Research &amp; Informatics LLP, India</other_contributors>
+    <other_contributors>Tara Bonet Chinillach, Catalan Health Service, Spain</other_contributors>
+    <other_contributors>Clara Calleja Vega, CatSalut. Servei Català de la Salut., Spain</other_contributors>
+    <other_contributors>Lars Fuhrmann, German Society of Ophthalmology, Germany</other_contributors>
+    <other_contributors>William Goossen, Results 4 Care, Netherlands</other_contributors>
+    <other_contributors>Patricia Homem-Silva, University of Porto, Portugal</other_contributors>
+    <other_contributors>Evelyn Hovenga, EJSH Consulting, Australia</other_contributors>
+    <other_contributors>Heather Leslie, Atomica Informatics, Australia (openEHR Editor)</other_contributors>
+    <other_contributors>Michael Lutz, BITsoft, Germany</other_contributors>
+    <other_contributors>Patrick Fergal McSharry, MSMS(I) and SESLHD, Australia</other_contributors>
+    <other_contributors>Mikael Nyström, Cambio Healthcare Systems AB, Sweden</other_contributors>
+    <other_contributors>Vuk Radnić, Better, Slovenia</other_contributors>
+    <other_contributors>Norwegian Review Summary, Norwegian Public Hospitals, Norway</other_contributors>
+    <other_contributors>Averil Tam, CSIRO, Australia</other_contributors>
+    <other_contributors>Nyree Taylor, CSIRO, Australia (openEHR Editor)</other_contributors>
     <lifecycle_state>in_development</lifecycle_state>
     <other_details id="licence">This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.</other_details>
     <other_details id="custodian_organisation">openEHR Foundation</other_details>
-    <other_details id="references">Functional support requirements, Proposed data group. Sparked AU FHIR accelerator, Australian Clinical Data for Interoperability.&#xD;
+    <other_details id="references">Functional support requirements, Proposed data group, Australian Clinical Data for Interoperability (AUCDI) Release 4 [Internet]. Sparked FHIR Accelerator, CSIRO; [cited 2026 Nov 05]. Unpublished.&#xD;
 &#xD;
-Granger CV, Hamilton BB, Linacre JM, Heinemann AW, Wright BD. Performance profiles of the functional independence measure. Am J Phys Med Rehabil. 1993 Apr;72(2):84-9.</other_details>
+Granger CV, Hamilton BB, Linacre JM, Heinemann AW, Wright BD. Performance profiles of the functional independence measure. Am J Phys Med Rehabil. 1993 Apr;72(2):84-9.&#xD;
+&#xD;
+World Health Organization. International classification of functioning, disability and health (ICF) [Internet]. Geneva: World Health Organization; 2001 [cited 2026 Jan 19]. Available from: https://www.who.int/standards/classifications/international-classification-of-functioning-disability-and-health</other_details>
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">4F8FC2C7F6E89AAEB0816E20213D72FA</other_details>
-    <other_details id="build_uid">3d6ee835-7346-409a-9e4d-5b5c1e33cc28</other_details>
+    <other_details id="MD5-CAM-1.0.1">C166E78CF4454B54EB3AA0F9CF229339</other_details>
+    <other_details id="build_uid">3193d5d5-0a1d-447f-b08d-e22b0795f18a</other_details>
     <other_details id="revision">0.0.1-alpha</other_details>
     <details>
       <language>
         <terminology_id>
           <value>ISO_639-1</value>
         </terminology_id>
-        <code_string>en</code_string>
+        <code_string>nb</code_string>
       </language>
-      <purpose>To record summary information about the supports required to enable or assist an individual to perform an activity.</purpose>
-      <use>Use to record summary information about the supports required to enable or assist an individual when performing an identified activity. This information may be used to inform care planning, support provision, assessment of functional support needs, or service eligibility.&#xD;
+      <purpose>For å registrere sammendragsinformasjon om støtten som er nødvendig for å sette et individ i stand til eller hjelpe et individ med å utføre en aktivitet.</purpose>
+      <use>*Use to record summary information about the supports needed to enable or assist an individual to perform a single activity. This includes an individual who is fully dependent on others to complete the activity.&#xD;
 &#xD;
-These supports may include, but are not limited to:&#xD;
-- human assistance, including physical or cognitive assistance from one or more people&#xD;
-- assistive devices, including medical devices and support animals&#xD;
-- environmental conditions that may support successful performance of an activity, such as a quiet room.&#xD;
+Supports may include human assistance, assistive devices, assistance animals, and environmental conditions, such as a quiet room.&#xD;
+&#xD;
+Support requirements may be identified for activities of everyday life in any setting, such as at home, in residential care, or in hospital.&#xD;
 &#xD;
 Support requirements may be identified across a range of areas of activity and participation including, but not limited to:&#xD;
 - Mobility,&#xD;
@@ -54,19 +71,98 @@ An activity may be:&#xD;
 - A simple or foundational action that can be observed as a discrete activity, such as standing, brushing hair, or gripping a cup.&#xD;
 - A complex or composite action that requires a sequence of simple actions, such as transferring from bed to chair, preparing a meal, managing medications, or driving a car.&#xD;
 &#xD;
-This archetype is one of a set of three related archetypes designed to represent different aspects of how an individual functions in everyday life. Together, these archetypes support structured representation of functional ability, impairments contributing to functional limitations, and the supports required to enable or assist an individual to perform an activity. The other archetypes are:&#xD;
-- OBSERVATION.functional_ability and&#xD;
-- EVALUATION.impairment_summary.</use>
+This information is persistent and is updated as support requirements change. It may inform care planning, allocation of staff and equipment, and determination of service eligibility. It may be recorded on its own or as part of a care plan. Recording a support requirement identifies a need. It does not imply that the support will be provided against the individual's wishes.&#xD;
+&#xD;
+Record one instance of this archetype for each activity, reflecting the support needed when the individual's need for support is greatest. Where an assistive device changes the human assistance needed, such as a hoist for transfers, include the device in the name of the activity.&#xD;
+&#xD;
+This archetype is one of a set of three related archetypes designed to represent different aspects of how an individual functions in everyday life:&#xD;
+- OBSERVATION.functional_ability, which records what an individual can do when performing an activity;&#xD;
+- EVALUATION.impairment_summary, which records an impairment that may limit what an individual can do; and&#xD;
+- EVALUATION.functional_support_requirements, which records the type and level of support an individual needs for an activity.&#xD;
+&#xD;
+In practice, these archetypes are often used alongside others, such as CLUSTER.symptom_sign and EVALUATION.problem_diagnosis. For example:&#xD;
+- For an adult with Parkinson’s disease, tremor is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to drink from a cup using OBSERVATION.functional_ability, motor control using EVALUATION.impairment_summary, and the need for a cup with a lid using EVALUATION.functional_support_requirements.&#xD;
+- For an adult after a stroke, left-sided weakness is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to transfer from bed to chair using OBSERVATION.functional_ability, left lower limb motor control using EVALUATION.impairment_summary, and the need for physical assistance from two people to transfer from bed to chair using EVALUATION.functional_support_requirements.&#xD;
+- For an adult with Alzheimer’s disease, forgetfulness is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to manage medications using OBSERVATION.functional_ability, short-term memory using EVALUATION.impairment_summary, and the need for prompting from a carer using EVALUATION.functional_support_requirements.&#xD;
+- For a child with chronic otitis media, ear discharge is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to follow instructions in the classroom using OBSERVATION.functional_ability, hearing using EVALUATION.impairment_summary, and the need for seating near the teacher using EVALUATION.functional_support_requirements.. (en)</use>
+      <misuse>Brukes ikke for å registrere et individs evne til å utføre en aktivitet eller delta i en livssituasjon. Bruk arketypen OBSERVATION.functional_ability (Funksjonell evne) til dette formålet.&#xD;
+&#xD;
+Brukes ikke for å registrere en underliggende funksjonsnedsettelse som påvirker en kroppsfunksjon eller kroppsstruktur. Bruk arketypen EVALUATION.impairment_summary (Sammendrag av funksjonsnedsettelse) til dette formålet.&#xD;
+&#xD;
+Brukes ikke for å registrere resultatet av en vurdering eller skala for funksjonell uavhengighet. Bruk en egnet OBSERVATION-arketype til dette formålet.&#xD;
+&#xD;
+Brukes ikke for å registrere intervensjoner som ble levert under en spesifikk omsorgshendelse eller intervensjon. Bruk en egnet ACTION-arketype for å dokumentere intervensjoner eller tjenester som er levert som del av omsorgsutførelsen.</misuse>
+      <copyright />
+    </details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>en</code_string>
+      </language>
+      <purpose>To record summary information about the supports needed to enable or assist an individual to perform an activity.</purpose>
+      <use>Use to record summary information about the supports needed to enable or assist an individual to perform a single activity. This includes an individual who is fully dependent on others to complete the activity.&#xD;
+&#xD;
+Supports may include human assistance, assistive devices, assistance animals, and environmental conditions, such as a quiet room.&#xD;
+&#xD;
+Support requirements may be identified for activities of everyday life in any setting, such as at home, in residential care, or in hospital.&#xD;
+&#xD;
+Support requirements may be identified across a range of areas of activity and participation including, but not limited to:&#xD;
+- Mobility,&#xD;
+- Self-care,&#xD;
+- Communication,&#xD;
+- Domestic life,&#xD;
+- Attending work or school,&#xD;
+- Community participation,&#xD;
+- Recognised groupings of activities, such as personal activities of daily living (pADLs) or instrumental activities of daily living (iADLs), and&#xD;
+- Activities performed in regulated, occupational, or safety-critical contexts.&#xD;
+&#xD;
+An activity may be:&#xD;
+- A simple or foundational action that can be observed as a discrete activity, such as standing, brushing hair, or gripping a cup.&#xD;
+- A complex or composite action that requires a sequence of simple actions, such as transferring from bed to chair, preparing a meal, managing medications, or driving a car.&#xD;
+&#xD;
+This information is persistent and is updated as support requirements change. It may inform care planning, allocation of staff and equipment, and determination of service eligibility. It may be recorded on its own or as part of a care plan. Recording a support requirement identifies a need. It does not imply that the support will be provided against the individual's wishes.&#xD;
+&#xD;
+Record one instance of this archetype for each activity, reflecting the support needed when the individual's need for support is greatest. Where an assistive device changes the human assistance needed, such as a hoist for transfers, include the device in the name of the activity.&#xD;
+&#xD;
+This archetype is one of a set of three related archetypes designed to represent different aspects of how an individual functions in everyday life:&#xD;
+- OBSERVATION.functional_ability, which records what an individual can do when performing an activity;&#xD;
+- EVALUATION.impairment_summary, which records an impairment that may limit what an individual can do; and&#xD;
+- EVALUATION.functional_support_requirements, which records the type and level of support an individual needs for an activity.&#xD;
+&#xD;
+In practice, these archetypes are often used alongside others, such as CLUSTER.symptom_sign and EVALUATION.problem_diagnosis. For example:&#xD;
+- For an adult with Parkinson’s disease, tremor is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to drink from a cup using OBSERVATION.functional_ability, motor control using EVALUATION.impairment_summary, and the need for a cup with a lid using EVALUATION.functional_support_requirements.&#xD;
+- For an adult after a stroke, left-sided weakness is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to transfer from bed to chair using OBSERVATION.functional_ability, left lower limb motor control using EVALUATION.impairment_summary, and the need for physical assistance from two people to transfer from bed to chair using EVALUATION.functional_support_requirements.&#xD;
+- For an adult with Alzheimer’s disease, forgetfulness is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to manage medications using OBSERVATION.functional_ability, short-term memory using EVALUATION.impairment_summary, and the need for prompting from a carer using EVALUATION.functional_support_requirements.&#xD;
+- For a child with chronic otitis media, ear discharge is recorded using CLUSTER.symptom_sign, the condition using EVALUATION.problem_diagnosis, the ability to follow instructions in the classroom using OBSERVATION.functional_ability, hearing using EVALUATION.impairment_summary, and the need for seating near the teacher using EVALUATION.functional_support_requirements..</use>
       <misuse>Not to be used to record an individual's ability to perform an activity or participate in a life situation. Use the OBSERVATION.functional_ability archetype for this purpose.&#xD;
 &#xD;
-Not to be used to record an underlying impairment of body function or structure. Use the EVALUATION.impairment_summary archetype for this purpose.&#xD;
+Not to be used to record an impairment of physiological or psychological function. Use the EVALUATION.impairment_summary archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record a diagnosis, including a diagnosis of impairment or disability. Use the EVALUATION.problem_diagnosis archetype for this purpose.&#xD;
 &#xD;
 Not to be used to record the outcome of a functional independence assessment or scoring system. Use an appropriate OBSERVATION archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record a request or order for a support, service, or device. Use an appropriate INSTRUCTION archetype for this purpose.&#xD;
+&#xD;
+Not to be used to record who is allocated or rostered to provide support, the organisation providing it, or where it is provided. This belongs to care planning and service arrangements.&#xD;
 &#xD;
 Not to be used to record the interventions that were provided during a specific care event or intervention. Use an appropriate ACTION archetype to document interventions or services delivered as part of care provision.</misuse>
       <copyright>© openEHR Foundation</copyright>
     </details>
   </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>nb</code_string>
+    </language>
+    <author id="name">Silje Ljosland Bakke, John Tore Valand, Marte Vassli Gullesen, Ciprian Gerstenberger</author>
+    <author id="organisation">Helse Vest IKT, Helse Nord IKT</author>
+    <author id="email">silje.ljosland.bakke@helse-vest-ikt.no, john.tore.valand@helse-vest-ikt.no, marte.vassli.gullesen@hnikt.no, ciprian-virgil.gerstenberger@hnikt.no</author>
+  </translations>
   <uid>
     <value>4bce40ec-2b5e-40eb-86b4-c5fdf3951d04</value>
   </uid>
@@ -393,6 +489,18 @@ Not to be used to record the interventions that were provided during a specific 
                   </children>
                 </attributes>
               </children>
+              <children xsi:type="C_COMPLEX_OBJECT">
+                <rm_type_name>DV_TEXT</rm_type_name>
+                <occurrences>
+                  <lower_included>true</lower_included>
+                  <upper_included>true</upper_included>
+                  <lower_unbounded>false</lower_unbounded>
+                  <upper_unbounded>false</upper_unbounded>
+                  <lower>1</lower>
+                  <upper>1</upper>
+                </occurrences>
+                <node_id />
+              </children>
             </attributes>
           </children>
           <children xsi:type="C_COMPLEX_OBJECT">
@@ -427,6 +535,37 @@ Not to be used to record the interventions that were provided during a specific 
                   <upper>1</upper>
                 </occurrences>
                 <node_id />
+                <attributes xsi:type="C_SINGLE_ATTRIBUTE">
+                  <rm_attribute_name>magnitude</rm_attribute_name>
+                  <existence>
+                    <lower_included>true</lower_included>
+                    <upper_included>true</upper_included>
+                    <lower_unbounded>false</lower_unbounded>
+                    <upper_unbounded>false</upper_unbounded>
+                    <lower>1</lower>
+                    <upper>1</upper>
+                  </existence>
+                  <children xsi:type="C_PRIMITIVE_OBJECT">
+                    <rm_type_name>INTEGER</rm_type_name>
+                    <occurrences>
+                      <lower_included>true</lower_included>
+                      <upper_included>true</upper_included>
+                      <lower_unbounded>false</lower_unbounded>
+                      <upper_unbounded>false</upper_unbounded>
+                      <lower>1</lower>
+                      <upper>1</upper>
+                    </occurrences>
+                    <node_id />
+                    <item xsi:type="C_INTEGER">
+                      <range>
+                        <lower_included>true</lower_included>
+                        <lower_unbounded>false</lower_unbounded>
+                        <upper_unbounded>true</upper_unbounded>
+                        <lower>1</lower>
+                      </range>
+                    </item>
+                  </children>
+                </attributes>
               </children>
             </attributes>
           </children>
@@ -652,8 +791,8 @@ Not to be used to record the interventions that were provided during a specific 
     <term_definitions language="en">
       <items code="at0000">
         <items id="text">Functional support requirements</items>
-        <items id="description">Summary information about the supports needed to enable or assist an individual in performing an activity.</items>
-        <items id="comment">Throughout this archetype, the phrase ‘perform an activity’, or similar, refers to carrying out a single activity or a grouping of related activities, or participating in an everyday life situation. The term ‘assistive device’ refers to any tool, aid, or technology used by an individual to support, maintain, or optimise performance of an activity.</items>
+        <items id="description">Summary information about the supports needed to enable or assist an individual to perform an activity.</items>
+        <items id="comment">Throughout this archetype, the phrase "perform an activity", or similar, refers to carrying out a single activity or a grouping of related activities, or participating in an everyday life situation. The term "assistive device" refers to any tool, aid, or technology used by an individual to support, maintain, or optimise performance of an activity, including digital technologies and medical devices.</items>
       </items>
       <items code="at0001">
         <items id="text">Item tree</items>
@@ -662,12 +801,12 @@ Not to be used to record the interventions that were provided during a specific 
       <items code="at0002">
         <items id="text">Activity name</items>
         <items id="description">The name of the activity for which support is required.</items>
-        <items id="comment">Coding with an external terminology is recommended. Free text entry should only be permitted where no appropriate coded value is available. For example: rolling over in bed, transferring from bed to chair, walking; climbing stairs; brushing teeth, putting on shoes, menstrual care; reading, speaking, writing; preparing meals, doing housework; using public transport, seeking a job, withdraw money from an ATM; attending school, play sport, join a club, attend the theatre.</items>
+        <items id="comment">Coding with an external terminology is recommended. For example: rolling over in bed, transferring from bed to chair, walking; climbing stairs; brushing teeth, putting on shoes, menstrual care; reading, speaking, writing; preparing meals, doing housework; using public transport, seeking a job, withdrawing money from an ATM; attending school, playing sport, joining a club, attending the theatre. Free text entry should only be permitted where no appropriate coded value is available.</items>
       </items>
       <items code="at0003">
         <items id="text">Support description</items>
-        <items id="description">Narrative description of the supports required to enable or assist performance of the identified activity.</items>
-        <items id="comment">Support is used as an umbrella concept that may include human assistance, assistive devices, or environmental conditions.</items>
+        <items id="description">Narrative description of all supports needed to perform the activity.</items>
+        <items id="comment">Supports may include human assistance, assistive devices, assistance animals, and environmental conditions.</items>
       </items>
       <items code="at0004">
         <items id="text">Item tree</items>
@@ -675,72 +814,72 @@ Not to be used to record the interventions that were provided during a specific 
       </items>
       <items code="at0005">
         <items id="text">Assistance type</items>
-        <items id="description">The type of human assistance required to enable or assist the individual in performing the activity.</items>
-        <items id="comment">More than one 'Assistance type' may be recorded where applicable. The value 'No assistance' may be recorded when a previously identified functional requirement is no longer required.</items>
+        <items id="description">The type of human assistance needed to enable or assist the individual to perform the activity safely or effectively.</items>
+        <items id="comment">More than one 'Assistance type' may be recorded. "No assistance" may be recorded where only supports other than human assistance are needed, or where human assistance is no longer needed.</items>
       </items>
       <items code="at0006">
-        <items id="text">None</items>
-        <items id="description">No human assistance is required for the individual to independently perform the activity.</items>
+        <items id="text">No assistance</items>
+        <items id="description">No assistance from other people is needed.</items>
       </items>
       <items code="at0007">
         <items id="text">Supervision</items>
-        <items id="description">Monitoring of the activity by another person to ensure safety, typically from nearby or at a distance and without positioning for immediate physical intervention.</items>
+        <items id="description">Observation from a distance by one or more people.</items>
       </items>
       <items code="at0008">
         <items id="text">Task preparation</items>
-        <items id="description">Preparation of the environment or equipment by another person so the individual can perform the activity.</items>
+        <items id="description">Set-up of the environment or equipment by one or more people.</items>
       </items>
       <items code="at0009">
         <items id="text">Cognitive support</items>
-        <items id="description">Guidance on how to plan or approach an activity, or cues given during the activity to support completion of the task.</items>
+        <items id="description">Guidance from one or more people on how to plan or approach the activity, or cues during the activity.</items>
       </items>
       <items code="at0010">
         <items id="text">Physical assistance</items>
-        <items id="description">Physical proximity or hands-on assistance from another person to support safe or effective performance of the activity.</items>
+        <items id="description">Physical proximity or hands-on assistance from one or more people.</items>
       </items>
       <items code="at0011">
-        <items id="text">Physical assistance type</items>
-        <items id="description">The intensity of human assistance required from one or more people to support safe or effective performance of an activity.</items>
-        <items id="comment">Physical assistance may relate to safety, balance, coordination, strength, or motor execution during the activity. The simultaneous use of assistive devices or environmental supports does not determine the 'Physical assistance type', although it may influence the number of people required to provide assistance.</items>
+        <items id="text">Physical assistance level</items>
+        <items id="description">The degree of physical involvement needed from one or more people to enable or assist the individual to perform the activity safely or effectively.</items>
+        <items id="comment">Record only where 'Assistance type' includes "Physical assistance". Physical assistance may relate to safety, balance, coordination, strength, or motor execution. The levels are informed by, but deliberately not aligned with, the Functional Independence Measure (FIM). They add standby and contact guarding. Each level is described in plain language rather than by proportion of effort. Where FIM or another scale is required, its values may be used in place of the local value set in a template.</items>
       </items>
       <items code="at0012">
         <items id="text">Standby assistance (guarding)</items>
-        <items id="description">The individual performs the activity independently while one or more people remain within arm’s reach, positioned to provide immediate physical assistance if required for safety.</items>
+        <items id="description">The individual performs the whole activity without physical contact while one or more people remain within arm's reach, ready to provide immediate physical assistance.</items>
       </items>
       <items code="at0013">
         <items id="text">Light physical contact (contact guarding)</items>
-        <items id="description">The individual performs the activity independently while one or more people provide light physical contact for balance or stability only.</items>
+        <items id="description">The individual performs the whole activity while one or more people maintain light physical contact to provide immediate support.</items>
       </items>
       <items code="at0014">
         <items id="text">Minimal physical assistance</items>
-        <items id="description">The individual performs most of the activity while one or more people provide limited physical effort.</items>
+        <items id="description">The individual performs most of the activity while one or more people provide a small amount of physical effort.</items>
       </items>
       <items code="at0015">
         <items id="text">Moderate physical assistance</items>
-        <items id="description">The individual and one or more people contribute approximately equal physical effort to complete the activity.</items>
+        <items id="description">The individual and one or more people contribute approximately equal physical effort.</items>
       </items>
       <items code="at0016">
-        <items id="text">Maximal physical assistance</items>
-        <items id="description">The individual performs only a small part of the activity while one or more people provide most of the physical effort.</items>
+        <items id="text">Extensive physical assistance</items>
+        <items id="description">The individual contributes a small part of the physical effort and one or more people provide the rest. Sometimes known as 'Maximal' assistance.</items>
       </items>
       <items code="at0017">
         <items id="text">Total physical assistance</items>
-        <items id="description">The individual is unable to perform the activity and one or more people provide all physical effort required.</items>
+        <items id="description">The individual is not able to contribute any effort and is dependent on one or more people to provide all the physical effort.</items>
       </items>
       <items code="at0018">
         <items id="text">Number of people</items>
-        <items id="description">The number of people required to provide human assistance when performing the activity.</items>
-        <items id="comment">The number of people required may vary depending on environmental conditions or the simultaneous use of assistive devices.</items>
+        <items id="description">The number of people needed to provide human assistance for the individual to perform the activity safely or effectively.</items>
+        <items id="comment">The number of people needed may vary with environmental conditions or the use of assistive devices.</items>
       </items>
       <items code="at0019">
         <items id="text">Support person details</items>
-        <items id="description">Structured details of one or more specific people or roles required to provide assistance when performing the activity.</items>
-        <items id="comment">This may include a named individual, relationship, or defined role, such as partner, family member, carer, therapist, or support worker.</items>
+        <items id="description">Structured details of one or more specific people who must provide the assistance.</items>
+        <items id="comment">Use only where the assistance must be provided by a particular person or role, for example: shopping only with their mother, or support from a familiar support worker. This may be a named individual, a relationship, such as partner or family member, or a defined role, such as carer, therapist, or support worker.</items>
       </items>
       <items code="at0020">
         <items id="text">Assistive device details</items>
-        <items id="description">Structured detail about one or more tools, aids, or technologies required to enable or assist the individual in performing the activity.</items>
-        <items id="comment">For example: smartphone reminders, modified cutlery, reading glasses, hearing aids, mobility aids, prostheses, self-care aids, communication aids, or an assistance animal.</items>
+        <items id="description">Structured detail about one or more assistive devices needed to perform the activity.</items>
+        <items id="comment">For example: smartphone reminders, modified cutlery, reading glasses, hearing aids, mobility aids, prostheses, self-care aids, or communication aids.</items>
       </items>
       <items code="at0021">
         <items id="text">Additional details</items>
@@ -749,6 +888,7 @@ Not to be used to record the interventions that were provided during a specific 
       <items code="at0022">
         <items id="text">Comment</items>
         <items id="description">Additional narrative about the functional support requirements for an activity not captured in other fields.</items>
+        <items id="comment">For example: variation in support requirements with circumstances, such as fatigue, pain, or time of day.</items>
       </items>
       <items code="at0023">
         <items id="text">Last updated</items>
@@ -761,10 +901,125 @@ Not to be used to record the interventions that were provided during a specific 
       </items>
       <items code="at0025">
         <items id="text">Assistive devices description</items>
-        <items id="description">Narrative description about tools, aids, or technologies required to enable or assist the individual in performing the activity.</items>
-        <items id="comment">For example: smartphone reminders, modified cutlery, reading glasses, hearing aids, mobility aids, prostheses, self-care aids, communication aids, or an assistance animal.</items>
+        <items id="description">Narrative description of the assistive devices needed to perform the activity.</items>
+        <items id="comment">For example: smartphone reminders, modified cutlery, reading glasses, hearing aids, mobility aids, prostheses, self-care aids, or communication aids.</items>
+      </items>
+    </term_definitions>
+    <term_definitions language="nb">
+      <items code="at0000">
+        <items id="text">Funksjonelle støttebehov</items>
+        <items id="description">Sammendragsinformasjon om støtten som er nødvendig for å sette et individ i stand til eller hjelpe et individ med å utføre en aktivitet.</items>
+        <items id="comment">I hele denne arketypen refererer uttrykket "utføre en aktivitet" eller lignende til å gjennomføre en enkelt aktivitet eller en gruppering av relaterte aktiviteter, eller å delta i en hverdagslig livssituasjon. Begrepet "hjelpemiddel" refererer til ethvert verktøy, hjelpemiddel eller teknologi som brukes av et individ for å støtte, opprettholde eller optimere utførelsen av en aktivitet.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Aktivitetsnavn</items>
+        <items id="description">Navnet på aktiviteten som det er behov for støtte til.</items>
+        <items id="comment">Koding med ekstern terminologi anbefales. Fritekst bør bare tillates der ingen passende kodet verdi er tilgjengelig. For eksempel: snu seg i sengen, forflytte seg fra seng til stol, gå; gå i trapper; pusse tenner, ta på sko, menstruasjonshygiene; lese, snakke, skrive; tilberede måltider, gjøre husarbeid; bruke offentlig transport, søke jobb, ta ut penger i en minibank; gå på skole, drive med sport, bli med i en klubb, gå på teater.</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Beskrivelse av støtte</items>
+        <items id="description">Fritekstbeskrivelse av støtten som er nødvendig for å sette individet i stand til eller hjelpe et individ med å utføre den identifiserte aktiviteten.</items>
+        <items id="comment">"Støtte" brukes som et paraplybegrep som kan omfatte menneskelig hjelp, hjelpemidler eller miljømessige forhold.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Item tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Type assistanse</items>
+        <items id="description">Typen menneskelig assistanse som er nødvendig for å sette individet i stand til eller hjelpe individet med å utføre aktiviteten.</items>
+        <items id="comment">Mer enn én "Type assistanse" kan registreres der det er aktuelt. Verdien "Ingen" kan registreres dersom et tidligere identifisert funksjonelt støttebehov ikke lenger er nødvendig.</items>
+      </items>
+      <items code="at0006">
+        <items id="text">Ingen</items>
+        <items id="description">Det er ikke behov for menneskelig assistanse for at individet skal kunne utføre aktiviteten selvstendig.</items>
+      </items>
+      <items code="at0007">
+        <items id="text">Tilsyn</items>
+        <items id="description">Overvåking av aktiviteten av en annen person for å ivareta sikkerheten, vanligvis fra et sted i nærheten eller på avstand, og uten å være posisjonert for å gripe inn fysisk umiddelbart.</items>
+      </items>
+      <items code="at0008">
+        <items id="text">Tilrettelegging av oppgave</items>
+        <items id="description">Tilrettelegging av miljøet eller utstyret av en annen person slik at individet kan utføre aktiviteten.</items>
+      </items>
+      <items code="at0009">
+        <items id="text">Kognitiv støtte</items>
+        <items id="description">Veiledning om hvordan en aktivitet kan planlegges eller tilnærmes, eller hint/pekepinn gitt under aktiviteten for å støtte gjennomføringen av oppgaven.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Fysisk assistanse</items>
+        <items id="description">Fysisk nærhet eller praktisk assistanse fra en annen person for å støtte trygg eller effektiv utførelse av aktiviteten.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Type fysisk assistanse</items>
+        <items id="description">Intensiteten av menneskelig assistanse som er nødvendig fra en eller flere personer for å støtte trygg eller effektiv utførelse av en aktivitet.</items>
+        <items id="comment">Fysisk assistanse kan være relatert til sikkerhet, balanse, koordinasjon, styrke eller motorisk utførelse under aktiviteten. Samtidig bruk av hjelpemidler eller miljømessig støtte bestemmer ikke "Type fysisk assistanse", selv om det kan påvirke antall personer som kreves for å yte assistanse.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Tilstedeværende avventende assistanse</items>
+        <items id="description">Individet utfører aktiviteten selvstendig mens en eller flere personer holder seg innenfor armlengdes avstand, posisjonert slik at de umiddelbart kan gi fysisk assistanse om nødvendig av sikkerhetshensyn.</items>
+      </items>
+      <items code="at0013">
+        <items id="text">Lett fysisk kontakt</items>
+        <items id="description">Individet utfører aktiviteten selvstendig mens en eller flere personer gir lett fysisk kontakt for kun balanse eller stabilitet.</items>
+      </items>
+      <items code="at0014">
+        <items id="text">Minimal fysisk assistanse</items>
+        <items id="description">Individet utfører det meste av aktiviteten mens en eller flere personer bidrar med begrenset fysisk innsats.</items>
+      </items>
+      <items code="at0015">
+        <items id="text">Moderat fysisk assistanse</items>
+        <items id="description">Individet og en eller flere personer bidrar med omtrent like stor fysisk innsats for å fullføre aktiviteten.</items>
+      </items>
+      <items code="at0016">
+        <items id="text">Maksimal fysisk assistanse</items>
+        <items id="description">*The individual contributes a small part of the physical effort and one or more people provide the rest. Sometimes known as 'Maximal' assistance. (en)</items>
+      </items>
+      <items code="at0017">
+        <items id="text">Total fysisk assistanse</items>
+        <items id="description">*The individual is not able to contribute any effort and is dependent on one or more people to provide all the physical effort. (en)</items>
+      </items>
+      <items code="at0018">
+        <items id="text">Antall personer</items>
+        <items id="description">Antall personer som er nødvendig for å yte menneskelig assistanse ved utførelse av aktiviteten.</items>
+        <items id="comment">Antall personer som er nødvendig kan variere avhengig av miljømessige forhold eller samtidig bruk av hjelpemidler.</items>
+      </items>
+      <items code="at0019">
+        <items id="text">Detaljer om støtteperson</items>
+        <items id="description">Strukturerte detaljer om en eller flere spesifikke personer eller roller som er nødvendige for å yte assistanse ved utførelse av aktiviteten.</items>
+        <items id="comment">Dette kan omfatte en navngitt person, en relasjon eller en definert rolle, slik som partner, familiemedlem, omsorgsperson, terapeut eller støtteperson.</items>
+      </items>
+      <items code="at0020">
+        <items id="text">Detaljer om hjelpemiddel</items>
+        <items id="description">Strukturerte detaljer om ett eller flere verktøy, hjelpemidler eller teknologier som er nødvendige for å sette individet i stand til eller hjelpe et individ med å utføre aktiviteten.</items>
+        <items id="comment">For eksempel: smarttelefonpåminnelser, tilpasset spisebestikk, lesebriller, høreapparater, mobilitetshjelpemidler, proteser, hjelpemidler til egenomsorg, kommunikasjonshjelpemidler eller et servicedyr.</items>
+      </items>
+      <items code="at0021">
+        <items id="text">Ytterligere detaljer</items>
+        <items id="description">Ytterligere strukturerte detaljer om de funksjonelle støttebehovene for en aktivitet.</items>
+      </items>
+      <items code="at0022">
+        <items id="text">Kommentar</items>
+        <items id="description">Ytterligere fritekst om de funksjonelle støttebehovene for en aktivitet som ikke er fanget opp i andre felt.</items>
+      </items>
+      <items code="at0023">
+        <items id="text">Sist oppdatert</items>
+        <items id="description">Datoen da disse funksjonelle støttebehovene sist ble oppdatert.</items>
+      </items>
+      <items code="at0024">
+        <items id="text">Tilleggsinformasjon</items>
+        <items id="description">Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller eller formalismer.</items>
+        <items id="comment">For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.</items>
+      </items>
+      <items code="at0025">
+        <items id="text">Beskrivelse av hjelpemidler</items>
+        <items id="description">Fritekstbeskrivelse av verktøy, hjelpemidler eller teknologier som er nødvendige for å sette individet i stand til eller hjelpe individet med å utføre aktiviteten.</items>
+        <items id="comment">For eksempel: smarttelefonpåminnelser, tilpasset spisebestikk, lesebriller, høreapparater, mobilitetshjelpemidler, proteser, hjelpemidler til egenomsorg, kommunikasjonshjelpemidler eller et servicedyr.</items>
       </items>
     </term_definitions>
   </ontology>
 </archetype>
-

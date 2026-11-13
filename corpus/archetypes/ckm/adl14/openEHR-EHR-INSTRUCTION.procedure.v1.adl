@@ -1,0 +1,82 @@
+﻿archetype (adl_version=1.4)
+	openEHR-EHR-INSTRUCTION.procedure.v1
+
+concept
+	[at0000]	-- Procedure instruction
+language
+	original_language = <[ISO_639-1::en]>
+description
+	original_author = <
+		["name"] = <"unknown">
+	>
+	details = <
+		["en"] = <
+			language = <[ISO_639-1::en]>
+			purpose = <"T orecord details about an instruction to carry out one or more procedures.">
+			use = <"">
+			misuse = <"">
+			copyright = <"copyright (c) 2009 openEHR Foundation">
+		>
+	>
+	lifecycle_state = <"AuthorDraft">
+	other_contributors = <>
+	other_details = <
+		["references"] = <"">
+	>
+
+definition
+	INSTRUCTION[at0000] matches {	-- Procedure instruction
+		other_participations cardinality matches {0..*; unordered} matches {
+			PARTICIPATION occurrences matches {0..1} matches {
+				function matches {
+					DV_CODED_TEXT matches {
+						defining_code matches {
+							[local::
+							at0003, 	-- Operator
+							at0004, 	-- Operator Assistant
+							at0005]	-- Responsible Clinician
+						}
+					}
+				}
+			}
+		}
+		activities cardinality matches {0..*; unordered} matches {
+			ACTIVITY[at0002] occurrences matches {0..1} matches {	-- new activity
+				action_archetype_id matches {/openEHR-EHR-ACTION\.procedure\.v2/}
+				description matches {
+					allow_archetype ITEM_TREE occurrences matches {0..*} matches {
+						include
+							archetype_id/value matches {/openEHR-EHR-ITEM_TREE\.procedure_fetal_scalp_electrode\.v1|openEHR-EHR-ITEM_TREE\.procedure_peripheral_line\.v1|openEHR-EHR-ITEM_TREE\.procedure_TENS_application\.v1|openEHR-EHR-ITEM_TREE\.Amnioinfusion\.v1|openEHR-EHR-ITEM_TREE\.Cervical_cerclage\.v1|openEHR-EHR-ITEM_TREE\.Interuterine_pressure_catheter_insertion\.v1|openEHR-EHR-ITEM_TREE\.maternity_suturing\.v1|openEHR-EHR-ITEM_TREE\.maternity_incision\.v1|openEHR-EHR-ITEM_TREE\.maternity_ventouse\.v1|openEHR-EHR-ITEM_TREE\.procedure-analgesic\.v2|openEHR-EHR-ITEM_TREE\.procedure-caesarian\.v1|openEHR-EHR-ITEM_TREE\.procedure-hearing\.v1|openEHR-EHR-ITEM_TREE\.procedure\.v1|openEHR-EHR-ITEM_TREE\.procedure_airway_management\.v1|openEHR-EHR-ITEM_TREE\.procedure_airway_management\.v2|openEHR-EHR-ITEM_TREE\.procedure_arterial_line\.v1|openEHR-EHR-ITEM_TREE\.procedure_central_venous_pressure_line\.v1|openEHR-EHR-ITEM_TREE\.procedure_electrocardiogram\.v1|openEHR-EHR-ITEM_TREE\.procedure_fetal_blood_sampling\.v1|openEHR-EHR-ITEM_TREE\.procedure_waterbirth\.v1/}
+					}
+				}
+			}
+		}
+	}
+
+ontology
+	term_definitions = <
+		["en"] = <
+			items = <
+				["at0000"] = <
+					text = <"Procedure instruction">
+					description = <"An instruction to carry out one or more procedures">
+				>
+				["at0002"] = <
+					text = <"new activity">
+					description = <"*">
+				>
+				["at0003"] = <
+					text = <"Operator">
+					description = <"Person performing the procedure">
+				>
+				["at0004"] = <
+					text = <"Operator Assistant">
+					description = <"Clinician assisting the Operator">
+				>
+				["at0005"] = <
+					text = <"Responsible Clinician">
+					description = <"Clinician who takes responsibility for procedure">
+				>
+			>
+		>
+	>

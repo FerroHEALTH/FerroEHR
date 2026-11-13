@@ -22,6 +22,10 @@
 #                       image reference instead of building — the weekly lane
 #                       verifies the very artifact the release pushed.
 #   UI_E2E_NO_COMPOSE   if set, assume CDR+Keycloak are already up.
+#   UI_E2E_SCIM_GRANT   the command that runs the CDR's binary against its
+#                       database, which grants each SCIM client before it
+#                       provisions; `docker compose … exec -T ferroehr ferroehr`
+#                       on the compose stack.
 #   UI_E2E_NO_BUILD     if set, `up --no-build` the compose stack (use images
 #                       already present as the `*_IMAGE` refs) instead of
 #                       building from source. CI pre-builds the app image with
@@ -174,10 +178,17 @@ wait_http "$CDR_URL/ferroehr/rest/status" 150
 # Every login the journeys use is bound to a demographic PERSON first: the
 # three Basic users of docker/ferroehr.dev.toml, and the dev realm's users by
 # the ids its export fixes (docker/keycloak/import/ferroehr-realm-exported.json),
-# each through its own SCIM client (docs/conformance/party/scim/README.md).
-bash scripts/scim-provision.sh "$CDR_URL" basic-users \
-  ferroehr ferroehr-admin ferroehr-readonly
-bash scripts/scim-provision.sh "$CDR_URL" keycloak-dev \
+# each through its own SCIM client, which the server grants scim_provision
+# first (docs/conformance/party/scim/README.md).
+export SCIM_GRANT="${UI_E2E_SCIM_GRANT:-docker compose ${COMPOSE_FILES[*]} exec -T ferroehr ferroehr}"
+bash scripts/scim-provision.sh "$CDR_URL" basic-users urn:ferroehr:basic-user \
+  ferroehr ferroehr-admin --roles READONLY ferroehr-readonly
+# The viewer is the client the dev realm's persons sign in through
+# (docker/viewer/e2e-env.yml), once the CDR grants it sign_in_persons.
+read -ra cdr_cli <<<"$SCIM_GRANT"
+"${cdr_cli[@]}" party-binding grant --issuer https://keycloak:8443/auth/realms/ferroehr \
+  --client-id ferroehr-viewer --operation sign_in_persons >/dev/null
+bash scripts/scim-provision.sh "$CDR_URL" keycloak-dev urn:ferroehr:keycloak-dev-login \
   keycloak-ferroehr-admin=d06b336b-8343-4253-b5e5-e6dace5cff0c \
   keycloak-ferroehr-user=aca7c611-779e-4f68-99fb-06cc57e7ed26
 wait_http "$KEYCLOAK_URL/auth/realms/ferroehr/.well-known/openid-configuration" 90

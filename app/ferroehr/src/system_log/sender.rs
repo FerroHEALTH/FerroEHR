@@ -41,8 +41,8 @@
 use std::collections::BTreeSet;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
 use backon::{ExponentialBuilder, Retryable};
@@ -56,12 +56,15 @@ use tokio::task::JoinHandle;
 use super::event::{AuditEvent, EmitOutcome};
 
 use crate::system_log::AuditError;
+use crate::system_log::categories::{CategoryMapConfig, Classifier};
 use crate::system_log::chain_check::ChainCheck;
 use crate::system_log::config::{AuditConfig, FailMode, Retention, StoreConfig};
 use crate::system_log::message::AuditContext;
 use crate::system_log::render::{CompiledPolicy, RenderPolicy};
 use crate::system_log::store::{AuditRecord, AuditStore, RecordEnd};
 use crate::system_log::syslog::SyslogRoute;
+
+mod categories;
 
 /// The patient subject of an EHR: `EHR_STATUS.subject.external_ref`'s id and
 /// namespace.
@@ -148,8 +151,9 @@ struct SenderInner {
     /// by `ehds-logging`.
     emergency: ehds_logging::emergency::EmergencyPurposes,
     legal_basis: Option<String>,
-    /// The compiled `[audit.categories]` map every record is classified through.
-    categories: crate::system_log::categories::Classifier,
+    /// The compiled category register every record is classified through.
+    categories: RwLock<Arc<Classifier>>,
+    store: Option<AuditStore>,
     /// Whether the local store is currently accepting writes (`true` when the
     /// store is disabled — health then rides on the queue alone). Written by
     /// the drain, read by [`AuditSender::emit`] under `fail_mode = closed`.
@@ -250,12 +254,6 @@ impl AuditSender {
         self.inner.legal_basis.as_deref()
     }
 
-    /// The category map every access record is classified through.
-    #[must_use]
-    pub fn categories(&self) -> &crate::system_log::categories::Classifier {
-        &self.inner.categories
-    }
-
     /// Enqueue an event (non-blocking). Never awaits, never blocks the request.
     ///
     /// A full queue (or a stopped drain) is metered and mapped through the
@@ -270,7 +268,7 @@ impl AuditSender {
     /// and with the emergency mark when a purpose of use it names is one of
     /// `[audit] emergency_purpose_codes`.
     pub fn emit(&self, mut event: AuditEvent) -> EmitOutcome {
-        event.category_map_digest = Some(self.inner.categories.digest());
+        event.category_map_digest = Some(self.categories().digest());
         event.emergency_access = event.names_purpose(|c| self.is_emergency_purpose(Some(c)));
         crate::telemetry::metrics::metrics()
             .atna_audit_emitted
@@ -513,7 +511,7 @@ pub async fn start(
         None
     };
 
-    let policy = RenderPolicy::of(&config);
+    let policy = RenderPolicy::of(&config, &CategoryMapConfig::default());
     let store = if config.store.enabled {
         if let Some(pool) = pool {
             Some(
@@ -555,7 +553,7 @@ pub async fn start(
     let store_healthy = Arc::new(AtomicBool::new(true));
     let (tx, rx) = mpsc::channel(config.queue_capacity.max(1));
     let sinks = Sinks {
-        store,
+        store: store.clone(),
         syslog,
         #[cfg(feature = "fhir")]
         feed_spool,
@@ -580,7 +578,8 @@ pub async fn start(
             purpose_codes: config.purpose_codes.clone(),
             emergency,
             legal_basis: config.legal_basis.clone(),
-            categories,
+            categories: RwLock::new(Arc::new(categories)),
+            store,
             fail_mode: config.fail_mode,
             store_healthy,
             dropped_since_warn: AtomicU64::new(0),
@@ -621,8 +620,6 @@ fn start_feed(
         return Ok((None, None));
     };
     let feed = repository(fhir_feed)?;
-    let retry = ihe_atna::atna::retry::Retry::try_from(fhir_feed.endpoint.retry)
-        .map_err(|e| AuditError::Transport(Box::new(e)))?;
     let Some(store) = store else {
         // NOTE: no specification governs the bounds of the store-off feed's
         // spool: our own design, about a day of records at a modest rate.
@@ -631,7 +628,7 @@ fn start_feed(
             max_bytes: 256 * 1024 * 1024,
             write_timeout: Duration::from_secs(2),
         });
-        let forwarder = Forwarder::fhir_feed_with_retry(spool, feed, retry);
+        let forwarder = Forwarder::fhir_feed(spool, feed);
         deliveries.push(deliver("fhir_feed", &forwarder));
         return Ok((None, Some(forwarder)));
     };
@@ -640,7 +637,7 @@ fn start_feed(
     let outbox = StoreOutbox::new(store.clone(), Arc::clone(&notify), poll);
     deliveries.push(deliver(
         "fhir_feed",
-        &Forwarder::fhir_feed_from_with_retry(outbox, feed, retry),
+        &Forwarder::fhir_feed_from(outbox, feed),
     ));
     Ok((Some(notify), None))
 }
@@ -1028,12 +1025,11 @@ mod tests {
                 sgb_v_309_controller: false,
                 verify_interval: ferrohealth_config::units::Duration::from_secs(0),
                 full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-                ..StoreConfig::default()
             },
             syslog: Some(SyslogConfig {
                 // A port nothing listens on is fine: the sink connects on the
                 // first send, which fails and is metered.
-                url: format!("tls://{}:{}", "127.0.0.1".to_owned(), 1),
+                url: ferrohealth_secret::secret_url::SecretUrl::new("tls://127.0.0.1:1"),
                 ..SyslogConfig::default()
             }),
             queue_capacity: 8,
@@ -1115,7 +1111,8 @@ mod tests {
                 ])
                 .expect("one declared purpose"),
                 legal_basis: None,
-                categories: crate::system_log::categories::Classifier::default(),
+                categories: RwLock::new(Arc::new(Classifier::default())),
+                store: None,
                 fail_mode,
                 store_healthy: Arc::new(AtomicBool::new(store_healthy)),
                 dropped_since_warn: AtomicU64::new(0),

@@ -5,6 +5,16 @@ concept
 	[at0000]	-- Fetal heart rate
 language
 	original_language = <[ISO_639-1::en]>
+	translations = <
+		["sv"] = <
+			language = <[ISO_639-1::sv]>
+			author = <
+				["name"] = <"Manna Vosta">
+				["organisation"] = <"Karolinska University Hospital">
+				["email"] = <"manna.vosta@regionstockholm.se">
+			>
+		>
+	>
 description
 	original_author = <
 		["name"] = <"Heather Leslie">
@@ -13,6 +23,17 @@ description
 		["date"] = <"2011-12-20">
 	>
 	details = <
+		["sv"] = <
+			language = <[ISO_639-1::sv]>
+			purpose = <"Att registrera uppgifter om fostrets hjärtfrekvens genom intermittenta observationer.">
+			use = <"Används för att registrera intermittenta observationer av fostrets hjärtfrekvens och hjärtslagens egenskaper under graviditeten.
+
+Ska endast användas när fostret är vårdsubjekt.">
+			keywords = <"foster", "fosterhjärta", "fosterhjärtfrekvens", "hjärtfrekvens", "hjärtslag", "hjärtrytm">
+			misuse = <"Ska inte användas för att registrera de mer detaljerade uppgifter som krävs vid elektronisk övervakning av fostrets hjärtfrekvens över tid. Använd i stället specialiseringen OBSERVATION.fetal_heart-monitoring.
+
+Ska inte användas för att registrera hjärtfrekvens hos spädbarn, barn eller vuxna.">
+		>
 		["en"] = <
 			language = <[ISO_639-1::en]>
 			purpose = <"To record details about the fetal heart rate via intermittent observations.">
@@ -38,8 +59,8 @@ Intrapartum care: management and delivery of care to women in labour: http://www
 		["original_namespace"] = <"org.openehr">
 		["original_publisher"] = <"openEHR Foundation">
 		["custodian_namespace"] = <"org.openehr">
-		["MD5-CAM-1.0.1"] = <"33E87488ECAB3CC3DE97115C41F455BC">
-		["build_uid"] = <"cbf49db5-05a6-458d-8bbf-aefb08dd9fa9">
+		["MD5-CAM-1.0.1"] = <"5A42A4519D6FCB25FEC019435801D67F">
+		["build_uid"] = <"65d95bd5-6ce4-4e2f-a5bd-925ae73f88b8">
 		["revision"] = <"0.0.1-alpha">
 	>
 
@@ -157,7 +178,6 @@ definition
 		}
 	}
 
-
 ontology
 	term_definitions = <
 		["en"] = <
@@ -262,6 +282,111 @@ ontology
 				["at0025"] = <
 					text = <"Not in labour">
 					description = <"The mother is not in labour as the observation is made.">
+				>
+			>
+		>
+		["sv"] = <
+			items = <
+				["at0000"] = <
+					text = <"Fosterhjärtfrekvens">
+					description = <"Observationer av fostrets hjärtfrekvens.">
+				>
+				["at0001"] = <
+					text = <"Event Series">
+					description = <"@ internal @">
+				>
+				["at0002"] = <
+					text = <"Ospecificerad händelse">
+					description = <"Ospecificerad standardhändelse vid en tidpunkt eller inom ett tidsintervall som explicit kan definieras i en template eller genereras automatiskt av vissa IT-system.">
+				>
+				["at0003"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0004"] = <
+					text = <"Förekomst">
+					description = <"Fosterhjärtslag kan detekteras.">
+					comment = <"Förekomst antas om fostrets hjärtfrekvens är > 0.">
+				>
+				["at0005"] = <
+					text = <"Hjärtfrekvens">
+					description = <"Fostrets observerade hjärtfrekvens.">
+				>
+				["at0009"] = <
+					text = <"Kommentar">
+					description = <"Kommentarer avseende fostrets hjärtfrekvens som inte beskrivs i övriga datafält.">
+				>
+				["at0010"] = <
+					text = <"Klinisk tolkning">
+					description = <"Enstaka ord, fras eller kort beskrivning som anger den kliniska innebörden och relevansen av fostrets hjärtfrekvens.">
+					comment = <"Exempelvis bradykardi eller takykardi.">
+				>
+				["at0011"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0012"] = <
+					text = <"Moderns kroppsställning">
+					description = <"Moderns kroppsställning när fostrets hjärtfrekvens mättes.">
+				>
+				["at0013"] = <
+					text = <"Stående">
+					description = <"Modern står vid mätningen av fostrets hjärtfrekvens.">
+				>
+				["at0014"] = <
+					text = <"Sittande">
+					description = <"Modern sitter vid mätningen av fostrets hjärtfrekvens.">
+				>
+				["at0015"] = <
+					text = <"Halvliggande">
+					description = <"Modern är halvliggande vid mätningen av fostrets hjärtfrekvens.">
+				>
+				["at0016"] = <
+					text = <"Liggande">
+					description = <"Modern ligger plant vid mätningen av fostrets hjärtfrekvens.">
+				>
+				["at0017"] = <
+					text = <"Liggande med vänsterlutning">
+					description = <"Modern ligger plant med viss sidolutning åt vänster.">
+				>
+				["at0018"] = <
+					text = <"Tree">
+					description = <"@ internal @">
+				>
+				["at0020"] = <
+					text = <"Utrustning">
+					description = <"Uppgifter om den utrustning som används för att detektera fostrets hjärtfrekvens.">
+					comment = <"Exempelvis Pinardstetoskop eller dopplerultraljud.">
+				>
+				["at0021"] = <
+					text = <"Tilläggsinformation">
+					description = <"Plats för tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+					comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR.">
+				>
+				["at0022"] = <
+					text = <"Möjliga felkällor">
+					description = <"Beskrivning av faktorer och felkällor som inte registrerats i övriga datafält och som kan påverka mätningen av fostrets hjärtfrekvens.">
+					comment = <"Exempelvis feber hos modern eller fysisk ansträngning.">
+				>
+				["at0023"] = <
+					text = <"Pågående förlossning">
+					description = <"Är modern i aktiv förlossning under observationen?">
+				>
+				["at0024"] = <
+					text = <"Pågående förlossning">
+					description = <"Modern är i förlossning när observationen görs.">
+				>
+				["at0025"] = <
+					text = <"Ingen pågående förlossning">
+					description = <"Modern är inte i förlossning när observationen görs.">
+				>
+				["at0026"] = <
+					text = <"Förekommer">
+					description = <"Fostrets hjärtslag kan detekteras.">
+				>
+				["at0027"] = <
+					text = <"Förekommer inte">
+					description = <"Fostrets hjärtslag kan inte detekteras.">
 				>
 			>
 		>

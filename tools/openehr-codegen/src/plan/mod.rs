@@ -15,6 +15,7 @@
 
 pub(crate) mod composition;
 pub(crate) mod construction;
+pub(crate) mod drafts;
 pub(crate) mod elided_arguments;
 pub(crate) mod its_json_bounds;
 pub(crate) mod ordered_hashes;

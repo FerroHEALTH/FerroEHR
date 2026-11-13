@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -56,8 +56,7 @@ Exclusion statement, Deprecated Archetype [Internet]. openEHR Foundation, openEH
         </terminology_id>
         <code_string>de</code_string>
       </language>
-      <purpose>Zur Dokumentation einer Aussage über den Ausschluss eines bestimmten Problems/Diagnose, familiäre Krankengeschichte, Medikation, Verfahren, Nebenwirkung oder eines anderen klinischen Ereignisses, das entweder derzeit nicht vorliegt oder in der Vergangenheit nicht vorgelegen hat. &#xD;
-</purpose>
+      <purpose>Zur Dokumentation einer Aussage über den Ausschluss eines bestimmten Problems/Diagnose, familiäre Krankengeschichte, Medikation, Verfahren, Nebenwirkung oder eines anderen klinischen Ereignisses, das entweder derzeit nicht vorliegt oder in der Vergangenheit nicht vorgelegen hat.</purpose>
       <keywords>Ausschluss</keywords>
       <keywords>ausschließen</keywords>
       <keywords>Verneinung</keywords>
@@ -72,8 +71,7 @@ Das Daten Element "ausgeschlossene Kategorie" ermöglicht die Dokumentation und 
 &#xD;
 Jeder spezifische Ausschluss sollte in einer separaten Instanz des Archetyps dokumentiert werden. Zum Beispiel sollte die Dokumentation von "keine bekannte Penicillin V Unverträglichkeit", "keine bekannten Unverträglichkeiten gegenüber Cephalosporine" und "keine Kenntnisse über Herzkrankheiten in der Familie" in 3 getrennten Instanzen in diesem Archetyp erfolgen.&#xD;
 &#xD;
-Zu beachten ist, dass Äußerungen zu z.B. ausgeschlossenen Erkrankungen nur zum Zeitpunkt der Aufnahme als aktuell und korrekt angesehen werden können. Es ist möglich, dass ein Datensatz angegeben wird, dass eine Person KEINE KENNTNIS über eine Vorgeschichte eines bestimmten Problems oder einer bestimmten Diagnose hat (unter Verwendung einer Ausschlussaussage), während gleichzeitig der Nachweis der ersten Erfahrung mit dem gleichen Problem oder der gleichen Diagnose aufgezeichnet (unter Verwendung des Archetyps EVALUATION.problem_diagnosis) wird. In zukünftigen Aufzeichnungen von der Person kann der Verlauf des Problems oder der Diagnose in der Problemliste gespeichert sein.&#xD;
-</use>
+Zu beachten ist, dass Äußerungen zu z.B. ausgeschlossenen Erkrankungen nur zum Zeitpunkt der Aufnahme als aktuell und korrekt angesehen werden können. Es ist möglich, dass ein Datensatz angegeben wird, dass eine Person KEINE KENNTNIS über eine Vorgeschichte eines bestimmten Problems oder einer bestimmten Diagnose hat (unter Verwendung einer Ausschlussaussage), während gleichzeitig der Nachweis der ersten Erfahrung mit dem gleichen Problem oder der gleichen Diagnose aufgezeichnet (unter Verwendung des Archetyps EVALUATION.problem_diagnosis) wird. In zukünftigen Aufzeichnungen von der Person kann der Verlauf des Problems oder der Diagnose in der Problemliste gespeichert sein.</use>
       <misuse>Nicht für die Dokumentation von allen ausgeschlossenen Problemen oder Diagnosen, Medikamenten, Verfahren, familiärer Krankengeschichte, Nebenwirkungen oder anderen klinischen Ereignissen verwenden - Bitte verwenden Sie für diesen Zweck den Archetyp EVALUATION.exclusion_global.&#xD;
 &#xD;
 Nicht für die Dokumentation von einer ausgeschlossenen Komponente der körperlichen Untersuchung verwenden - Bitte verwenden Sie für diesen Zweck den Archetyp CLUSTER.exclusion_exam innerhalb des entsprechenden OBSERVATION oder CLUSTER Archetyps.&#xD;
@@ -605,8 +603,7 @@ Dersom en prekoordinert term brukes i dette dataelementet blir elementet "Eksklu
       <items code="at0002">
         <items id="text">Aussage über den Ausschluss</items>
         <items id="description">Ein Bericht über den Ausschluss eines/r bestimmten Problems/Diagnose, familiäre Krankengeschichte, Medikation, Verfahren, Nebenwirkung oder eines anderen klinischen Ereignisses.</items>
-        <items id="comment">Diese Beschreibung muss in Verbindung mit dem Datenelement "ausgeschlossene Kategorie" verwendet werden. Zum Beispiel: Dieses Datenelement kann zur Erfassung einer allgemeinen Aussage, wie z.B. "keine bekannte Vorgeschichte über..." verwendet werden. Die "ausgeschlossene Kategorie" spezifiziert die Aussage, in dem eine Zuordnung zu z.B. Diagnose oder Medikation vorgenommen werden kann. Wird bereits die "ausgeschlossene Kategorie" dafür genutzt, durch eine präkoordinierte Bezeichnung das Vorliegen von Diabetes in der familiären Krankengeschichte auszuschließen, ist der Eintrag in diesem Datenelement redundant. &#xD;
-</items>
+        <items id="comment">Diese Beschreibung muss in Verbindung mit dem Datenelement "ausgeschlossene Kategorie" verwendet werden. Zum Beispiel: Dieses Datenelement kann zur Erfassung einer allgemeinen Aussage, wie z.B. "keine bekannte Vorgeschichte über..." verwendet werden. Die "ausgeschlossene Kategorie" spezifiziert die Aussage, in dem eine Zuordnung zu z.B. Diagnose oder Medikation vorgenommen werden kann. Wird bereits die "ausgeschlossene Kategorie" dafür genutzt, durch eine präkoordinierte Bezeichnung das Vorliegen von Diabetes in der familiären Krankengeschichte auszuschließen, ist der Eintrag in diesem Datenelement redundant.</items>
       </items>
       <items code="at0003">
         <items id="text">Ausgeschlossene Kategorie</items>
@@ -710,4 +707,3 @@ Wird das Datenelement wie in Beispiel (2) kodiert, ist eine weitere Spezifikatio
     </term_definitions>
   </ontology>
 </archetype>
-

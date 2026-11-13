@@ -57,16 +57,16 @@ fn rest_config() -> AppConfig {
         c.api.admin = true;
         c
     };
-    common::with_basic_users(
-        &mut config,
-        &[("user", &["USER"]), ("root", &["ADMIN"]), ("noroles", &[])],
-    );
-    let basic = config.auth.shared.basic.take();
     config.auth = common::issuer_auth(ISSUER, AUDIENCE);
-    config.auth.shared.basic = basic;
-    config.rbac.role_issuers = vec![ISSUER.to_owned()];
+    common::bind_issuer(&mut config, ISSUER);
+    common::basic_users(&mut config, USERS);
+    config.rbac.role_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(ISSUER)];
     config
 }
+
+/// The Basic users: a clinician, an administrator and a user granted no
+/// role.
+const USERS: &[(&str, &[&str])] = &[("user", &["USER"]), ("root", &["ADMIN"]), ("noroles", &[])];
 
 fn authz(enabled: bool) -> Option<Arc<AuthzHandle>> {
     let mut cfg = AuthzConfig::default();
@@ -87,19 +87,20 @@ async fn service(audit: Option<AuditSender>) -> (testkit::TestDb, Arc<FerroEhrSe
     if let Some(sender) = audit {
         svc = svc.with_audit(sender);
     }
+    common::grant_basic_users(&svc, &pool, USERS).await;
+    common::bind_subjects(&pool, &[(ISSUER, "svc")]).await;
     (pg, Arc::new(svc))
 }
 
 async fn app(rbac_enabled: bool, audit: Option<AuditSender>) -> (testkit::TestDb, Router) {
     let (pg, svc) = service(audit).await;
-    let app = ferroehr_rest::build_full(
+    let app = common::build_full(
         rest_config(),
         svc,
         authz(rbac_enabled),
         ferroehr_rest::extensions::management::Observability::default(),
     )
-    .await
-    .expect("build app");
+    .await;
     (pg, app)
 }
 
@@ -119,10 +120,9 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
             sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            ..StoreConfig::default()
         },
         syslog: Some(SyslogConfig {
-            url: format!("tls://127.0.0.1:{port}"),
+            url: ferrohealth_secret::secret_url::SecretUrl::new(format!("tls://127.0.0.1:{port}")),
             tls: ferrohealth_config::tls::TlsClientSection {
                 trust_roots_file: Some(socket.ca_file.clone()),
                 ..ferrohealth_config::tls::TlsClientSection::default()
@@ -484,7 +484,10 @@ async fn default_committer_names_the_callers_issuer_on_both_paths() {
         );
         for audit in audits {
             let identifier = &audit["committer"]["identifiers"][0];
-            assert_eq!(audit["committer"]["name"], subject, "{id_type}: {history}");
+            assert_eq!(
+                audit["committer"]["external_ref"]["type"], "PERSON",
+                "{id_type}: the bound PERSON commits: {history}"
+            );
             assert_eq!(identifier["id"], subject, "{id_type}: {history}");
             assert_eq!(identifier["type"], id_type, "{id_type}: {history}");
             assert_eq!(identifier["issuer"], issuer, "{id_type}: {history}");
@@ -541,9 +544,7 @@ async fn app_with_config_snapshot(snapshot: Value) -> (testkit::TestDb, Router) 
         env_snapshot: Arc::new(snapshot),
         ..Default::default()
     };
-    let app = ferroehr_rest::build_full(rest_config(), svc, authz(true), obs)
-        .await
-        .expect("build app");
+    let app = common::build_full(rest_config(), svc, authz(true), obs).await;
     (pg, app)
 }
 
@@ -617,11 +618,15 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
     cfg.terminology = Some(
         ferroehr::service::terminology::config::TerminologyServerConfig {
             endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                url: leaky(2).expose().to_owned(),
+                url: leaky(2),
                 credentials: ferrohealth_smart::config::credentials::CredentialsSection {
                     oauth: Some(ferrohealth_smart::config::credentials::OauthSection {
-                        token_endpoint: "https://u3:URL_PW_SENTINEL_3@h3/p".to_owned(),
+                        token_endpoint: SecretUrl::new("https://u3:URL_PW_SENTINEL_3@h3/p"),
                         ..ferrohealth_smart::config::credentials::OauthSection::default()
+                    }),
+                    onward: Some(ferrohealth_smart::config::onward::OnwardSection {
+                        token_endpoint: leaky(12),
+                        ..ferrohealth_smart::config::onward::OnwardSection::default()
                     }),
                     ..ferrohealth_smart::config::credentials::CredentialsSection::default()
                 },
@@ -631,12 +636,26 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
         },
     );
     // URL 4 was the usage report endpoint, whose type now refuses userinfo.
-    cfg.authz.abac.remote.endpoint.url = leaky(5).expose().to_owned();
+    cfg.authz.abac.remote.endpoint.url = leaky(5);
     cfg.telemetry.otlp = Some(ferrohealth_telemetry::section::OtlpSection {
         endpoint: leaky(6),
         ..ferrohealth_telemetry::section::OtlpSection::default()
     });
     cfg.record.multimedia.url = Some(leaky(7));
+    cfg.audit.syslog = Some(SyslogConfig {
+        url: leaky(8),
+        ..SyslogConfig::default()
+    });
+    cfg.auth.smart.platform_base_url = Some(leaky(9));
+    cfg.server.public_base_url = Some(leaky(10));
+    cfg.auth.shared.issuer = vec![ferrohealth_smart::config::IssuerEntry {
+        issuer: SecretUrl::new("https://idp.example"),
+        introspection: Some(ferrohealth_smart::config::IntrospectionSection {
+            endpoint: leaky(13),
+            ..ferrohealth_smart::config::IntrospectionSection::default()
+        }),
+        ..ferrohealth_smart::config::IssuerEntry::default()
+    }];
     let snapshot = cfg.to_redacted_json().expect("redacted json");
 
     let (_pg, svc) = service(None).await;
@@ -652,9 +671,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
         env_snapshot: Arc::new(snapshot),
         ..Default::default()
     };
-    let app = ferroehr_rest::build_full(rest_config(), svc, authz(true), obs)
-        .await
-        .expect("build app");
+    let app = common::build_full(rest_config(), svc, authz(true), obs).await;
     for uri in [format!("{EXT}/admin/config"), "/management/env".to_owned()] {
         let request = common::req("GET", &uri).auth(basic("root")).build();
         let resp = app.clone().oneshot(request).await.expect("oneshot");
@@ -668,7 +685,8 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
             !body.contains("URL_PW_SENTINEL"),
             "URL userinfo leaked from {uri}: {body}"
         );
-        for n in (1..=7).filter(|n| *n != 4) {
+        // URL 11 was `[auth.scim] public_base_url`, which URL 10 replaces.
+        for n in (1..=13).filter(|n| ![4, 11].contains(n)) {
             assert!(
                 body.contains(&format!("https://***@h{n}/p")),
                 "URL {n} lost its host and path in {uri}: {body}"

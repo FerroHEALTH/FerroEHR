@@ -30,7 +30,7 @@ const SNOMED: &str = "http://snomed.info/sct";
 fn server_cfg(base: &str, oauth: Option<OauthSection>) -> TerminologyServerConfig {
     TerminologyServerConfig {
         endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-            url: base.to_owned(),
+            url: ferrohealth_secret::secret_url::SecretUrl::new(base),
             timeout: ferrohealth_config::units::Duration::from_millis(800),
             credentials: ferrohealth_smart::config::credentials::CredentialsSection {
                 oauth,
@@ -39,7 +39,6 @@ fn server_cfg(base: &str, oauth: Option<OauthSection>) -> TerminologyServerConfi
             ..ferrohealth_smart::config::endpoint::EndpointSection::default()
         },
         on_error: ferroehr::service::terminology::config::OnError::Accept,
-        ..TerminologyServerConfig::default()
     }
 }
 
@@ -128,7 +127,10 @@ async fn oauth2_client_credentials_token_is_obtained_and_reused() {
         .await;
 
     let grant = OauthSection {
-        token_endpoint: format!("{}/token", idp.uri()),
+        token_endpoint: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+            "{}/token",
+            idp.uri()
+        )),
         client_id: "ferroehr-cdr".to_owned(),
         client_secret: Some(SecretString::from("s3cret")),
         client_auth: ClientAuth::ClientSecretBasic,
@@ -181,7 +183,10 @@ async fn a_refused_grant_is_a_typed_error_not_an_anonymous_request() {
         .await;
 
     let grant = OauthSection {
-        token_endpoint: format!("{}/token", idp.uri()),
+        token_endpoint: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+            "{}/token",
+            idp.uri()
+        )),
         client_id: "ferroehr-cdr".to_owned(),
         client_secret: Some(SecretString::from("wrong")),
         client_auth: ClientAuth::ClientSecretBasic,
@@ -244,7 +249,10 @@ async fn client_secret_post_sends_credentials_in_the_body() {
         .await;
 
     let grant = OauthSection {
-        token_endpoint: format!("{}/token", idp.uri()),
+        token_endpoint: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+            "{}/token",
+            idp.uri()
+        )),
         client_id: "ferroehr-cdr".to_owned(),
         client_secret: Some(SecretString::from("s3cret")),
         client_auth: ClientAuth::ClientSecretPost,
@@ -306,7 +314,10 @@ async fn a_refused_token_is_renewed_once() {
         .await;
 
     let grant = OauthSection {
-        token_endpoint: format!("{}/token", idp.uri()),
+        token_endpoint: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+            "{}/token",
+            idp.uri()
+        )),
         client_id: "ferroehr-cdr".to_owned(),
         client_secret: Some(SecretString::from("s3cret")),
         client_auth: ClientAuth::ClientSecretBasic,

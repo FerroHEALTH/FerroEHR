@@ -12,7 +12,8 @@
 # RBAC off. The steps:
 #   1. waits for the app healthcheck to report healthy;
 #   2. asserts GET /rest/status returns 200;
-#   3. creates an EHR with the dev Basic credentials (ferroehr/ferroehr);
+#   3. creates an EHR with the dev Basic credentials (ferroehr/ferroehr), and
+#      runs the README's quick start: one more EHR and an AQL query;
 #   4. restarts the app and proves the second-boot migration run is a no-op
 #      (the sqlx ledger is unchanged — the library migrator is silent on no-op,
 #      so the row count is the reliable idempotency signal; app logs are dumped
@@ -94,6 +95,22 @@ code=$(curl -sS -o /dev/null -w '%{http_code}' -u ferroehr:ferroehr \
   -X POST "$BASE/openehr/v1/ehr" \
   -H 'Prefer: return=minimal')
 [[ "$code" = "201" ]] || { echo "::error::POST /ehr returned $code (expected 201)"; exit 1; }
+
+# The README's quick start: README.md shows the commands between each ANCHOR
+# and ANCHOR_END line verbatim, and scripts/checks/readme-quickstart.sh
+# refuses a copy that differs from this script by a byte.
+echo "==> The README's quick start: create an EHR"
+# ANCHOR: ehr
+curl --fail-with-body -u ferroehr:ferroehr -X POST -i http://localhost:8080/ferroehr/rest/openehr/v1/ehr
+# ANCHOR_END: ehr
+
+echo "==> The README's quick start: query it with AQL"
+# ANCHOR: aql
+curl --fail-with-body -u ferroehr:ferroehr -H 'Content-Type: application/json' \
+  -d '{"q":"SELECT e/ehr_id/value FROM EHR e"}' \
+  http://localhost:8080/ferroehr/rest/openehr/v1/query/aql
+# ANCHOR_END: aql
+echo
 
 echo "==> Recording migration ledger before restart"
 before=$(migration_count)

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -21,9 +21,24 @@
     <other_details id="original_namespace">org.openehr</other_details>
     <other_details id="original_publisher">openEHR Foundation</other_details>
     <other_details id="custodian_namespace">org.openehr</other_details>
-    <other_details id="MD5-CAM-1.0.1">079F0EABA6122DE0912BD63BA7C83453</other_details>
-    <other_details id="build_uid">6e092c05-496e-4411-ac7b-bbe50641d92a</other_details>
+    <other_details id="MD5-CAM-1.0.1">CEA54BB44E61F6ADB77EBDCC48935E82</other_details>
+    <other_details id="build_uid">4b9bc0ac-f2ee-4d83-93ee-4fe74223b4bd</other_details>
     <other_details id="revision">0.0.1-alpha</other_details>
+    <details>
+      <language>
+        <terminology_id>
+          <value>ISO_639-1</value>
+        </terminology_id>
+        <code_string>sv</code_string>
+      </language>
+      <purpose>Dokumentera ett underlag för beslut om patientens inkludering i ett specifikt långvarigt vårdförlopp.</purpose>
+      <keywords>kronisk</keywords>
+      <keywords>långvarigt vårdförlopp</keywords>
+      <keywords>Inskrivning</keywords>
+      <use>Kan användas både för att inkludera nya patienter i ett specifikt vårdförlopp och för att bedöma om redan inkluderade patienter ska fortsätta i vårdförloppet.</use>
+      <misuse>De flesta arketyper är inriktade på dokumentation av akuta vårdhändelser i klinisk verksamhet. Den här arketypen är däremot avsedd för regelbunden omprövning av beslut som rör ett långvarigt vårdförlopp, till exempel ett behandlingsbeslut vid ett kroniskt tillstånd som kräver regelbunden behandling. Arketypen är därför inte avsedd för dokumentation av beslut om enstaka vårdåtgärder.</misuse>
+      <copyright />
+    </details>
     <details>
       <language>
         <terminology_id>
@@ -40,6 +55,19 @@
       <copyright>© openEHR Foundation</copyright>
     </details>
   </description>
+  <translations>
+    <language>
+      <terminology_id>
+        <value>ISO_639-1</value>
+      </terminology_id>
+      <code_string>sv</code_string>
+    </language>
+    <author id="name">Alicia Lindmark</author>
+    <author id="organisation">Tieto</author>
+    <author id="email">alicia.lindmark@tieto.com</author>
+    <other_details id="other_contributors">Josefin Ankarblom, Tieto, Sweden&#xD;
+Therése Oresten, Tieto, Sweden</other_details>
+  </translations>
   <uid>
     <value>41127c0f-8888-4267-aba4-cd2df0905034</value>
   </uid>
@@ -477,6 +505,43 @@
         <items id="description">If true, the patient meets the criteria required to be inscribed in the healthcare process.</items>
       </items>
     </term_definitions>
+    <term_definitions language="sv">
+      <items code="at0000">
+        <items id="text">Inskrivning i ett långvarigt vårdförlopp</items>
+        <items id="description">Hanterar inskrivning av patienter i ett specifikt långvarigt vårdförlopp.</items>
+      </items>
+      <items code="at0001">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0002">
+        <items id="text">Tree</items>
+        <items id="description">@ internal @</items>
+      </items>
+      <items code="at0003">
+        <items id="text">Beslutsdatum</items>
+        <items id="description">Datum då beslut fattades om patienten skulle inkluderas i eller exkluderas från vårdförloppet.</items>
+      </items>
+      <items code="at0004">
+        <items id="text">Vårdförlopp</items>
+        <items id="description">Anger vilket vårdförlopp patienten diskuteras för inkludering i.</items>
+      </items>
+      <items code="at0005">
+        <items id="text">Beskrivning</items>
+        <items id="description">Beskrivning av den vårdinsats som patienten föreslås få.</items>
+      </items>
+      <items code="at0010">
+        <items id="text">Kriterier</items>
+        <items id="description">Beskrivning av de kriterier som beaktas vid beslut om patientens inkludering i vårdförloppet.</items>
+      </items>
+      <items code="at0011">
+        <items id="text">Granskning av beslut</items>
+        <items id="description">Datum för nästa planerade granskning av det aktuella beslutet om inkludering i vårdförloppet.</items>
+      </items>
+      <items code="at0012">
+        <items id="text">Inskrivning</items>
+        <items id="description">Om sant uppfyller patienten kriterierna för att inkluderas i vårdförloppet.</items>
+      </items>
+    </term_definitions>
   </ontology>
 </archetype>
-

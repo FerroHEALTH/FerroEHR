@@ -15,9 +15,10 @@
 //! Gating: mounted under `/admin/`, so every route inherits the group's RBAC
 //! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
 //! (`405` with an empty `Allow` when off) unchanged. Recording is refused while
-//! `[authz.rbac] access_service_roles` is empty, since the mark would then
-//! hold for nobody; reversing and reading are always open, so a recorded
-//! opt-out can always be reversed.
+//! `[authz.grants] allowed` does not allow `access_service`, since the CDR
+//! could then name no access service and the mark would hold for nobody;
+//! reversing and reading are always open, so a recorded opt-out can always be
+//! reversed.
 
 #![expect(
     clippy::disallowed_types,
@@ -26,6 +27,7 @@
 )]
 
 use axum::response::Response;
+use ferroehr::party_binding::grants::operation::Operation;
 use http::StatusCode;
 use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
@@ -64,16 +66,16 @@ guarded_handler! {
                      })),
         responses(
             (status = 204, description = "The opt-out is recorded. A caller holding \
-                                          one of `authz.rbac.access_service_roles` \
+                                          an `access_service` grant in the CDR \
                                           then reads the EHR as absent at every \
                                           route, query and export, unless it \
                                           declares an emergency purpose and acts \
                                           for no person (EHDS Art. 10(2)); every \
                                           other caller reads it as before."),
-            (status = 400, description = "The body is not the object above, or the \
-                                          deployment declares no access-service \
-                                          caller (`authz.rbac.access_service_roles` \
-                                          is empty).",
+            (status = 400, description = "The body is not the object above, or \
+                                          `authz.grants.allowed` does not allow \
+                                          `access_service`, so no caller can be an \
+                                          access service.",
              body = serde_json::Value),
             (status = 404, description = "No such EHR; nothing is recorded.",
              body = serde_json::Value),
@@ -150,12 +152,16 @@ async fn register(state: AppState, parts: RequestParts) -> Result<Response, Rest
 async fn opt_out(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let body = negotiate::decode::json_value(&parts.headers, &parts.body)?;
     let ehr_id = required_str(&body, "ehr_id")?;
-    let declared = &state.config().rbac.access_service_roles;
-    if declared.iter().all(|role| role.trim().is_empty()) {
+    if !state
+        .backend()
+        .grants()
+        .ceiling()
+        .allows(Operation::AccessService)
+    {
         return Err(RestError::from(ApiError::BadRequest(
-            "this deployment declares no EHDS Art. 10 access-service caller \
-             ([authz.rbac] access_service_roles is empty), so an opt-out would hold for \
-             nobody; declare the roles of the access services first"
+            "this deployment allows no EHDS Art. 10 access-service caller ([authz.grants] \
+             allowed does not allow access_service), so an opt-out would hold for nobody; \
+             allow access_service and grant it to the access services in the CDR first"
                 .to_owned(),
         )));
     }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<archetype xmlns="http://schemas.openehr.org/v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <original_language>
     <terminology_id>
       <value>ISO_639-1</value>
@@ -877,19 +877,19 @@ This archetype allows the recording of one or more of: the full Mayo score (12 p
       </items>
       <items code="at0010">
         <items id="text">Normal number of stools</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">1-2 stools more than normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">3-4 stools more than normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">5 or more stools more than normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Rectal bleeding</items>
@@ -897,19 +897,19 @@ This archetype allows the recording of one or more of: the full Mayo score (12 p
       </items>
       <items code="at0015">
         <items id="text">No blood seen</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Streaks of blood with stool less than half the time</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Obvious blood with stool most of the time</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Blood alone passed</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Endoscopy findings</items>
@@ -918,7 +918,7 @@ This archetype allows the recording of one or more of: the full Mayo score (12 p
       </items>
       <items code="at0020">
         <items id="text">Normal or inactive disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Mild disease</items>
@@ -938,19 +938,19 @@ This archetype allows the recording of one or more of: the full Mayo score (12 p
       </items>
       <items code="at0025">
         <items id="text">Normal or inactive disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Mild disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Moderate disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Severe disease</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Total Mayo score</items>
@@ -1000,19 +1000,19 @@ This archetype allows the recording of one or more of: the full Mayo score (12 p
       </items>
       <items code="at0010">
         <items id="text">Normalt antall avføringer</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">1-2 flere avføringer enn normalt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">3-4 flere avføringer enn normalt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">5 eller mer flere avføringer enn normalt</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Rektale blødninger</items>
@@ -1020,19 +1020,19 @@ This archetype allows the recording of one or more of: the full Mayo score (12 p
       </items>
       <items code="at0015">
         <items id="text">Ikke synlig blod</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Synlig blod i avføringen mindre enn halvparten av tiden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Synlig blod i avføringen mer enn halvparten av tiden</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Tømming består utelukkende av blod</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Funn ved endoskopi</items>
@@ -1061,19 +1061,19 @@ This archetype allows the recording of one or more of: the full Mayo score (12 p
       </items>
       <items code="at0025">
         <items id="text">Normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Mild</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Moderat</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Alvorlig</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Total Mayo skår</items>
@@ -1123,19 +1123,19 @@ This archetype allows the recording of one or more of: the full Mayo score (12 p
       </items>
       <items code="at0010">
         <items id="text">Normale Anzahl der Stühle</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0011">
         <items id="text">1-2 Stühle mehr als normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0012">
         <items id="text">3-4 Stühle mehr als normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0013">
         <items id="text">5 oder mehr Stühle mehr als normal</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0014">
         <items id="text">Rektaler Blutabgang</items>
@@ -1143,19 +1143,19 @@ This archetype allows the recording of one or more of: the full Mayo score (12 p
       </items>
       <items code="at0015">
         <items id="text">Kein Blut sichtbar</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0016">
         <items id="text">Blutstreifen bei weniger als bei der Hälfte der Stühle</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0017">
         <items id="text">Deutliche Blutbeimengung im Stuhl die meiste Zeit</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0018">
         <items id="text">Blut ohne Stuhl</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0019">
         <items id="text">Endoskopische Befunde</items>
@@ -1164,7 +1164,7 @@ This archetype allows the recording of one or more of: the full Mayo score (12 p
       </items>
       <items code="at0020">
         <items id="text">Normaler Befund oder inaktive Erkrankung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0021">
         <items id="text">Milde Colitis</items>
@@ -1184,19 +1184,19 @@ This archetype allows the recording of one or more of: the full Mayo score (12 p
       </items>
       <items code="at0025">
         <items id="text">Normal oder inaktive Erkrankung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0026">
         <items id="text">Milde Erkrankung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0027">
         <items id="text">Moderate Erkrankung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0028">
         <items id="text">Schwere Erkrankung</items>
-        <items id="description"></items>
+        <items id="description" />
       </items>
       <items code="at0029">
         <items id="text">Total Mayo Score</items>
@@ -1225,4 +1225,3 @@ This archetype allows the recording of one or more of: the full Mayo score (12 p
     </term_definitions>
   </ontology>
 </archetype>
-

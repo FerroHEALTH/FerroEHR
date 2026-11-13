@@ -3,7 +3,7 @@
 
 //! The EHDS Art. 3(3) delay of the person's own access: the professional's
 //! hold and release, the register, and the expiry records under the policy
-//! of [`crate::config::access_delay`].
+//! of [`crate::policy_register::access_delay`].
 //!
 //! Regulation (EU) 2025/327 Art. 3(1) gives a person access to their data
 //! "immediately after" it is registered, and Art. 3(3) lets a Member State
@@ -23,10 +23,10 @@ use std::time::Duration;
 
 use sqlx::Connection as _;
 
-use crate::config::access_delay::AccessDelayPolicy;
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::ids::{EhrId, VoId};
+use crate::policy_register::access_delay::AccessDelayPolicy;
 use crate::service::FerroEhrService;
 use crate::storage::access_delay;
 use crate::system_log::event::EventActionCode;
@@ -37,18 +37,16 @@ const REGISTER: &str = "access-delay";
 const EXPIRY: &str = "access-delay-expiry";
 
 impl FerroEhrService {
-    /// Install the `[privacy.access_delay]` policy; `None`, the default, leaves the
-    /// person's access immediate (EHDS Art. 3(1)).
-    #[must_use]
-    pub fn with_access_delay(mut self, policy: Option<AccessDelayPolicy>) -> Self {
-        self.access_delay = policy.map(Arc::new);
-        self
-    }
-
-    /// Whether the deployment enables the EHDS Art. 3(3) delay.
+    /// Whether the access-delay register in force enables the EHDS Art. 3(3)
+    /// delay.
     #[must_use]
     pub fn access_delay_enabled(&self) -> bool {
-        self.access_delay.is_some()
+        self.registers.access_delay().policy.is_some()
+    }
+
+    /// The access-delay register's policy in force, when the delay is on.
+    fn access_delay_policy(&self) -> Option<Arc<AccessDelayPolicy>> {
+        self.registers.access_delay().policy.clone()
     }
 
     /// Hold one composition from the person's own access until `until`, or for
@@ -69,11 +67,11 @@ impl FerroEhrService {
         until: Option<&str>,
         note: Option<&str>,
     ) -> Result<(), ServiceError> {
-        // NOTE: EHDS Art. 3(3) is a Member State option; with no `[privacy.access_delay]`,
-        // Art. 3(1) immediate access holds and no hold may be placed.
-        let Some(policy) = self.access_delay.as_deref() else {
+        // NOTE: EHDS Art. 3(3) is a Member State option; with the access-delay register
+        // off, Art. 3(1) immediate access holds and no hold may be placed.
+        let Some(policy) = self.access_delay_policy() else {
             return Err(ServiceError::precondition(
-                "privacy.access_delay is not configured on this server: EHDS Art. 3(3) delays the \
+                "the access-delay register is off on this server: EHDS Art. 3(3) delays the \
                  person's access only where a Member State rule provides for it",
             ));
         };
@@ -95,7 +93,7 @@ impl FerroEhrService {
         if held.is_none() {
             return Err(ServiceError::precondition(format!(
                 "nothing was held: {vo_id} is not a COMPOSITION, or `until` is not after now \
-                 and within privacy.access_delay.max_delay ({}h) of now (EHDS Art. 3(3): a limited period)",
+                 and within the access-delay register's max_delay ({}h) of now (EHDS Art. 3(3): a limited period)",
                 policy.hours()
             )));
         }
@@ -252,11 +250,10 @@ impl FerroEhrService {
     }
 
     /// Record the expiries every `every` in a detached task that ends with the
-    /// runtime; nothing is spawned while the delay is off.
+    /// runtime; the access-delay register may turn the delay on at any time,
+    /// and a hold placed while it was on still expires after it is off.
     pub fn spawn_access_delay_expiries(self: &Arc<Self>, every: Duration) {
-        if self.access_delay_enabled() {
-            tokio::spawn(record_expiries(Arc::clone(self), every));
-        }
+        tokio::spawn(record_expiries(Arc::clone(self), every));
     }
 }
 

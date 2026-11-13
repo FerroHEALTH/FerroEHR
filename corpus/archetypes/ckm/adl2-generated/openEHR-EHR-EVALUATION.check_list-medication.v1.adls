@@ -1,0 +1,106 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-EVALUATION.check_list-medication.v1.0.0
+
+specialize
+    openEHR-EHR-EVALUATION.check_list.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jasmin Buck, Sebastian Garde">
+                ["email"] = <"University of Heidelberg, Central Queensland University">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2007-04-02">
+    >
+    lifecycle_state = <"Rejected">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"2F6726A75556B6249EBE41FD5CAEBCA2">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Eine Kontrollliste zur Dokumentation strukturierter Fragen und Antworten zur Medikation.">
+            keywords = <"Kontrolle", "Liste", "Medikation">
+            use = <"Zur Dokumentation von gesammelten Informationen zur Medikation">
+            misuse = <"Nicht zur Dokumentation von Verordnungen oder Verabreichungen">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A checklist for recording structured questions and answers about medication.">
+            keywords = <"check", "list", "medication">
+            use = <"Use for recording information gathering about medication.">
+            misuse = <"Not for recording medication orders or administration records.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"قائمة مراجعة لتسجيل الأسئلة المركبة و الإجابات المتعلقة بالأدوية">
+            keywords = <"التحقق/ المراجعة", "قائمة", "الأدوية">
+            use = <"يستخدم لتسجيل عملية تجميع المعلومات حول الأدوية">
+            misuse = <"لا يستخدم لتسجيل الأمر بالأدوية أو سجلات تناول الدواء ">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- A check list for medications
+        /data[at0001]/items[at0004]/items[at0002]/items matches {
+            ELEMENT[at0003.1] matches {    -- Medication
+                value matches {
+                    DV_TEXT[at0.9000]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"Eine Kontrollliste für Medikationen">
+                description = <"Ein allgemeiner Archetyp zur Dokumentation von Fragen und Antworten zur Medikation">
+            >
+            ["at0003.1"] = <
+                text = <"Medikation">
+                description = <"Die Medikation, die die Antwort auf die Frage ist">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"A check list for medications">
+                description = <"A generic archetype for recording questions and answers about medication.">
+            >
+            ["at0003.1"] = <
+                text = <"Medication">
+                description = <"The medications that are the answer(s) to the question.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000.1"] = <
+                text = <"قائمة مراجعة للأدوية">
+                description = <"نموذج جنيس - غير محدود الملكية - لتسجيل الأسئلة و الإجابات حول الدواء.">
+            >
+            ["at0003.1"] = <
+                text = <"الدواء">
+                description = <"الأدوية التي هي إجابة للسؤال المطروح">
+            >
+        >
+    >

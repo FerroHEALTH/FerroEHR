@@ -17,9 +17,11 @@
 
 use std::collections::BTreeMap;
 
+use ferrohealth_secret::secret_url::SecretUrl;
 use serde::{Deserialize, Serialize};
 
-use crate::config::abac_rules::{CedarConfig, RemoteConfig};
+use crate::config::abac_rules::RemoteConfig;
+use crate::party_binding::grants::operation::GrantCeiling;
 
 /// The server-wide disposition for an EHR that carries no
 /// `ACCESS_CONTROL_SETTINGS` of its own — the `ehr_access_default` tri-state's
@@ -29,6 +31,7 @@ use crate::config::abac_rules::{CedarConfig, RemoteConfig};
 /// mandates no authorization scheme, and RM `master07` only defines the
 /// per-EHR object.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum EhrAccessDefault {
     /// Any caller the coarse layers already admitted reaches the EHR. The
@@ -47,7 +50,9 @@ pub enum EhrAccessDefault {
 
 /// The coarse role-based access-control settings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
 pub struct RbacConfig {
     /// Master switch of the coarse role gate, active only when auth is enabled
     /// (`FERROEHR__AUTHZ__RBAC__ENABLED`, default `true`).
@@ -63,18 +68,6 @@ pub struct RbacConfig {
     /// granting roles (a restriction overrides a grant). Supports the
     /// conformance catalogue's authorization-separation cases.
     pub readonly_role: String,
-    /// The role that may read the access log for ONE subject at a time
-    /// (`FERROEHR__AUTHZ__RBAC__SUBJECT_AUDIT_ROLE`, default unset).
-    ///
-    /// A portal that shows a person who accessed their record (GDPR Art. 15
-    /// with Recital 63, `docs/law/eu/gdpr/oj.html`, EHDS Art. 9, for Dutch deployments Wabvpz Art. 15e)
-    /// needs the ITI-81 retrieval for that person and nobody else. A caller
-    /// holding this role may call `GET /fhir/r4/AuditEvent` only with the
-    /// `patient` parameter, the subject's opaque pseudonym; without it the call
-    /// is refused, and the unscoped retrieval stays with `admin_role`. Unset,
-    /// the log is admin-only, as before (#3240). No openEHR spec governs the
-    /// access log — our own design/extension.
-    pub subject_audit_role: Option<String>,
     /// The role that may reach data under an EHDS Art. 8 access restriction in
     /// an emergency (`FERROEHR__AUTHZ__RBAC__EMERGENCY_ACCESS_ROLE`, default
     /// unset).
@@ -87,27 +80,18 @@ pub struct RbacConfig {
     /// may. No openEHR spec governs restriction of access — our own
     /// design/extension.
     pub emergency_access_role: Option<String>,
-    /// The roles of an EHDS Art. 10 access-service caller, held to an opt-out
-    /// (`FERROEHR__AUTHZ__RBAC__ACCESS_SERVICE_ROLES`; empty, the default, holds nobody).
-    pub access_service_roles: Vec<String>,
-    /// The role that may read a party's protected national identifiers
-    /// (`FERROEHR__AUTHZ__RBAC__IDENTIFIER_READER_ROLE`, default unset).
+    /// The issuers whose role claims may grant `admin_role` and
+    /// `emergency_access_role`, each a `persons` issuer; empty, the default,
+    /// lets no token grant them. Each renders with any userinfo masked.
+    pub role_issuers: Vec<SecretUrl>,
+    /// The Basic user of `[[auth.basic.users]]` that holds `admin_role` and
+    /// `[auth] product_scope` from this file
+    /// (`FERROEHR__AUTHZ__RBAC__FIRST_ADMIN`, default unset).
     ///
-    /// `GET /admin/party/identifiers` expands the identifiers
-    /// `[privacy.identifier_protection]` seals, and every read is an
-    /// access record. The route sits in the ADMIN API and also needs this
-    /// role, so holding `admin_role` alone does not reveal a national
-    /// identifier. Unset, nobody may call it (#3776). No openEHR spec governs
-    /// this — our own design/extension.
-    pub identifier_reader_role: Option<String>,
-    /// The role that may import an EHR or an EHR extract
-    /// (`message_import_ehr`, `message_import_ehr_extract`; default unset).
-    // TODO(#5005): require the role on the two import operations.
-    pub import_role: Option<String>,
-    /// The issuers whose role claims may grant `admin_role`,
-    /// `emergency_access_role`, `import_role` and `identifier_reader_role`,
-    /// each a `persons` issuer; empty, the default, lets no token grant them.
-    pub role_issuers: Vec<String>,
+    /// No policy grant gives `admin_role`, so this user is the administrator
+    /// who writes the first policy parties through the Demographic API.
+    /// Unset, no Basic user holds `admin_role`. Our own design.
+    pub first_admin: Option<String>,
     /// What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default
     /// `open`).
     ///
@@ -131,23 +115,35 @@ impl Default for RbacConfig {
             enabled: true,
             admin_role: "ADMIN".to_owned(),
             readonly_role: "READONLY".to_owned(),
-            subject_audit_role: None,
             emergency_access_role: None,
-            access_service_roles: Vec::new(),
-            identifier_reader_role: None,
-            import_role: None,
             role_issuers: Vec::new(),
+            first_admin: None,
             ehr_access_default: EhrAccessDefault::Open,
         }
+    }
+}
+
+impl RbacConfig {
+    /// The privileged roles, upper-cased: `admin_role` and
+    /// `emergency_access_role`, which a `hold_roles` grant never gives.
+    #[must_use]
+    pub fn privileged_roles(&self) -> Vec<String> {
+        [Some(&self.admin_role), self.emergency_access_role.as_ref()]
+            .into_iter()
+            .flatten()
+            .map(|role| role.trim().to_uppercase())
+            .collect()
     }
 }
 
 /// The ABAC policy engine selector (`abac.engine`). `cedar` is the
 /// embedded default; `remote` delegates to an external PDP.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum AbacEngineKind {
-    /// Embedded Cedar (`cedar-policy`), policies from `abac.cedar.policy_dir`.
+    /// Embedded Cedar (`cedar-policy`), its policy set from the Cedar admin
+    /// register.
     #[default]
     Cedar,
     /// The remote policy-decision-point (`abac.remote.url`).
@@ -158,6 +154,7 @@ pub enum AbacEngineKind {
 /// attribute keys, exactly `organization` / `patient` / `template` /
 /// `category` / `origin` on the wire.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum AbacParam {
     /// The caller's organization (from `abac.organization_claim`).
@@ -168,7 +165,7 @@ pub enum AbacParam {
     Template,
     /// The EHDS categories of the resource's data (EHDS Annex II 3.4).
     Category,
-    /// The origins of the resource's data (EHDS Annex II 3.4, `[[authz.origin]]`).
+    /// The origins of the resource's data (EHDS Annex II 3.4, a `data_origin` grant).
     Origin,
 }
 
@@ -191,7 +188,9 @@ impl AbacParam {
 /// A per-resource-kind policy binding: the policy name appended to the
 /// remote PDP base URL, and which resolved parameters its request body carries.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct PolicyRule {
     /// The policy name (the path segment appended to `abac.remote.url`).
     pub name: String,
@@ -208,7 +207,9 @@ pub struct PolicyRule {
 /// table's presence, because `organization_claim` applies while it is off:
 /// the access log records the organisation a caller acts for.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct AbacConfig {
     /// Master ABAC switch (default `false`).
     pub enabled: bool,
@@ -216,9 +217,11 @@ pub struct AbacConfig {
     pub engine: AbacEngineKind,
     /// The JWT claim carrying the caller's organization (default
     /// `organization_id`); resolved opportunistically (absent → no attribute).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub organization_claim: String,
     /// The JWT claim carrying the patient id (default `patient_id`); its presence
     /// enables the local subject gate. Set to empty to disable the gate.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub patient_claim: String,
     /// The subject namespace patient-claim ids are issued in
     /// (`EHR_STATUS.subject.external_ref.namespace`, RM ehr master04 §EHR
@@ -228,9 +231,8 @@ pub struct AbacConfig {
     /// (claim, this value). Unset, a claim names the subject holding that id
     /// only when no other namespace holds the same id, and matches nothing
     /// otherwise. No openEHR spec governs the claim — our own extension.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub patient_namespace: Option<String>,
-    /// Embedded-Cedar settings.
-    pub cedar: CedarConfig,
     /// Remote-PDP settings.
     pub remote: RemoteConfig,
     /// Whether DIRECTORY (FOLDER) operations are submitted to the PDP
@@ -261,7 +263,6 @@ impl Default for AbacConfig {
             organization_claim: "organization_id".to_owned(),
             patient_claim: "patient_id".to_owned(),
             patient_namespace: None,
-            cedar: CedarConfig::default(),
             remote: RemoteConfig::default(),
             check_directory: false,
             policy: BTreeMap::new(),
@@ -294,9 +295,54 @@ impl AbacConfig {
     }
 }
 
+/// The ceiling on what the policy grants may grant (`[authz.grants]`).
+///
+/// A grant is an operation of FerroEHR's operation terminology
+/// (`ferroehr-operations`) coded in the credentials of a `CAPABILITY`, which
+/// an administrator manages through the Demographic API. This key is the
+/// trust bound the party store cannot raise: a commit of a capability coding
+/// an operation it does not list is refused, and one already stored is never
+/// honoured, so a compromised administrator account grants no more than the
+/// operator allows. No openEHR spec gives a capability an authorization
+/// meaning: our own design.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
+#[serde(default, deny_unknown_fields)]
+pub struct GrantsConfig {
+    /// The operations the party store may grant
+    /// (`FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated).
+    ///
+    /// The operations are the codes of `ferroehr-operations`
+    /// ([`crate::party_binding::grants::operation::Operation`]). The default
+    /// allows only `commit_composition`, which lets a client write the
+    /// templates its grant names and nothing else: every other operation
+    /// reaches beyond one system's own writes, so each is allowed by name. An
+    /// empty list lets the store grant nothing.
+    pub allowed: Vec<crate::party_binding::grants::operation::Operation>,
+}
+
+impl Default for GrantsConfig {
+    fn default() -> Self {
+        Self {
+            allowed: vec![crate::party_binding::grants::operation::Operation::CommitComposition],
+        }
+    }
+}
+
+impl GrantsConfig {
+    /// The ceiling these operations set, reserving the privileged roles of
+    /// `rbac` ([`RbacConfig::privileged_roles`]).
+    #[must_use]
+    pub fn ceiling(&self, rbac: &RbacConfig) -> GrantCeiling {
+        GrantCeiling::new(self.allowed.iter().copied()).with_reserved_roles(rbac.privileged_roles())
+    }
+}
+
 /// Authorization configuration: the coarse RBAC gate plus the opt-in ABAC
 /// policy layer.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct AuthzConfig {
     /// Role-based access control.
@@ -305,23 +351,13 @@ pub struct AuthzConfig {
     pub abac: AbacConfig,
     /// The authentication assurance a patient-data request must carry
     /// (`[authz.assurance]`, off by default).
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub assurance: ferrohealth_smart::assurance::AssuranceSection,
     /// The party binding: the provider, the namespace and the Basic users'
     /// keys (`[authz.party_binding]`).
     pub party_binding: crate::config::binding::PartyBindingConfig,
-    /// The systems whose imported committers are trusted (`[authz.import]`).
-    pub import: crate::config::clients::ImportConfig,
-    /// The system clients that commit (`[[authz.system_client]]`).
-    pub system_client: Vec<crate::config::clients::SystemClient>,
-    /// The federation agreements (`[authz.federation]`).
-    pub federation: crate::config::agreement::FederationConfig,
-    /// The origins of data this deployment recognises, which a retention
-    /// period and an access rule may name (`[[authz.origin]]`, EHDS Annex II
-    /// 3.4).
-    pub origin: Vec<crate::origins::RegisteredOrigin>,
-    /// Retired in v5.7.0: the `[authz.professional]` table, refused at load.
-    #[serde(skip_serializing)]
-    pub professional: ferrohealth_config::removed::Removed,
+    /// The operations the policy grants may grant (`[authz.grants]`).
+    pub grants: GrantsConfig,
 }
 
 /// A boot-time authorization-configuration error — a hard error that must
@@ -348,9 +384,6 @@ pub enum AuthzConfigError {
     /// carries the URL with its `userinfo` masked.
     #[error("authz.abac.remote.url must end with '/' (got {0:?})")]
     RemoteServerTrailingSlash(String),
-    /// `engine = cedar` without a configured policy directory.
-    #[error("authz.abac.cedar.policy_dir is required when abac.engine = cedar")]
-    CedarDirMissing,
     /// `engine = remote` without a policy for a kind the enforcement point
     /// consults — the runtime branch can only fail closed, so it is refused here.
     #[error(
@@ -382,7 +415,6 @@ impl AuthzConfig {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
 
     use super::*;
     use crate::config::abac_rules::REQUIRED_REMOTE_POLICY_KINDS;
@@ -467,10 +499,6 @@ mod tests {
                 abac: AbacConfig {
                     enabled: true,
                     engine: AbacEngineKind::Cedar,
-                    cedar: CedarConfig {
-                        policy_dir: Some(PathBuf::from("/tmp/policies")),
-                        ..CedarConfig::default()
-                    },
                     policy,
                     ..AbacConfig::default()
                 },
@@ -496,10 +524,6 @@ mod tests {
         let c = AuthzConfig {
             abac: AbacConfig {
                 enabled: true,
-                cedar: CedarConfig {
-                    policy_dir: Some(PathBuf::from("/tmp/p")),
-                    ..CedarConfig::default()
-                },
                 policy,
                 ..AbacConfig::default()
             },
@@ -548,10 +572,9 @@ mod tests {
             abac: AbacConfig {
                 remote: RemoteConfig {
                     endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                        url: "http://pdp:3001/exec".to_owned(),
+                        url: SecretUrl::new("http://pdp:3001/exec"),
                         ..RemoteConfig::default().endpoint
                     },
-                    ..RemoteConfig::default()
                 },
                 ..base.clone()
             },
@@ -566,10 +589,9 @@ mod tests {
             abac: AbacConfig {
                 remote: RemoteConfig {
                     endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                        url: "http://pdp:3001/exec/".to_owned(),
+                        url: SecretUrl::new("http://pdp:3001/exec/"),
                         ..RemoteConfig::default().endpoint
                     },
-                    ..RemoteConfig::default()
                 },
                 ..base
             },
@@ -590,10 +612,9 @@ mod tests {
                 engine: AbacEngineKind::Remote,
                 remote: RemoteConfig {
                     endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                        url: "http://pdp:3001/exec/".to_owned(),
+                        url: SecretUrl::new("http://pdp:3001/exec/"),
                         ..RemoteConfig::default().endpoint
                     },
-                    ..RemoteConfig::default()
                 },
                 policy,
                 ..AbacConfig::default()
@@ -629,16 +650,12 @@ mod tests {
             Err(AuthzConfigError::RemotePolicyMissing("directory"))
         );
 
-        // The Cedar engine reads its policies from disk, so the map is not
-        // required there.
+        // The Cedar engine reads its policies from the Cedar register, so the
+        // map is not required there.
         let cedar = AuthzConfig {
             abac: AbacConfig {
                 enabled: true,
                 engine: AbacEngineKind::Cedar,
-                cedar: CedarConfig {
-                    policy_dir: Some(PathBuf::from("/etc/ferroehr/policies")),
-                    ..CedarConfig::default()
-                },
                 ..AbacConfig::default()
             },
             ..AuthzConfig::default()
@@ -655,10 +672,6 @@ mod tests {
             abac: AbacConfig {
                 enabled: true,
                 engine: AbacEngineKind::Cedar,
-                cedar: CedarConfig {
-                    policy_dir: Some(PathBuf::from("/etc/ferroehr/policies")),
-                    ..CedarConfig::default()
-                },
                 check_directory: true,
                 ..AbacConfig::default()
             },
@@ -670,8 +683,11 @@ mod tests {
         );
     }
 
+    /// The Cedar engine takes its policy set from the Cedar register, so it
+    /// needs no configuration of its own, and `[authz.abac.cedar]` is an
+    /// unknown table.
     #[test]
-    fn cedar_requires_policy_dir() {
+    fn cedar_needs_no_configuration() {
         let c = AuthzConfig {
             abac: AbacConfig {
                 enabled: true,
@@ -680,7 +696,11 @@ mod tests {
             },
             ..AuthzConfig::default()
         };
-        assert_eq!(c.validate(), Err(AuthzConfigError::CedarDirMissing));
+        assert_eq!(c.validate(), Ok(()));
+        assert!(
+            toml::from_str::<AbacConfig>("[cedar]\npolicy_dir = \"/etc/ferroehr\"").is_err(),
+            "[authz.abac.cedar] is no longer a configuration table"
+        );
     }
 
     #[test]
@@ -732,9 +752,5 @@ mod tests {
             default.abac.patient_namespace
         );
         assert_eq!(parsed.abac.check_directory, default.abac.check_directory);
-        assert_eq!(
-            parsed.abac.remote.request_timeout_ms,
-            default.abac.remote.request_timeout_ms
-        );
     }
 }
