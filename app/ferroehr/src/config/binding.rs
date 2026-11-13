@@ -501,8 +501,8 @@ fn tenants(tables: &[TenantProvider], resolved: &Resolved, errors: &mut Vec<Stri
 }
 
 impl crate::config::FerroEhrConfig {
-    /// The boot refusals of the party binding and the system clients; the
-    /// section rules of `[auth]` itself are [`crate::config::auth::validate`]'s.
+    /// The boot refusals of the party binding; the section rules of `[auth]`
+    /// itself are [`crate::config::auth::validate`]'s.
     pub(crate) fn identity_errors(&self) -> Vec<String> {
         let mut errors = Vec::new();
         let Ok(resolved) = crate::config::auth::resolve(&self.auth.shared) else {
@@ -523,10 +523,6 @@ impl crate::config::FerroEhrConfig {
                 .sections()
                 .errors(&key_issuers(&resolved), protected),
         );
-        errors.extend(crate::config::clients::system_client_errors(
-            &self.authz.system_client,
-            &resolved,
-        ));
         errors
     }
 }

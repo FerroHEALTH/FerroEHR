@@ -916,7 +916,13 @@ async fn a_deployments_own_archetypes_carrying_the_codes_are_policy_parties() {
         role
     };
 
-    let granting = migration(operation("import_ehr"));
+    let mut granting = migration(operation("import_ehr"));
+    granting["capabilities"][0]["credentials"]["items"][0]["items"]
+        .as_array_mut()
+        .expect("the scope's items")
+        .push(json!({ "_type": "ELEMENT", "archetype_node_id": "at0011",
+            "name": operation("subject_namespace"),
+            "value": { "_type": "DV_TEXT", "value": "nl.legacy-his.patients" } }));
     assert_policy_refusal(as_clinician(create(&svc, PartyKind::Role, &granting)).await);
     let (_, grant_uid) = as_admin(create(&svc, PartyKind::Role, &granting))
         .await

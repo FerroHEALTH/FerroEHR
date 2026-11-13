@@ -3,9 +3,9 @@
 
 //! The party binding configuration through `ferroehr::config::assemble`: a
 //! full configuration of every issuer kind loads, and each boot refusal of
-//! `[auth]`, `[authz.party_binding]` and `[[authz.system_client]]` names its
-//! key; the federation agreements are CDR data, judged at their commit
-//! (`federation_agreements.rs`). No openEHR spec governs
+//! `[auth]` and `[authz.party_binding]` names its key; the federation
+//! agreements and the system clients are CDR data, judged at their commit
+//! (`federation_agreements.rs`, `policy_grants.rs`). No openEHR spec governs
 //! configuration: our own design.
 
 use std::collections::HashMap;
@@ -18,7 +18,7 @@ use ferroehr::config::binding::{BindingPosture, Providers};
 const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaGhhc2hoYQ";
 
 /// A configuration with one issuer of every kind, a bound persons issuer,
-/// a mapped Basic user and a system client.
+/// and a mapped Basic user.
 fn full() -> String {
     format!(
         r#"
@@ -80,12 +80,6 @@ user = "alice"
 key_issuer = "urn:example:staff-login"
 key = "3f2b0c1e-0000-4000-8000-000000000001"
 
-[[authz.system_client]]
-issuer = "https://idp.example/realms/machines"
-client_id = "ferrobridge"
-provider = {{ issuer = "urn:oid:2.16.528.1.1007.3.3", id = "12345678" }}
-facilities = [{{ issuer = "urn:example:facility", id_prefix = "ward-" }}]
-origins = ["relay"]
 "#
     )
 }
@@ -287,16 +281,6 @@ fn a_basic_user_with_no_mapping_is_refused_naming_the_user() {
 
 #[test]
 fn a_table_for_an_issuer_of_the_wrong_kind_or_twice_is_refused() {
-    let text = refusal(&with(
-        "issuer = \"https://idp.example/realms/machines\"\nclient_id",
-        "issuer = \"https://federation.example\"\nclient_id",
-    ));
-    assert!(
-        text.contains(
-            "names a federation issuer: a system client's issuer is of kind machines or persons"
-        ),
-        "{text}"
-    );
     let party = "[[auth.party]]\nissuer = \"https://idp.example/realms/staff\"\nidentifier_issuer = \"urn:example:staff-login\"\nidentifier_type = \"guid\"\n";
     let text = refusal(&with(
         party,
@@ -412,16 +396,24 @@ fn a_party_claim_and_a_token_profile_are_refused() {
     assert!(text.contains("unknown field `token_profile`"), "{text}");
 }
 
+/// The system clients are policy parties in the CDR (#5436): the table that
+/// declared them is an unknown key, with each of its former keys.
 #[test]
-fn a_device_client_without_identifier_issuers_is_refused() {
-    let text = refusal(&with(
-        "origins = [\"relay\"]",
+fn a_system_client_table_is_refused_as_unknown() {
+    for table in [
+        "issuer = \"https://idp.example/realms/machines\"\nclient_id = \"ferrobridge\"",
+        "provider = { issuer = \"urn:oid:2.16.528.1.1007.3.3\", id = \"12345678\" }",
+        "facilities = [{ issuer = \"urn:example:facility\", id_prefix = \"ward-\" }]",
+        "writes = [\"Vital signs.v1\"]",
         "origins = [\"relay\", \"device\"]",
-    ));
-    assert!(
-        text.contains("has origins containing device and needs device_identifier_issuers"),
-        "{text}"
-    );
+        "device_identifier_issuers = [\"urn:oid:2.999.9\"]",
+    ] {
+        let text = refusal(&format!("{}\n[[authz.system_client]]\n{table}\n", full()));
+        assert!(
+            text.contains("unknown field `system_client`"),
+            "{table}: {text}"
+        );
+    }
 }
 
 #[test]
@@ -456,33 +448,6 @@ fn the_keys_the_cdr_now_holds_are_refused_as_unknown() {
         let text = refusal(&format!("{}\n{removed}", full()));
         assert!(text.contains(key), "{key}: {text}");
     }
-}
-
-#[tokio::test]
-async fn a_system_client_naming_a_template_the_store_does_not_hold_is_refused() {
-    let (_db, service) = crate::fixtures::service().await;
-    let config = assemble(&with(
-        "origins = [\"relay\"]",
-        "origins = [\"relay\"]\nwrites = [\"Not held.v1\"]",
-    ))
-    .expect("assembles");
-    let unheld = service
-        .unheld_written_templates(&config.authz)
-        .await
-        .expect("the store answers")
-        .expect_err("refused");
-    assert!(
-        unheld
-            .to_string()
-            .contains("writes the template \"Not held.v1\", which the store does not hold"),
-        "{unheld}"
-    );
-    let held = assemble(&full()).expect("assembles");
-    service
-        .unheld_written_templates(&held.authz)
-        .await
-        .expect("the store answers")
-        .expect("no template is named");
 }
 
 /// The shared party mapping of #5013: one person template with its three

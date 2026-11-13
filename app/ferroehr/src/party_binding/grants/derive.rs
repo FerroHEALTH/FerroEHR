@@ -22,8 +22,9 @@
 
 use serde_json::Value;
 
+use crate::party_binding::derive::container;
 use crate::party_binding::grants::operation::{NOT_AFTER, NOT_BEFORE, is_qualifier};
-use crate::party_binding::policy_mark::{CLIENT_ID, coded};
+use crate::party_binding::policy_mark::{CLIENT_ID, acts_for, coded};
 use crate::versioning::Kind;
 
 /// A `Not before` or `Not after` bound of a capability's credentials.
@@ -64,6 +65,12 @@ pub(crate) struct GrantFacts {
     /// A `ROLE`'s granted operations, one per capability and code, in
     /// document order.
     pub(crate) capabilities: Vec<CapabilityFacts>,
+    /// The container an actor's first inline acts-for `PARTY_RELATIONSHIP`
+    /// targets: the provider a client acts for.
+    pub(crate) provider: Option<uuid::Uuid>,
+    /// An `ORGANISATION`'s identifier as a provider, `(issuer, id)`: the
+    /// first `DV_IDENTIFIER` in its `details` that names no client.
+    pub(crate) identifier: Option<(String, String)>,
 }
 
 impl GrantFacts {
@@ -86,6 +93,18 @@ impl GrantFacts {
                     });
                 }
                 facts.clients = found;
+                facts.provider = body
+                    .get("relationships")
+                    .and_then(Value::as_array)
+                    .into_iter()
+                    .flatten()
+                    .filter(|relationship| acts_for(relationship))
+                    .find_map(|relationship| {
+                        container(relationship.pointer("/target/id/value")?.as_str()?)
+                    });
+                if kind == Kind::Organisation {
+                    facts.identifier = body.get("details").and_then(provider_identifier);
+                }
             }
             Kind::Role => {
                 for (ordinal, capability) in body
@@ -171,6 +190,23 @@ fn client(value: &Value) -> Option<(String, String)> {
     (text("_type") == Some("DV_IDENTIFIER") && text("type") == Some(CLIENT_ID))
         .then(|| Some((text("issuer")?.to_owned(), text("id")?.to_owned())))
         .flatten()
+}
+
+/// The `(issuer, id)` of the first `DV_IDENTIFIER` below `details` that names
+/// no client.
+fn provider_identifier(details: &Value) -> Option<(String, String)> {
+    let mut found = None;
+    walk(details, &mut |value| {
+        let text = |key: &str| value.get(key).and_then(Value::as_str);
+        if found.is_none()
+            && text("_type") == Some("DV_IDENTIFIER")
+            && text("type") != Some(CLIENT_ID)
+            && let (Some(issuer), Some(id)) = (text("issuer"), text("id"))
+        {
+            found = Some((issuer.to_owned(), id.to_owned()));
+        }
+    });
+    found
 }
 
 /// The bound the `DV_DATE_TIME` value of the element `element` names.

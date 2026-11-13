@@ -67,13 +67,14 @@ A system client commits clinical content only as declared:
   COMPOSITION names the device in `composer`. Treating such a registration as
   outside Art. 13(4) is FerroEHR's reading of that article and of
   `COMPOSITION.composer`;
-- either one names a facility of its `facilities` in
+- either one names a facility its grant covers in
   `context.health_care_facility`, or, without a context, in
   `feeder_audit.originating_system_audit.location`. The server checks the
   facility and never fills it.
 
-The full rules are under
-[`[[authz.system_client]]`](../installation/config-auth.md#authzsystem_client).
+The client's grant is policy data in the CDR, and the committer carries an
+`external_ref` to the client's `ACTOR`. The full rules are under
+[What a system client may do](../operational-policy.md#what-a-system-client-may-do).
 
 ## What a client may still send
 

@@ -198,8 +198,8 @@ fn agent(client_id: &str) -> Value {
 }
 
 /// A `ROLE` of the deployment's own archetype the `AGENT` `performer`
-/// performs, granting `operation` for `template`, valid until `until` when
-/// given.
+/// performs, granting `operation` for `template`, relayed, valid until
+/// `until` when given.
 fn role(performer: &str, operation: &str, template: &str, until: Option<&str>) -> Value {
     let archetype = "openEHR-DEMOGRAPHIC-ROLE.lab_feed.v1";
     let mut role = json!({
@@ -215,7 +215,9 @@ fn role(performer: &str, operation: &str, template: &str, until: Option<&str>) -
                 { "_type": "ELEMENT", "archetype_node_id": "at0022", "name": text("operation"),
                   "value": operation_code(operation) },
                 { "_type": "ELEMENT", "archetype_node_id": "at0023",
-                  "name": operation_code("template"), "value": text(template) }
+                  "name": operation_code("template"), "value": text(template) },
+                { "_type": "ELEMENT", "archetype_node_id": "at0024",
+                  "name": operation_code("origin"), "value": operation_code("relay") }
             ] }
         }]
     });

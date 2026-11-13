@@ -710,8 +710,7 @@ config:
   auth:
     enabled: true
 
-  # [authz] — coarse RBAC (on with auth) + ABAC (off).
-  authz:
+  # [authz] — coarse RBAC (on with auth) + ABAC (off). Under config.authz:
     # The party binding. `provider` (issuer and id, in NL the URA) is required
     # once auth admits a credential: every access record of a bound person and
     # every version a person commits name it (EHDS Art. 13(4), Annex II 3.2(a)).
@@ -720,16 +719,10 @@ config:
     #     provider: { issuer: "urn:oid:2.16.528.1.1007.3.3", id: "12345678" }
     #     basic_user:
     #       - { user: clinician, key_issuer: urn:example:staff-login, key: "<binding key>" }
-    # Each OAuth client-credentials client that commits: its issuer and
-    # client_id, the provider it acts for, the facilities and templates it may
-    # commit, and its origins (relay | device).
-    #   - issuer: https://idp.example.com/realms/machines
-    #     client_id: ferrobridge
-    #     provider: { issuer: "urn:oid:2.16.528.1.1007.3.3", id: "12345678" }
-    #     facilities: [{ issuer: urn:example:facility, id_prefix: ward- }]
-    #     writes: []
-    #     origins: [relay]
-    system_client: []
+    # A system client, such as FerroBRIDGE, is authorized by the CDR itself:
+    # an AGENT carrying its client_id and performing a ROLE whose capabilities
+    # grant what it may commit, import or export, written through the
+    # Demographic API (the book's "Operational policy").
     # The federation agreements are CDR data, written through the Demographic
     # API (Operational policy in the book), and no configuration key.
 

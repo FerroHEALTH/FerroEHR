@@ -431,13 +431,15 @@ curl -H "Authorization: Bearer $TOKEN" -X POST -i \
 A service with no user behind it takes the client-credentials grant with
 `ferroehr-service`. Its service account holds `USER`, so the token reaches the
 clinical API and the admin routes refuse it with `403`. Its `system/aql-*`
-grant counts because the CDR grants the client `query_system_wide`: the
-`ferroehr-provision-keycloak` one-shot writes its `AGENT` and a `ROLE` coding
-that operation through the Demographic API, and the overlay admits it in
-`[authz.grants] allowed` (`FERROEHR__AUTHZ__GRANTS__ALLOWED`). It creates EHRs
-because the overlay declares it as an `[[authz.system_client]]` (`FERROEHR__AUTHZ__SYSTEM_CLIENT__0__*`),
-the only way a caller acting for no person commits; it lists no `writes`, so it
-commits no COMPOSITION:
+grant counts because the CDR grants the client `query_system_wide`, and it
+creates EHRs because the CDR grants it `commit_composition`, the only way a
+caller acting for no person commits: the `ferroehr-provision-keycloak`
+one-shot writes its `AGENT` and a `ROLE` coding both operations through the
+Demographic API, and the overlay admits them in `[authz.grants] allowed`
+(`FERROEHR__AUTHZ__GRANTS__ALLOWED`)
+([Operational policy](../operational-policy.md#what-a-system-client-may-do)).
+The `commit_composition` grant names no template, so it commits no
+COMPOSITION:
 
 ```shell
 TOKEN=$(curl -s -d client_id=ferroehr-service -d client_secret=ferroehr-service-quickstart-secret \

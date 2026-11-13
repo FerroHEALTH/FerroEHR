@@ -31,7 +31,6 @@ pub mod auth_section;
 pub mod authz;
 mod beside;
 pub mod binding;
-pub mod clients;
 pub mod deployment;
 pub mod federation;
 pub mod management;

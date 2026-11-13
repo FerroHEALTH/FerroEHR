@@ -55,13 +55,6 @@ config:
         - user: clinician
           key_issuer: urn:ferroehr:basic-user
           key: clinician
-    # FerroBRIDGE commits what $toopenehr maps, relaying the record of
-    # another system, as the healthcare provider this deployment acts for.
-    system_client:
-      - issuer: https://machines.example.org/realms/ferroehr
-        client_id: ferrobridge
-        provider: { issuer: "urn:oid:2.999.7.9", id: "bridge" }
-        origins: [relay]
   record:
     subject_index: local
 

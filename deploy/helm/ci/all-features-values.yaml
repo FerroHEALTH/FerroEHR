@@ -120,13 +120,6 @@ config:
             path: { "FerroEHR professional": "/contacts[at0005]/addresses[at0006]/details[at0007]/items[at0008]" }
       professional_role:
         template_id: FerroEHR professional role
-    # FerroBRIDGE commits what $toopenehr maps, relaying the record of
-    # another system, as the healthcare provider this deployment acts for.
-    system_client:
-      - issuer: https://machines.example.org/realms/ferroehr
-        client_id: ferrobridge
-        provider: { issuer: "urn:oid:2.999.7.9", id: "all-features" }
-        origins: [relay]
     rbac:
       role_issuers: [https://keycloak.example.com/realms/ferroehr]
     # The operations the party store may grant: FerroBRIDGE reads the change

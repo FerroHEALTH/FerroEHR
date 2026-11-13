@@ -396,7 +396,7 @@ pub struct Authenticator {
     /// The party binding every admitted caller is looked up in, when an
     /// `[[auth.party]]` table binds an issuer.
     party: Option<Arc<party::Binding>>,
-    /// The system clients and the federation agreements' caller limits.
+    /// The federation agreements' caller limits.
     declared: declared::Declared,
 }
 
@@ -624,8 +624,7 @@ pub(crate) async fn middleware(
             }
             req.extensions_mut().insert(principal.clone());
             let for_audit = principal.clone();
-            let mut committer =
-                party::committer_identity(&for_audit, &auth.declared.system_clients);
+            let mut committer = party::committer_identity(&for_audit, &granted);
             if let Some(binding) = auth.party.as_deref() {
                 match binding.details(&for_audit).await {
                     Ok(details) => committer.bound = details,
@@ -636,7 +635,7 @@ pub(crate) async fn middleware(
             // scope, so a record the service layer emits by itself carries
             // them too (#3239).
             let roles = for_audit.roles.clone();
-            let binding = record::of_request(&for_audit, &committer);
+            let binding = record::of_request(&for_audit, &committer, &granted, Some(auth));
             let mut resp = REQUEST_PRINCIPAL
                 .scope(
                     Some(principal),

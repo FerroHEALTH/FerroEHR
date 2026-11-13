@@ -55,7 +55,7 @@ pub(crate) async fn as_admin<F: Future>(fut: F) -> F::Output {
         representative: false,
         bound: None,
         system: false,
-        system_client: None,
+        agent: None,
         external: None,
     };
     ferroehr::system_log::access_context::with_roles(

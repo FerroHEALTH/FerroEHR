@@ -212,12 +212,7 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         an_extract: Extract,
     ) -> Result<(), ServiceError> {
-        if !ehr_repo::ehr_exists(&mut *acquire(&self.pool).await?, an_ehr_id).await? {
-            return Err(ServiceError::not_found(
-                Missing::Ehr,
-                format!("no EHR with id {an_ehr_id}"),
-            ));
-        }
+        self.admit_import_target(an_ehr_id).await?;
         let (containers, parties) = self
             .admitted(&an_extract, Operation::ImportEhrExtract)
             .await?;

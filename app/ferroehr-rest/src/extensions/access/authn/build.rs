@@ -199,7 +199,7 @@ impl Authenticator {
             primary,
             role_issuers: RoleIssuers::of(config),
             party,
-            declared: super::declared::Declared::of(config),
+            declared: super::declared::Declared::default(),
         }))
     }
 }

@@ -102,7 +102,7 @@ async fn create(svc: &FerroEhrService, kind: PartyKind, body: &Value) -> VoId {
         representative: false,
         bound: None,
         system: false,
-        system_client: None,
+        agent: None,
         external: None,
     };
     let mut write = WriteRequest::new(

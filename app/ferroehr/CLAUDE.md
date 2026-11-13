@@ -22,8 +22,11 @@ definitions of `deploy/definitions/` and the ids the default mapping names;
 absent; `grants` derives the client identifiers of any `ACTOR` and the
 operations of the `ferroehr-operations` terminology coded in any `ROLE`'s
 capability credentials into the side table in each commit, never by
-archetype, refuses an operation above `[authz.grants] allowed`, and keeps them in memory per replica
-(`LiveGrants`, invalidated through `NOTIFY`) for `Capabilities::current()`),
+archetype, refuses an operation above `[authz.grants] allowed` or a grant
+without its terms, holds each client's acts-for provider, and keeps them in
+memory per replica (`LiveGrants`, invalidated through `NOTIFY`) for
+`Capabilities::current()`, which decides a system client's commits
+(`versioning::system`), imports and exports (`service::message::import_policy`)),
 `origins` (the
 `[origins]` register of recognised data origins, EHDS Annex II 3.4),
 `policy_register` (the operational-policy admin registers: the audit category

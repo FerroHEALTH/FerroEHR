@@ -386,8 +386,6 @@ pub struct AuthzConfig {
     /// The party binding: the provider, the namespace and the Basic users'
     /// keys (`[authz.party_binding]`).
     pub party_binding: crate::config::binding::PartyBindingConfig,
-    /// The system clients that commit (`[[authz.system_client]]`).
-    pub system_client: Vec<crate::config::clients::SystemClient>,
     /// The operations the policy grants may grant (`[authz.grants]`).
     pub grants: GrantsConfig,
 }

@@ -46,21 +46,24 @@ use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
 use crate::party_binding::grants::capabilities::{Credentials, Grant};
 use crate::party_binding::grants::operation::{
-    BINDING_ISSUER, ORIGIN, Operation, READER, ROLE, TOKEN_SCOPE,
+    BINDING_ISSUER, DEVICE, DEVICE_IDENTIFIER_ISSUER, FACILITY, FACILITY_PARTS, ORIGIN, Operation,
+    READER, RELAY, ROLE, SUBJECT_NAMESPACE, TOKEN_SCOPE,
 };
 use crate::party_binding::grants::trust::FederationTrust;
 
 /// Refuses the committed body `facts` of the `ROLE` `role` when it grants an
 /// operation the ceiling of `grants` does not admit, a `hold_roles` grant
 /// names a role the ceiling reserves, a capability breaks the element rules
-/// ([`check_elements`]), a `create_at_login` grant admits nothing
+/// ([`check_elements`]), a grant lacks the terms of its operation
+/// ([`check_terms`]), a `create_at_login` grant admits nothing
 /// ([`admission::check`]), or a federation agreement breaks its rules
 /// ([`check_agreements`]).
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) naming the first such capability and
 /// the configuration key, the `400` of [`check_elements`], the `422` of
-/// [`admission::check`] and of [`check_agreements`], and a storage failure.
+/// [`check_terms`], of [`admission::check`] and of [`check_agreements`], and
+/// a storage failure.
 pub(crate) async fn check_role(
     tx: &mut PgConnection,
     role: Uuid,
@@ -89,6 +92,7 @@ pub(crate) async fn check_role(
         .find(|capability| !ceiling.allows_code(&capability.code))
     else {
         check_elements(facts)?;
+        check_terms(facts)?;
         admission::check(facts)?;
         return check_agreements(tx, role, facts, &grants.federation()).await;
     };
@@ -103,6 +107,43 @@ pub(crate) async fn check_role(
             allowed.join(", ")
         }
     )))
+}
+
+/// Refuses the committed body `facts` of a `ROLE` when a grant it carries
+/// lacks the terms its operation is checked by: a `commit_composition` grant
+/// without an origin, a `device` grant without a device identifier issuer, a
+/// facility without its issuer and exactly one of its identifier and prefix,
+/// and an import or export grant without a subject namespace.
+///
+/// # Errors
+/// [`ServiceError::Unprocessable`] (`422`) naming the first such capability.
+fn check_terms(facts: &Facts) -> Result<(), ServiceError> {
+    for capability in &facts.grants.capabilities {
+        let credentials = Credentials::of(capability.credentials.as_ref());
+        let refusal = match Operation::of(&capability.code) {
+            Some(Operation::CommitComposition) => commit_terms(credentials),
+            Some(
+                Operation::ImportEhr | Operation::ImportEhrExtract | Operation::ExportEhrExtract,
+            ) if credentials.texts(SUBJECT_NAMESPACE).is_empty() => Some(
+                "names no subject_namespace, and an import or export grant covers only the EHRs \
+                 whose subject namespace it names",
+            ),
+            _ => None,
+        };
+        if let Some(refusal) = refusal {
+            return Err(ServiceError::content_invalid(
+                Violation::new(format!(
+                    "the capability granting {} {refusal}",
+                    capability.code
+                ))
+                .with_path(format!(
+                    "ROLE.capabilities[{}].credentials",
+                    capability.ordinal
+                )),
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Refuses the committed body `facts` of a `ROLE` when a capability of an
@@ -169,6 +210,31 @@ fn check_elements(facts: &Facts) -> Result<(), ServiceError> {
         }
     }
     Ok(())
+}
+
+/// What a `commit_composition` grant's `credentials` lack, when they lack a
+/// term.
+fn commit_terms(credentials: Credentials<'_>) -> Option<&'static str> {
+    let origins = credentials.words(ORIGIN);
+    if origins.is_empty()
+        || origins
+            .iter()
+            .any(|origin| ![RELAY, DEVICE].contains(origin))
+    {
+        return Some("needs an origin element coding relay or device, or both");
+    }
+    if origins.contains(&DEVICE) && credentials.texts(DEVICE_IDENTIFIER_ISSUER).is_empty() {
+        return Some("has the origin device and needs a device_identifier_issuer");
+    }
+    let malformed = credentials.clusters(FACILITY).into_iter().any(|facility| {
+        facility.texts(FACILITY_PARTS[0]).len() != 1
+            || facility.texts(FACILITY_PARTS[1]).len() + facility.texts(FACILITY_PARTS[2]).len()
+                != 1
+    });
+    malformed.then_some(
+        "has a facility cluster without one issuer and exactly one of identifier and \
+         identifier_prefix",
+    )
 }
 
 /// Refuses the committed body `facts` of the `ROLE` `role` when a federation

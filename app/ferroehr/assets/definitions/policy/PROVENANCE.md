@@ -1,6 +1,6 @@
 # Policy definitions: provenance
 
-Six ADL 2 archetypes, the defaults of FerroEHR's authorization model. The
+Five ADL 2 archetypes, the defaults of FerroEHR's authorization model. The
 binary carries them (`ferroehr::party_binding::policy::DEFINITIONS`), and
 each boot stores one when no definition of its id is stored, never over a
 stored one. They are examples: FerroEHR recognises a policy party by the
@@ -22,14 +22,16 @@ book's "Operational policy" page describes the model.
    relationship from a system's `AGENT` to the provider's `ORGANISATION` it
    acts for, held in the `AGENT`'s `relationships`, recognised in its
    interface form, `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1`.
-3. `openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0.adls`: what a system
-   commits, one `CAPABILITY` per origin (relay or device).
-4. `openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0.adls`: a migration's
-   operations, subject namespaces, rate and trusted creating systems.
-5. `openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0.adls`: the terms of a
+3. `openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0.adls`: what a system may
+   do, one `CAPABILITY` per grant: what it commits (its templates,
+   facilities, origin and device identifier issuers) and what it imports or
+   exports (its subject namespaces), each credentials element named by its
+   `ferroehr-operations` code. A migration is a system client whose grants
+   are the import and export operations.
+4. `openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0.adls`: the terms of a
    partner's data-sharing agreement, one `CAPABILITY` per accessor (person or
    organisation).
-6. `openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0.adls`: a privilege a person
+5. `openEHR-DEMOGRAPHIC-ROLE.privileged.v1.0.0.adls`: a privilege a person
    holds beyond clinical access (subject audit, access service, identifier
    reader, import).
 
@@ -47,7 +49,7 @@ its modification time.
 |---|---|
 | `AGENT` | `openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0` (1013.1.475, 2019-08-09; an `ACTOR`, like `AGENT`), `openEHR-DEMOGRAPHIC-PARTY_IDENTITY.organisation_name.v0` (1013.1.476, 2019-08-09) |
 | acts-for `PARTY_RELATIONSHIP` | the `PARTY_RELATIONSHIP` that `openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0` (1013.1.475, 2019-08-09) constrains inline |
-| system client, data migration, privileged `ROLE`s | `openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0` (1013.1.482, 2019-08-09), for the `ROLE` with its name in `identities` |
+| system client, privileged `ROLE`s | `openEHR-DEMOGRAPHIC-ROLE.individual_provider.v0` (1013.1.482, 2019-08-09), for the `ROLE` with its name in `identities` |
 | federation partner `ROLE` | `openEHR-DEMOGRAPHIC-ROLE.healthcare_provider_organisation.v0` (1013.1.501, 2019-08-09), the `ROLE` of an organisation acting as a healthcare provider, since its performer is the partner's `ORGANISATION` |
 
 ## Our own modelling
@@ -60,14 +62,14 @@ its modification time.
   credentials hold an authorization grant, which no openEHR specification
   or CKM archetype defines. The grant fields of each kind are FerroEHR's
   own: the templates written, the facilities, the operations, the subject
-  namespaces, the rate, the terms of an agreement and the privilege kinds.
+  namespaces, the terms of an agreement and the privilege kinds.
 - **Bounds finer than a day.** `time_validity` is `DV_INTERVAL<DV_DATE>` on
   `ROLE`, `CAPABILITY` and `PARTY_RELATIONSHIP`, so every grant carries
   optional `Not before` and `Not after` elements of type `DV_DATE_TIME`, and
   an optional `Authorisation reference`.
 - **The `AGENT` carries its identifier.** Its `details` are mandatory, since
   the identifier is what names the system.
-- **The value sets** (origins, operations, accessors, privileges) are
+- **The value sets** (operations, accessors, privileges) are
   FerroEHR's own, and so is the name of the acts-for relationship, its type
   (RM `PARTY_RELATIONSHIP` `Type_validity`).
 - **The federation partner's coded terms carry `ferroehr-operations` codes**

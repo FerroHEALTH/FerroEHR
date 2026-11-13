@@ -564,28 +564,19 @@ creates persons, make the name attributes administrator-controlled, as the key
 is; [Enterprise identity providers](../identity-providers.md#just-in-time-creation)
 shows the settings per identity provider.
 
-### `[[authz.system_client]]`
+### Imports and system clients
 
 The systems whose wrapped committers an import may carry are no key: a
 `creating_system` element of the importer's import grant names each one
 ([What the grants decide](../operational-policy.md#what-the-grants-decide)).
 
-Each OAuth client-credentials client that commits is declared in one
-`[[authz.system_client]]` table, keyed by `issuer` (a `machines` or `persons`
-issuer) and `client_id`. A Basic user is never a system client. A system
-caller with no table reads under its `system/` scopes and commits nothing into
-an EHR (`403`); a declared one commits a COMPOSITION only of a template its
-`writes` lists, at a facility its `facilities` lists, as the
-[caller kinds](../identity-providers.md#who-the-caller-is) describe.
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `issuer`, `client_id` | string | required | The client, as its tokens name it. A duplicate pair refuses the start. |
-| `provider` | `{ issuer, id }` | required | The healthcare provider it acts for, recorded on every system access (EHDS Annex II 3.2(a)). |
-| `facilities` | list of `{ issuer, id }` or `{ issuer, id_prefix }` | `[]` | The facility identifiers it may commit for. |
-| `writes` | list of template ids | `[]` | The templates it may commit; a template the store does not hold refuses the start. |
-| `origins` | list of `relay`, `device` | required | `relay`: it relays another system's record of a human act, such as HL7 v2. `device`: a device registers with no human acting, which needs `device_identifier_issuers`. |
-| `device_identifier_issuers` | list of string | `[]` | The issuers of the device identifiers a `device` client names. |
+The system clients are not configuration. An OAuth client-credentials client
+is granted what it may commit, import or export in the CDR, as an `ACTOR`
+carrying its `client_id` that acts for a provider and performs a `ROLE` whose
+capabilities grant the operations; see
+[What a system client may do](../operational-policy.md#what-a-system-client-may-do).
+The former `[[authz.system_client]]` table is an unknown key and refuses the
+start.
 
 ### Federation agreements
 

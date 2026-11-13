@@ -110,6 +110,17 @@ fn first<T>(value: &Value, found: &mut impl FnMut(&Value) -> Option<T>) -> Optio
     }
 }
 
+/// Whether the `PARTY_RELATIONSHIP` `relationship` carries the acts-for code
+/// ([`ACTS_FOR`]) in its `name` or anywhere in its `details`.
+pub(crate) fn acts_for(relationship: &Value) -> bool {
+    let code = |item: &Value| (coded(item) == Some(ACTS_FOR)).then_some(());
+    relationship.get("name").and_then(code).is_some()
+        || relationship
+            .get("details")
+            .and_then(|details| first(details, &mut |item| code(item)))
+            .is_some()
+}
+
 /// What makes the party body `body`, in canonical JSON, a policy party, or
 /// `None` when it holds none of it.
 #[must_use]
@@ -119,12 +130,7 @@ pub fn policy_content(body: &Value) -> Option<PolicyContent> {
             coded(item).map(str::to_owned)
         })
         .map(PolicyContent::Grant),
-        "PARTY_RELATIONSHIP" => {
-            let acts_for = |item: &Value| (coded(item) == Some(ACTS_FOR)).then_some(());
-            let named = value.get("name").and_then(acts_for);
-            let detailed = || first(value.get("details")?, &mut |item| acts_for(item));
-            named.or_else(detailed).map(|()| PolicyContent::ActsFor)
-        }
+        "PARTY_RELATIONSHIP" => acts_for(value).then_some(PolicyContent::ActsFor),
         "DV_IDENTIFIER" => {
             (text(value, "type") == Some(CLIENT_ID)).then_some(PolicyContent::Client)
         }

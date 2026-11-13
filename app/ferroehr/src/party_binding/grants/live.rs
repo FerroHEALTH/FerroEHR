@@ -25,7 +25,7 @@ use uuid::Uuid;
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
 use crate::party_binding::grants::capabilities::{
-    Actor, Capabilities, Client, ClientState, Credentials, Grant,
+    Actor, Capabilities, Client, ClientState, Credentials, Grant, Provider,
 };
 use crate::party_binding::grants::operation::{GrantCeiling, Operation};
 use crate::party_binding::grants::store::{self, CHANNEL, CapabilityRow, Loaded};
@@ -243,6 +243,10 @@ impl LiveGrants {
                 let client = Client {
                     party: row.party_id,
                     state: ClientState::of(&row.lifecycle_state),
+                    provider: row.provider_id.map(|party| Provider {
+                        party,
+                        identifier: row.provider,
+                    }),
                 };
                 ((row.issuer, row.client_id), client)
             })
@@ -269,14 +273,15 @@ impl LiveGrants {
                 let Some(client) = held
                     .clients
                     .get(&(issuer.to_owned(), client_id.to_owned()))
-                    .copied()
+                    .cloned()
                 else {
                     return Capabilities::default();
                 };
                 if !client.state.grants() {
                     return Capabilities::new(Some(client), Vec::new());
                 }
-                (Some(client), client.party)
+                let party = client.party;
+                (Some(client), party)
             }
             Actor::Party(party) => (None, party),
         };

@@ -54,7 +54,8 @@ pub const SUBJECT_NAMESPACE: &str = "subject_namespace";
 pub const CREATING_SYSTEM: &str = "creating_system";
 
 /// The code naming a [`Operation::DataOrigin`] grant's element that names
-/// the origin id the party's data carry.
+/// the origin id the party's data carry, and a `commit_composition` grant's
+/// element that names what it commits: [`RELAY`] or [`DEVICE`].
 pub const ORIGIN: &str = "origin";
 
 /// The code naming a [`Operation::ReadChangeFeed`] grant's element that
@@ -99,6 +100,22 @@ pub const ROLE: &str = "role";
 /// [`Operation::HoldScopes`] grant gives a Basic user.
 pub const SCOPE: &str = "scope";
 
+/// The codes naming the elements of a `facility` `CLUSTER`: the issuer of
+/// the facility identifier, and the identifier or a prefix of it.
+pub const FACILITY_PARTS: [&str; 3] = ["issuer", "identifier", "identifier_prefix"];
+
+/// The origin of a relayed record of a person's act, such as HL7 v2: an
+/// [`ORIGIN`] of a `commit_composition` grant.
+pub const RELAY: &str = "relay";
+
+/// The origin of a device's registration, which no person made: an
+/// [`ORIGIN`] of a `commit_composition` grant.
+pub const DEVICE: &str = "device";
+
+/// The code naming the element whose text is the issuer of a device
+/// identifier a [`DEVICE`] grant may name as its composer.
+pub const DEVICE_IDENTIFIER_ISSUER: &str = "device_identifier_issuer";
+
 /// The codes naming a grant's scope elements, which a check reads with
 /// [`crate::party_binding::grants::capabilities::Credentials::named`].
 pub const SCOPES: [&str; 8] = [
@@ -127,6 +144,12 @@ fn names_no_operation(code: &str) -> bool {
         ADMIT_ROLE,
         ADMIT_ASSURANCE,
         ADMIT_GUESTS,
+        FACILITY_PARTS[0],
+        FACILITY_PARTS[1],
+        FACILITY_PARTS[2],
+        RELAY,
+        DEVICE,
+        DEVICE_IDENTIFIER_ISSUER,
     ]
     .contains(&code)
         || SCOPES.contains(&code)
@@ -334,6 +357,7 @@ mod tests {
         assert_eq!(Operation::of("import_everything"), None);
         assert!(is_qualifier(ACTS_FOR) && is_qualifier("template"));
         assert!(AGREEMENT.iter().all(|code| is_qualifier(code)));
+        assert!(is_qualifier(RELAY) && is_qualifier(DEVICE) && is_qualifier("identifier_prefix"));
         assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_GUESTS));
     }
 

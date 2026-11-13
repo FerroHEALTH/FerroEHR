@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The system clients the configuration declares (`[[authz.system_client]]`)
-//! and the admission of a verified external person or organisation of a
+//! The admission of a verified external person or organisation of a
 //! `federation` issuer: only under the federation agreement its partner holds
 //! in the CDR for its accessor kind
 //! ([`ferroehr::party_binding::grants::agreement`]), and only with the scopes
@@ -20,7 +19,6 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use axum::response::Response;
-use ferroehr::config::clients::SystemClient;
 use ferroehr::party_binding::grants::agreement::{AccessClass, Accessor, Agreement};
 use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::party_binding::grants::trust::FederationTrust;
@@ -59,31 +57,15 @@ const NEUTRAL: [&str; 5] = ["openid", "profile", "fhirUser", "online_access", "l
 /// The caller limit of one agreement's rate, kept while the rate stands.
 type Limits = BTreeMap<(Uuid, Accessor), (CallerRate, CallerLimit)>;
 
-/// The `[[authz.system_client]]` tables and the caller limit of each
-/// agreement admitted under so far.
+/// The caller limit of each agreement admitted under so far.
 #[derive(Debug, Default)]
 pub(super) struct Declared {
-    /// The system clients.
-    pub(super) system_clients: Vec<Arc<SystemClient>>,
     /// The caller limit of each agreement, by its `ROLE` and accessor, so a
     /// caller's allowance outlives the request.
     limits: Mutex<Limits>,
 }
 
 impl Declared {
-    /// Returns the system clients `config` declares.
-    pub(super) fn of(config: &crate::config::AppConfig) -> Self {
-        Self {
-            system_clients: config
-                .system_clients
-                .iter()
-                .cloned()
-                .map(Arc::new)
-                .collect(),
-            limits: Mutex::default(),
-        }
-    }
-
     /// The caller limit of the agreement of `accessor` the `ROLE` `role`
     /// grants at `rate`: the one held while its rate stands.
     fn limit(&self, role: Uuid, accessor: Accessor, rate: CallerRate) -> CallerLimit {
@@ -249,16 +231,14 @@ pub(super) fn contact_point(access: &Access) -> Option<&Arc<Agreement>> {
 /// from the family's caller limit, carrying the caller and its binding record
 /// for the access log, which counts it into the caller's summary record.
 /// `None` within the rate or for any other caller.
-pub(super) fn over_rate(
-    principal: &super::Principal,
-    clients: &[Arc<SystemClient>],
-) -> Option<Response> {
+pub(super) fn over_rate(principal: &super::Principal) -> Option<Response> {
     let limit = held(&principal.access)?.limit.as_ref()?;
     let caller = CallerKey(Arc::from(principal.subject.as_str()));
     let wait = limit.take(&caller, tokio::time::Instant::now()).err()?;
     let mut refusal = caller_rate::refusal(wait);
-    let committer = super::party::committer_identity(principal, clients);
-    if let Some(mut binding) = super::record::of_request(principal, &committer) {
+    let granted = Capabilities::default();
+    let committer = super::party::committer_identity(principal, &granted);
+    if let Some(mut binding) = super::record::of_request(principal, &committer, &granted, None) {
         binding
             .detail
             .insert("refusal".to_owned(), vec!["caller-rate".to_owned()]);

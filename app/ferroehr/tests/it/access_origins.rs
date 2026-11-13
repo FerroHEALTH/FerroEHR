@@ -217,7 +217,7 @@ async fn a_granted_origin_stamps_a_direct_commit() {
         representative: false,
         bound: None,
         system: false,
-        system_client: None,
+        agent: None,
         external: None,
     };
     let as_committer = |client: &'static str, body: Value| {

@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DATABASE__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 30.0.0 -n ferroehr \
+  --version 31.0.0 -n ferroehr \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.7.0 \
@@ -68,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 30.0.0
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 31.0.0
 ```
 
 ### Pin two versions, not one
@@ -81,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 30.0.0` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 31.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.7.0` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -181,7 +181,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 30.0.0 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 31.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -326,7 +326,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 30.0.0 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 31.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -833,7 +833,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 30.0.0 -n ferroehr --reuse-values \
+  --version 31.0.0 -n ferroehr --reuse-values \
   --set config.record.query.plan_cache_capacity=512
 ```
 
@@ -1013,7 +1013,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 30.0.0 -n ferroehr --reuse-values \
+  --version 31.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1155,8 +1155,10 @@ with the OAuth 2.0 client credentials grant (RFC 6749 §4.4) from a `machines`
 issuer the CDR trusts, and the CDR checks it as it checks every token. A Basic
 user is a person and holds no `system/` scope, so the chart has no Basic mode.
 Add the issuer to `config.auth.issuer` with `kind: machines`, name
-FerroBRIDGE's client in `bridge.cdr.oauth`, and declare the client in
-`config.authz.system_client` when it commits what `$toopenehr` maps. The
+FerroBRIDGE's client in `bridge.cdr.oauth`, and, when it commits what
+`$toopenehr` maps, grant the client in the CDR: an `AGENT` carrying its
+`client_id` and performing a `ROLE` that grants `commit_composition`, as
+[A system client](../operational-policy.md#a-system-client) shows. The
 render is refused when `bridge.cdr.oauth.issuer` is not a `machines` issuer of
 `config.auth.issuer`. FerroBRIDGE reads the token endpoint from that issuer's
 metadata; when the authorization server serves none there, set
@@ -1170,12 +1172,6 @@ config:
       - issuer: https://idp.example.org/realms/machines
         kind: machines
         audience: [ferroehr-machines]
-  authz:
-    system_client:
-      - issuer: https://idp.example.org/realms/machines
-        client_id: ferrobridge
-        provider: { issuer: "urn:oid:2.999.7.9", id: "clinic" }
-        origins: [relay]
 bridge:
   cdr:
     existingSecret: ferroehr-bridge-cdr
@@ -1388,7 +1384,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 30.0.0 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 31.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

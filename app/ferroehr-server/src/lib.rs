@@ -1035,7 +1035,6 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         )?;
     }
 
-    service.unheld_written_templates(&config.authz).await??;
     let binding_lease = party_binding::prepare(&service, &config).await?;
     // The policy registers in force before the listener takes traffic, and the
     // retention register keyed on the category register in force.

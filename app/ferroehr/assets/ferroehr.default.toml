@@ -15,7 +15,7 @@
 #
 # What you must set
 #
-# This file lists 878 keys. A deployment that holds real data sets the 10
+# This file lists 868 keys. A deployment that holds real data sets the 10
 # below; every other key is optional and runs on the built-in default its line
 # shows, or stays unset where its note says so.
 #
@@ -1468,40 +1468,6 @@ provisional_report_after = "30d"
 # The dotted claim path the identity provider an `admit_idp` admission
 # condition matches is read from. Optional (trust).
 #? idp_claim = "idp"
-
-# The system clients that commit (`[authz.system_client]`).
-#? [[authz.system_client]]
-# The `machines` or `persons` issuer of the client's tokens. It renders with
-# any userinfo masked. Optional (trust).
-#? issuer = ""
-# The client the token names. Optional (trust).
-#? client_id = ""
-# The template ids the client may commit; none by default. Optional (trust).
-#? writes = []
-# What the client commits: a relayed record of a human act, a device's
-# registration, or both. Optional (trust).
-#? origins = []
-# The issuers of the device identifiers a `device` client names. Optional
-# (trust).
-#? device_identifier_issuers = []
-
-# The healthcare provider the client acts for, recorded on every system access.
-#? [authz.system_client.provider]
-# The issuer of the identifier. Optional (trust).
-#? issuer = ""
-# The identifier. Optional (trust).
-#? id = ""
-
-# The facilities the client may commit for.
-#? [[authz.system_client.facilities]]
-# The issuer of the facility identifier. Optional (trust).
-#? issuer = ""
-# The facility identifier; exclusive with `id_prefix`. Optional, unset by
-# default (trust).
-#? id = ""
-# The prefix every admitted facility identifier starts with; exclusive with
-# `id`. Optional, unset by default (trust).
-#? id_prefix = ""
 
 # The operations the policy grants may grant (`[authz.grants]`).
 [authz.grants]

@@ -507,15 +507,15 @@ fn a_party_binding_issuer_never_renders_its_userinfo() {
     );
 }
 
-/// An `[[authz.system_client]]` issuer renders and refuses with its userinfo
-/// masked.
+/// The removed `[[authz.system_client]]` table is refused as an unknown key,
+/// and the refusal never carries its issuer's userinfo (#5436).
 #[test]
-fn a_system_client_issuer_never_renders_its_userinfo() {
-    assert_table_issuer_masked(
-        "[[authz.system_client]]\nissuer = \"https://u:SYSTEM_PW_SENTINEL@system.example/realms/ferroehr\"\nclient_id = \"lab\"\n",
-        "SYSTEM_PW_SENTINEL",
-        "system.example",
-    );
+fn a_removed_system_client_table_is_refused_without_its_userinfo() {
+    let refused = tests::file_refusal(&format!(
+        "{NAMED_ISSUER}\n[[authz.system_client]]\nissuer = \"https://u:SYSTEM_PW_SENTINEL@system.example/realms/ferroehr\"\nclient_id = \"lab\"\n"
+    ));
+    assert!(refused.contains("system_client"), "{refused}");
+    assert!(!refused.contains("SYSTEM_PW_SENTINEL"), "{refused}");
 }
 
 /// An `authz.rbac.role_issuers` issuer renders and refuses with its userinfo

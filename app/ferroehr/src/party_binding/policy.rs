@@ -37,7 +37,7 @@ pub const ACTS_FOR_ARCHETYPE: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.act
 
 /// The default policy definitions, each its file name and its ADL 2 text,
 /// the `AGENT` and the acts-for relationship before the `ROLE`s.
-pub const DEFINITIONS: [(&str, &str); 6] = [
+pub const DEFINITIONS: [(&str, &str); 5] = [
     (
         "openEHR-DEMOGRAPHIC-AGENT.system.v1.0.0.adls",
         include_str!(
@@ -57,12 +57,6 @@ pub const DEFINITIONS: [(&str, &str); 6] = [
         ),
     ),
     (
-        "openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0.adls",
-        include_str!(
-            "../../assets/definitions/policy/openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0.adls"
-        ),
-    ),
-    (
         "openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0.adls",
         include_str!(
             "../../assets/definitions/policy/openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0.adls"
@@ -79,10 +73,9 @@ pub const DEFINITIONS: [(&str, &str); 6] = [
 /// The kind of grant a policy `ROLE` archetype carries.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PolicyRole {
-    /// What a system client commits, at which facilities, from which origin.
+    /// What a system client may do: commit, at which facilities and from
+    /// which origin, import and export.
     SystemClient,
-    /// A data migration: import and export, its subjects, rate and window.
-    DataMigration,
     /// The terms of a federation partner's data-sharing agreement.
     FederationPartner,
     /// A privilege a professional's `PERSON` holds beyond clinical access.
@@ -91,9 +84,8 @@ pub enum PolicyRole {
 
 impl PolicyRole {
     /// Every kind.
-    pub const ALL: [Self; 4] = [
+    pub const ALL: [Self; 3] = [
         Self::SystemClient,
-        Self::DataMigration,
         Self::FederationPartner,
         Self::Privileged,
     ];
@@ -103,7 +95,6 @@ impl PolicyRole {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::SystemClient => "system_client",
-            Self::DataMigration => "data_migration",
             Self::FederationPartner => "federation_partner",
             Self::Privileged => "privileged",
         }
@@ -114,7 +105,6 @@ impl PolicyRole {
     pub const fn archetype_id(self) -> &'static str {
         match self {
             Self::SystemClient => "openEHR-DEMOGRAPHIC-ROLE.system_client.v1",
-            Self::DataMigration => "openEHR-DEMOGRAPHIC-ROLE.data_migration.v1",
             Self::FederationPartner => "openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1",
             Self::Privileged => "openEHR-DEMOGRAPHIC-ROLE.privileged.v1",
         }
@@ -135,17 +125,13 @@ pub enum PolicyKind {
 impl PolicyKind {
     /// Every kind, with its archetype.
     #[must_use]
-    pub fn all() -> [(Self, &'static str); 6] {
+    pub fn all() -> [(Self, &'static str); 5] {
         [
             (Self::Agent, AGENT_ARCHETYPE),
             (Self::ActsFor, ACTS_FOR_ARCHETYPE),
             (
                 Self::Role(PolicyRole::SystemClient),
                 PolicyRole::SystemClient.archetype_id(),
-            ),
-            (
-                Self::Role(PolicyRole::DataMigration),
-                PolicyRole::DataMigration.archetype_id(),
             ),
             (
                 Self::Role(PolicyRole::FederationPartner),

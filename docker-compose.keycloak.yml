@@ -134,18 +134,10 @@ services:
       FERROEHR__AUTHZ__RBAC__ENABLED: "true"
       # The realm's service client's system/aql-* grant counts only for a
       # client the CDR grants query_system_wide (SMART on openEHR §Resource
-      # Scopes): ferroehr-provision-keycloak writes its AGENT and ROLE, and the
-      # ceiling admits the operation beside the SCIM clients' scim_provision.
+      # Scopes), and it creates EHRs only under a commit_composition grant:
+      # ferroehr-provision-keycloak writes its AGENT and ROLE, and the ceiling
+      # admits both operations beside the SCIM clients' scim_provision.
       FERROEHR__AUTHZ__GRANTS__ALLOWED: commit_composition,query_system_wide,scim_provision
-      # The service client is declared as a system client, the only way a
-      # caller acting for no person commits into an EHR. It writes no
-      # COMPOSITION here (no `writes`), so it creates EHRs and reads; the
-      # provider is the example id the base quickstart acts for.
-      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__ISSUER: ${KEYCLOAK_HOSTNAME:-https://keycloak.localhost:8443/auth}/realms/ferroehr
-      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__CLIENT_ID: ferroehr-service
-      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__PROVIDER__ISSUER: urn:oid:2.999.7.9
-      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__PROVIDER__ID: quickstart
-      FERROEHR__AUTHZ__SYSTEM_CLIENT__0__ORIGINS: relay
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 
@@ -210,8 +202,10 @@ services:
   # the fixed `id` the realm import gives that user, which Keycloak puts in
   # `sub`. The service account is a system client and binds to no party:
   # the quickstart administrator writes its AGENT, which carries its
-  # `client_id`, and a ROLE granting `query_system_wide` through the
-  # Demographic API, so its system/aql-* grant counts. A User or an AGENT that
+  # `client_id`, and a ROLE granting `query_system_wide`, so its system/aql-*
+  # grant counts, and `commit_composition` with the origin relay and no
+  # template, so it creates EHRs and commits no COMPOSITION, for the provider
+  # the deployment acts for, through the Demographic API. A User or an AGENT that
   # exists already (409) is kept, and the one-shot then stays up and reports
   # healthy, so `up --wait` returns once every login is bound and the grant is
   # written.
@@ -252,7 +246,7 @@ services:
         case $$status in
         201)
         agent=$$(sed -n 's|^[Ee][Tt][Aa][Gg]:.*"\([0-9a-f-]*\)::.*|\1|p' /tmp/headers);
-        printf '%s%s%s' '{"_type":"ROLE","archetype_node_id":"openEHR-DEMOGRAPHIC-ROLE.quickstart_query.v1","archetype_details":{"_type":"ARCHETYPED","archetype_id":{"_type":"ARCHETYPE_ID","value":"openEHR-DEMOGRAPHIC-ROLE.quickstart_query.v1"},"rm_version":"1.1.0"},"name":{"_type":"DV_TEXT","value":"System-wide query"},"identities":[{"_type":"PARTY_IDENTITY","archetype_node_id":"at0001","name":{"_type":"DV_TEXT","value":"name"},"details":{"_type":"ITEM_TREE","archetype_node_id":"at0002","name":{"_type":"DV_TEXT","value":"details"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0003","name":{"_type":"DV_TEXT","value":"name"},"value":{"_type":"DV_TEXT","value":"system-wide query"}}]}}],"performer":{"_type":"PARTY_REF","namespace":"demographic","type":"AGENT","id":{"_type":"HIER_OBJECT_ID","value":"' "$$agent" '"}},"capabilities":[{"_type":"CAPABILITY","archetype_node_id":"at0020","name":{"_type":"DV_TEXT","value":"grant"},"credentials":{"_type":"ITEM_TREE","archetype_node_id":"at0021","name":{"_type":"DV_TEXT","value":"terms"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0022","name":{"_type":"DV_TEXT","value":"operation"},"value":{"_type":"DV_CODED_TEXT","value":"query_system_wide","defining_code":{"_type":"CODE_PHRASE","terminology_id":{"_type":"TERMINOLOGY_ID","value":"ferroehr-operations"},"code_string":"query_system_wide"}}}]}}]}' > /tmp/role.json;
+        printf '%s%s%s' '{"_type":"ROLE","archetype_node_id":"openEHR-DEMOGRAPHIC-ROLE.quickstart_query.v1","archetype_details":{"_type":"ARCHETYPED","archetype_id":{"_type":"ARCHETYPE_ID","value":"openEHR-DEMOGRAPHIC-ROLE.quickstart_query.v1"},"rm_version":"1.1.0"},"name":{"_type":"DV_TEXT","value":"System-wide query"},"identities":[{"_type":"PARTY_IDENTITY","archetype_node_id":"at0001","name":{"_type":"DV_TEXT","value":"name"},"details":{"_type":"ITEM_TREE","archetype_node_id":"at0002","name":{"_type":"DV_TEXT","value":"details"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0003","name":{"_type":"DV_TEXT","value":"name"},"value":{"_type":"DV_TEXT","value":"system-wide query"}}]}}],"performer":{"_type":"PARTY_REF","namespace":"demographic","type":"AGENT","id":{"_type":"HIER_OBJECT_ID","value":"' "$$agent" '"}},"capabilities":[{"_type":"CAPABILITY","archetype_node_id":"at0020","name":{"_type":"DV_TEXT","value":"grant"},"credentials":{"_type":"ITEM_TREE","archetype_node_id":"at0021","name":{"_type":"DV_TEXT","value":"terms"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0022","name":{"_type":"DV_TEXT","value":"operation"},"value":{"_type":"DV_CODED_TEXT","value":"query_system_wide","defining_code":{"_type":"CODE_PHRASE","terminology_id":{"_type":"TERMINOLOGY_ID","value":"ferroehr-operations"},"code_string":"query_system_wide"}}}]}},{"_type":"CAPABILITY","archetype_node_id":"at0020","name":{"_type":"DV_TEXT","value":"grant"},"credentials":{"_type":"ITEM_TREE","archetype_node_id":"at0021","name":{"_type":"DV_TEXT","value":"terms"},"items":[{"_type":"ELEMENT","archetype_node_id":"at0022","name":{"_type":"DV_TEXT","value":"operation"},"value":{"_type":"DV_CODED_TEXT","value":"commit_composition","defining_code":{"_type":"CODE_PHRASE","terminology_id":{"_type":"TERMINOLOGY_ID","value":"ferroehr-operations"},"code_string":"commit_composition"}}},{"_type":"ELEMENT","archetype_node_id":"at0023","name":{"_type":"DV_CODED_TEXT","value":"origin","defining_code":{"_type":"CODE_PHRASE","terminology_id":{"_type":"TERMINOLOGY_ID","value":"ferroehr-operations"},"code_string":"origin"}},"value":{"_type":"DV_TEXT","value":"relay"}}]}}]}' > /tmp/role.json;
         status=$$(curl -sS -o /tmp/answer -w '%{http_code}' -X POST -u ferroehr:ferroehr
         -H 'Content-Type: application/json' --data @/tmp/role.json $$demographic/role);
         case $$status in 201) ;; *) echo "granting ferroehr-service answered $$status" >&2; cat /tmp/answer >&2; exit 1;; esac;;

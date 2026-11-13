@@ -112,8 +112,8 @@ covers the same operation the wider grant wins.
 A `system/` grant belongs to a backend client acting for no person. A token
 its issuer's profile marks app-only holds `system/` grants alone: one that
 carries a `user/` or `patient/` scope is refused with `403`, because no person
-stands behind it. Such a client commits only as a declared
-`[[authz.system_client]]` ([Who the caller is](identity-providers.md#who-the-caller-is)).
+stands behind it. Such a client commits only under a grant of the CDR
+([Who the caller is](identity-providers.md#who-the-caller-is)).
 
 ## The discovery document
 

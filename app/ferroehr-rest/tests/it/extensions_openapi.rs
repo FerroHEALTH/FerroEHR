@@ -551,7 +551,6 @@ fn app_config() -> AppConfig {
             assurance: ferrohealth_smart::assurance::AssuranceSection::default(),
             spec_profile: ferroehr::config::profile::SpecProfile::default(),
             party_binding: ferroehr::config::binding::PartyBindingConfig::default(),
-            system_clients: Vec::new(),
         };
         c.api.admin = true;
         c.auth.smart = SmartConfig {
