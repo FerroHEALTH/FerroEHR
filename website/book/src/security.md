@@ -687,32 +687,27 @@ role gate).
 For attribute-level decisions ("may this user touch this patient's data,
 under this organisation, for this template?") enable ABAC. A policy decision
 point is consulted per clinical operation with resolved attributes. An
-enabled ABAC block that cannot be built (a missing or invalid policy
-directory, an unreachable-by-construction PDP client) aborts server startup:
+enabled ABAC block that cannot be built (a Cedar register in force that does
+not validate) aborts server startup:
 a configuration that promises fine-grained authorization never silently runs
 without it.
 
 | Environment variable | Default | Meaning |
 |---|---|---|
 | `FERROEHR__AUTHZ__ABAC__ENABLED` | `false` | master ABAC switch |
-| `FERROEHR__AUTHZ__ABAC__ENGINE` | `cedar` | `cedar` (embedded) or `remote` (external PDP) |
+| `FERROEHR__AUTHZ__ABAC__ENGINE` | `cedar` | `cedar`, the embedded engine and the only value |
 | `FERROEHR__AUTHZ__ABAC__ORGANIZATION_CLAIM` | `organization_id` | JWT claim for the organisation attribute |
 | `FERROEHR__AUTHZ__ABAC__PATIENT_CLAIM` | `patient_id` | JWT claim for the patient attribute (enables the subject gate) |
 | `FERROEHR__AUTHZ__ABAC__CHECK_DIRECTORY` | `false` | also submit DIRECTORY (FOLDER) operations to the policy engine |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__ENDPOINT__URL` | — (required for `remote`) | PDP base URL (must end with `/`) |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__ENDPOINT__CONNECT_TIMEOUT` | `2s` | PDP connect timeout |
-| `FERROEHR__AUTHZ__ABAC__REMOTE__ENDPOINT__TIMEOUT` | `5s` | PDP request timeout |
 
-Two engines sit behind one interface. **Cedar** is the embedded default: its
-policy set is the [Cedar admin register](operational-policy.md#the-cedar-policy-register),
+The policy engine is the embedded **Cedar** engine. Its policy set is the [Cedar admin register](operational-policy.md#the-cedar-policy-register),
 written through the admin API and validated when it is written against a
 shipped schema built from the resource-kind and access-mode sets themselves (a
 set that does not validate is refused and the set in force keeps deciding), and
 it needs no external service. Until the register is written the set is empty
-and permits nothing. The **remote PDP** option consults an external policy server
-over HTTP for deployments that already run one; it additionally requires an
-`[authz.abac.policy.<kind>]` binding for every resource kind it will be asked
-about, and a missing one is a boot error rather than a first-request surprise.
+and permits nothing. FerroEHR calls no external policy server:
+`[authz.abac.remote]` and `[authz.abac.policy.<kind>]` are unknown tables and
+refuse boot.
 
 A policy sees the **caller**, not just the request: the authenticated subject,
 its roles (as the role layer above resolved them), its scopes, the resolved
@@ -742,8 +737,7 @@ the committing client, or this server's `system_id`
 declares the register). A write is decided on what its body names: its
 template's category and the origin the commit will stamp. A FLAT or STRUCTURED
 write is converted only after the check, so it carries the category its
-template header implies and no origin attribute. A remote PDP receives both as
-the `category` and `origin` parameters of `[authz.abac.policy.<kind>]`.
+template header implies and no origin attribute.
 
 ```cedar
 // Laboratory reports fed by the lab are readable by the lab's own staff only.
@@ -766,17 +760,13 @@ permits vacuously, because there is nothing to decide about.
 > shows up in the status code.
 >
 > Nothing permits by omission: a gate reached without an authenticated caller
-> refuses, an unconfigured resource kind on the remote PDP denies (and the
-> missing rule is a boot error), and Cedar is deny-by-default with `forbid`
-> overriding `permit`. A denied decision is a **`403`**.
+> refuses, and Cedar is deny-by-default with `forbid` overriding `permit`. A denied decision is a **`403`**.
 >
-> And a stage that cannot **decide** is never read as a decision. An
-> unreachable policy engine, a policy server answering `5xx`, or a policy that
-> errors during evaluation is a **`500`**: never a silent permit, and never a
+> And a stage that cannot **decide** is never read as a decision. A policy
+> that errors during evaluation is a **`500`**: never a silent permit, and never a
 > `403`, which would claim a decision was made. (Cedar skips a policy that
 > errors and reports it in its diagnostics; ignoring those would let an erroring
-> `forbid` quietly stop forbidding.) A `4xx` from a remote PDP *is* a decision,
-> so it denies.
+> `forbid` quietly stop forbidding.)
 >
 > When a patient claim is configured, a local subject gate also rejects access to
 > another patient's EHR before any policy call. The EHR Extract import routes

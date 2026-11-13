@@ -1,0 +1,91 @@
+include::partial$module_vars.adoc[]
+
+= Appendix
+
+include::partial$draft_notice.adoc[]
+
+== Conformance Points
+
+[cols="1,4", options="header"]
+|===
+|Point |A conforming system
+
+|AC-1 Settings
+|stores `ACCESS_DIRECTIVE_SETTINGS` in `EHR_ACCESS._settings_`, checks every version against the invariants and the terminology groups, and refuses a failing version whole.
+
+|AC-2 Decision
+|decides every access to an EHR whose scheme is `access_directives` by xref:decision_procedure.adoc#_procedure[the procedure], queries included.
+
+|AC-3 Invisibility
+|answers an opted-out EHR and restricted data as absent, and never shows the refusal (xref:decision_procedure.adoc#_refusals[Refusals]).
+
+|AC-4 Settings access
+|admits reads and writes of the settings by xref:decision_procedure.adoc#_reading_and_writing_the_settings[Reading and Writing the Settings].
+
+|AC-5 Controller policy
+|stores `ACCESS_POLICY` as a versioned object and applies its classifications, care relationship, purpose and catalogue.
+
+|AC-6 Exchange
+|exports and imports the `EHR_ACCESS` versions in an EHR Extract.
+|===
+
+== Example (informative)
+
+A restriction of mental health data with one exception for the subject's psychiatrist, which an emergency lifts:
+
+[source, json]
+----
+{
+  "_type": "ACCESS_DIRECTIVE_SETTINGS",
+  "default_access": {"_type": "DV_CODED_TEXT", "value": "open",
+    "defining_code": {"terminology_id": {"value": "openehr"}, "code_string": "<access default: open>"}},
+  "gate_keepers": [{"_type": "PARTY_SELF"}],
+  "directives": [{
+    "_type": "ACCESS_DIRECTIVE",
+    "archetype_node_id": "at10",
+    "name": {"_type": "DV_TEXT", "value": "Mental health restriction"},
+    "kind": {"_type": "DV_CODED_TEXT", "value": "restriction",
+      "defining_code": {"terminology_id": {"value": "openehr"}, "code_string": "<access directive kind: restriction>"}},
+    "effect": {"_type": "DV_CODED_TEXT", "value": "deny",
+      "defining_code": {"terminology_id": {"value": "openehr"}, "code_string": "<access effect: deny>"}},
+    "applies_to": [{"_type": "ACCESS_ACTOR_SCOPE",
+      "caller_kind": {"_type": "DV_CODED_TEXT", "value": "professional",
+        "defining_code": {"terminology_id": {"value": "openehr"}, "code_string": "<access caller kind: professional>"}}}],
+    "data": [{"_type": "ACCESS_DATA_SCOPE",
+      "categories": [{"_type": "DV_CODED_TEXT", "value": "mental health",
+        "defining_code": {"terminology_id": {"value": "local"}, "code_string": "mental-health"}}]}],
+    "emergency_override": true,
+    "exceptions": [{
+      "_type": "ACCESS_DIRECTIVE",
+      "archetype_node_id": "at11",
+      "name": {"_type": "DV_TEXT", "value": "Except my psychiatrist"},
+      "kind": {"_type": "DV_CODED_TEXT", "value": "consent",
+        "defining_code": {"terminology_id": {"value": "openehr"}, "code_string": "<access directive kind: consent>"}},
+      "effect": {"_type": "DV_CODED_TEXT", "value": "permit",
+        "defining_code": {"terminology_id": {"value": "openehr"}, "code_string": "<access effect: permit>"}},
+      "applies_to": [{"_type": "ACCESS_ACTOR_SCOPE",
+        "party": {"_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+          "id": {"_type": "HIER_OBJECT_ID", "value": "6f1c2d3e-4b5a-4c6d-8e7f-90a1b2c3d4e5"}}}],
+      "emergency_override": false
+    }],
+    "instructed_by": {"_type": "PARTY_SELF"},
+    "instructed": {"_type": "DV_DATE_TIME", "value": "2026-11-13T10:20:00+01:00"},
+    "legal_grounds": [{"_type": "DV_CODED_TEXT", "value": "EHDS Art 8",
+      "defining_code": {"terminology_id": {"value": "local"}, "code_string": "ehds-art-8"}}]
+  }]
+}
+----
+
+The `<...>` values stand for codes the terminology editors assign. The exception is a `consent` permit, since `Restriction_denies` makes every restriction a deny and `Exceptions_opposite` gives an exception the opposite effect of its parent.
+
+== Change Requests
+
+Submitting this proposal would raise, once the FerroEHR owner approves each text:
+
+* SPECPR: the problem report of xref:change_request.adoc#_problem_report_specpr[Change Request];
+* SPECRM: the `access_control` package (this module and its BMM);
+* SPECTERM: the groups of xref:terminology.adoc[Terminology];
+* SPECITS: the resources of xref:its_rest.adoc[ITS-REST Resources] and the ITS-JSON schema;
+* SPECBASE: the Access Control paragraph of the Architecture Overview, pointing at the package.
+
+include::partial$amendment_record.adoc[]

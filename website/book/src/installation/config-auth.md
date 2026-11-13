@@ -635,11 +635,11 @@ under `[authz.grants] allowed`. The keys that named a role for them before
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `false` | Master ABAC switch. The table keeps `enabled` where other optional features use the table's presence, because `organization_claim` applies while it is off: the access log records it. |
-| `engine` | enum{cedar,remote} | `cedar` | Embedded Cedar, or a remote decision point. |
+| `engine` | enum{cedar} | `cedar` | The embedded Cedar engine, the one engine. |
 | `organization_claim` | string | `organization_id` | JWT claim carrying the caller's organization. |
 | `patient_claim` | string | `patient_id` | JWT claim carrying the patient id. Set, it scopes every request to the patient it names (see below). Empty turns the patient scope off. |
 | `patient_namespace` | string | unset | The subject namespace (`EHR_STATUS.subject.external_ref.namespace`) the patient ids in `patient_claim` are issued in. Set, a claim names the EHR whose subject is that id under this namespace. Unset, a claim names the EHR holding that id only when no other namespace holds the same id. |
-| `check_directory` | bool | `false` | Submit DIRECTORY (`FOLDER`) operations to the decision point. Engine-independent, so it works under Cedar as well as a remote PDP. |
+| `check_directory` | bool | `false` | Submit DIRECTORY (`FOLDER`) operations to the policy engine. |
 
 **The patient scope.** With ABAC on and `patient_claim` set, a token
 without that claim is refused with `403`. With the claim:
@@ -653,7 +653,7 @@ without that claim is refused with `403`. With the claim:
 - An AQL query returns rows only from EHRs the claim names, whatever the query
   selects, including `SELECT e/ehr_id/value FROM EHR e`.
 
-After a query runs, the decision point receives the subject ids of every EHR
+After a query runs, the policy engine receives the subject ids of every EHR
 the query touched as its `patient` attribute, so a patient-keyed policy
 applies to queries whether or not `patient_claim` is set. Without
 `patient_namespace`, a query that touches a subject id held under several
@@ -664,37 +664,9 @@ namespaces is refused with `403`, because a bare id would name both subjects.
   not a configuration key: `[authz.abac.cedar]` is an unknown table and
   refuses boot. Until the register is written the set is empty, and Cedar,
   deny-by-default, permits nothing.
-- **`[authz.abac.remote.endpoint]`:** the policy service, as the family's
-  [endpoint table](config-integrations.md#the-endpoint-table): `url` (required
-  when `engine = "remote"`, and it must end with `/`, because the policy name
-  is appended; credentials embedded in it are masked in every rendering),
-  `connect_timeout` (`"2s"` here), `timeout` (`"5s"` here), `retry` (a call
-  that got no answer or a `5xx` is asked again; a `4xx` is a decision and is
-  never asked again), `tls` and `credentials`.
-- **`[authz.abac.remote.endpoint.credentials.oauth]`:** calls the policy
-  service as an OAuth 2.0 client instead of with HTTP Basic: FerroEHR obtains
-  a token with the client credentials grant and sends it as a bearer token,
-  with the [grant's keys](config-integrations.md#the-endpoint-table).
-  When the policy service refuses the token with `401`, a new one is fetched
-  and the decision asked once more; a token that cannot be obtained, or that
-  is refused again, is no decision, and the request fails closed with a `500`,
-  never a `403`. A `url` with credentials beside this table stops startup.
-- **`[authz.abac.policy.<kind>]`:** one entry per resource kind, with `kind` ∈
-  `ehr`, `ehr_status`, `composition`, `contribution`, `query`, `directory`.
-  Keys: `name` (string, the policy to evaluate) and `parameters` (list of
-  enum{organization,patient,template}). A key that is not one of those six
-  kinds is a boot error, and `template` is rejected on `ehr` and `ehr_status`,
-  since neither carries a template.
-
-> [!WARNING]
-> **With `engine = "remote"`, every resource kind the enforcement point
-> consults needs a policy entry: `ehr`, `ehr_status`, `composition`,
-> `contribution`, `query`**, plus `directory` when `check_directory = true`. A
-> missing one is a boot error. At runtime a kind with no policy can only be
-> **denied**, since there is no policy to ask and permitting would be a silent
-> hole, so the misconfiguration is caught at startup rather than turning into
-> blanket `403`s on live traffic. The Cedar engine reads its policies from the
-> Cedar admin register and needs no entries here.
+- **No remote policy decision point.** FerroEHR has no outbound policy
+  service. `[authz.abac.remote]` and `[authz.abac.policy.<name>]` are unknown
+  tables and refuse boot, as `engine = "remote"` does.
 
 ## `[api] admin`
 

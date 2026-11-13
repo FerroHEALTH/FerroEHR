@@ -1,0 +1,75 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_DIRECTIVE_SETTINGS",
+  "documentation": "The concrete `ACCESS_CONTROL_SETTINGS` of the access directive scheme, carried by `EHR_ACCESS._settings_` and versioned with the EHR. It records the facts an access decision about one EHR rests on: the default disposition, the gate-keepers who may change the settings, the directives the subject or their representative gave (consent, restriction, opt-out, delegation scope), and sensitivity labels on individual versioned objects. It carries no rule language: the decision procedure that reads these facts is fixed by the scheme. `EHR_ACCESS.scheme()` returns `access_directives` for an instance of this class.",
+  "ancestors": [
+    "ACCESS_CONTROL_SETTINGS"
+  ],
+  "properties": {
+    "default_access": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "default_access",
+      "documentation": "What the EHR admits where no directive applies, coded in the `access default` group: `open` (any caller the other layers admit), `restricted` (only callers a permit directive, a gate-keeper or a care relationship names) or `consent_required` (only callers a permit directive names, apart from the subject and an emergency override).",
+      "is_mandatory": true,
+      "type": "DV_CODED_TEXT"
+    },
+    "gate_keepers": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "gate_keepers",
+      "documentation": "The parties who may commit a new version of the `EHR_ACCESS` that holds these settings: usually `PARTY_SELF` for a competent adult, otherwise a parent, guardian or other responsible party referenced into the demographic service (BASE Architecture Overview, Security, Access Control of access settings). Empty leaves the change to the system's administrators.",
+      "type_def": {
+        "container_type": "List",
+        "type": "PARTY_PROXY"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "directives": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "directives",
+      "documentation": "The directives in force or recorded for this EHR. A directive outside its `_time_validity_` is kept as history and decides nothing.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_DIRECTIVE"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "labels": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "labels",
+      "documentation": "Sensitivity labels on individual versioned objects of the EHR, beside the labels the system's `ACCESS_POLICY` classification gives whole kinds of data.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_LABEL"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    }
+  },
+  "functions": {
+    "scheme": {
+      "name": "scheme",
+      "documentation": "The name of this scheme, `access_directives`, which `EHR_ACCESS.scheme()` returns.",
+      "result": {
+        "_type": "P_BMM_SIMPLE_TYPE",
+        "type": "String"
+      }
+    }
+  },
+  "invariants": {
+    "Default_access_valid": "terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_default, default_access.defining_code)",
+    "Gate_keepers_valid": "gate_keepers /= Void implies not gate_keepers.is_empty",
+    "Directives_valid": "directives /= Void implies not directives.is_empty",
+    "Labels_valid": "labels /= Void implies not labels.is_empty",
+    "Opt_out_unique": "directives /= Void implies directives.filter (d | d.is_opt_out).count <= 1"
+  }
+}
+--------
