@@ -27,10 +27,9 @@ use crate::common::{BASE, EXT};
 
 const ARCHETYPE: &str = "openEHR-EHR-ACCESS_POLICY.controller.v1";
 
-/// One replica of a deployment over `pool`: `root` holds `admin_role` and the
-/// `write_access_policy` grant, `dr` neither, and `clerk` the admin role
-/// alone. Its access policy listener runs when `listening`.
-async fn replica(pool: &PgPool, listening: bool) -> (Arc<FerroEhrService>, Router) {
+/// One replica of a deployment over `pool`: `root` holds `admin_role`, and
+/// the `write_access_policy` grant when `granted`; `dr` holds neither. Its access policy listener runs when `listening`.
+async fn replica(pool: &PgPool, listening: bool, granted: bool) -> (Arc<FerroEhrService>, Router) {
     let svc = Arc::new(FerroEhrService::new(
         &ferroehr::db::domain::DomainPools::from_shared(pool),
     ));
@@ -58,7 +57,9 @@ async fn replica(pool: &PgPool, listening: bool) -> (Arc<FerroEhrService>, Route
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
     }
-    common::grant_to(&svc, pool, "root", Operation::WriteAccessPolicy).await;
+    if granted {
+        common::grant_to(&svc, pool, "root", Operation::WriteAccessPolicy).await;
+    }
     let handle = AuthzHandle::build(
         &AuthzConfig::default(),
         &config.api.base_path,
@@ -139,7 +140,7 @@ async fn create(app: &Router, body: &Value) -> String {
 #[tokio::test]
 async fn the_policy_is_read_written_and_versioned() {
     let (_db, pool) = common::migrated_pool().await;
-    let (_svc, app) = replica(&pool, false).await;
+    let (_svc, app) = replica(&pool, false, true).await;
     let (status, _, body) = call(&app, "GET", "root", "", None, None).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
     let (status, _, body) = call(&app, "GET", "root", "/history", None, None).await;
@@ -217,7 +218,7 @@ async fn the_policy_is_read_written_and_versioned() {
 #[tokio::test]
 async fn a_policy_that_does_not_hold_is_refused_whole() {
     let (_db, pool) = common::migrated_pool().await;
-    let (_svc, app) = replica(&pool, false).await;
+    let (_svc, app) = replica(&pool, false, true).await;
     let first = create(&app, &policy(false)).await;
     let mut negative_grace = policy(true);
     negative_grace["relationship_grace"] = json!({ "_type": "DV_DURATION", "value": "-P1D" });
@@ -251,7 +252,7 @@ async fn a_policy_that_does_not_hold_is_refused_whole() {
 #[tokio::test]
 async fn a_caller_without_the_admin_role_is_refused() {
     let (_db, pool) = common::migrated_pool().await;
-    let (_svc, app) = replica(&pool, false).await;
+    let (_svc, app) = replica(&pool, false, true).await;
     for (method, tail, body) in [
         ("GET", "", None),
         ("PUT", "", Some(policy(false))),
@@ -278,8 +279,8 @@ async fn a_caller_without_the_admin_role_is_refused() {
 #[tokio::test]
 async fn a_change_decides_the_next_request_on_another_replica() {
     let (_db, pool) = common::migrated_pool().await;
-    let (_a, writer) = replica(&pool, true).await;
-    let (b, reader) = replica(&pool, true).await;
+    let (_a, writer) = replica(&pool, true, true).await;
+    let (b, reader) = replica(&pool, true, true).await;
     let next_request = || async {
         common::send_status(
             &reader,
@@ -317,8 +318,8 @@ async fn a_change_decides_the_next_request_on_another_replica() {
 #[tokio::test]
 async fn a_replica_that_lost_its_listener_reads_on_the_next_request() {
     let (_db, pool) = common::migrated_pool().await;
-    let (_a, writer) = replica(&pool, false).await;
-    let (b, reader) = replica(&pool, true).await;
+    let (_a, writer) = replica(&pool, false, true).await;
+    let (b, reader) = replica(&pool, true, true).await;
     let listeners: Vec<i32> = sqlx::query_scalar(
         "SELECT pid FROM pg_stat_activity WHERE datname = current_database() \
          AND query LIKE 'LISTEN %'",
@@ -358,25 +359,22 @@ async fn a_replica_that_lost_its_listener_reads_on_the_next_request() {
     );
 }
 
-/// An admin without the `write_access_policy` grant reads the policy and is
-/// refused a write.
+/// An admin whose `PERSON` holds no `write_access_policy` grant is refused a
+/// write, and nothing is committed.
 #[tokio::test]
 async fn an_admin_without_the_write_grant_is_refused_a_write() {
     let (_db, pool) = common::migrated_pool().await;
-    let (_svc, app) = replica(&pool, false).await;
-    let first = create(&app, &policy(false)).await;
+    let (_svc, app) = replica(&pool, false, false).await;
     let (status, _, answer) = call(
         &app,
         "PUT",
-        "clerk",
+        "root",
         "",
-        Some((header::IF_MATCH, &first)),
+        Some((header::IF_NONE_MATCH, "*")),
         Some(&policy(true)),
     )
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{answer}");
-    let (status, headers, body) = call(&app, "GET", "clerk", "", None, None).await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    assert_eq!(common::header(&headers, header::ETAG), Some(first.as_str()));
-    assert_eq!(body["care_relationship_required"], false);
+    let (status, _, body) = call(&app, "GET", "root", "", None, None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
 }

@@ -52,6 +52,7 @@ const EXTENSION_ROOTS: &[&str] = &[
     "/admin/access-delay",
     "/admin/access-opt-out",
     "/admin/access-restriction",
+    "/admin/access_policy",
     "/admin/archive",
     "/admin/config",
     "/admin/dump",

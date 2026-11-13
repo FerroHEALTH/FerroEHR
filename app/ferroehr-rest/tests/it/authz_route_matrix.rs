@@ -400,6 +400,11 @@ const ADMIN_READ: &[(&str, &str)] = &[
     // The operational-policy registers and their versions (#5442).
     ("GET", "/admin/registers/{register}"),
     ("GET", "/admin/registers/{register}/history"),
+    // The controller's access policy, its versions and its versioned object
+    // (#5512).
+    ("GET", "/admin/access_policy"),
+    ("GET", "/admin/access_policy/history"),
+    ("GET", "/admin/access_policy/versioned"),
 ];
 
 /// Admin-class writes (relative to their namespace).
@@ -459,6 +464,10 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     // A new version of an operational-policy register decides every request
     // after it (#5442).
     ("PUT", "/admin/registers/{register}"),
+    // A new version of the access policy decides every request after it. It
+    // also needs a `write_access_policy` grant, checked in its handler
+    // (#5512).
+    ("PUT", "/admin/access_policy"),
 ];
 
 /// The ITI-81 audit retrieval: the node's security-surveillance record, so the
