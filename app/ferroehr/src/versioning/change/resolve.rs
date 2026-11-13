@@ -207,7 +207,7 @@ async fn prepare_body(
         &object_version_id(vo_id, &ctx.system_id, tree),
     )?;
     let stable_compatible = profile::stable_compatible(ctx.spec_profile, kind, &canonical);
-    let origins = crate::versioning::origins::origins(&ctx.direct_origin, &canonical);
+    let origins = ctx.direct_origin.stamp(&canonical)?;
     let canonical_text = Some(canonical_body_text(&canonical)?);
     let content_digest = content_digest(&canonical)?;
     let party_facts = kind.is_demographic().then(|| {

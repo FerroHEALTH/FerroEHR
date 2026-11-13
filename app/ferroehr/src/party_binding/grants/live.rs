@@ -266,6 +266,53 @@ impl LiveGrants {
     }
 }
 
+impl LiveGrants {
+    /// Every grant of `operation` in force at `now`, of any performer, with
+    /// its performer, from the copy held: what a store-wide reading such as
+    /// the registered origins or the change-feed readers ranges over. A
+    /// performer that is a client `ACTOR` in a state that holds no grant
+    /// holds none here either.
+    #[must_use]
+    pub fn all_in_force(&self, operation: Operation, now: jiff::Timestamp) -> Vec<(Uuid, Grant)> {
+        let held = self.held();
+        let ceiling = self.ceiling();
+        let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
+        let silenced: std::collections::BTreeSet<Uuid> = held
+            .clients
+            .values()
+            .filter(|client| !client.state.grants())
+            .map(|client| client.party)
+            .collect();
+        held.capabilities
+            .iter()
+            .filter(|(performer, _)| !silenced.contains(performer))
+            .flat_map(|(performer, rows)| rows.iter().map(move |row| (*performer, row)))
+            .filter(|(_, row)| in_force(row, &ceiling, today, now) == Some(operation))
+            .map(|(performer, row)| {
+                (
+                    performer,
+                    Grant::new(operation, row.role_id, row.credentials.clone().map(Arc::new)),
+                )
+            })
+            .collect()
+    }
+
+    /// Every stored grant of `operation`, of any performer, whether or not it
+    /// is in force or above the ceiling: what must still be honoured once a
+    /// grant has ended, such as the erasure of the contacts of the Users a
+    /// former SCIM client deleted.
+    #[must_use]
+    pub fn all_stored(&self, operation: Operation) -> Vec<Grant> {
+        self.held()
+            .capabilities
+            .values()
+            .flatten()
+            .filter(|row| Operation::of(&row.operation) == Some(operation))
+            .map(|row| Grant::new(operation, row.role_id, row.credentials.clone().map(Arc::new)))
+            .collect()
+    }
+}
+
 /// The operation of the stored capability `row` when it is in force on `today` and
 /// at `now` under `ceiling`.
 fn in_force(

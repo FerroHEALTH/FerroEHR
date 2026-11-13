@@ -547,12 +547,6 @@ subject_index = "local"
 
 [auth.scim]
 public_base_url = "https://cdr.example.com"
-
-[[auth.scim.client]]
-issuer = "https://as.example"
-client_id = "entra-provisioning"
-scope = "ferroehr/scim"
-binding_issuer = "urn:example:login"
 "#;
     let (ok, text) = config_check(scim);
     assert!(

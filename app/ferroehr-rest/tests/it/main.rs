@@ -103,6 +103,7 @@ mod overload_http;
 mod party_binding_http;
 mod party_reverse_relationships_http;
 mod patient_data_assurance;
+mod policy_fixture;
 mod policy_grants_http;
 mod policy_registers_http;
 mod protocol_tail;

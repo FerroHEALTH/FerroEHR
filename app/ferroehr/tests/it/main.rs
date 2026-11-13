@@ -94,6 +94,8 @@ mod party_binding_source;
 mod party_mapping;
 mod party_mapping_templates;
 mod persistence;
+mod policy_elements;
+mod policy_fixtures;
 mod policy_grants;
 mod policy_parties;
 mod policy_parties_aql;

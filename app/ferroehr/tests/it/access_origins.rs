@@ -18,6 +18,7 @@ use sqlx::Row;
 
 use crate::fixtures::setup;
 use crate::fixtures::{composition, uv};
+use crate::policy_fixtures::{as_client, capability, granted, identified, scope};
 
 /// A `FEEDER_AUDIT` whose originating system is `system_id`.
 fn feeder_audit(system_id: &str) -> Value {
@@ -188,22 +189,22 @@ async fn an_unstamped_row_is_assessed_from_the_body_at_read() {
     );
 }
 
-/// A body with no `FEEDER_AUDIT`, committed by a client the `[[authz.origin]]`
-/// register names, is stamped with that client's origin; any other caller's
-/// direct commit keeps this server (EHDS Annex II 3.4).
+/// A body with no `FEEDER_AUDIT`, committed by a client whose `data_origin`
+/// grant in the CDR names an origin, is stamped with that origin; any other
+/// caller's direct commit keeps this server, a body naming its origin keeps
+/// it, and a caller whose grants name two origins commits no direct body
+/// (EHDS Annex II 3.4, #5439).
 #[tokio::test]
-async fn a_registered_client_stamps_its_origin_on_a_direct_commit() {
+async fn a_granted_origin_stamps_a_direct_commit() {
     let (db, svc, ehr_id) = setup().await;
-    let origins: ferroehr::origins::OriginsConfig = toml::from_str(
-        r#"
-        [[registered]]
-        id = "lab.example"
-        clients = ["lab-gateway"]
-        "#,
+    let svc = crate::policy_fixtures::granting(svc).await;
+    granted(
+        &svc,
+        "lab-gateway",
+        &[capability("data_origin", &[identified("origin", "lab.example")])],
     )
-    .expect("the register parses");
-    let svc = svc.with_origins(origins);
-    let as_client = |client: &str| ferroehr::versioning::committer::CommitterIdentity {
+    .await;
+    let committer = |client: &str| ferroehr::versioning::committer::CommitterIdentity {
         subject: "dr.jansen".to_owned(),
         id_type: "oauth2",
         issuer: Some("https://idp.example".to_owned()),
@@ -216,22 +217,28 @@ async fn a_registered_client_stamps_its_origin_on_a_direct_commit() {
         system_client: None,
         external: None,
     };
+    let as_committer = |client: &'static str, body: Value| {
+        let svc = &svc;
+        async move {
+            as_client(
+                svc,
+                client,
+                ferroehr::versioning::committer::with_committer(
+                    Some(committer(client)),
+                    Box::pin(commit(svc, ehr_id, &body)),
+                ),
+            )
+            .await
+        }
+    };
 
-    let (registered, _) = ferroehr::versioning::committer::with_committer(
-        Some(as_client("lab-gateway")),
-        Box::pin(commit(&svc, ehr_id, &composition("from the gateway"))),
-    )
-    .await;
+    let (registered, _) = as_committer("lab-gateway", composition("from the gateway")).await;
     assert_eq!(
         stamped_origins(&db, registered).await,
         Some(json!(["lab.example"]))
     );
 
-    let (other, creating_system) = ferroehr::versioning::committer::with_committer(
-        Some(as_client("a-portal")),
-        Box::pin(commit(&svc, ehr_id, &composition("from a portal"))),
-    )
-    .await;
+    let (other, creating_system) = as_committer("a-portal", composition("from a portal")).await;
     assert_eq!(
         stamped_origins(&db, other).await,
         Some(json!([creating_system]))
@@ -239,14 +246,34 @@ async fn a_registered_client_stamps_its_origin_on_a_direct_commit() {
 
     let mut imported = composition("fed by the lab, sent by the gateway");
     imported["feeder_audit"] = feeder_audit("pacs.example");
-    let (fed, _) = ferroehr::versioning::committer::with_committer(
-        Some(as_client("lab-gateway")),
-        Box::pin(commit(&svc, ehr_id, &imported)),
-    )
-    .await;
+    let (fed, _) = as_committer("lab-gateway", imported).await;
     assert_eq!(
         stamped_origins(&db, fed).await,
         Some(json!(["pacs.example"])),
         "a body that names its origin keeps it"
+    );
+
+    granted(
+        &svc,
+        "two-sites",
+        &[
+            capability("data_origin", &[identified("origin", "lab.example")]),
+            capability("data_origin", &[scope("origin", "pacs.example")]),
+        ],
+    )
+    .await;
+    let refused = as_client(
+        &svc,
+        "two-sites",
+        ferroehr::versioning::committer::with_committer(
+            Some(committer("two-sites")),
+            Box::pin(svc.create_composition(ehr_id, uv(&composition("whose?"), "249", None))),
+        ),
+    )
+    .await
+    .expect_err("two origins stamp no direct body");
+    assert!(
+        matches!(refused, ferroehr::error::ServiceError::Forbidden(_)),
+        "{refused:?}"
     );
 }

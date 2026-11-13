@@ -26,8 +26,8 @@ pub struct RecordConfig {
     pub signing: crate::versioning::signature::config::SigningConfig,
     /// `[record.query]`: AQL execution knobs.
     pub query: crate::service::query::config::QueryConfig,
-    /// `[record.change_feed]`: the commit-event outbox readers and their
-    /// retention.
+    /// `[record.change_feed]`: the commit-event outbox retention; its readers
+    /// are the change-feed grants.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub change_feed: crate::extensions::outbox::config::OutboxConfig,
     /// `[record.multimedia]`: `DV_MULTIMEDIA` externalization to object

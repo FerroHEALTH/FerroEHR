@@ -228,8 +228,9 @@ The report is a JSON document on stdout:
   no live `PERSON` carries.
 
 A key passes the provenance rule when the version that introduced it was
-committed by a `[[auth.scim.client]]` (its client identifier under its token
-issuer), by an administrator, by a declared migration, or by just-in-time
+committed by a SCIM client, a client whose `ACTOR` holds or held a
+`scim_provision` grant (its client identifier under its token issuer), by an
+administrator, by a declared migration, or by just-in-time
 creation at a first login of an `[[authz.party_binding.issuer]]` with
 `jit = true` (a `249|creation|` version carrying its description, committed
 by the new `PERSON` itself). A stored version
@@ -269,6 +270,36 @@ another committer. It also refuses a party that is no live key-bearing
 which two `PERSON`s carry one selector value. A `PERSON` that already
 performs the `ROLE` is reported under `already` and left alone. The report
 is a JSON document on stdout with the CONTRIBUTION and each new `ROLE`.
+
+### `ferroehr party-binding grant`
+
+```text
+ferroehr party-binding grant --issuer <ISSUER> --client-id <CLIENT_ID>
+                             --operation <CODE> [--element <CODE>=<TEXT>]...
+```
+
+Grants an operation of the `ferroehr-operations` terminology to a client, on
+the operator's authority: an `AGENT` carrying the client identifier under the
+token issuer, unless an `ACTOR` names the client already, and a `ROLE` it
+performs whose capability grants the operation, with one scope element per
+`--element`. It is the first grant of a new deployment, typically the
+`scim_provision` of the client that provisions the administrators, since no
+administrator can log in before their `PERSON` exists; every later grant is
+an administrator's write through the Demographic API. The commits take the
+path a Demographic API write takes, with the server's own committer: a code
+`[authz.grants] allowed` does not admit, or an element named other than as
+the operation reads it, refuses the run. A client that holds the operation
+already gets nothing, so the command runs again safely. The report is a JSON
+document on stdout naming the `AGENT` and the new `ROLE`, or `already`. The
+operations and elements are on
+[Operational policy](../operational-policy.md#how-a-request-reads-its-grants).
+
+```sh
+docker compose exec ferroehr /usr/local/bin/ferroehr party-binding grant \
+  --issuer https://login.example.org/machines --client-id entra-provisioning \
+  --operation scim_provision \
+  --element binding_issuer=urn:example:login --element token_scope=ferroehr/scim
+```
 
 ### `ferroehr healthcheck`
 

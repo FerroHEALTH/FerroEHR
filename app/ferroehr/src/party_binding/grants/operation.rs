@@ -37,15 +37,53 @@ pub const NOT_BEFORE: &str = "not_before";
 /// instant after which a grant does not hold.
 pub const NOT_AFTER: &str = "not_after";
 
-/// The codes naming a grant's scope elements, which a check reads with
-/// [`crate::party_binding::grants::capabilities::Credentials::named`]: a
-/// template written, a facility, a subject namespace.
-pub const SCOPES: [&str; 3] = ["template", "facility", "subject_namespace"];
+/// The code naming a grant's scope element that names a template written.
+pub const TEMPLATE: &str = "template";
 
-/// The codes of the terminology that name no operation.
-const QUALIFIERS: [&str; 6] = [
-    ACTS_FOR, NOT_BEFORE, NOT_AFTER, SCOPES[0], SCOPES[1], SCOPES[2],
+/// The code naming a grant's scope element or `CLUSTER` that names a facility.
+pub const FACILITY: &str = "facility";
+
+/// The code naming a grant's scope element that names a subject namespace.
+pub const SUBJECT_NAMESPACE: &str = "subject_namespace";
+
+/// The code naming an import grant's scope element that names a
+/// `creating_system_id` whose wrapped committers the import may carry.
+pub const CREATING_SYSTEM: &str = "creating_system";
+
+/// The code naming a [`Operation::DataOrigin`] grant's element that names
+/// the origin id the party's data carry.
+pub const ORIGIN: &str = "origin";
+
+/// The code naming a [`Operation::ReadChangeFeed`] grant's element that
+/// names the reader of the commit-event outbox.
+pub const READER: &str = "reader";
+
+/// The code naming a [`Operation::ScimProvision`] grant's element that names
+/// the identifier issuer of the binding keys the client provisions.
+pub const BINDING_ISSUER: &str = "binding_issuer";
+
+/// The code naming a [`Operation::ScimProvision`] grant's element that names
+/// a scope the client's token must hold.
+pub const TOKEN_SCOPE: &str = "token_scope";
+
+/// The codes naming a grant's scope elements, which a check reads with
+/// [`crate::party_binding::grants::capabilities::Credentials::named`].
+pub const SCOPES: [&str; 8] = [
+    TEMPLATE,
+    FACILITY,
+    SUBJECT_NAMESPACE,
+    CREATING_SYSTEM,
+    ORIGIN,
+    READER,
+    BINDING_ISSUER,
+    TOKEN_SCOPE,
 ];
+
+/// Whether `code` names a grant's bound or scope element, or the acts-for
+/// relationship.
+fn names_no_operation(code: &str) -> bool {
+    [ACTS_FOR, NOT_BEFORE, NOT_AFTER].contains(&code) || SCOPES.contains(&code)
+}
 
 /// One operation a capability may grant.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -73,11 +111,22 @@ pub enum Operation {
     AccessService,
     /// Read a party's protected national identifiers.
     ReadIdentifiers,
+    /// Be an origin of data (EHDS Annex II 3.4): the grant's `origin`
+    /// element is the id the party's data carry, which a retention period
+    /// and an access rule may name, and the origin its direct commits are
+    /// stamped with.
+    DataOrigin,
+    /// Read the commit-event outbox as the reader the grant's `reader`
+    /// element names.
+    ReadChangeFeed,
+    /// Provision Users and Groups over SCIM 2.0, owning the binding keys of
+    /// the grant's `binding_issuer`.
+    ScimProvision,
 }
 
 impl Operation {
     /// Every operation, in contract order.
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 12] = [
         Self::CommitComposition,
         Self::ImportEhr,
         Self::ImportEhrExtract,
@@ -87,6 +136,9 @@ impl Operation {
         Self::ReadSubjectAudit,
         Self::AccessService,
         Self::ReadIdentifiers,
+        Self::DataOrigin,
+        Self::ReadChangeFeed,
+        Self::ScimProvision,
     ];
 
     /// The operation's code in [`crate::party_binding::policy_mark::TERMINOLOGY`].
@@ -102,6 +154,9 @@ impl Operation {
             Self::ReadSubjectAudit => "read_subject_audit",
             Self::AccessService => "access_service",
             Self::ReadIdentifiers => "read_identifiers",
+            Self::DataOrigin => "data_origin",
+            Self::ReadChangeFeed => "read_change_feed",
+            Self::ScimProvision => "scim_provision",
         }
     }
 
@@ -125,7 +180,7 @@ impl fmt::Display for Operation {
 /// operation: the acts-for code, a bound or a scope.
 #[must_use]
 pub(crate) fn is_qualifier(code: &str) -> bool {
-    QUALIFIERS.contains(&code.trim())
+    names_no_operation(code.trim())
 }
 
 /// The operations the CDR may grant: `[authz.grants] allowed`.

@@ -84,10 +84,7 @@ fn adoption(admin: Option<VoId>, parties: &[VoId]) -> AdoptInput {
     AdoptInput {
         check: CheckInput {
             key_types: BTreeMap::from([(LOGIN.to_owned(), "guid".to_owned())]),
-            scim_clients: vec![(
-                ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
-                CLIENT.to_owned(),
-            )],
+                scim_clients: vec![(MACHINES.to_owned(), CLIENT.to_owned())],
             administrators: admin
                 .map(|a| Administrator::Party(a.0))
                 .into_iter()

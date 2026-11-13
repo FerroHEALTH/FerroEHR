@@ -79,9 +79,6 @@ user = "alice"
 key_issuer = "urn:example:staff-login"
 key = "3f2b0c1e-0000-4000-8000-000000000001"
 
-[authz.import]
-trusted_systems = ["legacy.example"]
-
 [[authz.system_client]]
 issuer = "https://idp.example/realms/machines"
 client_id = "ferrobridge"
@@ -661,13 +658,24 @@ fn a_namespace_outside_the_object_ref_pattern_is_refused() {
     assert!(text.contains("OBJECT_REF.namespace pattern"), "{text}");
 }
 
+/// The keys #5439 moved into the CDR are unknown keys, refused like any
+/// other: trusted import systems, registered origins, change-feed readers and
+/// SCIM clients are grants of the policy parties now.
 #[test]
-fn a_trusted_system_that_is_this_node_is_refused() {
-    let text = refusal(&with(
-        "trusted_systems = [\"legacy.example\"]",
-        "trusted_systems = [\"ferroehr.local\"]",
-    ));
-    assert!(text.contains("this node's own api.system_id"), "{text}");
+fn the_keys_the_cdr_now_holds_are_refused_as_unknown() {
+    for (removed, key) in [
+        ("[authz.import]\ntrusted_systems = [\"legacy.example\"]\n", "import"),
+        ("[[authz.origin]]\nid = \"lab.example\"\n", "origin"),
+        ("[record.change_feed]\nreaders = [\"ferrobridge\"]\n", "readers"),
+        (
+            "[auth.scim]\npublic_base_url = \"https://cdr.example.com\"\n\
+             [[auth.scim.client]]\nclient_id = \"entra\"\n",
+            "client",
+        ),
+    ] {
+        let text = refusal(&format!("{}\n{removed}", full()));
+        assert!(text.contains(key), "{key}: {text}");
+    }
 }
 
 #[tokio::test]
@@ -868,57 +876,21 @@ fn a_relationship_code_outside_subject_relationship_is_refused() {
     );
 }
 
-/// [`full`] serving SCIM to one provisioning client of `issuer` binding
-/// `binding_issuer`, followed by `extra`.
-fn scim(issuer: &str, binding_issuer: &str, extra: &str) -> String {
-    format!(
-        "{}\n[auth.scim]\npublic_base_url = \"https://cdr.example.com\"\n\n\
-         [[auth.scim.client]]\nissuer = \"{issuer}\"\nclient_id = \"entra\"\nscope = \"ferroehr/scim\"\n\
-         binding_issuer = \"{binding_issuer}\"\n{extra}",
-        full()
-    )
-}
-
+/// [`full`] serving SCIM; who provisions is a `scim_provision` grant in the
+/// CDR, so the table holds no client.
 #[test]
-fn a_scim_client_of_the_machines_issuer_binding_a_party_issuer_loads() {
-    let config = assemble(&bound(&scim(
-        "https://idp.example/realms/machines",
-        "urn:example:staff-login",
-        "",
+fn a_scim_table_with_no_client_loads() {
+    let config = assemble(&bound(&format!(
+        "{}\n[auth.scim]\npublic_base_url = \"https://cdr.example.com\"\n",
+        full()
     )))
     .expect("assembles");
     config.validate().expect("validates");
-    assert_eq!(config.auth.scim.expect("the scim table").client.len(), 1);
+    assert!(config.auth.scim.is_some());
 }
 
 #[test]
-fn every_scim_client_refusal_is_named() {
-    let staff = refusal(&scim(
-        "https://idp.example/realms/staff",
-        "urn:example:staff-login",
-        "",
-    ));
-    assert!(
-        staff.contains("names a persons issuer: a SCIM client acts for nobody"),
-        "{staff}"
-    );
-    let unbound = refusal(&scim(
-        "https://idp.example/realms/machines",
-        "urn:example:other",
-        "",
-    ));
-    assert!(
-        unbound.contains("is the identifier_issuer of no [[auth.party]] table"),
-        "{unbound}"
-    );
-    let shared = refusal(&scim(
-        "https://idp.example/realms/machines",
-        "urn:example:staff-login",
-        "\n[[auth.scim.client]]\nissuer = \"https://idp.example/realms/machines\"\n\
-         client_id = \"okta\"\nscope = \"ferroehr/scim\"\n\
-         binding_issuer = \"urn:example:staff-login\"\n",
-    ));
-    assert!(shared.contains("shares binding_issuer"), "{shared}");
+fn an_unknown_scim_key_is_named() {
     let unknown = refusal(&format!("{}\n[auth.scim]\nmax_deactivation = 3\n", full()));
     assert!(unknown.contains("max_deactivation"), "{unknown}");
 }

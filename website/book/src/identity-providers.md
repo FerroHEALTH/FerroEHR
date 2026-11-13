@@ -109,7 +109,7 @@ profile, and the server acts on the kind:
   it holds `system/` scopes only, and a token with a `user/` or `patient/` scope
   is refused with `403`. It reads under its `system/` scopes. It commits into an
   EHR only as a client an `[[authz.system_client]]` table declares
-  ([configuration](installation/config-auth.md#authzimport-and-authzsystem_client)),
+  ([configuration](installation/config-auth.md#authzsystem_client)),
   under the committer `PARTY_IDENTIFIED{name = <client>, identifiers =
   [{issuer = <iss>, id = <client>, type = "client"}]}` with no `external_ref`.
   - Each COMPOSITION it commits is of a template its `writes` lists, or the
@@ -293,9 +293,9 @@ the issuer table, which wins over the preset.
 3. **The SCIM client.** Your authorization server issues the provisioning
    client an access token by the client credentials grant (RFC 6749 §4.4), or
    in exchange for a client assertion (RFC 7523 §2.2). Declare the
-   authorization server as an issuer of kind `machines`, and the client in
-   [`[[auth.scim.client]]`](installation/config-auth.md#authscim) with the
-   `binding_issuer` of step 2. The SCIM client sends the key as
+   authorization server as an issuer of kind `machines`, and grant the client
+   [`scim_provision`](installation/config-auth.md#authscim) in the CDR with
+   the `binding_issuer` of step 2. The SCIM client sends the key as
    `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User:loginIdentifier`
    (RFC 7644).
 4. **An onward caller.** A service that calls FerroEHR for a signed-in

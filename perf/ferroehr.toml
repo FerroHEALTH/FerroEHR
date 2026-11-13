@@ -44,6 +44,11 @@ roles = ["ADMIN", "USER"]
 [authz.rbac]
 enabled = false
 
+# The operation the gate grants its provisioning client in the CDR before it
+# provisions the Basic user (scripts/scim-provision.sh).
+[authz.grants]
+allowed = ["commit_composition", "scim_provision"]
+
 [authz.party_binding]
 provider = { issuer = "urn:oid:2.999.7.9", id = "perf" }
 
@@ -52,15 +57,10 @@ user = "ferroehr"
 key_issuer = "urn:ferroehr:basic-user"
 key = "ferroehr"
 
-# The SCIM endpoint the gate provisions the Basic user through.
+# The SCIM endpoint the gate provisions the Basic user through, by the
+# `basic-users` client scripts/scim-provision.sh grants scim_provision first.
 [auth.scim]
 public_base_url = "http://127.0.0.1:58080"
-
-[[auth.scim.client]]
-issuer = "https://scim.ferroehr.invalid"
-client_id = "basic-users"
-scope = "ferroehr/scim"
-binding_issuer = "urn:ferroehr:basic-user"
 
 [record]
 subject_index = "local"

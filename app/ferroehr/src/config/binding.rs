@@ -500,12 +500,11 @@ fn tenants(tables: &[TenantProvider], resolved: &Resolved, errors: &mut Vec<Stri
 }
 
 impl crate::config::FerroEhrConfig {
-    /// The boot refusals of the party binding, the system clients, the
-    /// federation agreements and `[authz.import]`; the section rules of
-    /// `[auth]` itself are [`crate::config::auth::validate`]'s.
+    /// The boot refusals of the party binding, the system clients and the
+    /// federation agreements; the section rules of `[auth]` itself are
+    /// [`crate::config::auth::validate`]'s.
     pub(crate) fn identity_errors(&self) -> Vec<String> {
-        let mut errors =
-            crate::config::clients::import_errors(&self.authz.import, &self.api.system_id);
+        let mut errors = Vec::new();
         let Ok(resolved) = crate::config::auth::resolve(&self.auth.shared) else {
             return errors;
         };
@@ -747,7 +746,6 @@ mod tests {
             ),
             ("FERROEHR__AUTHZ__RBAC__IMPORT_ROLE", "IMPORTER"),
             ("FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS", "https://a,https://b"),
-            ("FERROEHR__AUTHZ__IMPORT__TRUSTED_SYSTEMS", "sys-a"),
         ]);
         assert_eq!(c.authz.assurance.claim, "loa");
         assert_eq!(
@@ -774,6 +772,5 @@ mod tests {
                 ferrohealth_secret::secret_url::SecretUrl::new("https://b")
             ]
         );
-        assert_eq!(c.authz.import.trusted_systems, ["sys-a"]);
     }
 }

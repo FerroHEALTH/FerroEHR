@@ -242,7 +242,7 @@ anything.
 | `GET {ext}/admin/restriction` | `?ehr_id=…` | **200**: the register, newest request first, lifts included |
 | `POST {ext}/admin/restriction/lift` | `{"ehr_id": "…", "vo_id": "…"?}` | **204**: every in-force restriction at that grain is lifted |
 | `POST {ext}/admin/research-objection` | `{"ehr_id": "…", "objected": true, "ground": "…"?}` | **204**: the objection, its override, or its withdrawal is recorded |
-| `PUT {ext}/admin/retention/policy` | `{"kind": "…", "jurisdiction": "…", "category": "…"?, "origin": "…"?, "period": "…", "anchor": "…", "source": "…"}` | **204**: the period is declared, keyed on one EHDS priority category when `category` is set and on one registered origin (`[[authz.origin]]`) when `origin` is set |
+| `PUT {ext}/admin/retention/policy` | `{"kind": "…", "jurisdiction": "…", "category": "…"?, "origin": "…"?, "period": "…", "anchor": "…", "source": "…"}` | **204**: the period is declared, keyed on one EHDS priority category when `category` is set and on one origin a `data_origin` grant in force names when `origin` is set |
 | `GET {ext}/admin/retention/policy` | — | **200**: the whole retention register, each period with its `category` and `origin` (`null` for every object of the kind, or every origin) |
 | `PUT {ext}/admin/retention/anchor` | `{"ehr_id": "…", "jurisdiction": "…", "anchored_at": "…"?, "hold_at": "…"?, "hold_ground": "…"?}` | **204**: the EHR's anchor and any whole-record hold |
 | `POST {ext}/admin/retention/hold` | `{"vo_id": "…", "held": true}` | **204**: the per-object exemption is placed or released |
@@ -736,15 +736,15 @@ other `Content-Type` is **415**.
 ## Other routes under `{base}/admin`
 
 The outbox feed shares the `/admin` path prefix but **not** the
-`api.admin` switch: it answers for the readers `[record.change_feed] readers` names,
-and **404** for any other name, whatever `api.admin` says:
+`api.admin` switch: it answers for the readers the `read_change_feed` grants in
+force name, and **404** for any other name, whatever `api.admin` says:
 
 | Routes | Gate | Documented in |
 |---|---|---|
-| `{base}/admin/outbox/{reader}`, `{base}/admin/outbox/{reader}/ack` | `record.change_feed.readers` and the `__ferroehr.outbox` scope | [Change events (outbox feed)](beyond-core/outbox-feed.md) |
+| `{base}/admin/outbox/{reader}`, `{base}/admin/outbox/{reader}/ack` | the `__ferroehr.outbox` scope and the caller's own `read_change_feed` grant naming the reader | [Change events (outbox feed)](beyond-core/outbox-feed.md) |
 
-They are still admin-class routes for authorization, so the same **401** /
-**403** split applies.
+An unauthenticated caller is **401**, and a caller without the scope or the
+grant **403**.
 
 For everything else an operator needs (migrations, health probes, the
 management surface, observability and upgrades) see

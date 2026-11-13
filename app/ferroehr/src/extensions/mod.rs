@@ -21,14 +21,14 @@
 //!
 //! Every extension keeps two non-negotiables: each submodule doc comment carries
 //! the explicit flag "no openEHR spec governs this — our own design/extension",
-//! and the feature does nothing unless configuration enables it, so with its
-//! gate off the commit and read paths are byte-identical to the no-extension
+//! and the feature does nothing unless its gate enables it, so with its gate
+//! off the commit and read paths are byte-identical to the no-extension
 //! behaviour.
 //!
-//! | Submodule | Gate (config path, default off) |
+//! | Submodule | Gate (default off) |
 //! |---|---|
-//! | [`multimedia`] | `multimedia.enabled` |
-//! | [`outbox`] | `outbox.readers` (empty) |
+//! | [`multimedia`] | `[record.multimedia] enabled` |
+//! | [`outbox`] | a `read_change_feed` grant in force (none) |
 
 pub mod multimedia;
 pub mod outbox;

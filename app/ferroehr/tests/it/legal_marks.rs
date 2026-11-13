@@ -636,23 +636,28 @@ async fn a_category_keyed_period_lists_its_objects_and_unclassified_takes_the_lo
     );
 }
 
-/// A period keyed on a registered origin lists the objects whose latest
-/// version came from it, an unregistered origin is refused, and the period
-/// keyed on no origin still lists every object (Regulation (EU) 2025/327
-/// Annex II 3.4, `docs/law/eu/ehds/text.html`, #4299).
+/// A period keyed on an origin a `data_origin` grant in the CDR names lists
+/// the objects whose latest version came from it, an origin no grant names is
+/// refused, and the period keyed on no origin still lists every object
+/// (Regulation (EU) 2025/327 Annex II 3.4, `docs/law/eu/ehds/text.html`,
+/// #4299, #5439).
 #[tokio::test]
 async fn an_origin_keyed_period_lists_the_objects_of_its_origin() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let origins: ferroehr::origins::OriginsConfig = toml::from_str(
-        r#"
-        [[registered]]
-        id = "lab.example"
-        "#,
+    let svc = crate::policy_fixtures::granting(FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    ))
+    .await;
+    crate::policy_fixtures::granted(
+        &svc,
+        "lab-feed",
+        &[crate::policy_fixtures::capability(
+            "data_origin",
+            &[crate::policy_fixtures::identified("origin", "lab.example")],
+        )],
     )
-    .expect("the register parses");
-    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
-        .with_origins(origins);
+    .await;
     let (ehr_id, _status_vo) = seed(&svc).await;
 
     let mut fed = crate::fixtures::composition("fed by the lab");

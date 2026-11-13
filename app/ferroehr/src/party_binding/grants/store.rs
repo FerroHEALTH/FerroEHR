@@ -320,6 +320,24 @@ pub(crate) struct Loaded {
     pub(crate) capabilities: Vec<CapabilityRow>,
 }
 
+/// The token issuer and `client_id` of every client whose `ACTOR` performs a
+/// `ROLE` that stores a grant of `scim_provision`, in force or ended, sorted:
+/// the clients a binding key's provenance names as SCIM provisioning.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn provisioning_clients(pool: &sqlx::PgPool) -> Result<Vec<(String, String)>, StorageError> {
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT DISTINCT c.issuer, c.client_id FROM binding_client c \
+         JOIN binding_capability k ON k.performer_id = c.party_id \
+         WHERE k.operation = $1 ORDER BY c.issuer, c.client_id",
+    )
+    .bind(crate::party_binding::grants::operation::Operation::ScimProvision.code())
+    .fetch_all(pool)
+    .await?;
+    Ok(rows)
+}
+
 /// Reads every grant row in one repeatable-read snapshot on `conn`.
 ///
 /// # Errors

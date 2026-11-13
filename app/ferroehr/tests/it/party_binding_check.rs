@@ -250,10 +250,7 @@ async fn snapshot(pool: &PgPool) -> Vec<String> {
 fn input() -> CheckInput {
     CheckInput {
         key_types: BTreeMap::from([(LOGIN.to_owned(), "guid".to_owned())]),
-        scim_clients: vec![(
-            ferrohealth_secret::secret_url::SecretUrl::new(MACHINES),
-            CLIENT.to_owned(),
-        )],
+        scim_clients: vec![(MACHINES.to_owned(), CLIENT.to_owned())],
         migrations: vec![MIGRATION.to_owned()],
         provisional_report_after: ferrohealth_config::units::Duration::from_days(30),
         today: ferroehr::support::today_utc().to_string(),

@@ -45,17 +45,10 @@ services:
       FERROEHR__AUTH__PARTY__1__ISSUER: https://keycloak:8443/auth/realms/ferroehr
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:ferroehr:keycloak-dev-login
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: login
-      # The group claim and its identifier issuer, which a SCIM client's table
-      # needs once the party mapping provisions Groups.
+      # The group claim and its identifier issuer, under which a SCIM client's
+      # Groups are written once the party mapping provisions Groups.
       FERROEHR__AUTH__PARTY__1__GROUP_CLAIM: groups
       FERROEHR__AUTH__PARTY__1__GROUP_IDENTIFIER_ISSUER: urn:ferroehr:keycloak-dev-groups
-      # The SCIM client that provisions the realm's users by the ids the realm
-      # export fixes (docs/conformance/party/scim/README.md): a second client,
-      # since no two clients share a binding_issuer.
-      FERROEHR__AUTH__SCIM__CLIENT__1__ISSUER: https://scim.ferroehr.invalid
-      FERROEHR__AUTH__SCIM__CLIENT__1__CLIENT_ID: keycloak-dev
-      FERROEHR__AUTH__SCIM__CLIENT__1__SCOPE: ferroehr/scim
-      FERROEHR__AUTH__SCIM__CLIENT__1__BINDING_ISSUER: urn:ferroehr:keycloak-dev-login
       FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: https://keycloak:8443/auth/realms/ferroehr
       FERROEHR__AUTH__TLS__TRUST_ROOTS_FILE: /run/ferroehr-dev-tls/ca/ca.crt
       # The realm's service client, whose system/aql-* grant counts only when

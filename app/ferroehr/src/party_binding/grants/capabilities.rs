@@ -149,6 +149,11 @@ impl Grant {
 pub struct Credentials<'a>(Option<&'a Value>);
 
 impl<'a> Credentials<'a> {
+    /// The credentials `tree`, an `ITEM_STRUCTURE` as the capability holds it.
+    pub(crate) fn of(tree: Option<&'a Value>) -> Self {
+        Self(tree)
+    }
+
     /// The items below this tree whose `name` is `code`, in document order.
     #[must_use]
     pub fn named(self, code: &str) -> Vec<&'a Value> {
@@ -176,6 +181,22 @@ impl<'a> Credentials<'a> {
     pub fn texts(self, code: &str) -> Vec<&'a str> {
         self.values(code)
             .filter_map(|value| value.get("value").and_then(Value::as_str))
+            .collect()
+    }
+
+    /// What each element `code` names identifies: the text of a `DV_TEXT` or
+    /// `DV_CODED_TEXT` value, or the `id` of a `DV_IDENTIFIER` value, trimmed,
+    /// such as the origin of a [`Operation::DataOrigin`] grant.
+    #[must_use]
+    pub fn identified(self, code: &str) -> Vec<&'a str> {
+        self.values(code)
+            .filter_map(|value| {
+                value
+                    .get("value")
+                    .or_else(|| value.get("id"))
+                    .and_then(Value::as_str)
+            })
+            .map(str::trim)
             .collect()
     }
 
@@ -300,6 +321,7 @@ mod tests {
         let grant = Grant::new(Operation::ImportEhr, Uuid::nil(), Some(Arc::new(tree)));
         let credentials = grant.credentials();
         assert_eq!(credentials.texts("template"), vec!["T.v1", "U.v1"]);
+        assert_eq!(credentials.identified("template"), vec!["T.v1", "U.v1"]);
         let [facility] = credentials.clusters("facility")[..] else {
             panic!("one facility");
         };

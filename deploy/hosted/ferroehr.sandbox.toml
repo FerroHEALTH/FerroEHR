@@ -69,9 +69,10 @@ key_issuer = "urn:ferroehr:basic-user"
 key = "ferroehr"
 
 # The SCIM endpoint the demo PERSON is provisioned through (RFC 7644 §3.3), as
-# an identity provider provisions people: the ferroehr-provision service of the
-# box's compose file holds the `sandbox-scim` client's client credentials
-# token (RFC 6749 §4.4) from the development issuer, trusted here as a machines
+# an identity provider provisions people: the ferroehr-grant service of the
+# box's compose file grants the `sandbox-scim` client scim_provision in the
+# CDR, and the ferroehr-provision service holds its client credentials token
+# (RFC 6749 §4.4) from the development issuer, trusted here as a machines
 # issuer for that one client, and creates the User whose binding key
 # `ferroehr` the Basic user above is mapped by. The issuer publishes no port,
 # so only the containers on the box obtain its tokens.
@@ -84,11 +85,10 @@ token_types = ["JWT"]
 [auth.scim]
 public_base_url = "https://sandbox.ferroehr.eu"
 
-[[auth.scim.client]]
-issuer = "http://localhost:8180/sandbox"
-client_id = "sandbox-scim"
-scope = "ferroehr/scim"
-binding_issuer = "urn:ferroehr:basic-user"
+# The operations the party store may grant: beside a system client's commit,
+# the scim_provision the ferroehr-grant service grants `sandbox-scim`.
+[authz.grants]
+allowed = ["commit_composition", "scim_provision"]
 
 # Authentication only, no role gate — the one demo user deliberately reaches
 # every enabled surface, the admin group included (#2965).

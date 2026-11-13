@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `[[authz.origin]]` register: the origins of data this deployment recognises.
+//! The origins of data this deployment recognises, read from the policy
+//! grants.
 //!
 //! Regulation (EU) 2025/327 Annex II 3.4 asks the storing components to
 //! "support different retention periods and access rights that take into
@@ -11,174 +12,157 @@
 //! `FEEDER_AUDIT.originating_system_audit.system_id` the body carries, as the
 //! sending system chose it (RM common, `FEEDER_AUDIT_DETAILS.system_id`). A
 //! free-text value can key neither a retention period nor an access rule, so
-//! the deployment declares here the origins it recognises, each by the id its
-//! data carry, and the clients whose direct commits come from it. A body with
-//! no feeder audit, committed by a registered client, is stamped with that
-//! client's origin; any other direct commit keeps this server's `system_id`.
+//! an origin is recognised when a party holds a grant of
+//! [`Operation::DataOrigin`] whose `origin` element names it, in force on the
+//! request. A body with no feeder audit, committed by a caller holding such a
+//! grant, is stamped with that grant's origin; any other direct commit keeps
+//! this server's `system_id`.
 //!
 //! **No openEHR spec governs this — our own design/extension.**
 
-#![cfg_attr(
-    feature = "schema",
-    expect(
-        clippy::disallowed_types,
-        reason = "owner-approved 2026-08-03 (#1694 family 8, OpenAPI schema literals): the \
-                  schemars derive builds the JSON Schema of this module's configuration type \
-                  with serde_json::Map, which no item-level attribute reaches"
-    )
-)]
+use std::collections::BTreeSet;
 
-use std::collections::{BTreeMap, BTreeSet};
+use serde_json::Value;
 
-use serde::{Deserialize, Serialize};
+use crate::error::ServiceError;
+use crate::party_binding::grants::capabilities::Capabilities;
+use crate::party_binding::grants::live::LiveGrants;
+use crate::party_binding::grants::operation::{ORIGIN, Operation};
 
-/// The registered origins, read from `[[authz.origin]]`.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct OriginsConfig {
-    /// The recognised origins (`[[authz.origin]]`). Empty by default:
-    /// no retention period or access rule can then name an origin.
-    pub registered: Vec<RegisteredOrigin>,
+/// The origins every grant of [`Operation::DataOrigin`] in force at `now`
+/// names, from `grants`' copy: the origins a retention period may be keyed
+/// on.
+#[must_use]
+pub fn registered(grants: &LiveGrants, now: jiff::Timestamp) -> BTreeSet<String> {
+    grants
+        .all_in_force(Operation::DataOrigin, now)
+        .iter()
+        .flat_map(|(_, grant)| grant.credentials().identified(ORIGIN))
+        .filter(|origin| !origin.is_empty())
+        .map(str::to_owned)
+        .collect()
 }
 
-/// One recognised origin.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
-pub struct RegisteredOrigin {
-    /// The id the origin's data carry: the
-    /// `FEEDER_AUDIT.originating_system_audit.system_id` its feeds commit
-    /// under, and the origin a direct commit by one of [`Self::clients`] is
-    /// stamped with. Compared exactly.
-    pub id: String,
-    /// The authenticated clients whose direct commits come from this origin:
-    /// a Basic user name, or the `client_id` (failing that the `azp`) of an
-    /// OAuth 2.0 access token (RFC 9068 §2.2). Each client belongs to one
-    /// origin at most.
-    #[serde(default)]
-    pub clients: Vec<String>,
+/// The origin a body with no `FEEDER_AUDIT` is stamped with.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DirectOrigin {
+    /// The origin of the committer's grant, or this server's `system_id`.
+    One(String),
+    /// The committer's grants name more than one origin, so a direct commit
+    /// comes from none of them.
+    Ambiguous(Vec<String>),
 }
 
-impl OriginsConfig {
-    /// The boot validation's findings, one message per defect: a blank id or
-    /// one carrying whitespace, an id registered twice, a blank client, and a
-    /// client named by two origins.
+impl DirectOrigin {
+    /// The direct origin of a caller holding `capabilities`: the one origin
+    /// its grants of [`Operation::DataOrigin`] name, or `system_id` when they
+    /// name none.
     #[must_use]
-    pub fn errors(&self) -> Vec<String> {
-        let mut errors = Vec::new();
-        let mut ids = BTreeSet::new();
-        let mut clients: BTreeMap<&str, &str> = BTreeMap::new();
-        for origin in &self.registered {
-            if origin.id.is_empty() || origin.id.chars().any(char::is_whitespace) {
-                errors.push(format!(
-                    "authz.origin id {:?} is blank or carries whitespace",
-                    origin.id
-                ));
-            }
-            if !ids.insert(origin.id.as_str()) {
-                errors.push(format!("authz.origin names the id {:?} twice", origin.id));
-            }
-            for client in &origin.clients {
-                if client.trim().is_empty() {
-                    errors.push(format!(
-                        "authz.origin id {:?} lists a blank client",
-                        origin.id
-                    ));
-                } else if let Some(other) = clients.insert(client.as_str(), origin.id.as_str())
-                    && other != origin.id
-                {
-                    errors.push(format!(
-                        "authz.origin client {client:?} belongs to both {other:?} and {:?}; \
-                         a client's direct commits come from one origin",
-                        origin.id
-                    ));
-                }
-            }
+    pub fn of(capabilities: &Capabilities, system_id: &str) -> Self {
+        let named: BTreeSet<&str> = capabilities
+            .of(Operation::DataOrigin)
+            .flat_map(|grant| grant.credentials().identified(ORIGIN))
+            .filter(|origin| !origin.is_empty())
+            .collect();
+        let mut named: Vec<String> = named.into_iter().map(str::to_owned).collect();
+        match named.len() {
+            0 => Self::One(system_id.to_owned()),
+            1 => Self::One(named.remove(0)),
+            _ => Self::Ambiguous(named),
         }
-        errors
     }
 
-    /// Whether `id` is a registered origin.
+    /// The direct origin of the running request's caller
+    /// ([`Capabilities::current`]).
     #[must_use]
-    pub fn is_registered(&self, id: &str) -> bool {
-        self.registered.iter().any(|origin| origin.id == id)
+    pub fn current(system_id: &str) -> Self {
+        Self::of(&Capabilities::current(), system_id)
     }
 
-    /// The registered origin whose clients name `client`.
+    /// The origins this direct origin may stand for: the one, or each of the
+    /// ambiguous ones, which an attribute check is asked about before the
+    /// commit refuses.
     #[must_use]
-    pub fn origin_of_client(&self, client: &str) -> Option<&str> {
-        self.registered
-            .iter()
-            .find(|origin| origin.clients.iter().any(|c| c == client))
-            .map(|origin| origin.id.as_str())
+    pub fn candidates(&self) -> Vec<String> {
+        match self {
+            Self::One(origin) => vec![origin.clone()],
+            Self::Ambiguous(origins) => origins.clone(),
+        }
     }
 
-    /// The origin a direct commit by `client` is stamped with: the client's
-    /// registered origin, or `system_id`, this server, for any other caller.
-    #[must_use]
-    pub fn direct_origin(&self, client: Option<&str>, system_id: &str) -> String {
-        client
-            .and_then(|client| self.origin_of_client(client))
-            .unwrap_or(system_id)
-            .to_owned()
+    /// The origin set `canonical` is stamped with: its feeder origins, or
+    /// this direct origin when it carries none.
+    ///
+    /// # Errors
+    /// [`ServiceError::Forbidden`] (`403`) when the body carries no feeder
+    /// audit and the committer's grants name more than one origin.
+    pub fn stamp(&self, canonical: &Value) -> Result<Vec<String>, ServiceError> {
+        let fed = crate::versioning::origins::fed(canonical);
+        if !fed.is_empty() {
+            return Ok(fed.into_iter().collect());
+        }
+        match self {
+            Self::One(origin) => Ok(vec![origin.clone()]),
+            Self::Ambiguous(origins) => Err(ServiceError::not_permitted(format!(
+                "the committer's data_origin grants name the origins {}, so a body with no \
+                 FEEDER_AUDIT comes from none of them: leave the committer one origin, or \
+                 name the origin in the body's FEEDER_AUDIT",
+                origins.join(", ")
+            ))),
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use serde_json::json;
+    use uuid::Uuid;
+
     use super::*;
+    use crate::party_binding::grants::capabilities::Grant;
+    use crate::party_binding::policy_mark::TERMINOLOGY;
 
-    fn register() -> OriginsConfig {
-        toml::from_str(
-            r#"
-            [[registered]]
-            id = "lab.example"
-            clients = ["lab-gateway"]
-            [[registered]]
-            id = "pacs.example"
-            "#,
-        )
-        .expect("the register parses")
+    fn origin_grant(origin: &str) -> Grant {
+        let tree = json!({"_type": "ITEM_TREE", "items": [
+            {"_type": "ELEMENT",
+             "name": {"_type": "DV_CODED_TEXT", "value": ORIGIN,
+                      "defining_code": {"terminology_id": {"value": TERMINOLOGY},
+                                        "code_string": ORIGIN}},
+             "value": {"_type": "DV_IDENTIFIER", "id": origin}}]});
+        Grant::new(Operation::DataOrigin, Uuid::nil(), Some(Arc::new(tree)))
     }
 
     #[test]
-    fn a_registered_client_stamps_its_origin_and_any_other_the_server() {
-        let origins = register();
-        assert_eq!(origins.errors(), Vec::<String>::new());
-        assert!(origins.is_registered("pacs.example"));
-        assert!(!origins.is_registered("PACS.example"));
+    fn a_granted_origin_stamps_a_direct_commit_and_any_other_the_server() {
+        let lab = Capabilities::new(None, vec![origin_grant("lab.example")]);
+        let direct = DirectOrigin::of(&lab, "ferroehr");
+        assert_eq!(direct, DirectOrigin::One("lab.example".to_owned()));
         assert_eq!(
-            origins.direct_origin(Some("lab-gateway"), "ferroehr"),
-            "lab.example"
+            direct.stamp(&json!({"_type": "COMPOSITION"})).ok(),
+            Some(vec!["lab.example".to_owned()])
         );
         assert_eq!(
-            origins.direct_origin(Some("someone"), "ferroehr"),
-            "ferroehr"
+            DirectOrigin::of(&Capabilities::default(), "ferroehr"),
+            DirectOrigin::One("ferroehr".to_owned())
         );
-        assert_eq!(origins.direct_origin(None, "ferroehr"), "ferroehr");
     }
 
     #[test]
-    fn the_boot_validation_names_every_defect() {
-        let origins: OriginsConfig = toml::from_str(
-            r#"
-            [[registered]]
-            id = "a b"
-            clients = ["x", " "]
-            [[registered]]
-            id = "dup"
-            clients = ["x"]
-            [[registered]]
-            id = "dup"
-            "#,
-        )
-        .expect("the register parses");
-        let errors = origins.errors();
-        assert_eq!(errors.len(), 4, "{errors:#?}");
-        assert!(errors.iter().any(|e| e.contains("carries whitespace")));
-        assert!(errors.iter().any(|e| e.contains("blank client")));
-        assert!(errors.iter().any(|e| e.contains("belongs to both")));
-        assert!(errors.iter().any(|e| e.contains("twice")));
+    fn two_origins_stamp_no_direct_commit_but_leave_a_fed_one() {
+        let both = Capabilities::new(
+            None,
+            vec![origin_grant("lab.example"), origin_grant("pacs.example")],
+        );
+        let direct = DirectOrigin::of(&both, "ferroehr");
+        assert_eq!(direct.candidates().len(), 2);
+        assert!(matches!(
+            direct.stamp(&json!({"_type": "COMPOSITION"})),
+            Err(ServiceError::Forbidden(_))
+        ));
+        let fed = json!({"_type": "COMPOSITION", "feeder_audit": {"_type": "FEEDER_AUDIT",
+            "originating_system_audit": {"system_id": "ris.example"}}});
+        assert_eq!(direct.stamp(&fed).ok(), Some(vec!["ris.example".to_owned()]));
     }
 }

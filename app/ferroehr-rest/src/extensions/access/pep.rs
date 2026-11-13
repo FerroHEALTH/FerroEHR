@@ -500,7 +500,7 @@ async fn pre_content(
                 stored_attrs(rules, content, true)
             }))
         }
-        (CompositionGate::Write, _) => Ok(composition_content(rules, principal, parts)),
+        (CompositionGate::Write, _) => Ok(composition_content(rules, parts)),
         // An item-tag write: the attributes of the COMPOSITION it tags.
         (CompositionGate::None, Verb::Update | Verb::Delete)
             if row.kind == Some(ResourceKind::Composition) =>
@@ -534,13 +534,16 @@ async fn stored_content(
     }))
 }
 
-/// The origin a body with no `FEEDER_AUDIT` committed by `principal` is
-/// stamped with: the caller's registered origin, or this server.
-fn direct_origin(rules: &ContentRules, principal: &Principal) -> String {
-    rules.origins.direct_origin(
-        crate::extensions::access::authn::client_of(principal).as_deref(),
-        &rules.system_id,
-    )
+/// The origins a body committed by the running request's caller is stamped
+/// with: its feeder origins, or the origin of the caller's `data_origin`
+/// grant, or this server; each candidate when the caller's grants name
+/// several, which the commit then refuses.
+fn stamped_origins(rules: &ContentRules, canonical: &serde_json::Value) -> Vec<String> {
+    let fed = ferroehr::versioning::origins::fed(canonical);
+    if !fed.is_empty() {
+        return fed.into_iter().collect();
+    }
+    ferroehr::origins::DirectOrigin::current(&rules.system_id).candidates()
 }
 
 /// The attributes of a COMPOSITION write, read off its body the way the commit
@@ -550,7 +553,6 @@ fn direct_origin(rules: &ContentRules, principal: &Principal) -> String {
 /// template and the category it implies and no origin attribute.
 fn composition_content(
     rules: &ContentRules,
-    principal: &Principal,
     parts: &RequestParts,
 ) -> ContentAttrs {
     let h = &parts.headers;
@@ -577,18 +579,16 @@ fn composition_content(
     let Ok(composition) = negotiate::decode::rm_value::<Composition>(h, &parts.body) else {
         return ContentAttrs::default();
     };
-    composition_attrs(rules, principal, &composition)
+    composition_attrs(rules, &composition)
 }
 
 /// The attributes of one decoded COMPOSITION a write carries.
 fn composition_attrs(
     rules: &ContentRules,
-    principal: &Principal,
     composition: &Composition,
 ) -> ContentAttrs {
     let canonical = openehr_its::json::to_canonical_value(composition);
-    let origins =
-        ferroehr::versioning::origins::origins(&direct_origin(rules, principal), &canonical);
+    let origins = stamped_origins(rules, &canonical);
     let details = composition.archetype_details.as_ref();
     let template = details
         .and_then(|a| a.template_id.as_ref())
@@ -659,7 +659,7 @@ fn contribution_content(
                 // is nothing here to authorize.
                 return Ok(ContentAttrs::default());
             };
-            let attrs = composition_attrs(rules, principal, &composition);
+            let attrs = composition_attrs(rules, &composition);
             let details = composition.archetype_details.as_ref();
             match details.and_then(|a| a.template_id.as_ref()) {
                 Some(template) => {

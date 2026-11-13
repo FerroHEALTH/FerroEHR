@@ -187,8 +187,8 @@ impl FerroEhrService {
     /// origins and categories of electronic health data"
     /// (`docs/law/eu/ehds/text.html`); `category` and `origin` are those
     /// dimensions. A category is named as the audit category register names one and
-    /// stored as its `<system>|<code>` token; an origin is the id of a
-    /// registered origin (`[[authz.origin]]`). `None` keys the period on every object
+    /// stored as its `<system>|<code>` token; an origin is the id a
+    /// `data_origin` grant in force names ([`crate::origins`]). `None` keys the period on every object
     /// of the kind, or of every origin. The register is where those answers
     /// come from.
     ///
@@ -201,11 +201,11 @@ impl FerroEhrService {
         period: marks::RetentionPeriod<'_>,
     ) -> Result<(), ServiceError> {
         if let Some(origin) = period.origin
-            && !self.origins().is_registered(origin)
+            && !self.registered_origins().await?.contains(origin)
         {
             return Err(ServiceError::precondition(format!(
                 "{origin:?} is not a registered origin: a retention period is keyed only on an \
-                 origin [[authz.origin]] declares, by its id"
+                 origin a data_origin grant in force names, by its id"
             )));
         }
         let category = period

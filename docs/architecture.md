@@ -198,8 +198,8 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `ehr_folder` and `item_tag`, which stand outside change control; the
   definition stores `template_ref`, `template_store`, `archetype_store`,
   `adl2_artefact` and `stored_query`; the change-event `event_outbox` with its
-  `event_outbox_reader` cursors, which the readers `[record.change_feed] readers` names
-  move over the outbox feed (`extensions::outbox`); and
+  `event_outbox_reader` cursors, which the readers the `read_change_feed`
+  grants name move over the outbox feed (`extensions::outbox`); and
   `blob_ref`, which records that a version references an externalized
   multimedia blob so collection is an index probe rather than a scan of `node`.
   Every write emits contribution + commit audit in the same transaction
@@ -507,7 +507,7 @@ section a deployment sets replaces that section's default whole, and nothing
 is seeded under a deployment's own ids. A SCIM client whose `[[auth.party]]`
 table names no `group_identifier_issuer` writes its Groups' `externalId`s
 under its `binding_issuer` with `/groups` appended
-(`ScimClient::group_issuer`). **Our own design.**
+(`config::scim::group_issuer`). **Our own design.**
 
 **Who writes and reads a policy party.** A party is a policy party once a
 version of it holds the coded content above, inline or on our own
@@ -544,9 +544,11 @@ its `credentials` hold, at any depth, an element whose value is a
 (`commit_composition`, `import_ehr`, `import_ehr_extract`,
 `export_ehr_extract`, `federated_person_access`,
 `federated_organisation_access`, `read_subject_audit`, `access_service`,
-`read_identifiers`); elements named by the qualifier codes `not_before` and
-`not_after` bound it finer than a day, and `template`, `facility` and
-`subject_namespace` scope it; `acts_for` codes the acts-for relationship.
+`read_identifiers`, `data_origin`, `read_change_feed`, `scim_provision`);
+elements named by the qualifier codes `not_before` and `not_after` bound it
+finer than a day, and `template`, `facility`, `subject_namespace`,
+`creating_system`, `origin`, `reader`, `binding_issuer` and `token_scope`
+scope it; `acts_for` codes the acts-for relationship.
 That is the RM's `ITEM_STRUCTURE` with a terminology binding, which any
 modeller produces (RM `data_types` `DV_CODED_TEXT`, `CODE_PHRASE`). A client
 is any `ACTOR` carrying a `DV_IDENTIFIER` of type `client_id` in its
@@ -607,6 +609,43 @@ alone, which reaches only the templates the grant names: an import, an
 export, a federation agreement and every privilege reach beyond one system's
 own writes, so the operator admits each by name. It is the one key this
 program adds. **Our own design.**
+
+**Trusted import systems, origins, change-feed readers and SCIM clients**
+(#5439) are grants read per request through `Capabilities::current` or, for a
+store-wide reading, `LiveGrants::all_in_force`; their TOML keys
+(`[authz.import] trusted_systems`, `[[authz.origin]]`, `[record.change_feed]
+readers`, `[[auth.scim.client]]`) are gone. A wrapped committer of an import
+may name a local party only when the version's `creating_system_id` is a
+`creating_system` element of the importer's grant of that import operation,
+never this node's own (`service::message::import_policy`); the RM keeps an
+imported audit as received (`IMPORTED_VERSION`), so the trust is the
+importer's. An origin is the `origin` element of a `data_origin` grant: the
+registered origins a retention period may name are those in force
+(`origins::registered`), and a direct commit is stamped with its committer's
+one origin, a committer with two refused for a body with no `FEEDER_AUDIT`
+(`origins::DirectOrigin`), which serves EHDS Annex II 3.4. A change-feed
+reader is the `reader` element of a `read_change_feed` grant: the binary's
+`OutboxGate::WhileGranted` writes the outbox row while one is in force, and
+the registry is reconciled with the grants at boot, on every feed call and
+before every prune; only a caller whose own grant names a reader reads it. A
+SCIM client is a client `ACTOR` holding `scim_provision`, whose
+`binding_issuer` is an `[[auth.party]]` identifier issuer no other client's
+grant names and whose `token_scope` its token holds; the contact erasure
+reaches the binding issuers of every stored grant, ended ones included, so
+revoking a client stops no GDPR Art. 17 erasure. The `ROLE` commit refuses a
+capability that names `origin`, `reader` or `binding_issuer` other than once
+(`grants::check_elements`). Every request reads the grant copy again when it
+is stale, a caller with no grant included, so a commit sees the change-feed
+grants in force. **Our own design:** no openEHR spec defines a change feed,
+SCIM, or an authorization meaning for these.
+
+**The first grant is the operator's.** An administrator is a person bound to
+a `PERSON`, and a new deployment's `PERSON`s arrive through a SCIM client
+that needs a grant, so `ferroehr party-binding grant`
+(`party_binding::grants::bootstrap`) commits the client's `AGENT` and a
+`ROLE` granting one operation offline, through `party_create` with the
+server's own committer, under the ceiling and the element rules. It is
+idempotent per client and operation. **Our own design.**
 
 **Break-glass stays in the configuration.** Emergency access (EHDS Art.
 11(5)) must work when the party store does not answer, so

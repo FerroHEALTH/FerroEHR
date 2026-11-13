@@ -8,13 +8,13 @@
 //! A system client is resolved by the issuer of its token and its
 //! `client_id` to the `ACTOR` carrying that client identifier, and a
 //! caller the login binding bound to a party by that party; every other
-//! caller has none and reads nothing. The copy is read only when a
-//! notification or a lost listener asks for it, so a request adds no
-//! transaction; a store that cannot answer is the server's failure and
-//! answers `503`. A request whose own commit changed a grant reads the copy
-//! again before it answers, so the caller's next request runs under the
-//! change. Nothing reads the capabilities to decide a request yet; a check
-//! reads them through [`Capabilities::current`]. No openEHR spec gives a
+//! caller has none. The copy is read only when a notification or a lost
+//! listener asks for it, on every request, so a request adds no transaction
+//! and every commit sees the change-feed grants in force; a store that cannot
+//! answer is the server's failure and answers `503`. A request whose own
+//! commit changed a grant reads the copy again before it answers, so the
+//! caller's next request runs under the change. A check reads the
+//! capabilities through [`Capabilities::current`]. No openEHR spec gives a
 //! capability an authorization meaning: our own design.
 
 use std::future::Future;
@@ -22,22 +22,23 @@ use std::sync::Arc;
 
 use axum::response::Response;
 use ferroehr::party_binding::grants::capabilities::{Actor, Capabilities, with_capabilities};
-use ferroehr::party_binding::grants::live::tracking;
+use ferroehr::party_binding::grants::live::{LiveGrants, tracking};
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::Outcome;
 
-use super::{AuthError, AuthLayer, Principal};
+use super::{AuthError, Principal};
 
-/// The capabilities of the caller of `principal`, after reading the grant
-/// rows when this replica's copy is stale.
+/// The capabilities of the caller of `principal` under `grants`, after
+/// reading the grant rows when this replica's copy is stale.
 ///
 /// # Errors
 /// [`AuthError::PartyUnavailable`] when the copy is stale and the party store
 /// cannot answer.
-pub(super) async fn resolve(
-    layer: &AuthLayer,
+pub(crate) async fn resolve(
+    grants: &LiveGrants,
     principal: &Principal,
 ) -> Result<Arc<Capabilities>, AuthError> {
+    fresh(grants).await?;
     let Some(caller) = principal.access.caller() else {
         return Ok(Arc::default());
     };
@@ -54,7 +55,17 @@ pub(super) async fn resolve(
         (_, _, _, Some(party)) => Actor::Party(party),
         _ => return Ok(Arc::default()),
     };
-    let grants = layer.service.grants();
+    Ok(Arc::new(grants.capabilities(actor, jiff::Timestamp::now())))
+}
+
+/// Reads the grant rows when this replica's copy is stale, so every request,
+/// a caller's with no grant included, commits under the grants in force: the
+/// change-feed grants decide whether a commit writes its outbox row.
+///
+/// # Errors
+/// [`AuthError::PartyUnavailable`] when the copy is stale and the party store
+/// cannot answer.
+pub(crate) async fn fresh(grants: &LiveGrants) -> Result<(), AuthError> {
     if let Err(error) = grants.refresh_if_stale().await {
         tracing::warn!(
             error = %ferroehr::error::ErrorChain::new(&error),
@@ -62,19 +73,19 @@ pub(super) async fn resolve(
         );
         return Err(AuthError::PartyUnavailable { retry_after: None });
     }
-    Ok(Arc::new(grants.capabilities(actor, jiff::Timestamp::now())))
+    Ok(())
 }
 
 /// Runs `request` inside the caller's capabilities `granted`, reads the grant
 /// rows again when its own commit changed one, and carries `granted` on the
 /// response.
-pub(super) async fn scoped<F: Future<Output = Response>>(
-    layer: &AuthLayer,
+pub(crate) async fn scoped<F: Future<Output = Response>>(
+    grants: &LiveGrants,
     granted: Arc<Capabilities>,
     request: F,
 ) -> Response {
     let (mut resp, changed) = tracking(with_capabilities(Arc::clone(&granted), request)).await;
-    if changed && let Err(error) = layer.service.grants().refresh().await {
+    if changed && let Err(error) = grants.refresh().await {
         // NOTE: no specification governs this: our own design; the commit
         // notified every replica, and a copy that could not be read is read
         // again on the next request.

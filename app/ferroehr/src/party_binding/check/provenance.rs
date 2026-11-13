@@ -201,7 +201,7 @@ fn origin(
                 && input
                     .scim_clients
                     .iter()
-                    .any(|(i, client)| i.expose() == *issuer && client == id)
+                    .any(|(i, client)| i == issuer && client == id)
         });
         if scim {
             return Some(Origin::Scim);

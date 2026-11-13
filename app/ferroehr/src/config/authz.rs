@@ -176,7 +176,7 @@ pub enum AbacParam {
     Template,
     /// The EHDS categories of the resource's data (EHDS Annex II 3.4).
     Category,
-    /// The origins of the resource's data (EHDS Annex II 3.4, `[[authz.origin]]`).
+    /// The origins of the resource's data (EHDS Annex II 3.4, a `data_origin` grant).
     Origin,
 }
 
@@ -366,16 +366,10 @@ pub struct AuthzConfig {
     /// The party binding: the provider, the namespace and the Basic users'
     /// keys (`[authz.party_binding]`).
     pub party_binding: crate::config::binding::PartyBindingConfig,
-    /// The systems whose imported committers are trusted (`[authz.import]`).
-    pub import: crate::config::clients::ImportConfig,
     /// The system clients that commit (`[[authz.system_client]]`).
     pub system_client: Vec<crate::config::clients::SystemClient>,
     /// The federation agreements (`[authz.federation]`).
     pub federation: crate::config::agreement::FederationConfig,
-    /// The origins of data this deployment recognises, which a retention
-    /// period and an access rule may name (`[[authz.origin]]`, EHDS Annex II
-    /// 3.4).
-    pub origin: Vec<crate::origins::RegisteredOrigin>,
     /// The operations the policy grants may grant (`[authz.grants]`).
     pub grants: GrantsConfig,
 }

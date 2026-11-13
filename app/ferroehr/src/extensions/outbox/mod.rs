@@ -1,11 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The commit-event outbox: the reader registry `[record.change_feed]` reconciles at
-//! boot, the cursor feed each reader pulls, and the retention prune.
+//! The commit-event outbox: the reader registry reconciled with the
+//! change-feed grants, the cursor feed each reader pulls, and the retention
+//! prune.
 //!
-//! **No openEHR spec governs eventing: our own design/extension.** While a
-//! reader is configured, every commit writes one PHI-free row into its
+//! **No openEHR spec governs eventing: our own design/extension.** A reader is
+//! named by the `reader` element of a grant of
+//! [`Operation::ReadChangeFeed`] in force, read per request from the policy
+//! grants; the registry is reconciled with them at boot, on every feed call
+//! and before every prune. While a reader is granted, every commit writes one
+//! PHI-free row into its
 //! domain's `event_outbox` in the commit's own transaction. The clinical and
 //! the party domain each keep their own outbox, with their own `seq`, and a
 //! reader keeps one cursor per domain in that domain's `event_outbox_reader`.
@@ -29,7 +34,7 @@
 //!
 //! The prune deletes a row once it is older than the retention window and at
 //! or below every active reader's cursor, so a reader that is down loses
-//! nothing inside the window. A reader the configuration no longer names is
+//! nothing inside the window. A reader no grant in force names any more is
 //! inactive and holds nothing back.
 
 #![expect(
@@ -47,9 +52,11 @@ use sqlx::types::Json;
 use sqlx::{Connection as _, PgConnection, PgPool};
 
 use crate::db::acquire::{AcquireError, acquire};
-use crate::db::domain::DomainPools;
 use crate::error::refusal::Missing;
 use crate::error::{ErrorChain, ServiceError};
+use crate::party_binding::grants::capabilities::Capabilities;
+use crate::party_binding::grants::live::LiveGrants;
+use crate::party_binding::grants::operation::{Operation, READER};
 use crate::service::FerroEhrService;
 
 /// The exclusive form of the lock every outbox insert holds shared, keyed on
@@ -108,15 +115,6 @@ impl OutboxDomain {
             .into_iter()
             .find(|domain| domain.as_str() == token)
     }
-
-    /// The pool that serves this domain's outbox.
-    #[must_use]
-    pub const fn pool(self, pools: &DomainPools) -> &PgPool {
-        match self {
-            Self::Clinical => &pools.clinical,
-            Self::Party => &pools.party,
-        }
-    }
 }
 
 /// What one boot reconciliation changed in one domain's reader registry.
@@ -124,7 +122,7 @@ impl OutboxDomain {
 pub struct Reconciled {
     /// The readers registered for the first time or made active again.
     pub registered: Vec<String>,
-    /// The readers the configuration no longer names, now inactive.
+    /// The readers no change-feed grant in force names any more, now inactive.
     pub deactivated: Vec<String>,
 }
 
@@ -167,24 +165,17 @@ pub async fn reconcile(pool: &PgPool, readers: &[String]) -> Result<Reconciled, 
     })
 }
 
-/// [`reconcile`] in both outboxes, logging what each changed.
-///
-/// # Errors
-///
-/// The first [`reconcile`] failure.
-pub async fn reconcile_domains(pools: &DomainPools, readers: &[String]) -> Result<(), OutboxError> {
-    for domain in OutboxDomain::ALL {
-        let reconciled = reconcile(domain.pool(pools), readers).await?;
-        if !reconciled.registered.is_empty() || !reconciled.deactivated.is_empty() {
-            tracing::info!(
-                domain = domain.as_str(),
-                registered = ?reconciled.registered,
-                deactivated = ?reconciled.deactivated,
-                "outbox readers reconciled with [record.change_feed] readers"
-            );
-        }
+/// Logs what one reconciliation of `domain` changed, when it changed
+/// anything.
+fn log_reconciled(domain: OutboxDomain, reconciled: &Reconciled) {
+    if !reconciled.registered.is_empty() || !reconciled.deactivated.is_empty() {
+        tracing::info!(
+            domain = domain.as_str(),
+            registered = ?reconciled.registered,
+            deactivated = ?reconciled.deactivated,
+            "outbox readers reconciled with the change-feed grants"
+        );
     }
-    Ok(())
 }
 
 /// One event of the feed: the stored envelope with its delivery `seq`.
@@ -365,7 +356,8 @@ pub async fn prune(pool: &PgPool, retention: Duration) -> Result<u64, OutboxErro
     Ok(pruned)
 }
 
-/// Prune both outboxes every `interval`, for as long as the task runs.
+/// Reconcile the reader registry with the change-feed grants of `service`
+/// and prune both outboxes every `interval`, for as long as the task runs.
 ///
 /// A failed pass is logged and the next one runs on schedule.
 #[expect(
@@ -373,13 +365,24 @@ pub async fn prune(pool: &PgPool, retention: Duration) -> Result<u64, OutboxErro
     reason = "a detached background task with no shutdown channel: the binary aborts it \
               at exit, as it does the planner-statistics refresh"
 )]
-pub async fn scheduled_prune(pools: DomainPools, retention: Duration, interval: Duration) {
+pub async fn scheduled_prune(
+    service: std::sync::Arc<FerroEhrService>,
+    retention: Duration,
+    interval: Duration,
+) {
     let mut ticker = tokio::time::interval(interval);
     ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
     loop {
         ticker.tick().await;
+        if let Err(error) = service.reconcile_change_feed().await {
+            tracing::warn!(
+                error = %ErrorChain::new(&error),
+                "reconciling the outbox readers failed; no outbox is pruned before the next pass"
+            );
+            continue;
+        }
         for domain in OutboxDomain::ALL {
-            if let Err(error) = prune(domain.pool(&pools), retention).await {
+            if let Err(error) = prune(service.outbox_pool(domain), retention).await {
                 tracing::warn!(
                     domain = domain.as_str(),
                     error = %ErrorChain::new(&error),
@@ -388,6 +391,35 @@ pub async fn scheduled_prune(pools: DomainPools, retention: Duration, interval: 
             }
         }
     }
+}
+
+/// When a commit writes its outbox row.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum OutboxGate {
+    /// On every commit: a bare service (tests, embeddings) never silently
+    /// drops an event.
+    #[default]
+    Always,
+    /// While a change-feed grant in force names a reader: the binary's gate,
+    /// so the `event_outbox` insert is skipped while no reader will read it.
+    WhileGranted,
+}
+
+/// The readers the grants of [`Operation::ReadChangeFeed`] in force at `now`
+/// name, from `grants`' copy, sorted; a name outside the registry's grammar,
+/// which the `ROLE` commit refuses, names none.
+#[must_use]
+pub fn granted_readers(grants: &LiveGrants, now: jiff::Timestamp) -> Vec<String> {
+    let mut readers: Vec<String> = grants
+        .all_in_force(Operation::ReadChangeFeed, now)
+        .iter()
+        .flat_map(|(_, grant)| grant.credentials().identified(READER))
+        .filter(|reader| config::is_reader_name(reader))
+        .map(str::to_owned)
+        .collect();
+    readers.sort_unstable();
+    readers.dedup();
+    readers
 }
 
 impl FerroEhrService {
@@ -399,19 +431,83 @@ impl FerroEhrService {
         }
     }
 
+    /// Whether a commit now writes its outbox row, under the gate the
+    /// service holds.
+    pub(crate) fn outbox_written(&self) -> bool {
+        match self.outbox_gate {
+            OutboxGate::Always => true,
+            OutboxGate::WhileGranted => {
+                !granted_readers(self.grants(), jiff::Timestamp::now()).is_empty()
+            }
+        }
+    }
+
+    /// The readers the change-feed grants in force name, after reading the
+    /// grants when this replica's copy is stale.
+    ///
+    /// # Errors
+    /// [`ServiceError::Storage`] when the grants must be read and the party
+    /// store cannot answer.
+    pub async fn change_feed_readers(&self) -> Result<Vec<String>, ServiceError> {
+        Ok(granted_readers(
+            self.fresh_grants().await?,
+            jiff::Timestamp::now(),
+        ))
+    }
+
+    /// Reconcile both outboxes' reader registries with the change-feed grants
+    /// in force: a newly granted reader is registered, and one no grant names
+    /// any more is inactive.
+    ///
+    /// # Errors
+    /// As [`Self::change_feed_readers`], and the [`reconcile`] failures.
+    pub async fn reconcile_change_feed(&self) -> Result<(), ServiceError> {
+        let readers = self.change_feed_readers().await?;
+        for domain in OutboxDomain::ALL {
+            log_reconciled(domain, &reconcile(self.outbox_pool(domain), &readers).await?);
+        }
+        Ok(())
+    }
+
+    /// The registry of `domain` reconciled with the change-feed grants, once
+    /// `reader` is one they name and, when the request has a caller, one the
+    /// caller's own grant names.
+    async fn granted_reader(&self, domain: OutboxDomain, reader: &str) -> Result<(), ServiceError> {
+        let readers = self.change_feed_readers().await?;
+        if !readers.iter().any(|granted| granted == reader) {
+            return Err(unknown_reader(reader));
+        }
+        if crate::versioning::committer::current_committer().is_some() {
+            let capabilities = Capabilities::current();
+            let own = capabilities
+                .of(Operation::ReadChangeFeed)
+                .any(|grant| grant.credentials().identified(READER).contains(&reader));
+            if !own {
+                return Err(ServiceError::not_permitted(format!(
+                    "the outbox reader {reader:?} is read only by a caller whose own \
+                     read_change_feed grant names it"
+                )));
+            }
+        }
+        reconcile(self.outbox_pool(domain), &readers).await?;
+        Ok(())
+    }
+
     /// Up to `limit` events of `domain`'s outbox after `reader`'s cursor, in
     /// `seq` order.
     ///
     /// # Errors
     ///
-    /// [`ServiceError::NotFound`] when the reader is unknown or inactive, and
-    /// a database failure otherwise.
+    /// [`ServiceError::NotFound`] when no change-feed grant in force names the
+    /// reader, [`ServiceError::Forbidden`] when the request's caller holds no
+    /// grant naming it, and a database failure otherwise.
     pub async fn outbox_events(
         &self,
         domain: OutboxDomain,
         reader: &str,
         limit: i64,
     ) -> Result<Vec<FeedEvent>, ServiceError> {
+        self.granted_reader(domain, reader).await?;
         read(self.outbox_pool(domain), domain, reader, limit)
             .await?
             .ok_or_else(|| unknown_reader(reader))
@@ -421,15 +517,17 @@ impl FerroEhrService {
     ///
     /// # Errors
     ///
-    /// [`ServiceError::NotFound`] when the reader is unknown or inactive,
-    /// [`ServiceError::Conflict`] when `last_seq` lies below the cursor or
-    /// above the highest row, and a database failure otherwise.
+    /// [`ServiceError::NotFound`] when no change-feed grant in force names the
+    /// reader, [`ServiceError::Forbidden`] when the request's caller holds no
+    /// grant naming it, [`ServiceError::Conflict`] when `last_seq` lies below
+    /// the cursor or above the highest row, and a database failure otherwise.
     pub async fn outbox_acknowledge(
         &self,
         domain: OutboxDomain,
         reader: &str,
         last_seq: i64,
     ) -> Result<(), ServiceError> {
+        self.granted_reader(domain, reader).await?;
         match acknowledge(self.outbox_pool(domain), reader, last_seq).await? {
             Acknowledged::Moved => Ok(()),
             Acknowledged::Unknown => Err(unknown_reader(reader)),
@@ -450,7 +548,8 @@ fn unknown_reader(reader: &str) -> ServiceError {
     ServiceError::not_found(
         Missing::VersionedObject,
         format!(
-            "no active outbox reader {reader:?}; readers come from [record.change_feed] readers"
+            "no active outbox reader {reader:?}; a reader is named by a read_change_feed grant \
+             in force"
         ),
     )
 }

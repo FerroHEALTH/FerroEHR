@@ -334,10 +334,9 @@ rather than inherit from a quickstart. See
 | `[record.versioning]` | The opt-in answer to an update whose content equals the current version's, off by default | [Authentication & access](config-auth.md#recordversioning) |
 | `[record.query]` | AQL execution budgets and result ceilings | [Integrations](config-integrations.md) |
 | `record.subject_index`, `[pixm]`, `[pixm.endpoint]` | Who holds the patient-to-EHR cross-reference: an IHE patient identity source over PIXm or the in-instance map | [Integrations](config-integrations.md#pixm) |
-| `[record.change_feed]` | The commit-event outbox and the readers of its feed | [Integrations](config-integrations.md#recordchange_feed) |
+| `[record.change_feed]` | The commit-event outbox retention; its readers are grants in the CDR | [Integrations](config-integrations.md#recordchange_feed) |
 | `[terminology]`, `[record.multimedia]` | The terminology server, multimedia externalization | [Integrations](config-integrations.md) |
 | `[audit]`, `[audit.store]`, `[audit.syslog]`, `[audit.fhir_feed]` | The IHE ATNA audit trail and its sinks | [Audit](config-audit.md) |
-| `[[authz.origin]]` | The origins of data the deployment recognises, which a retention period and an ABAC rule may name (EHDS Annex II 3.4) | [Audit](config-audit.md#authzorigin-the-origins-a-deployment-recognises) |
 | `[privacy]`, `[privacy.identifier_scan]` | What the clinical side refuses to hold: the subject reference, identified parties, the identifier scanner | [Privacy & data minimisation](config-privacy.md) |
 | `[privacy.cohort]`, `[privacy.cohort.predicates]` | Cross-domain cohort queries: the demographic predicate allow-list, the small-cell floor, the cohort ceiling | [Privacy & data minimisation](config-privacy.md) |
 | `[privacy.identifier_protection]` | Sealing national identifiers in the demographic domain, and the key that opens them | [Privacy & data minimisation](config-privacy.md) |

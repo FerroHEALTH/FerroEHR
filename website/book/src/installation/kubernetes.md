@@ -866,7 +866,7 @@ is an explicit, auditable decision:
 | Specification generation | `config.deployment.spec_profile` | `development` | One coupled choice; `stable` runs the released generations. |
 | ADMIN API | `config.api.admin` | off | Physical, irreversible delete. Gate behind admin RBAC. |
 | Terminology extension API | `config.api.terminology` | off | 404 when off. |
-| Outbox feed | `config.record.change_feed.readers` | none | The commit-event feed for the readers named; FerroBRIDGE delivers it to a broker. See [Change events](../beyond-core/outbox-feed.md). |
+| Outbox feed | `config.authz.grants.allowed` admitting `read_change_feed` | none | The commit-event feed for the readers a `read_change_feed` grant in the CDR names; FerroBRIDGE delivers it to a broker. See [Change events](../beyond-core/outbox-feed.md). |
 | Bearer tokens | `config.auth.issuer` | unset | A list of issuer tables, each with its `kind`, `profile` and `audience`, and a `config.auth.party` table for a `persons` issuer; the issuer's metadata and key set are read at boot, asymmetric algorithms only. |
 | Party binding | `config.authz.party_binding.provider` | unset | Required once authentication admits a credential: the healthcare provider the deployment acts for. Each Basic user maps to its binding key under `config.authz.party_binding.basic_user`. |
 | RBAC | `config.authz.rbac.enabled` | **on** | The coarse role gate (active while `config.auth.enabled`). |

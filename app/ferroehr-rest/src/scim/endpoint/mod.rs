@@ -7,11 +7,15 @@
 //! `/ServiceProviderConfig` is readable without a token, so a client can learn
 //! the authentication scheme before it holds one (RFC 7644 §4,
 //! `authenticationSchemes`). Every other path needs a bearer token of a
-//! `[[auth.scim.client]]`: a caller acting for nobody (a `System` caller), whose
-//! issuer and client the table names, holding the table's `scope`. A person's
-//! token is refused, since provisioning is a client's act. The client's
-//! requests count against `[server.caller_rate]` like any other caller's. No
-//! openEHR spec governs SCIM: our own design over RFC 7644.
+//! provisioning client: a caller acting for nobody (a `System` caller) whose
+//! `ACTOR`, named by its token's issuer and `client_id`, holds a grant of
+//! `scim_provision` in force, read per request from the policy grants. The
+//! grant names the `binding_issuer` of the Users the client owns, the
+//! identifier issuer of an `[[auth.party]]` table no other client's grant
+//! names, and the `token_scope` the token must hold. A person's token is
+//! refused, since provisioning is a client's act. The client's requests count
+//! against `[server.caller_rate]` like any other caller's. No openEHR spec
+//! governs SCIM: our own design over RFC 7644.
 
 #[expect(
     clippy::disallowed_types,
@@ -53,10 +57,12 @@ use axum::extract::{Path, Query, Request, State};
 use axum::middleware::{Next, from_fn, from_fn_with_state};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
-use ferroehr::config::scim::ScimClient;
+use ferroehr::party_binding::grants::capabilities::Capabilities;
+use ferroehr::party_binding::grants::operation::{BINDING_ISSUER, Operation, TOKEN_SCOPE};
 use ferroehr::service::FerroEhrService;
 use ferrohealth_server::caller_rate::{self, CallerLimit};
 use ferrohealth_smart::kind::CallerKind;
+use ferrohealth_smart::party::config::PartySection;
 use http::{HeaderValue, StatusCode, header};
 use serde::Deserialize;
 
@@ -70,6 +76,20 @@ use crate::state::AppState;
 /// The path the endpoint is served under.
 pub const BASE_PATH: &str = "/scim/v2";
 
+/// A provisioning client as its `scim_provision` grant names it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScimClient {
+    /// The issuer of the client's access token.
+    pub issuer: String,
+    /// The client the token names.
+    pub client_id: String,
+    /// The identifier issuer of the binding keys the client provisions.
+    pub binding_issuer: String,
+    /// The issuer its Groups' `externalId`s are written under
+    /// ([`ferroehr::config::scim::group_issuer`]).
+    pub group_issuer: String,
+}
+
 /// The provisioning client a request was admitted as, on its extensions.
 #[derive(Debug, Clone)]
 pub struct ScimCaller(pub Arc<ScimClient>);
@@ -78,7 +98,8 @@ pub struct ScimCaller(pub Arc<ScimClient>);
 #[derive(Clone)]
 struct Gate {
     authenticator: Arc<Authenticator>,
-    clients: Arc<[Arc<ScimClient>]>,
+    service: Arc<FerroEhrService>,
+    parties: Arc<[PartySection]>,
 }
 
 /// Why a SCIM endpoint cannot be served.
@@ -125,12 +146,8 @@ pub(crate) fn router(
     };
     // NOTE: GDPR Art. 5(1)(e), a deleted User's contacts are kept no longer than necessary;
     // the sweep runs while the endpoint that deletes Users is served.
-    service.spawn_contact_erasure(
-        scim.binding_issuers(),
-        scim.erasure_minutes(),
-        Duration::from_secs(60),
-    );
-    let resources = match resources(config, scim, &discovery, service) {
+    service.spawn_contact_erasure(scim.erasure_minutes(), Duration::from_secs(60));
+    let resources = match resources(config, scim, &discovery, Arc::clone(&service)) {
         Ok(resources) => resources,
         Err(error) => {
             tracing::error!(%error, "the SCIM endpoint is not mounted: its resource mapping does not build");
@@ -139,7 +156,8 @@ pub(crate) fn router(
     };
     let gate = Gate {
         authenticator: Arc::clone(authenticator),
-        clients: scim.client.iter().cloned().map(Arc::new).collect(),
+        service,
+        parties: config.auth.shared.party.iter().cloned().collect(),
     };
     let gated: Router<AppState> = Router::new()
         .route("/ResourceTypes", get(resource_types))
@@ -223,7 +241,8 @@ fn resources(
     ))
 }
 
-/// Admits the request of a declared provisioning client holding its scope.
+/// Admits the request of a provisioning client whose `scim_provision` grant
+/// is in force, holding the grant's scope.
 async fn admit(State(gate): State<Gate>, request: Request, next: Next) -> Response {
     let (parts, body) = request.into_parts();
     let authenticated = match gate.authenticator.authenticate(&parts).await {
@@ -239,35 +258,116 @@ async fn admit(State(gate): State<Gate>, request: Request, next: Next) -> Respon
              acting for nobody",
         ));
     }
-    let issuer = caller.and_then(|caller| caller.issuer());
-    let client_id = authn::client_of(&principal);
-    let Some(client) = gate.clients.iter().find(|client| {
-        Some(client.issuer.expose()) == issuer && client_id.as_deref() == Some(&client.client_id)
-    }) else {
-        return refusal(&ScimError::new(
-            StatusCode::FORBIDDEN,
-            "the token's client is no [[auth.scim.client]] of this deployment",
-        ));
+    let grants = gate.service.grants();
+    let capabilities = match authn::grants::resolve(grants, &principal).await {
+        Ok(capabilities) => capabilities,
+        Err(error) => return refused(&error),
     };
-    if !principal.scopes.iter().any(|scope| *scope == client.scope) {
-        let mut response = refusal(&ScimError::new(
-            StatusCode::FORBIDDEN,
-            "the token does not hold the scope its [[auth.scim.client]] table names",
+    let client = match provisioning_client(&gate, &principal, &capabilities) {
+        Ok(client) => client,
+        Err(response) => return response,
+    };
+    let mut request = Request::from_parts(parts, body);
+    request
+        .extensions_mut()
+        .insert(ScimCaller(Arc::new(client)));
+    request.extensions_mut().insert(principal.clone());
+    authn::grants::scoped(
+        grants,
+        capabilities,
+        gate.authenticator.run_admitted(principal, next.run(request)),
+    )
+    .await
+}
+
+/// The provisioning client the caller of `principal` is by its
+/// `capabilities`, or the refusal of a caller that is none.
+fn provisioning_client(
+    gate: &Gate,
+    principal: &authn::Principal,
+    capabilities: &Capabilities,
+) -> Result<ScimClient, Response> {
+    let forbidden = |message: String| refusal(&ScimError::new(StatusCode::FORBIDDEN, message));
+    let issuer = principal
+        .access
+        .caller()
+        .and_then(|caller| caller.issuer())
+        .unwrap_or_default()
+        .to_owned();
+    let client_id = authn::client_of(principal).unwrap_or_default();
+    let granted: Vec<_> = capabilities.of(Operation::ScimProvision).collect();
+    if granted.is_empty() {
+        return Err(forbidden(
+            "the token's client holds no scim_provision grant in force".to_owned(),
         ));
+    }
+    let mut binding_issuers: Vec<&str> = granted
+        .iter()
+        .flat_map(|grant| grant.credentials().identified(BINDING_ISSUER))
+        .filter(|issuer| !issuer.is_empty())
+        .collect();
+    binding_issuers.sort_unstable();
+    binding_issuers.dedup();
+    let [binding_issuer] = binding_issuers[..] else {
+        return Err(forbidden(format!(
+            "the scim_provision grants of the token's client name {} binding issuers: a client \
+             owns the Users of one binding_issuer",
+            binding_issuers.len()
+        )));
+    };
+    if !gate
+        .parties
+        .iter()
+        .any(|table| table.identifier_issuer == binding_issuer)
+    {
+        return Err(forbidden(format!(
+            "the scim_provision grant names the binding_issuer {binding_issuer:?}, which is the \
+             identifier_issuer of no [[auth.party]] table"
+        )));
+    }
+    let own = capabilities.client().map(|client| client.party);
+    let shared = gate
+        .service
+        .grants()
+        .all_in_force(Operation::ScimProvision, jiff::Timestamp::now())
+        .iter()
+        .any(|(performer, grant)| {
+            Some(*performer) != own
+                && grant
+                    .credentials()
+                    .identified(BINDING_ISSUER)
+                    .contains(&binding_issuer)
+        });
+    if shared {
+        return Err(forbidden(format!(
+            "another client's scim_provision grant names the binding_issuer \
+             {binding_issuer:?}: each User belongs to the one client whose binding_issuer \
+             issues its key"
+        )));
+    }
+    let scoped = granted.iter().any(|grant| {
+        grant
+            .credentials()
+            .identified(TOKEN_SCOPE)
+            .iter()
+            .any(|scope| principal.scopes.iter().any(|held| held == scope))
+    });
+    if !scoped {
+        let mut response = forbidden(
+            "the token does not hold the token_scope its scim_provision grant names".to_owned(),
+        );
         response.headers_mut().insert(
             header::WWW_AUTHENTICATE,
             HeaderValue::from_static("Bearer error=\"insufficient_scope\""),
         );
-        return response;
+        return Err(response);
     }
-    let mut request = Request::from_parts(parts, body);
-    request
-        .extensions_mut()
-        .insert(ScimCaller(Arc::clone(client)));
-    request.extensions_mut().insert(principal.clone());
-    gate.authenticator
-        .run_admitted(principal, next.run(request))
-        .await
+    Ok(ScimClient {
+        issuer,
+        client_id,
+        binding_issuer: binding_issuer.to_owned(),
+        group_issuer: ferroehr::config::scim::group_issuer(binding_issuer, &gate.parties),
+    })
 }
 
 /// The SCIM answer to an authentication refusal: `401` with the RFC 6750 §3

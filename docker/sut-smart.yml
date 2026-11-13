@@ -61,18 +61,10 @@ services:
       FERROEHR__AUTH__PARTY__1__ISSUER: "https://as.cnf.test"
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: "urn:ferroehr:cnf-smart-login"
       FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: "login"
-      # The group claim and its identifier issuer, which a SCIM client's table
-      # needs once the party mapping provisions Groups.
+      # The group claim and its identifier issuer, under which a SCIM client's
+      # Groups are written once the party mapping provisions Groups.
       FERROEHR__AUTH__PARTY__1__GROUP_CLAIM: "groups"
       FERROEHR__AUTH__PARTY__1__GROUP_IDENTIFIER_ISSUER: "urn:ferroehr:cnf-smart-groups"
-      # The SCIM client that provisions the runner's subject `cnf-smart-app`
-      # (docs/conformance/party/ferroehr/ixit.json `scoped_tokens.mint`) under
-      # this issuer's identifier issuer: a second client, since no two clients
-      # share a binding_issuer (docs/conformance/party/scim/README.md).
-      FERROEHR__AUTH__SCIM__CLIENT__1__ISSUER: "https://scim.ferroehr.invalid"
-      FERROEHR__AUTH__SCIM__CLIENT__1__CLIENT_ID: "cnf-smart"
-      FERROEHR__AUTH__SCIM__CLIENT__1__SCOPE: "ferroehr/scim"
-      FERROEHR__AUTH__SCIM__CLIENT__1__BINDING_ISSUER: "urn:ferroehr:cnf-smart-login"
     volumes:
       - ./docs/conformance/party/smart/jwks.json:/etc/ferroehr/cnf-smart-jwks.json:ro
       - ./docs/conformance/party/smart/issuer-metadata.json:/etc/ferroehr/cnf-smart-issuer-metadata.json:ro

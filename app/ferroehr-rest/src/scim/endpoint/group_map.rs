@@ -5,7 +5,7 @@
 //!
 //! A Group's `displayName` is its `GROUP`'s `PARTY_IDENTITY`, its `externalId`
 //! a `DV_IDENTIFIER` under the client's group issuer
-//! ([`ScimClient::group_issuer`]): the `group_identifier_issuer` of the
+//! ([`ferroehr::config::scim::group_issuer`]): the `group_identifier_issuer` of the
 //! `[[auth.party]]` table whose `identifier_issuer` is the client's
 //! `binding_issuer`, so the token's group claim of that client's people
 //! matches it, or one derived from the `binding_issuer` when the table sets
@@ -14,16 +14,13 @@
 //! `display`, which RFC 7643 §4.2 leaves optional. No openEHR spec governs
 //! SCIM: our own design.
 
-use std::collections::BTreeMap;
-
-use ferroehr::config::scim::ScimClient;
 use ferroehr::ids::VoId;
 use ferroehr::party_binding::provisioned::GroupClient;
 use ferroehr::service::demographic::group_provision::{GroupState, GroupWriter, ProvisionedGroup};
 use serde_json::{Map, Value, json};
 
 use crate::config::AppConfig;
-use crate::scim::endpoint::schemas;
+use crate::scim::endpoint::{ScimClient, schemas};
 use crate::scim::protocol::error::{ScimError, ScimType};
 use crate::scim::protocol::etag::EntityTag;
 use crate::scim::protocol::resource::{Container, Resource};
@@ -33,7 +30,6 @@ use crate::scim::protocol::urn;
 #[derive(Debug, Clone)]
 pub(crate) struct GroupMap {
     namespace: String,
-    group_issuers: BTreeMap<String, String>,
     max_members: usize,
 }
 
@@ -70,19 +66,8 @@ impl GroupMap {
                     .to_owned(),
             );
         }
-        let group_issuers = scim
-            .client
-            .iter()
-            .map(|client| {
-                (
-                    client.binding_issuer.clone(),
-                    client.group_issuer(&config.auth.shared.party),
-                )
-            })
-            .collect();
         Ok(Some(Self {
             namespace: binding.namespace.clone(),
-            group_issuers,
             max_members: usize::try_from(scim.max_group_members).unwrap_or(usize::MAX),
         }))
     }
@@ -97,13 +82,10 @@ impl GroupMap {
     }
 
     /// Who `client`'s Group queries ask for.
-    pub(crate) fn client<'a>(&'a self, client: &'a ScimClient) -> GroupClient<'a> {
+    pub(crate) fn client<'a>(&self, client: &'a ScimClient) -> GroupClient<'a> {
         GroupClient {
             binding_issuer: &client.binding_issuer,
-            group_issuer: self
-                .group_issuers
-                .get(&client.binding_issuer)
-                .map_or("", String::as_str),
+            group_issuer: &client.group_issuer,
         }
     }
 }

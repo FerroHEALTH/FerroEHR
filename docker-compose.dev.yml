@@ -73,10 +73,13 @@ services:
         target: /etc/ferroehr/scim-jwks.json
 
   # The quickstart's provisioning one-shot signs with the development issuer,
-  # which docker/ferroehr.dev.toml does not trust: a dev lane provisions its
-  # users with scripts/scim-provision.sh instead, so this one starts only
-  # under its own profile.
+  # which docker/ferroehr.dev.toml does not trust, and its grant one-shot reads
+  # the quickstart configuration: a dev lane grants its clients and provisions
+  # its users with scripts/scim-provision.sh instead, so these start only under
+  # their own profile.
   ferroehr-provision:
+    profiles: [quickstart-provision]
+  ferroehr-grant:
     profiles: [quickstart-provision]
 
   ferroehr-viewer:

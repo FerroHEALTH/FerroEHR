@@ -41,7 +41,7 @@ pub(crate) mod assurance;
 mod build;
 pub(crate) mod declared;
 mod gates;
-mod grants;
+pub(crate) mod grants;
 mod issuer;
 mod party;
 pub(crate) mod purpose;
@@ -557,6 +557,9 @@ pub(crate) async fn middleware(
 ) -> Response {
     let auth = &layer.authenticator;
     if !auth.enabled() {
+        if let Err(e) = grants::fresh(layer.service.grants()).await {
+            return refusal::response(auth, req.headers(), &e);
+        }
         return REQUEST_PRINCIPAL.scope(None, next.run(req)).await;
     }
     let (parts, body) = req.into_parts();
@@ -619,7 +622,7 @@ pub(crate) async fn middleware(
                     Err(e) => return refusal::response(auth, req.headers(), &e),
                 }
             }
-            let granted = match grants::resolve(&layer, &for_audit).await {
+            let granted = match grants::resolve(layer.service.grants(), &for_audit).await {
                 Ok(granted) => granted,
                 Err(e) => return refusal::response(auth, req.headers(), &e),
             };
@@ -637,7 +640,7 @@ pub(crate) async fn middleware(
                             binding,
                             ferroehr::versioning::committer::with_committer(
                                 Some(committer),
-                                Box::pin(grants::scoped(&layer, granted, next.run(req))),
+                                Box::pin(grants::scoped(layer.service.grants(), granted, next.run(req))),
                             ),
                         ),
                     ),
@@ -656,7 +659,7 @@ pub(crate) async fn middleware(
     }
 }
 
-/// The client a request came through, which the `[[authz.origin]]` register maps to.
+/// The client a request came through: the Basic user, or the token's client.
 ///
 /// The Basic user, or the client the token's issuer profile reads from
 /// `client_claims`, never another client claim the token carries (#5194).

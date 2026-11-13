@@ -33,12 +33,20 @@ pub(crate) const RECORD_CAP: usize = 32;
 /// sorted, or `system_id` alone when it carries none.
 #[must_use]
 pub fn origins(system_id: &str, canonical: &Value) -> Vec<String> {
-    let mut found = BTreeSet::new();
-    walk(canonical, &mut found);
+    let mut found = fed(canonical);
     if found.is_empty() {
         found.insert(system_id.to_owned());
     }
     found.into_iter().collect()
+}
+
+/// Every `FEEDER_AUDIT.originating_system_audit.system_id` found anywhere in
+/// `canonical`; empty for a body created here.
+#[must_use]
+pub fn fed(canonical: &Value) -> BTreeSet<String> {
+    let mut found = BTreeSet::new();
+    walk(canonical, &mut found);
+    found
 }
 
 /// The origins of one stored version at read time: the commit-time stamp
