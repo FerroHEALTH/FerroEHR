@@ -101,11 +101,7 @@ impl FerroEhrService {
         let mut event = AuditEvent::new(EventActionCode::Delete, object, EventOutcome::Success);
         event.object_id = Some(format!("{ACT}:{uid}"));
         event.ehr_id = ehr_id.map(|id| id.to_string());
-        event.result_count = Some(1);
-        event.purpose = crate::system_log::access_context::current_purpose();
-        event.permit = crate::system_log::access_context::current_permit();
-        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event)
+        self.record_one_access(event)
     }
 }
 
