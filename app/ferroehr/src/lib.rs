@@ -53,6 +53,7 @@ pub mod banner;
 pub mod config;
 pub mod db;
 pub mod decommission;
+pub mod digest;
 pub mod error;
 pub mod extensions;
 pub mod identifier_protection;

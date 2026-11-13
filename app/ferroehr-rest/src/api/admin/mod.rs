@@ -13,7 +13,8 @@
 //! They are [`archive`] (archival storage), [`report`] (the four activity
 //! statistics) and [`dump_load`] (file-system export and load), and
 //! [`integrity`], which sweeps the storage's two content copies
-//! for disagreement, and no openEHR spec governs storage mechanics. Beside
+//! for disagreement, and no openEHR spec governs storage mechanics.
+//! [`access_log`] seals, verifies and exports the access log (#5129). Beside
 //! them, [`marks`] keeps the legal marks, [`access_delay`] the EHDS Art. 3(3)
 //! delay of the person's own access, [`access_restriction`] the EHDS Art. 8
 //! restriction of access by health professionals, [`access_log_erasure`] the
@@ -27,6 +28,7 @@
 //! spec-silence flag and register citation.
 
 pub mod access_delay;
+pub mod access_log;
 pub mod access_log_erasure;
 pub mod access_repair;
 pub mod access_restriction;

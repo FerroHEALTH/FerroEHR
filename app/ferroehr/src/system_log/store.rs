@@ -40,6 +40,7 @@ mod batch;
 pub(crate) mod lax;
 mod writers;
 
+use crate::access_log::store::AccessLogStore;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 #[cfg(feature = "fhir")]
@@ -231,6 +232,10 @@ pub struct AuditStore {
     /// The search tokens and sets this store has written.
     #[cfg(feature = "fhir")]
     tokens: Arc<crate::system_log::search::TokenRegistry>,
+    /// The access-log store the records' entries are appended through, which
+    /// signs their links as `[audit.access_log]` asks once the server installs
+    /// it ([`Self::use_access_log`]); an unsigning one until then.
+    access_log: Arc<std::sync::OnceLock<AccessLogStore>>,
 }
 
 impl AuditStore {
@@ -248,7 +253,22 @@ impl AuditStore {
             policies: Arc::new(Mutex::new(BTreeMap::new())),
             #[cfg(feature = "fhir")]
             tokens: Arc::new(crate::system_log::search::TokenRegistry::default()),
+            access_log: Arc::default(),
         }
+    }
+
+    /// Append the access-log entries of every record this store and its
+    /// clones write through `access_log`, the store configured to sign links;
+    /// `false` when one was installed already, which stays.
+    #[must_use]
+    pub fn use_access_log(&self, access_log: AccessLogStore) -> bool {
+        self.access_log.set(access_log).is_ok()
+    }
+
+    /// The access-log store the server installed ([`Self::use_access_log`]).
+    #[must_use]
+    pub fn access_log(&self) -> Option<AccessLogStore> {
+        self.access_log.get().cloned()
     }
 
     /// `owed` when the FHIR Feed delivers from this store, else `plain`.
@@ -522,11 +542,16 @@ impl AuditStore {
                 .await?;
             learned_all.push(learned);
         }
-        let entries = records
+        let entries: Vec<_> = records
             .iter()
             .filter_map(|record| record.entry.as_deref().cloned())
             .collect();
-        crate::access_log::store::append_on(&mut tx, entries).await?;
+        if !entries.is_empty() {
+            let access_log = self
+                .access_log()
+                .unwrap_or_else(|| AccessLogStore::new(self.pool.clone()));
+            access_log.append_in(&mut tx, entries).await?;
+        }
         tx.commit().await?;
         for learned in learned_all {
             self.remember(learned);

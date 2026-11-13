@@ -24,6 +24,7 @@ use crate::service::FerroEhrService;
 use crate::system_log::event::{
     AuditEvent, EntryScope, EventActionCode, EventOutcome, EventType, ObjectClass,
 };
+use crate::system_log::sender::AuditSender;
 use crate::versioning::audit::dv_date_time;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 use openehr_rm::draft::access_log::access_log::access_log_tombstone::AccessLogTombstone;
@@ -57,7 +58,11 @@ impl FerroEhrService {
                 "the local audit store is off, so this server keeps no access log",
             ));
         };
-        let log = AccessLogStore::new(audit_store.pool.clone());
+        let log = self
+            .audit
+            .as_ref()
+            .and_then(AuditSender::access_log)
+            .unwrap_or_else(|| AccessLogStore::new(audit_store.pool.clone()));
         let entry = match log.read(uid).await.map_err(refused)? {
             None => {
                 return Err(ServiceError::not_found(

@@ -44,6 +44,7 @@ mod access_log_erasure_http;
 mod access_log_http;
 mod access_opt_out_http;
 mod access_restriction_http;
+mod admin_access_log_http;
 mod admin_extension_http;
 mod admin_http;
 mod admin_integrity_http;

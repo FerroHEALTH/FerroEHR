@@ -558,17 +558,7 @@ impl QueryNaming {
     /// stored under `stored` when it is a stored query.
     #[must_use]
     pub fn of(language: &'static str, text: &str, stored: Option<String>) -> Self {
-        use sha2::Digest as _;
-        let digest = sha2::Sha256::digest(text.as_bytes());
-        let text_digest = digest
-            .iter()
-            .fold(String::with_capacity(64), |mut out, byte| {
-                use std::fmt::Write as _;
-                // NOTE: `impl fmt::Write for String` never fails
-                // (<https://doc.rust-lang.org/std/fmt/trait.Write.html#impl-Write-for-String>).
-                let _written = write!(out, "{byte:02x}");
-                out
-            });
+        let text_digest = crate::digest::sha256_hex(text);
         Self {
             language,
             stored,

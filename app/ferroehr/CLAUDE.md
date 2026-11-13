@@ -153,7 +153,11 @@ module.**
   the chain `audit_event` shares and derives the search columns from it, and
   an entry changes only by its replacement with its own tombstone. Never
   compute a link outside the trigger, and never write a search column: both
-  are read from the content.
+  are read from the content. `checkpoint` seals the head with the
+  version-signing keyring and verifies through `audit.verify_audit_chain()`;
+  `chain` is the one verifier of a span held apart from the database (an
+  export or an import), and both accept a tombstone by its recorded content
+  digest; `transfer` exports and imports one EHR's log (#5129).
 - **Consume `openehr-*` types directly** — never re-model the RM or re-serialize;
   canonical JSON/XML goes through `openehr-its`.
 - DB tests take their database from the shared harness — `testkit::db()`

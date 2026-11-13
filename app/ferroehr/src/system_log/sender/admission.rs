@@ -40,4 +40,22 @@ impl AuditSender {
         self.inner.store.as_ref()?;
         crate::access_log::entry::for_store(event, &self.inner.context)
     }
+
+    /// Append the access-log entries the drain writes through `access_log`,
+    /// the store `[audit.access_log]` configured; `false` when the local
+    /// store is off or one was installed already.
+    #[must_use]
+    pub fn use_access_log(&self, access_log: crate::access_log::store::AccessLogStore) -> bool {
+        self.inner
+            .store
+            .as_ref()
+            .is_some_and(|store| store.use_access_log(access_log))
+    }
+
+    /// The access-log store the server installed ([`Self::use_access_log`]),
+    /// which signs links as configured.
+    #[must_use]
+    pub fn access_log(&self) -> Option<crate::access_log::store::AccessLogStore> {
+        self.inner.store.as_ref()?.access_log()
+    }
 }

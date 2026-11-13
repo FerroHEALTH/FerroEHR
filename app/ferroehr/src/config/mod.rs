@@ -1266,6 +1266,22 @@ mod tests {
         assert!(c.validate().is_ok());
     }
 
+    /// Checkpoints and signed links sign with the keyring's key, so either
+    /// one on without a `pgp` keyring is a configuration error (#5129).
+    #[test]
+    fn access_log_signing_requires_a_pgp_keyring() {
+        for (checkpoints, sign_links) in [(true, false), (false, true)] {
+            let mut c = standalone();
+            c.audit.access_log.checkpoints = checkpoints;
+            c.audit.access_log.sign_links = sign_links;
+            let err = c.validate().expect_err("no OpenPGP key in the keyring");
+            assert!(format!("{err:?}").contains("audit.access_log"), "{err:?}");
+            c.record.signing.mode = crate::versioning::signature::config::Mode::Pgp;
+            c.record.signing.key_file = Some(PathBuf::from("/k.asc"));
+            assert!(c.validate().is_ok(), "{:?}", c.validate());
+        }
+    }
+
     /// The discovery document is built from the `[auth]` issuer's metadata and
     /// sends applications to that issuer, so serving it without an issuer whose
     /// tokens this server accepts is refused.
