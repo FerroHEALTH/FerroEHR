@@ -293,7 +293,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   walk both in position order. An entry changes only by its replacement with
   its own tombstone, which keeps its uid, time and link, so the chain verifies
   after its content is gone (`audit/0027_access_log_record.sql`,
-  `access_log::store`). No openEHR spec governs audit storage: our own design.
+  `access_log::store`). Every access to EHR data writes one entry per EHR it
+  reached, refusals and reads of the log included: the drain builds it from
+  the access's `AuditEvent` (`access_log::entry`) and `AuditStore::insert_batch`
+  appends it in the transaction that stores the batch's records, so an access
+  adds no transaction and the store holds a record and its entry or neither.
+  No openEHR spec governs audit storage: our own design.
 - **One pool and one DSN per storage domain.** `[database.clinical]`,
   `[database.party]` and `[database.audit]` each carry a
   `url`/`url_file`, defaulting to the shared `[database].url`, and

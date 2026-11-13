@@ -108,7 +108,7 @@ impl<'a> BatchColumns<'a> {
         record: &'a AuditRecord,
         end: Option<&RecordEnd>,
     ) -> Result<(), AuditError> {
-        let AuditRecord { event, subject } = record;
+        let AuditRecord { event, subject, .. } = record;
         self.recorded_at.push(Timestamp::from(event.timestamp));
         self.actions.push(action_str(event));
         self.outcomes.push(outcome_smallint(event));

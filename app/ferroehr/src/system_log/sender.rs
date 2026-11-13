@@ -55,6 +55,8 @@ use tokio::task::JoinHandle;
 
 use super::event::{AuditEvent, EmitOutcome};
 
+#[cfg(feature = "fhir")]
+use crate::access_log::entry::for_store;
 use crate::system_log::AuditError;
 use crate::system_log::categories::{CategoryMapConfig, Classifier};
 use crate::system_log::chain_check::ChainCheck;
@@ -799,7 +801,15 @@ async fn render_batch(
                 .then(|| render_audit_event(&event, ctx, subject.as_deref()))
                 .flatten(),
         );
-        records.push(AuditRecord { event, subject });
+        #[cfg(feature = "fhir")]
+        let entry = sinks.store.as_ref().and_then(|_| for_store(&event, ctx));
+        #[cfg(not(feature = "fhir"))]
+        let entry = None;
+        records.push(AuditRecord {
+            event,
+            subject,
+            entry,
+        });
     }
     Drained {
         records,
@@ -834,7 +844,7 @@ async fn write_to_store(
     store_healthy: &AtomicBool,
 ) {
     if let Some(store) = &sinks.store {
-        let ends = record_ends(records, ctx);
+        let ends = crate::system_log::retention::record_ends(records, ctx);
         store_whole_batch(
             store,
             records,
@@ -844,21 +854,6 @@ async fn write_to_store(
         )
         .await;
     }
-}
-
-/// The first date each record may be deleted on ([`crate::system_log::fhir::record_end`]).
-#[cfg(feature = "fhir")]
-fn record_ends(records: &[AuditRecord], ctx: &AuditContext) -> Vec<RecordEnd> {
-    records
-        .iter()
-        .map(|record| crate::system_log::fhir::record_end(&record.event, ctx))
-        .collect()
-}
-
-/// A slim build has no store sink ([`start`] refuses one), so no record has an end.
-#[cfg(not(feature = "fhir"))]
-fn record_ends(_records: &[AuditRecord], _ctx: &AuditContext) -> Vec<RecordEnd> {
-    Vec::new()
 }
 
 /// Persists the batch in one multi-row INSERT with bounded jittered retries,
@@ -907,7 +902,7 @@ async fn store_whole_batch(
 /// Stores every record's DICOM PS3.15 §A.5 XML frame in the syslog spool,
 /// which the forwarder delivers.
 async fn submit_to_syslog(route: &SyslogRoute, records: &[AuditRecord], ctx: &AuditContext) {
-    for AuditRecord { event, subject } in records {
+    for AuditRecord { event, subject, .. } in records {
         let xml = match crate::system_log::message::to_xml(event, ctx, subject.as_deref()) {
             Ok(xml) => xml,
             Err(e) => {

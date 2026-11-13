@@ -227,6 +227,20 @@ pub struct AuditEvent {
     /// roles (IHE ITI TF-2 §3.71.4.2.2.1.1, RFC 9396 §2); `None` for a token
     /// of an issuer without one, or no token.
     pub token: Option<TokenAttributes>,
+    /// Whether the access was admitted or refused (a `401`, a `403`, a
+    /// caller above its rate, a security event); the access-log entry
+    /// records a refusal as `refused` rather than `failed`.
+    pub decision: AccessDecision,
+    /// Whether, and as what, this record also writes an openEHR access-log
+    /// entry (`crate::access_log::entry`).
+    pub entry: EntryScope,
+    /// The query the access ran, named and never quoted: a stored query by
+    /// its name, an ad-hoc one by the digest of its text.
+    pub query: Option<QueryNaming>,
+    /// The grounds the access decision rested on, carried into the entry's
+    /// `authorisations` (#5514 fills them).
+    pub grounds:
+        Vec<crate::access_log_draft::access_log::access_authorisation::AccessAuthorisation>,
     /// The event time.
     pub timestamp: Timestamp,
 }
@@ -485,7 +499,74 @@ impl AuditEvent {
             binding: None,
             summary: None,
             token: None,
+            decision: AccessDecision::Admitted,
+            entry: EntryScope::ByDomain,
+            query: None,
+            grounds: Vec::new(),
             timestamp: Timestamp::now(),
+        }
+    }
+}
+
+/// Whether the access a record describes was admitted or refused.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AccessDecision {
+    /// The access was admitted; its outcome says whether it succeeded.
+    #[default]
+    Admitted,
+    /// The access was refused before it reached any data.
+    Refused,
+}
+
+/// Whether a record also writes an openEHR access-log entry, and as what.
+///
+/// No openEHR spec governs which records do: our own design (#5121), every
+/// access to EHR data, refusals and reads of the log included.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum EntryScope {
+    /// An entry when the record is an access to EHR data
+    /// ([`AccessDomain::Ehr`]), none otherwise.
+    #[default]
+    ByDomain,
+    /// An entry for a refusal no operation record of its request covers.
+    Refusal,
+    /// An entry for a read of the access log itself (rule 4).
+    LogRead,
+}
+
+/// The query an access ran, named by its stored name or by the SHA-256 of its
+/// text, so no entry carries the text (GDPR Art 5(1)(c),
+/// `docs/law/eu/gdpr/text.html`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QueryNaming {
+    /// The language the query is written in, such as `AQL`.
+    pub language: &'static str,
+    /// The stored query's qualified name, when a stored query ran.
+    pub stored: Option<String>,
+    /// The SHA-256 of the query text in lower-case hexadecimal.
+    pub text_digest: String,
+}
+
+impl QueryNaming {
+    /// The naming of a query written in `language` whose text is `text`,
+    /// stored under `stored` when it is a stored query.
+    #[must_use]
+    pub fn of(language: &'static str, text: &str, stored: Option<String>) -> Self {
+        use sha2::Digest as _;
+        let digest = sha2::Sha256::digest(text.as_bytes());
+        let text_digest = digest
+            .iter()
+            .fold(String::with_capacity(64), |mut out, byte| {
+                use std::fmt::Write as _;
+                // NOTE: `impl fmt::Write for String` never fails
+                // (<https://doc.rust-lang.org/std/fmt/trait.Write.html#impl-Write-for-String>).
+                let _written = write!(out, "{byte:02x}");
+                out
+            });
+        Self {
+            language,
+            stored,
+            text_digest,
         }
     }
 }

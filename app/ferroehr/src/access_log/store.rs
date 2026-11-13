@@ -36,7 +36,7 @@ use openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use serde_json::Value;
 use sqlx::postgres::PgRow;
-use sqlx::{Connection, PgPool, Row};
+use sqlx::{Connection, PgConnection, PgPool, Row};
 
 use crate::access_log_draft::access_log::access_log_entry::AccessLogEntry;
 use crate::access_log_draft::access_log::access_log_link::AccessLogLink;
@@ -135,41 +135,14 @@ impl AccessLogStore {
     /// store errors when a statement fails (a repeated uid among them).
     pub async fn append(
         &self,
-        mut entries: Vec<AccessLogEntry>,
+        entries: Vec<AccessLogEntry>,
     ) -> Result<Vec<AccessLogEntry>, AccessLogError> {
         if entries.is_empty() {
             return Ok(entries);
         }
-        let contents = entries
-            .iter()
-            .map(canonical_form)
-            .collect::<Result<Vec<_>, _>>()?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        // NOTE: the ordinality orders the insert, which is the order the row trigger links the records in.
-        let rows = sqlx::query(
-            "INSERT INTO audit.access_log_record (content) \
-             SELECT t.content FROM unnest($1::text[]) WITH ORDINALITY AS t(content, n) ORDER BY t.n \
-             RETURNING uid, chain_seq, algorithm, previous_digest, content_digest, digest, signature",
-        )
-        .bind(&contents)
-        .fetch_all(&mut *tx)
-        .await?;
-        let mut links = rows
-            .iter()
-            .map(|row| Ok((row.try_get::<String, _>("uid")?, link(row)?)))
-            .collect::<Result<BTreeMap<_, _>, sqlx::Error>>()?;
-        for entry in &mut entries {
-            entry.link =
-                links
-                    .remove(entry.uid.value())
-                    .ok_or_else(|| AccessLogError::Unlinked {
-                        uid: entry.uid.value().to_owned(),
-                    })?;
-        }
-        for entry in &entries {
-            check_entry(entry)?;
-        }
+        let entries = append_on(&mut tx, entries).await?;
         tx.commit().await?;
         Ok(entries)
     }
@@ -239,6 +212,59 @@ impl AccessLogStore {
         tx.commit().await?;
         Ok(Some(tombstone))
     }
+}
+
+/// Append `entries` to the chain in their order on `conn`, inside the
+/// transaction the caller holds, and return them with the links the chain
+/// gave them.
+///
+/// The one write of the access log: [`AccessLogStore::append`] runs it in a
+/// transaction of its own, and the audit store in the transaction that writes
+/// the records of the same accesses
+/// ([`crate::system_log::store::AuditStore::insert_batch`]), so an access
+/// adds no transaction of its own. Each entry is checked against the draft's
+/// invariants with its link, and one that breaks one fails the caller's
+/// transaction.
+///
+/// # Errors
+/// [`AccessLogError::Canonical`] for an entry with no canonical form,
+/// [`AccessLogError::Invalid`] for one that breaks an invariant, and the
+/// store errors when a statement fails (a repeated uid among them).
+pub(crate) async fn append_on(
+    conn: &mut PgConnection,
+    mut entries: Vec<AccessLogEntry>,
+) -> Result<Vec<AccessLogEntry>, AccessLogError> {
+    if entries.is_empty() {
+        return Ok(entries);
+    }
+    let contents = entries
+        .iter()
+        .map(canonical_form)
+        .collect::<Result<Vec<_>, _>>()?;
+    // NOTE: the ordinality orders the insert, which is the order the row trigger links the records in.
+    let rows = sqlx::query(
+        "INSERT INTO audit.access_log_record (content) \
+         SELECT t.content FROM unnest($1::text[]) WITH ORDINALITY AS t(content, n) ORDER BY t.n \
+         RETURNING uid, chain_seq, algorithm, previous_digest, content_digest, digest, signature",
+    )
+    .bind(&contents)
+    .fetch_all(&mut *conn)
+    .await?;
+    let mut links = rows
+        .iter()
+        .map(|row| Ok((row.try_get::<String, _>("uid")?, link(row)?)))
+        .collect::<Result<BTreeMap<_, _>, sqlx::Error>>()?;
+    for entry in &mut entries {
+        entry.link = links
+            .remove(entry.uid.value())
+            .ok_or_else(|| AccessLogError::Unlinked {
+                uid: entry.uid.value().to_owned(),
+            })?;
+    }
+    for entry in &entries {
+        check_entry(entry)?;
+    }
+    Ok(entries)
 }
 
 /// The link the columns of `row` hold.

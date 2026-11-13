@@ -17,7 +17,7 @@ use axum::response::Response;
 
 use ferroehr::system_log::categories::{AccessedContent, ContentIds};
 use ferroehr::system_log::event::{
-    AuditEvent, EmitOutcome, EventActionCode, EventOutcome, EventType, ObjectClass,
+    AuditEvent, EmitOutcome, EventActionCode, EventOutcome, EventType, ObjectClass, QueryNaming,
 };
 
 use crate::state::AppState;
@@ -54,6 +54,9 @@ pub struct AuditServedEhrs {
     pub served: Vec<(String, u64)>,
     /// The identifiers of the versions served from each EHR, keyed by EHR id.
     pub content: BTreeMap<String, Vec<ContentIds>>,
+    /// The statement that served them, named and never quoted, which each
+    /// EHR's access-log entry names.
+    pub query: Option<QueryNaming>,
 }
 
 /// The parties a read disclosed beside the one it addressed: the source
@@ -82,7 +85,11 @@ fn emit_served_ehr_records(
     timestamp: jiff::Timestamp,
     access: &AccessContext,
 ) -> bool {
-    let Some(AuditServedEhrs { served, content }) = resp.extensions().get::<AuditServedEhrs>()
+    let Some(AuditServedEhrs {
+        served,
+        content,
+        query,
+    }) = resp.extensions().get::<AuditServedEhrs>()
     else {
         return false;
     };
@@ -98,6 +105,7 @@ fn emit_served_ehr_records(
         event.ehr_id = Some(ehr_id.clone());
         event.object_id = Some(ehr_id.clone());
         event.result_count = Some(*rows);
+        event.query.clone_from(query);
         event.category = content.get(ehr_id).and_then(|objects| {
             state
                 .backend()

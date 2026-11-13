@@ -125,6 +125,9 @@ pub struct QueryOutcome {
     /// The storage domain the query read: the access record of a demographic
     /// query is filed under the demographic domain.
     pub domain: crate::aql::ir::QueryDomain,
+    /// The statement that ran, named by its stored name and the digest of its
+    /// text, for the access log, which never carries the text.
+    pub statement: Option<crate::system_log::event::QueryNaming>,
 }
 
 impl QueryOutcome {
@@ -143,6 +146,7 @@ impl QueryOutcome {
             accessed: None,
             served_ehr_content: BTreeMap::new(),
             domain: crate::aql::ir::QueryDomain::Clinical,
+            statement: None,
         }
     }
 }

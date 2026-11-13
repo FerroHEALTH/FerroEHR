@@ -49,15 +49,14 @@ use openehr_its::rest::runtime::ApiError;
 use ferroehr::system_log::access_context;
 use ferroehr::system_log::categories::{AccessedContent, ResourceKind};
 use ferroehr::system_log::event::{
-    AccessDomain, ActorAuthentication, AuditEvent, EmitOutcome, EventActionCode, EventOutcome,
-    EventType, ObjectClass,
+    AccessDecision, AccessDomain, ActorAuthentication, AuditEvent, EmitOutcome, EntryScope,
+    EventActionCode, EventOutcome, EventType, ObjectClass, QueryNaming,
 };
 
 use crate::extensions::access::authn::{FreshAuthentication, Principal};
 use crate::overview::error::RestError;
 use crate::state::AppState;
 use crate::system_log::classify::audit_for;
-use crate::system_log::refusals::{Charged, OverRate, Reason, Refusal};
 
 /// The matched ITS-REST operation id, inserted by the dispatch layer onto the
 /// response. Present only when a request reached the generic dispatcher.
@@ -102,6 +101,11 @@ pub struct AuditObject {
     /// of the objects, or a query's positive constraints. `None` leaves the
     /// operation and the resource class to decide.
     pub content: Option<AccessedContent>,
+    /// The query the operation ran, named and never quoted.
+    pub query: Option<QueryNaming>,
+    /// Whether the operation's record writes an access-log entry by its
+    /// domain, or as a read of the access log itself.
+    pub entry: EntryScope,
 }
 
 /// The access-logging facts every record of one request shares: the request
@@ -119,9 +123,9 @@ pub(super) struct AccessContext {
 /// principal, and how it authenticated.
 #[derive(Debug, Clone, Copy)]
 pub(super) struct Caller<'a> {
-    principal: Option<&'a Principal>,
-    actor: Option<&'a ActorAuthentication>,
-    binding: Option<&'a ferroehr::system_log::binding::BindingRecord>,
+    pub(super) principal: Option<&'a Principal>,
+    pub(super) actor: Option<&'a ActorAuthentication>,
+    pub(super) binding: Option<&'a ferroehr::system_log::binding::BindingRecord>,
 }
 
 impl<'a> Caller<'a> {
@@ -147,6 +151,39 @@ pub(super) fn fill_access(event: &mut AuditEvent, access: &AccessContext, state:
     event.permit.clone_from(&access.permit);
     event.organisation.clone_from(&access.organisation);
     event.legal_basis = state.backend().audit_legal_basis().map(str::to_owned);
+}
+
+/// Stamp what the handler said it touched onto the operation record: the
+/// EHR, the object, the served count and origins, the query, the domain and
+/// whether the record writes an access-log entry. The route's EHR and the
+/// path's object stand in where the handler said nothing.
+fn fill_object(
+    event: &mut AuditEvent,
+    object: Option<&AuditObject>,
+    route_ehr_id: Option<&str>,
+    op: &str,
+    path: &str,
+) {
+    // NOTE: EHDS Art. 9(2)(c) (`docs/law/eu/ehds/text.html`), the record names
+    // whose data was accessed, so the subject-scoped ITI-81 retrieval finds it.
+    event.ehr_id = object
+        .and_then(|o| o.ehr_id.clone())
+        .or_else(|| route_ehr_id.map(str::to_owned));
+    event.object_id = object
+        .and_then(|o| o.uid.clone())
+        .or_else(|| object_id_from_path(op, path));
+    let Some(object) = object else {
+        return;
+    };
+    event.result_count = object.result_count;
+    event.record_origins(object.origins.clone(), object.origin_count);
+    event.query.clone_from(&object.query);
+    event.entry = object.entry;
+    // A handler that knows its domain better than the resource class does
+    // says so; the class decides for everything else.
+    if let Some(domain) = object.domain {
+        event.domain = domain;
+    }
 }
 
 /// The purpose of use the caller declared, when the deployment records it.
@@ -236,8 +273,10 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     };
 
     let fresh_auth = resp.extensions().get::<FreshAuthentication>().is_some();
+    let refusal = crate::system_log::refusals::is_refusal(&resp);
 
     let mut op_rejected = false;
+    let mut op_recorded = false;
 
     // The operation record: `audit_for` fails an unrecognised op id closed to
     // the audited default, so only a deliberate opt-out yields `None`.
@@ -248,21 +287,18 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         // The concrete operation is the `EventTypeCode` (DICOM PS3.15 §A.5
         // EventIdentification); the id is ours.
         event.event_type = Some(EventType::rest(op));
-        fill_common(&mut event, caller, client_ip.clone(), timestamp);
-        // NOTE: EHDS Art. 9(2)(c) (`docs/law/eu/ehds/text.html`), the record names
-        // whose data was accessed, so the subject-scoped ITI-81 retrieval finds it.
-        event.ehr_id = object
-            .as_ref()
-            .and_then(|o| o.ehr_id.clone())
-            .or_else(|| route_ehr_id.clone());
-        event.object_id = object
-            .as_ref()
-            .and_then(|o| o.uid.clone())
-            .or_else(|| object_id_from_path(op, &path));
-        event.result_count = object.as_ref().and_then(|o| o.result_count);
-        if let Some(object) = object.as_ref() {
-            event.record_origins(object.origins.clone(), object.origin_count);
+        if refusal {
+            event.decision = AccessDecision::Refused;
         }
+        op_recorded = true;
+        fill_common(&mut event, caller, client_ip.clone(), timestamp);
+        fill_object(
+            &mut event,
+            object.as_ref(),
+            route_ehr_id.as_deref(),
+            op,
+            &path,
+        );
         if event.outcome == EventOutcome::Success
             && let Some(accessed) = accessed_content(
                 op,
@@ -271,11 +307,6 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
             )
         {
             event.category = state.backend().audit_classify(&accessed, action);
-        }
-        // A handler that knows its domain better than the resource class does
-        // says so; the class decides for everything else.
-        if let Some(domain) = object.as_ref().and_then(|o| o.domain) {
-            event.domain = domain;
         }
         fill_access(&mut event, &access, &state);
         op_rejected = state.backend().emit(event) == EmitOutcome::Rejected;
@@ -294,8 +325,8 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     // user-authentication event (DICOM PS3.15 §A.5.1 `EventID` 110114 with
     // `EventTypeCode` 110122), and the success record fires only on a genuine
     // authentication event, gated by `suppress_login_events`.
-    if is_refusal(&resp) {
-        op_rejected |= refused(
+    if refusal {
+        op_rejected |= crate::system_log::refusals::refused(
             &state,
             &resp,
             caller,
@@ -303,6 +334,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
             timestamp,
             &access,
             route_ehr_id,
+            op_recorded,
         );
     } else if fresh_auth && !state.backend().suppress_login_events() {
         let mut event = AuditEvent::new(
@@ -329,81 +361,6 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         return resp;
     }
     resp
-}
-
-/// Whether `resp` refused the request: a `401`, a `403`, a caller above its
-/// agreement's `caller_rate` ([`OverRate`]), or a security event such as a TRC
-/// patient mismatch, whatever its status.
-fn is_refusal(resp: &Response) -> bool {
-    let status = resp.status();
-    status == StatusCode::UNAUTHORIZED
-        || status == StatusCode::FORBIDDEN
-        || resp.extensions().get::<OverRate>().is_some()
-        || resp
-            .extensions()
-            .get::<ferroehr::system_log::binding::BindingRecord>()
-            .is_some_and(|binding| binding.code.is_security_event())
-}
-
-/// Records the refusal `resp` answered as a failed user authentication
-/// (DICOM PS3.15 §A.5.1 `EventID` 110114, `EventTypeCode` 110122), charged
-/// to the verified caller when there is one and to the client's network
-/// otherwise, and counted into the caller's summary when it is [`OverRate`];
-/// whether its record was rejected under `fail_mode = "closed"`.
-fn refused(
-    state: &AppState,
-    resp: &Response,
-    caller: Caller<'_>,
-    client_ip: Option<String>,
-    timestamp: jiff::Timestamp,
-    access: &AccessContext,
-    ehr_id: Option<String>,
-) -> bool {
-    let mut event = AuditEvent::new(
-        EventActionCode::Execute,
-        ObjectClass::Authentication,
-        outcome_from_status(resp.status()),
-    );
-    event.event_type = Some(EventType::Login);
-    // NOTE: no specification governs this: our own design; the address was
-    // rendered from an `IpAddr`, so only its absence leaves it unparsed.
-    let address = client_ip.as_deref().and_then(|ip| ip.parse().ok());
-    // A refused credential has no principal, so the caller is `UNKNOWN`; a
-    // 403 and a patient-data step-up 401 carry one.
-    fill_common(&mut event, caller, client_ip, timestamp);
-    fill_access(&mut event, access, state);
-    event.ehr_id = ehr_id;
-    let charged = caller.principal.map_or_else(
-        || Charged::network(address),
-        |principal| Charged::Caller {
-            issuer: event.issuer.clone().unwrap_or_default(),
-            subject: principal.subject.clone(),
-        },
-    );
-    let summarised = resp.extensions().get::<OverRate>().is_some();
-    let outcome = if summarised {
-        "caller-rate".to_owned()
-    } else {
-        caller.binding.map_or_else(
-            || {
-                resp.extensions().get::<Reason>().map_or_else(
-                    || resp.status().as_str().to_owned(),
-                    |Reason(r)| (*r).to_owned(),
-                )
-            },
-            |binding| binding.code.as_str().to_owned(),
-        )
-    };
-    crate::system_log::refusals::record(
-        state,
-        &Refusal {
-            charged,
-            outcome: &outcome,
-            ehr_id: event.ehr_id.as_deref(),
-            event: &event,
-            summarised,
-        },
-    )
 }
 
 /// What an operation touched, for the record's EHDS priority category
@@ -447,7 +404,7 @@ fn accessed_content(
 /// read, RFC 9110 §15.4), 4xx is `4` minor failure, 5xx is `8` serious failure.
 /// `12` major failure denotes a system-level abnormal termination and is not
 /// inferable from an HTTP status, so it is never emitted here.
-fn outcome_from_status(status: StatusCode) -> EventOutcome {
+pub(super) fn outcome_from_status(status: StatusCode) -> EventOutcome {
     if status.is_informational() || status.is_success() || status.is_redirection() {
         EventOutcome::Success
     } else if status.is_server_error() {

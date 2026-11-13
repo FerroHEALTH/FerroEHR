@@ -10,4 +10,6 @@
 //! FerroEHR's change proposal and no openEHR release, so no openEHR spec
 //! governs this module: our own design.
 
+#[cfg(feature = "fhir")]
+pub mod entry;
 pub mod store;

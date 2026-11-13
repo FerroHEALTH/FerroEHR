@@ -127,7 +127,13 @@ impl FerroEhrService {
             Err(failure) => failure.outcome,
         };
         count_query(label);
-        outcome.map_err(|failure| *failure.error)
+        let mut outcome = outcome.map_err(|failure| *failure.error)?;
+        outcome.statement = Some(crate::system_log::event::QueryNaming::of(
+            "AQL",
+            aql,
+            name.map(ToString::to_string),
+        ));
+        Ok(outcome)
     }
 
     /// Execute a planned single-domain query and assemble its `RESULT_SET`,

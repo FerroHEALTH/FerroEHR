@@ -144,6 +144,9 @@ pub enum AuditError {
     /// `ehds-logging` refused a retention or label policy of the access record.
     #[error("the access record policy is invalid")]
     Policy(#[source] Box<dyn std::error::Error + Send + Sync>),
+    /// The access-log entries of a batch could not be appended.
+    #[error("the access-log entries could not be written")]
+    AccessLog(#[from] crate::access_log::store::AccessLogError),
     /// A batch named a retention end count other than its record count.
     #[error("{ends} retention ends for {records} audit records")]
     RetentionEnds {
