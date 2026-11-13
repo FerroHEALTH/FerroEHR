@@ -14,7 +14,7 @@ description
         ["en"] = <
             language = <[ISO_639-1::en]>
             purpose = <"A patient's PERSON: the subject of an EHR, and the target of a representation relationship.">
-            use = <"Its patient identifiers, date of birth and sex in details, its names in identities named by their usage, a postal and an electronic address, and its relationships to personal contacts, third-party payers and healthcare providers, each payer and provider with the patient identifiers it issues. Adapted from the openEHR CKM archetypes the derived_from entry names.">
+            use = <"Its patient identifiers, date of birth and sex in details, its names in identities named by their usage, a postal and an electronic address, and its relationships to personal contacts, third-party payers and healthcare providers, each payer and provider with the patient identifiers it issues, and its care relationships to the care teams and units it is under the care of. Adapted from the openEHR CKM archetypes the derived_from entry names.">
             copyright = <"© openEHR Foundation">
         >
     >
@@ -163,6 +163,20 @@ definition
                     }
                 }
             }
+            PARTY_RELATIONSHIP[id32] occurrences matches {0..*} matches {
+                details matches {
+                    ITEM_TREE[id33] matches {
+                        items matches {
+                            ELEMENT[id34] occurrences matches {1} matches {
+                                value matches { DV_CODED_TEXT[id63] }
+                            }
+                            ELEMENT[id35] occurrences matches {0..1} matches {
+                                value matches { DV_DATE_TIME[id64] }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -200,6 +214,10 @@ terminology
             ["id29"] = <text = <"Healthcare provider"> description = <"The relationship of the patient to a healthcare provider organisation or an individual provider.">>
             ["id30"] = <text = <"Provider details"> description = <"The details of the relationship to the provider.">>
             ["id31"] = <text = <"Provider patient identifier"> description = <"An identifier the provider issued to the patient.">>
+            ["id32"] = <text = <"Care relationship"> description = <"The care of the patient by a care team or an organisational unit, its target, such as a ward during an admission, with the admission as time_validity. Written by the care delivery environment under a write_care_relationship grant.">>
+            ["id33"] = <text = <"Care details"> description = <"The details of the care relationship.">>
+            ["id34"] = <text = <"Care relationship code"> description = <"The code that makes the relationship a care relationship: under_care_of of FerroEHR's terminology ferroehr-operations.">>
+            ["id35"] = <text = <"Discharge time"> description = <"The time the patient left the care of the team or unit, when a bound finer than the date of time_validity is needed.">>
             ["ac1"] = <text = <"Sexes"> description = <"The sexes a patient is recorded with.">>
             ["ac2"] = <text = <"Name usages"> description = <"The usages of a person's name.">>
             ["ac3"] = <text = <"Address types"> description = <"The types of a postal address.">>

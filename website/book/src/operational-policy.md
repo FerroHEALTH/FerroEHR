@@ -1562,6 +1562,61 @@ design:
 - **A federation agreement is a grant on the partner**, keyed by its client
   identifiers, and its rules are judged when it is written.
 
+## Caller facts: clearances, purposes and care relationships
+
+Beside its grants, a caller carries the facts the access evaluator reads:
+the sensitivities it is cleared for, the purposes of use it may declare, and
+the care teams it belongs to. A patient carries the teams and units it is
+under the care of. FerroEHR reads each by its code of `ferroehr-operations`
+in any archetype, never by an archetype id, and holds them on every replica
+beside the grants, so a request reads them with no transaction of its own.
+
+**Clearance and permitted purpose.** A `CAPABILITY` of a `ROLE` clears a
+sensitivity when its `credentials` hold, at any depth, an element whose
+`name` is the `DV_CODED_TEXT` `sensitivity_clearance` and whose value is a
+`DV_CODED_TEXT` of the terminology your jurisdiction names, such as the HL7
+v3 `ActCode` code `PSY`. An element named `permitted_purpose` whose value is
+a purpose-of-use code, such as the HL7 `PurposeOfUse` code `TREAT`, lets the
+holder declare that purpose. Both hold while the capability does: the
+`ROLE`'s and the `CAPABILITY`'s `time_validity` and the `not_before` and
+`not_after` elements. A value coded in `ferroehr-operations`, or no
+`DV_CODED_TEXT`, is refused `422` at the commit of the `ROLE`. A `ROLE`
+carrying either is a policy party, which only an administrator writes.
+
+**Care relationships.** A `PARTY_RELATIONSHIP` in a `PERSON`'s
+`relationships` whose `name` or `details` carry `member_of` makes the
+professional a member of the care team its `target` names; one carrying
+`under_care_of` puts the patient in the care of the team or unit its
+`target` names, with the admission as its `time_validity`. The discharge is
+the upper bound of `time_validity`, and the relationship stays, so the
+evaluator can apply a grace period after it. A care relationship of a party
+other than a `PERSON`, one whose target is no party of this store, and a
+`PARTY_RELATIONSHIP` committed on its own carrying either code are refused
+`422`. The default definitions ship
+`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.0` and
+`openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1.0.0` as examples
+([Default demographic definitions](installation/default-demographic-definitions.md)).
+
+**Who writes them.** The care delivery environment does, as openEHR's
+security overview asks: "the evaluation of a role category such as 'care
+deliverer' into particular identities ... must be done in each care
+delivery environment, not in the EHR" (BASE Architecture Overview, §The
+Problem of Roles). A version of a `PERSON` that adds, changes or removes a
+care relationship commits only for a caller holding the
+`write_care_relationship` grant, such as your hospital's ADT system, or for
+an administrator; anyone else is refused `403`. A version that leaves the
+care relationships as they were needs no grant.
+
+**When a change applies.** An admission, a transfer and a discharge decide
+the next request on every replica. The commit stamps the patient whose facts
+changed, and each replica reads only the facts of the parties stamped since
+its copy, in one indexed read.
+
+No openEHR specification gives a capability or a relationship an access
+meaning: reading them as clearances, purposes and care relationships, the
+`write_care_relationship` rule, and holding them in memory are FerroEHR's
+own design.
+
 ## Representatives in the patient portal
 
 A parent, a guardian or a proxy the patient chose reads the patient's record
