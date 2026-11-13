@@ -45,6 +45,7 @@ commit the result.
 | FHIR R4 and R5 `AuditEvent` pages (resource, definitions, mappings, licence) | `scripts/vendor/fhir-auditevent.sh` | `docs/specs/fhir-auditevent/` |
 | FHIR R4 and R5 `Consent` (resource, definitions, StructureDefinition, the bound value sets, the examples in JSON, licence) | `scripts/vendor/fhir-consent.sh` | `docs/specs/fhir-consent/` |
 | IHE BPPC (ITI TF-1 ch. 19, ITI TF-3 §5.1, HTML Technical Framework) and the APPC supplement Rev. 1.4, with the General Introduction's copyright chapter | `scripts/vendor/ihe-consents.sh` | `docs/specs/ihe-consents/` |
+| OASIS XACML 2.0 core specification (OASIS Standard, 1 Feb 2005) | `scripts/vendor/xacml.sh` | `docs/specs/xacml/` |
 | DICOM PS3.15 2026c Annex A.5, cache only (NEMA copyright, no redistribution grant) | `scripts/vendor/dicom-ps3-15.sh` | record `docs/specs/dicom-ps3-15/`, cache `.vendor-cache/dicom-ps3-15/` |
 | RFC 3881 and RFC 8785, cache only (Independent Submissions, outside the IETF Trust's grant) | `scripts/vendor/rfcs-independent.sh` | record `docs/specs/rfc-independent/`, cache `.vendor-cache/rfc-independent/` |
 | Logius Logboek Dataverwerkingen NEN7513 Extensie (the NEN 7513:2024 record fields), at a pinned commit, and Kamerstuk 27529 nr. 228, cache only | `scripts/vendor/nen-7513-sources.sh` | `docs/specs/nen-7513-sources/`, cache `.vendor-cache/nen-7513-sources/` |
