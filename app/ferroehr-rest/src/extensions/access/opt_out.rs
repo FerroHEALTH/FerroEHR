@@ -112,7 +112,7 @@ pub(crate) async fn refuse_opted_out(
             .map_err(fault)?
     {
         if opt_out == OptOut::Overridden {
-            return override_recorded(state, ehr_id).map_err(fault);
+            return override_recorded(state, ehr_id).await.map_err(fault);
         }
         let message = if op.contains("ehr_status") {
             format!("EHR_STATUS for EHR {ehr_id}")
@@ -131,7 +131,7 @@ pub(crate) async fn refuse_opted_out(
             continue;
         };
         if opt_out == OptOut::Overridden {
-            return override_recorded(state, owner).map_err(fault);
+            return override_recorded(state, owner).await.map_err(fault);
         }
         return Ok(Some(super::restriction::object_not_found(op, raw)));
     }
@@ -155,19 +155,22 @@ pub(crate) async fn record_overrides(
     if applies(state, op) != OptOut::Overridden {
         return Ok(());
     }
-    let named: std::collections::BTreeSet<EhrId> = ehr_ids.iter().copied().collect();
-    for ehr_id in named {
-        if state.backend().is_ehr_opted_out(ehr_id).await? {
-            state.backend().record_access_opt_out_override(ehr_id)?;
-        }
-    }
-    Ok(())
+    state
+        .backend()
+        .record_access_opt_out_overrides(ehr_ids)
+        .await
 }
 
 /// Record the Art. 10(2) override of the opt-out of `ehr_id` and let the
 /// request proceed.
-fn override_recorded(state: &AppState, ehr_id: EhrId) -> Result<Option<Response>, ServiceError> {
-    state.backend().record_access_opt_out_override(ehr_id)?;
+async fn override_recorded(
+    state: &AppState,
+    ehr_id: EhrId,
+) -> Result<Option<Response>, ServiceError> {
+    state
+        .backend()
+        .record_access_opt_out_overrides(&[ehr_id])
+        .await?;
     Ok(None)
 }
 

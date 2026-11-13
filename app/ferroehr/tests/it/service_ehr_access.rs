@@ -447,10 +447,7 @@ async fn the_migration_drops_an_ehr_access_of_the_removed_scheme() {
 async fn the_default_definition_is_stored_at_boot_only_when_absent() {
     use ferroehr::service::demographic::default_definitions::Seeded;
     let (_db, svc, _ehr_id) = setup().await;
-    let ids = [
-        "openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0",
-        "openEHR-EHR-EHR_ACCESS.access_directives.v1.1.0",
-    ];
+    let id = "openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0";
     let first = svc
         .seed_default_definitions()
         .await
@@ -459,23 +456,21 @@ async fn the_default_definition_is_stored_at_boot_only_when_absent() {
         .seed_default_definitions()
         .await
         .expect("the next boot seeds");
-    for id in ids {
-        assert!(
-            first.contains(&Seeded::Stored(id.to_owned())),
-            "{id} is stored: {first:?}"
-        );
-        assert!(
-            again.contains(&Seeded::Kept(format!("{id}.adls"))),
-            "{id} is kept: {again:?}"
-        );
-    }
+    assert!(
+        first.contains(&Seeded::Stored(id.to_owned())),
+        "the definition is stored: {first:?}"
+    );
+    assert!(
+        again.contains(&Seeded::Kept(format!("{id}.adls"))),
+        "the stored definition is kept: {again:?}"
+    );
 }
 
-/// The ADL 2 errors of the shipped `v1.1.0` definition against `rm`.
+/// The ADL 2 errors of the shipped definition against `rm`.
 fn errors_against(rm: &dyn openehr_adl::validate::rm::RmModel) -> Vec<String> {
     use openehr_adl::validate::bindings::NoTerminologyResolver;
     use openehr_adl::validate::catalogue::Severity;
-    let (_, text) = ferroehr::service::ehr::access_settings::DEFINITIONS[1];
+    let (_, text) = ferroehr::service::ehr::access_settings::DEFINITIONS[0];
     openehr_adl::validate::validate_source(text, None, rm, &NoTerminologyResolver)
         .expect("the definition parses")
         .into_iter()
@@ -484,7 +479,7 @@ fn errors_against(rm: &dyn openehr_adl::validate::rm::RmModel) -> Vec<String> {
         .collect()
 }
 
-/// The `v1.1.0` definition constrains the settings to the draft class
+/// The default definition constrains the settings to the draft class
 /// `ACCESS_DIRECTIVE_SETTINGS` and its attributes, and validates against the
 /// RM extended by the draft packages, where the class conforms to the RM's
 /// `ACCESS_CONTROL_SETTINGS` (AOM2 `master11-rm_adaptation.adoc`).

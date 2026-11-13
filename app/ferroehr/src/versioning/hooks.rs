@@ -3,7 +3,8 @@
 
 //! The hooks that run in a commit's transaction once its version is written:
 //! the access-delay hold of a new COMPOSITION, the party binding side tables
-//! of a demographic version, and the projection of an `EHR_ACCESS` version.
+//! of a demographic version, the projection of an `EHR_ACCESS` version and
+//! the restriction and opt-out marks its directives in force set.
 //!
 //! Each writes rows derived from the version in the same transaction, so a
 //! rolled-back commit leaves none. No openEHR spec governs these derived
@@ -15,7 +16,7 @@ use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::party_binding::derive::Facts;
 use crate::service::ehr::access_projection::AccessCommit;
-use crate::versioning::SigningCtx;
+use crate::versioning::{Kind, SigningCtx};
 use crate::versioning::change::Committed;
 
 /// What the hooks of one written version read beside the version itself,
@@ -54,6 +55,11 @@ impl Hooks<'_> {
         }
         if let (Some(ehr_id), Some(access)) = (self.ehr_id, self.access) {
             access.project(tx, ehr_id, committed).await?;
+        }
+        if let Some(ehr_id) = self.ehr_id
+            && committed.kind == Kind::EhrAccess
+        {
+            crate::service::ehr::access_marks::project(tx, ehr_id).await?;
         }
         Ok(())
     }

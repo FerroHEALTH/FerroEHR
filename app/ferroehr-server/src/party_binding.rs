@@ -222,6 +222,10 @@ pub async fn prepare(
         .context("filling the EHR_ACCESS projection")?;
     service.ehr_access_listened().spawn_listener();
     service
+        .refill_access_marks()
+        .await
+        .context("projecting the restriction and opt-out directives of every EHR_ACCESS")?;
+    service
         .read_grants()
         .await
         .context("reading the policy grants")?;
