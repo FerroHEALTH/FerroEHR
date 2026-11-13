@@ -119,11 +119,13 @@ async fn a_source_the_upload_refuses_is_refused_and_not_stored() {
 
 /// The default demographic definitions, each under `deploy/definitions/` in
 /// the order the binary seeds them.
-const DEFAULT_SET: [&str; 7] = [
+const DEFAULT_SET: [&str; 9] = [
     "professional/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls",
     "professional/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls",
     "care-team/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls",
     "care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls",
+    "care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.0.adls",
+    "care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1.0.0.adls",
     "representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls",
     "patient/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls",
     "provider/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls",
@@ -457,7 +459,22 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
             ] }],
         "relationships": [
             relationship("id26", "id27", "id28", "ORGANISATION", "7c4e9a2b-1f6d-4b3e-9c8a-5d2e0f7b1a36"),
-            relationship("id29", "id30", "id31", "ORGANISATION", "9d2f4a7e-3c1b-4e8a-9f60-2b7d5c8e1a40")
+            relationship("id29", "id30", "id31", "ORGANISATION", "9d2f4a7e-3c1b-4e8a-9f60-2b7d5c8e1a40"),
+            json!({
+                "_type": "PARTY_RELATIONSHIP", "archetype_node_id": "id32", "name": dv_text("Ward stay"),
+                "details": { "_type": "ITEM_TREE", "archetype_node_id": "id33", "name": dv_text("Care details"),
+                    "items": [element("id34", "Care relationship code", &json!({
+                        "_type": "DV_CODED_TEXT", "value": "under_care_of",
+                        "defining_code": { "_type": "CODE_PHRASE",
+                            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+                            "code_string": "under_care_of" } }))] },
+                "time_validity": { "_type": "DV_INTERVAL",
+                    "lower": { "_type": "DV_DATE", "value": "2026-11-03" },
+                    "lower_unbounded": false, "upper_unbounded": true,
+                    "lower_included": true, "upper_included": false },
+                "source": party_ref("PERSON", me),
+                "target": party_ref("GROUP", "4b8e2c7a-953e-4a1d-8c9b-2f4c8e6a0d71")
+            })
         ]
     });
     let fit = svc
