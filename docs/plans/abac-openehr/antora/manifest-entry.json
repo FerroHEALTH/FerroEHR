@@ -1,0 +1,21 @@
+{
+  "id": "access_control",
+  "title": "Access Control Information Model",
+  "title_short": "Access Control",
+  "description": "openEHR Access Control Information Model specification (draft)",
+  "micro_summary": "Access directives and controller policy as facts",
+  "summary": "A concrete ACCESS_CONTROL_SETTINGS scheme for EHR_ACCESS that records the subject's access directives (consent, restriction, opt-out, delegation) and sensitivity labels as versioned facts, and a versioned ACCESS_POLICY of a controller that classifies data and states its access requirements. The classes hold facts; the decision procedure is fixed by the scheme.",
+  "classes": [
+    "ACCESS_DIRECTIVE_SETTINGS",
+    "ACCESS_DIRECTIVE",
+    "ACCESS_ACTOR_SCOPE",
+    "ACCESS_DATA_SCOPE",
+    "ACCESS_LABEL",
+    "ACCESS_POLICY",
+    "ACCESS_CLASSIFICATION",
+    "VERSIONED_ACCESS_POLICY"
+  ],
+  "copyright_year": "2026",
+  "spec_status": "DEVELOPMENT",
+  "keywords": "access control, consent, EHR_ACCESS, ABAC, openehr"
+}
