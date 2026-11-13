@@ -155,6 +155,15 @@ fn interval(lower: &str, upper: &str) -> Value {
 /// A `PERSON` of the mapped template carrying the binding key `key` under
 /// the portal, holding `relationships`; its container.
 async fn representative(svc: &FerroEhrService, key: &str, relationships: Value) -> VoId {
+    representative_at(svc, key, relationships).await.0
+}
+
+/// [`representative`], with the uid of its last version.
+async fn representative_at(
+    svc: &FerroEhrService,
+    key: &str,
+    relationships: Value,
+) -> (VoId, String) {
     let created =
         Box::pin(svc.party_create(PartyKind::Person, write(&person(PORTAL, key), "532", None)))
             .await
@@ -177,7 +186,7 @@ async fn representative(svc: &FerroEhrService, key: &str, relationships: Value) 
             .collect();
         body["relationships"] = Value::Array(held);
         let preceding = uid(&created);
-        Box::pin(svc.party_update(
+        let updated = Box::pin(svc.party_update(
             PartyKind::Person,
             id,
             Precondition::parse(Some(&preceding), None).expect("an If-Match"),
@@ -185,8 +194,9 @@ async fn representative(svc: &FerroEhrService, key: &str, relationships: Value) 
         ))
         .await
         .expect("the representation commits");
+        return (id, uid(&updated));
     }
-    id
+    (id, uid(&created))
 }
 
 /// The child's `PERSON` and the EHR whose `EHR_STATUS` names it.
@@ -292,6 +302,64 @@ async fn a_representation_not_recorded_or_ended_is_refused() {
     }
 }
 
+/// A former representative is never the patient (#5532): once an inline
+/// representation is deleted from their `PERSON`, or a standalone one is
+/// deleted, both paths refuse them, while the patient's own login and a
+/// representative of another subject only, who never represented this one,
+/// are still the patient.
+#[tokio::test]
+async fn a_deleted_representation_never_leaves_the_patient_behind() {
+    let (_db, svc) = service().await;
+    let (subject, ehr) = child(&svc).await;
+    let (other, _) = child(&svc).await;
+    let (parent, preceding) = representative_at(
+        &svc,
+        PARENT,
+        json!([representation(subject, subject, "254", None)]),
+    )
+    .await;
+    representative(
+        &svc,
+        PROXY,
+        json!([representation(other, other, "254", None)]),
+    )
+    .await;
+    let app = router(&svc).await;
+    assert_eq!(
+        read(&app, &ehr, &token(PARENT, &ehr, &json!({}))).await.0,
+        StatusCode::OK
+    );
+
+    Box::pin(svc.party_update(
+        PartyKind::Person,
+        parent,
+        Precondition::parse(Some(&preceding), None).expect("an If-Match"),
+        write(&person(PORTAL, PARENT), "532", Some(&preceding)),
+    ))
+    .await
+    .expect("the representation is deleted from the parent");
+
+    for (case, credential) in [
+        ("deleted, act", acting(&ehr, Some(PARENT))),
+        ("deleted, own login", token(PARENT, &ehr, &json!({}))),
+        ("never recorded, act", acting(&ehr, Some(PROXY))),
+    ] {
+        let (status, body) = read(&app, &ehr, &credential).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{case}: {body}");
+        assert!(
+            body.contains("refused-representation-unrecorded"),
+            "{case}: {body}"
+        );
+    }
+    for (case, credential) in [
+        ("the patient", acting(&ehr, None)),
+        ("never recorded, own login", token(PROXY, &ehr, &json!({}))),
+    ] {
+        let (status, body) = read(&app, &ehr, &credential).await;
+        assert_eq!(status, StatusCode::OK, "{case}: {body}");
+    }
+}
+
 /// The patient authorises a proxy through the API: the proxy then reads the
 /// patient's EHR, and the patient's revocation ends it on the next request.
 /// The patient writes no representation of anyone else.
@@ -336,8 +404,17 @@ async fn the_patient_authorises_a_proxy_and_revokes_it() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
-    let (status, body) = read(&app, &ehr, &as_proxy).await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "revoked: {body}");
+    for (path, credential) in [
+        ("act", as_proxy),
+        ("own login", token(PROXY, &ehr, &json!({}))),
+    ] {
+        let (status, body) = read(&app, &ehr, &credential).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "revoked, {path}: {body}");
+        assert!(
+            body.contains("refused-representation-unrecorded"),
+            "{path}: {body}"
+        );
+    }
 }
 
 /// A representation of the patient an administrator recorded, a guardian's,
