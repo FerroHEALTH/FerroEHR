@@ -17,10 +17,10 @@
 //! spec governs who grants a capability: our own design.
 
 use openehr_base::containers::NonEmptyVec;
-use openehr_base::prelude::{ArchetypeId, HierObjectId, ObjectId, PartyRef, TerminologyId};
+use openehr_base::prelude::{HierObjectId, ObjectId, PartyRef, TerminologyId};
 use openehr_rm::prelude::{
-    Agent, Archetyped, Capability, CodePhrase, DataValue, DvCodedText, DvIdentifier, DvText,
-    Element, Item, ItemStructure, ItemTree, Party, PartyIdentity, Role,
+    Agent, Capability, CodePhrase, DataValue, DvCodedText, DvIdentifier, DvText, Element, Item,
+    ItemStructure, ItemTree, Party, PartyIdentity, Role,
 };
 use serde::Serialize;
 use uuid::Uuid;
@@ -33,7 +33,8 @@ use crate::party_binding::grants::operation::Operation;
 use crate::party_binding::policy_mark::{CLIENT_ID, TERMINOLOGY};
 use crate::service::FerroEhrService;
 use crate::service::demographic::types::PartyKind;
-use crate::service::version_update::WriteRequest;
+use crate::service::ehr::service::archetyped;
+use crate::service::version_update::{WriteRequest, plain_text};
 
 /// The archetype of the `AGENT` a grant creates: FerroEHR's own, with no
 /// template.
@@ -147,10 +148,6 @@ impl FerroEhrService {
     }
 }
 
-fn text(value: &str) -> DvText {
-    crate::service::version_update::plain_text(value)
-}
-
 fn coded(code: &str) -> DvCodedText {
     DvCodedText {
         value: code.to_owned(),
@@ -166,16 +163,6 @@ fn coded(code: &str) -> DvCodedText {
             code_string: code.to_owned(),
             preferred_term: None,
         },
-    }
-}
-
-fn archetyped(archetype: &str) -> Archetyped {
-    Archetyped {
-        archetype_id: ArchetypeId {
-            value: archetype.to_owned(),
-        },
-        template_id: None,
-        rm_version: openehr_rm::Generation::default().spec_version().to_owned(),
     }
 }
 
@@ -197,7 +184,7 @@ fn element(node: &str, name: DvText, value: DataValue) -> Item {
 /// An `ITEM_TREE` at `node`, named `name`, holding `items`.
 fn tree(node: &str, name: &str, items: Vec<Item>) -> ItemStructure {
     ItemStructure::ItemTree(Box::new(ItemTree {
-        name: text(name),
+        name: plain_text(name),
         archetype_node_id: node.to_owned(),
         uid: None,
         links: None,
@@ -210,7 +197,7 @@ fn tree(node: &str, name: &str, items: Vec<Item>) -> ItemStructure {
 /// The one name identity of a party named `name`.
 fn identities(name: &str) -> NonEmptyVec<PartyIdentity> {
     NonEmptyVec::of(PartyIdentity {
-        name: text("name"),
+        name: plain_text("name"),
         archetype_node_id: "at0001".to_owned(),
         uid: None,
         links: None,
@@ -221,8 +208,8 @@ fn identities(name: &str) -> NonEmptyVec<PartyIdentity> {
             "details",
             vec![element(
                 "at0003",
-                text("name"),
-                DataValue::DvText(text(name)),
+                plain_text("name"),
+                DataValue::DvText(plain_text(name)),
             )],
         ),
     })
@@ -237,7 +224,7 @@ fn agent(grant: &ClientGrant) -> Party {
         r#type: Some(CLIENT_ID.to_owned()),
     };
     Party::Agent(Agent {
-        name: text(&grant.client_id),
+        name: plain_text(&grant.client_id),
         archetype_node_id: AGENT_ARCHETYPE.to_owned(),
         uid: None,
         links: None,
@@ -250,7 +237,7 @@ fn agent(grant: &ClientGrant) -> Party {
             "details",
             vec![element(
                 "at0011",
-                text("client"),
+                plain_text("client"),
                 DataValue::DvIdentifier(client),
             )],
         )),
@@ -266,18 +253,18 @@ fn role(agent: VoId, grant: &ClientGrant) -> Party {
     let code = grant.operation.code();
     let mut items = vec![element(
         "at0021",
-        text("operation"),
+        plain_text("operation"),
         DataValue::DvText(DvText::DvCodedText(coded(code))),
     )];
     items.extend(grant.elements.iter().map(|(name, value)| {
         element(
             "at0022",
             DvText::DvCodedText(coded(name)),
-            DataValue::DvText(text(value)),
+            DataValue::DvText(plain_text(value)),
         )
     }));
     Party::Role(Role {
-        name: text(code),
+        name: plain_text(code),
         archetype_node_id: ROLE_ARCHETYPE.to_owned(),
         uid: None,
         links: None,
@@ -294,7 +281,7 @@ fn role(agent: VoId, grant: &ClientGrant) -> Party {
             id: ObjectId::HierObjectId(HierObjectId::from(agent.0)),
         },
         capabilities: Some(NonEmptyVec::of(Capability {
-            name: text("grant"),
+            name: plain_text("grant"),
             archetype_node_id: "at0020".to_owned(),
             uid: None,
             links: None,
