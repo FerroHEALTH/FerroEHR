@@ -21,6 +21,7 @@
 use crate::analyze::{External, Model, emittable_specs};
 use crate::load::bmm::BmmSchema;
 use crate::plan::composition::{DepGeneration, external_index, generation_dep_schemas};
+use crate::plan::overrides::RefTarget;
 use std::collections::BTreeSet;
 use std::path::Path;
 
@@ -177,6 +178,66 @@ pub(crate) const DRAFTS: &[DraftModule] = &[
         ),
     },
 ];
+
+/// Every reference-typed attribute of the FerroEHR-local draft packages
+/// (`draft/bmm/`), with its target, read from the draft BMM's own
+/// documentation of the attribute.
+const DRAFT_REF_TARGETS: &[RefTarget] = &[
+    RefTarget {
+        class: "ACCESSOR",
+        attr: "groups",
+        target: Some("GROUP"),
+        citation: "draft openehr_access_log_0.1.0.bmm.json ACCESSOR.groups: \"The demographic \
+                   `GROUP` parties, such as care teams, whose membership the access relied on.\"",
+    },
+    RefTarget {
+        class: "ACCESSED_ITEM",
+        attr: "object",
+        target: None,
+        citation: "draft openehr_access_log_0.1.0.bmm.json ACCESSED_ITEM.object: \"Reference to \
+                   the versioned object, `EHR_STATUS`, `EHR_ACCESS` or directory the item \
+                   belongs to.\" (several classes)",
+    },
+    RefTarget {
+        class: "ACCESS_ACTOR_SCOPE",
+        attr: "party",
+        target: None,
+        citation: "draft openehr_access_control_0.1.0.bmm.json ACCESS_ACTOR_SCOPE.party: \"A party \
+                   in the demographic service: a `PERSON` or `AGENT` matches itself; an \
+                   `ORGANISATION` or `GROUP` matches every caller that acts for it\" (several \
+                   classes)",
+    },
+    RefTarget {
+        class: "ACCESS_DATA_SCOPE",
+        attr: "objects",
+        target: None,
+        citation: "draft openehr_access_control_0.1.0.bmm.json ACCESS_DATA_SCOPE.objects: \
+                   \"Individual versioned objects, such as one `VERSIONED_COMPOSITION`.\" \
+                   (several classes)",
+    },
+    RefTarget {
+        class: "ACCESS_LABEL",
+        attr: "target",
+        target: None,
+        citation: "draft openehr_access_control_0.1.0.bmm.json ACCESS_LABEL.target: \"The \
+                   versioned object the labels apply to.\" (any versioned object)",
+    },
+    RefTarget {
+        class: "ACCESS_POLICY",
+        attr: "controller",
+        target: Some("ORGANISATION"),
+        citation: "draft openehr_access_control_0.1.0.bmm.json ACCESS_POLICY.controller: \"The \
+                   `ORGANISATION` whose policy this is, the controller of the data.\"",
+    },
+];
+
+/// The target of the reference-typed draft attribute `class.attr`, if the
+/// draft table names one.
+pub(crate) fn draft_ref_target(class: &str, attr: &str) -> Option<&'static RefTarget> {
+    DRAFT_REF_TARGETS
+        .iter()
+        .find(|r| r.class == class && r.attr == attr)
+}
 
 /// A draft resolved into its schema, resolution model and reference index.
 pub(crate) struct ComposedDraft {

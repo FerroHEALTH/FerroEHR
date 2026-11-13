@@ -20,6 +20,7 @@
 
 pub mod access_log;
 mod json_serde;
+pub mod model;
 
 // hand-written modules (spec behaviour), auto-declared:
 pub mod invariants;

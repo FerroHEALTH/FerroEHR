@@ -42,6 +42,7 @@ mod access_log_checkpoint;
 mod access_log_retention;
 mod access_log_store;
 mod access_origins;
+mod access_policy;
 mod adl14_knowledge_archetypes;
 mod adl2_content_commit;
 mod adl2_fixture;
