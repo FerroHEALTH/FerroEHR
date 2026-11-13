@@ -477,7 +477,9 @@ async fn an_import_needs_a_grant_and_refuses_a_local_login_from_an_untrusted_sys
     let refused = refused.flattened();
     assert!(matches!(refused, ServiceError::Forbidden(_)));
     assert!(
-        refused.to_string().contains("wrapped AUDIT_DETAILS.committer"),
+        refused
+            .to_string()
+            .contains("wrapped AUDIT_DETAILS.committer"),
         "{refused}"
     );
     // A grant that vouches for the source system on another operation, or
