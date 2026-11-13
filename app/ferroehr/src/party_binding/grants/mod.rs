@@ -30,9 +30,13 @@ pub mod live;
 pub mod operation;
 pub mod store;
 
-use crate::error::ServiceError;
+use crate::error::{ServiceError, Violation};
 use crate::party_binding::derive::Facts;
-use crate::party_binding::grants::operation::GrantCeiling;
+use crate::party_binding::grants::capabilities::Credentials;
+use crate::party_binding::grants::operation::{
+    DEVICE, DEVICE_IDENTIFIER_ISSUER, FACILITY_PARTS, GrantCeiling, ORIGIN, Operation, RELAY,
+    SCOPES,
+};
 
 /// Refuses the committed body `facts` of a `ROLE` when it grants an
 /// operation `ceiling` does not admit.
@@ -49,7 +53,7 @@ pub(crate) fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(),
     else {
         return Ok(());
     };
-    let allowed: Vec<&str> = ceiling.allowed().map(operation::Operation::code).collect();
+    let allowed: Vec<&str> = ceiling.allowed().map(Operation::code).collect();
     Err(ServiceError::not_permitted(format!(
         "the ROLE grants the operation {}, which [authz.grants] allowed does not admit, so \
          this CDR may not grant it (allowed: {})",
@@ -60,4 +64,66 @@ pub(crate) fn check_ceiling(facts: &Facts, ceiling: &GrantCeiling) -> Result<(),
             allowed.join(", ")
         }
     )))
+}
+
+/// Refuses the committed body `facts` of a `ROLE` when a grant it carries
+/// lacks the terms its operation is checked by: a `commit_composition` grant
+/// without an origin, a `device` grant without a device identifier issuer, a
+/// facility without its issuer and exactly one of its identifier and prefix,
+/// and an import or export grant without a subject namespace.
+///
+/// # Errors
+/// [`ServiceError::Unprocessable`] (`422`) naming the first such capability.
+pub(crate) fn check_terms(facts: &Facts) -> Result<(), ServiceError> {
+    for capability in &facts.grants.capabilities {
+        let credentials = Credentials::of(capability.credentials.as_ref());
+        let refusal = match Operation::of(&capability.code) {
+            Some(Operation::CommitComposition) => commit_terms(credentials),
+            Some(
+                Operation::ImportEhr | Operation::ImportEhrExtract | Operation::ExportEhrExtract,
+            ) if credentials.texts(SCOPES[2]).is_empty() => Some(
+                "names no subject_namespace, and an import or export grant covers only the EHRs \
+                 whose subject namespace it names",
+            ),
+            _ => None,
+        };
+        if let Some(refusal) = refusal {
+            return Err(ServiceError::content_invalid(
+                Violation::new(format!(
+                    "the capability granting {} {refusal}",
+                    capability.code
+                ))
+                .with_path(format!(
+                    "ROLE.capabilities[{}].credentials",
+                    capability.ordinal
+                )),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// What a `commit_composition` grant's `credentials` lack, when they lack a
+/// term.
+fn commit_terms(credentials: Credentials<'_>) -> Option<&'static str> {
+    let origins = credentials.codes(ORIGIN);
+    if origins.is_empty()
+        || origins
+            .iter()
+            .any(|origin| ![RELAY, DEVICE].contains(origin))
+    {
+        return Some("needs an origin element coding relay or device, or both");
+    }
+    if origins.contains(&DEVICE) && credentials.texts(DEVICE_IDENTIFIER_ISSUER).is_empty() {
+        return Some("has the origin device and needs a device_identifier_issuer");
+    }
+    let malformed = credentials.clusters(SCOPES[1]).into_iter().any(|facility| {
+        facility.texts(FACILITY_PARTS[0]).len() != 1
+            || facility.texts(FACILITY_PARTS[1]).len() + facility.texts(FACILITY_PARTS[2]).len()
+                != 1
+    });
+    malformed.then_some(
+        "has a facility cluster without one issuer and exactly one of identifier and \
+         identifier_prefix",
+    )
 }

@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The callers the configuration declares: the system clients that commit
-//! (`[[authz.system_client]]`) and the agreements a verified external person
-//! or organisation of a `federation` issuer is admitted under
+//! The callers the configuration declares: the agreements a verified external
+//! person or organisation of a `federation` issuer is admitted under
 //! (`[[authz.federation.agreement]]`), only within the agreement of its
 //! issuer and accessor, and only with the scopes the agreement reads.
 //!
@@ -18,7 +17,7 @@ use std::sync::Arc;
 
 use axum::response::Response;
 use ferroehr::config::agreement::{AccessClass, Accessor, Agreement};
-use ferroehr::config::clients::SystemClient;
+use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::versioning::committer::ExternalCaller;
 use ferroehr::versioning::committer::external::ExternalProfessional;
 use ferrohealth_server::caller_rate::{self, CallerKey, CallerLimit};
@@ -49,12 +48,9 @@ struct Held {
 /// grant no access here.
 const NEUTRAL: [&str; 5] = ["openid", "profile", "fhirUser", "online_access", "launch"];
 
-/// The `[[authz.system_client]]` tables and the
-/// `[[authz.federation.agreement]]` tables, by issuer and accessor.
+/// The `[[authz.federation.agreement]]` tables, by issuer and accessor.
 #[derive(Default)]
 pub(super) struct Declared {
-    /// The system clients.
-    pub(super) system_clients: Vec<Arc<SystemClient>>,
     /// The agreements, each with the jurisdiction it holds for; boot has
     /// refused a table without an accessor.
     agreements: BTreeMap<(String, Accessor), Arc<Held>>,
@@ -65,7 +61,6 @@ pub(super) struct Declared {
 impl std::fmt::Debug for Declared {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Declared")
-            .field("system_clients", &self.system_clients)
             .field("agreements", &self.agreements.values().collect::<Vec<_>>())
             .finish()
     }
@@ -75,12 +70,6 @@ impl Declared {
     /// Returns the tables `config` declares.
     pub(super) fn of(config: &crate::config::AppConfig) -> Self {
         Self {
-            system_clients: config
-                .system_clients
-                .iter()
-                .cloned()
-                .map(Arc::new)
-                .collect(),
             agreements: config
                 .agreements
                 .iter()
@@ -224,16 +213,13 @@ pub(super) fn contact_point(access: &Access) -> Option<&Arc<Agreement>> {
 /// from the family's caller limit, carrying the caller and its binding record
 /// for the access log, which counts it into the caller's summary record.
 /// `None` within the rate or for any other caller.
-pub(super) fn over_rate(
-    principal: &super::Principal,
-    clients: &[Arc<SystemClient>],
-) -> Option<Response> {
+pub(super) fn over_rate(principal: &super::Principal) -> Option<Response> {
     let limit = held(&principal.access)?.limit.as_ref()?;
     let caller = CallerKey(Arc::from(principal.subject.as_str()));
     let wait = limit.take(&caller, tokio::time::Instant::now()).err()?;
     let mut refusal = caller_rate::refusal(wait);
-    let committer = super::party::committer_identity(principal, clients);
-    if let Some(mut binding) = super::record::of_request(principal, &committer) {
+    let committer = super::party::committer_identity(principal, &Capabilities::default());
+    if let Some(mut binding) = super::record::of_request(principal, &committer, None) {
         binding
             .detail
             .insert("refusal".to_owned(), vec!["caller-rate".to_owned()]);

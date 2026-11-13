@@ -26,8 +26,8 @@ key = "clinician"                        # the binding key the PERSON carries
 ```
 
 A Basic user with no mapping refuses the start, naming the user. A machine,
-read-only included, authenticates with OAuth 2.0 client credentials under
-a declared `[[authz.system_client]]`. A Basic credential carries no
+read-only included, authenticates with OAuth 2.0 client credentials and
+is granted in the CDR ([Operational policy](../operational-policy.md#what-a-system-client-may-do)). A Basic credential carries no
 assurance level, so with `[authz.assurance] minimum` set it is refused on
 patient data, and the server logs a `warn` naming every mapped Basic user
 while no minimum is set.

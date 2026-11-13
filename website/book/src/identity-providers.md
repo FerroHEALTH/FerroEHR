@@ -29,8 +29,9 @@ The HTTP Basic user list in `ferroehr.toml` holds persons only, and it is not
 a user store: each Basic user maps to the `PERSON` that carries its binding
 key, which the identity provider provisions through SCIM
 ([bootstrap and migration](installation/party-binding-migration.md)). A
-machine authenticates with OAuth 2.0 client credentials under a declared
-`[[authz.system_client]]`, and most people authenticate with bearer tokens
+machine authenticates with OAuth 2.0 client credentials and is granted what
+it may do in the CDR ([Operational policy](operational-policy.md#what-a-system-client-may-do)),
+and most people authenticate with bearer tokens
 from the IdP.
 
 > [!NOTE]
@@ -108,25 +109,15 @@ profile, and the server acts on the kind:
   `keycloak`. A Basic user is never one. A system caller acts for no person, so
   it holds `system/` scopes only, and a token with a `user/` or `patient/` scope
   is refused with `403`. It reads under its `system/` scopes. It commits into an
-  EHR only as a client an `[[authz.system_client]]` table declares
-  ([configuration](installation/config-auth.md#authzimport-and-authzsystem_client)),
+  EHR only as a client the CDR grants `commit_composition`: an `ACTOR`
+  carrying its `client_id`, acting for a provider and performing a `ROLE`
+  whose capability grants it
+  ([Operational policy](operational-policy.md#what-a-system-client-may-do)),
   under the committer `PARTY_IDENTIFIED{name = <client>, identifiers =
-  [{issuer = <iss>, id = <client>, type = "client"}]}` with no `external_ref`.
-  - Each COMPOSITION it commits is of a template its `writes` lists, or the
-    commit is refused with `403`.
-  - It names a facility of its `facilities` in
-    `context.health_care_facility.identifiers`, or, for a COMPOSITION with no
-    context, in `feeder_audit.originating_system_audit.location.identifiers`.
-    Otherwise it is refused with `422` naming the element; the server fills
-    neither.
-  - A device act names the device in `composer`, with an identifier of one of
-    the client's `device_identifier_issuers` that is also
-    `feeder_audit.originating_system_audit.system_id`, and is accepted only
-    from a `device` client. Every other COMPOSITION records a person's act: it
-    is accepted only from a `relay` client (`403` otherwise) and names the
-    professional by an identifier in `composer` or in the `performer` of a
-    context participation (`422` otherwise). An organisation `composer` is
-    refused with `422`.
+  [{issuer = <iss>, id = <client>, type = "client"}]}` with an `external_ref`
+  to that `ACTOR`. The grant decides the templates it writes, the facilities
+  it writes at and whether it relays a person's act or registers a device's;
+  an import or an export needs a grant of its own.
 - **A verified external person or organisation** of a `federation` issuer is
   admitted only under the `[[authz.federation.agreement]]` of its issuer and
   accessor, and refused with `403` without one or under the other accessor's.

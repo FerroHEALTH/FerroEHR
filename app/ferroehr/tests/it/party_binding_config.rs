@@ -3,8 +3,8 @@
 
 //! The party binding configuration through `ferroehr::config::assemble`: a
 //! full configuration of every issuer kind loads, and each boot refusal of
-//! `[auth]`, `[authz.party_binding]`, `[[authz.system_client]]` and
-//! `[[authz.federation.agreement]]` names its key. No openEHR spec governs
+//! `[auth]`, `[authz.party_binding]` and `[[authz.federation.agreement]]`
+//! names its key. No openEHR spec governs
 //! configuration: our own design.
 
 use std::collections::HashMap;
@@ -17,7 +17,7 @@ use ferroehr::config::binding::{BindingPosture, Providers};
 const HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaGhhc2hoYQ";
 
 /// A configuration with one issuer of every kind, a bound persons issuer,
-/// a mapped Basic user, a system client and two federation agreements.
+/// a mapped Basic user and two federation agreements.
 fn full() -> String {
     format!(
         r#"
@@ -81,13 +81,6 @@ key = "3f2b0c1e-0000-4000-8000-000000000001"
 
 [authz.import]
 trusted_systems = ["legacy.example"]
-
-[[authz.system_client]]
-issuer = "https://idp.example/realms/machines"
-client_id = "ferrobridge"
-provider = {{ issuer = "urn:oid:2.16.528.1.1007.3.3", id = "12345678" }}
-facilities = [{{ issuer = "urn:example:facility", id_prefix = "ward-" }}]
-origins = ["relay"]
 
 [[authz.federation.agreement]]
 issuer = "https://federation.example"
@@ -305,16 +298,6 @@ fn a_basic_user_with_no_mapping_is_refused_naming_the_user() {
 #[test]
 fn a_table_for_an_issuer_of_the_wrong_kind_or_twice_is_refused() {
     let text = refusal(&with(
-        "issuer = \"https://idp.example/realms/machines\"\nclient_id",
-        "issuer = \"https://federation.example\"\nclient_id",
-    ));
-    assert!(
-        text.contains(
-            "names a federation issuer: a system client's issuer is of kind machines or persons"
-        ),
-        "{text}"
-    );
-    let text = refusal(&with(
         "issuer = \"https://federation.example\"\naccessor = \"person\"",
         "issuer = \"https://idp.example/realms/staff\"\naccessor = \"person\"",
     ));
@@ -434,16 +417,24 @@ fn a_party_claim_and_a_token_profile_are_refused() {
     assert!(text.contains("unknown field `token_profile`"), "{text}");
 }
 
+/// The system clients are policy parties in the CDR (#5436): the table that
+/// declared them is an unknown key, with each of its former keys.
 #[test]
-fn a_device_client_without_identifier_issuers_is_refused() {
-    let text = refusal(&with(
-        "origins = [\"relay\"]",
+fn a_system_client_table_is_refused_as_unknown() {
+    for table in [
+        "issuer = \"https://idp.example/realms/machines\"\nclient_id = \"ferrobridge\"",
+        "provider = { issuer = \"urn:oid:2.16.528.1.1007.3.3\", id = \"12345678\" }",
+        "facilities = [{ issuer = \"urn:example:facility\", id_prefix = \"ward-\" }]",
+        "writes = [\"Vital signs.v1\"]",
         "origins = [\"relay\", \"device\"]",
-    ));
-    assert!(
-        text.contains("has origins containing device and needs device_identifier_issuers"),
-        "{text}"
-    );
+        "device_identifier_issuers = [\"urn:oid:2.999.9\"]",
+    ] {
+        let text = refusal(&format!("{}\n[[authz.system_client]]\n{table}\n", full()));
+        assert!(
+            text.contains("unknown field `system_client`"),
+            "{table}: {text}"
+        );
+    }
 }
 
 #[test]

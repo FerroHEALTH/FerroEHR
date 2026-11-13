@@ -157,6 +157,7 @@ pub(crate) async fn reindex_committed(
         && let Some(facts) = facts
     {
         grants::check_ceiling(facts, &ctx.grants.ceiling())?;
+        grants::check_terms(facts)?;
     }
     let (lifecycle_state, trunk_head) = head_of(tx, committed.vo_id).await?;
     let head = if trunk_head == Some(committed.sys_version) {
@@ -332,7 +333,7 @@ pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(
     Ok(())
 }
 
-/// Rebuilds every grant row from the `AGENT` and `ROLE` versions alone, on
+/// Rebuilds every grant row from the `ACTOR` and `ROLE` versions alone, on
 /// `tx`, and moves the grant revision.
 ///
 /// # Errors
@@ -340,7 +341,7 @@ pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(
 /// two `AGENT`s naming one client included.
 pub async fn refill_grants(tx: &mut PgConnection) -> Result<(), StorageError> {
     grants::store::clear(tx).await?;
-    for kind in [Kind::Agent, Kind::Role] {
+    for kind in grants::store::HOLDERS {
         let mut after = None;
         loop {
             let page = stored_heads(tx, &BindingMapping::default(), kind, None, after).await?;

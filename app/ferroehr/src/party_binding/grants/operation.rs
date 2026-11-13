@@ -42,9 +42,39 @@ pub const NOT_AFTER: &str = "not_after";
 /// template written, a facility, a subject namespace.
 pub const SCOPES: [&str; 3] = ["template", "facility", "subject_namespace"];
 
+/// The codes naming the elements of a `facility` `CLUSTER`: the issuer of
+/// the facility identifier, and the identifier or a prefix of it.
+pub const FACILITY_PARTS: [&str; 3] = ["issuer", "identifier", "identifier_prefix"];
+
+/// The code naming the element whose `DV_CODED_TEXT` value is the origin of
+/// what a `commit_composition` grant commits: [`RELAY`] or [`DEVICE`].
+pub const ORIGIN: &str = "origin";
+
+/// The origin of a relayed record of a person's act, such as HL7 v2.
+pub const RELAY: &str = "relay";
+
+/// The origin of a device's registration, which no person made.
+pub const DEVICE: &str = "device";
+
+/// The code naming the element whose text is the issuer of a device
+/// identifier a [`DEVICE`] grant may name as its composer.
+pub const DEVICE_IDENTIFIER_ISSUER: &str = "device_identifier_issuer";
+
 /// The codes of the terminology that name no operation.
-const QUALIFIERS: [&str; 6] = [
-    ACTS_FOR, NOT_BEFORE, NOT_AFTER, SCOPES[0], SCOPES[1], SCOPES[2],
+const QUALIFIERS: [&str; 13] = [
+    ACTS_FOR,
+    NOT_BEFORE,
+    NOT_AFTER,
+    SCOPES[0],
+    SCOPES[1],
+    SCOPES[2],
+    FACILITY_PARTS[0],
+    FACILITY_PARTS[1],
+    FACILITY_PARTS[2],
+    ORIGIN,
+    RELAY,
+    DEVICE,
+    DEVICE_IDENTIFIER_ISSUER,
 ];
 
 /// One operation a capability may grant.
@@ -182,6 +212,7 @@ mod tests {
         }
         assert_eq!(Operation::of("import_everything"), None);
         assert!(is_qualifier(ACTS_FOR) && is_qualifier("template"));
+        assert!(is_qualifier(RELAY) && is_qualifier(DEVICE) && is_qualifier("identifier_prefix"));
     }
 
     #[test]

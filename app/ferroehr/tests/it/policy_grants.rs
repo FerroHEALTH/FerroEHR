@@ -78,7 +78,7 @@ async fn as_admin<F: Future>(fut: F) -> F::Output {
         representative: false,
         bound: None,
         system: false,
-        system_client: None,
+        agent: None,
         external: None,
     };
     ferroehr::system_log::access_context::with_roles(
@@ -231,11 +231,14 @@ fn capability(operations: &[&str], items: &[Value], validity: Option<Value>) -> 
     capability
 }
 
-/// The grant to commit compositions of `template`.
+/// The grant to commit compositions of `template`, relayed.
 fn writes(template: &str, validity: Option<Value>) -> Value {
     capability(
         &["commit_composition"],
-        &[named("template", &text(template))],
+        &[
+            named("template", &text(template)),
+            named("origin", &operation_code("relay")),
+        ],
         validity,
     )
 }
@@ -425,7 +428,10 @@ async fn only_a_role_and_capability_valid_today_grant() {
             .to_string()
     };
     let bounded = |template: &str, before: Option<String>, after: Option<String>| {
-        let mut items = vec![named("template", &text(template))];
+        let mut items = vec![
+            named("template", &text(template)),
+            named("origin", &operation_code("relay")),
+        ];
         for (code, at) in [("not_before", before), ("not_after", after)] {
             if let Some(at) = at {
                 items.push(named(
@@ -534,6 +540,111 @@ async fn an_operation_above_the_ceiling_is_refused_at_commit() {
             .await
             .holds(Operation::CommitComposition)
     );
+}
+
+/// A grant is refused at its commit when it lacks the terms its operation is
+/// checked by, the rules the removed `[[authz.system_client]]` boot checks
+/// held (#5436): an origin, a device identifier issuer for a device, a
+/// facility's issuer with one identifier or prefix, and a subject namespace
+/// for an import or an export.
+#[tokio::test]
+async fn a_grant_without_the_terms_of_its_operation_is_refused_at_commit() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = replica(&db.pool(), GrantCeiling::new(Operation::ALL)).await;
+    let (lab, _) = create(&svc, PartyKind::Agent, &agent("lab"))
+        .await
+        .expect("the AGENT commits");
+    let template = named("template", &text("Lab.v1"));
+    let origin = |code: &str| named("origin", &operation_code(code));
+    let facility = |items: Vec<Value>| {
+        json!({ "_type": "CLUSTER", "archetype_node_id": "at0031",
+                "name": operation_code("facility"), "items": items })
+    };
+    let issuer = named("issuer", &text("urn:oid:2.999.1"));
+    for (items, refusal) in [
+        (vec![template.clone()], "needs an origin"),
+        (
+            vec![template.clone(), origin("import_ehr")],
+            "needs an origin",
+        ),
+        (
+            vec![template.clone(), origin("device")],
+            "needs a device_identifier_issuer",
+        ),
+        (
+            vec![
+                template.clone(),
+                origin("relay"),
+                facility(vec![named("identifier", &text("ward-7"))]),
+            ],
+            "facility cluster",
+        ),
+        (
+            vec![
+                template.clone(),
+                origin("relay"),
+                facility(vec![
+                    issuer.clone(),
+                    named("identifier", &text("ward-7")),
+                    named("identifier_prefix", &text("ward-")),
+                ]),
+            ],
+            "facility cluster",
+        ),
+    ] {
+        let refused = create(
+            &svc,
+            PartyKind::Role,
+            &role(
+                lab,
+                None,
+                &[capability(&["commit_composition"], &items, None)],
+            ),
+        )
+        .await
+        .expect_err("a grant without its terms");
+        assert!(
+            matches!(refused, ServiceError::Unprocessable { .. }),
+            "{refused:?}"
+        );
+        assert!(format!("{refused:?}").contains(refusal), "{refused:?}");
+    }
+    for code in ["import_ehr", "import_ehr_extract", "export_ehr_extract"] {
+        let refused = create(
+            &svc,
+            PartyKind::Role,
+            &role(lab, None, &[capability(&[code], &[], None)]),
+        )
+        .await
+        .expect_err("an import or export grant without a subject namespace");
+        assert!(
+            format!("{refused:?}").contains("names no subject_namespace"),
+            "{code}: {refused:?}"
+        );
+    }
+    let complete = capability(
+        &["commit_composition"],
+        &[
+            template,
+            origin("relay"),
+            origin("device"),
+            named("device_identifier_issuer", &text("urn:oid:2.999.9")),
+            facility(vec![issuer, named("identifier_prefix", &text("ward-"))]),
+        ],
+        None,
+    );
+    let migrates = capability(
+        &["import_ehr", "export_ehr_extract"],
+        &[named("subject_namespace", &text("nl.legacy-his.patients"))],
+        None,
+    );
+    create(
+        &svc,
+        PartyKind::Role,
+        &role(lab, None, &[complete, migrates]),
+    )
+    .await
+    .expect("a grant with its terms commits");
 }
 
 #[tokio::test]

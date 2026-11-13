@@ -205,7 +205,7 @@ fn caller(subject: &str) -> CommitterIdentity {
         representative: false,
         bound: None,
         system: false,
-        system_client: None,
+        agent: None,
         external: None,
     }
 }
@@ -359,8 +359,8 @@ async fn each_worked_example_fits_its_definition() {
             "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0",
         ),
         (
-            "data-migration-role",
-            "openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0",
+            "migration-role",
+            "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0",
         ),
         (
             "federation-partner-role",
@@ -477,7 +477,7 @@ async fn only_an_administrator_grants_a_policy_role() {
         .await
         .expect("an administrator creates the AGENT");
     for (name, ids) in [
-        ("data-migration-role", [(AGENT, agent)]),
+        ("migration-role", [(AGENT, agent)]),
         ("federation-partner-role", [(PARTNER, partner)]),
         ("privileged-role", [(PERSON, person)]),
     ] {

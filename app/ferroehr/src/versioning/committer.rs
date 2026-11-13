@@ -86,10 +86,10 @@ pub struct CommitterIdentity {
     /// Whether the caller is a system caller (an OAuth client-credentials
     /// client acting for no person).
     pub system: bool,
-    /// The `[[authz.system_client]]` table that declares a system caller's
-    /// client, when one does; a system caller without one commits nothing
-    /// into an EHR.
-    pub system_client: Option<std::sync::Arc<crate::config::clients::SystemClient>>,
+    /// The client `ACTOR` a system caller's issuer and `client_id` name in
+    /// the party store, when one does: the committer a default commit records
+    /// references it, so the commit is attributed to that `AGENT`.
+    pub agent: Option<uuid::Uuid>,
     /// What a verified external caller of a `federation` issuer may commit
     /// under the agreement it was admitted under; `None` for any other caller.
     pub external: Option<ExternalCaller>,
@@ -345,7 +345,7 @@ mod tests {
             representative: false,
             bound: None,
             system: false,
-            system_client: None,
+            agent: None,
             external: None,
         }
     }

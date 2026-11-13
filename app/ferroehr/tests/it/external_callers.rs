@@ -86,7 +86,7 @@ fn external(external: ExternalCaller) -> CommitterIdentity {
         representative: false,
         bound: None,
         system: false,
-        system_client: None,
+        agent: None,
         external: Some(external),
     }
 }

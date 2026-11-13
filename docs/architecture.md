@@ -483,7 +483,7 @@ hold `ferroehr-operations::acts_for`, or a `DV_IDENTIFIER` of type
 `ITEM_STRUCTURE` with a terminology binding). The shipped archetypes
 `openEHR-DEMOGRAPHIC-AGENT.system.v1`,
 `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1` and
-`openEHR-DEMOGRAPHIC-ROLE.{system_client,data_migration,federation_partner,privileged}.v1`
+`openEHR-DEMOGRAPHIC-ROLE.{system_client,federation_partner,privileged}.v1`
 are examples that carry those codes; `PolicyKind::of` names them only so a
 party of one is validated against its own template. The binary carries
 a default template of each (`party_binding::policy::DEFINITIONS`, from `app/ferroehr/assets/definitions/policy/`); each boot stores one
@@ -545,8 +545,11 @@ its `credentials` hold, at any depth, an element whose value is a
 `export_ehr_extract`, `federated_person_access`,
 `federated_organisation_access`, `read_subject_audit`, `access_service`,
 `read_identifiers`); elements named by the qualifier codes `not_before` and
-`not_after` bound it finer than a day, and `template`, `facility` and
-`subject_namespace` scope it; `acts_for` codes the acts-for relationship.
+`not_after` bound it finer than a day, and `template`, `facility` (an
+element of a `DV_IDENTIFIER`, or a cluster of `issuer` with `identifier` or
+`identifier_prefix`) and `subject_namespace` scope it; `origin` (a value of
+`relay` or `device`) and `device_identifier_issuer` qualify a
+`commit_composition` grant; `acts_for` codes the acts-for relationship.
 That is the RM's `ITEM_STRUCTURE` with a terminology binding, which any
 modeller produces (RM `data_types` `DV_CODED_TEXT`, `CODE_PHRASE`). A client
 is any `ACTOR` carrying a `DV_IDENTIFIER` of type `client_id` in its
@@ -587,8 +590,7 @@ listener is not connected every request that resolves a caller reads the
 revision. A request resolves its caller after authentication: a system
 client (`CallerKind::System`) by its token's issuer and `client_id`, a
 caller the login binding bound by its party, anyone else to no grants and no
-read; a copy that must be read and cannot be is `503`. Nothing decides a
-request on a grant yet: the consumers of #5433 read
+read; a copy that must be read and cannot be is `503`. The consumers read
 `Capabilities::current()`, which holds the caller's grants for the duration
 of the request, each an `Operation` with its `ROLE` and credentials read by
 the codes of their elements' names. A per-request read without a cache,
@@ -608,6 +610,38 @@ export, a federation agreement and every privilege reach beyond one system's
 own writes, so the operator admits each by name. It is the one key this
 program adds. **Our own design.**
 
+**System clients from the CDR** (#5436, #5432). The
+`[[authz.system_client]]` table is gone: a system caller
+(`CallerKind::System`) is what the policy parties say. Its commit into an EHR
+(`versioning::system`) needs a `commit_composition` grant and an acts-for
+relationship of its `ACTOR` to a provider, or it is `403`, and a
+`COMPOSITION` is admitted when one grant lists its template, has the origin
+the act needs (a device's registration under `device`, recognised by a
+composer identifier of a `device_identifier_issuer` equal to
+`feeder_audit.originating_system_audit.system_id`; any other act under
+`relay`, naming the professional) and covers the facility it names (EHDS
+Art. 13(4)). A `ROLE` whose grant lacks the terms its operation is checked by
+is `422` at its commit (`party_binding::grants::check_terms`), the boot
+refusals the table had. Import (`message_import_ehr`,
+`message_import_ehr_extract`) needs `[authz.rbac] import_role` or a grant of
+the operation whose `subject_namespace` names the subject namespace of every
+`EHR_STATUS` the extract carries and of the target EHR; a system caller's
+export needs an `export_ehr_extract` grant covering the EHR the same way
+(`service::message::import_policy`). A grant names its namespaces, so there
+is no grant of every EHR. FerroEHR's own extracts rewrite every reference
+namespace to `local` (RM `ehr_extract` `master09-semantics.adoc` §Creation
+Semantics), so a grant over them names `local`. The commit of a system
+caller is attributed to its `ACTOR`: the committer's `external_ref` is a
+`PARTY_REF` of type `ACTOR` (BASE `base_types` `PARTY_REF`
+`Type_validity`), and its access record names the `ACTOR` as its party and
+the provider by the first `DV_IDENTIFIER` in the `details` of the
+`ORGANISATION` its acts-for relationship targets (EHDS Annex II 3.2(a)). The
+target and that identifier are side-table rows too (`binding_client.provider_id`,
+`binding_provider`, migration `party/0036`), written in the commit of the
+`AGENT` and of the `ORGANISATION`, so the request path still adds no
+transaction. There is no data migration role: a migration is an `AGENT` whose
+`ROLE` holds the import and export operations. **Our own design.**
+
 **Break-glass stays in the configuration.** Emergency access (EHDS Art.
 11(5)) must work when the party store does not answer, so
 `emergency_access_role` and `emergency_purpose_codes` stay TOML. **Our own
@@ -617,7 +651,7 @@ down.
 **The default definitions** sit under `app/ferroehr/assets/definitions/policy/`
 with a `PROVENANCE.md`: the `AGENT` and the acts-for relationship adapt CKM's
 `ORGANISATION.organisation.v0` (CKM publishes no `AGENT` or
-`PARTY_RELATIONSHIP` archetype), the system-client, migration and privileged
+`PARTY_RELATIONSHIP` archetype), the system-client and privileged
 `ROLE`s adapt `ROLE.individual_provider.v0`, the federation-partner `ROLE`
 adapts `ROLE.healthcare_provider_organisation.v0` (its performer is an
 organisation), and each grant `CAPABILITY` is ours. The provider and the

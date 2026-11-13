@@ -21,8 +21,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use ferroehr::config::binding::Providers;
-use ferroehr::config::clients::SystemClient;
 use ferroehr::error::ServiceError;
+use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::party_binding::source::BindingSource;
 use ferroehr::versioning::committer::bound::BoundDetails;
 
@@ -569,24 +569,15 @@ pub(super) fn kind_refusal(caller: &Caller) -> Option<AuthError> {
 /// (`AUDIT_DETAILS.committer` 1..1 — RM common master04 §Audit Details). A
 /// Bearer subject was minted by the identity provider, so the audit records the
 /// validated token issuer; Basic credentials are local and carry none. A
-/// system caller carries the `[[authz.system_client]]` table of `clients`
-/// that declares its issuer and client, when one does.
+/// system caller's client `ACTOR` is `granted`'s client, the party its issuer
+/// and `client_id` name in the policy parties, when one does.
 pub(super) fn committer_identity(
     principal: &super::Principal,
-    clients: &[Arc<SystemClient>],
+    granted: &Capabilities,
 ) -> ferroehr::versioning::committer::CommitterIdentity {
     let caller = principal.access.caller();
     let system = caller.is_some_and(|caller| matches!(caller.kind(), CallerKind::System));
     let client = super::client_of(principal);
-    let system_client = caller.filter(|_| system).and_then(|caller| {
-        let named = caller.client_id().or(client.as_deref())?;
-        clients
-            .iter()
-            .find(|table| {
-                Some(table.issuer.expose()) == caller.issuer() && table.client_id == named
-            })
-            .cloned()
-    });
     ferroehr::versioning::committer::CommitterIdentity {
         subject: principal.subject.clone(),
         id_type: match principal.method {
@@ -613,7 +604,10 @@ pub(super) fn committer_identity(
             .is_some_and(|caller| matches!(caller.kind(), CallerKind::Representative { .. })),
         bound: None,
         system,
-        system_client,
+        agent: granted
+            .client()
+            .filter(|_| system)
+            .map(|client| client.party),
         external: super::declared::committing(&principal.access),
     }
 }

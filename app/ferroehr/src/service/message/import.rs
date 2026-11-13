@@ -118,7 +118,7 @@ impl FerroEhrService {
         an_ehr_id: Option<EhrId>,
         an_extract: Extract,
     ) -> Result<EhrId, ServiceError> {
-        let (containers, parties) = self.admitted(&an_extract).await?;
+        let (containers, parties) = self.admitted(&an_extract, None).await?;
         // A whole-EHR clone must carry an EHR_STATUS (EHR.ehr_status 1..1, RM
         // ehr §"EHR Creation") — the target could not otherwise be a valid EHR.
         if !containers.iter().any(|c| c.kind == Kind::EhrStatus) {
@@ -219,7 +219,7 @@ impl FerroEhrService {
                 format!("no EHR with id {an_ehr_id}"),
             ));
         }
-        let (containers, parties) = self.admitted(&an_extract).await?;
+        let (containers, parties) = self.admitted(&an_extract, Some(an_ehr_id)).await?;
         reject_duplicate_singleton_containers(&containers)?;
 
         let mut conn = acquire(&self.pool).await?;

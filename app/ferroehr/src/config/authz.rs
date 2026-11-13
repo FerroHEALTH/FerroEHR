@@ -368,8 +368,6 @@ pub struct AuthzConfig {
     pub party_binding: crate::config::binding::PartyBindingConfig,
     /// The systems whose imported committers are trusted (`[authz.import]`).
     pub import: crate::config::clients::ImportConfig,
-    /// The system clients that commit (`[[authz.system_client]]`).
-    pub system_client: Vec<crate::config::clients::SystemClient>,
     /// The federation agreements (`[authz.federation]`).
     pub federation: crate::config::agreement::FederationConfig,
     /// The origins of data this deployment recognises, which a retention

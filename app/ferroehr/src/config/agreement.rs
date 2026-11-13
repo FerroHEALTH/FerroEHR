@@ -504,35 +504,20 @@ pub fn describe_source(source: &Source) -> String {
     }
 }
 
-/// Returns the agreements' and the system clients' template ids that are
-/// not in `held`, each with the table that names it.
+/// Returns the agreements' template ids that are not in `held`, each with
+/// the table that names it.
 #[must_use]
-pub fn missing_templates<'a>(
-    agreements: &'a [Agreement],
-    clients: &'a [crate::config::clients::SystemClient],
-    held: &BTreeSet<String>,
-) -> Vec<String> {
-    let agreed = agreements.iter().flat_map(|a| {
-        a.writes.iter().map(move |t| {
-            (
-                format!("[[authz.federation.agreement]] of {:?}", a.issuer),
-                t,
-            )
+pub fn missing_templates(agreements: &[Agreement], held: &BTreeSet<String>) -> Vec<String> {
+    agreements
+        .iter()
+        .flat_map(|a| {
+            a.writes.iter().map(move |t| {
+                (
+                    format!("[[authz.federation.agreement]] of {:?}", a.issuer),
+                    t,
+                )
+            })
         })
-    });
-    let declared = clients.iter().flat_map(|c| {
-        c.writes.iter().map(move |t| {
-            (
-                format!(
-                    "[[authz.system_client]] {:?} of {:?}",
-                    c.client_id, c.issuer
-                ),
-                t,
-            )
-        })
-    });
-    agreed
-        .chain(declared)
         .filter(|(_, template)| !held.contains(template.as_str()))
         .map(|(table, template)| {
             format!("the {table} writes the template {template:?}, which the store does not hold")

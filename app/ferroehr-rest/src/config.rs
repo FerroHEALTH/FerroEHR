@@ -46,8 +46,6 @@ pub struct AppConfig {
     /// `[authz.party_binding]` — the namespace a bound party is named under
     /// and the key each Basic user is bound by.
     pub party_binding: ferroehr::config::binding::PartyBindingConfig,
-    /// `[[authz.system_client]]` — the system clients that commit.
-    pub system_clients: Vec<ferroehr::config::clients::SystemClient>,
     /// `[[authz.federation.agreement]]` — what each `federation` issuer's
     /// external callers may do.
     pub agreements: Vec<ferroehr::config::agreement::Agreement>,
@@ -65,7 +63,6 @@ impl From<&ferroehr::config::FerroEhrConfig> for AppConfig {
             assurance: config.authz.assurance.clone(),
             spec_profile: config.deployment.spec_profile,
             party_binding: config.authz.party_binding.clone(),
-            system_clients: config.authz.system_client.clone(),
             agreements: config.authz.federation.agreement.clone(),
         }
     }

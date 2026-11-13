@@ -25,7 +25,7 @@ use serde_json::Value;
 use uuid::Uuid;
 
 use crate::party_binding::grants::derive::walk;
-use crate::party_binding::grants::operation::Operation;
+use crate::party_binding::grants::operation::{Operation, SCOPES};
 use crate::party_binding::policy_mark::coded;
 
 tokio::task_local! {
@@ -84,12 +84,27 @@ impl ClientState {
 }
 
 /// The `ACTOR` a client identifier names.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Client {
     /// The `ACTOR`'s container.
     pub party: Uuid,
     /// The state of its head.
     pub state: ClientState,
+    /// The provider its acts-for relationship names; `None` when it names
+    /// none.
+    pub provider: Option<Provider>,
+}
+
+/// The provider a client acts for: the party its acts-for
+/// `PARTY_RELATIONSHIP` targets (RM demographic
+/// `master02-demographic_package.adoc` §Party Relationships).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Provider {
+    /// The target's container.
+    pub party: Uuid,
+    /// The identifier the target `ORGANISATION` carries, `(issuer, id)`, by
+    /// which an access record names it; `None` when it carries none.
+    pub identifier: Option<(String, String)>,
 }
 
 /// One grant in force: an operation a `CAPABILITY` of a `ROLE` grants.
@@ -149,6 +164,12 @@ impl Grant {
 pub struct Credentials<'a>(Option<&'a Value>);
 
 impl<'a> Credentials<'a> {
+    /// The credentials `tree`, as a capability holds them.
+    #[must_use]
+    pub fn of(tree: Option<&'a Value>) -> Self {
+        Self(tree)
+    }
+
     /// The items below this tree whose `name` is `code`, in document order.
     #[must_use]
     pub fn named(self, code: &str) -> Vec<&'a Value> {
@@ -238,8 +259,8 @@ impl Capabilities {
     /// The `ACTOR` the caller's client identifier names; `None` for a party,
     /// or a client no `ACTOR` carries.
     #[must_use]
-    pub fn client(&self) -> Option<Client> {
-        self.client
+    pub fn client(&self) -> Option<&Client> {
+        self.client.as_ref()
     }
 
     /// Every grant in force.
@@ -259,6 +280,18 @@ impl Capabilities {
     #[must_use]
     pub fn holds(&self, operation: Operation) -> bool {
         self.of(operation).next().is_some()
+    }
+
+    /// Whether one grant of `operation` in force names every subject
+    /// namespace of `namespaces` in its `subject_namespace` elements; never
+    /// for no namespace, so a grant reaches only EHRs whose subject it names.
+    #[must_use]
+    pub fn covers(&self, operation: Operation, namespaces: &[&str]) -> bool {
+        !namespaces.is_empty()
+            && self.of(operation).any(|grant| {
+                let named = grant.credentials().texts(SCOPES[2]);
+                namespaces.iter().all(|namespace| named.contains(namespace))
+            })
     }
 }
 

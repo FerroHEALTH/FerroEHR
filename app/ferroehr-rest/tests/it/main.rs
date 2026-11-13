@@ -123,6 +123,7 @@ mod smart_metadata_file;
 mod spec_profile_http;
 mod stored_query_definition_http;
 mod subject_query_privacy;
+mod system_grants;
 mod template_adl14_http;
 mod terminology_http;
 mod trace_shape;

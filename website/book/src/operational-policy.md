@@ -16,8 +16,9 @@ access, is openEHR demographic data in the party store: the
 with every change a version with its committer. Policy that has no home in
 the openEHR demographic model is an [admin register](#the-admin-registers).
 FerroEHR stores, validates and protects the policy parties, and every
-request resolves its caller's grants from them; no check decides a request
-on a grant yet.
+request resolves its caller's grants from them. A system client's commits,
+imports and exports are decided by its grants, as
+[What a system client may do](#what-a-system-client-may-do) describes.
 
 No openEHR specification governs operational policy or where it is kept, and
 none gives a party an authorization meaning. The classes are the openEHR
@@ -207,7 +208,14 @@ in the element's `name`:
 | `not_before` | A `DV_DATE_TIME`: the instant before which the grant does not hold |
 | `not_after` | A `DV_DATE_TIME`: the instant after which the grant does not hold |
 | `template` | A template the grant writes |
-| `facility` | A facility the grant covers, an element or a `CLUSTER` |
+| `facility` | A facility the grant covers: an element whose value is a `DV_IDENTIFIER` (its `issuer` and `id`), or a `CLUSTER` of `issuer` with `identifier` or `identifier_prefix` |
+| `issuer` | In a `facility` `CLUSTER`: the issuer of the facility identifier |
+| `identifier` | In a `facility` `CLUSTER`: the facility identifier |
+| `identifier_prefix` | In a `facility` `CLUSTER`: a prefix every facility identifier it covers starts with |
+| `origin` | A `DV_CODED_TEXT` of this terminology: `relay` or `device` |
+| `relay` | As an `origin`: the grant commits relayed records of a person's act, such as HL7 v2 |
+| `device` | As an `origin`: the grant commits a device's registrations, which no person made |
+| `device_identifier_issuer` | The issuer of a device identifier a `device` grant may name as its composer |
 | `subject_namespace` | The `EHR_STATUS.subject.external_ref.namespace` of the EHRs it touches |
 | `acts_for` | On a `PARTY_RELATIONSHIP`: the source acts for the target |
 
@@ -284,7 +292,67 @@ which holds them for the duration of the request:
   each an `Operation` with its `ROLE`;
 - `credentials()` of a grant reads its credentials by the code of an
   element's name: `named`, `texts`, `codes`, `count`, `boolean`, and
-  `clusters` for a `CLUSTER` such as a facility.
+  `clusters` for a `CLUSTER` such as a facility;
+- `covers(operation, namespaces)` is whether one grant of the operation names
+  every subject namespace given; it never holds for none.
+
+### What a system client may do
+
+A system client is a token of a `machines` issuer. It resolves to the
+`ACTOR` carrying its client identifier, and what it may do is what that
+party's grants say. No key of `ferroehr.toml` declares a system client.
+
+**Commit into an EHR.** A system client commits only under a
+`commit_composition` grant, and only when its `ACTOR` holds an acts-for
+relationship to its provider; otherwise any commit into an EHR is answered
+`403`. A `COMPOSITION` is admitted when one `commit_composition` grant:
+
+- lists its template in a `template` element, or the commit is `403`;
+- has the origin that fits the act. A composer that is a `PARTY_IDENTIFIED`
+  whose identifier, of an issuer the grant lists as a
+  `device_identifier_issuer`, is the `feeder_audit.originating_system_audit.system_id`
+  is a device's registration and needs the origin `device`. Any other
+  `COMPOSITION` records a person's act, needs the origin `relay`, and names
+  the professional by an identifier, in the composer or in a performer
+  participation (EHDS Art. 13(4)). The wrong origin is `403`, a person act
+  naming nobody `422`;
+- covers the facility the `COMPOSITION` names, in
+  `EVENT_CONTEXT.health_care_facility` or, with no context, in
+  `feeder_audit.originating_system_audit.location`; otherwise `422`. The
+  server never writes the facility.
+
+A deletion is held to the templates the same way. A composer that names an
+`ORGANISATION` is `422`: the composer is a person.
+
+**Import.** `message_import_ehr` needs an `import_ehr` grant and
+`message_import_ehr_extract` an `import_ehr_extract` grant, either of which
+names in `subject_namespace` the subject namespace of the EHR: of each
+`EHR_STATUS` the extract carries and, for an extract into an existing EHR,
+of that EHR. A caller holding `[authz.rbac] import_role` imports as before.
+Any other import is `403`. The versions inside an extract keep their
+original committers only when their `creating_system_id` is in
+`[authz.import] trusted_systems`.
+
+**Export.** A system client exports an EHR with `message_export_ehrs` or
+`message_export_ehr_extracts` only under an `export_ehr_extract` grant whose
+`subject_namespace` names the EHR's subject namespace; any other export by a
+system client is `403`. A person's export is decided by the access rules it
+already meets.
+
+**Attribution.** Every commit of a system client, an import included,
+records as its committer a `PARTY_IDENTIFIED` named by the client, with the
+client identifier under the token issuer and an `external_ref` to the client's
+`ACTOR` (`PARTY_REF` type `ACTOR`). Every access record of a system client
+names the `ACTOR` as its party and the provider by the first `DV_IDENTIFIER`
+in the `details` of the `ORGANISATION` its acts-for relationship targets
+(EHDS Annex II 3.2(a)).
+
+**Checked at commit.** A `ROLE` whose grant lacks the terms its operation is
+checked by is refused with `422`, naming the capability: a
+`commit_composition` grant without an `origin` coding `relay` or `device`, a
+`device` grant without a `device_identifier_issuer`, a `facility` `CLUSTER`
+without one `issuer` and exactly one of `identifier` and `identifier_prefix`,
+and an import or export grant without a `subject_namespace`.
 
 ### The example policy archetypes
 
@@ -301,7 +369,6 @@ names them.
 | System `AGENT` | `openEHR-DEMOGRAPHIC-AGENT.system.v1` |
 | Acts-for relationship | `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1` |
 | System client `ROLE` | `openEHR-DEMOGRAPHIC-ROLE.system_client.v1` |
-| Data migration `ROLE` | `openEHR-DEMOGRAPHIC-ROLE.data_migration.v1` |
 | Federation partner `ROLE` | `openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1` |
 | Privileged `ROLE` | `openEHR-DEMOGRAPHIC-ROLE.privileged.v1` |
 
@@ -319,9 +386,10 @@ and every change from them are in
 `app/ferroehr/assets/definitions/policy/PROVENANCE.md`.
 
 **The contract.** The `ferroehr-operations` codes and the `client_id`
-identifier type make a party a policy party, in any archetype. The archetype
-ids above and the node ids below are what FerroEHR reads the terms of an
-example grant by, and every template and version built on an archetype keeps
+identifier type make a party a policy party, in any archetype, and FerroEHR
+reads the terms of a system client's grant by the codes in its elements'
+names, never by a node id. The archetype ids and the node ids below describe
+the examples, and every template and version built on an archetype keeps
 them. A breaking change to them is a new archetype major version (`.v2`),
 which FerroEHR does not take for the `.v1` kind. Each grant is a
 `CAPABILITY` at `/capabilities[id6]`, its kind the coded `name`, its
@@ -336,17 +404,12 @@ credentials at `/capabilities[id6]/credentials[id8]`, and its `time_validity` th
 | `PARTY_RELATIONSHIP.acts_for` | Acts-for code, `ferroehr-operations::acts_for` | `/details[id3]/items[id6]` | `DV_CODED_TEXT` |
 | every policy `ROLE` | Kind of grant (the capability's `name`) | `/capabilities[id6]/name` | `DV_CODED_TEXT` |
 | every policy `ROLE` | Operation, a `ferroehr-operations` code | `/capabilities[id6]/credentials[id8]/items[id90]` | `DV_CODED_TEXT` |
-| `ROLE.system_client` | Kind | `at10` relay, `at11` device | |
-| `ROLE.system_client` | Template written | `/capabilities[id6]/credentials[id8]/items[id9]` | `DV_TEXT` |
-| `ROLE.system_client` | Facility: issuer, identifier, identifier prefix | `/capabilities[id6]/credentials[id8]/items[id10]/items[id11]`, `[id12]`, `[id13]` | `DV_TEXT` |
-| `ROLE.system_client` | Device identifier issuer | `/capabilities[id6]/credentials[id8]/items[id14]` | `DV_TEXT` |
+| `ROLE.system_client` | Template written, named `template` | `/capabilities[id6]/credentials[id8]/items[id9]` | `DV_TEXT` |
+| `ROLE.system_client` | Facility, named `facility`: issuer, identifier, identifier prefix, named `issuer`, `identifier`, `identifier_prefix` | `/capabilities[id6]/credentials[id8]/items[id10]/items[id11]`, `[id12]`, `[id13]` | `DV_TEXT` |
+| `ROLE.system_client` | Device identifier issuer, named `device_identifier_issuer` | `/capabilities[id6]/credentials[id8]/items[id14]` | `DV_TEXT` |
 | `ROLE.system_client` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id15]`, `[id16]`, `[id17]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
-| `ROLE.data_migration` | Kind | `at10` data migration | |
-| `ROLE.data_migration` | Operation | `/capabilities[id6]/credentials[id8]/items[id9]`: `at20` import EHR, `at21` import EHR extract, `at22` export EHR extract | `DV_CODED_TEXT` |
-| `ROLE.data_migration` | Subject namespace | `/capabilities[id6]/credentials[id8]/items[id10]` | `DV_TEXT` |
-| `ROLE.data_migration` | Rate: requests per second, burst | `/capabilities[id6]/credentials[id8]/items[id11]/items[id12]`, `[id13]` | `DV_COUNT` |
-| `ROLE.data_migration` | Trusted creating system | `/capabilities[id6]/credentials[id8]/items[id14]` | `DV_TEXT` |
-| `ROLE.data_migration` | Not before, not after, authorisation reference | `/capabilities[id6]/credentials[id8]/items[id15]`, `[id16]`, `[id17]` | `DV_DATE_TIME`, `DV_DATE_TIME`, `DV_TEXT` |
+| `ROLE.system_client` | Origin, named `origin`: `relay` or `device` | `/capabilities[id6]/credentials[id8]/items[id18]` | `DV_CODED_TEXT` |
+| `ROLE.system_client` | Subject namespace, named `subject_namespace` | `/capabilities[id6]/credentials[id8]/items[id19]` | `DV_TEXT` |
 | `ROLE.federation_partner` | Kind (accessor) | `at10` person, `at11` organisation | |
 | `ROLE.federation_partner` | Agreement name, version, jurisdiction, exchange | `/capabilities[id6]/credentials[id8]/items[id9]`, `[id10]`, `[id11]`, `[id12]` | `DV_TEXT` |
 | `ROLE.federation_partner` | Purpose | `/capabilities[id6]/credentials[id8]/items[id13]`: `at20` care, `at21` keuring | `DV_CODED_TEXT` |
@@ -422,8 +485,11 @@ First its `AGENT`, `POST /demographic/agent`:
 
 Its grant is a `ROLE` it performs, `POST /demographic/role`, with the
 `AGENT` `5b8e2c91-7d4a-4f3e-8a1c-6e9f0b2d4c73` the first call returned as
-`performer`. One capability per origin, here `relay`: the templates it
-writes and the facility it writes at.
+`performer`. Its capability grants `commit_composition` with the origin
+`relay`, the template it writes and the facility it writes at, each element
+named by its `ferroehr-operations` code. A system that also registers
+device measurements holds a second capability with the origin `device` and
+its `device_identifier_issuer`.
 
 <!-- policy-example: system-client-role -->
 ```json
@@ -458,34 +524,36 @@ writes and the facility it writes at.
     "lower_included": true, "upper_included": false
   },
   "capabilities": [{
-    "_type": "CAPABILITY", "archetype_node_id": "id6",
-    "name": {
-      "_type": "DV_CODED_TEXT", "value": "Relay",
-      "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" }, "code_string": "at10" }
-    },
+    "_type": "CAPABILITY", "archetype_node_id": "id6", "name": { "_type": "DV_TEXT", "value": "Relay" },
     "credentials": {
       "_type": "ITEM_TREE", "archetype_node_id": "id8", "name": { "_type": "DV_TEXT", "value": "Grant" },
       "items": [
         {
           "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
-          "value": {
-            "_type": "DV_CODED_TEXT", "value": "Commit composition",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "commit_composition" }
-          }
+          "value": { "_type": "DV_CODED_TEXT", "value": "Commit composition", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "commit_composition" } }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id9", "name": { "_type": "DV_TEXT", "value": "Template written" },
+          "_type": "ELEMENT", "archetype_node_id": "id18",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Origin", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "origin" } },
+          "value": { "_type": "DV_CODED_TEXT", "value": "Relay", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "relay" } }
+        },
+        {
+          "_type": "ELEMENT", "archetype_node_id": "id9",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Template written", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "template" } },
           "value": { "_type": "DV_TEXT", "value": "openEHR-EHR-COMPOSITION.report-result.v1" }
         },
         {
-          "_type": "CLUSTER", "archetype_node_id": "id10", "name": { "_type": "DV_TEXT", "value": "Facility" },
+          "_type": "CLUSTER", "archetype_node_id": "id10",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Facility", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "facility" } },
           "items": [
             {
-              "_type": "ELEMENT", "archetype_node_id": "id11", "name": { "_type": "DV_TEXT", "value": "Issuer" },
+              "_type": "ELEMENT", "archetype_node_id": "id11",
+              "name": { "_type": "DV_CODED_TEXT", "value": "Issuer", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "issuer" } },
               "value": { "_type": "DV_TEXT", "value": "urn:oid:2.16.528.1.1007.3.3" }
             },
             {
-              "_type": "ELEMENT", "archetype_node_id": "id12", "name": { "_type": "DV_TEXT", "value": "Identifier" },
+              "_type": "ELEMENT", "archetype_node_id": "id12",
+              "name": { "_type": "DV_CODED_TEXT", "value": "Identifier", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "identifier" } },
               "value": { "_type": "DV_TEXT", "value": "01234567" }
             }
           ]
@@ -569,26 +637,29 @@ relationship goes in this second version.
 }
 ```
 
-#### A data migration
+#### A migration
 
-A migration job imports the EHRs of a legacy system and its extracts over
-one night. Its `AGENT` is written as above; its grant is a `ROLE` of the
-data migration template, `POST /demographic/role`. The capability's
-`time_validity` holds the migration to two days, and `Not before` and
-`Not after` narrow it to the night between them.
+A migration is a system client like any other: its `AGENT` is written as
+above, and its `ROLE` holds the import and export operations. Here a job
+imports the EHRs of a legacy system and its extracts over one night, and may
+export them again to check the result. The capability's `time_validity`
+holds the migration to two days, `Not before` and `Not after` narrow it to
+the night between them, and `subject_namespace` limits it to the legacy
+system's patients. `[authz.grants] allowed` must admit `import_ehr`,
+`import_ehr_extract` and `export_ehr_extract`.
 
-<!-- policy-example: data-migration-role -->
+<!-- policy-example: migration-role -->
 ```json
 {
   "_type": "ROLE",
-  "archetype_node_id": "openEHR-DEMOGRAPHIC-ROLE.data_migration.v1",
+  "archetype_node_id": "openEHR-DEMOGRAPHIC-ROLE.system_client.v1",
   "archetype_details": {
     "_type": "ARCHETYPED",
-    "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-ROLE.data_migration.v1" },
-    "template_id": { "_type": "TEMPLATE_ID", "value": "openEHR-DEMOGRAPHIC-ROLE.data_migration.v1.0.0" },
+    "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-ROLE.system_client.v1" },
+    "template_id": { "_type": "TEMPLATE_ID", "value": "openEHR-DEMOGRAPHIC-ROLE.system_client.v1.0.0" },
     "rm_version": "1.1.0"
   },
-  "name": { "_type": "DV_TEXT", "value": "Data migration" },
+  "name": { "_type": "DV_TEXT", "value": "System client" },
   "identities": [{
     "_type": "PARTY_IDENTITY", "archetype_node_id": "id2", "name": { "_type": "DV_TEXT", "value": "Role name" },
     "details": {
@@ -604,11 +675,7 @@ data migration template, `POST /demographic/role`. The capability's
     "id": { "_type": "HIER_OBJECT_ID", "value": "5b8e2c91-7d4a-4f3e-8a1c-6e9f0b2d4c73" }
   },
   "capabilities": [{
-    "_type": "CAPABILITY", "archetype_node_id": "id6",
-    "name": {
-      "_type": "DV_CODED_TEXT", "value": "Data migration",
-      "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" }, "code_string": "at10" }
-    },
+    "_type": "CAPABILITY", "archetype_node_id": "id6", "name": { "_type": "DV_TEXT", "value": "Migration" },
     "time_validity": {
       "_type": "DV_INTERVAL",
       "lower": { "_type": "DV_DATE", "value": "2026-12-05" },
@@ -621,59 +688,29 @@ data migration template, `POST /demographic/role`. The capability's
       "items": [
         {
           "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
-          "value": {
-            "_type": "DV_CODED_TEXT", "value": "Import EHR",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "import_ehr" }
-          }
+          "value": { "_type": "DV_CODED_TEXT", "value": "Import EHR", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "import_ehr" } }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
-          "value": {
-            "_type": "DV_CODED_TEXT", "value": "Import EHR extract",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "import_ehr_extract" }
-          }
+          "value": { "_type": "DV_CODED_TEXT", "value": "Import EHR extract", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "import_ehr_extract" } }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id9", "name": { "_type": "DV_TEXT", "value": "Operation" },
-          "value": {
-            "_type": "DV_CODED_TEXT", "value": "Import EHR",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" }, "code_string": "at20" }
-          }
+          "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
+          "value": { "_type": "DV_CODED_TEXT", "value": "Export EHR extract", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "export_ehr_extract" } }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id9", "name": { "_type": "DV_TEXT", "value": "Operation" },
-          "value": {
-            "_type": "DV_CODED_TEXT", "value": "Import EHR extract",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "local" }, "code_string": "at21" }
-          }
-        },
-        {
-          "_type": "ELEMENT", "archetype_node_id": "id10", "name": { "_type": "DV_TEXT", "value": "Subject namespace" },
+          "_type": "ELEMENT", "archetype_node_id": "id19",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Subject namespace", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "subject_namespace" } },
           "value": { "_type": "DV_TEXT", "value": "nl.legacy-his.patients" }
         },
         {
-          "_type": "CLUSTER", "archetype_node_id": "id11", "name": { "_type": "DV_TEXT", "value": "Rate" },
-          "items": [
-            {
-              "_type": "ELEMENT", "archetype_node_id": "id12", "name": { "_type": "DV_TEXT", "value": "Requests per second" },
-              "value": { "_type": "DV_COUNT", "magnitude": 50 }
-            },
-            {
-              "_type": "ELEMENT", "archetype_node_id": "id13", "name": { "_type": "DV_TEXT", "value": "Burst" },
-              "value": { "_type": "DV_COUNT", "magnitude": 100 }
-            }
-          ]
-        },
-        {
-          "_type": "ELEMENT", "archetype_node_id": "id14", "name": { "_type": "DV_TEXT", "value": "Trusted creating system" },
-          "value": { "_type": "DV_TEXT", "value": "legacy-his.example.org" }
-        },
-        {
-          "_type": "ELEMENT", "archetype_node_id": "id15", "name": { "_type": "DV_TEXT", "value": "Not before" },
+          "_type": "ELEMENT", "archetype_node_id": "id15",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Not before", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "not_before" } },
           "value": { "_type": "DV_DATE_TIME", "value": "2026-12-05T22:00:00Z" }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id16", "name": { "_type": "DV_TEXT", "value": "Not after" },
+          "_type": "ELEMENT", "archetype_node_id": "id16",
+          "name": { "_type": "DV_CODED_TEXT", "value": "Not after", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "not_after" } },
           "value": { "_type": "DV_DATE_TIME", "value": "2026-12-06T05:00:00Z" }
         },
         {
@@ -685,6 +722,15 @@ data migration template, `POST /demographic/role`. The capability's
   }]
 }
 ```
+
+The job then calls `POST /message/import` (`message_import_ehr`) and
+`POST /message/import/{ehr_id}` (`message_import_ehr_extract`) with its own
+token, and `POST /message/export` to read the result back. Each
+import is committed under the job's `ACTOR` and is an access record that names
+it and the provider it acts for. The versions of an extract keep their legacy
+committers when `[authz.import] trusted_systems` lists the legacy system's
+`creating_system_id`; otherwise an extract naming a local party is refused.
+When the night ends the grant holds no longer, with no change to anything.
 
 #### A federation partner
 

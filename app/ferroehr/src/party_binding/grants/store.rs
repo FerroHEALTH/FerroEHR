@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Row I/O for the grant rows: `binding_client`, `binding_capability` and the
-//! revision that moves with both.
+//! Row I/O for the grant rows: `binding_client`, `binding_capability`,
+//! `binding_provider` and the revision that moves with them.
 //!
 //! A commit of an `ACTOR` or a `ROLE` replaces the rows of that party with the
 //! ones its new head holds, in its own transaction; a change moves the
@@ -30,6 +30,15 @@ use crate::versioning::Kind;
 /// The channel a grant change notifies and every replica listens on.
 pub const CHANNEL: &str = "ferroehr_policy_grants";
 
+/// The kinds whose heads hold grant rows: every `ACTOR` and the `ROLE`.
+pub(crate) const HOLDERS: [Kind; 5] = [
+    Kind::Agent,
+    Kind::Person,
+    Kind::Organisation,
+    Kind::Group,
+    Kind::Role,
+];
+
 /// The `version_lifecycle_state` code of a logically deleted head.
 const DELETED: &str = "523";
 
@@ -55,8 +64,8 @@ impl GrantHead<'_> {
 
 /// Replaces the grant rows of `head`, a party of `kind`, on its commit
 /// transaction `tx`; moves the revision and notifies when they changed.
-/// An `ACTOR` holds client rows and a `ROLE` capability rows; every other
-/// kind holds none.
+/// An `ACTOR` holds client rows, an `ORGANISATION` its provider row too, and
+/// a `ROLE` capability rows; every other kind holds none.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure, the unique violation of
@@ -67,9 +76,8 @@ pub(crate) async fn write(
     head: GrantHead<'_>,
 ) -> Result<(), StorageError> {
     let changed = match kind {
-        Kind::Agent | Kind::Person | Kind::Organisation | Kind::Group => {
-            write_clients(tx, head).await?
-        }
+        Kind::Organisation => write_clients(tx, head).await? | write_provider(tx, head).await?,
+        Kind::Agent | Kind::Person | Kind::Group => write_clients(tx, head).await?,
         Kind::Role => write_role(tx, head).await?,
         _ => false,
     };
@@ -98,18 +106,49 @@ async fn write_clients(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<boo
         .map(|(issuer, client)| (issuer.as_str(), client.as_str()))
         .unzip();
     let came = sqlx::query(
-        "INSERT INTO binding_client (party_id, issuer, client_id, lifecycle_state) \
-         SELECT $1, t.issuer, t.client_id, $4 \
+        "INSERT INTO binding_client (party_id, issuer, client_id, lifecycle_state, provider_id) \
+         SELECT $1, t.issuer, t.client_id, $4, $5 \
          FROM unnest($2::text[], $3::text[]) AS t(issuer, client_id)",
     )
     .bind(head.vo_id)
     .bind(&issuers)
     .bind(&clients)
     .bind(head.lifecycle_state)
+    .bind(facts.grants.provider)
     .execute(&mut *tx)
     .await?
     .rows_affected();
     Ok(gone > 0 || came > 0)
+}
+
+/// Replaces the provider row of the `ORGANISATION` `head`; whether the row
+/// changed.
+async fn write_provider(tx: &mut PgConnection, head: GrantHead<'_>) -> Result<bool, StorageError> {
+    let identifier = head
+        .live()
+        .and_then(|facts| facts.grants.identifier.as_ref());
+    let Some((issuer, id)) = identifier else {
+        let gone = sqlx::query("DELETE FROM binding_provider WHERE party_id = $1")
+            .bind(head.vo_id)
+            .execute(&mut *tx)
+            .await?
+            .rows_affected();
+        return Ok(gone > 0);
+    };
+    let written = sqlx::query(
+        "INSERT INTO binding_provider (party_id, issuer, id) VALUES ($1, $2, $3) \
+         ON CONFLICT (party_id) DO UPDATE SET issuer = EXCLUDED.issuer, id = EXCLUDED.id, \
+             written_at = now() \
+         WHERE (binding_provider.issuer, binding_provider.id) \
+               IS DISTINCT FROM (EXCLUDED.issuer, EXCLUDED.id)",
+    )
+    .bind(head.vo_id)
+    .bind(issuer)
+    .bind(id)
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+    Ok(written > 0)
 }
 
 /// Replaces the capability rows of the `ROLE` `head`; whether any row went or
@@ -218,6 +257,7 @@ pub(crate) async fn clear(tx: &mut PgConnection) -> Result<(), StorageError> {
     for statement in [
         "DELETE FROM binding_client",
         "DELETE FROM binding_capability",
+        "DELETE FROM binding_provider",
     ] {
         sqlx::query(statement).execute(&mut *tx).await?;
     }
@@ -265,7 +305,12 @@ pub(crate) async fn erase(tx: &mut PgConnection, vo_ids: &[Uuid]) -> Result<(), 
     .execute(&mut *tx)
     .await?
     .rows_affected();
-    if clients > 0 || capabilities > 0 {
+    let providers = sqlx::query("DELETE FROM binding_provider WHERE party_id = ANY($1)")
+        .bind(vo_ids)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
+    if clients > 0 || capabilities > 0 || providers > 0 {
         revise(tx).await?;
         super::live::note_change();
     }
@@ -279,6 +324,10 @@ pub(crate) struct ClientRow {
     pub(crate) issuer: String,
     pub(crate) client_id: String,
     pub(crate) lifecycle_state: String,
+    /// The container the `ACTOR`'s acts-for relationship targets.
+    pub(crate) provider_id: Option<Uuid>,
+    /// That provider's identifier, `(issuer, id)`, when it carries one.
+    pub(crate) provider: Option<(String, String)>,
 }
 
 /// One stored capability, with its dates as `[lower, upper)` bounds.
@@ -312,7 +361,7 @@ impl Dates {
 }
 
 /// Everything the grant rows hold, read in one snapshot: the revision, every
-/// client identifier and every capability.
+/// client identifier with its provider, and every capability.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Loaded {
     pub(crate) revision: i64,
@@ -332,17 +381,23 @@ pub(crate) async fn load(conn: &mut PgConnection) -> Result<Loaded, StorageError
     let revision = revision(&mut tx).await?;
     let mut clients = Vec::new();
     for row in sqlx::query(
-        "SELECT party_id, issuer, client_id, lifecycle_state FROM binding_client \
-         ORDER BY issuer, client_id",
+        "SELECT c.party_id, c.issuer, c.client_id, c.lifecycle_state, c.provider_id, \
+                p.issuer AS provider_issuer, p.id AS provider_ident \
+         FROM binding_client c LEFT JOIN binding_provider p ON p.party_id = c.provider_id \
+         ORDER BY c.issuer, c.client_id",
     )
     .fetch_all(&mut *tx)
     .await?
     {
+        let provider_issuer: Option<String> = row.try_get("provider_issuer")?;
+        let provider_ident: Option<String> = row.try_get("provider_ident")?;
         clients.push(ClientRow {
             party_id: row.try_get("party_id")?,
             issuer: row.try_get("issuer")?,
             client_id: row.try_get("client_id")?,
             lifecycle_state: row.try_get("lifecycle_state")?,
+            provider_id: row.try_get("provider_id")?,
+            provider: provider_issuer.zip(provider_ident),
         });
     }
     let mut capabilities = Vec::new();
