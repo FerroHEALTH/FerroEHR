@@ -113,7 +113,7 @@ Details that decide behaviour:
   password hashes, signing-key secrets and S3 secret keys render as
   `***`; every URL that can carry credentials (database, the FHIR audit
   feed, the syslog audit repository, the terminology server and its token
-  endpoint, the remote policy server, the OTLP collector, the object store,
+  endpoint, the OTLP collector, the object store,
   the SMART platform and public base URLs, the SCIM public base URL) keeps
   its host and path and masks the embedded credentials and query
   (`postgres://***@host:5432/db`). The usage-report endpoint refuses

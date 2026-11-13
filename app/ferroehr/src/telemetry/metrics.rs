@@ -39,8 +39,6 @@ pub const AUTH_FAILURES: &str = "auth_failures";
 pub const BINDING_REFUSALS: &str = "binding_refusals";
 /// Cedar authorization decisions (`result`).
 pub const AUTHZ_CEDAR_DECISIONS: &str = "authz_cedar_decisions";
-/// Remote-PDP authorization calls (`result`).
-pub const AUTHZ_REMOTE_PDP_CALLS: &str = "authz_remote_pdp_calls";
 /// Database pool connections (`state`), sampled as a gauge.
 pub const DB_POOL_CONNECTIONS: &str = "db_pool_connections";
 /// Database connection-acquire latency.
@@ -131,8 +129,6 @@ pub struct Metrics {
     pub binding_refusals: Counter<u64>,
     /// Cedar authorization decisions.
     pub authz_cedar_decisions: Counter<u64>,
-    /// Remote-PDP authorization calls.
-    pub authz_remote_pdp_calls: Counter<u64>,
     /// Database connection-acquire latency, seconds.
     pub db_pool_acquire_duration: Histogram<f64>,
     /// Service transactions by outcome.
@@ -191,10 +187,6 @@ impl Metrics {
             authz_cedar_decisions: meter
                 .u64_counter(AUTHZ_CEDAR_DECISIONS)
                 .with_description("Cedar authorization decisions by result")
-                .build(),
-            authz_remote_pdp_calls: meter
-                .u64_counter(AUTHZ_REMOTE_PDP_CALLS)
-                .with_description("Remote-PDP authorization calls by result")
                 .build(),
             db_pool_acquire_duration: meter
                 .f64_histogram(DB_POOL_ACQUIRE_DURATION)
@@ -353,7 +345,6 @@ mod tests {
             AUTH_FAILURES,
             BINDING_REFUSALS,
             AUTHZ_CEDAR_DECISIONS,
-            AUTHZ_REMOTE_PDP_CALLS,
             DB_POOL_CONNECTIONS,
             DB_POOL_ACQUIRE_DURATION,
             DB_TRANSACTIONS,

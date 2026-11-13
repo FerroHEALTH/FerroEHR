@@ -15,12 +15,9 @@
 //! (`[management.endpoints]`, one level per endpoint) is its single authority,
 //! enforced by the per-route guard in `ferroehr-rest`.
 
-use std::collections::BTreeMap;
-
 use ferrohealth_secret::secret_url::SecretUrl;
 use serde::{Deserialize, Serialize};
 
-use crate::config::abac_rules::RemoteConfig;
 use crate::party_binding::grants::operation::GrantCeiling;
 
 /// The server-wide disposition for an EHR that carries no
@@ -136,8 +133,8 @@ impl RbacConfig {
     }
 }
 
-/// The ABAC policy engine selector (`abac.engine`). `cedar` is the
-/// embedded default; `remote` delegates to an external PDP.
+/// The ABAC policy engine selector (`abac.engine`). `cedar`, the embedded
+/// engine, is its one value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
@@ -146,57 +143,6 @@ pub enum AbacEngineKind {
     /// register.
     #[default]
     Cedar,
-    /// The remote policy-decision-point (`abac.remote.url`).
-    Remote,
-}
-
-/// One flat parameter a remote PDP body may carry: the resolved
-/// attribute keys, exactly `organization` / `patient` / `template` /
-/// `category` / `origin` on the wire.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(rename_all = "snake_case")]
-pub enum AbacParam {
-    /// The caller's organization (from `abac.organization_claim`).
-    Organization,
-    /// The patient the resource is about (from `abac.patient_claim` / EHR subject).
-    Patient,
-    /// The resource's template id.
-    Template,
-    /// The EHDS categories of the resource's data (EHDS Annex II 3.4).
-    Category,
-    /// The origins of the resource's data (EHDS Annex II 3.4, a `data_origin` grant).
-    Origin,
-}
-
-impl AbacParam {
-    /// The key this attribute takes in the flat PDP request body — the wire name
-    /// a policy author writes their rules against, so it is part of the
-    /// deployment's contract with its PDP.
-    #[must_use]
-    pub const fn wire_key(self) -> &'static str {
-        match self {
-            AbacParam::Organization => "organization",
-            AbacParam::Patient => "patient",
-            AbacParam::Template => "template",
-            AbacParam::Category => "category",
-            AbacParam::Origin => "origin",
-        }
-    }
-}
-
-/// A per-resource-kind policy binding: the policy name appended to the
-/// remote PDP base URL, and which resolved parameters its request body carries.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
-pub struct PolicyRule {
-    /// The policy name (the path segment appended to `abac.remote.url`).
-    pub name: String,
-    /// The parameters the PDP body carries; empty = an unparameterized policy.
-    #[serde(default)]
-    pub parameters: Vec<AbacParam>,
 }
 
 /// The fine-grained attribute-based access-control settings.
@@ -233,26 +179,10 @@ pub struct AbacConfig {
     /// otherwise. No openEHR spec governs the claim — our own extension.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub patient_namespace: Option<String>,
-    /// Remote-PDP settings.
-    pub remote: RemoteConfig,
-    /// Whether DIRECTORY (FOLDER) operations are submitted to the PDP
-    /// (default `false`).
-    ///
-    /// An engine-independent switch: the alternative — inferring the opt-in from
-    /// a `directory` entry in [`Self::policy`] — is a remote-PDP-shaped map, so a
-    /// Cedar deployment could only enable the check by inventing a policy name
-    /// its engine never reads. No openEHR spec governs authorization — our own
-    /// design/extension.
+    /// Whether DIRECTORY (FOLDER) operations are submitted to the policy
+    /// engine (default `false`). No openEHR spec governs authorization — our
+    /// own design/extension.
     pub check_directory: bool,
-    /// Per-resource-kind policy bindings, keyed by the canonical kind name
-    /// (`ehr`, `ehr_status`, `composition`, `contribution`, `query`,
-    /// `directory`).
-    ///
-    /// With `engine = remote` every kind the enforcement point consults needs an
-    /// entry ([`REQUIRED_REMOTE_POLICY_KINDS`](crate::config::abac_rules::REQUIRED_REMOTE_POLICY_KINDS)), checked at boot: a runtime
-    /// "kind not configured" branch can only fail closed, and a deny on
-    /// live traffic is a worse answer than a refusal to start.
-    pub policy: BTreeMap<String, PolicyRule>,
 }
 
 impl Default for AbacConfig {
@@ -263,9 +193,7 @@ impl Default for AbacConfig {
             organization_claim: "organization_id".to_owned(),
             patient_claim: "patient_id".to_owned(),
             patient_namespace: None,
-            remote: RemoteConfig::default(),
             check_directory: false,
-            policy: BTreeMap::new(),
         }
     }
 }
@@ -367,47 +295,19 @@ pub enum AuthzConfigError {
     /// A required role name was blank.
     #[error("authz.rbac.{0} must not be empty")]
     EmptyRole(&'static str),
-    /// A policy key does not name a known resource kind.
-    #[error(
-        "authz.abac.policy.{0} is not a known resource kind \
-         (ehr, ehr_status, composition, contribution, query, directory)"
-    )]
-    UnknownPolicyKind(String),
-    /// A `template` parameter was configured for `ehr`/`ehr_status`, whose
-    /// resources carry no template.
-    #[error("authz.abac.policy.{0} must not take the `template` parameter")]
-    TemplateParamIllegal(&'static str),
-    /// `engine = remote` without a configured base URL.
-    #[error("authz.abac.remote.url is required when abac.engine = remote")]
-    RemoteServerMissing,
-    /// The remote base URL does not end with `/` (the policy name is appended);
-    /// carries the URL with its `userinfo` masked.
-    #[error("authz.abac.remote.url must end with '/' (got {0:?})")]
-    RemoteServerTrailingSlash(String),
-    /// `engine = remote` without a policy for a kind the enforcement point
-    /// consults — the runtime branch can only fail closed, so it is refused here.
-    #[error(
-        "authz.abac.policy.{0} is required when abac.engine = remote: every resource kind the \
-         enforcement point consults must name a policy, or its requests can only be denied"
-    )]
-    RemotePolicyMissing(&'static str),
 }
 
 impl AuthzConfig {
     /// Validate the configuration at boot. All defaults are valid.
     ///
     /// # Errors
-    /// [`AuthzConfigError`] when a role name is blank or an ABAC setting does
-    /// not hold.
+    /// [`AuthzConfigError`] when a role name is blank.
     pub fn validate(&self) -> Result<(), AuthzConfigError> {
         if self.rbac.admin_role.trim().is_empty() {
             return Err(AuthzConfigError::EmptyRole("admin_role"));
         }
         if self.rbac.readonly_role.trim().is_empty() {
             return Err(AuthzConfigError::EmptyRole("readonly_role"));
-        }
-        if self.abac.enabled {
-            self.abac.validate()?;
         }
         Ok(())
     }
@@ -417,7 +317,6 @@ impl AuthzConfig {
 mod tests {
 
     use super::*;
-    use crate::config::abac_rules::REQUIRED_REMOTE_POLICY_KINDS;
 
     #[test]
     fn defaults_are_valid() {
@@ -465,222 +364,26 @@ mod tests {
     }
 
     #[test]
-    fn abac_disabled_by_default_and_skips_validation() {
+    fn abac_disabled_by_default() {
         let c = AuthzConfig::default();
         assert!(!c.abac.enabled);
         assert_eq!(c.abac.engine, AbacEngineKind::Cedar);
-        // A misconfigured-but-disabled ABAC section is not validated.
-        let c = AuthzConfig {
-            abac: AbacConfig {
-                enabled: false,
-                engine: AbacEngineKind::Remote,
-                remote: RemoteConfig {
-                    ..RemoteConfig::default()
-                },
-                ..AbacConfig::default()
-            },
-            ..AuthzConfig::default()
-        };
         assert!(c.validate().is_ok());
     }
 
+    /// DIRECTORY gating is its own switch, off by default.
     #[test]
-    fn template_param_illegal_on_ehr_and_ehr_status() {
-        for kind in ["ehr", "ehr_status"] {
-            let mut policy = BTreeMap::new();
-            policy.insert(
-                kind.to_owned(),
-                PolicyRule {
-                    name: "p".to_owned(),
-                    parameters: vec![AbacParam::Template],
-                },
-            );
-            let c = AuthzConfig {
-                abac: AbacConfig {
-                    enabled: true,
-                    engine: AbacEngineKind::Cedar,
-                    policy,
-                    ..AbacConfig::default()
-                },
-                ..AuthzConfig::default()
-            };
-            assert!(matches!(
-                c.validate(),
-                Err(AuthzConfigError::TemplateParamIllegal(_))
-            ));
-        }
-    }
-
-    #[test]
-    fn unknown_policy_kind_rejected() {
-        let mut policy = BTreeMap::new();
-        policy.insert(
-            "nonsense".to_owned(),
-            PolicyRule {
-                name: "p".to_owned(),
-                parameters: vec![],
-            },
-        );
-        let c = AuthzConfig {
-            abac: AbacConfig {
-                enabled: true,
-                policy,
-                ..AbacConfig::default()
-            },
-            ..AuthzConfig::default()
-        };
-        assert_eq!(
-            c.validate(),
-            Err(AuthzConfigError::UnknownPolicyKind("nonsense".to_owned()))
-        );
-    }
-
-    /// A `policy` entry for every kind [`REQUIRED_REMOTE_POLICY_KINDS`] names.
-    fn full_remote_policy_map() -> BTreeMap<String, PolicyRule> {
-        REQUIRED_REMOTE_POLICY_KINDS
-            .iter()
-            .map(|kind| {
-                (
-                    (*kind).to_owned(),
-                    PolicyRule {
-                        name: format!("{kind}-access"),
-                        parameters: vec![],
-                    },
-                )
-            })
-            .collect()
-    }
-
-    #[test]
-    fn remote_server_must_be_present_and_slash_terminated() {
-        let base = AbacConfig {
-            enabled: true,
-            engine: AbacEngineKind::Remote,
-            policy: full_remote_policy_map(),
-            ..AbacConfig::default()
-        };
-        let missing = AuthzConfig {
-            abac: base.clone(),
-            ..AuthzConfig::default()
-        };
-        assert_eq!(
-            missing.validate(),
-            Err(AuthzConfigError::RemoteServerMissing)
-        );
-
-        let no_slash = AuthzConfig {
-            abac: AbacConfig {
-                remote: RemoteConfig {
-                    endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                        url: SecretUrl::new("http://pdp:3001/exec"),
-                        ..RemoteConfig::default().endpoint
-                    },
-                },
-                ..base.clone()
-            },
-            ..AuthzConfig::default()
-        };
-        assert!(matches!(
-            no_slash.validate(),
-            Err(AuthzConfigError::RemoteServerTrailingSlash(_))
-        ));
-
-        let ok = AuthzConfig {
-            abac: AbacConfig {
-                remote: RemoteConfig {
-                    endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                        url: SecretUrl::new("http://pdp:3001/exec/"),
-                        ..RemoteConfig::default().endpoint
-                    },
-                },
-                ..base
-            },
-            ..AuthzConfig::default()
-        };
-        assert!(ok.validate().is_ok());
-    }
-
-    /// A remote PDP with no policy for a kind the enforcement point consults can
-    /// only be answered by a fail-closed deny at runtime, which would break live
-    /// traffic; the misconfiguration is therefore refused at boot. No openEHR
-    /// spec governs authorization — our own design/extension.
-    #[test]
-    fn remote_engine_without_a_policy_per_kind_is_a_boot_error() {
-        let remote = |policy: BTreeMap<String, PolicyRule>| AuthzConfig {
-            abac: AbacConfig {
-                enabled: true,
-                engine: AbacEngineKind::Remote,
-                remote: RemoteConfig {
-                    endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                        url: SecretUrl::new("http://pdp:3001/exec/"),
-                        ..RemoteConfig::default().endpoint
-                    },
-                },
-                policy,
-                ..AbacConfig::default()
-            },
-            ..AuthzConfig::default()
-        };
-
-        // An empty map names the first missing kind.
-        assert_eq!(
-            remote(BTreeMap::new()).validate(),
-            Err(AuthzConfigError::RemotePolicyMissing(
-                REQUIRED_REMOTE_POLICY_KINDS[0]
-            ))
-        );
-
-        // Each kind is required in turn: drop exactly one from a full map.
-        for kind in REQUIRED_REMOTE_POLICY_KINDS {
-            let mut policy = full_remote_policy_map();
-            policy.remove(kind);
-            assert_eq!(
-                remote(policy).validate(),
-                Err(AuthzConfigError::RemotePolicyMissing(kind)),
-                "a remote PDP with no {kind} policy must not boot"
-            );
-        }
-
-        // The full map boots; `directory` is required only with the opt-in on.
-        assert!(remote(full_remote_policy_map()).validate().is_ok());
-        let mut with_directory_check = remote(full_remote_policy_map());
-        with_directory_check.abac.check_directory = true;
-        assert_eq!(
-            with_directory_check.validate(),
-            Err(AuthzConfigError::RemotePolicyMissing("directory"))
-        );
-
-        // The Cedar engine reads its policies from the Cedar register, so the
-        // map is not required there.
-        let cedar = AuthzConfig {
-            abac: AbacConfig {
-                enabled: true,
-                engine: AbacEngineKind::Cedar,
-                ..AbacConfig::default()
-            },
-            ..AuthzConfig::default()
-        };
-        assert!(cedar.validate().is_ok());
-    }
-
-    /// DIRECTORY gating is its own switch, not an inference from the remote-PDP
-    /// policy map, so it is off by default and settable under either engine.
-    #[test]
-    fn check_directory_defaults_off_and_is_engine_independent() {
+    fn check_directory_defaults_off() {
         assert!(!AbacConfig::default().check_directory);
         let cedar = AuthzConfig {
             abac: AbacConfig {
                 enabled: true,
-                engine: AbacEngineKind::Cedar,
                 check_directory: true,
                 ..AbacConfig::default()
             },
             ..AuthzConfig::default()
         };
-        assert!(
-            cedar.validate().is_ok(),
-            "the Cedar engine needs no policy-map entry to gate DIRECTORY"
-        );
+        assert!(cedar.validate().is_ok());
     }
 
     /// The Cedar engine takes its policy set from the Cedar register, so it
@@ -703,19 +406,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn remote_timeouts_default() {
-        let c = AbacConfig::default();
-        assert_eq!(
-            c.remote.endpoint.connect_timeout,
-            Some(ferrohealth_config::units::Duration::from_secs(2))
-        );
-        assert_eq!(
-            c.remote.endpoint.timeout,
-            ferrohealth_config::units::Duration::from_secs(5)
-        );
-    }
-
     /// Every section here carries a container-level `#[serde(default)]`, which
     /// serde fills from the struct's own [`Default`] — so the `Default` impl is
     /// the single source of defaults and no field needs its own default
@@ -723,20 +413,14 @@ mod tests {
     /// unmentioned key at its `Default` value.
     #[test]
     fn a_partial_table_falls_back_to_the_default_impl() {
-        let parsed: AuthzConfig = toml::from_str(
-            "[rbac]\nadmin_role = \"OPERATOR\"\n\n[abac]\nenabled = true\n\n\
-             [abac.remote.endpoint]\nconnect_timeout = \"750ms\"\n",
-        )
-        .expect("partial authz table");
+        let parsed: AuthzConfig =
+            toml::from_str("[rbac]\nadmin_role = \"OPERATOR\"\n\n[abac]\nenabled = true\n")
+                .expect("partial authz table");
 
         let default = AuthzConfig::default();
         // The specified keys took the file's values.
         assert_eq!(parsed.rbac.admin_role, "OPERATOR");
         assert!(parsed.abac.enabled);
-        assert_eq!(
-            parsed.abac.remote.endpoint.connect_timeout,
-            Some(ferrohealth_config::units::Duration::from_millis(750))
-        );
         // Every unmentioned key came from the Default impl, not from
         // `<field type>::default()` (which would be `false`/`0`/empty).
         assert_eq!(parsed.rbac.enabled, default.rbac.enabled);

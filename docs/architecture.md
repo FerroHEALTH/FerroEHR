@@ -399,8 +399,7 @@ which is what makes an optional stage safe to disable:
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an
    OAuth2 scope is NOT a role (RFC 6749 §3.3).
-4. **ABAC** — off by default. A policy engine (embedded Cedar, or an external
-   PDP) decides over subject attributes (subject, roles, scopes, organization,
+4. **ABAC** — off by default. The embedded Cedar engine decides over subject attributes (subject, roles, scopes, organization,
    patient) and resource attributes (patient, template), fanned out over
    multi-valued attributes as a cartesian product with **all-must-permit** and
    short-circuit deny.
@@ -408,12 +407,14 @@ which is what makes an optional stage safe to disable:
    can only narrow. Disabled SMART produces zero wire drift.
 
 **Deny-by-default and fail-closed, in both senses.** No stage permits by
-omission: a gate reached without a principal refuses; an unconfigured resource
-kind on the external PDP denies (and the missing rule is a boot error); Cedar is
+omission: a gate reached without a principal refuses; Cedar is
 deny-by-default with `forbid` overriding `permit`. And a stage that cannot
 DECIDE is never read as a decision — an unreachable token issuer is `503`, a
-policy server answering `5xx` or a Cedar policy that errors during evaluation is
-a fail-closed `500`. Silence is never consent, and a broken control never looks
+Cedar policy that errors during evaluation is a fail-closed `500`. FerroEHR
+calls no remote policy decision point: the owner removed it on 2026-11-13
+(#5487, #5516), since it is a second policy world over HTTP that receives none
+of the openEHR access facts, and ITS-REST 1.1.0 mandates no authorization
+scheme (`Requests_and_responses.md` §Authentication and authorization). Silence is never consent, and a broken control never looks
 like a policy outcome.
 
 Configuration is boot-validated rather than degraded at the first request: a

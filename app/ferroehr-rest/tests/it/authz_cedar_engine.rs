@@ -2,25 +2,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Cedar engine tests over this CDR's model: the shipped example policies
-//! produce the expected golden decisions, and the Cedar engine is
-//! **behaviourally identical** to the remote PDP over a corpus of requests
-//! (the differential test — same `AuthzRequest`, same decision).
-use std::collections::BTreeMap;
+//! produce the expected golden decisions, and the fan-out over a set of
+//! attribute values decides as the request model says.
 use std::path::PathBuf;
 
-use ferroehr::config::abac_rules::RemoteConfig;
-use ferroehr::config::authz::{AbacConfig, AbacEngineKind, AbacParam, PolicyRule};
-use ferroehr_rest::extensions::access::authz::remote::remote_pdp;
 use ferroehr_rest::extensions::access::authz::request::{
     AccessMode, AuthzRequest, ResourceKind, model,
 };
 use ferrohealth_authz::cedar::CedarEngine;
 use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
-use ferrohealth_authz::remote::RemotePdp;
 use ferrohealth_authz::request::{Attr, Decision};
-use serde_json::Value;
-use wiremock::matchers::method;
-use wiremock::{Mock, MockServer, Request, ResponseTemplate};
 
 fn examples_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/policies")
@@ -137,92 +128,66 @@ async fn bad_policy_dir_refuses_to_load() {
     assert!(matches!(e, AuthzError::Load(_)), "got {e}");
 }
 
-/// Build a remote PDP whose mock permits iff the request body's `patient == "ok"`
-/// — the same rule the Cedar policy below encodes.
-async fn remote_permit_when_patient_ok() -> (MockServer, RemotePdp) {
-    let server = MockServer::start().await;
-    Mock::given(method("POST"))
-        .respond_with(|req: &Request| {
-            let ok = serde_json::from_slice::<Value>(&req.body)
-                .ok()
-                .and_then(|v| v.get("patient").and_then(Value::as_str).map(|p| p == "ok"))
-                .unwrap_or(false);
-            ResponseTemplate::new(if ok { 200 } else { 403 })
-        })
-        .mount(&server)
-        .await;
-    let mut policy = BTreeMap::new();
-    policy.insert(
-        "composition".to_owned(),
-        PolicyRule {
-            name: "p".to_owned(),
-            parameters: vec![AbacParam::Patient],
-        },
-    );
-    let config = AbacConfig {
-        enabled: true,
-        engine: AbacEngineKind::Remote,
-        remote: RemoteConfig {
-            endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
-                url: ferrohealth_secret::secret_url::SecretUrl::new(format!("{}/", server.uri())),
-                connect_timeout: Some(ferrohealth_config::units::Duration::from_millis(500)),
-                timeout: ferrohealth_config::units::Duration::from_millis(1000),
-                ..ferrohealth_smart::config::endpoint::EndpointSection::default()
-            },
-        },
-        policy,
-        ..AbacConfig::default()
-    };
-    let pdp = remote_pdp(&config).expect("build remote");
-    (server, pdp)
-}
-
-/// Differential test: the same `AuthzRequest` corpus must yield identical
-/// decisions from the embedded Cedar engine and the v1-compatible remote PDP,
-/// proving the fan-out semantics (cartesian product, all-must-permit,
-/// short-circuit, an empty set refused before either is asked) are
-/// engine-independent.
+/// The fan-out semantics over one rule, permit iff `resource.patient ==
+/// "ok"`: a set is the cartesian product of its values, every combination must
+/// permit, and an empty set is refused before the engine is asked.
 #[tokio::test]
-async fn cedar_and_remote_agree_over_corpus() {
-    // Cedar policy encoding the identical rule: permit iff resource.patient == "ok".
+async fn cedar_fans_out_over_a_corpus() {
     let cedar = CedarEngine::from_source(
         model(),
         r#"permit(principal, action, resource) when { resource has patient && resource.patient == "ok" };"#,
     )
     .expect("build cedar");
-    let (_server, remote) = remote_permit_when_patient_ok().await;
 
-    let corpus: Vec<AuthzRequest<'static>> = vec![
-        composition(Some("org1"), Some(Attr::One("ok".to_owned())), None),
-        composition(Some("org1"), Some(Attr::One("bad".to_owned())), None),
-        composition(None, None, None),
-        composition(
-            Some("org1"),
-            Some(Attr::Set(vec!["ok".to_owned(), "ok".to_owned()])),
+    let corpus: Vec<(AuthzRequest<'static>, Option<bool>)> = vec![
+        (
+            composition(Some("org1"), Some(Attr::One("ok".to_owned())), None),
+            Some(true),
+        ),
+        (
+            composition(Some("org1"), Some(Attr::One("bad".to_owned())), None),
+            Some(false),
+        ),
+        (composition(None, None, None), Some(false)),
+        (
+            composition(
+                Some("org1"),
+                Some(Attr::Set(vec!["ok".to_owned(), "ok".to_owned()])),
+                None,
+            ),
+            Some(true),
+        ),
+        (
+            composition(
+                Some("org1"),
+                Some(Attr::Set(vec!["ok".to_owned(), "bad".to_owned()])),
+                None,
+            ),
+            Some(false),
+        ),
+        (
+            composition(Some("org1"), Some(Attr::Set(vec![])), None),
             None,
         ),
-        composition(
-            Some("org1"),
-            Some(Attr::Set(vec!["ok".to_owned(), "bad".to_owned()])),
-            None,
-        ),
-        composition(Some("org1"), Some(Attr::Set(vec![])), None),
-        // Template variation the [Patient]-only remote policy (and the
-        // patient-only Cedar rule) both ignore.
-        composition(
-            Some("org1"),
-            Some(Attr::One("ok".to_owned())),
-            Some(Attr::Set(vec!["t1".to_owned(), "t2".to_owned()])),
+        // A template variation the patient-only rule ignores.
+        (
+            composition(
+                Some("org1"),
+                Some(Attr::One("ok".to_owned())),
+                Some(Attr::Set(vec!["t1".to_owned(), "t2".to_owned()])),
+            ),
+            Some(true),
         ),
     ];
 
-    for req in &corpus {
-        let c = permits(&cedar, req).await;
-        let r = permits(&remote, req).await;
+    for (req, expected) in &corpus {
+        let decided = permits(&cedar, req).await;
         assert_eq!(
-            c, r,
-            "engines diverged for {:?}/{:?}: cedar={c:?} remote={r:?}",
-            req.patient, req.template
+            decided.as_ref().ok().copied(),
+            *expected,
+            "{:?}/{:?}: {decided:?}",
+            req.patient,
+            req.template
         );
     }
 }

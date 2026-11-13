@@ -25,7 +25,6 @@
 
 pub mod loader;
 
-pub mod abac_rules;
 pub mod auth;
 pub mod auth_section;
 pub mod authz;
@@ -257,6 +256,8 @@ pub fn load_with_provenance(
 }
 
 #[cfg(test)]
+mod abac_tests;
+#[cfg(test)]
 mod audit_tests;
 #[cfg(test)]
 mod secret_tests;
@@ -269,7 +270,6 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::config::authz::AbacParam;
     use crate::service::ehr_index::config::SubjectIndex;
     use crate::storage::cohort_predicate::PredicateKind;
     use ferrohealth_secret::secret_url::SecretUrl;
@@ -485,7 +485,15 @@ mod tests {
                 ("FERROEHR__AUTH__ISSUER__0__KIND", "persons"),
                 ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr,other"),
                 ("FERROEHR__AUTH__ISSUER__0__TIMEOUT", "1500ms"),
-                ("FERROEHR__AUTHZ__ABAC__POLICY__EHR__NAME", "ehr-policy"),
+                (
+                    "FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__ARCHETYPE",
+                    "openEHR-DEMOGRAPHIC-ADDRESS.address.v1",
+                ),
+                (
+                    "FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__NODE",
+                    "at0012",
+                ),
+                ("FERROEHR__PRIVACY__COHORT__PREDICATES__CITY__KIND", "text"),
             ]),
             &[],
         );
@@ -520,12 +528,12 @@ mod tests {
             ferrohealth_config::units::Duration::from_mins(1)
         );
         assert_eq!(
-            c.authz
-                .abac
-                .policy
-                .get("ehr")
-                .map(|rule| rule.name.as_str()),
-            Some("ehr-policy")
+            c.privacy
+                .cohort
+                .predicates
+                .get("city")
+                .map(|predicate| predicate.archetype.as_str()),
+            Some("openEHR-DEMOGRAPHIC-ADDRESS.address.v1")
         );
     }
 
@@ -579,32 +587,6 @@ mod tests {
         assert_eq!(
             c.auth.smart.patient_issuers,
             vec![SecretUrl::new("https://as.example")]
-        );
-    }
-
-    /// A list nested under a MAP key is addressable from the environment too,
-    /// so it needs registration like any other — `authz.abac.policy.<kind>` is
-    /// a map, not an array of tables, and the scalar case above already proves
-    /// the env grammar reaches into one.
-    #[test]
-    fn a_list_under_a_map_key_parses_from_env() {
-        let c = assemble_ok(
-            None,
-            &env(&[
-                ("FERROEHR__AUTHZ__ABAC__POLICY__EHR__NAME", "ehr-policy"),
-                (
-                    "FERROEHR__AUTHZ__ABAC__POLICY__EHR__PARAMETERS",
-                    "patient,template",
-                ),
-            ]),
-            &[],
-        );
-        let rule = c.authz.abac.policy.get("ehr").expect("the ehr policy rule");
-        assert_eq!(rule.name, "ehr-policy");
-        assert_eq!(
-            rule.parameters,
-            vec![AbacParam::Patient, AbacParam::Template],
-            "a policy's parameter list must be reachable from the environment"
         );
     }
 
@@ -1689,13 +1671,12 @@ mod tests {
 
     /// Every outbound grant is the `ferrohealth-smart` client table, so the
     /// key `token_url` that preceded `token_endpoint` stops startup by name
-    /// in each of the three tables that take a grant.
+    /// in each of the two tables that take a grant.
     #[test]
     fn the_old_token_url_key_is_refused_in_every_grant() {
         for table in [
             "terminology.endpoint.credentials.oauth",
             "audit.fhir_feed.endpoint.credentials.oauth",
-            "authz.abac.remote.endpoint.credentials.oauth",
         ] {
             let file = toml_file(&format!(
                 "[{table}]\ntoken_url = \"https://idp.example/token\"\nclient_id = \"c\"\n"

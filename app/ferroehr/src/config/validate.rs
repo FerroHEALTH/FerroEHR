@@ -74,8 +74,7 @@ impl FerroEhrConfig {
 
     /// The outbound endpoints in use, each by the endpoint rules
     /// ([`crate::outbound::problems`]): the ITI-20 feed and the terminology
-    /// server when they are configured, and the remote policy service when
-    /// ABAC runs on it. A credential beside one in the URL's
+    /// server when they are configured. A credential beside one in the URL's
     /// userinfo is refused: the upstream would receive two authorizations, and
     /// which one it honours is not ours to guess. No openEHR spec governs
     /// outbound authentication: our own design.
@@ -92,18 +91,6 @@ impl FerroEhrConfig {
                 crate::outbound::problems("terminology.endpoint", &terminology.endpoint)
                     .into_iter()
                     .map(ConfigError::semantic),
-            );
-        }
-        let remote_in_use =
-            self.authz.abac.enabled && self.authz.abac.engine == authz::AbacEngineKind::Remote;
-        if remote_in_use {
-            errors.extend(
-                crate::outbound::problems(
-                    "authz.abac.remote.endpoint",
-                    &self.authz.abac.remote.endpoint,
-                )
-                .into_iter()
-                .map(ConfigError::semantic),
             );
         }
     }
