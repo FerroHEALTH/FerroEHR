@@ -40,8 +40,6 @@ pub mod record;
 pub mod redact;
 pub mod rest;
 pub mod retention;
-pub mod retired;
-pub mod retired_shared;
 pub mod scim;
 pub mod server;
 pub mod smart;
@@ -52,7 +50,6 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use ferrohealth_config::loader::Loaded;
-use ferrohealth_config::removed::Removed;
 use serde::{Deserialize, Serialize};
 
 use crate::config::loader::{ConfigError, ConfigErrors};
@@ -64,9 +61,7 @@ use crate::config::loader::{ConfigError, ConfigErrors};
 /// table a boot error. One table per concern: what the deployment is, the
 /// family's shared sections (`[server]`, `[telemetry]`, `[usage_report]`,
 /// `[auth]`), FerroEHR's own surfaces and policies, and one table per outbound
-/// integration (`[terminology]`, `[pixm]`). Every table a release before
-/// v5.7.0 read is kept only to be refused at load, naming its replacement
-/// ([`retired`]).
+/// integration (`[terminology]`, `[pixm]`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
@@ -119,63 +114,6 @@ pub struct FerroEhrConfig {
     /// `[pixm]` — the IHE PIXm patient identity source the subject index asks
     /// (ITI-83) under `record.subject_index = "pixm"`.
     pub pixm: Option<crate::service::ehr_index::config::PixmConfig>,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub spec_profile: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub deployment_profile: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub deployment_accepts: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub rest: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub db: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub storage: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub admin: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub smart: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub signing: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub licence: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub query: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub outbox: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub multimedia: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub origins: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub demographic: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub cohort: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub ehr_index: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub versioning: Removed,
-    /// Retired in v5.7.0: refused at load, naming its replacement ([`retired`]).
-    #[serde(skip_serializing)]
-    pub scim: Removed,
 }
 
 impl Default for FerroEhrConfig {
@@ -208,25 +146,6 @@ impl Default for FerroEhrConfig {
             record: record::RecordConfig::default(),
             terminology: None,
             pixm: None,
-            spec_profile: Removed::default(),
-            deployment_profile: Removed::default(),
-            deployment_accepts: Removed::default(),
-            rest: Removed::default(),
-            db: Removed::default(),
-            storage: Removed::default(),
-            admin: Removed::default(),
-            smart: Removed::default(),
-            signing: Removed::default(),
-            licence: Removed::default(),
-            query: Removed::default(),
-            outbox: Removed::default(),
-            multimedia: Removed::default(),
-            origins: Removed::default(),
-            demographic: Removed::default(),
-            cohort: Removed::default(),
-            ehr_index: Removed::default(),
-            versioning: Removed::default(),
-            scim: Removed::default(),
         }
     }
 }
@@ -407,6 +326,14 @@ mod tests {
         let f = assert_fs::NamedTempFile::new("ferroehr.toml").expect("temp");
         f.write_str(content).expect("write");
         f
+    }
+
+    /// The refusal `assemble` gives a file carrying `content`, as text.
+    pub(super) fn file_refusal(content: &str) -> String {
+        let file = toml_file(content);
+        assemble(Some(file.path()), &env(&[]), &[])
+            .expect_err(content)
+            .to_string()
     }
 
     pub(super) fn assemble_ok(
@@ -805,11 +732,14 @@ mod tests {
 
     #[test]
     fn unknown_env_var_is_a_boot_error_with_suggestion() {
-        let err = assemble(None, &env(&[("FERROEHR__SIGNIN__ENABLED", "true")]), &[])
+        let err = assemble(None, &env(&[("FERROEHR__TELEMETRI__FILTER", "info")]), &[])
             .expect_err("unknown var");
         let msg = err.to_string();
-        assert!(msg.contains("FERROEHR__SIGNIN__ENABLED"), "{msg}");
-        assert!(msg.contains("signing"), "did-you-mean missing: {msg}");
+        assert!(msg.contains("FERROEHR__TELEMETRI__FILTER"), "{msg}");
+        assert!(
+            msg.contains("did you mean `telemetry"),
+            "did-you-mean missing: {msg}"
+        );
     }
 
     #[test]

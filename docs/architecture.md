@@ -245,6 +245,35 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `search_path`, so one set of storage code serves both; a `CHECK` on each side
   refuses the other's rows. GDPR Art. 4(5) and Art. 32(1)(a); no openEHR spec
   governs storage layout or database roles.
+- **`PARTY.reverse_relationships` at a version or at a time** (#5473). RM
+  1.1.0 makes it an attribute of `PARTY` and RM 1.2.0 a function
+  (`master00-amendment_record.adoc` SPECRM-124), whose result a repository
+  lookup defines (`Post_reverse_relationships_validity`). No openEHR spec says
+  how a derived list behaves on an old version, and no REST resource serves the
+  1.2.0 function, so both rules here are our own design:
+  - A read of the current version by its container id serves the list as it
+    stands now. Every read addressed to one version, by its
+    `OBJECT_VERSION_ID`, at a `version_at_time`, or as the `data` of a
+    `VERSION<PARTY>`, and the representation a create or update returns, serves
+    it as it stood when that version was committed. The `ETag` of each of
+    those responses names that version, so one version has one document.
+  - `party_relationship_target` keeps one row per interval over which a source
+    party's trunk named the target (`valid_from`, `valid_to`, open while the
+    current trunk version names it), written incrementally in the commit
+    transaction and rebuilt from the stored trunk versions by an import or an
+    archive load (`storage::party_reverse::rebuild`). A point-in-time read is
+    an indexed probe of the intervals plus one indexed lookup of each source's
+    trunk version at that instant, never a walk of a source's versions.
+  - The stable profile carries the list in the body of every PARTY
+    representation, canonical JSON and XML. The development profile does not:
+    ITS-JSON publishes no RM 1.2.0 schema, its released schemas are generated
+    from the BMM properties with `additionalProperties: false`, and the 1.2.0
+    BMM lists `reverse_relationships` among the functions, so a member in the
+    body would be refused by a development reader, FerroEHR's own included,
+    when the document comes back. The evaluated function is served instead on
+    the extension route `GET {extensions}/demographic/party/{uid_based_id}/reverse_relationships`
+    (optional `version_at_time`), under the same pinning rule, in both
+    profiles: a JSON array of `LOCATABLE_REF`s, `[]` when none.
 - **Which EHR belongs to which subject** is the `ehr` table's subject columns,
   promoted from `EHR_STATUS.subject.external_ref` on every EHR create and
   `EHR_STATUS` update. A cohort, the AQL demographic join and the EHR index
@@ -303,9 +332,21 @@ lookup by a value reads the one object instead of every node of the
 archetype (#4437). The feature envelope is documented per construct;
 rejections are explicit typed errors.
 
-A query whose outermost `FROM` class is `PERSON`, `ORGANISATION` or `ROLE` is
-the experimental demographic extension (no openEHR spec governs it; QUERY
-master03 §FROM gives semantics only to the clinical repository). The planner
+A query whose outermost `FROM` class is a demographic class is the
+experimental demographic extension (no openEHR spec governs it; QUERY
+master03 §FROM gives semantics only to the clinical repository). Every class
+whose concrete RM descendants are all demographic versioned objects is a root
+(#5474): the five concrete `PARTY` classes, the abstract `PARTY` and `ACTOR`
+over the concrete classes the RM model lists below them (`aql::lower`, the
+`descendants` of the generated RM model, so a root reads `rm_type IN (…)`),
+and the standalone `PARTY_RELATIONSHIP` container, whose root row is the only
+`PARTY_RELATIONSHIP` row (an inline relationship stays in its source party's
+data and is read by path). Every root carries the one policy predicate,
+`vo_head.policy_party_at IS NULL` on the head row it joins by key
+(`aql::sql::gates`), so a caller who is no administrator reads no policy
+party or acts-for relationship container under any root. A join under an abstract root reads
+each party's class (`version.kind`) and matches the subject reference against
+that class and its demographic RM ancestors. The planner
 marks the IR `QueryDomain::Demographic`, and the same SQL runs on the party
 pool, whose `search_path` names the `party` schema rendered from the same DDL,
 without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`, ABAC subject
@@ -443,30 +484,29 @@ optional. No openEHR spec governs configuration: our own design.
   access rights that "take into account the origins and categories" are what
   the grants express.
 
-**Recognised by archetype, seeded as defaults.** Definitions are versioned
-and a deployment models its own way, so nothing is locked in the binary.
-FerroEHR recognises a policy party by its root archetype (or, for acts-for,
-the archetype of a relationship it holds): `openEHR-DEMOGRAPHIC-AGENT.system.v1`,
+**Recognised by coded content, seeded as examples.** Definitions are
+versioned and a deployment models its own parties from any archetype, so
+FerroEHR never recognises a policy party by archetype id (owner decision on
+#5433, 2026-11-12). A version is a policy party when it holds a `CAPABILITY`
+whose `credentials` hold a `DV_CODED_TEXT` of the operation terminology
+`ferroehr-operations`, a `PARTY_RELATIONSHIP` whose `name` or `details`
+hold `ferroehr-operations::acts_for`, or a `DV_IDENTIFIER` of type
+`client_id` (`party_binding::policy_mark::policy_content`, the RM's
+`ITEM_STRUCTURE` with a terminology binding). The shipped archetypes
+`openEHR-DEMOGRAPHIC-AGENT.system.v1`,
 `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1` and
-`openEHR-DEMOGRAPHIC-ROLE.{system_client,data_migration,federation_partner,privileged}.v1`,
-or an ADL 2 specialisation of one within the same major version
-(`party_binding::policy::PolicyKind::of`; AM `ADL2/master09.01-spec_overview.adoc`
-§Specialisation: "All possible data instance arrangements that conform to the
-specialised archetype must also conform to all of its parents"; BASE
-`base_types` §Archetype Identifiers, `domain_concept = concept_name { '-'
-specialisation }`). It reads the credentials by the archetype's node ids,
-which every template and version on the archetype keeps; those ids and the
-archetype ids are the documented contract (the book's "Operational policy"
-page), and a breaking change to them is a new archetype major version. The
-binary carries a default template of each (`party_binding::policy::DEFINITIONS`,
-from `app/ferroehr/assets/definitions/policy/`); each boot stores one
+`openEHR-DEMOGRAPHIC-ROLE.{system_client,data_migration,federation_partner,privileged}.v1`
+are examples that carry those codes; `PolicyKind::of` names them only so a
+party of one is validated against its own template. The binary carries
+a default template of each (`party_binding::policy::DEFINITIONS`, from `app/ferroehr/assets/definitions/policy/`); each boot stores one
 through the normal definition path only when no definition of its id is
 stored, never overwriting, never refusing a deployment's change and never
 re-seeding over it (`seed_default_definitions`). After that they are ordinary
 definitions, versioned and replaced through the definition API, and every
 write of a policy party is validated against its own template. The
 recognition runs with or without a party mapping and enters no mapping
-digest, since it derives no side-table row yet. **Our own design.**
+digest: the grant rows it derives do not depend on the mapping. **Our own
+design.**
 
 The default demographic definitions of `deploy/definitions/` (the
 professional `PERSON` and `ROLE`, the care-team `GROUP`, the membership and
@@ -481,25 +521,104 @@ table names no `group_identifier_issuer` writes its Groups' `externalId`s
 under its `binding_issuer` with `/groups` appended
 (`ScimClient::group_issuer`). **Our own design.**
 
-**Who writes and reads a policy party.** A policy party is an `AGENT` or a
-`ROLE` whose root archetype is a policy archetype or a specialisation, under
-any template, or a party holding an acts-for relationship (or such a
-relationship on our own relationship routes). Only a caller holding `admin_role` creates,
-updates or deletes one, on its own route or inside a demographic
-`CONTRIBUTION`; any other caller, a SCIM client included, is `403` naming
-the template or archetype. `party_binding::protect` judges the version
-before and after the write in the commit's transaction, so a policy party is
-never planted, changed, deleted or turned into an ordinary one by anyone
-else. Reads are an administrator's too: the Demographic API reads of a
+**Who writes and reads a policy party.** A party is a policy party once a
+version of it holds the coded content above, inline or on our own
+relationship routes. Only a caller holding `admin_role` creates, updates or
+deletes one, on its own route or inside a demographic `CONTRIBUTION`; any
+other caller, a SCIM client included, is `403` naming what makes it one.
+`party_binding::protect` judges the new version and the party's mark in the
+commit's transaction, so a policy party is never planted, changed, deleted
+or turned into an ordinary one by anyone else. Reads are an administrator's too: the Demographic API reads of a
 party or relationship any of whose versions is a policy party are `403` to
-any other caller (`protect::check_read`, read from the root node rows and the
-relationships' node ids, no body parsed); demographic AQL is tracked on #5450. **Our own design:** the RM's
+any other caller, and demographic AQL by such a caller leaves out every
+version of it (#5450, #5485). Both read one mark: `vo_head.policy_party_at`
+(party migration `0034_policy_party_mark.sql`), which the commit of a policy
+version sets in its own transaction (`protect::check`, from the body the
+commit holds), which nothing clears, and which an import, an archive load
+and `party-binding refill` set from the stored bodies
+(`policy_mark::mark_stored`, by the SQL/JSON path `POLICY_PATH`, which a test
+runs against `policy_content` over one set of bodies). `protect::check_read` reads it by the head's primary key,
+and AQL adds it to the head join every versioned-object source makes
+(`aql::sql::gates`), so counts and paging see only what the caller may read
+and no extra statement runs.
+**Our own design:** the RM's
 `ACCESS_CONTROL_SETTINGS` is "Currently implementation dependent" and the
 Demographic API defines no access rule for its operations.
 
-**The grant ceiling.** `[authz.grants] allowed` bounds the kinds of grant
-the party store may hold, so a compromised administrator account cannot
-grant more than the operator allows. **Our own design.**
+**The grant rows and the read path** (`party_binding::grants`, #5435). By
+the owner's correction on #5433, FerroEHR reads permission from coded
+content and never recognises a grant by archetype or template id, so a
+deployment models its parties from any archetypes. The contract is a
+terminology of our own, `ferroehr-operations`
+(`party_binding::grants::operation`): a `CAPABILITY` grants an operation when
+its `credentials` hold, at any depth, an element whose value is a
+`DV_CODED_TEXT` of that terminology with an operation code
+(`commit_composition`, `import_ehr`, `import_ehr_extract`,
+`export_ehr_extract`, `federated_person_access`,
+`federated_organisation_access`, `read_subject_audit`, `access_service`,
+`read_identifiers`); elements named by the qualifier codes `not_before` and
+`not_after` bound it finer than a day, and `template`, `facility` and
+`subject_namespace` scope it; `acts_for` codes the acts-for relationship.
+That is the RM's `ITEM_STRUCTURE` with a terminology binding, which any
+modeller produces (RM `data_types` `DV_CODED_TEXT`, `CODE_PHRASE`). A client
+is any `ACTOR` carrying a `DV_IDENTIFIER` of type `client_id` in its
+`details` or `identities`, whose issuer is the token issuer (§Party
+Identification). **Our own design.**
+
+The binding side table gains two relations (migration `party/0035`):
+`binding_client`, one row per client identifier of an `ACTOR` head that is
+not deleted, unique per `(issuer, client_id)`, so a second party naming a
+client is `409` at its commit; and `binding_capability`, one row per
+operation a `CAPABILITY` of a `ROLE` head grants, with its performer, the
+`ROLE`'s and the `CAPABILITY`'s `time_validity` as date ranges (absent is
+every date, a bound that does not read is none), the `not_before` and
+`not_after` instants (a `DV_DATE_TIME` without an offset reads in UTC, one
+that does not read makes the capability hold on no date), and the
+credentials as written. They are written in each party commit's own
+transaction from the body the commit holds, replaced per party, and rebuilt
+from the versions by `ferroehr party-binding refill`; a boot fills them once
+if no change has moved their revision yet. A grant is in force for a request
+when the client and the `ROLE` heads are `complete` or `incomplete`, both
+date ranges hold the request's date in UTC (the zone every `DV_DATE` is read
+in), the instants hold the request's instant, and the ceiling admits the
+operation. The `ROLE`'s `performer` alone ties a grant to its party: a
+demographic `CONTRIBUTION` cannot carry an `AGENT` and the `ROLE` that names
+it (the ids are minted at commit), so the performer's `roles` list is not
+required. **Our own design.**
+
+The request path adds no transaction: each replica keeps the rows in memory
+(`LiveGrants`) after the pattern of the admin registers below, listening on
+`ferroehr_policy_grants`. A commit that changes a grant row moves the
+revision row `binding_grant_revision` and notifies with it in its own
+transaction; a notification marks the copy stale, and the next request reads
+the revision, one indexed read, and the rows only when it moved. The request
+whose own commit changed a grant reads the copy again before it answers, so
+the caller's next request on that replica runs under the change; another
+replica does from its first request after the notification. While the
+listener is not connected every request that resolves a caller reads the
+revision. A request resolves its caller after authentication: a system
+client (`CallerKind::System`) by its token's issuer and `client_id`, a
+caller the login binding bound by its party, anyone else to no grants and no
+read; a copy that must be read and cannot be is `503`. Nothing decides a
+request on a grant yet: the consumers of #5433 read
+`Capabilities::current()`, which holds the caller's grants for the duration
+of the request, each an `Operation` with its `ROLE` and credentials read by
+the codes of their elements' names. A per-request read without a cache,
+which the program first named, would add a transaction to every request,
+which the performance gate's transactions-per-request measure refuses
+(#5459).
+
+**The grant ceiling.** `[authz.grants] allowed` bounds the operations the
+party store may grant, so a compromised administrator account cannot grant
+more than the operator allows. A `ROLE` commit with a capability coding an
+operation the ceiling does not admit, or a code of the terminology that
+names no operation, is `403` naming the code and the key; a stored one, such
+as one committed before the ceiling was narrowed, is never honoured and is
+logged when the rows are read. The default admits `commit_composition`
+alone, which reaches only the templates the grant names: an import, an
+export, a federation agreement and every privilege reach beyond one system's
+own writes, so the operator admits each by name. It is the one key this
+program adds. **Our own design.**
 
 **Break-glass stays in the configuration.** Emergency access (EHDS Art.
 11(5)) must work when the party store does not answer, so

@@ -18,7 +18,6 @@
 //! document is served, so the table is always read and `discovery` alone
 //! turns the document on.
 
-use ferrohealth_config::removed::Removed;
 use ferrohealth_secret::secret_url::SecretUrl;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -84,17 +83,6 @@ pub struct SmartConfig {
     /// own design).
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub demographic_clients: Vec<String>,
-
-    /// Retired in v5.7.0: refused at load, naming `discovery`.
-    #[serde(skip_serializing)]
-    pub enabled: Removed,
-    /// Retired in v5.7.0: refused at load, naming `episode_launch`.
-    #[serde(skip_serializing)]
-    pub episode: Removed,
-    /// Retired in v5.7.0: refused at load, naming `launch-base64-json` in
-    /// `auth.capabilities`.
-    #[serde(skip_serializing)]
-    pub launch_base64_json: Removed,
 }
 
 impl SmartConfig {

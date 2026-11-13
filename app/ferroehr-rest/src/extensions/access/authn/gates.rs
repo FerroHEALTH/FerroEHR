@@ -22,7 +22,7 @@ use ferroehr::system_log::event::ActorAuthentication;
 
 use super::assurance::{PatientDataGate, PatientDataRefusal};
 use super::refusal::count_auth_failure;
-use super::{AuthError, AuthLayer, AuthMethod, Principal, mechanism_label};
+use super::{AuthError, AuthLayer, AuthMethod, Principal};
 
 /// Runs the RBAC gate over an authenticated caller: the matched operation's
 /// class against the caller's roles, then the read-only restriction.
@@ -166,4 +166,12 @@ pub(super) fn patient_data_refusal(
     resp.extensions_mut().insert(principal.clone());
     resp.extensions_mut().insert(actor);
     resp
+}
+
+/// The `mechanism` metric label for a known authenticated principal.
+fn mechanism_label(method: AuthMethod) -> &'static str {
+    match method {
+        AuthMethod::Basic => "basic",
+        AuthMethod::Bearer => "bearer",
+    }
 }

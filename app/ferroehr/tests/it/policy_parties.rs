@@ -4,11 +4,12 @@
 //! The policy parties (#5434) over a real PostgreSQL 18: the default policy
 //! definitions are seeded when absent and never overwritten, no
 //! configuration key names them, each worked example on the book's
-//! "Operational policy" page fits its definition, a deployment's own
-//! version or specialisation of a policy archetype is recognised by
-//! archetype, and only an administrator writes or reads a policy party (the
-//! system `AGENT`, a policy `ROLE`, an acts-for relationship inline or of its
-//! own). No openEHR spec governs who writes a party: our own design.
+//! "Operational policy" page fits its definition and carries the codes that
+//! make it a policy party, a deployment's own version or specialisation of
+//! an example archetype carrying them is one too, and only an administrator
+//! writes or reads a policy party (an `AGENT` holding a client identifier, a
+//! `ROLE` holding an operation code, an acts-for relationship inline or of
+//! its own). No openEHR spec governs who writes a party: our own design.
 
 use std::collections::HashMap;
 
@@ -19,6 +20,7 @@ use crate::fixtures::{at, delete_precondition, if_match, object, written_vo};
 use ferroehr::config::FerroEhrConfig;
 use ferroehr::error::ServiceError;
 use ferroehr::ids::VoId;
+use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::party_binding::policy::{PolicyKind, PolicyRole};
 use ferroehr::party_binding::protect;
 use ferroehr::service::FerroEhrService;
@@ -33,10 +35,10 @@ const ACTS_FOR: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.acts_for.v1";
 /// The example ids of the book page, each replaced by the id of the party
 /// the test commits: the provider, the partner, the `AGENT`, the
 /// professional's `PERSON` and the system client's `ROLE`.
-const PROVIDER: &str = "9d2f4a7e-3c1b-4e8a-9f60-2b7d5c8e1a40";
+pub(crate) const PROVIDER: &str = "9d2f4a7e-3c1b-4e8a-9f60-2b7d5c8e1a40";
 const PARTNER: &str = "7c4e9a2b-1f6d-4b3e-9c8a-5d2e0f7b1a36";
-const AGENT: &str = "5b8e2c91-7d4a-4f3e-8a1c-6e9f0b2d4c73";
-const PERSON: &str = "3e7a1d5c-9b2f-4c8e-a6d0-1f4b8e2c7a95";
+pub(crate) const AGENT: &str = "5b8e2c91-7d4a-4f3e-8a1c-6e9f0b2d4c73";
+pub(crate) const PERSON: &str = "3e7a1d5c-9b2f-4c8e-a6d0-1f4b8e2c7a95";
 const ROLE: &str = "e41c7b2a-6d3f-4a9e-8b05-2f7d1c9e3a68";
 /// The administrator role of the tests.
 const ADMIN: &str = "ADMIN";
@@ -65,7 +67,7 @@ fn example(name: &str) -> String {
 }
 
 /// The JSON example `name` with each example id replaced by its party.
-fn body(name: &str, ids: &[(&str, VoId)]) -> Value {
+pub(crate) fn body(name: &str, ids: &[(&str, VoId)]) -> Value {
     let mut text = example(name);
     for (example_id, id) in ids {
         text = text.replace(example_id, &id.to_string());
@@ -91,7 +93,8 @@ async fn loaded() -> (testkit::TestDb, FerroEhrService) {
 }
 
 /// A service holding the policy definitions with the mapping of `toml`
-/// installed, as the server installs it.
+/// installed, as the server installs it, under an `[authz.grants] allowed`
+/// that admits every operation, so each worked example grants what it codes.
 async fn mapped_by(toml: &str) -> (testkit::TestDb, FerroEhrService) {
     let (db, svc) = loaded().await;
     let config = config(toml);
@@ -101,13 +104,14 @@ async fn mapped_by(toml: &str) -> (testkit::TestDb, FerroEhrService) {
         .expect("the mapping compiles");
     let svc = svc
         .with_mapped_party_templates(sections.mapped_templates())
-        .with_binding_mapping(mapping);
+        .with_binding_mapping(mapping)
+        .with_grant_ceiling(GrantCeiling::new(Operation::ALL));
     (db, svc)
 }
 
 /// A service holding the policy definitions under an empty configuration:
 /// the policy parties need no key.
-async fn mapped() -> (testkit::TestDb, FerroEhrService) {
+pub(crate) async fn mapped() -> (testkit::TestDb, FerroEhrService) {
     mapped_by("").await
 }
 
@@ -216,12 +220,12 @@ async fn as_caller<F: Future>(subject: &str, roles: &[&str], fut: F) -> F::Outpu
 }
 
 /// Runs `fut` as a clinician: a caller who is no administrator.
-async fn as_clinician<F: Future>(fut: F) -> F::Output {
+pub(crate) async fn as_clinician<F: Future>(fut: F) -> F::Output {
     as_caller("clinician", &["CLINICIAN"], fut).await
 }
 
 /// Runs `fut` as an administrator.
-async fn as_admin<F: Future>(fut: F) -> F::Output {
+pub(crate) async fn as_admin<F: Future>(fut: F) -> F::Output {
     as_caller("admin", &[ADMIN], fut).await
 }
 
@@ -237,7 +241,7 @@ fn version<T: serde::de::DeserializeOwned>(
 }
 
 /// Creates `body` as a party of `kind`.
-async fn create(
+pub(crate) async fn create(
     svc: &FerroEhrService,
     kind: PartyKind,
     body: &Value,
@@ -248,7 +252,7 @@ async fn create(
 }
 
 /// Commits `body` as the next version of `vo` after `uid`.
-async fn update(
+pub(crate) async fn update(
     svc: &FerroEhrService,
     kind: PartyKind,
     vo: VoId,
@@ -266,7 +270,11 @@ async fn update(
 }
 
 /// Deletes the party at `uid`.
-async fn delete(svc: &FerroEhrService, kind: PartyKind, uid: &str) -> Result<(), ServiceError> {
+pub(crate) async fn delete(
+    svc: &FerroEhrService,
+    kind: PartyKind,
+    uid: &str,
+) -> Result<(), ServiceError> {
     Box::pin(svc.party_delete(
         kind,
         object(uid),
@@ -277,16 +285,12 @@ async fn delete(svc: &FerroEhrService, kind: PartyKind, uid: &str) -> Result<(),
     .map(|_| ())
 }
 
-/// Asserts `refused` is the `403` of a policy party, naming the archetype
-/// that makes it one.
-fn assert_policy_refusal<T: std::fmt::Debug>(refused: Result<T, ServiceError>) {
+/// Asserts `refused` is the `403` of a policy party.
+pub(crate) fn assert_policy_refusal<T: std::fmt::Debug>(refused: Result<T, ServiceError>) {
     let refused = refused.expect_err("a policy party is written by an administrator only");
     assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
     let text = refused.to_string();
-    assert!(
-        text.contains("is a policy party of the archetype openehr-demographic-"),
-        "{text}"
-    );
+    assert!(text.contains(" is a policy party"), "{text}");
 }
 
 fn text(value: &str) -> Value {
@@ -294,7 +298,7 @@ fn text(value: &str) -> Value {
 }
 
 /// A plain `PARTY` of `class` named `name`, of no mapped template.
-fn plain(class: &str, archetype: &str, name: &str) -> Value {
+pub(crate) fn plain(class: &str, archetype: &str, name: &str) -> Value {
     json!({
         "_type": class, "archetype_node_id": archetype, "name": text(name),
         "archetype_details": { "_type": "ARCHETYPED",
@@ -311,7 +315,7 @@ fn plain(class: &str, archetype: &str, name: &str) -> Value {
 
 /// The parties the examples refer to, which any caller writes: the
 /// provider and the partner `ORGANISATION`s and a professional's `PERSON`.
-async fn referred(svc: &FerroEhrService) -> [(VoId, String); 3] {
+pub(crate) async fn referred(svc: &FerroEhrService) -> [(VoId, String); 3] {
     let organisation = "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0";
     let provider = plain("ORGANISATION", organisation, "Example hospital");
     let partner = plain("ORGANISATION", organisation, "Regional care network");
@@ -647,9 +651,9 @@ async fn only_an_administrator_reads_a_policy_party() {
 }
 
 /// The professional `ROLE`'s `CAPABILITY` holds a clinician's
-/// qualifications (CKM `individual_credentials`), never a grant: its
-/// template is no policy role, so a `ROLE` of it is no policy party, and a
-/// clinician reads it.
+/// qualifications (CKM `individual_credentials`), never a grant: it holds no
+/// code of FerroEHR's operation terminology, so a `ROLE` of it is no policy
+/// party, and a clinician reads it.
 #[tokio::test]
 async fn a_professional_credentials_capability_is_never_read_as_a_grant() {
     let (_db, svc) = loaded().await;
@@ -719,7 +723,7 @@ async fn a_professional_credentials_capability_is_never_read_as_a_grant() {
 
 /// The system client `ROLE` example under another template: `template_id`
 /// and the root archetype id `archetype`.
-fn system_client_under(template_id: &str, archetype: &str, agent: VoId) -> Value {
+pub(crate) fn system_client_under(template_id: &str, archetype: &str, agent: VoId) -> Value {
     let mut role = body("system-client-role", &[(AGENT, agent)]);
     role["archetype_node_id"] = json!(archetype);
     role["archetype_details"]["archetype_id"]["value"] = json!(archetype);
@@ -729,8 +733,8 @@ fn system_client_under(template_id: &str, archetype: &str, agent: VoId) -> Value
 
 /// A deployment versions the system client `ROLE` and builds a specialised
 /// one under another id, through the definition upload the REST route
-/// calls: both are recognised by their archetype and guarded, and a boot
-/// keeps them.
+/// calls: both carry the operation code of the example, so both are policy
+/// parties, and a boot keeps them.
 #[tokio::test]
 async fn a_deployments_version_and_specialisation_are_policy_parties() {
     let (_db, svc) = mapped().await;

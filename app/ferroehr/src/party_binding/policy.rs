@@ -1,20 +1,18 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The policy parties: the system `AGENT`, the policy `ROLE`s whose
-//! `CAPABILITY.credentials` hold a grant, and the acts-for
+//! The default policy definitions, examples of the policy parties.
+//!
+//! They are archetypes of a system `AGENT`, of the `ROLE`s whose
+//! `CAPABILITY.credentials` grant operations, and of the acts-for
 //! `PARTY_RELATIONSHIP` from a system to the provider it acts for.
 //!
-//! FerroEHR recognises a policy party by its root archetype, never by its
-//! template: the policy archetype itself, or an ADL 2 specialisation of it
-//! (AM `ADL2/master09.01-spec_overview.adoc` §Specialisation: "All possible
-//! data instance arrangements that conform to the specialised archetype must
-//! also conform to all of its parents"; BASE `base_types` §Archetype
-//! Identifiers: `domain_concept = concept_name { '-' specialisation }`). A
-//! deployment versions, renames or constrains the templates built on these
-//! archetypes, or builds its own, and they stay policy parties. The archetype
-//! ids and the node ids FerroEHR reads are the contract; a breaking change to
-//! them is a new archetype major version.
+//! FerroEHR does not recognise a policy party by these archetypes: a party is
+//! one when a version of it holds the coded content
+//! [`crate::party_binding::policy_mark`] reads, in any archetype or template
+//! a deployment models. The archetypes here are examples that use those
+//! codes, and [`PolicyKind`] names them so a party of one is validated
+//! against its own template.
 //!
 //! The binary carries a default definition of each ([`DEFINITIONS`]), which
 //! the first boot stores when no definition of its id is stored; after that
@@ -165,14 +163,29 @@ impl PolicyKind {
     #[must_use]
     pub fn of(archetype_id: &str) -> Option<Self> {
         let (entity, concept, major) = archetype_parts(archetype_id.trim())?;
-        Self::all().into_iter().find_map(|(kind, policy)| {
-            let (p_entity, p_concept, p_major) = archetype_parts(policy)?;
-            let specialises = concept == p_concept
-                || concept
-                    .strip_prefix(p_concept.as_str())
-                    .is_some_and(|rest| rest.starts_with('-'));
-            (entity == p_entity && major == p_major && specialises).then_some(kind)
-        })
+        Self::parts()
+            .into_iter()
+            .find_map(|(kind, p_entity, p_concept, p_major)| {
+                let specialises = concept == p_concept
+                    || concept
+                        .strip_prefix(p_concept.as_str())
+                        .is_some_and(|rest| rest.starts_with('-'));
+                (entity == p_entity && major == p_major && specialises).then_some(kind)
+            })
+    }
+
+    /// Every kind with the parts of its archetype that [`Self::of`] compares:
+    /// the lowercased `qualified_rm_entity` and `domain_concept`, and the
+    /// major version, as [`archetype_parts`] decomposes them.
+    #[must_use]
+    pub fn parts() -> Vec<(Self, String, String, i32)> {
+        Self::all()
+            .into_iter()
+            .filter_map(|(kind, policy)| {
+                let (entity, concept, major) = archetype_parts(policy)?;
+                Some((kind, entity, concept, major))
+            })
+            .collect()
     }
 }
 

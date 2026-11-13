@@ -44,7 +44,7 @@ use serde_json::Value;
 
 use crate::error::ServiceError;
 use crate::service::FerroEhrService;
-use crate::service::demographic::validate::{party_check, relationship_check};
+use crate::service::demographic::validate::{Container, party_check, relationship_check};
 use crate::templates::identity::canonical_key;
 use crate::versioning::Kind;
 
@@ -209,19 +209,29 @@ impl FerroEhrService {
     /// lane: the full RM check including the decode, which the direct routes
     /// make at their typed door, then the template gate.
     ///
+    /// A party version is judged as part of `container`, which every party
+    /// write knows; a `PARTY_RELATIONSHIP` container needs none.
+    ///
     /// # Errors
     /// The [`party_check`] or [`relationship_check`] refusal, then the
-    /// [`Self::mapped_template_gate`] one.
+    /// [`Self::mapped_template_gate`] one; [`ServiceError::Internal`] for a
+    /// party version judged without its container.
     pub(crate) async fn demographic_commit_check(
         &self,
         kind: Kind,
         data: &Value,
         incomplete: bool,
+        container: Option<Container>,
     ) -> Result<(), ServiceError> {
-        if kind == Kind::PartyRelationship {
-            relationship_check(data, incomplete)?;
-        } else {
-            party_check(kind.as_str(), data, incomplete)?;
+        match (kind, container) {
+            (Kind::PartyRelationship, _) => relationship_check(data, incomplete)?,
+            (_, Some(container)) => party_check(kind.as_str(), data, incomplete, container)?,
+            (_, None) => {
+                return Err(ServiceError::exception(format!(
+                    "a {} version reached the commit check without its version container",
+                    kind.as_str()
+                )));
+            }
         }
         self.mapped_template_gate(kind.as_str(), data, incomplete)
             .await

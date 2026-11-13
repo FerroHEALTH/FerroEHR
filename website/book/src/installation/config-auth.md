@@ -55,11 +55,10 @@ The section keys:
 The keys `audience`, `algorithms`, `token_profile`, `clock_skew_seconds`,
 `jwks_max_age_seconds`, `jwks_refresh_interval_seconds`, `jwks_file`,
 `timeout_ms`, `mode`, `introspection`, `role_claims`, `acting_for_claim`,
-`client_tokens` and `ca_file`, which v5.6 read in `[auth]`, are refused in
-v5.7.0 naming what replaces each: the first ones live on each
-`[[auth.issuer]]` table, the caller classification replaces
-`acting_for_claim` and `client_tokens`, and `[auth.tls]` replaces `ca_file`.
-From v5.8.0 they are unknown keys.
+`client_tokens` and `ca_file`, which v5.6 read in `[auth]`, are unknown keys
+and refuse the start: the first ones live on each `[[auth.issuer]]` table,
+the caller classification replaces `acting_for_claim` and `client_tokens`,
+and `[auth.tls]` replaces `ca_file`.
 
 ### `[[auth.issuer]]`: the trusted issuers
 
@@ -389,9 +388,9 @@ template carrying a selector identifier, its professional `ROLE`, a
 representation relationship, and a `GROUP` of the group template. Only an
 administrator (`authz.rbac.admin_role`) writes one through the demographic
 API, including the creation of a party that carries a selector identifier.
-The policy parties (a system's `AGENT`, a `ROLE` of a policy role template
-and an acts-for relationship) are recognised by their archetypes and take no
-key of this mapping; they are an administrator's to write and to read,
+The policy parties (a party holding a capability coded in
+`ferroehr-operations`, an acts-for relationship or a `client_id` identifier)
+are recognised by what they hold and take no key of this mapping; they are an administrator's to write and to read,
 never a SCIM client's: see [Operational policy](../operational-policy.md#who-writes-and-reads-a-policy-party).
 An administrator's version that leaves a protected identifier out is refused
 with `422`. A present binding key is immutable (RFC 7643 §2.2): a version
@@ -611,6 +610,12 @@ own accessor kind; every agreement is listed on the boot line and in
 An organisation agreement on a MyHealth@EU `contact_point` issuer refuses the
 start.
 
+### `[authz.grants]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `allowed` | list of operation codes | `["commit_composition"]` | The operations of the `ferroehr-operations` terminology the policy grants may grant. A `ROLE` committed with a capability that codes an operation this list does not name is refused with `403`, and one already stored is never honoured, so a compromised administrator account grants no more than you allow. An empty list lets the party store grant nothing; an unknown code refuses the start. Environment: `FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated. The codes and how a request reads its grants are on [Operational policy](../operational-policy.md#how-a-request-reads-its-grants). |
+
 ### `[authz.rbac]`
 
 | Key | Type | Default | Description |
@@ -736,8 +741,8 @@ Every `meta.location` and discovery document names the resource by its URI
 [`server.public_base_url`](config-server.md#public_base_url-the-one-public-url)
 and `server.base_path`, so the table needs that key.
 
-The table's presence turns the endpoint on; `enabled` is a retired key and
-refuses the start. The start is refused when the table is present without
+The table's presence turns the endpoint on; it has no `enabled` key, and
+setting one refuses the start. The start is refused when the table is present without
 `server.public_base_url` or without a client, and for a client that misses a key, is declared twice,
 shares a `binding_issuer`, names an issuer that is not of kind `machines`, or
 names a `binding_issuer` no `[[auth.party]]` table carries. It is refused too

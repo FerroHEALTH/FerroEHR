@@ -31,6 +31,7 @@ use crate::service::demographic::provision::ProvisionedUser;
 use crate::service::demographic::template::TemplateFit;
 use crate::service::demographic::types::PartyKind;
 use crate::service::demographic::user_lifecycle::{Transition, transition};
+use crate::service::demographic::validate::Container;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{self, Change, CommittedContribution, WriteEnvelope};
@@ -160,8 +161,13 @@ impl FerroEhrService {
             // item is one that lost relevance while incomplete, so its content is.
             let incomplete = matches!(*lifecycle, state::INCOMPLETE | state::ABANDONED);
             typed_decode_gate(Kind::Person, &body, incomplete)?;
-            self.validate_for_commit(Kind::Person, &body, incomplete)
-                .await?;
+            self.demographic_commit_check(
+                Kind::Person,
+                &body,
+                incomplete,
+                Some(Container::Existing(id)),
+            )
+            .await?;
             let tree = self.head_tree(id).await?;
             let envelope = WriteEnvelope {
                 lifecycle_state: Some((*lifecycle).to_owned()),

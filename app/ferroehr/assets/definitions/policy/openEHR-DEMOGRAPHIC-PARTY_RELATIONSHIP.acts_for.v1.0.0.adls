@@ -33,6 +33,9 @@ definition
         details matches {
             ITEM_TREE[id3] matches {
                 items matches {
+                    ELEMENT[id6] occurrences matches {1} matches {
+                        value matches { DV_CODED_TEXT[id7] }
+                    }
                     ELEMENT[id4] occurrences matches {0..1} matches {
                         value matches { DV_TEXT[id5] }
                     }
@@ -48,6 +51,7 @@ terminology
             ["id2"] = <text = <"Type of relationship"> description = <"The type of the relationship, which is its name.">>
             ["id3"] = <text = <"Details"> description = <"The details of the relationship.">>
             ["id4"] = <text = <"Agreement reference"> description = <"The reference of the agreement under which the system acts for the provider, such as a processing agreement.">>
+            ["id6"] = <text = <"Acts-for code"> description = <"The code that makes the relationship an acts-for relationship: acts_for of FerroEHR's operation terminology ferroehr-operations.">>
             ["ac1"] = <text = <"Types of acting for"> description = <"The types of the relationship.">>
             ["at10"] = <text = <"Acts for"> description = <"The system acts for the provider.">>
         >

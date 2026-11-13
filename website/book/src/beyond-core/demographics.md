@@ -118,6 +118,17 @@ model requires them, and a party reference has to name a legal type and
 namespace. A body that fails these is refused as unprocessable, with the
 offending path named.
 
+A relationship a party carries in its own `relationships` list is stored
+under its source, so its `source` must name that party's version container
+(the Reference Model's `PARTY.Relationships_validity`). This holds on every
+write: `POST` and `PUT` on the party routes and each version of a demographic
+CONTRIBUTION. The server assigns a new party's container id when it commits
+the party, and ignores a `uid` you put in the body of a create, so a create
+that carries a relationship is refused **422**: create the party first, then
+add the relationship with a `PUT`. On a `PUT`, and on a CONTRIBUTION version
+that modifies a party, a body `uid` that names another container than the one
+you write to is refused **422** as well.
+
 Two limits are worth knowing because they are deliberate rather than accidental:
 
 - There is **no demographic archetype or template store**, so a party is checked
@@ -140,13 +151,31 @@ attribute:
   `PARTY.reverse_relationships`: the released generation defines it, so
   refusing a valid instance of the generation the server advertises would invent
   a prohibition. The value is accepted and then dropped, because the server
-  derives that attribute itself. A canonical-JSON read of a party lists, in
-  `reverse_relationships`, one `LOCATABLE_REF` per relationship another party's
-  current version carries with this party as its target: the reference names
-  that party's version container and the relationship's path in its data.
-  The canonical-XML read does not carry it yet.
+  derives that attribute itself. A party read lists, in
+  `reverse_relationships`, one `LOCATABLE_REF` per relationship another party
+  carries with this party as its target: the reference names that party's
+  version container and the relationship's path in its data. The path names
+  that one relationship: by its `uid` when no sibling shares it
+  (`/relationships[<node> and uid='…']`), else by its archetype node id and
+  name when no sibling shares both, else by its position
+  (`/relationships[2]`), the three unique forms of BASE §Data Paths and
+  Uniqueness. Canonical JSON
+  and XML both carry it, and so do a `VERSION` read's `data` and the
+  representation a create or update returns.
 - Under **`development`**, the attribute is not part of the model and a body
   carrying it is refused as an undeclared field, like any other unknown key.
+  RM 1.2.0 keeps `reverse_relationships()` as a function, and FerroEHR
+  evaluates it on its own route, in either profile:
+  `GET /ferroehr/rest/extensions/v1/demographic/party/{uid_based_id}/reverse_relationships`
+  answers a JSON array of the same `LOCATABLE_REF`s, `[]` when no relationship
+  targets the party. It takes `version_at_time` like a party read.
+
+Which relationships a read lists depends on what it addresses. A read by the
+party's container id lists them as they stand now. A read of one version, by
+its `OBJECT_VERSION_ID`, at a `version_at_time`, or through the
+`versioned_party` routes, lists them as they stood when that version was
+committed, so a version reads the same every time you fetch it. The
+specification leaves this open; it is FerroEHR's own choice.
 
 XML bodies need no such split: undeclared elements are skipped in either
 profile.

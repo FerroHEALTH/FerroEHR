@@ -62,9 +62,6 @@ pub enum ConfigError {
     /// A semantic (cross-field) validation failure.
     #[error("{0}")]
     Semantic(String),
-    /// A key the tree no longer reads, named with what replaced it.
-    #[error("{0}")]
-    Removed(ferrohealth_config::removed::Removal),
 }
 
 impl ConfigError {
@@ -151,7 +148,6 @@ pub fn load_process(
     overrides: &[(String, String)],
 ) -> Result<(Loaded<FerroEhrConfig>, FerroEhrConfig), ConfigErrors> {
     let sources = loader()?;
-    refuse_shared(sources.load_with::<toml::Table>(cli_config, overrides))?;
     let loaded = sources
         .load_with::<FerroEhrConfig>(cli_config, overrides)
         .map_err(ConfigError::from)?;
@@ -198,12 +194,6 @@ pub fn assemble_from<S: std::hash::BuildHasher>(
         .map(|(name, value)| (name.clone(), value.clone()))
         .collect();
     let sources = loader()?;
-    refuse_shared(sources.load_sources_with::<toml::Table>(
-        text.as_deref(),
-        file,
-        &environment,
-        overrides,
-    ))?;
     let loaded = sources
         .load_sources_with::<FerroEhrConfig>(text.as_deref(), file, &environment, overrides)
         .map_err(ConfigError::from)?;
@@ -211,44 +201,8 @@ pub fn assemble_from<S: std::hash::BuildHasher>(
     Ok((loaded, config))
 }
 
-/// Refuses every retired key of a family section the merged tree sets, which
-/// the typed load would refuse only as unknown.
-fn refuse_shared(
-    tree: Result<Loaded<toml::Table>, ferrohealth_config::error::ConfigError>,
-) -> Result<(), ConfigErrors> {
-    // NOTE: no specification governs this: our own design; a tree that does not
-    // merge is refused by the typed load that follows, with its position.
-    let Ok(tree) = tree else {
-        return Ok(());
-    };
-    let removals = super::retired_shared::removals(tree.settings());
-    if removals.is_empty() {
-        return Ok(());
-    }
-    Err(ConfigErrors(
-        removals
-            .removals()
-            .iter()
-            .cloned()
-            .map(ConfigError::Removed)
-            .collect(),
-    ))
-}
-
-/// Refuses every retired key `config` sets, then resolves every `*_file`
-/// secret sibling of it.
+/// Resolves every `*_file` secret sibling of `config`.
 fn finish(mut config: FerroEhrConfig) -> Result<FerroEhrConfig, ConfigErrors> {
-    let removals = super::retired::removals(&config);
-    if !removals.is_empty() {
-        return Err(ConfigErrors(
-            removals
-                .removals()
-                .iter()
-                .cloned()
-                .map(ConfigError::Removed)
-                .collect(),
-        ));
-    }
     let mut errors = Vec::new();
     resolve_secret_files(&mut config, &mut errors);
     if errors.is_empty() {

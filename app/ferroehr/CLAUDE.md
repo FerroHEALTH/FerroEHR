@@ -19,12 +19,17 @@ parties by archetype and carries their default definitions from
 `assets/definitions/policy/`, and `shipped` carries the default demographic
 definitions of `deploy/definitions/` and the ids the default mapping names;
 `service::demographic::default_definitions` seeds both sets at boot when
-absent),
+absent; `grants` derives the client identifiers of any `ACTOR` and the
+operations of the `ferroehr-operations` terminology coded in any `ROLE`'s
+capability credentials into the side table in each commit, never by
+archetype, refuses an operation above `[authz.grants] allowed`, and keeps them in memory per replica
+(`LiveGrants`, invalidated through `NOTIFY`) for `Capabilities::current()`),
 `origins` (the
 `[origins]` register of recognised data origins, EHDS Annex II 3.4),
 `policy_register` (the operational-policy admin registers: the audit category
 map, the access delay and the Cedar policy set, versioned in the clinical
-`policy_register` table and read again on every request),
+`policy_register` table, held in memory and read again when `listen::Listened`
+says a write notified),
 `licence`, `ids`, `extensions`, `banner`, `decommission` (the `ferroehr db
 erase` operation: blobs first, then `db::erase_schema` drops every schema,
 behind a confirmation naming the instance), `manufacturer` (the one source of

@@ -126,7 +126,7 @@ pub(super) fn archetype_predicate(node: &str, value: &str, lineage: &ArchetypeLi
 /// observations were estimated at 188 of 1 467 rows with `LIKE` and 1 313
 /// with the range, and the low estimate cost the flat read its `LIMIT` early
 /// stop (#4944).
-fn legacy_children(node: &str, concept: &str) -> Expr {
+pub(super) fn legacy_children(node: &str, concept: &str) -> Expr {
     let column = || col(node, Node::ArchConcept);
     column()
         .binary(BinOper::Custom("~>=~"), Expr::val(format!("{concept}-")))

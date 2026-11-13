@@ -73,12 +73,12 @@ everywhere else flag "no openEHR spec governs configuration — our own design".
    fails on drift and the template-sync tests (`config::tests`) on a key the
    template misses. A key is never read
    under two names: no alias layer, no remapping table. A renamed or removed
-   key keeps a `ferrohealth_config::removed::Removed` field that
-   `config::retired::removals` refuses at load naming its replacement, for ONE
-   release only (owner hard rule 2026-11-09, `.claude/memory/no-compat-shims.md`):
-   the refusal records the release that introduced it, ships in that release
-   with the upgrade step in the changelog fragment, and the next release
-   deletes it so `deny_unknown_fields` takes over.
+   key is deleted from its struct and nothing else: FerroEHR is greenfield
+   (owner ruling, #5463), so `deny_unknown_fields` refuses the old spelling as
+   an unknown key, with the loader's did-you-mean, and the changelog fragment
+   names the replacement. No `ferrohealth_config::removed::Removed` field and
+   no refusal table naming a replacement (the 5.7.0 ones were deleted in
+   5.7.1, `.claude/memory/no-compat-shims.md`).
 3. Classify every key you add (#5455): `x-ferroehr-class` through
    `#[cfg_attr(feature = "schema", schemars(extend(...)))]`, on the struct
    (its own keys) or on the field: `infrastructure` or `trust` for a key that
