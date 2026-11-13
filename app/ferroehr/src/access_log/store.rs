@@ -7,8 +7,9 @@
 //!
 //! The draft's integrity rules (`docs/plans/access-log.md` §Integrity) fix
 //! the chain: the canonical form of a record is its ITS-JSON serialisation
-//! without its link, canonicalised by RFC 8785; `content_digest` is the SHA-256 of that form and
-//! `digest` the SHA-256 of `previous_digest`, the sequence and
+//! without its link, canonicalised by RFC 8785; `content_digest` is the
+//! SHA-256 of that form and `digest` the SHA-256 of `previous_digest`, the
+//! sequence and
 //! `content_digest`, one per line. The store writes the canonical form, and
 //! the insert trigger of `audit.access_log_record`
 //! (`migrations/audit/0027_access_log_record.sql`) gives it its link in the
