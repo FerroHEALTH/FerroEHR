@@ -2,18 +2,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The **draft-module table**: FerroEHR-local BMM schemas that are no openEHR
-//! release, each emitted as one generated module of an application crate.
+//! release, each emitted as one generated module under the `draft` module of
+//! the openEHR crate it extends, behind that crate's `draft` cargo feature.
 //!
 //! A draft change proposal is still a BMM model, so the codegen rule forbids
-//! hand-transcribing it, but it is no openEHR specification, so it does not
-//! belong in the published `openehr-*` crates either. Each entry names its
-//! FerroEHR-local input under `draft/bmm/`, the crate and module it lands in,
-//! and the published generations it resolves against. No openEHR spec governs
-//! where a draft package is generated: our own design (#5124).
+//! hand-transcribing it. Generated openEHR types live in the openEHR crates,
+//! never in an application crate (owner decision 2026-11-13, #5540), and a
+//! draft is no openEHR release, so it sits apart from the generations under a
+//! `draft` module the crate compiles only when a consumer enables the `draft`
+//! feature. Each entry names its FerroEHR-local input under `draft/bmm/`, the
+//! crate and package module it lands in, and the published generations it
+//! resolves against. No openEHR spec governs where a draft package is
+//! generated: our own design (#5124, #5540).
 //!
-//! A draft module carries no prelude (the application crates re-export
-//! nothing) and no `Generation` enum (a draft has no released generations);
-//! its types are named by full module path.
+//! A draft module carries no prelude and no `Generation` enum (a draft has no
+//! released generations); its types are named by full module path.
 
 use crate::analyze::{External, Model, emittable_specs};
 use crate::load::bmm::BmmSchema;
@@ -25,16 +28,20 @@ use std::path::Path;
 /// is FerroEHR's own text under BUSL-1.1.
 const DRAFT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/draft/bmm");
 
-/// One draft BMM schema and the application module it is emitted into.
+/// The module every draft package of a crate is emitted under, inside the
+/// crate's `src/`, and the cargo feature that compiles it.
+pub(crate) const MODULE: &str = "draft";
+
+/// One draft BMM schema and the crate module it is emitted into.
 pub(crate) struct DraftModule {
     /// The draft BMM file, relative to the draft root.
     pub file: &'static str,
-    /// The receiving crate's name, which decides the SPDX header.
+    /// The receiving openEHR crate's name, which decides the SPDX header.
     pub crate_name: &'static str,
     /// The receiving crate's directory, relative to the workspace root.
     pub crate_dir: &'static str,
-    /// The top module the draft is emitted under, inside the crate's `src/`.
-    pub module: &'static str,
+    /// The package module the draft is emitted as, under [`MODULE`].
+    pub package: &'static str,
     /// The schema ids the draft must declare in its `includes`, exactly.
     pub includes: &'static [&'static str],
     /// Dependency generations merged (in order, before the draft) into the
@@ -45,6 +52,44 @@ pub(crate) struct DraftModule {
     pub prelude_deps: &'static [DepGeneration],
     /// The module's doc comment, emitted into its `mod.rs`.
     pub doc: &'static str,
+}
+
+impl DraftModule {
+    /// The draft's Rust module path inside its crate (`draft::access_log`).
+    pub(crate) fn module_path(&self) -> String {
+        format!("{MODULE}::{}", self.package)
+    }
+
+    /// The draft's module directory inside its crate's `src/`
+    /// (`draft/access_log`).
+    pub(crate) fn module_dir(&self) -> String {
+        format!("{MODULE}/{}", self.package)
+    }
+}
+
+/// Whether `crate_name` receives at least one draft module, so its generated
+/// `lib.rs` declares the feature-gated [`MODULE`].
+pub(crate) fn has_drafts(crate_name: &str) -> bool {
+    DRAFTS.iter().any(|d| d.crate_name == crate_name)
+}
+
+/// Refuse a row whose target is no openEHR crate of `crates/`: a draft is an
+/// openEHR specification type, and an application crate never holds one.
+///
+/// # Errors
+/// Returns an error naming the row when its crate is not an `openehr-*` crate
+/// or its directory is not that crate's `crates/` directory.
+pub(crate) fn check_target(draft: &DraftModule) -> Result<(), String> {
+    if !draft.crate_name.starts_with("openehr-")
+        || draft.crate_dir != format!("crates/{}", draft.crate_name)
+    {
+        return Err(format!(
+            "draft {}: targets {} ({}); a draft is generated into an openEHR crate \
+             under crates/, never into an application crate",
+            draft.file, draft.crate_name, draft.crate_dir
+        ));
+    }
+    Ok(())
 }
 
 /// The dependency generations every draft that includes `openehr_rm_1.2.0`
@@ -74,7 +119,8 @@ const RM_1_2_PRELUDE_DEPS: &[DepGeneration] = &[
 ];
 
 /// The module doc of a draft package that includes `openehr_rm_1.2.0`: its
-/// title, package and BMM file, then why it is emitted outside `openehr-rm`.
+/// title, package and BMM file, then why it sits under `draft` and apart from
+/// the RM generations.
 macro_rules! rm_1_2_draft_doc {
     ($title:literal, $package:literal, $file:literal) => {
         concat!(
@@ -85,8 +131,9 @@ macro_rules! rm_1_2_draft_doc {
             "` 0.1.0), generated from its FerroEHR-local BMM `tools/openehr-codegen/draft/bmm/",
             $file,
             "`.\n\nThe package is a draft change proposal and no openEHR release, so it is \
-             emitted here rather than in `openehr-rm`; if openEHR adopts it, it moves to \
-             `openehr-rm` as a generation of the RM. Its classes resolve against RM 1.2.0 and \
+             emitted under `draft`, behind the `draft` feature, rather than as a generation of \
+             the RM; if openEHR adopts it, it moves into an RM generation. Its classes resolve \
+             against RM 1.2.0 and \
              BASE 1.3.0, the schemas the draft includes, and read and write the canonical JSON \
              form with `_type` through the same strict runtime as the spec crates."
         )
@@ -94,14 +141,14 @@ macro_rules! rm_1_2_draft_doc {
 }
 
 /// The draft access log of `docs/plans/access-log.md` and the draft access
-/// control of `docs/plans/abac-openehr.md`, emitted into `app/ferroehr` until
-/// openEHR adopts the packages.
+/// control of `docs/plans/abac-openehr.md`, emitted into `openehr-rm` under
+/// `draft` until openEHR adopts the packages.
 pub(crate) const DRAFTS: &[DraftModule] = &[
     DraftModule {
         file: "openehr_access_log_0.1.0.bmm.json",
-        crate_name: "ferroehr",
-        crate_dir: "app/ferroehr",
-        module: "access_log_draft",
+        crate_name: "openehr-rm",
+        crate_dir: "crates/openehr-rm",
+        package: "access_log",
         includes: &["openehr_rm_1.2.0"],
         model_deps: RM_1_2_MODEL_DEPS,
         prelude_deps: RM_1_2_PRELUDE_DEPS,
@@ -113,9 +160,9 @@ pub(crate) const DRAFTS: &[DraftModule] = &[
     },
     DraftModule {
         file: "openehr_access_control_0.1.0.bmm.json",
-        crate_name: "ferroehr",
-        crate_dir: "app/ferroehr",
-        module: "access_control_draft",
+        crate_name: "openehr-rm",
+        crate_dir: "crates/openehr-rm",
+        package: "access_control",
         includes: &["openehr_rm_1.2.0"],
         model_deps: RM_1_2_MODEL_DEPS,
         prelude_deps: RM_1_2_PRELUDE_DEPS,
@@ -162,12 +209,14 @@ fn schema_id(schema: &BmmSchema) -> String {
 /// it nor its dependency generations define.
 ///
 /// # Errors
-/// Returns an error if a BMM file cannot be loaded, the draft's `includes`
+/// Returns an error if the row targets no openEHR crate, a BMM file cannot be
+/// loaded, the draft's `includes`
 /// differ from the declared ones or name a schema the dependencies do not
 /// load, or a class refers to a type that resolves nowhere.
 pub(crate) fn compose_draft(
     draft: &'static DraftModule,
 ) -> Result<ComposedDraft, Box<dyn std::error::Error>> {
+    check_target(draft)?;
     let schema = load_draft(draft.file)?;
     let declared: BTreeSet<&str> = draft.includes.iter().copied().collect();
     let found: BTreeSet<&str> = schema.includes.iter().map(String::as_str).collect();
@@ -230,7 +279,7 @@ fn unresolved_types(model: &Model, schema: &BmmSchema, external: &External) -> B
 
 #[cfg(test)]
 mod tests {
-    use super::{DRAFTS, compose_draft, unresolved_types};
+    use super::{DRAFTS, DraftModule, MODULE, check_target, compose_draft, unresolved_types};
     use crate::load::bmm::BmmSchema;
 
     #[test]
@@ -242,18 +291,62 @@ mod tests {
     }
 
     #[test]
-    fn every_draft_module_is_named_as_a_draft() {
+    fn every_draft_targets_an_openehr_crate_with_a_draft_feature() {
         // The drift check, `.gitattributes` and the Sonar scope find the draft
-        // modules by the glob `app/*/src/*_draft`.
+        // modules under `crates/`, and the crate compiles them behind `draft`.
         for d in DRAFTS {
+            assert_eq!(check_target(d), Ok(()), "{}", d.file);
+            let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../..")
+                .join(d.crate_dir)
+                .join("Cargo.toml");
+            let text = std::fs::read_to_string(&manifest).expect("the crate manifest reads");
+            let (_, after) = text
+                .split_once("\n[features]\n")
+                .unwrap_or_else(|| panic!("{}: no [features]", d.crate_dir));
+            let features = after.split("\n[").next().unwrap_or_default();
+            let declares = |name: &str| {
+                features
+                    .lines()
+                    .find(|l| l.split('=').next().is_some_and(|k| k.trim() == name))
+            };
             assert!(
-                d.module.ends_with("_draft") && d.crate_dir.starts_with("app/"),
-                "{}: module {} in {} must match app/*/src/*_draft",
-                d.file,
-                d.module,
+                declares(MODULE).is_some(),
+                "{}: no draft feature",
+                d.crate_dir
+            );
+            assert!(
+                declares("default").is_none_or(|l| !l.contains(&format!("\"{MODULE}\""))),
+                "{}: draft is a default feature",
                 d.crate_dir
             );
         }
+    }
+
+    #[test]
+    fn a_row_that_targets_an_application_crate_is_refused() {
+        for (crate_name, crate_dir) in [
+            ("ferroehr", "app/ferroehr"),
+            ("openehr-rm", "app/ferroehr"),
+            ("openehr-rm", "crates/openehr-am"),
+        ] {
+            let row = DraftModule {
+                crate_name,
+                crate_dir,
+                ..*DRAFTS.first().expect("a draft row")
+            };
+            assert!(check_target(&row).is_err(), "{crate_name} in {crate_dir}");
+            assert!(
+                compose_draft_owned(row).is_err(),
+                "{crate_name} in {crate_dir}"
+            );
+        }
+    }
+
+    /// [`compose_draft`] over a row built in the test.
+    fn compose_draft_owned(row: DraftModule) -> Result<(), String> {
+        let row: &'static DraftModule = Box::leak(Box::new(row));
+        compose_draft(row).map(|_| ()).map_err(|e| e.to_string())
     }
 
     #[test]

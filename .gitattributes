@@ -55,10 +55,12 @@ app/ferroehr/assets/ferroehr.default.toml linguist-generated=true
 crates/openehr-base/src/** linguist-generated=true
 crates/openehr-rm/src/**   linguist-generated=true
 crates/openehr-am/src/**   linguist-generated=true
-# The draft modules openehr-codegen emits into the app crates (#5124).
-app/*/src/*_draft/** linguist-generated=true
 crates/openehr-base/src/**/*_impl.rs linguist-generated=false
 crates/openehr-rm/src/**/*_impl.rs   linguist-generated=false
+# The draft packages emit-drafts writes under openehr-rm's `draft` module are
+# covered by the crate glob above (#5124, #5540); their invariant checks are
+# hand-written.
+crates/openehr-rm/src/draft/**/invariants.rs linguist-generated=false
 crates/openehr-am/src/**/*_impl.rs   linguist-generated=false
 
 # Vendored third-party / spec inputs (never authored here)

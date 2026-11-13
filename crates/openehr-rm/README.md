@@ -32,6 +32,20 @@ generation modules: `v1_1` (RM 1.1.0, the latest released) and `v1_2`
   sets), the oracle an AQL planner or path validator needs, generated rather
   than reflected.
 
+## Draft packages (`draft` feature)
+
+The `draft` feature, off by default, adds `openehr_rm::draft`: FerroEHR's
+draft change proposals to the RM, generated from their own BMM schemas and
+resolved against RM 1.2.0. They are no openEHR release and can change in any
+version.
+
+- `draft::access_log`: the access log (`org.openehr.rm.access_log` 0.1.0).
+- `draft::access_control`: access control (`org.openehr.rm.access_control`
+  0.1.0), with the conversion of `ACCESS_DIRECTIVE_SETTINGS` to and from the
+  `EHR_ACCESS.settings` carrier.
+- `draft::invariants` and `draft::<package>::invariants`: the class
+  invariants each draft BMM states.
+
 ## Generated code — do not edit
 
 Every type file carries a `// @generated` header. The crate is emitted

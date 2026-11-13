@@ -190,7 +190,8 @@ impl<'a> Shape<'a> {
 }
 
 /// Emit one specification unit under its generation's version-named top
-/// module. Produces the type files and the `mod.rs` tree; the caller
+/// module (`prefix`, or a `::`-separated module path such as a draft's
+/// `draft::access_log`). Produces the type files and the `mod.rs` tree; the caller
 /// assembles the generation prelude, the crate prelude and `lib.rs`. The
 /// generation's spec version lives ONLY on the `Generation` enum (owner
 /// ruling 2026-08-05: no version constants anywhere — a second copy of the
@@ -239,7 +240,7 @@ pub(crate) fn emit_version(
         let pkg = class_pkg.get(name).cloned().unwrap_or_default();
         let mut chain: Vec<String> = Vec::new();
         if !prefix.is_empty() {
-            chain.push(prefix.to_string());
+            chain.extend(prefix.split("::").map(str::to_owned));
         }
         chain.extend(
             pkg.split('/')
@@ -311,12 +312,19 @@ pub(crate) fn emit_version(
     // the generation `mod.rs` declares it (the caller assembles the prelude
     // file itself, over the generation's prelude-carrying units).
     let mut tree_chains = type_chains.clone();
-    tree_chains.push(vec![prefix.to_string(), "prelude".to_string()]);
+    let mut prelude_chain: Vec<String> = prefix.split("::").map(str::to_owned).collect();
+    prelude_chain.push("prelude".to_string());
+    tree_chains.push(prelude_chain);
     files.extend(emit_module_tree(&tree_chains));
 
     Version {
         files,
-        top: std::iter::once(prefix.to_string()).collect(),
+        top: prefix
+            .split("::")
+            .next()
+            .map(str::to_owned)
+            .into_iter()
+            .collect(),
         emitted,
     }
 }
@@ -502,6 +510,12 @@ fn emit_lib(top: &BTreeSet<String>, comp: &CrateComposition) -> GenFile {
         b.push_str(&format!("pub mod {m};\n"));
     }
     b.push_str("pub mod prelude;\n");
+    if crate::plan::drafts::has_drafts(comp.crate_name) {
+        b.push_str(&format!(
+            "#[cfg(feature = \"{m}\")]\npub mod {m};\n",
+            m = crate::plan::drafts::MODULE
+        ));
+    }
     // No crate-level SPEC_VERSION const (owner ruling 2026-08-05): a
     // multi-generation crate has no single implemented spec version — the
     // `Generation` enum is the authority (per-variant `spec_version()`, the

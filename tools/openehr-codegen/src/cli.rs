@@ -1193,8 +1193,10 @@ fn write_crate(crate_name: &str, files: &[&EmittedFile]) -> Result<(), Box<dyn s
     // files, never the hand-written `*_impl.rs` / spec-behaviour modules beside
     // them. (A stale generated file no longer emitted this run is `@generated` →
     // removed; a hand-written sibling is kept.)
+    // The `draft` subtree is `emit-drafts` output, never this target's.
+    let drafts = src.join(crate::plan::drafts::MODULE);
     if src.exists() {
-        remove_generated_files(&src)?;
+        remove_generated_files_except(&src, &drafts)?;
     }
     std::fs::create_dir_all(&src)?;
     let mut written = Vec::with_capacity(files.len());
@@ -1210,7 +1212,7 @@ fn write_crate(crate_name: &str, files: &[&EmittedFile]) -> Result<(), Box<dyn s
     // beside a generated `mod.rs` (or at the crate root beside `lib.rs`) is
     // declared `pub mod <name>;` so the hand-written `*_impl.rs` files compile without the
     // generator owning them. Deterministic (sorted scan) → drift-check-stable.
-    declare_hand_written_modules(&src, &mut written)?;
+    declare_hand_written_modules(&src, "lib.rs", Some(&drafts), &mut written)?;
     rustfmt(&written)?;
     println!("emitted {} files into {}", files.len(), src.display());
     Ok(())
@@ -1239,10 +1241,24 @@ fn is_generated_file(path: &Path) -> bool {
 /// Recursively delete every `@generated` file under `dir` (leaving hand-written
 /// files + their directories in place), then prune directories left empty.
 pub(crate) fn remove_generated_files(dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    remove_generated_files_except(dir, Path::new(""))
+}
+
+/// [`remove_generated_files`], leaving the subtree at `keep` untouched.
+///
+/// # Errors
+/// A directory that cannot be read, or a file that cannot be removed.
+fn remove_generated_files_except(
+    dir: &Path,
+    keep: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
     for entry in std::fs::read_dir(dir)? {
         let path = entry?.path();
+        if path == keep {
+            continue;
+        }
         if path.is_dir() {
-            remove_generated_files(&path)?;
+            remove_generated_files_except(&path, keep)?;
             if std::fs::read_dir(&path)?.next().is_none() {
                 std::fs::remove_dir(&path)?;
             }
@@ -1261,18 +1277,26 @@ pub(crate) fn remove_generated_files(dir: &Path) -> Result<(), Box<dyn std::erro
 /// untouched: it manages its own submodules (so we never duplicate an `odin/`
 /// mod.rs's private `mod lexer;`). Modified anchors are added to `written` for
 /// rustfmt.
-fn declare_hand_written_modules(
+///
+/// `root_anchor` is the anchor of `src` itself (`lib.rs` for a crate, `mod.rs`
+/// for a module tree such as `draft`); the subtree at `skip`, if any, is left
+/// to its own target.
+pub(crate) fn declare_hand_written_modules(
     src: &Path,
+    root_anchor: &str,
+    skip: Option<&Path>,
     written: &mut Vec<PathBuf>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // (dir, module-anchor file) pairs: the root anchors on lib.rs, each subdir on
-    // its mod.rs. Collect all dirs first (sorted) for deterministic output.
+    // (dir, module-anchor file) pairs: the root anchors on `root_anchor`, each
+    // subdir on its mod.rs. Collect all dirs first (sorted) for deterministic
+    // output.
     let mut dirs = vec![src.to_path_buf()];
     collect_dirs(src, &mut dirs)?;
+    dirs.retain(|d| skip.is_none_or(|s| !d.starts_with(s)));
     dirs.sort();
     for dir in dirs {
         let anchor = if dir == src {
-            dir.join("lib.rs")
+            dir.join(root_anchor)
         } else {
             dir.join("mod.rs")
         };
