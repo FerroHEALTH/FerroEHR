@@ -39,7 +39,7 @@ use crate::common;
 
 /// The one value substituted for every path capture but `{ehr_id}`: the
 /// evaluator refuses on the EHR before any object the path names is read.
-const PROBE: &str = "0b8f7c5e-0000-4000-8000-000000000001";
+pub(crate) const PROBE: &str = "0b8f7c5e-0000-4000-8000-000000000001";
 
 /// The person's app over a fresh database, with the access log stored, and
 /// both EHRs seeded.
@@ -60,10 +60,11 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     (db, pool, app)
 }
 
-/// Every `(method, path)` the router mounts whose path names `{ehr_id}`,
-/// the access log's own routes and the controller's admin routes left out.
-fn ehr_routes() -> Vec<(String, String)> {
-    let doc = ferroehr_rest::extensions::openapi::extensions_document(&rest_config());
+/// Every `(method, path)` the router of `config` mounts whose path names
+/// `{ehr_id}`, the access log's own routes and the controller's admin routes
+/// left out.
+pub(crate) fn ehr_routes(config: &ferroehr_rest::config::AppConfig) -> Vec<(String, String)> {
+    let doc = ferroehr_rest::extensions::openapi::extensions_document(config);
     let mut out = Vec::new();
     for (path, item) in &doc.paths.paths {
         let segments = || path.split('/');
@@ -86,7 +87,7 @@ fn ehr_routes() -> Vec<(String, String)> {
 }
 
 /// `template` with `{ehr_id}` as `ehr` and every other capture as [`PROBE`].
-fn concrete(template: &str, ehr: &str) -> String {
+pub(crate) fn concrete(template: &str, ehr: &str) -> String {
     template
         .split('/')
         .map(|segment| match segment {
@@ -131,7 +132,7 @@ async fn assert_refused(app: &Router, pool: &PgPool, req: Request<Body>, n: usiz
 #[tokio::test]
 async fn every_route_naming_another_patients_ehr_refuses_and_records_alike() {
     let (_db, pool, app) = app().await;
-    let routes = ehr_routes();
+    let routes = ehr_routes(&rest_config());
     assert!(
         routes.iter().any(|(_, p)| p.ends_with("/directory"))
             && routes.iter().any(|(_, p)| p.ends_with("/tags"))

@@ -84,10 +84,7 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
     let caller = Caller {
         kind,
         party: settings.party().map(str::to_owned),
-        own_ehr: own_ehr(
-            principal,
-            kind == CallerKind::Subject || patient_grants_only,
-        ),
+        own_ehr: own_ehr(principal, kind, patient_grants_only),
         patient_grants_only,
         acts_for,
         administrator: roles.iter().any(|r| r.eq_ignore_ascii_case(&admin_role)),
@@ -150,16 +147,33 @@ fn kind(principal: Option<&Principal>, subject: bool, capabilities: &Capabilitie
     CallerKind::Professional
 }
 
-/// The EHR a `confined` caller reaches: the EHR of its SMART App Launch
+/// The EHR a confined caller of `kind` reaches: for a representative, the
+/// EHR whose `EHR_STATUS.subject` names the subject its recorded
+/// representation `PARTY_RELATIONSHIP` names, which authentication resolved
+/// ([`Principal::represented`]); otherwise the EHR of its SMART App Launch
 /// patient context (`ehrId`, ITS-REST `master07` §Context Selection), or,
 /// for a contact point's caller, the EHR of its TRC patient, which stands in
 /// for the launch context its token does not carry (eHDSI XCA Profile 8.0.1
 /// §4.2.1).
-fn own_ehr(principal: Option<&Principal>, confined: bool) -> Option<EhrId> {
-    if !confined {
+fn own_ehr(
+    principal: Option<&Principal>,
+    kind: CallerKind,
+    patient_grants_only: bool,
+) -> Option<EhrId> {
+    let principal = principal?;
+    if kind == CallerKind::Representative {
+        // NOTE: our own design (#5609), a representative whose subject has no EHR, or one
+        // authentication did not resolve, reaches none, so the evaluator refuses it on every EHR.
+        return principal
+            .represented
+            .as_ref()
+            .and_then(|represented| represented.ehr_id.as_deref())
+            .and_then(|ehr| ehr.parse().ok());
+    }
+    if kind != CallerKind::Subject && !patient_grants_only {
         return None;
     }
-    let access = &principal?.access;
+    let access = &principal.access;
     if let Some(TrcPatientEhr(ehr)) = access.extension::<TrcPatientEhr>() {
         return Some(*ehr);
     }
