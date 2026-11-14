@@ -48,5 +48,7 @@ pub mod config;
 mod expander;
 pub mod fhir;
 mod routing;
+#[cfg(feature = "fhir")]
+mod translate;
 
 pub mod types;

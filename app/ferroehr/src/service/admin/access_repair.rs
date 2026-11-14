@@ -200,7 +200,7 @@ impl FerroEhrService {
 
     /// The `EHR_ACCESS` of `ehr_id`: its object, its current version and that
     /// version read.
-    async fn current_ehr_access(
+    pub(in crate::service) async fn current_ehr_access(
         &self,
         ehr_id: EhrId,
     ) -> Result<(VoId, TreeId, VersionRead), ServiceError> {

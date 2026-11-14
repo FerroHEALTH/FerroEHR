@@ -52,6 +52,7 @@ mod dump_load;
 mod statistics;
 
 pub mod access_delay;
+pub mod access_exchange;
 pub mod access_log_erasure;
 pub mod access_log_read;
 pub mod access_policy;

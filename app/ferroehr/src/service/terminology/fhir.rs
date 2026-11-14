@@ -65,13 +65,13 @@ const FHIR_CHILD_PROPERTY: &str = "http://hl7.org/fhir/concept-properties#child"
 
 /// The `ferrobridge-term` client of the one server.
 #[cfg(feature = "fhir")]
-type Wire = ferrobridge_term::client::Client;
+pub(super) type Wire = ferrobridge_term::client::Client;
 
 /// A slim build holds no client: [`FhirTerminologyProvider::new`] refuses a
 /// configured server, so no provider value exists.
 #[cfg(not(feature = "fhir"))]
 #[derive(Debug, Clone)]
-enum Wire {}
+pub(super) enum Wire {}
 
 /// A FHIR R4B terminology-server client answering the terminology
 /// lookup/validation calls against the one configured
@@ -79,7 +79,7 @@ enum Wire {}
 #[derive(Debug, Clone)]
 pub struct FhirTerminologyProvider {
     /// The client of the server, carrying the timeout and the credentials.
-    wire: Wire,
+    pub(super) wire: Wire,
     /// The base URL with any userinfo masked, the server's name on the trace
     /// record.
     endpoint: String,
