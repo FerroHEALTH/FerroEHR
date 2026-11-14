@@ -11,6 +11,7 @@
 //! signed; client-supplied signatures are stored verbatim; `verify_on_read =
 //! strict` turns a tampered row into a 5xx; canonical XML carries the signature.
 
+use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 
@@ -159,7 +160,7 @@ async fn ehr_status_versions_are_signed_and_every_version_carries_a_digest() {
 
     // Update EHR_STATUS → v2, then read the ORIGINAL_VERSION of v1.
     let mut body = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status get");
@@ -177,7 +178,7 @@ async fn ehr_status_versions_are_signed_and_every_version_carries_a_digest() {
 
     let (status_vo, status_ver) = version_components(&status_ovid_v1);
     let ov = svc
-        .ehr_status_version_envelope(ehr_uuid, status_vo, &status_ver)
+        .ehr_object_version_envelope(ehr_uuid, EhrObject::Status, status_vo, &status_ver)
         .await
         .expect("versioned ehr_status version")
         .body;

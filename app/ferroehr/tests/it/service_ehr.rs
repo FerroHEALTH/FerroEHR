@@ -8,6 +8,7 @@
 //! REST layer calls it, asserting both the RM payload (`.body`) and the resource
 //! metadata (`.meta`, from which the HTTP edge derives `ETag`/`Location`).
 
+use ferroehr::service::ehr::object::EhrObject;
 use serde_json::{Value, json};
 
 use openehr_base::prelude::ObjectVersionId;
@@ -64,7 +65,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
 
     // ── EHR_STATUS: read v1, update → v2, optimistic concurrency ─────────────
     let status_v1 = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status get");
@@ -84,7 +85,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     .expect("status update");
     assert!(status_v2_uid.ends_with("::2"));
     let status_v2 = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status v2");
@@ -122,7 +123,12 @@ async fn ehr_composition_lifecycle_end_to_end() {
     // an ORIGINAL_VERSION wrapper.
     let sp: Vec<&str> = status_ovid_v1.split("::").collect();
     let status_by_v = svc
-        .ehr_status_at_version(ehr_uuid, sp[0].parse().expect("status vo uuid"), sp[2])
+        .ehr_object_at_version(
+            ehr_uuid,
+            EhrObject::Status,
+            sp[0].parse().expect("status vo uuid"),
+            sp[2],
+        )
         .await
         .map(|r| r.body)
         .expect("status by version");
@@ -426,7 +432,7 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
     // Deactivate: set is_modifiable = false. This EHR_STATUS write MUST succeed
     // (the EHR_STATUS object is always modifiable).
     let status_v1 = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status v1");
@@ -519,7 +525,7 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
     // But an EHR_STATUS-only CONTRIBUTION (here, flipping it back to modifiable)
     // is still allowed — the EHR_STATUS object is always modifiable.
     let status_v2 = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status v2");
@@ -593,7 +599,7 @@ async fn ehr_creation_merges_the_committal_metadata() {
         .expect("create_ehr with committal metadata");
 
     let version = svc
-        .ehr_status_version_at_time(ehr_id, None)
+        .ehr_object_version_at_time(ehr_id, EhrObject::Status, None)
         .await
         .expect("EHR_STATUS version")
         .body;
@@ -768,7 +774,7 @@ async fn ehr_status_subject_type_is_enforced_end_to_end() {
     //     unrepresentable there too — an EHR_STATUS commit cannot carry it.
     let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
     let status_v1 = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status v1");
@@ -1040,7 +1046,7 @@ async fn revision_history_lists_every_version() {
     let ehr_uuid = ferroehr::ids::EhrId(ehr_id.parse::<uuid::Uuid>().expect("ehr uuid"));
 
     let mut status = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status");
@@ -1052,7 +1058,7 @@ async fn revision_history_lists_every_version() {
         .expect("status update");
 
     let history = svc
-        .ehr_status_revision_history(ehr_uuid)
+        .ehr_object_revision_history(ehr_uuid, EhrObject::Status)
         .await
         .map(|r| r.body)
         .expect("revision history");
@@ -1859,7 +1865,7 @@ async fn version_get_at_time_returns_the_original_version() {
     // ETag/Location uid the old `.meta` carried is the ORIGINAL_VERSION's own
     // `uid.value`.
     let status_version = svc
-        .ehr_status_version_at_time(ehr_uuid, None)
+        .ehr_object_version_at_time(ehr_uuid, EhrObject::Status, None)
         .await
         .expect("status version at time (latest)")
         .body;
@@ -1873,7 +1879,11 @@ async fn version_get_at_time_returns_the_original_version() {
 
     // A time before the EHR existed → no version at that time (404).
     let too_early = svc
-        .ehr_status_version_at_time(ehr_uuid, Some("2000-01-01T00:00:00Z".to_owned()))
+        .ehr_object_version_at_time(
+            ehr_uuid,
+            EhrObject::Status,
+            Some("2000-01-01T00:00:00Z".to_owned()),
+        )
         .await;
     assert!(
         matches!(
@@ -1887,7 +1897,7 @@ async fn version_get_at_time_returns_the_original_version() {
     );
     // A malformed version_at_time → 400.
     let bad_time = svc
-        .ehr_status_version_at_time(ehr_uuid, Some("not-a-time".to_owned()))
+        .ehr_object_version_at_time(ehr_uuid, EhrObject::Status, Some("not-a-time".to_owned()))
         .await;
     assert!(
         matches!(
@@ -2200,7 +2210,7 @@ async fn change_ehr_status(
     change: impl FnOnce(&mut serde_json::Map<String, Value>),
 ) -> Result<String, ServiceError> {
     let mut body = svc
-        .ehr_status(ehr, None)
+        .ehr_object(ehr, EhrObject::Status, None)
         .await
         .expect("the current EHR_STATUS reads")
         .body;
@@ -2227,7 +2237,7 @@ async fn ehr_status_discrete_mutators() {
 
     // Defaults: both flags true (default_ehr_status).
     let v1 = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
         .expect("status v1")
         .body;
@@ -2242,7 +2252,11 @@ async fn ehr_status_discrete_mutators() {
     .await
     .expect("clear is_queryable");
     assert!(q_off.ends_with("::2"), "got {q_off}");
-    let s = svc.ehr_status(ehr_uuid, None).await.expect("status").body;
+    let s = svc
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
+        .await
+        .expect("status")
+        .body;
     assert_eq!(s["is_queryable"], json!(false));
     assert_eq!(s["is_modifiable"], json!(true), "unrelated flag untouched");
 
@@ -2254,7 +2268,10 @@ async fn ehr_status_discrete_mutators() {
     .expect("set is_queryable");
     assert!(q_on.ends_with("::3"), "got {q_on}");
     assert_eq!(
-        svc.ehr_status(ehr_uuid, None).await.expect("status").body["is_queryable"],
+        svc.ehr_object(ehr_uuid, EhrObject::Status, None)
+            .await
+            .expect("status")
+            .body["is_queryable"],
         json!(true)
     );
 
@@ -2267,7 +2284,10 @@ async fn ehr_status_discrete_mutators() {
     .expect("clearing is_modifiable must be committable on the EHR it disables");
     assert!(m_off.ends_with("::4"), "got {m_off}");
     assert_eq!(
-        svc.ehr_status(ehr_uuid, None).await.expect("status").body["is_modifiable"],
+        svc.ehr_object(ehr_uuid, EhrObject::Status, None)
+            .await
+            .expect("status")
+            .body["is_modifiable"],
         json!(false)
     );
 
@@ -2288,7 +2308,10 @@ async fn ehr_status_discrete_mutators() {
     .expect("setting is_modifiable reactivates");
     assert!(m_on.ends_with("::5"), "got {m_on}");
     assert_eq!(
-        svc.ehr_status(ehr_uuid, None).await.expect("status").body["is_modifiable"],
+        svc.ehr_object(ehr_uuid, EhrObject::Status, None)
+            .await
+            .expect("status")
+            .body["is_modifiable"],
         json!(true)
     );
     // Reactivated: content writes now succeed.
@@ -2309,7 +2332,11 @@ async fn ehr_status_discrete_mutators() {
     .await
     .expect("update other_details");
     assert!(od.ends_with("::6"), "got {od}");
-    let after = svc.ehr_status(ehr_uuid, None).await.expect("status").body;
+    let after = svc
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
+        .await
+        .expect("status")
+        .body;
     assert_eq!(after["other_details"]["_type"], "ITEM_TREE");
     assert_eq!(after["other_details"]["archetype_node_id"], "at0001");
 }
@@ -2466,7 +2493,7 @@ async fn write_responses_match_a_fresh_read() {
     // post-commit reassembly) == fresh read uid, and the `is_queryable` mutation
     // persists (the folded subject/is_queryable sync rode the write's UPDATE).
     let status_v1 = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
         .expect("get_ehr_status v1")
         .body;
@@ -2490,7 +2517,7 @@ async fn write_responses_match_a_fresh_read() {
         "status update yields trunk version 2"
     );
     let fresh_status = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
         .expect("get_ehr_status v2")
         .body;
@@ -2572,7 +2599,7 @@ async fn the_default_ehr_status_satisfies_the_locatable_root_invariants() {
 
     let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
     let status = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
         .expect("bootstrap EHR_STATUS read-back")
         .body;
@@ -2719,7 +2746,7 @@ async fn the_bootstrap_ehr_status_version_has_no_preceding_version_uid() {
 
     let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
     let status_v1 = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
         .expect("status v1")
         .body;
@@ -2730,7 +2757,7 @@ async fn the_bootstrap_ehr_status_version_has_no_preceding_version_uid() {
 
     let vo_id = parts[0].parse().expect("versioned-object uuid");
     let original_v1 = svc
-        .ehr_status_version_envelope(ehr_uuid, vo_id, parts[2])
+        .ehr_object_version_envelope(ehr_uuid, EhrObject::Status, vo_id, parts[2])
         .await
         .expect("bootstrap ORIGINAL_VERSION")
         .body;
@@ -2757,8 +2784,9 @@ async fn the_bootstrap_ehr_status_version_has_no_preceding_version_uid() {
         .expect("status v2");
     let parts_v2: Vec<&str> = ovid_v2.split("::").collect();
     let original_v2 = svc
-        .ehr_status_version_envelope(
+        .ehr_object_version_envelope(
             ehr_uuid,
+            EhrObject::Status,
             parts_v2[0].parse().expect("versioned-object uuid"),
             parts_v2[2],
         )
@@ -2780,7 +2808,7 @@ async fn wrong_kind_uid_on_a_resource_read_is_not_found() {
 
     // The EHR's own EHR_STATUS container id, and one committed COMPOSITION.
     let status_v1 = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status get");
@@ -2820,7 +2848,9 @@ async fn wrong_kind_uid_on_a_resource_read_is_not_found() {
     );
 
     // EHR_STATUS version read addressed with the COMPOSITION's version: not found.
-    let cross = svc.ehr_status_at_version(ehr_uuid, comp_vo, "1").await;
+    let cross = svc
+        .ehr_object_at_version(ehr_uuid, EhrObject::Status, comp_vo, "1")
+        .await;
     assert!(
         cross.is_err(),
         "a COMPOSITION uid is not an EHR_STATUS representation: {cross:?}"
@@ -2831,7 +2861,7 @@ async fn wrong_kind_uid_on_a_resource_read_is_not_found() {
         .await
         .map(|r| r.body.into_value().expect("the stored COMPOSITION decodes"))
         .expect("the composition still reads by its own id");
-    svc.ehr_status_at_version(ehr_uuid, status_container, "1")
+    svc.ehr_object_at_version(ehr_uuid, EhrObject::Status, status_container, "1")
         .await
         .expect("the status still reads by its own id");
 }

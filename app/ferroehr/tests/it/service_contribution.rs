@@ -17,6 +17,7 @@ use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::{Clash, Invalid, Malformed, Missing, Refusal};
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::service::version_update::WriteRequest;
 
 use serde_json::{Value, json};
@@ -653,7 +654,7 @@ async fn ehr_read_with_its_counts() {
     // CONTRIBUTIONs, one of them a COMPOSITION.
     let ehr_id = crate::fixtures::create_ehr(&svc).await; // contribution #1
     let status_uid = svc
-        .ehr_status(ehr_id, None)
+        .ehr_object(ehr_id, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("get current EHR_STATUS")["uid"]["value"]
@@ -679,7 +680,7 @@ async fn ehr_read_with_its_counts() {
         "system_id (EHR.system_id)"
     );
     let status = svc
-        .ehr_status(ehr_id, None)
+        .ehr_object(ehr_id, EhrObject::Status, None)
         .await
         .expect("the current EHR_STATUS")
         .body;
@@ -738,7 +739,7 @@ async fn ehr_contribution_list_page_extension() {
     // Seed three contributions: EHR create, an EHR_STATUS update, a composition.
     let ehr_id = crate::fixtures::create_ehr(&svc).await;
     let status_uid = svc
-        .ehr_status(ehr_id, None)
+        .ehr_object(ehr_id, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("get current EHR_STATUS")["uid"]["value"]
@@ -1313,7 +1314,7 @@ async fn create_composition_gate_error_surface_survives_the_writability_fold() {
     // content write is refused with a conflict (the modifiability signal of the
     // folded query, checked after existence).
     let status_uid = svc
-        .ehr_status(ehr_id, None)
+        .ehr_object(ehr_id, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("current EHR_STATUS")["uid"]["value"]
@@ -1435,7 +1436,7 @@ async fn contribution_cannot_delete_the_ehr_status() {
     let ehr_id = crate::fixtures::create_ehr(&svc).await;
 
     let status_uid = svc
-        .ehr_status(ehr_id, None)
+        .ehr_object(ehr_id, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status read")["uid"]["value"]
@@ -1464,7 +1465,7 @@ async fn contribution_cannot_delete_the_ehr_status() {
 
     // the status is still there
     let still = svc
-        .ehr_status(ehr_id, None)
+        .ehr_object(ehr_id, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status still present");
@@ -2512,7 +2513,7 @@ fn member(data: Value, change: (&str, &str), preceding: Option<&str>) -> Value {
 
 /// The current `EHR_STATUS` version uid of an EHR.
 async fn current_status_uid(svc: &FerroEhrService, ehr: EhrId) -> String {
-    svc.ehr_status(ehr, None)
+    svc.ehr_object(ehr, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("current EHR_STATUS")["uid"]["value"]

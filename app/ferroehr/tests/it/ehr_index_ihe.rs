@@ -13,6 +13,7 @@
 //! §`PARTY_SELF`): our own design. A subject is resolved through the cohort
 //! query that names it, the production path a subject resolution takes.
 
+use ferroehr::service::ehr::object::EhrObject;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -164,7 +165,7 @@ async fn a_subject_is_resolved_through_the_pix_manager() {
         crate::fixtures::create_ehr_subject(&svc, &SubjectRef::person(&pseudonym, CLINICAL)).await;
 
     let stored = svc
-        .ehr_status(ehr, None)
+        .ehr_object(ehr, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("the status reads");

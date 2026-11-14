@@ -11,6 +11,7 @@
 //! shares the transaction's fate); (3) the outbox feed serves every row to a
 //! reader in `seq` order until the reader acknowledges it.
 
+use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::service::version_update::WriteRequest;
 
 use serde_json::{Value, json};
@@ -390,7 +391,7 @@ async fn import_writes_one_phi_free_outbox_row() {
     let ehr = crate::fixtures::create_ehr(&source).await;
     // Give it a second EHR_STATUS version so the import carries real content.
     let mut status = source
-        .ehr_status(ehr, None)
+        .ehr_object(ehr, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status");
