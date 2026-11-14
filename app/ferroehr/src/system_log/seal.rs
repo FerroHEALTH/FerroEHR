@@ -170,7 +170,7 @@ impl Seals {
             return Ok(None);
         };
         let sequence: i64 = head.try_get("chain_seq")?;
-        if let Some(sealed) = self.at(sequence).await? {
+        if let Some(sealed) = self.stored(Some(sequence)).await? {
             return Ok(Some(sealed));
         }
         let mut seal = ChainSeal {
@@ -181,7 +181,8 @@ impl Seals {
             time_sealed: Timestamp::now().to_string(),
             proof: String::new(),
         };
-        seal.proof = self.signer.attest(form(&seal)?.as_bytes())?;
+        let unsigned = canonical_form(&seal).map_err(SealError::Canonical)?;
+        seal.proof = self.signer.attest(unsigned.as_bytes())?;
         let content = serde_json::to_string(&seal)
             .map_err(|source| SealError::Unreadable { sequence, source })?;
         sqlx::query(
@@ -193,40 +194,25 @@ impl Seals {
         .bind(&content)
         .execute(&mut *acquire(&self.pool).await?)
         .await?;
-        Ok(self.at(sequence).await?.or(Some(seal)))
+        let stored = self.stored(Some(sequence)).await?;
+        Ok(stored.or(Some(seal)))
     }
 
-    /// The stored seal at `sequence`.
+    /// The stored seal at `sequence`, or the newest stored one when
+    /// `sequence` is `None`.
     ///
     /// # Errors
     /// The store errors when the statement fails, and
     /// [`SealError::Unreadable`] when the stored seal does not read.
-    pub async fn at(&self, sequence: i64) -> Result<Option<ChainSeal>, SealError> {
-        let content: Option<String> =
-            sqlx::query_scalar("SELECT content FROM audit.audit_chain_seal WHERE sequence = $1")
-                .bind(sequence)
-                .fetch_optional(&mut *acquire(&self.pool).await?)
-                .await?;
-        content.map(|text| read(sequence, &text)).transpose()
-    }
-
-    /// The newest stored seal.
-    ///
-    /// # Errors
-    /// As [`Self::at`].
-    pub async fn latest(&self) -> Result<Option<ChainSeal>, SealError> {
-        let row = sqlx::query(
-            "SELECT sequence, content FROM audit.audit_chain_seal ORDER BY sequence DESC LIMIT 1",
+    pub async fn stored(&self, sequence: Option<i64>) -> Result<Option<ChainSeal>, SealError> {
+        let found: Option<(i64, String)> = sqlx::query_as(
+            "SELECT sequence, content FROM audit.audit_chain_seal \
+             WHERE $1::bigint IS NULL OR sequence = $1 ORDER BY sequence DESC LIMIT 1",
         )
+        .bind(sequence)
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?;
-        row.map(|row| {
-            read(
-                row.try_get("sequence")?,
-                &row.try_get::<String, _>("content")?,
-            )
-        })
-        .transpose()
+        found.map(|(at, content)| read(at, &content)).transpose()
     }
 
     /// Verify the system chain against `seal`, or the newest stored one when
@@ -239,7 +225,7 @@ impl Seals {
     pub async fn verify(&self, seal: Option<ChainSeal>) -> Result<SealVerification, SealError> {
         let seal = match seal {
             Some(seal) => Some(seal),
-            None => self.latest().await?,
+            None => self.stored(None).await?,
         };
         let chain = AuditStore::new(self.pool.clone())
             .verify_chain_advancing(AuditChain::System, VerifyScope::Full)
@@ -254,7 +240,7 @@ impl Seals {
                     algorithm: seal.algorithm.clone(),
                 });
             }
-            let data = form(seal)?;
+            let data = canonical_form(seal).map_err(SealError::Canonical)?;
             if !self.signer.attests(data.as_bytes(), &seal.proof)
                 && !self.trusted.verifies(data.as_bytes(), &seal.proof)
             {
@@ -274,11 +260,6 @@ impl Seals {
             chain,
         })
     }
-}
-
-/// The canonical form of `seal`, its proof left out: what its proof signs.
-fn form(seal: &ChainSeal) -> Result<String, SealError> {
-    canonical_form(seal).map_err(SealError::Canonical)
 }
 
 /// The seal stored at `sequence` as `text`.
@@ -302,9 +283,9 @@ mod tests {
             time_sealed: "2026-11-14T00:00:00Z".to_owned(),
             proof: String::new(),
         };
-        let unsigned = form(&seal).expect("the form");
+        let unsigned = canonical_form(&seal).expect("the form");
         seal.proof = "-----BEGIN PGP SIGNATURE-----".to_owned();
-        assert_eq!(form(&seal).expect("the form"), unsigned);
+        assert_eq!(canonical_form(&seal).expect("the form"), unsigned);
         assert!(!unsigned.contains("proof"));
     }
 }

@@ -80,12 +80,10 @@ pub async fn run(
 )]
 async fn verify(seals: &Seals, file: Option<&Path>) -> anyhow::Result<()> {
     let given: Option<ChainSeal> = match file {
-        Some(path) => {
-            let text = tokio::fs::read_to_string(path)
-                .await
-                .with_context(|| format!("reading the seal {}", path.display()))?;
-            Some(serde_json::from_str(&text).context("the seal does not read")?)
-        }
+        Some(path) => Some(
+            serde_json::from_str(&crate::access_log::kept(path, "seal").await?)
+                .context("the seal does not read")?,
+        ),
         None => None,
     };
     let verification = seals.verify(given).await?;
@@ -96,15 +94,7 @@ async fn verify(seals: &Seals, file: Option<&Path>) -> anyhow::Result<()> {
     for finding in &verification.findings {
         println!("finding: {finding}");
     }
-    for finding in &verification.chain {
-        println!(
-            "chain finding at {}: {}",
-            finding
-                .chain_seq
-                .map_or_else(|| "-".to_owned(), |sequence| sequence.to_string()),
-            finding.finding
-        );
-    }
+    crate::access_log::print_chain(&verification.chain);
     anyhow::ensure!(verification.intact(), "the system chain does not verify");
     println!("the system chain verifies");
     Ok(())
