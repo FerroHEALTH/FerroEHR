@@ -42,7 +42,7 @@ const MOVED: &str = "7d44b88c-4199-4bad-97dc-000000000001";
 const STAYS: &str = "7d44b88c-4199-4bad-97dc-000000000002";
 
 /// A generated Ed25519 `OpenPGP` secret key.
-fn generate_key() -> SignedSecretKey {
+pub(crate) fn generate_key() -> SignedSecretKey {
     let params = SecretKeyParamsBuilder::default()
         .key_type(KeyType::Ed25519Legacy)
         .can_sign(true)
@@ -53,7 +53,7 @@ fn generate_key() -> SignedSecretKey {
 }
 
 /// A `pgp`-mode keyring over `key`.
-fn keyring(key: &SignedSecretKey) -> Arc<Signer> {
+pub(crate) fn keyring(key: &SignedSecretKey) -> Arc<Signer> {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, Ordering::Relaxed);
     let path = std::env::temp_dir().join(format!(

@@ -570,6 +570,26 @@ which is what makes an optional stage safe to disable:
    #5588). The copy also holds the EHR's subject, and a commit that changes
    it notifies the same channel.
 
+   **Staleness fails closed** (#5589). Each copied entry and each verdict a
+   request judges carries the revision of the EHR's settings row (the
+   `sys_version` of the `EHR_ACCESS` version it was projected from). Every
+   read that leaves the store selects `access_revision(ehr_id)` beside its own
+   columns (`head_facts!`, `version_select!`, the EHR summary read; migration
+   `clinical/0043`, with a `party/0040` twin answering `NULL` so a statement
+   both domains run reads it), and `condition::admits` refuses a verdict judged
+   on another revision and marks the copy stale (`StaleCopies`), which drops
+   it before its next read. A commit reads the revision with its restriction
+   check and judges the EHR again from its own transaction; a replica's own
+   `EHR_ACCESS` commit judges the request's EHR again after it commits. A
+   change committed on another replica is therefore never admitted under the
+   old settings, with no added statement. Each policy listener holds a
+   connection of its own (`[database] listen_url`, `[database.<domain>]
+   listen_url`), named `ferroehr policy listener`, so the request pools may
+   run through a transaction-mode pooler. Each instance writes its signing
+   key fingerprint and configuration digest into `clinical.instance`
+   (migration `0044`, `instance::Instances`) and the `instances` indicator
+   names an instance that differs.
+
    **The access evaluator** (`access_eval`, #5513) decides every EHR a
    request reaches by a fixed procedure over three fact sets held in memory:
    the subject's directives and labels (the copy above), the caller's

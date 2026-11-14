@@ -1,0 +1,83 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# Two FerroEHR instances on one PostgreSQL: an overlay for the quickstart,
+# STANDALONE like docker-compose.observability.yml. Download it beside
+# docker-compose.yml and run
+#
+#   docker compose -f docker-compose.yml -f docker-compose.replicas.yml \
+#     --profile replicas up -d --wait
+#
+# The quickstart's `ferroehr` answers on localhost:8080 and the second
+# instance, `ferroehr-2`, on localhost:8081. Both read the same inline
+# configuration, the same signing key and the same database, with no
+# sticky sessions: a request may go to either, and each answers from
+# PostgreSQL, the only source of truth
+# (https://ferroehr.eu/docs/latest/installation/several-instances.html).
+#
+# The second instance shares the identity issuer's network namespace, as the
+# first does, so it reaches FerroPIX and the issuer on localhost; it moves to
+# port 8081 there. The issuer publishes that port, which is why this is an
+# overlay rather than a profile of the quickstart file: the quickstart alone
+# publishes no port nothing listens on. The deployment probe brings this
+# stack up and runs the two-instance probes against it
+# (scripts/deploy-probes/replicas.sh). No openEHR spec governs the process
+# model: our own design (#5589).
+services:
+  identity-issuer:
+    ports:
+      - "${FERROEHR_BIND_HOST:-127.0.0.1}:${FERROEHR_REPLICA_PORT:-8081}:8081"
+
+  ferroehr-2:
+    profiles: [replicas]
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:main}
+    network_mode: service:identity-issuer
+    depends_on:
+      ferroehr:
+        condition: service_healthy
+    environment:
+      FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
+      FERROEHR__SERVER__LISTEN: 0.0.0.0:8081
+      FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
+      # Two instances hold two sets of pools and listeners, so each takes
+      # fewer connections than the quickstart's one (the connection budget on
+      # the page above).
+      FERROEHR__DATABASE__MAX_CONNECTIONS: ${FERROEHR__DATABASE__MAX_CONNECTIONS:-10}
+      FERROEHR__RECORD__SIGNING__ENABLED: ${FERROEHR__RECORD__SIGNING__ENABLED:-true}
+      FERROEHR__TELEMETRY__FORMAT: ${FERROEHR__TELEMETRY__FORMAT:-pretty}
+      FERROEHR__TELEMETRY__FILTER: ${FERROEHR__TELEMETRY__FILTER:-info}
+      FERROEHR__USAGE_REPORT__ENABLED: ${FERROEHR__USAGE_REPORT__ENABLED:-true}
+      FERROEHR__USAGE_REPORT__DEPLOYMENT: compose
+      # The multimedia keys pass through from your shell, as for `ferroehr`:
+      # declared without a value, an unset key reaches the server as absent.
+      FERROEHR__RECORD__MULTIMEDIA__ENABLED:
+      FERROEHR__RECORD__MULTIMEDIA__URL:
+      FERROEHR__RECORD__MULTIMEDIA__BUCKET:
+      FERROEHR__RECORD__MULTIMEDIA__REGION:
+      FERROEHR__RECORD__MULTIMEDIA__THRESHOLD:
+      FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID:
+      FERROEHR__RECORD__MULTIMEDIA__SECRET_ACCESS_KEY:
+    configs:
+      - source: ferroehr-config${FERROEHR_EHR_INDEX:+-${FERROEHR_EHR_INDEX}}
+        target: /etc/ferroehr/ferroehr.toml
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 16384
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "${FERROEHR_CPUS:-4}"
+          memory: ${FERROEHR_MEM:-4G}
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/ferroehr", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
