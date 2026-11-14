@@ -51,6 +51,13 @@ no scope are grants on the client's `AGENT` (`sign_in_persons`,
 `act_for_persons`, `access_without_scope`), so the clients from the example
 above sign in only once an administrator grants them.
 
+Beside an `[[auth.party]]` table, a Basic user is a person's credential and
+must map to the key of its `PERSON` with `[[authz.party_binding.basic_user]]`,
+`first_admin` included; an unmapped one refuses the start. Until that
+`PERSON` exists, the user's requests are refused as unbound. Such a deployment
+starts with the operator grant, never with `first_admin`: see
+[The first grant](../operational-policy.md#the-first-grant).
+
 The section keys:
 
 | Key | Type | Default | Description |
