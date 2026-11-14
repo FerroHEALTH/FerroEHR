@@ -126,6 +126,16 @@ async fn service_and_seed_app() -> (testkit::TestDb, Arc<FerroEhrService>, Route
 
 // ── seeding through an auth-off app over the same service ───────────────────────
 
+/// Seed the EHRs `ehr_ids` through an auth-off app over `svc`, so a refusal
+/// is the evaluator's on an EHR that exists: an EHR the store does not hold
+/// answers `404` before any step (#5623).
+async fn seed_ehrs(svc: &Arc<FerroEhrService>, ehr_ids: &[&str]) {
+    let seed = common::build_with(seed_config(), Arc::clone(svc)).await;
+    for ehr_id in ehr_ids {
+        seed_ehr(&seed, ehr_id).await;
+    }
+}
+
 /// Create an EHR with a chosen id (`PUT /ehr/{id}` → 201).
 pub(crate) async fn seed_ehr(seed: &Router, ehr_id: &str) {
     let req = Request::builder()
@@ -368,6 +378,7 @@ async fn query_first_column(
 #[tokio::test]
 async fn create_for_other_patient_is_pre_check_forbidden() {
     let (_pg, svc) = service(None).await;
+    seed_ehrs(&svc, &[EHR_OTHER]).await;
     let app = gated_app(svc).await;
     let s = probe(
         &app,
@@ -446,6 +457,7 @@ async fn read_of_own_patient_is_served() {
 #[tokio::test]
 async fn a_patient_context_naming_no_ehr_is_forbidden() {
     let (_pg, svc) = service(None).await;
+    seed_ehrs(&svc, &[EHR_OWN]).await;
     let app = gated_app(svc).await;
     let s = probe(&app, "POST", &format!("/ehr/{EHR_OWN}/composition"), None).await;
     assert_eq!(
@@ -461,6 +473,7 @@ async fn a_patient_context_naming_no_ehr_is_forbidden() {
 #[tokio::test]
 async fn the_patient_claim_is_no_launch_context() {
     let (_pg, svc) = service(None).await;
+    seed_ehrs(&svc, &[EHR_OWN]).await;
     let app = gated_app(svc).await;
     let token = common::bearer(&json!({
         "sub": SUBJECT, "iss": PATIENTS, "aud": AUDIENCE,
@@ -510,6 +523,7 @@ async fn a_patient_deny_is_audited() {
     // (`EventOutcomeIndicator="4"`) attributed to `svc`.
     let (mut socket, sender) = audit_capture().await;
     let (_pg, svc) = service(Some(sender)).await;
+    seed_ehrs(&svc, &[EHR_OTHER]).await;
     let app = gated_app(svc).await;
 
     let s = probe(
@@ -879,6 +893,7 @@ pub(crate) fn manifest_export(ehr_ids: &[&str], launch: &str) -> Request<Body> {
 #[tokio::test]
 async fn an_export_of_another_patients_ehr_is_forbidden() {
     let (_pg, svc) = service(None).await;
+    seed_ehrs(&svc, &[EHR_OWN, EHR_OTHER]).await;
     let app = gated_app(svc).await;
 
     assert_eq!(
@@ -951,6 +966,7 @@ fn import(path: &str, name: &str, launch: Option<&str>) -> Request<Body> {
 #[tokio::test]
 async fn an_import_outside_the_patient_context_is_forbidden() {
     let (_pg, svc) = service(None).await;
+    seed_ehrs(&svc, &[EHR_OWN, EHR_OTHER]).await;
     let app = gated_app(svc).await;
 
     assert_eq!(

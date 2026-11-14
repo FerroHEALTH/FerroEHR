@@ -14,6 +14,11 @@
 //! non-empty are not checked here: the generated types hold each such list
 //! as an `Option<NonEmptyVec<_>>`, so the reader refuses an empty one.
 //!
+//! The RM data values the classes hold keep their own invariants wherever
+//! they are used: each `DV_DATE_TIME` and `DV_DURATION` is checked by its
+//! `Value_valid`, through the BASE validator the RM types use (RM Data Types,
+//! `DV_DATE_TIME` and `DV_DURATION` §Invariants, #5629).
+//!
 //! The terminology invariants name `Terminology_id_access_control`, which the
 //! draft leaves to FerroEHR's operation terminology until openEHR adopts the
 //! groups: a coded value holds when [`crate::draft::access_control::terminology`] reads it as
@@ -31,7 +36,11 @@ use crate::draft::access_control::terminology::{
 };
 use crate::draft::access_log::invariants::{ACCESSOR_KIND, in_group};
 use crate::draft::invariants::{Check, Violations};
+use crate::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
+use crate::v1_2::data_types::quantity::date_time::dv_duration::DvDuration;
+use crate::v1_2::data_types::quantity::dv_interval::DvInterval;
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
+use crate::v1_2::validate::{valid_iso8601_date_time, valid_iso8601_duration};
 
 /// `ACCESS_DIRECTIVE.is_deny`: the effect is the `deny` code.
 fn is_deny(directive: &AccessDirective) -> bool {
@@ -46,6 +55,24 @@ fn is_restriction(directive: &AccessDirective) -> bool {
 /// `ACCESS_DIRECTIVE.is_opt_out`: the kind is the `opt_out` code.
 fn is_opt_out(directive: &AccessDirective) -> bool {
     DirectiveKind::OptOut.is(&directive.kind)
+}
+
+/// `ACCESS_DIRECTIVE.is_controller_rule`: the kind is the `controller_rule`
+/// code.
+fn is_controller_rule(directive: &AccessDirective) -> bool {
+    DirectiveKind::ControllerRule.is(&directive.kind)
+}
+
+/// Whether `directive` and each of its exceptions are controller rules, all
+/// of them when `rules` and none of them otherwise.
+fn all_rules_or_none(directive: &AccessDirective, rules: bool) -> bool {
+    is_controller_rule(directive) == rules
+        && directive
+            .exceptions
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .all(|e| is_controller_rule(e) == rules)
 }
 
 /// Whether `coded`, when present, is a term of the group `T`.
@@ -71,14 +98,19 @@ pub fn check_settings(settings: &AccessDirectiveSettings) -> Result<(), Violatio
         "ACCESS_DIRECTIVE_SETTINGS",
         "Opt_out_unique",
     );
+    check.hold(
+        directives.iter().all(|d| all_rules_or_none(d, false)),
+        "ACCESS_DIRECTIVE_SETTINGS",
+        "Directives_not_controller_rules",
+    );
     for directive in directives {
         directive_rules(&mut check, directive);
     }
     check.finish()
 }
 
-/// Checks every invariant of an `ACCESS_POLICY` and of the classifications
-/// and catalogue entries it holds.
+/// Checks every invariant of an `ACCESS_POLICY` and of the classifications,
+/// rules and catalogue entries it holds.
 ///
 /// # Errors
 /// [`Violations`] naming each invariant the policy breaks.
@@ -91,6 +123,9 @@ pub fn check_policy(policy: &AccessPolicy) -> Result<(), Violations> {
         "ACCESS_POLICY",
         "Is_archetype_root",
     );
+    if let Some(grace) = &policy.relationship_grace {
+        duration(&mut check, grace);
+    }
     check.hold(
         policy
             .relationship_grace
@@ -105,10 +140,21 @@ pub fn check_policy(policy: &AccessPolicy) -> Result<(), Violations> {
         "ACCESS_POLICY",
         "Catalogue_identified",
     );
+    check.hold(
+        catalogue.iter().all(|d| all_rules_or_none(d, false)),
+        "ACCESS_POLICY",
+        "Catalogue_not_controller_rules",
+    );
+    let rules = policy.rules.as_deref().unwrap_or_default();
+    check.hold(
+        rules.iter().all(|r| all_rules_or_none(r, true)),
+        "ACCESS_POLICY",
+        "Rules_kind",
+    );
     for classification in policy.classifications.as_deref().unwrap_or_default() {
         classification_rules(&mut check, classification);
     }
-    for directive in catalogue {
+    for directive in catalogue.iter().chain(rules) {
         directive_rules(&mut check, directive);
     }
     for restriction in policy.log_restrictions.as_deref().unwrap_or_default() {
@@ -166,6 +212,12 @@ fn directive_rules(check: &mut Check, directive: &AccessDirective) {
         "ACCESS_DIRECTIVE",
         "Exceptions_opposite",
     );
+    if let Some(validity) = &directive.time_validity {
+        interval(check, validity);
+    }
+    if let Some(instructed) = &directive.instructed {
+        date_time(check, instructed);
+    }
     for scope in directive.applies_to.as_deref().unwrap_or_default() {
         actor_scope_rules(check, scope);
     }
@@ -198,7 +250,35 @@ fn actor_scope_rules(check: &mut Check, scope: &AccessActorScope) {
     );
 }
 
+/// `DV_DATE_TIME.Value_valid`: the value is an ISO 8601 date-time.
+fn date_time(check: &mut Check, value: &DvDateTime) {
+    check.hold(
+        valid_iso8601_date_time(&value.value),
+        "DV_DATE_TIME",
+        "Value_valid",
+    );
+}
+
+/// `DV_DURATION.Value_valid`: the value is an ISO 8601 duration.
+fn duration(check: &mut Check, value: &DvDuration) {
+    check.hold(
+        valid_iso8601_duration(&value.value),
+        "DV_DURATION",
+        "Value_valid",
+    );
+}
+
+/// Each limit of `interval` by [`date_time`].
+fn interval(check: &mut Check, interval: &DvInterval<DvDateTime>) {
+    for limit in [&interval.lower, &interval.upper].into_iter().flatten() {
+        date_time(check, limit);
+    }
+}
+
 fn data_scope_rules(check: &mut Check, scope: &AccessDataScope) {
+    if let Some(recorded) = &scope.recorded {
+        interval(check, recorded);
+    }
     check.hold(
         scope.objects.is_some()
             || scope.templates.is_some()

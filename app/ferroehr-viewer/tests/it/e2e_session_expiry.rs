@@ -208,10 +208,10 @@ async fn returning_through_oidc_from_the_expired_card_renders_the_chrome() {
     h.finish().await;
 }
 
-/// The session watch: told by another tab that the session has 30 seconds
-/// left, the page opens the warning; Stay signed in finds the session gone,
-/// so the page leaves for the sign-in page saying the session ended, which
-/// returns to the page once signed in again.
+/// The session watch: once enhanced, told by another tab that the session
+/// has 30 seconds left, the page opens the warning; Stay signed in finds the
+/// session gone, so the page leaves for the sign-in page saying the session
+/// ended, which returns to the page once signed in again.
 #[tokio::test]
 async fn the_session_watch_warns_then_leaves_for_sign_in_when_the_session_ends() {
     let Some(h) = Harness::start("session-watch").await else {
@@ -219,6 +219,9 @@ async fn the_session_watch_warns_then_leaves_for_sign_in_when_the_session_ends()
     };
     login_basic(&h).await;
     h.goto("/templates").await;
+    // NOTE: HTML Standard, BroadcastChannel postMessage(): a channel opened after
+    // the post receives nothing, so the other tab speaks once the watch listens.
+    h.wait_css("#ferroui-session-warning[data-fui-ready]").await;
     revoke_session(&h).await;
     h.run_script(
         "const tab = new BroadcastChannel('ferroui-session'); \

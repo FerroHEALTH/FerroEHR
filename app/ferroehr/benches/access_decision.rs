@@ -207,6 +207,7 @@ fn request() -> RequestAccess {
             facts,
             administrator: false,
             settings: SettingsCaller::new(false, false, Some(NURSE.to_owned())),
+            lacks_consent_reference: false,
         },
         Asking {
             operation: OperationClass::Read,

@@ -1,0 +1,84 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# The hospital scenario (#5610) against the image CI publishes from main.
+#
+# It runs the `hospital` deploy-probe family alone: SCIM, RBAC, the access
+# evaluator, AQL, the access log and SMART discovery on two instances with
+# Keycloak, the quickstart's machines issuer and a patient portal's issuer.
+#
+# RUN COLOUR. Red while any finding of #5610 is open, and gating nothing: each
+# failing probe names the issue it is tracked by, in the record and the job
+# summary. The summary step refuses a failing probe whose tracking issues are
+# all closed, or one that names none, so a fix that did not hold, or a finding
+# nobody filed, says so. When the tracked issues land, the family moves into
+# ci.yml's required deploy-probe job (#5642).
+name: deploy-probe (hospital)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/deploy-probe.sh
+      - scripts/deploy-probes/**
+      - docker-compose.yml
+      - docker-compose.keycloak.yml
+      - docker-compose.replicas.yml
+      - .github/workflows/deploy-probe-hospital.yml
+  pull_request:
+    paths:
+      - scripts/deploy-probe.sh
+      - scripts/deploy-probes/**
+      - docker-compose.yml
+      - docker-compose.keycloak.yml
+      - docker-compose.replicas.yml
+      - .github/workflows/deploy-probe-hospital.yml
+  schedule:
+    # Daily at 04:41 UTC, after main's image has been published. Off the hour:
+    # GitHub documents that runs scheduled on the hour are delayed by load
+    # spikes (https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+    - cron: "41 4 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: deploy-probe-hospital-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # A FerroEHR the harness starts sends no usage report to FerroPULSE.
+  FERROEHR__USAGE_REPORT__ENABLED: "false"
+
+jobs:
+  hospital:
+    name: deploy-probe (hospital)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: read # the states of the tracking issues the summary reads
+      packages: read # pull the image published from main
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The server image under probe is ghcr.io/ferrohealth/ferroehr:main, the
+      # compose default; the database image is built from this tree by the
+      # harness, since its initdb provisions the roles the tree expects.
+      - name: Probe the hospital scenario
+        env:
+          PROBE_ONLY: hospital
+          PROBE_OUT: docs/conformance/deployment/hospital.json
+        run: bash scripts/deploy-probe.sh
+      - name: Summarise the record and check its tracking issues
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/deploy-probes/hospital_summary.sh docs/conformance/deployment/hospital.json "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: deploy-probe-hospital-record
+          path: docs/conformance/deployment/hospital.json
+          if-no-files-found: warn

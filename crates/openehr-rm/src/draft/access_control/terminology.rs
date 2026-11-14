@@ -53,6 +53,8 @@ pub enum Group {
     /// `care relationship`: the demographic relationships that put a caller
     /// in care of a subject.
     CareRelationship,
+    /// `group kind`: what kind of group a demographic `GROUP` is.
+    GroupKind,
     /// `access refusal`: the code an access refusal is recorded under.
     AccessRefusal,
     /// `access log withheld`: the attributes of an access-log accessor the
@@ -62,7 +64,7 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 12] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -72,6 +74,7 @@ impl Group {
         Self::AccessSensitivityClearance,
         Self::AccessPermittedPurpose,
         Self::CareRelationship,
+        Self::GroupKind,
         Self::AccessRefusal,
         Self::AccessLogWithheld,
     ];
@@ -89,6 +92,7 @@ impl Group {
             Self::AccessSensitivityClearance => "access sensitivity clearance",
             Self::AccessPermittedPurpose => "access permitted purpose",
             Self::CareRelationship => "care relationship",
+            Self::GroupKind => "group kind",
             Self::AccessRefusal => "access refusal",
             Self::AccessLogWithheld => "access log withheld",
         }
@@ -107,6 +111,7 @@ impl Group {
             Self::AccessSensitivityClearance => SensitivityClearance::CODES,
             Self::AccessPermittedPurpose => PermittedPurpose::CODES,
             Self::CareRelationship => CareRelationship::CODES,
+            Self::GroupKind => GroupKind::CODES,
             Self::AccessRefusal => Refusal::CODES,
             Self::AccessLogWithheld => Withheld::CODES,
         }
@@ -262,6 +267,9 @@ group! {
         OptOut => "opt_out",
         /// The scope of what a proxy may do (EHDS Art. 4(2)).
         Delegation => "delegation",
+        /// A rule of the controller's `ACCESS_POLICY` for every EHR it keeps,
+        /// never a directive of an EHR (EHDS Art. 11(3)).
+        ControllerRule => "controller_rule",
     }
 }
 
@@ -354,6 +362,16 @@ group! {
 }
 
 group! {
+    /// What kind of group a demographic `GROUP` is, coded in its `name`: RM
+    /// demographic `party.adoc` makes `type()` the `name` (`Type_valid`).
+    GroupKind in GroupKind {
+        /// The `GROUP` is a care team: a `member_of` relationship to it puts
+        /// its member in the care of the subjects under its care.
+        CareTeam => "care_team",
+    }
+}
+
+group! {
     /// The code an access refusal is recorded under, one per step of the
     /// decision procedure that can refuse.
     Refusal in AccessRefusal {
@@ -380,6 +398,9 @@ group! {
         /// subject a recorded representation names: it acts for that
         /// subject alone.
         NotRepresented => "refused-not-represented",
+        /// A caller admitted under an agreement that conditions its reads on
+        /// a consent decision asks to read with no reference to one.
+        ConsentReferenceMissing => "refused-consent-reference-missing",
     }
 }
 
@@ -433,6 +454,9 @@ pub enum ForeignKind {
     Purpose,
     /// A legal provision, such as GDPR Art. 9(2)(a).
     LegalGround,
+    /// A role a `ROLE` is named by, such as a professional role code
+    /// (RM Demographic IM, `PARTY.type()`).
+    Role,
 }
 
 impl fmt::Display for ForeignKind {
@@ -442,6 +466,7 @@ impl fmt::Display for ForeignKind {
             Self::Category => "category",
             Self::Purpose => "purpose",
             Self::LegalGround => "legal ground",
+            Self::Role => "role",
         })
     }
 }

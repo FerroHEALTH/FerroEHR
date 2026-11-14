@@ -333,7 +333,8 @@ group is FerroEHR's own design.
 | `access sensitivity clearance` | `sensitivity_clearance` | The `name` of a credentials element whose value is a sensitivity code |
 | `access permitted purpose` | `permitted_purpose` | The `name` of a credentials element whose value is a purpose-of-use code |
 | `care relationship` | `member_of`, `under_care_of` | The `name` of a `PARTY_RELATIONSHIP` |
-| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-purpose-not-permitted`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented` | The access record of a refusal |
+| `group kind` | `care_team` | The `name` of a `GROUP`: the `GROUP` is a care team ([Care teams provisioned over SCIM](#care-teams-provisioned-over-scim)) |
+| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-purpose-not-permitted`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented`, `refused-consent-reference-missing` | The access record of a refusal |
 | `access log withheld` | `accessor_party`, `accessor_provider`, `accessor_roles`, `accessor_groups` | `ACCESS_LOG_RESTRICTION.withheld`: the accessor members the access log's subject view withholds under EHDS Art. 9(3) |
 
 Two grants of the operation table belong to access control:
@@ -546,8 +547,25 @@ ferroehr party-binding grant --basic-user clinician --operation hold_scopes \
 
 Every later grant is an administrator's write through the Demographic API.
 `[authz.rbac] first_admin` is that administrator in a deployment whose people
-sign in with HTTP Basic: it holds `admin_role` and the product scope before
-any policy party exists.
+sign in with HTTP Basic and no `[[auth.party]]` table binds logins: it holds
+`admin_role` and the product scope before any policy party exists.
+
+No HTTP route grants an operation before an administrator exists. A
+deployment whose staff sign in through a `persons` issuer bound by an
+`[[auth.party]]` table starts in this order:
+
+1. The operator grants the SCIM client `scim_provision` with
+   `ferroehr party-binding grant`, as above.
+2. The SCIM client provisions the staff, the administrator among them.
+3. The administrator signs in in one of two ways. The first is a token of an
+   issuer `[authz.rbac] role_issuers` lists, carrying `admin_role`. The
+   second is `first_admin`, mapped with `[[authz.party_binding.basic_user]]`
+   to the key of the `PERSON` the SCIM client provisioned. A Basic user beside
+   an `[[auth.party]]` table must map to a key, so an unmapped `first_admin`
+   refuses the start, and a mapped one is refused as unbound until its
+   `PERSON` exists.
+4. The administrator writes every other policy party through the Demographic
+   API.
 
 ### The grant ceiling
 
@@ -599,7 +617,7 @@ named by its `ferroehr-operations` code:
 | `purpose` | `DV_CODED_TEXT` or `DV_TEXT`: what the exchange is for |
 | `gdpr_art_6_1`, `gdpr_art_9_2` | `DV_TEXT` or `DV_CODED_TEXT`: the point of GDPR Art. 6(1), `a` to `f`, and of Art. 9(2), `a` to `j` |
 | `national_provision` | `DV_TEXT`: the provision of the law that applies |
-| `consent` | `registry` (an external consent registry, whose question names the responsible professional) or `local`: the source of the consent a read is conditioned on; a read must then carry its consent decision reference |
+| `consent` | `registry` (an external consent registry, whose question names the responsible professional) or `local`: the source of the consent a read is conditioned on; a read must then carry its consent decision reference, and the access evaluator refuses one that carries none with `403 refused-consent-reference-missing` |
 | `read_scope` | `DV_TEXT`, one per scope: a `patient/` scope the callers may read |
 | `template` | `DV_TEXT`, one per template: a template an external person may commit |
 | `discard_window` | `DV_DURATION` of whole hours, such as `PT24H`: an external person may discard a dispensation of its own point of care within it |
@@ -1621,7 +1639,27 @@ Problem of Roles). A version of a `PERSON` that adds, changes or removes a
 care relationship commits only for a caller holding the
 `write_care_relationship` grant, such as your hospital's ADT system, or for
 an administrator; anyone else is refused `403`. A version that leaves the
-care relationships as they were needs no grant.
+care relationships as they were needs no grant. FerroEHR compares what each
+care relationship says (its code, target, validity and the lifecycle state
+of its holder), never its position in `relationships`, so removing another
+relationship before it changes none.
+
+The care delivery environment reaches FerroEHR on two channels, and a
+deployment uses either or both:
+
+- **The ADT or rostering system** writes `member_of` and `under_care_of`
+  through the Demographic API. On the `PERSON` of a SCIM User, which the
+  party binding protects, a version whose only change is to its care
+  relationships commits under the grant; any other change it makes stays
+  `403`, so the ADT system rosters a professional and touches nothing the
+  identity provider owns. It reads the `PERSON` to write it, so it sees the
+  professional's binding key and SCIM attributes.
+- **The identity provider** marks a SCIM Group as a care team
+  ([Care teams provisioned over SCIM](#care-teams-provisioned-over-scim)).
+
+The two never undo each other: a SCIM Group change touches only
+memberships of the membership archetype, and the ADT system's relationships
+are of its own archetype.
 
 **When a change applies.** An admission, a transfer and a discharge decide
 the next request on every replica. The commit stamps the patient whose facts
@@ -1632,6 +1670,30 @@ No openEHR specification gives a capability or a relationship an access
 meaning: reading them as clearances, purposes, care relationships and group
 memberships, the `write_care_relationship` rule, and holding them in memory
 are FerroEHR's own design.
+
+### Care teams provisioned over SCIM
+
+A SCIM Group is a care team when its client creates it with
+`careTeam = true` in FerroEHR's Group extension
+`urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:Group`. RFC 7643
+§4.2 leaves what a Group means to the service provider, and the openEHR
+Demographic IM names "the specialist care team, e.g. cardiology team" as
+the typical `GROUP`, so this reading is FerroEHR's own design. The Demographic
+IM makes a party's type its name (`PARTY.type()`, invariant
+`Type_valid: type = name`, and `PARTY_RELATIONSHIP.type()` likewise), so its
+`GROUP` is named by the coded `care_team` and each member's membership by the
+coded `member_of`, and the evaluator counts the member in the team's care on
+the next request. FerroEHR reads the kind by that code, never by the template
+or a path. `careTeam` is immutable (RFC 7643 §2.2): a
+Group never changes kind with its members in it.
+
+Creating a care-team Group, and every membership change of one, needs the
+client's `write_care_relationship` grant in the CDR beside its
+`scim_provision` grant; without it the request is refused `403` naming the
+grant. A membership from SCIM has no `time_validity`, since RFC 7643 has
+none: it holds until the client removes the member or the Group. Plain
+Groups, with `careTeam` left out or `false`, carry no care relationship and
+need no grant.
 
 ## Representatives in the patient portal
 
@@ -1847,7 +1909,9 @@ The controller's access policy states what holds for every EHR this FerroEHR
 keeps: which kinds of data carry which sensitivity (`classifications`),
 whether a professional's clinical access needs a care relationship
 (`care_relationship_required`, with a `relationship_grace`) and a declared
-purpose (`purpose_required`), the `catalogue` of named directives a
+purpose (`purpose_required`), the controller's own `rules` on which callers
+may do what with which kinds of data (each an `ACCESS_DIRECTIVE` of kind
+`controller_rule`, EHDS Art. 11(3)), the `catalogue` of named directives a
 patient can accept by reference, such as an IHE BPPC policy, and the
 `log_restrictions` of the access log's subject view your Member State's law
 lays down under EHDS Art. 9(3) ([Audit](audit.md#restricting-the-subject-view-ehds-art-93)).
@@ -1862,7 +1926,10 @@ one, nothing is tightened.
 - **Whole, over a version.** Name the version you replace in `If-Match`, or
   create the first with `If-None-Match: *`. A stale condition is `412`.
 - **Checked when written.** A body that is no canonical-JSON `ACCESS_POLICY`
-  or breaks an invariant of the draft model is refused whole with `400`.
+  or breaks an invariant of the draft model is refused whole with `400`, as
+  is a rule of another kind than `controller_rule`, a catalogue entry of that
+  kind, and a rule naming a role, purpose, sensitivity, category or legal
+  ground in `ferroehr-operations`.
 - **Effective without a restart**, as the registers above.
 - **Read by the access evaluator** on every request: a classification gives
   the data it covers its sensitivities (step 4), and the two requirements

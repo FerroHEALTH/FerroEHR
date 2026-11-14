@@ -247,6 +247,7 @@ impl Ask {
                 facts: CallerFacts::default(),
                 administrator: false,
                 settings: SettingsCaller::new(false, false, Some(world.nurse.clone())),
+                lacks_consent_reference: false,
             },
             purpose: None,
             policy: None,
@@ -525,6 +526,36 @@ async fn step_5_only_the_ehrs_in_care_are_queried() {
         "two subjects in care",
     )
     .await;
+}
+
+/// A care census far larger than the store reads exactly the EHRs whose
+/// subjects it names, with or without settings, whatever else it holds: the
+/// subjects bound once as a `jsonb` object match as the bound array matched
+/// (#5645).
+#[tokio::test]
+async fn a_large_care_census_reads_exactly_the_ehrs_in_care() {
+    let world = Box::pin(World::new()).await;
+    world.settings(1, &settings("open", &[], &[])).await;
+    let mut ask = Ask::professional(&world);
+    ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
+    let others: Vec<String> = (0..5000)
+        .map(|_| uuid::Uuid::now_v7().to_string())
+        .collect();
+    ask.cared.clone_from(&others);
+    assert_reads(&world, &ask, &[], "a census naming no subject of the store").await;
+    ask.cared.push(world.subject(1).to_uppercase());
+    assert_reads(&world, &ask, &[], "a subject named in another case").await;
+    ask.cared
+        .extend([world.subject(2), world.subject(0), world.subject(2)]);
+    assert_reads(
+        &world,
+        &ask,
+        &except(&world, &[1], &[]),
+        "two subjects among five thousand, one named twice",
+    )
+    .await;
+    ask.cared.push(world.subject(1));
+    assert_reads(&world, &ask, &world.every(), "every subject in care").await;
 }
 
 /// Step 6: where the policy requires a purpose, a query without one reads

@@ -26,7 +26,7 @@ use crate::common::{BASE, EXT, FHIR};
 /// The synthetic patient subject every EHR of the test resolves to.
 pub(crate) const SUBJECT: &str = "patient-access-log-1";
 /// A value written into a composition, which no entry may carry.
-const SENTINEL: &str = "access-log-sentinel-6b1f";
+pub(crate) const SENTINEL: &str = "access-log-sentinel-6b1f";
 
 /// One stored entry: its EHR, action, result, request id and canonical form.
 #[derive(Debug, Clone)]

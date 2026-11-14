@@ -252,6 +252,9 @@ pub struct PreparedQuery {
     /// column, whether its EHR carries `EHR_ACCESS` settings
     /// ([`ACCESS_SETTLED_PREFIX`]).
     pub access_settled_cols: Vec<String>,
+    /// Whether each access column holds, per row, the array of the EHRs an
+    /// aggregate projection read in place of one EHR id (#5639).
+    pub access_aggregated: bool,
     /// The SQL aliases of the hidden version-locator columns, one
     /// `(vo_id, sys_version)` pair per bound VO root, appended beside the
     /// access-EHR columns so the origins of the served data can be aggregated
@@ -269,10 +272,12 @@ pub struct PreparedQuery {
 /// it too. It is never read off a second, unpaged scan, which would name EHRs
 /// the query matched and never disclosed.
 ///
-/// Two plan shapes cannot carry it and get none: `SELECT DISTINCT`, where an
-/// extra column changes which rows are distinct, and an aggregate projection,
-/// where an ungrouped column is not even valid SQL. Both are recorded as a
-/// statement-level access with a row count and no per-EHR breakdown.
+/// `SELECT DISTINCT` cannot carry it, since an extra column changes which
+/// rows are distinct, and is recorded as a statement-level access with a row
+/// count and no per-EHR breakdown. An aggregate projection, where an
+/// ungrouped column is not valid SQL, carries per row the array of the
+/// distinct EHRs its aggregate read, so every EHR whose data shaped the
+/// result is named (EHDS Art. 9, #5639).
 ///
 /// **No openEHR spec governs this — our own design/extension.**
 pub const ACCESS_EHR_PREFIX: &str = "access_ehr_";
@@ -304,6 +309,7 @@ impl std::fmt::Debug for PreparedQuery {
             .field("columns", &self.columns)
             .field("access_ehr_cols", &self.access_ehr_cols)
             .field("access_settled_cols", &self.access_settled_cols)
+            .field("access_aggregated", &self.access_aggregated)
             .field("access_version_cols", &self.access_version_cols)
             .finish()
     }
@@ -566,11 +572,18 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
     if ir.distinct {
         b.q.distinct();
     }
-    let (sql, values) = b.q.build_sqlx(PostgresQueryBuilder);
+    let (sql, values) = match access::census(&ctx.ehr_access) {
+        Some(census) => b.q.with(census).build_sqlx(PostgresQueryBuilder),
+        None => b.q.build_sqlx(PostgresQueryBuilder),
+    };
     Ok(PreparedQuery {
         sql,
         values,
         columns,
+        access_aggregated: !access_ehr_cols.is_empty()
+            && ir.select.iter().any(|column| {
+                matches!(column.value, crate::aql::ir::SelectValue::Aggregate { .. })
+            }),
         access_ehr_cols,
         access_settled_cols,
         access_version_cols,

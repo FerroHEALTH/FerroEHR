@@ -206,6 +206,7 @@ fn access(
             facts,
             administrator: false,
             settings: SettingsCaller::new(false, false, Some(party.to_string())),
+            lacks_consent_reference: false,
         },
         Asking {
             operation: OperationClass::Read,
