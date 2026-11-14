@@ -427,8 +427,7 @@ impl RequestAccess {
     }
 
     /// The subjects the caller has a live care relationship to, by their
-    /// `PERSON` container id; none for a caller of no care team, whose
-    /// request reads nothing for it.
+    /// `PERSON` container id; a caller of no care team reads nothing.
     ///
     /// # Errors
     /// [`GrantsUnavailable`] when the care copy misses and cannot read.
@@ -440,7 +439,7 @@ impl RequestAccess {
             .iter()
             .map(CareTeam::team)
             .collect();
-        let (Some(grants), false) = (self.grants.as_ref(), teams.is_empty()) else {
+        let Some(grants) = self.grants.as_ref() else {
             return Ok(Vec::new());
         };
         Ok(grants
