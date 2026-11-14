@@ -128,6 +128,7 @@ impl Reader {
             facts: self.facts.clone(),
             administrator: false,
             settings: SettingsCaller::new(false, false, self.party.clone()),
+            lacks_consent_reference: false,
         };
         let asking = Asking {
             operation: OperationClass::Read,

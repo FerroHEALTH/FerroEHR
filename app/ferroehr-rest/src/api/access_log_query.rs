@@ -26,15 +26,14 @@ use serde_json::{Value, json};
 
 use ferroehr::access_log::search::{LOG_QUERY, LogQuery};
 use ferroehr::access_log::view::{LogReader, LogStanding, Restrictions, view_of};
-use ferroehr::ids::EhrId;
 use ferroehr::system_log::event::{EntryScope, QueryNaming};
+use openehr_rm::draft::access_control::terminology::CallerKind;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
-use crate::extensions::access::authn::{Principal, current_principal};
+use crate::extensions::access::authn::current_principal;
 use crate::extensions::access::authz::AuthzHandle;
 use crate::extensions::access::authz::classify::OperationClass;
 use crate::extensions::access::authz::roles::RbacDecision;
-use crate::extensions::access::delay;
 use crate::overview::error::RestError;
 use crate::overview::params::query_pairs;
 use crate::state::AppState;
@@ -71,22 +70,25 @@ pub(crate) const REVIEW_PARAMETERS: &[&str] = &[
 ];
 
 /// What the current caller may read of the access log, whichever resource
-/// names it: the subject of care and a representative bound through the party
-/// binding read the subject view of the EHR they are confined to (the EHR of
-/// the patient token's launch context, or of the subject the representation
-/// names, #5446, #5532), any other caller the admin class admits reads the
+/// names it: the subject of care and a representative read the subject view
+/// of the EHR the evaluator's caller is confined to (the EHR of the patient
+/// token's launch context, or of the subject the representation names,
+/// #5446, #5532, #5614), any other caller the admin class admits reads the
 /// full view, and any other caller is refused.
 pub(crate) fn standing(state: &AppState) -> LogStanding {
     // NOTE: our own design, a server with authentication off is open, as the admin review is.
     let Some(principal) = current_principal() else {
         return LogStanding::Reviewer;
     };
-    if delay::acts_for_the_person(&principal) {
-        let own = confined(&principal);
-        return if own.is_empty() {
+    let caller = crate::extensions::access::caller::current_caller(state);
+    if matches!(
+        caller.kind,
+        CallerKind::Subject | CallerKind::Representative
+    ) {
+        return if caller.own_ehrs.is_empty() {
             LogStanding::Refused
         } else {
-            LogStanding::Person(own.into())
+            LogStanding::Person(caller.own_ehrs.into())
         };
     }
     let authz = state.authz();
@@ -100,22 +102,6 @@ pub(crate) fn standing(state: &AppState) -> LogStanding {
         LogStanding::Reviewer
     } else {
         LogStanding::Refused
-    }
-}
-
-/// The EHRs the person's caller is confined to: each EHR of the represented
-/// subject for a representative, else the launch context's of the patient's
-/// token.
-fn confined(principal: &Principal) -> Vec<EhrId> {
-    match &principal.represented {
-        Some(represented) => represented.ehr_ids.clone(),
-        None => principal
-            .access
-            .ehr_id()
-            .and_then(|ehr| ehr.parse::<uuid::Uuid>().ok())
-            .map(EhrId)
-            .into_iter()
-            .collect(),
     }
 }
 

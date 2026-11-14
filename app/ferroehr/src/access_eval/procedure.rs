@@ -40,7 +40,10 @@
 //! but the one its patient context names (`refused-not-subject`), and a
 //! representative every EHR but the one whose subject its recorded
 //! representation `PARTY_RELATIONSHIP` names (`refused-not-represented`,
-//! EHDS Art. 4(2)). On its own EHR a confined professional takes every step,
+//! EHDS Art. 4(2)). With step 0 as well, a caller admitted under an agreement
+//! that conditions its reads on a consent decision, whose credential names no
+//! reference to it, is refused every read, query and export
+//! (`refused-consent-reference-missing`). On its own EHR a confined professional takes every step,
 //! and a representative is held to steps 1 to 3, the `delegation` directives
 //! of that EHR's `EHR_ACCESS` included, and skips 4 to 7. A declared
 //! emergency by the break-glass role lifts steps 4 to 7.
@@ -94,6 +97,10 @@ pub struct Caller {
     pub administrator: bool,
     /// The caller as the gate-keeper rule reads it.
     pub settings: SettingsCaller,
+    /// Whether the agreement the caller was admitted under conditions its
+    /// reads on a consent decision, and its credential names no reference to
+    /// one.
+    pub lacks_consent_reference: bool,
 }
 
 impl Caller {
@@ -377,10 +384,8 @@ pub struct Judged<'a> {
 pub fn decide(judged: &Judged<'_>) -> Verdict {
     let mut verdict = Verdict::admit();
     let caller = judged.caller;
-    // NOTE: our own design (#5586, #5606, #5609), SMART master08 §Resource Scopes and EHDS
-    // Art. 4(2) hold a patient context or a representative to one EHR, so every other refuses.
-    if caller.confined() && !judged.ehr.own {
-        verdict.otherwise = Outcome::Refused(caller.not_own());
+    if let Some(refusal) = standing(judged) {
+        verdict.otherwise = Outcome::Refused(refusal);
         return verdict;
     }
     // NOTE: EHDS Art. 3, the subject reads their own record; only the access delay holds it.
@@ -476,6 +481,24 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     };
     disposition(admitted, permits, &mut verdict);
     verdict
+}
+
+/// Step 0: the refusal of a caller whose standing reaches no data of the
+/// EHR, whatever its directives permit.
+fn standing(judged: &Judged<'_>) -> Option<Refusal> {
+    let caller = judged.caller;
+    // NOTE: our own design (#5586, #5606, #5609), SMART master08 §Resource Scopes and EHDS
+    // Art. 4(2) hold a patient context or a representative to one EHR, so every other refuses.
+    if caller.confined() && !judged.ehr.own {
+        return Some(caller.not_own());
+    }
+    // NOTE: our own design (#5614), a read under an agreement conditioned on consent names
+    // the consent decision, so a caller naming none is refused whatever the EHR permits.
+    let reads = matches!(
+        judged.asked.operation,
+        OperationClass::Read | OperationClass::Query | OperationClass::Export
+    );
+    (caller.lacks_consent_reference && reads).then_some(Refusal::ConsentReferenceMissing)
 }
 
 /// Step 7: what the default disposition `admitted` does not admit, a permit

@@ -44,9 +44,11 @@ pub(crate) mod precondition;
 mod project;
 pub(crate) mod resolve;
 mod sign;
+mod written;
 
 use resolve::{Content, Placing, resolve_create, resolve_delete, resolve_modify};
 use sign::body_and_signature;
+use written::{admit_written, root_archetype};
 
 /// The outcome of a versioned-object write: the object id, the new version's
 /// tree id, and the provenance carried into the event-outbox envelope.
@@ -670,7 +672,7 @@ async fn apply_change(
         known_now,
         preplaced,
     } = scope;
-    restriction::ensure_not_restricted_tx(tx, ehr_id, change.target_vo_id()).await?;
+    let gate = restriction::ensure_not_restricted_tx(tx, ehr_id, change.target_vo_id()).await?;
     let at = Placing {
         ehr_id,
         known_now,
@@ -743,6 +745,7 @@ async fn apply_change(
             .await?
         }
     };
+    admit_written(gate.as_ref(), &resolved)?;
     if skip_identical && let Some(existing) = skipped_resend(&resolved, audit) {
         return Ok((existing, Uuid::nil()));
     }
@@ -918,16 +921,6 @@ fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
         skipped: true,
         content_digest: r.content_digest,
     })
-}
-
-/// The root's `archetype_node_id` off the decomposed rows, for the outbox
-/// envelope and the audit record.
-fn root_archetype(rows: &[NodeRow]) -> Option<String> {
-    rows.first()
-        .filter(|root| root.num == 0)
-        .and_then(|root| root.data.get("archetype_node_id"))
-        .and_then(Value::as_str)
-        .map(str::to_owned)
 }
 
 /// Serializes the accepted, uid-stamped canonical value to the body bytes a

@@ -95,7 +95,7 @@ starts with the refusal code (`refused-consent-denied`,
 `refused-consent-required`, `refused-sensitivity`,
 `refused-no-care-relationship`, `refused-purpose-missing`,
 `refused-purpose-not-permitted`, `refused-not-subject`,
-`refused-not-represented`; see
+`refused-not-represented`, `refused-consent-reference-missing`; see
 [Access directives](../security.md)).
 
 With `Prefer: return=representation`: `refusal`, that code. A restriction or an

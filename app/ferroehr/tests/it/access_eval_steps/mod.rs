@@ -221,6 +221,7 @@ pub(super) fn caller(kind: CallerKind, party: &str) -> Caller {
         facts: CallerFacts::default(),
         administrator: false,
         settings: SettingsCaller::new(false, kind == CallerKind::Subject, Some(party.to_owned())),
+        lacks_consent_reference: false,
     }
 }
 

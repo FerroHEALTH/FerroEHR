@@ -55,7 +55,7 @@ Twelve groups are added to the openEHR Terminology. The codes are for the termin
 |The `_name_` of an `ELEMENT` in a `PERSON`'s `PARTY._details_` whose value is a `DV_IDENTIFIER` naming an `EHR_STATUS._subject_` reference the `PERSON` stands for: `_issuer_` is the reference's `_namespace_` and `_id_` its `_id_`, such as a pseudonym an identity source issued. An identifier another organisation issued belongs in `_details_` (Demographic IM §2.1.3), and the cross-reference stays out of the EHR (EHR IM §EHR Status)
 
 |access refusal
-|refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required, refused-not-subject, refused-not-represented
+|refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required, refused-not-subject, refused-not-represented, refused-consent-reference-missing
 |The refusal of each step of xref:decision_procedure.adoc#_procedure[the procedure]
 
 |access log withheld
