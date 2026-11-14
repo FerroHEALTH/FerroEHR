@@ -92,6 +92,7 @@
   - [Server & audit log](viewer/server.md)
   - [Preferences & the theme](viewer/preferences.md)
 - [Operations](operations.md)
+  - [Access path metrics and runbooks](operations-access-path.md)
   - [Admin & messaging APIs](operations-admin-apis.md)
   - [Operational policy](operational-policy.md)
   - [Usage report](usage-report.md)
