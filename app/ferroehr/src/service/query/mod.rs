@@ -13,17 +13,24 @@
 //!   execution orchestration (parse → plan → execute → assemble), paging
 //!   composition, `ehr_ids` resolution, and the per-query execution budget.
 //!   The AQL *engine* it drives is [`crate::aql`].
+//! - `budget` — the page, the row ceiling and the time budget of one
+//!   execution, shared by every execution path.
 //! - `join` — a query that joins a demographic root to its EHR, run as one
 //!   statement per pool and joined on the party-to-EHR map (no openEHR spec
 //!   governs it — our own design).
 //! - `result_set` — `RESULT_SET` / `RESULT_SET_COLUMN` / `RESULT_SET_ROW`
 //!   assembly to the ITS-REST `ResultSet` schema + parameter substitution,
 //!   isolated in one spec-cited place.
+//! - `access_log` — a query over `ACCESS_LOG_ENTRY`, run against the access
+//!   log under the log's own access control (no openEHR spec governs it — our
+//!   own design, #5131).
 //! - [`plan_cache`] — the bounded cache of lowered AQL plans keyed on query
 //!   text (no openEHR spec governs it — our own performance design).
 //! - [`config`] — the `[record.query]` tuning knobs (no openEHR spec governs
 //!   configuration — our own design).
 
+mod access_log;
+mod budget;
 pub mod config;
 mod execute;
 mod join;

@@ -158,6 +158,10 @@ module.**
   `chain` is the one verifier of a span held apart from the database (an
   export or an import), and both accept a tombstone by its recorded content
   digest; `transfer` exports and imports one EHR's log (#5129).
+  `view` is the one owner of what the subject view withholds: the JSON
+  reduction and `subject_withholds` for a path both read its lists, and AQL
+  over `ACCESS_LOG_ENTRY` (`aql::access_log`, #5131) reads its columns out of
+  `view_of` and never redacts a second way.
 - **Access evaluator** (`src/access_eval/`, #5513): `procedure::decide` is
   the one decision procedure over the subject's directives, the caller's
   facts and the access policy, a pure function whose `Verdict` is an ordered

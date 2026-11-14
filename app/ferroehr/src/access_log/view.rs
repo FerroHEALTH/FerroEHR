@@ -30,12 +30,14 @@ use ehds_logging::withheld::Holds;
 use jiff::Timestamp;
 use serde_json::Value;
 
+use crate::ids::EhrId;
 use openehr_base::v1_3::base_types::identification::object_id::ObjectId;
 use openehr_base::v1_3::base_types::identification::object_ref::ObjectRef;
 use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{Term, Withheld};
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
+use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
 /// The members of the entry the subject view leaves out.
@@ -44,6 +46,74 @@ const ENTRY_WITHHELD: [&str; 4] = ["link", "channel", "security_labels", "other_
 const ACCESSOR_WITHHELD: [&str; 3] = ["credential", "delegation", "binding"];
 /// The members of `ACCESS_QUERY` the subject view leaves out.
 const QUERY_WITHHELD: [&str; 2] = ["text", "text_digest"];
+/// The members of each item's `ACCESS_ORIGIN` the subject view leaves out.
+const ORIGIN_WITHHELD: [&str; 1] = ["endpoint"];
+
+/// The refusal of a caller who is neither the person nor a reviewer.
+pub const LOG_REFUSED: &str = "the access log is read by its subject, their representative, or a \
+                               reviewer the admin class admits";
+
+/// Who reads an EHR's access log, which decides what of it they read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LogReader {
+    /// The subject of care or their representative, under EHDS Art. 9(2).
+    Person,
+    /// A reviewer of the log (EHDS Annex II 3.3).
+    Reviewer,
+}
+
+/// What a caller may read of the access log, decided from who they are before
+/// any log is named (#5131): the same rules as the log's ITS-REST resources.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum LogStanding {
+    /// Neither the person nor a reviewer: the log is refused.
+    #[default]
+    Refused,
+    /// The subject of care or their representative, confined to this EHR.
+    Person(EhrId),
+    /// A reviewer, who reads the whole log in the full view.
+    Reviewer,
+}
+
+/// `record` as `reader` reads it: the full ITS-JSON record for a reviewer,
+/// the subject view of an entry under `restrictions` for the person, and `None` for a tombstone the
+/// person is never served.
+///
+/// # Errors
+/// The serialisation error when the record has no JSON form.
+pub fn view_of(
+    record: &AccessLogRecord,
+    reader: LogReader,
+    restrictions: &Restrictions,
+) -> Result<Option<Value>, serde_json::Error> {
+    match (record, reader) {
+        (_, LogReader::Reviewer) => serde_json::to_value(record).map(Some),
+        (AccessLogRecord::AccessLogEntry(entry), LogReader::Person) => {
+            subject_view(entry, restrictions).map(Some)
+        }
+        (AccessLogRecord::AccessLogTombstone(_), LogReader::Person) => Ok(None),
+    }
+}
+
+/// Whether the subject view under `restrictions` may leave out what the
+/// attribute path `path` of an entry reaches, so a query of the person can
+/// neither read nor test it.
+///
+/// An accessor member `restrictions` withholds from any accessor kind counts
+/// as withheld from every entry: a condition cannot tell the kinds apart
+/// without reading the member it tests. Our own design (EHDS Art. 9(3)).
+#[must_use]
+pub fn subject_withholds(path: &[&str], restrictions: &Restrictions) -> bool {
+    match path {
+        [member, ..] if ENTRY_WITHHELD.contains(member) => true,
+        ["accessor", member, ..] => {
+            ACCESSOR_WITHHELD.contains(member) || restrictions.withholds_any(member)
+        }
+        ["query", member, ..] => QUERY_WITHHELD.contains(member),
+        ["items", "origins", member, ..] => ORIGIN_WITHHELD.contains(member),
+        _ => false,
+    }
+}
 
 /// An accessor kind as the draft `accessor kind` group names it: the
 /// terminology id and the rubric.
@@ -83,6 +153,14 @@ impl Restrictions {
             }
         }
         Self { withheld }
+    }
+
+    /// Whether the policy withholds the `ACCESSOR` member `member` from an
+    /// accessor of any kind.
+    fn withholds_any(&self, member: &str) -> bool {
+        self.withheld
+            .values()
+            .any(|members| members.contains(member))
     }
 
     /// The `ACCESSOR` members withheld from an accessor of `kind`.
@@ -135,7 +213,7 @@ pub fn subject_view(
         .filter_map(|item| item.get_mut("origins").and_then(Value::as_array_mut))
         .flatten();
     for origin in origins {
-        remove(origin, &["endpoint"]);
+        remove(origin, &ORIGIN_WITHHELD);
     }
     Ok(value)
 }
@@ -183,6 +261,47 @@ fn remove(value: &mut Value, names: &[&str]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The shared fixture of the draft's entry.
+    const ENTRY: &str =
+        include_str!("../../../../crates/openehr-rm/tests/fixtures/draft/access_log_entry.json");
+
+    /// The members of `value` at `prefix`, each as its path.
+    fn member_paths(value: &Value, prefix: &[&'static str]) -> Vec<Vec<String>> {
+        value
+            .as_object()
+            .into_iter()
+            .flat_map(|members| members.keys())
+            .map(|name| {
+                let mut path: Vec<String> = prefix.iter().map(|step| (*step).to_owned()).collect();
+                path.push(name.clone());
+                path
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_path_is_withheld_exactly_when_the_subject_view_leaves_it_out() {
+        let entry: AccessLogEntry =
+            openehr_its::json::from_canonical_json(ENTRY).expect("the fixture reads");
+        let full = serde_json::to_value(&entry).expect("a JSON form");
+        let subject = subject_view(&entry, &Restrictions::default()).expect("a subject view");
+        let mut paths = member_paths(&full, &[]);
+        paths.extend(member_paths(&full["accessor"], &["accessor"]));
+        assert!(paths.len() > 10, "the fixture covers the entry: {paths:?}");
+        for path in paths {
+            let steps: Vec<&str> = path.iter().map(String::as_str).collect();
+            let shown = steps
+                .iter()
+                .try_fold(&subject, |value, step| value.get(*step))
+                .is_some();
+            assert_eq!(
+                subject_withholds(&steps, &Restrictions::default()),
+                !shown,
+                "{steps:?}"
+            );
+        }
+    }
 
     /// The shared entry fixture: a professional's read, `person` its
     /// accessor kind.
@@ -233,6 +352,18 @@ mod tests {
         assert!(view["accessor"].get("provider").is_none(), "{view}");
         assert_eq!(view["accessor"]["kind"]["value"], "person", "{view}");
         assert!(view.get("time_recorded").is_some(), "{view}");
+    }
+
+    #[test]
+    fn a_member_a_policy_restricts_is_withheld_from_a_query_of_the_person() {
+        let restrictions = Restrictions::of(Some(&policy(&["organisation"], &["accessor_party"])));
+        let party = ["accessor", "party", "external_ref", "id", "value"];
+        assert!(subject_withholds(&party, &restrictions));
+        assert!(!subject_withholds(&party, &Restrictions::default()));
+        assert!(!subject_withholds(
+            &["accessor", "kind", "value"],
+            &restrictions
+        ));
     }
 
     #[test]

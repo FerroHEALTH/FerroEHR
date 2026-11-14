@@ -155,6 +155,25 @@ impl AccessLogStore {
         rows.iter().map(stored).collect()
     }
 
+    /// The records the statement `sql`, bound to `values`, selects with the
+    /// record columns [`Self::search`] reads, in its order: the statement an AQL query over
+    /// the access log runs (`crate::aql::access_log::sql`).
+    ///
+    /// # Errors
+    /// The store errors when the statement fails, and
+    /// [`AccessLogError::Unreadable`] when a stored record does not read.
+    pub async fn select(
+        &self,
+        sql: String,
+        values: sea_query_sqlx::SqlxValues,
+    ) -> Result<Vec<AccessLogRecord>, AccessLogError> {
+        let rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
+            .persistent(false)
+            .fetch_all(&mut *acquire(self.pool()).await?)
+            .await?;
+        rows.iter().map(stored).collect()
+    }
+
     /// The uid and link of every access-log record from `from` to `to`, both
     /// included, in chain order, without their content.
     ///

@@ -383,7 +383,7 @@ pub(super) fn leaf_path_string(leaf: &LeafPath) -> String {
 /// `LIKE` pattern, escaping literal `%`/`_`/`\`. The AQL escapes `\*`/`\?` are
 /// the LITERAL characters (QUERY master03 §Operators/LIKE); `\\` is a literal
 /// backslash (SQL-escaped).
-pub(super) fn aql_like_to_sql(pattern: &str) -> String {
+pub(crate) fn aql_like_to_sql(pattern: &str) -> String {
     let mut out = String::with_capacity(pattern.len());
     let mut chars = pattern.chars().peekable();
     while let Some(ch) = chars.next() {
