@@ -81,7 +81,10 @@ async fn ask(access: Arc<RequestAccess>, ehr_id: EhrId) -> Outcome {
     };
     let judged = Arc::clone(&access);
     with_request_access(access, async move {
-        let verdict = judged.judge_ehr(ehr_id, &entry);
+        let verdict = judged
+            .judge_ehr(ehr_id, &entry)
+            .await
+            .expect("an EHR with no subject reads no care relationship");
         judged.note(ehr_id, &verdict, &Item::Ehr)
     })
     .await

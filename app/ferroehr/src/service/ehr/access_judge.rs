@@ -58,7 +58,7 @@ impl FerroEhrService {
             return Ok(verdict);
         }
         let entry = Box::pin(self.ehr_access_entry(ehr_id)).await?;
-        Ok(access.judge_ehr(ehr_id, &entry))
+        Ok(access.judge_ehr(ehr_id, &entry).await?)
     }
 
     /// The verdict of `access` on `ehr_id` as [`Self::ehr_verdict`] gives
@@ -81,7 +81,7 @@ impl FerroEhrService {
             Some(_) => {
                 self.ehr_access.forget(ehr_id).await;
                 let entry = Box::pin(self.ehr_access_entry(ehr_id)).await?;
-                Ok(access.judge_ehr(ehr_id, &entry))
+                Ok(access.judge_ehr(ehr_id, &entry).await?)
             }
             None => self.ehr_verdict(access, ehr_id).await,
         }
@@ -170,7 +170,8 @@ impl FerroEhrService {
             return Ok(AccessCondition::default());
         };
         let classes = self.ehr_access_classes().await?;
-        Ok(access.condition(&classes, access.cared_subjects()))
+        let cared = access.cared_subjects().await?;
+        Ok(access.condition(&classes, cared))
     }
 
     /// Judges every EHR the query `result` of the running request served
@@ -205,7 +206,7 @@ impl FerroEhrService {
             return Ok(());
         }
         for (ehr_id, entry) in self.ehr_access_entries(&settled).await? {
-            access.judge_ehr(ehr_id, &entry);
+            access.judge_ehr(ehr_id, &entry).await?;
         }
         Ok(())
     }
