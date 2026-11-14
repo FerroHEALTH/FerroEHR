@@ -209,7 +209,9 @@ async fn enforce_objects(
             .map_or("", |(raw, _)| raw);
         match access.note(ehr_id, &verdict, &held.item()) {
             Outcome::Admit => {}
-            Outcome::Absent(_) => return Err(Box::new(object_not_found(op, raw))),
+            Outcome::Absent(_) => {
+                return Err(Box::new(recorded(object_not_found(op, raw), principal)));
+            }
             Outcome::Refused(code) => return Err(Box::new(forbidden(principal, code))),
         }
     }
@@ -273,11 +275,11 @@ async fn refusal_of(
         .await
         .map_err(|e| Box::new(unavailable(principal, e)))?;
     if !held {
-        return Ok(Some(ehr_not_found(op, ehr_id)));
+        return Ok(Some(recorded(ehr_not_found(op, ehr_id), principal)));
     }
     Ok(match access.note(ehr_id, verdict, &Item::Ehr) {
         Outcome::Admit => None,
-        Outcome::Absent(_) => Some(ehr_not_found(op, ehr_id)),
+        Outcome::Absent(_) => Some(recorded(ehr_not_found(op, ehr_id), principal)),
         Outcome::Refused(code) => Some(forbidden(principal, code)),
     })
 }
@@ -332,6 +334,16 @@ pub(crate) fn named_objects(parts: &RequestParts) -> Vec<(&str, VoId)> {
 /// (`crate::api::ehr::ehr_access`).
 fn reads_ehr_access(op: &str) -> bool {
     op.starts_with("ehr_access_get") || op.starts_with("versioned_ehr_access")
+}
+
+/// `resp`, the `404` of data that read as absent, carrying the principal so
+/// the access record names the refused access, whose response says nothing
+/// (EHDS Art. 8, `ferroehr::access_eval::record::stamp`).
+fn recorded(mut resp: Response, principal: Option<&Principal>) -> Response {
+    if let Some(principal) = principal {
+        resp.extensions_mut().insert(principal.clone());
+    }
+    resp
 }
 
 /// The `404` an unknown EHR answers for `op`, worded as the dispatch words it.

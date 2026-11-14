@@ -61,6 +61,7 @@ pub struct RequestAccess {
     verdicts: Mutex<BTreeMap<EhrId, Judgement>>,
     recorded: Recorded,
     stale: Option<Arc<StaleCopies>>,
+    written: Mutex<BTreeSet<Uuid>>,
 }
 
 /// The EHRs whose copy on this replica a read found older than the row in
@@ -196,6 +197,7 @@ impl RequestAccess {
             verdicts: Mutex::new(BTreeMap::new()),
             recorded: Recorded::default(),
             stale: None,
+            written: Mutex::new(BTreeSet::new()),
         }
     }
 
@@ -212,6 +214,23 @@ impl RequestAccess {
     pub fn with_record_facts(mut self, facts: RecordFacts) -> Self {
         self.recorded.facts = facts;
         self
+    }
+
+    /// Notes that this request committed a version of the object `vo_id`,
+    /// which its response is built from.
+    pub fn wrote(&self, vo_id: Uuid) {
+        self.written
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(vo_id);
+    }
+
+    /// Whether this request committed a version of the object `vo_id`.
+    fn written(&self, vo_id: Uuid) -> bool {
+        self.written
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .contains(&vo_id)
     }
 
     /// The caller.
@@ -777,13 +796,19 @@ where
 
 /// Whether `item` of `ehr_id` may leave the store for the running request.
 ///
-/// `seen` is the revision of the EHR's settings row the read found beside
+/// The object a write of this request committed leaves for its response
+/// ([`RequestAccess::wrote`]). `seen` is the revision of the EHR's settings row the read found beside
 /// the item. Always outside a request, and for an object of no EHR; a
 /// verdict judged on another revision admits nothing
 /// ([`RequestAccess::stale`]).
 #[must_use]
 pub fn admits(ehr_id: Option<EhrId>, seen: Revision, item: &Item<'_>) -> bool {
     match (current(), ehr_id) {
+        // NOTE: our own design (owner ruling on #5621), a write's response is built from the
+        // version that request committed, so the writer's own object is no read of stored data.
+        (Some(access), Some(_)) if matches!(item, Item::Object(object) if access.written(object.vo_id)) => {
+            true
+        }
         (Some(access), Some(ehr_id)) => {
             !access.stale(ehr_id, seen) && access.outcome(ehr_id, item) == Outcome::Admit
         }

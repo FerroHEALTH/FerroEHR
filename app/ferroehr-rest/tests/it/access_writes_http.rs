@@ -108,10 +108,11 @@ async fn a_write_a_directive_refuses_is_never_stored() {
 }
 
 /// A restriction covering a template restricts who reads it, never its
-/// recording: the nurse's write in the restricted category is stored, she is
-/// refused reading it back with the `404` of absent data, and the access log
-/// records the write and the refused read (EHDS Art. 8; owner ruling on
-/// #5621).
+/// recording: the nurse's write in the restricted category is stored and
+/// answered `201` with its representation, built from the version her request
+/// committed; her next read of it is refused with the `404` of absent data,
+/// and the access log holds exactly the create and the refused read (EHDS
+/// Art. 8; owner ruling on #5621).
 #[tokio::test]
 async fn a_write_in_a_restricted_category_is_stored_and_not_read_back() {
     let (_db, pool, svc, app) = Box::pin(app()).await;
@@ -130,7 +131,11 @@ async fn a_write_in_a_restricted_category_is_stored_and_not_read_back() {
     .await;
     let (status, body) = commit(&app, &ehr, "nurse").await;
     assert_eq!(status, StatusCode::CREATED, "the write is stored: {body}");
-    assert!(!body.contains("refused-"), "{body}");
+    assert_eq!(
+        serde_json::from_str::<Value>(&body).expect("the representation")["_type"],
+        "COMPOSITION",
+        "{body}"
+    );
     assert_eq!(compositions(&app, &ehr).await, 2, "the version was stored");
     let vo = serde_json::from_str::<Value>(&body).expect("the composition")["uid"]["value"]
         .as_str()
@@ -141,18 +146,24 @@ async fn a_write_in_a_restricted_category_is_stored_and_not_read_back() {
     let (status, body) = send(&app, "GET", &read, "nurse", None, None).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
     assert!(!body.contains("refused-"), "{body}");
+    let refused = crate::access_log_http::entries(&pool, 1, |stored| {
+        stored.result.as_deref() == Some("refused")
+    })
+    .await;
+    assert_eq!(refused.len(), 1, "one refused read");
     let naming_it =
-        crate::access_log_http::entries(&pool, 2, |stored| stored.content.contains(&vo)).await;
-    assert!(
-        naming_it
-            .iter()
-            .any(|stored| stored.result.as_deref() != Some("refused")),
-        "the write is recorded"
-    );
-    let refused = naming_it
+        crate::access_log_http::entries(&pool, 1, |stored| stored.content.contains(&vo)).await;
+    let actions: Vec<(Option<&str>, Option<&str>)> = naming_it
         .iter()
-        .find(|stored| stored.result.as_deref() == Some("refused"))
-        .expect("the refused read is recorded");
+        .map(|stored| (stored.action.as_deref(), stored.result.as_deref()))
+        .filter(|(_, result)| *result != Some("refused"))
+        .collect();
+    assert_eq!(
+        actions,
+        vec![(Some("create"), Some("granted"))],
+        "the response is recorded as the create, and no read of it but the refused one"
+    );
+    let refused = &refused[0];
     let entry: Value = serde_json::from_str(&refused.content).expect("a canonical entry");
     assert_eq!(
         entry["outcome"]["reason"]["defining_code"]["code_string"], "refused-restricted",

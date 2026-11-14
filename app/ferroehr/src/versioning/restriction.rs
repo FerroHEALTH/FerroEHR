@@ -106,6 +106,9 @@ impl WriteGate {
             ..(*self.verdict).clone()
         };
         let Outcome::Refused(code) = judged.outcome(written) else {
+            if let Item::Object(object) = written {
+                self.access.wrote(object.vo_id);
+            }
             return Ok(());
         };
         if !self.named {
