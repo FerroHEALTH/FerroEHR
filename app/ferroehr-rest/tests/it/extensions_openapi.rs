@@ -546,7 +546,6 @@ fn app_config() -> AppConfig {
                 ..Default::default()
             },
             auth: common::issuer_auth(ISSUER, "ferroehr"),
-            audit_organization_claim: None,
             rbac: ferroehr::config::authz::RbacConfig::default(),
             assurance: ferrohealth_smart::assurance::AssuranceSection::default(),
             spec_profile: ferroehr::config::profile::SpecProfile::default(),

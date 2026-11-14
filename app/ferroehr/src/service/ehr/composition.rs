@@ -77,7 +77,7 @@ impl FerroEhrService {
             .validate_for_commit(Kind::Composition, &composition, incomplete)
             .await;
         // The committed template identity is promoted to `version.template_id`
-        // — the ABAC template attribute resolver (`template_of_version`) and the
+        // — the SMART template resolver (`template_of_version`) and the
         // template-delete guard both read that column, so the direct route
         // stamps it exactly like the CONTRIBUTION route.
         let template_id = composition_template_id(&composition).map(str::to_owned);
@@ -565,8 +565,8 @@ impl FerroEhrService {
 
     /// The OPT `template_id` a COMPOSITION version was committed against, read
     /// back from the version. `version` = the `VERSION_TREE_ID` lexical form
-    /// (`N` or `N.B.V`); `None` = the current version. The ABAC template
-    /// attribute for the access pre-checks / any per-version resolver.
+    /// (`N` or `N.B.V`); `None` = the current version. The template the
+    /// SMART `composition-` gate checks.
     ///
     /// NOTE (settled shape): this resolves through the promoted
     /// `version.template_id` column — one scalar `SELECT`, no node
@@ -592,28 +592,6 @@ impl FerroEhrService {
         )
         .await?
         .flatten())
-    }
-
-    /// The template, root archetype and origins of one version, the content
-    /// the ABAC template, category and origin attributes are read from (EHDS
-    /// Annex II 3.4). `version` = the `VERSION_TREE_ID` lexical form (`N` or
-    /// `N.B.V`); `None` = the current version. One indexed read, no node
-    /// reassembly. No openEHR spec governs authorization: our own design.
-    ///
-    /// # Errors
-    /// [`ServiceError`] for a malformed `version` string or a failing read.
-    pub async fn content_of_version(
-        &self,
-        vo_id: VoId,
-        version: Option<&str>,
-    ) -> Result<Option<crate::storage::version_repo::meta::VersionContent>, ServiceError> {
-        let tree = version.map(parse_tree_id).transpose()?;
-        Ok(crate::storage::version_repo::meta::content_of(
-            &self.pool,
-            vo_id,
-            tree.map(TreeId::columns),
-        )
-        .await?)
     }
 
     /// `delete_composition`: commits a

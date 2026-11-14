@@ -984,7 +984,7 @@ config_keys_gate() {
     '^ *sgb_v_309_controller = true$'; do
     grep -qE "$want" <<<"$toml" || { red "  audit-categories render lacks a line matching: ${want}"; missing=1; }
   done
-  if grep -qE '^ *\[(audit\.categories|privacy\.access_delay|authz\.abac\.cedar)' <<<"$toml"; then
+  if grep -qE '^ *\[(audit\.categories|privacy\.access_delay)' <<<"$toml"; then
     red "  audit-categories render carries a table the admin registers replace"
     missing=1
   fi

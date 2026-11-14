@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The classification of every operation the REST layer dispatches: one row
-//! per operation id, read by the RBAC route map, the ABAC policy-enforcement
+//! per operation id, read by the RBAC route map, the patient-scope enforcement
 //! point, the SMART on openEHR gates and the ATNA audit trail.
 //!
 //! Every generated ITS-REST operation has a row, which the completeness tests
 //! of [`crate::extensions::access::authz::classify`] and
 //! [`crate::system_log::classify`] hold. An extension operation has a row
-//! where it is ABAC-checked, SMART-checked or audited under a class of its own;
-//! an operation without a row is RBAC-classified by its path, skipped by ABAC,
+//! where it is patient-scope-checked, SMART-checked or audited under a class of its own;
+//! an operation without a row is RBAC-classified by its path, skipped by the patient scope,
 //! treated as a write, and audited under the fail-closed default. No
 //! specification governs this: our own design.
 
@@ -19,8 +19,7 @@ use std::sync::LazyLock;
 use ferroehr::system_log::event::{EventActionCode, ObjectClass};
 use ferrohealth_smart::openehr::smart_scopes::Permission;
 
-use crate::extensions::access::authz::classify::{Mode, OperationClass};
-use crate::extensions::access::authz::request::{AccessMode, ResourceKind};
+use crate::extensions::access::authz::classify::{Mode, OperationClass, ResourceKind};
 use crate::system_log::classify::Classification;
 
 /// What an operation does to the resource it addresses.
@@ -64,9 +63,10 @@ pub(crate) struct Operation {
     /// The RBAC class of a generated operation; `None` for an extension
     /// operation, which RBAC classifies by its path.
     pub(crate) class: Option<OperationClass>,
-    /// The ABAC resource kind; `None` for an operation ABAC does not model.
+    /// The resource kind; `None` for an operation outside the EHR and query
+    /// groups.
     pub(crate) kind: Option<ResourceKind>,
-    /// When the ABAC policy-enforcement point checks the operation.
+    /// When the patient scope checks the operation.
     pub(crate) pep: Mode,
     /// The DICOM resource class the operation is audited under; `None` for the
     /// fail-closed default.
@@ -82,19 +82,6 @@ impl Operation {
     #[must_use]
     pub(crate) fn is_write(&self) -> bool {
         !matches!(self.verb, Verb::Read | Verb::Search)
-    }
-
-    /// The ABAC access mode (the Cedar action axis) of an operation with a
-    /// resource kind.
-    #[must_use]
-    pub(crate) fn access(&self) -> Option<AccessMode> {
-        self.kind.map(|_kind| match self.verb {
-            Verb::Create => AccessMode::Create,
-            Verb::Update => AccessMode::Update,
-            Verb::Delete => AccessMode::Delete,
-            Verb::Search => AccessMode::Execute,
-            Verb::Read | Verb::Execute => AccessMode::Read,
-        })
     }
 
     /// The SMART permission letter the operation exercises (master08
@@ -125,12 +112,6 @@ impl Operation {
         self.audit
             .map(|object| Classification::Audited { action, object })
     }
-
-    /// Whether the operation commits a CONTRIBUTION.
-    #[must_use]
-    pub(crate) fn commits_contribution(&self) -> bool {
-        self.kind == Some(ResourceKind::Contribution) && self.verb == Verb::Create
-    }
 }
 
 /// The operation `id`, or `None` for an operation without a row.
@@ -143,8 +124,8 @@ pub(crate) fn operation(id: &str) -> Option<&'static Operation> {
 static BY_ID: LazyLock<HashMap<&str, &Operation>> =
     LazyLock::new(|| OPERATIONS.iter().map(|op| (op.id, op)).collect());
 
-/// Builds [`OPERATIONS`], one row per line: id, verb, RBAC class, ABAC kind,
-/// ABAC mode, audit class and `composition-` gate, `None` for an absent value.
+/// Builds [`OPERATIONS`], one row per line: id, verb, RBAC class, resource kind,
+/// patient-scope mode, audit class and `composition-` gate, `None` for an absent value.
 macro_rules! operations {
     ($($id:expr => $verb:ident, $class:ident, $kind:ident, $pep:ident, $audit:ident, $gate:ident;)*) => {
         &[$(Operation {
@@ -166,7 +147,7 @@ macro_rules! operations {
 /// The CONTRIBUTION ids are shared by the EHR and DEMOGRAPHIC groups, and one
 /// row is right for both: RM common master06 change control governs every
 /// `VERSIONED_OBJECT`. An `ITEM_TAG` operation is audited under its parent's
-/// class and ABAC-checked in the mode of its parent's read (`GET`) or write
+/// class and patient-scope-checked in the mode of its parent's read (`GET`) or write
 /// (`PUT`, `DELETE`): our own design, since RM ehr `master04-ehr_package.adoc`
 /// §Tags puts tags outside change control. The `EHR_ACCESS` extension reads are
 /// checked as reads of the EHR that holds the object, since no ABAC kind names
@@ -367,7 +348,6 @@ mod tests {
                 dash()
             },
             format!("{:?}", row.and_then(|row| row.kind)),
-            format!("{:?}", row.and_then(Operation::access)),
             if generated {
                 row.is_none_or(Operation::is_write).to_string()
             } else {
@@ -443,7 +423,7 @@ mod tests {
     /// The rows the policy-enforcement point selects by their fields are
     /// exactly the operations it named before.
     #[test]
-    fn the_content_and_gate_keeper_selections_name_their_operations() {
+    fn the_composition_gate_selections_name_their_operations() {
         let ids = |keep: fn(&Operation) -> bool| -> Vec<&str> {
             let mut ids: Vec<&str> = OPERATIONS
                 .iter()
@@ -465,13 +445,9 @@ mod tests {
             ids(|row| row.composition == CompositionGate::Write && row.verb == Verb::Delete),
             ["composition_delete"]
         );
-        assert_eq!(
-            ids(Operation::commits_contribution),
-            ["contribution_create"]
-        );
     }
 
-    /// Every item-tag operation takes the ABAC mode and resource kind of its
+    /// Every item-tag operation takes the patient-scope mode and resource kind of its
     /// target's read (`GET`) or write (`PUT`, `DELETE`).
     #[test]
     fn an_item_tag_operation_is_checked_as_its_target() {

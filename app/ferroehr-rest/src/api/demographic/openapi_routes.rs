@@ -8,7 +8,7 @@
 //!
 //! Each `#[utoipa::path]` handler single-sources its route and its `OpenAPI`
 //! path, then calls its operation's handler through [`guarded_dispatch`](crate::api::guarded_dispatch), so the
-//! `EHR_ACCESS` gate, the ABAC PEP and the ATNA audit tagging apply uniformly.
+//! `EHR_ACCESS` gate, the PEP and the ATNA audit tagging apply uniformly.
 //!
 //! The Demographic API is `DEVELOPMENT`-state within ITS-REST Release-1.1.0
 //! (`docs/demographic/Description.md` §Status). That is a reporting qualifier

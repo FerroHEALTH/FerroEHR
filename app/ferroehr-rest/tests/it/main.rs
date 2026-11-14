@@ -37,7 +37,6 @@
 mod canonical_json_literals;
 mod common;
 
-mod abac_e2e;
 mod access_delay_http;
 mod access_delay_trail;
 mod access_evaluator_http;
@@ -63,7 +62,6 @@ mod audit_ehr_subject;
 mod audit_emergency_access;
 mod audit_iti81;
 mod audit_route_coverage;
-mod authz_cedar_engine;
 mod authz_route_matrix;
 mod base_path_http;
 mod basic_binding_http;
@@ -114,6 +112,7 @@ mod overload_http;
 mod party_binding_http;
 mod party_reverse_relationships_http;
 mod patient_data_assurance;
+mod patient_scope_e2e;
 mod policy_fixture;
 mod policy_grants_http;
 mod policy_registers_http;

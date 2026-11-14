@@ -70,7 +70,7 @@ pub(crate) fn extension_routes() -> OpenApiRouter<AppState> {
 
 // Every handler snapshots the request into `RequestParts` and runs it through
 // the shared guarded dispatch onto its operation's handler, so the EHR_ACCESS
-// gate, the ABAC PEP and the ATNA audit tagging apply uniformly.
+// gate, the PEP and the ATNA audit tagging apply uniformly.
 
 // ── EHR ───────────────────────────────────────────────────────────────────────
 

@@ -230,7 +230,7 @@ pub struct FerroEhrService {
     /// local map.
     pub(in crate::service) ehr_index: ehr_index::provider::EhrIndexProvider,
     /// The operational-policy admin registers in force: the audit category
-    /// map, the EHDS Art. 3(3) access delay and the Cedar policy set, each at
+    /// map and the EHDS Art. 3(3) access delay, each at
     /// its default in [`Self::new`] until [`Self::refresh_policy_registers`]
     /// reads the stored versions.
     pub(in crate::service) registers: Arc<crate::policy_register::LiveRegisters>,

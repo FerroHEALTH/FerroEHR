@@ -84,7 +84,7 @@ pub struct FerroEhrConfig {
     /// serialization writes every secret as `***`, `[auth.idp]`,
     /// `[auth.smart]` and `[auth.scim]`.
     pub auth: auth_section::AuthConfig,
-    /// `[authz]` — RBAC, ABAC, assurance, the party binding, the system
+    /// `[authz]` — RBAC, assurance, the party binding, the system
     /// clients and the grant ceiling.
     pub authz: authz::AuthzConfig,
     /// `[api]` — the openEHR REST API: the base path, the system identifier,
@@ -621,8 +621,8 @@ mod tests {
         );
     }
 
-    /// The `[auth]` posture keys, the ABAC directory switch and the ABAC patient
-    /// namespace are reachable through the one env grammar — a documented env
+    /// The `[auth]` posture keys and the patient binding (`patient_claim`,
+    /// `patient_namespace`) are reachable through the one env grammar — a documented env
     /// spelling that binds nothing would ship dead.
     #[test]
     fn env_mapping_auth_and_authz_posture_keys() {
@@ -633,11 +633,8 @@ mod tests {
                 ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr"),
                 ("FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW", "2min"),
                 ("FERROEHR__AUTH__ISSUER__0__PROFILE", "keycloak"),
-                ("FERROEHR__AUTHZ__ABAC__CHECK_DIRECTORY", "true"),
-                (
-                    "FERROEHR__AUTHZ__ABAC__PATIENT_NAMESPACE",
-                    "nl.example.patients",
-                ),
+                ("FERROEHR__AUTH__PATIENT_CLAIM", "patient_id"),
+                ("FERROEHR__AUTH__PATIENT_NAMESPACE", "nl.example.patients"),
             ]),
             &[],
         );
@@ -649,16 +646,13 @@ mod tests {
             ferrohealth_config::units::Duration::from_mins(2)
         );
         assert_eq!(issuer.profile, ferrohealth_smart::profile::Preset::Keycloak);
-        assert!(c.authz.abac.check_directory);
-        assert_eq!(
-            c.authz.abac.patient_namespace(),
-            Some("nl.example.patients")
-        );
+        assert_eq!(c.auth.patient_claim(), Some("patient_id"));
+        assert_eq!(c.auth.patient_namespace(), Some("nl.example.patients"));
 
         // Unset, both carry their documented defaults.
         let d = assemble_ok(None, &env(&[]), &[]);
-        assert!(!d.authz.abac.check_directory);
-        assert_eq!(d.authz.abac.patient_namespace(), None);
+        assert_eq!(d.auth.patient_claim(), None);
+        assert_eq!(d.auth.patient_namespace(), None);
         assert_eq!(d.auth.shared.issuers(), []);
         let entry = ferrohealth_smart::config::IssuerEntry::default();
         assert_eq!(

@@ -37,7 +37,7 @@
 //! A demographic query ([`QueryDomain::Demographic`]) runs the same SQL on the
 //! party pool, whose `search_path` names the `party` schema rendered from the
 //! same DDL. It carries none of the EHR gates (the population gate, the
-//! `ehr_ids` scope, the per-EHR access decision, the ABAC patient scope),
+//! `ehr_ids` scope, the per-EHR access decision, the patient scope),
 //! because the `party` schema has no `ehr` relation and a party is no EHR's
 //! content; the restriction mark, the policy-party mark of a caller who is no
 //! administrator (`gates`) and `LATEST_VERSION` ride the head join as for
@@ -66,7 +66,7 @@ mod stream;
 pub mod subject;
 mod value;
 
-use crate::db::iden::{Ehr, Node, VersionRow};
+use crate::db::iden::{Ehr, Node};
 use crate::ids::EhrId;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
@@ -95,7 +95,7 @@ pub struct SqlCtx {
     /// Whether a non-empty [`Self::ehr_ids`] is a named target or a subset of
     /// the population, which the population gate still applies to.
     pub ehr_scope_kind: EhrScopeKind,
-    /// The ABAC patient scope (no openEHR spec governs this, our own
+    /// The patient scope (no openEHR spec governs this, our own
     /// extension): when set, every VO root and every EHR source is restricted
     /// to EHRs whose subject it names ([`subject::SubjectScope`]), so rows the
     /// caller may not see are never fetched, independent of what the query
@@ -303,13 +303,13 @@ impl std::fmt::Debug for PreparedQuery {
     }
 }
 
-/// A built scope-collection query for the ABAC query post-check.
+/// A built scope-collection query for the patient-scope query post-check.
 ///
 /// `SELECT DISTINCT` of every bound EHR source's `id` and every bound VO root's
-/// `ehr_id` + `template_id` over the same containment/filter as the main query
-/// (no openEHR spec governs ABAC — our own extension). Its rows carry the set
-/// of EHRs and templates the query touches — across **all** bound variables and
-/// **independent of the projection**.
+/// `ehr_id` over the same containment/filter as the main query (no openEHR spec
+/// governs the patient scope — our own extension). Its rows carry the set of
+/// EHRs the query touches — across **all** bound variables and **independent
+/// of the projection**.
 #[derive(Debug)]
 pub struct ScopeQuery {
     /// The generated SQL.
@@ -319,9 +319,6 @@ pub struct ScopeQuery {
     /// The EHR-id column aliases, one per bound EHR source and per bound VO
     /// root, the executor reads each result row's touched EHRs from.
     pub ehr_columns: Vec<String>,
-    /// The template-id column aliases, one per bound VO root and per joined
-    /// `EHR_STATUS` root.
-    pub template_columns: Vec<String>,
 }
 
 /// A VO "group": the node alias that roots it and the `version` alias its
@@ -365,7 +362,7 @@ struct Builder<'a> {
     /// path (keyed by EHR source id; joined once, lazily, on first use).
     ehr_status_node: BTreeMap<usize, String>,
     /// The `version` alias of each joined `EHR_STATUS` root (keyed by EHR source
-    /// id), the source of its `template_id` for the ABAC scope collection.
+    /// id).
     ehr_status_vo: BTreeMap<usize, String>,
     /// The `version` alias each versioned-object-root RM source opened
     /// (keyed by source id). Used to synthesize the server-assigned
@@ -384,12 +381,11 @@ struct Builder<'a> {
     /// already covers them, so gating the root again would be a duplicate
     /// full-population subquery per query.
     roots_linked_to_ehr: BTreeSet<String>,
-    /// The `version` alias for each entry in `group_roots` (parallel vec) —
-    /// the source of the touched `template_id` for the ABAC scope collection.
+    /// The `version` alias for each entry in `group_roots` (parallel vec).
     group_vos: Vec<String>,
     /// The `(node, version)` left-binding aliases of each `OR` branch operand
     /// bound as a versioned object of its own: reported to the access log and
-    /// the ABAC scope collection like a group root, but never filtered as one,
+    /// the patient-scope collection like a group root, but never filtered as one,
     /// since a `NULL` binding is a row whose branch did not match.
     branch_roots: Vec<(String, String)>,
     /// Fresh-alias counter for anchor subqueries / anti-joins.
@@ -470,7 +466,7 @@ impl<'a> Builder<'a> {
     /// A query that reads only the `ehr` row (`FROM EHR e` with no
     /// containment, or an `ehr_status` path) binds no versioned-object root
     /// and still serves the EHR its row names, so the access log
-    /// ([`ACCESS_EHR_PREFIX`]) and the ABAC scope collection both read this
+    /// ([`ACCESS_EHR_PREFIX`]) and the patient-scope collection both read this
     /// one list. No openEHR spec governs this: our own design.
     fn served_ehr_ids(&self) -> Vec<sea_query::Expr> {
         self.ehr_alias
@@ -592,7 +588,7 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
     })
 }
 
-/// Builds the ABAC scope-collection query for `ir`, or `None` when there is
+/// Builds the patient-scope collection query for `ir`, or `None` when there is
 /// nothing to collect.
 ///
 /// Nothing is collected for a query that binds neither an EHR source nor a
@@ -602,8 +598,7 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
 /// the collected scope is exactly the rows that query can serve. Every EHR
 /// source contributes its `ehr.id`, so a query that reads only the `ehr` row
 /// (`FROM EHR e`, an `ehr_status` path, an `OR` under the EHR) still reports
-/// the EHRs it touches; every versioned-object root contributes its `ehr_id`
-/// and `template_id`, and every joined `EHR_STATUS` root its `template_id`.
+/// the EHRs it touches; every versioned-object root contributes its `ehr_id`.
 ///
 /// # Errors
 /// The same refusals as [`build`].
@@ -627,36 +622,12 @@ pub fn build_scope(
         return Ok(None);
     }
     // The row-wise cartesian of the bound EHR sources and roots, DISTINCT-ed,
-    // so every touched EHR/template across every bound variable is collected.
-    // One index runs over the EHR sources, the roots, then the `EHR_STATUS`
-    // roots, so `scope_ehr_{i}` and its root's `scope_template_{i}` share it.
-    let first_root = b.ehr_alias.len();
-    let roots = b.served_roots();
+    // so every touched EHR across every bound variable is collected.
     let mut ehr_columns = Vec::with_capacity(served.len());
-    let mut template_columns = Vec::with_capacity(roots.len());
     for (i, ehr) in served.into_iter().enumerate() {
         let ehr_col = format!("scope_ehr_{i}");
         b.q.expr_as(ehr, Alias::new(ehr_col.as_str()));
         ehr_columns.push(ehr_col);
-    }
-    for (i, (_, vo)) in (first_root..).zip(roots.iter()) {
-        let template_col = format!("scope_template_{i}");
-        b.q.expr_as(
-            col(vo, VersionRow::TemplateId),
-            Alias::new(template_col.as_str()),
-        );
-        template_columns.push(template_col);
-    }
-    // A joined `EHR_STATUS` root belongs to its EHR source, whose id is already
-    // collected; it adds its template.
-    let first_status = first_root + roots.len();
-    for (i, vo) in (first_status..).zip(b.ehr_status_vo.values().cloned().collect::<Vec<_>>()) {
-        let template_col = format!("scope_template_{i}");
-        b.q.expr_as(
-            col(&vo, VersionRow::TemplateId),
-            Alias::new(template_col.as_str()),
-        );
-        template_columns.push(template_col);
     }
     b.q.distinct();
     let (sql, values) = b.q.build_sqlx(PostgresQueryBuilder);
@@ -664,6 +635,5 @@ pub fn build_scope(
         sql,
         values,
         ehr_columns,
-        template_columns,
     }))
 }

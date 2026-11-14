@@ -22,7 +22,7 @@ existing governance. So the split is deliberate and permanent:
 - **The IdP owns identities**: accounts, passwords, MFA, group/role
   membership, lifecycle (joiners/movers/leavers), and session policy.
 - **The CDR owns authorization**: it validates the token, mines roles from
-  its claims, and enforces [RBAC/ABAC and per-EHR access
+  its claims, and enforces [RBAC, the access evaluator and per-EHR access
   control](security.md#authorization) on every request.
 
 The HTTP Basic user list in `ferroehr.toml` holds persons only, and it is not

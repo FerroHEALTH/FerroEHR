@@ -76,8 +76,9 @@ that its sidecar will need its own Pod Security accommodation.
 usually proposed for.**
 
 - **Application authorization: already solved, do not add a second engine.** This
-  server ships a policy-driven authorization layer: RBAC, plus ABAC with an
-  embedded Cedar engine. Adding a second
+  server ships a policy-driven authorization layer: RBAC, plus the access
+  evaluator over the access directives each EHR carries and the controller's
+  access policy. Adding a policy
   engine for application decisions would mean two policy engines disagreeing about
   one question, and the one that loses is whichever is consulted second.
 - **Service-mesh authorization: moot**, no mesh ([above](#service-mesh-a-recorded-decision)).

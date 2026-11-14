@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DATABASE__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 32.0.0-rc1 -n ferroehr \
+  --version 33.0.0 -n ferroehr \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.7.1-rc1 \
@@ -68,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 32.0.0-rc1
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 33.0.0
 ```
 
 ### Pin two versions, not one
@@ -81,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 32.0.0-rc1` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 33.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.7.1-rc1` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -181,7 +181,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 32.0.0-rc1 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 33.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -284,10 +284,8 @@ says what it runs:
   [audit category register](config-audit.md#the-audit-category-register), an
   [admin register](../operational-policy.md#the-admin-registers) you write
   through the admin API once the server runs. Until then the
-  category map FerroEHR ships applies. The access delay and the Cedar policy
-  set are admin registers too; under `config:` their old tables
-  (`[audit.categories]`, `[privacy.access_delay]`, `[authz.abac.cedar]`) are
-  unknown keys the server refuses.
+  category map FerroEHR ships applies. The access delay is an admin register
+  too.
 
 The [Audit](config-audit.md) page has the category vocabulary and the
 retention floors and ceilings the server enforces at boot.
@@ -326,7 +324,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 32.0.0-rc1 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 33.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -458,8 +456,7 @@ and issues no DDL doing it.
 
 ## Secrets and mounted config
 
-Some material is file-shaped rather than a value: ABAC policy files, ATNA TLS
-certificates, terminology-server client certificates, a JWKS blob, the PGP
+Some material is file-shaped rather than a value: ATNA TLS certificates, terminology-server client certificates, a JWKS blob, the PGP
 signing key, and a commercial licence token. Supply these under `config.files`,
 whose entries the chart mounts read-only from a Secret at `/etc/ferroehr/<key>`
 (and which is deliberately *not* part of the rendered TOML); point the matching
@@ -836,7 +833,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 32.0.0-rc1 -n ferroehr --reuse-values \
+  --version 33.0.0 -n ferroehr --reuse-values \
   --set config.record.query.plan_cache_capacity=512
 ```
 
@@ -873,7 +870,7 @@ is an explicit, auditable decision:
 | Bearer tokens | `config.auth.issuer` | unset | A list of issuer tables, each with its `kind`, `profile` and `audience`, and a `config.auth.party` table for a `persons` issuer; the issuer's metadata and key set are read at boot, asymmetric algorithms only. |
 | Party binding | `config.authz.party_binding.provider` | unset | Required once authentication admits a credential: the healthcare provider the deployment acts for. Each Basic user maps to its binding key under `config.authz.party_binding.basic_user`. |
 | RBAC | `config.authz.rbac.enabled` | **on** | The coarse role gate (active while `config.auth.enabled`). |
-| ABAC | `config.authz.abac.enabled` | off | The embedded Cedar engine, its policy set the Cedar admin register. |
+| Patient scope | `config.auth.patient_claim` | unset | Holds every caller to the patient the claim names ([the patient scope](../security.md#the-patient-scope)). |
 | S3 multimedia | `config.record.multimedia.enabled` | off | ⚠ Offloaded blobs are PHI. Private, encrypted, HTTPS bucket; keys via `secrets.multimediaAccessKeyId` and `secrets.multimediaSecretAccessKey`. |
 | Terminology server | `config.terminology` | off | The one FHIR terminology server, at `config.terminology.endpoint.url`. To run FerroTERM in the cluster instead, use `terminology.enabled` ([FerroTERM](#ferroterm-a-terminology-server-beside-the-cdr-off-by-default)), which sets these keys for you. |
 | ATNA audit trail | `config.audit.enabled` | **on** | On with the local store only; forwarding (`config.audit.syslog`, `config.audit.fhir_feed`) is opt-in per sink. |
@@ -1016,7 +1013,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 32.0.0-rc1 -n ferroehr --reuse-values \
+  --version 33.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1375,8 +1372,8 @@ Roll back by re-pinning the prior image tag or digest.
 
 A change anywhere under `config`, `config.files` or `secrets` changes the
 `checksum/config` pod annotation, so `helm upgrade` rolls the pods for a
-configuration-only change too, including a rotated secret or an edited ABAC
-policy, both of which are read at boot and would otherwise reach the volume while
+configuration-only change too, including a rotated secret or an edited
+mounted file, both of which are read at boot and would otherwise reach the volume while
 every running pod kept using the old value.
 
 `helm uninstall` removes everything the chart created; the chart declares no
@@ -1387,7 +1384,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 32.0.0-rc1 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 33.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

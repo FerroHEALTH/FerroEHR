@@ -3084,7 +3084,7 @@
           {
             "name": "register",
             "in": "path",
-            "description": "`audit-categories`, `access-delay` or `cedar-policies`.",
+            "description": "`audit-categories` or `access-delay`.",
             "required": true,
             "schema": {
               "type": "string"
@@ -3166,7 +3166,7 @@
           {
             "name": "register",
             "in": "path",
-            "description": "`audit-categories`, `access-delay` or `cedar-policies`.",
+            "description": "`audit-categories` or `access-delay`.",
             "required": true,
             "schema": {
               "type": "string"
@@ -3183,7 +3183,7 @@
           }
         ],
         "requestBody": {
-          "description": "The whole register document. `audit-categories`: `{ \"shipped_map\": …, \"national\": [...], \"templates\": {...}, \"archetypes\": {...} }`. `access-delay`: `{ \"enabled\": …, \"categories\": [...], \"max_delay\": \"72h\" }`. `cedar-policies`: `{ \"policies\": \"<Cedar text>\" }`.",
+          "description": "The whole register document. `audit-categories`: `{ \"shipped_map\": …, \"national\": [...], \"templates\": {...}, \"archetypes\": {...} }`. `access-delay`: `{ \"enabled\": …, \"categories\": [...], \"max_delay\": \"72h\" }`.",
           "content": {
             "application/json": {
               "schema": {},
@@ -3208,7 +3208,7 @@
             }
           },
           "400": {
-            "description": "`If-Match` is missing or no version, or the document is refused whole: not the register's shape, a category map that does not compile or classifies nothing under the production floor, an access delay with an unusable limit or an unknown category, or a Cedar policy set that does not parse or validate. The version in force stays.",
+            "description": "`If-Match` is missing or no version, or the document is refused whole: not the register's shape, a category map that does not compile or classifies nothing under the production floor, or an access delay with an unusable limit or an unknown category. The version in force stays.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3292,7 +3292,7 @@
           {
             "name": "register",
             "in": "path",
-            "description": "`audit-categories`, `access-delay` or `cedar-policies`.",
+            "description": "`audit-categories` or `access-delay`.",
             "required": true,
             "schema": {
               "type": "string"
@@ -27799,7 +27799,7 @@
     },
     {
       "name": "admin-registers",
-      "description": "The operational-policy admin registers: the audit category map, the EHDS Art. 3(3) access delay and the Cedar policy set, each read, replaced whole over the version `If-Match` names and listed by version, by `admin_role` only. Every version keeps its committer, and a change applies on the next request with no restart. OUR OWN EXTENSION: no openEHR spec governs operational policy."
+      "description": "The operational-policy admin registers: the audit category map and the EHDS Art. 3(3) access delay, each read, replaced whole over the version `If-Match` names and listed by version, by `admin_role` only. Every version keeps its committer, and a change applies on the next request with no restart. OUR OWN EXTENSION: no openEHR spec governs operational policy."
     },
     {
       "name": "admin-outbox",

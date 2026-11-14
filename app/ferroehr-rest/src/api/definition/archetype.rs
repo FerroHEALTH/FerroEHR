@@ -16,7 +16,7 @@
 //!
 //! The routes mount inside the ITS-REST API router, so the full paths are
 //! `{base_path}/definition/{archetype,artefact}/…`, which keeps the auth,
-//! ATNA-audit and ABAC middleware stack uniform. There is no separate config
+//! ATNA-audit and PEP middleware stack uniform. There is no separate config
 //! gate: the archetype surface lives and dies with the DEFINITION group.
 //!
 //! NOTE: no openEHR spec governs role semantics on an unspecified route — our

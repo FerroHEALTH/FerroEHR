@@ -1,25 +1,25 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The policy-enforcement point (PEP) for the ITS-REST surface: the ABAC gate
-//! and the SMART resource-scope and launch-context gate, driven from the
+//! The policy-enforcement point (PEP) for the ITS-REST surface: the patient
+//! scope and the SMART resource-scope and launch-context gate, driven from the
 //! generic dispatch mount (`crate::api`).
 //!
-//! ABAC and RBAC are our own design; no openEHR spec governs them. SMART takes
-//! its scope grammar and launch-context binding from
+//! The patient scope is our own design ([`crate::extensions::access::patient_scope`]);
+//! no openEHR spec governs it. SMART takes its scope grammar and
+//! launch-context binding from
 //! `ITS-REST/docs/smart_app_launch/master08-scopes.adoc` §Resource Scopes and
 //! `master07-*.adoc` §Context Selection, and the 401/403 discipline from
 //! `.../overview/Requests_and_responses.md` §Authentication and authorization.
 //!
-//! The gates AND-compose as `EHR_ACCESS` → RBAC → ABAC → SMART. Pre-checks run
-//! before the backend call (op id, path params, query, body); post-checks run on
-//! a successful response, from the dispatch's
-//! [`AuditObject`](crate::system_log::middleware::AuditObject). A deny is a
-//! `403` and an engine failure a `500`, each carrying the [`Principal`] for the
-//! ATNA layer. ABAC is inert without a wired
-//! `crate::extensions::access::authz::AbacGate`. The SMART gate here, run
-//! whenever authentication is on, covers the COMPOSITION operations, whose
-//! template only the body or the stored version names (`crate::smart::routes`).
+//! The gates AND-compose after the access evaluator and RBAC: patient scope,
+//! then SMART. Pre-checks run before the backend call (op id, path params,
+//! query, body); post-checks run on a successful response, from the
+//! dispatch's [`AuditObject`](crate::system_log::middleware::AuditObject). A
+//! deny is a `403` and a lookup failure a `503` or `500`, each carrying the
+//! [`Principal`] for the ATNA layer. The SMART gate here, run whenever
+//! authentication is on, covers the COMPOSITION operations, whose template
+//! only the body or the stored version names (`crate::smart::routes`).
 #![expect(
     clippy::result_large_err,
     reason = "the Err variant of every decision point in this module is a \
@@ -29,9 +29,6 @@
 use axum::response::{IntoResponse, Response};
 
 use crate::api::operation::{CompositionGate, Operation, Verb, operation};
-use crate::extensions::access::authz::classify::Mode;
-use crate::extensions::access::authz::request::{AccessMode, AuthzRequest, ResourceKind};
-use ferrohealth_authz::request::Attr;
 use openehr_its::rest::runtime::ApiError;
 
 use ferroehr::error::ServiceError;
@@ -39,137 +36,17 @@ use openehr_rm::prelude::Composition;
 
 use crate::api::RequestParts;
 use crate::extensions::access::authn::{Principal, current_principal};
-use crate::extensions::access::authz::AbacGate;
-use crate::extensions::access::authz::content::ContentRules;
+use crate::extensions::access::patient_scope;
 use crate::overview::error::RestError;
-use ferroehr::storage::version_repo::meta::VersionContent;
-use ferroehr::system_log::categories::{AccessedContent, ContentIds};
 
+use crate::negotiate;
 use crate::smart::routes;
 use crate::state::AppState;
-use crate::{negotiate, params};
-use ferroehr::aql::sql::subject::SubjectScope;
-use ferroehr::aql::subject::{EhrSubject, TouchedSubjects};
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 use ferrohealth_smart::guard::Requirement;
 use ferrohealth_smart::openehr::smart_scopes::{Permission, ResourceFamily};
 
-/// Prepares a query execution: the patient subject scope to thread into the
-/// SQL, and whether the executor collects the touched EHR/template sets for the
-/// post-check.
-///
-/// `Ok((None, false))` when ABAC is off; `Err(response)` is a ready 403 for a
-/// missing configured patient claim.
-pub(crate) fn query_pre(
-    state: &AppState,
-    op: &'static str,
-) -> Result<(Option<SubjectScope>, bool), Response> {
-    let Some(handle) = state.authz() else {
-        return Ok((None, false));
-    };
-    let Some(abac) = handle.abac() else {
-        return Ok((None, false));
-    };
-    if operation(op).and_then(|row| row.kind) != Some(ResourceKind::Query) {
-        return Ok((None, false));
-    }
-    let principal = current_principal().ok_or_else(|| {
-        forbidden_unauthenticated("authentication required for attribute-based access control")
-    })?;
-    let patient = resolve_patient_claim(abac, &principal)?;
-    // Collect attributes whenever ABAC is on so the post-check has the touched
-    // subject and template sets; the subject scope pre-filters rows to the
-    // caller's patient, read in the configured namespace.
-    let scope = patient.map(|id| SubjectScope {
-        id,
-        namespace: abac.patient_namespace.clone(),
-    });
-    Ok((scope, true))
-}
-
-/// Post-checks a query execution: the PDP decides over the touched patients
-/// and templates.
-///
-/// The executor collects every EHR the query touches, from its EHR sources as
-/// well as its versioned-object roots, and reads their subjects. The patient
-/// attribute is the set of those subject ids (a set for query, as
-/// [`AuthzRequest::patient`] states), so a patient-keyed rule applies whether
-/// or not a patient claim is configured. Subject ids are read in the configured
-/// patient namespace ([`TouchedSubjects::fold`]); a touched EHR whose subject no
-/// claim can name is asked once more with no patient. Without a configured
-/// namespace, a touched subject whose id another namespace also holds is
-/// refused: the bare id the PDP sees would name both. A query touching nothing
-/// asks nothing of the PDP.
-///
-/// # Errors
-/// A ready `403` when the PDP denies, a touched subject id is ambiguous or the
-/// patient claim is missing, or a `500` when the PDP fails.
-pub(crate) async fn query_post(
-    state: &AppState,
-    op: &'static str,
-    outcome: &ferroehr::service::query::request::QueryOutcome,
-) -> Result<(), Response> {
-    let Some(handle) = state.authz() else {
-        return Ok(());
-    };
-    let Some(abac) = handle.abac() else {
-        return Ok(());
-    };
-    if operation(op).and_then(|row| row.kind) != Some(ResourceKind::Query) {
-        return Ok(());
-    }
-    // Empty result set → nothing touched → permit.
-    if outcome.ehr_ids.is_empty() && outcome.template_ids.is_empty() {
-        return Ok(());
-    }
-    let principal = current_principal().ok_or_else(|| {
-        forbidden_unauthenticated("authentication required for attribute-based access control")
-    })?;
-    // The claim gate stays: a configured claim the token lacks is a 403 here too.
-    let claim = resolve_patient_claim(abac, &principal)?;
-    let subjects = TouchedSubjects::fold(&outcome.subjects, abac.patient_namespace.as_deref());
-    if !subjects.shared.is_empty() {
-        return Err(forbidden(
-            &principal,
-            "patient scope (a touched subject id is held under several namespaces)",
-        ));
-    }
-    let template =
-        (!outcome.template_ids.is_empty()).then(|| Attr::Set(outcome.template_ids.clone()));
-    let category = outcome
-        .accessed
-        .as_ref()
-        .map(|accessed| category_attr(&abac.resolvers.content, accessed, false));
-    let origin =
-        (!outcome.served_origins.is_empty()).then(|| Attr::Set(outcome.served_origins.clone()));
-    let mut patients = Vec::with_capacity(2);
-    if !subjects.ids.is_empty() {
-        patients.push(Some(Attr::Set(subjects.ids.clone())));
-    }
-    if subjects.unnamed || subjects.ids.is_empty() {
-        patients.push(None);
-    }
-    for patient in patients {
-        let req = AuthzRequest {
-            operation_id: op,
-            subject: &principal.subject,
-            roles: &principal.roles,
-            scopes: &principal.scopes,
-            kind: ResourceKind::Query,
-            access: AccessMode::Execute,
-            organization: organization(abac, &principal),
-            subject_patient: claim.clone(),
-            patient,
-            template: template.clone(),
-            category: category.clone(),
-            origin: origin.clone(),
-        };
-        decide(abac, &principal, &req).await?;
-    }
-    Ok(())
-}
-
-/// Pre-check the request: the ABAC decision, then the SMART gate of a
+/// Pre-check the request: the patient scope, then the SMART gate of a
 /// COMPOSITION write. `Err(response)` short-circuits the dispatch with a
 /// ready 403/500; `Ok(())` lets it proceed.
 pub(crate) async fn pre_check(
@@ -177,74 +54,14 @@ pub(crate) async fn pre_check(
     op: &'static str,
     parts: &RequestParts,
 ) -> Result<(), Response> {
-    abac_pre(state, op, parts).await?;
+    patient_scope::pre(state, op, parts).await?;
     smart_pre(state, op, parts).await
 }
 
-/// The ABAC pre-check of the request.
-async fn abac_pre(
-    state: &AppState,
-    op: &'static str,
-    parts: &RequestParts,
-) -> Result<(), Response> {
-    let Some(handle) = state.authz() else {
-        return Ok(());
-    };
-    let Some(abac) = handle.abac() else {
-        return Ok(());
-    };
-    let Some((row, kind)) = operation(op)
-        .filter(|row| row.pep == Mode::Pre)
-        .and_then(|row| row.kind.map(|kind| (row, kind)))
-    else {
-        return Ok(());
-    };
-    // DIRECTORY is gated only under `abac.check_directory`, whatever the engine.
-    if kind == ResourceKind::Directory && !abac.directory_checked {
-        return Ok(());
-    }
-
-    let principal = current_principal().ok_or_else(|| {
-        forbidden_unauthenticated("authentication required for attribute-based access control")
-    })?;
-
-    let patient = resolve_patient_claim(abac, &principal)?;
-    let ehr_id = parts.path.get("ehr_id").cloned();
-
-    // Before any engine call.
-    patient_gate(
-        abac,
-        &principal,
-        patient.as_deref(),
-        op,
-        ehr_id.as_deref(),
-        parts,
-    )
-    .await?;
-
-    let content = pre_content(abac, &principal, row, parts).await?;
-
-    let req = AuthzRequest {
-        operation_id: op,
-        subject: &principal.subject,
-        roles: &principal.roles,
-        scopes: &principal.scopes,
-        kind,
-        access: row.access().unwrap_or(AccessMode::Read),
-        organization: organization(abac, &principal),
-        subject_patient: patient.clone(),
-        patient: patient.map(Attr::One),
-        template: content.template,
-        category: content.category,
-        origin: content.origin,
-    };
-    decide(abac, &principal, &req).await
-}
-
-/// Post-check a successful response: the ABAC decision over the resource ids
-/// the dispatch recorded, then the SMART gate of a COMPOSITION read.
+/// Post-check a successful response: the patient scope of the EHR the
+/// dispatch recorded, then the SMART gate of a COMPOSITION read.
 pub(crate) async fn post_check(state: &AppState, op: &'static str, resp: Response) -> Response {
-    let resp = abac_post(state, op, resp).await;
+    let resp = patient_scope::post(state, op, resp).await;
     if !resp.status().is_success() {
         return resp;
     }
@@ -256,344 +73,6 @@ pub(crate) async fn post_check(state: &AppState, op: &'static str, resp: Respons
         Ok(()) => resp,
         Err(deny) => deny,
     }
-}
-
-/// The ABAC post-check of a successful response.
-async fn abac_post(state: &AppState, op: &'static str, resp: Response) -> Response {
-    if !resp.status().is_success() {
-        return resp;
-    }
-    let Some(handle) = state.authz() else {
-        return resp;
-    };
-    let Some(abac) = handle.abac() else {
-        return resp;
-    };
-    let Some((row, kind)) = operation(op)
-        .filter(|row| row.pep == Mode::Post)
-        .and_then(|row| row.kind.map(|kind| (row, kind)))
-    else {
-        return resp;
-    };
-    let Some(principal) = current_principal() else {
-        return resp;
-    };
-
-    let object = resp
-        .extensions()
-        .get::<crate::system_log::middleware::AuditObject>()
-        .cloned();
-    let ehr_id = object.as_ref().and_then(|o| o.ehr_id.clone());
-    let uid = object.as_ref().and_then(|o| o.uid.clone());
-
-    let patient = match resolve_patient_claim(abac, &principal) {
-        Ok(p) => p,
-        Err(deny) => return deny,
-    };
-    if let Err(deny) = subject_gate(abac, &principal, patient.as_deref(), ehr_id.as_deref()).await {
-        return deny;
-    }
-
-    // A composition's template, category and origin, from the returned uid.
-    let content = match kind {
-        ResourceKind::Composition => match stored_content(abac, &principal, uid.as_deref()).await {
-            Ok(content) => content,
-            Err(deny) => return deny,
-        },
-        _ => ContentAttrs::default(),
-    };
-
-    let req = AuthzRequest {
-        operation_id: op,
-        subject: &principal.subject,
-        roles: &principal.roles,
-        scopes: &principal.scopes,
-        kind,
-        access: row.access().unwrap_or(AccessMode::Read),
-        organization: organization(abac, &principal),
-        subject_patient: patient.clone(),
-        patient: patient.map(Attr::One),
-        template: content.template,
-        category: content.category,
-        origin: content.origin,
-    };
-    match decide(abac, &principal, &req).await {
-        Ok(()) => resp,
-        Err(deny) => deny,
-    }
-}
-
-/// Resolves the patient claim, if the gate is configured.
-///
-/// A configured-but-missing claim is a 403, not a 500: the server is working
-/// and the caller's token is what is insufficient.
-pub(super) fn resolve_patient_claim(
-    abac: &AbacGate,
-    principal: &Principal,
-) -> Result<Option<String>, Response> {
-    let Some(claim) = &abac.patient_claim else {
-        return Ok(None);
-    };
-    match ferrohealth_smart::roles::claim_text(&principal.claims, claim) {
-        Some(v) => Ok(Some(v.to_owned())),
-        None => Err(forbidden(
-            principal,
-            &format!("ABAC requires a '{claim}' claim on the access token"),
-        )),
-    }
-}
-
-/// Returns the organization attribute, if the claim is configured and present.
-fn organization(abac: &AbacGate, principal: &Principal) -> Option<String> {
-    abac.organization_claim
-        .as_ref()
-        .and_then(|c| ferrohealth_smart::roles::claim_text(&principal.claims, c))
-        .map(str::to_owned)
-}
-
-/// The pre-check patient gate: the subject match for target-EHR ops, plus the
-/// by-subject case, where the request parameter IS the subject.
-///
-/// For `ehr_get_by_subject` an absent `subject_id` deliberately passes this gate
-/// so the route answers `400`, not `403`: the released specification declares
-/// the parameter required (`specifications/parameters/query/subject_id.yaml`),
-/// so the request is invalid for every caller and no authorization decision
-/// could make it succeed (RFC 9110 §15.5.1).
-async fn patient_gate(
-    abac: &AbacGate,
-    principal: &Principal,
-    patient: Option<&str>,
-    op: &str,
-    ehr_id: Option<&str>,
-    parts: &RequestParts,
-) -> Result<(), Response> {
-    if op == "ehr_get_by_subject" {
-        if let Some(patient) = patient
-            && let Some(subject) = params::query_param(parts.query.as_deref(), "subject_id")
-            && subject != patient
-        {
-            return Err(forbidden(principal, "patient scope (subject mismatch)"));
-        }
-        return Ok(());
-    }
-    subject_gate(abac, principal, patient, ehr_id).await
-}
-
-/// Gates a target EHR on the patient claim: the claim, read in the configured
-/// patient namespace, must name the EHR's subject
-/// ([`EhrSubject::is_named_by`]), the rule the query patient scope applies.
-///
-/// A subject-less EHR is refused; without a configured namespace, so is one
-/// whose subject id another namespace also holds. An id no EHR has passes, so
-/// the route answers it. No openEHR spec governs the patient scope — our own
-/// extension.
-///
-/// # Errors
-/// A ready `403` on a refusal, a `503` when the subject lookup cannot obtain a
-/// database connection, or a `500` when it fails otherwise.
-pub(super) async fn subject_gate(
-    abac: &AbacGate,
-    principal: &Principal,
-    patient: Option<&str>,
-    ehr_id: Option<&str>,
-) -> Result<(), Response> {
-    let (Some(patient), Some(ehr_id)) = (patient, ehr_id) else {
-        return Ok(());
-    };
-    let subject = (abac.resolvers.subject)(ehr_id.to_owned())
-        .await
-        .map_err(|e| engine_error(principal, "resolve the EHR subject attribute", &e))?;
-    match subject {
-        None => Ok(()),
-        Some(subject) if subject.is_named_by(patient, abac.patient_namespace.as_deref()) => Ok(()),
-        Some(EhrSubject::Absent) => Err(forbidden(
-            principal,
-            "patient scope (the EHR records no subject)",
-        )),
-        Some(EhrSubject::Shared { .. }) if abac.patient_namespace.is_none() => Err(forbidden(
-            principal,
-            "patient scope (the subject id is held under several namespaces)",
-        )),
-        Some(EhrSubject::Unique { .. } | EhrSubject::Shared { .. }) => {
-            Err(forbidden(principal, "patient scope (subject mismatch)"))
-        }
-    }
-}
-
-/// The template, category and origin attributes of one operation (EHDS
-/// Annex II 3.4); each `None` where the operation names no such value.
-#[derive(Debug, Default)]
-struct ContentAttrs {
-    template: Option<Attr>,
-    category: Option<Attr>,
-    origin: Option<Attr>,
-}
-
-/// The category attribute of `content`, as the access record spells each
-/// category: a `<system>|<code>` token, `none` or `unclassified`.
-fn category_attr(rules: &ContentRules, content: &AccessedContent, written: bool) -> Attr {
-    Attr::Set(rules.classify(content, written).stored_categories())
-}
-
-/// The attributes of objects identified by `objects`, with `origins` as the
-/// origin set; an empty set leaves the attribute out.
-fn attrs_of(
-    rules: &ContentRules,
-    templates: Vec<String>,
-    objects: Vec<ContentIds>,
-    origins: Vec<String>,
-    written: bool,
-) -> ContentAttrs {
-    let template = match templates.len() {
-        0 => None,
-        1 => templates.into_iter().next().map(Attr::One),
-        _ => Some(Attr::Set(templates)),
-    };
-    let category = (!objects.is_empty())
-        .then(|| category_attr(rules, &AccessedContent::Objects(objects), written));
-    let mut origins = origins;
-    origins.sort();
-    origins.dedup();
-    ContentAttrs {
-        template,
-        category,
-        origin: (!origins.is_empty()).then_some(Attr::Set(origins)),
-    }
-}
-
-/// The attributes of one stored version.
-fn stored_attrs(rules: &ContentRules, content: VersionContent, written: bool) -> ContentAttrs {
-    let object = ContentIds {
-        template_id: content.template_id.clone(),
-        archetype_id: content.archetype_id,
-        resource_kind: None,
-    };
-    attrs_of(
-        rules,
-        content.template_id.into_iter().collect(),
-        vec![object],
-        content.origins,
-        written,
-    )
-}
-
-/// Returns the template, category and origin attributes for a pre-checked op.
-async fn pre_content(
-    abac: &AbacGate,
-    principal: &Principal,
-    row: &Operation,
-    parts: &RequestParts,
-) -> Result<ContentAttrs, Response> {
-    let rules = &abac.resolvers.content;
-    match (row.composition, row.verb) {
-        (CompositionGate::Write, Verb::Delete) => {
-            // The content of the preceding (current) version being deleted.
-            let Some(uid) = parts.path.get("uid_based_id") else {
-                return Ok(ContentAttrs::default());
-            };
-            let (vo_id, _) = resolve_target(principal, uid)?;
-            let content = (abac.resolvers.content_of_version)(vo_id, None)
-                .await
-                .map_err(|e| engine_error(principal, "resolve the content attributes", &e))?;
-            Ok(content.map_or_else(ContentAttrs::default, |content| {
-                stored_attrs(rules, content, true)
-            }))
-        }
-        (CompositionGate::Write, _) => Ok(composition_content(rules, parts)),
-        // An item-tag write: the attributes of the COMPOSITION it tags.
-        (CompositionGate::None, Verb::Update | Verb::Delete)
-            if row.kind == Some(ResourceKind::Composition) =>
-        {
-            let uid = parts.path.get("uid_based_id").map(String::as_str);
-            stored_content(abac, principal, uid).await
-        }
-        _ if row.commits_contribution() => contribution_content(rules, parts, principal),
-        // EHR / EHR_STATUS / DIRECTORY carry no template.
-        _ => Ok(ContentAttrs::default()),
-    }
-}
-
-/// Returns the template, category and origin attributes of the stored
-/// composition version `uid` names: the one a read returned or a tag write
-/// targets.
-async fn stored_content(
-    abac: &AbacGate,
-    principal: &Principal,
-    uid: Option<&str>,
-) -> Result<ContentAttrs, Response> {
-    let Some(uid) = uid else {
-        return Ok(ContentAttrs::default());
-    };
-    let (vo_id, version) = resolve_target(principal, uid)?;
-    let content = (abac.resolvers.content_of_version)(vo_id, version)
-        .await
-        .map_err(|e| engine_error(principal, "resolve the content attributes", &e))?;
-    Ok(content.map_or_else(ContentAttrs::default, |content| {
-        stored_attrs(&abac.resolvers.content, content, false)
-    }))
-}
-
-/// The attributes of a COMPOSITION write, read off its body the way the commit
-/// will: the template, the root archetype, and the `FEEDER_AUDIT` origins or
-/// the caller's direct origin. A simplified-format body names its template in
-/// a header and is converted only at the commit seam, so it carries the
-/// template and the category it implies and no origin attribute.
-fn composition_content(rules: &ContentRules, parts: &RequestParts) -> ContentAttrs {
-    let h = &parts.headers;
-    if crate::formats::dispatch::is_simplified_body(h) {
-        let template = crate::formats::dispatch::header_template_id(h);
-        let objects = template
-            .iter()
-            .map(|template| ContentIds {
-                template_id: Some(template.clone()),
-                ..ContentIds::default()
-            })
-            .collect();
-        return attrs_of(
-            rules,
-            template.into_iter().collect(),
-            objects,
-            Vec::new(),
-            true,
-        );
-    }
-    // The same typed decode the commit seam performs: the ids come off the
-    // typed value, never a JSON pointer a shape change could silently stop
-    // matching. An undecodable body is the dispatch's 400; nothing to check.
-    let Ok(composition) = negotiate::decode::rm_value::<Composition>(h, &parts.body) else {
-        return ContentAttrs::default();
-    };
-    composition_attrs(rules, &composition)
-}
-
-/// The attributes of one decoded COMPOSITION a write carries.
-fn composition_attrs(rules: &ContentRules, composition: &Composition) -> ContentAttrs {
-    // The feeder origins of the body, or the caller's direct origin: each
-    // candidate when the caller's grants name several, which the commit then
-    // refuses.
-    let fed =
-        ferroehr::versioning::origins::fed(&openehr_its::json::to_canonical_value(composition));
-    let origins = if fed.is_empty() {
-        ferroehr::origins::DirectOrigin::current(&rules.system_id).candidates()
-    } else {
-        fed.into_iter().collect()
-    };
-    let details = composition.archetype_details.as_ref();
-    let template = details
-        .and_then(|a| a.template_id.as_ref())
-        .map(|id| id.value.clone());
-    let object = ContentIds {
-        template_id: template.clone(),
-        archetype_id: details.map(|a| a.archetype_id.value.clone()),
-        resource_kind: None,
-    };
-    attrs_of(
-        rules,
-        template.into_iter().collect(),
-        vec![object],
-        origins,
-        true,
-    )
 }
 
 /// Extracts the composition template id from the request body, or from the
@@ -614,126 +93,8 @@ fn composition_template(parts: &RequestParts) -> Option<String> {
         .map(|id| id.value)
 }
 
-/// Returns the template, category and origin attributes of the COMPOSITION
-/// versions in a contribution payload.
-///
-/// A COMPOSITION version without a template is unresolvable, so it is
-/// fail-closed (403).
-fn contribution_content(
-    rules: &ContentRules,
-    parts: &RequestParts,
-    principal: &Principal,
-) -> Result<ContentAttrs, Response> {
-    let Ok(value) = negotiate::decode::json_value(&parts.headers, &parts.body) else {
-        // A malformed body: let the dispatch return the 400; nothing to check.
-        return Ok(ContentAttrs::default());
-    };
-    let mut templates = Vec::new();
-    let mut objects = Vec::new();
-    let mut origins = Vec::new();
-    if let Some(versions) = value.get("versions").and_then(|v| v.as_array()) {
-        for version in versions {
-            let Some(data) = version.get("data") else {
-                continue;
-            };
-            if data.get("_type").and_then(|t| t.as_str()) != Some("COMPOSITION") {
-                continue;
-            }
-            // A CONTRIBUTION is a wrapper with no canonical RM type, so the
-            // enclosing value stays JSON; each `versions[i].data` is a canonical
-            // COMPOSITION, decoded so the template id comes off the typed value.
-            let Ok(composition) = openehr_its::json::from_canonical_value::<Composition>(data)
-            else {
-                // Undecodable: the dispatch answers 400 for this body, so there
-                // is nothing here to authorize.
-                return Ok(ContentAttrs::default());
-            };
-            let attrs = composition_attrs(rules, &composition);
-            let details = composition.archetype_details.as_ref();
-            match details.and_then(|a| a.template_id.as_ref()) {
-                Some(template) => {
-                    templates.push(template.value.clone());
-                    objects.push(ContentIds {
-                        template_id: Some(template.value.clone()),
-                        archetype_id: details.map(|a| a.archetype_id.value.clone()),
-                        resource_kind: None,
-                    });
-                }
-                None => {
-                    return Err(forbidden(
-                        principal,
-                        "contribution COMPOSITION version has no template id",
-                    ));
-                }
-            }
-            if let Some(Attr::Set(found)) = attrs.origin {
-                origins.extend(found);
-            }
-        }
-    }
-    Ok(attrs_of(rules, templates, objects, origins, true))
-}
-
-/// Runs the engine and maps the verdict: permit to `Ok`, deny to 403, error to
-/// 500.
-async fn decide(
-    abac: &AbacGate,
-    principal: &Principal,
-    req: &AuthzRequest<'_>,
-) -> Result<(), Response> {
-    let subject = req.subject();
-    let request = req
-        .to_request(&subject)
-        .map_err(|e| engine_error(principal, "build the authorization request", &e))?;
-    let outcome = abac.engine.decide(&request).await;
-    let result = match &outcome {
-        Ok(decision) if decision.is_permit() => "permit",
-        Ok(_) => "deny",
-        Err(_) => "error",
-    };
-    let metrics = ferroehr::telemetry::metrics::metrics();
-    metrics
-        .authz_cedar_decisions
-        .add(1, &[opentelemetry::KeyValue::new("result", result)]);
-    match outcome {
-        Ok(decision) if decision.is_permit() => Ok(()),
-        Ok(_) => Err(forbidden(principal, "policy denied")),
-        Err(e) => Err(engine_error(
-            principal,
-            "reach an authorization decision",
-            &e,
-        )),
-    }
-}
-
-/// Decomposes a `UID_BASED_ID` — a bare `HIER_OBJECT_ID` or a full
-/// `OBJECT_VERSION_ID` — into the `(vo_id, version_tree_id)` pair the attribute
-/// resolvers take.
-///
-/// The string goes through this adapter's one strict decoder
-/// ([`parse_uid_based_id`]; BASE `base_types`
-/// `master05-identification_package.adoc` §Syntaxes), so the PEP can never read
-/// an id differently from the route it guards. A value that decoder rejects is
-/// denied, not degraded: the attributes a policy binds on cannot be computed
-/// for an unaddressable id, and permitting on an absent one would walk a
-/// malformed path parameter past a template- or patient-scoped policy.
-fn resolve_target(principal: &Principal, uid: &str) -> Result<(String, Option<String>), Response> {
-    match parse_uid_based_id(uid) {
-        Ok(decoded) => Ok((
-            decoded.vo_id.to_string(),
-            decoded
-                .version
-                .map(|ovid| ovid.version_tree_id().value().to_owned()),
-        )),
-        Err(e) => Err(forbidden(
-            principal,
-            &format!("unaddressable resource id: {e}"),
-        )),
-    }
-}
-
 /// A 403 carrying the principal (audited by the ATNA layer).
-fn forbidden(principal: &Principal, detail: &str) -> Response {
+pub(super) fn forbidden(principal: &Principal, detail: &str) -> Response {
     let mut resp =
         RestError::from(ApiError::Forbidden(format!("access denied: {detail}"))).into_response();
     resp.extensions_mut().insert(principal.clone());
@@ -756,7 +117,7 @@ pub(super) fn forbidden_unauthenticated(detail: &str) -> Response {
 ///
 /// `step` names what could not be done and `error` the failure that broke it;
 /// both go to the trace record, and the body carries the curated opaque message.
-fn engine_error(
+pub(super) fn lookup_error(
     principal: &Principal,
     step: &'static str,
     error: &(dyn std::error::Error + 'static),
@@ -871,7 +232,7 @@ async fn composition_template_of(
         .backend()
         .template_of_version(decoded.vo_id, version.as_deref())
         .await
-        .map_err(|e| engine_error(principal, "resolve the composition template", &e))
+        .map_err(|e| lookup_error(principal, "resolve the composition template", &e))
 }
 
 #[cfg(test)]
@@ -883,253 +244,16 @@ mod tests {
     )]
 
     use std::sync::Arc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use async_trait::async_trait;
-    use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
-    use ferrohealth_authz::request::{Decision, Request};
     use http::StatusCode;
 
     use ferrohealth_smart::resource::{Access, Caller, Honoured};
 
     use super::*;
-    use crate::extensions::access::authz::{AuthzResolvers, ResolveError};
+    use crate::extensions::access::authz::classify::{Mode, ResourceKind};
 
     fn mode_of(op: &str) -> Mode {
         operation(op).map_or(Mode::Skip, |row| row.pep)
-    }
-
-    /// A bearer principal for `subject` carrying `claims`.
-    fn bearer_principal(
-        subject: &str,
-        claims: serde_json::Map<String, serde_json::Value>,
-        roles: Vec<String>,
-    ) -> Principal {
-        let caller = crate::test_support::person(subject, "").with_claims(claims);
-        Principal::new(Access::Caller(Arc::new(caller)), roles, Honoured::default())
-    }
-
-    /// A counting engine: records how often `decide` is called (the patient gate
-    /// must deny *without* reaching it), always permits.
-    #[derive(Debug, Default)]
-    struct CountingEngine(Arc<AtomicUsize>);
-
-    #[async_trait]
-    impl PolicyEngine for CountingEngine {
-        async fn decide(&self, _req: &Request<'_>) -> Result<Decision, AuthzError> {
-            self.0.fetch_add(1, Ordering::SeqCst);
-            Ok(Decision::Permit {
-                policies: Vec::new(),
-            })
-        }
-    }
-
-    /// A gate whose resolver answers `subject` for every EHR id (`None`: no EHR
-    /// has the id).
-    fn gate_with_subject(subject: Option<EhrSubject>, calls: Arc<AtomicUsize>) -> AbacGate {
-        AbacGate {
-            engine: Arc::new(CountingEngine(calls)),
-            resolvers: AuthzResolvers {
-                subject: Arc::new(move |_ehr_id: String| {
-                    let subject = subject.clone();
-                    Box::pin(async move { Ok::<_, ResolveError>(subject) })
-                }),
-                content_of_version: Arc::new(|_vo: String, _v: Option<String>| {
-                    Box::pin(async move { Ok::<_, ResolveError>(None) })
-                }),
-                content: Arc::default(),
-            },
-            organization_claim: None,
-            patient_claim: Some("patient_id".to_owned()),
-            patient_namespace: None,
-            directory_checked: false,
-        }
-    }
-
-    fn principal_with_patient(patient: &str) -> Principal {
-        let mut claims = serde_json::Map::new();
-        claims.insert("patient_id".to_owned(), serde_json::json!(patient));
-        bearer_principal("alice", claims, vec!["USER".to_owned()])
-    }
-
-    #[tokio::test]
-    async fn subject_mismatch_denies_without_engine_call() {
-        let calls = Arc::new(AtomicUsize::new(0));
-        let gate = gate_with_subject(Some(unique("P2")), Arc::clone(&calls));
-        let principal = principal_with_patient("P1");
-        let err = subject_gate(&gate, &principal, Some("P1"), Some("ehr-1"))
-            .await
-            .expect_err("mismatch must deny");
-        assert_eq!(err.status(), StatusCode::FORBIDDEN);
-        assert_eq!(
-            calls.load(Ordering::SeqCst),
-            0,
-            "no engine call on gate deny"
-        );
-    }
-
-    #[tokio::test]
-    async fn subject_match_passes_gate() {
-        let calls = Arc::new(AtomicUsize::new(0));
-        let gate = gate_with_subject(Some(unique("P1")), calls);
-        let principal = principal_with_patient("P1");
-        assert!(
-            subject_gate(&gate, &principal, Some("P1"), Some("ehr-1"))
-                .await
-                .is_ok()
-        );
-    }
-
-    /// A subject the claim id names under one namespace.
-    fn unique(id: &str) -> EhrSubject {
-        EhrSubject::Unique {
-            id: id.to_owned(),
-            namespace: Some("test.patients".to_owned()),
-        }
-    }
-
-    #[tokio::test]
-    async fn caller_without_patient_scope_passes_gate() {
-        // A caller with no patient scope is unaffected by the subject gate, so
-        // an anonymous EHR stays fully operable for it (RM ehr
-        // `master04-ehr_package.adoc` §EHR Status).
-        let calls = Arc::new(AtomicUsize::new(0));
-        let gate = gate_with_subject(Some(EhrSubject::Absent), calls);
-        let principal = principal_with_patient("P1");
-        assert!(
-            subject_gate(&gate, &principal, None, Some("ehr-1"))
-                .await
-                .is_ok()
-        );
-    }
-
-    /// A subject-less EHR is outside every patient scope, as the query scope
-    /// excludes it.
-    #[tokio::test]
-    async fn subject_less_ehr_is_refused_without_engine_call() {
-        let calls = Arc::new(AtomicUsize::new(0));
-        let gate = gate_with_subject(Some(EhrSubject::Absent), Arc::clone(&calls));
-        let principal = principal_with_patient("P1");
-        let err = subject_gate(&gate, &principal, Some("P1"), Some("ehr-1"))
-            .await
-            .expect_err("a subject-less EHR must deny");
-        assert_eq!(err.status(), StatusCode::FORBIDDEN);
-        assert_eq!(calls.load(Ordering::SeqCst), 0);
-    }
-
-    /// The claim carries no namespace, so an id another namespace also holds
-    /// names neither subject.
-    #[tokio::test]
-    async fn subject_id_held_under_two_namespaces_is_refused() {
-        let calls = Arc::new(AtomicUsize::new(0));
-        let shared = EhrSubject::Shared {
-            id: "P1".to_owned(),
-            namespace: Some("test.patients".to_owned()),
-        };
-        let gate = gate_with_subject(Some(shared), Arc::clone(&calls));
-        let principal = principal_with_patient("P1");
-        let err = subject_gate(&gate, &principal, Some("P1"), Some("ehr-1"))
-            .await
-            .expect_err("an ambiguous subject id must deny");
-        assert_eq!(err.status(), StatusCode::FORBIDDEN);
-        assert_eq!(calls.load(Ordering::SeqCst), 0);
-    }
-
-    /// A subject lookup that cannot obtain a database connection answers `503`
-    /// with `Retry-After`: no statement ran, so the request can be repeated.
-    #[tokio::test]
-    async fn a_resolver_acquire_failure_answers_503() {
-        let options = sqlx::postgres::PgConnectOptions::new()
-            .host("ferroehr-acquire-test.invalid")
-            .username("nobody")
-            .database("nothing");
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy_with(options);
-        pool.close().await;
-        let calls = Arc::new(AtomicUsize::new(0));
-        let mut gate = gate_with_subject(None, Arc::clone(&calls));
-        gate.resolvers.subject = Arc::new(move |_ehr_id: String| {
-            let pool = pool.clone();
-            Box::pin(async move {
-                ferroehr::aql::subject::ehr_subject(&pool, ferroehr::ids::EhrId(uuid::Uuid::nil()))
-                    .await
-                    .map_err(|e| ResolveError::new("ehr subject lookup", ServiceError::from(e)))
-            })
-        });
-        let principal = principal_with_patient("P1");
-        let err = subject_gate(&gate, &principal, Some("P1"), Some("ehr-1"))
-            .await
-            .expect_err("an unreachable database must not pass the gate");
-        assert_eq!(err.status(), StatusCode::SERVICE_UNAVAILABLE);
-        assert!(
-            err.headers().contains_key(http::header::RETRY_AFTER),
-            "a 503 carries Retry-After"
-        );
-        assert_eq!(calls.load(Ordering::SeqCst), 0);
-    }
-
-    /// A resolver failure that is not a lost connection stays a `500`.
-    #[tokio::test]
-    async fn a_resolver_fault_answers_500() {
-        let calls = Arc::new(AtomicUsize::new(0));
-        let mut gate = gate_with_subject(None, calls);
-        gate.resolvers.subject = Arc::new(|_ehr_id: String| {
-            Box::pin(async move {
-                Err(ResolveError::new(
-                    "ehr subject lookup",
-                    ServiceError::exception("lookup failed"),
-                ))
-            })
-        });
-        let principal = principal_with_patient("P1");
-        let err = subject_gate(&gate, &principal, Some("P1"), Some("ehr-1"))
-            .await
-            .expect_err("a resolver fault must not pass the gate");
-        assert_eq!(err.status(), StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
-    /// With a configured patient namespace the claim names the (id, namespace)
-    /// pair, so an id another namespace also holds is no longer ambiguous.
-    #[tokio::test]
-    async fn a_configured_namespace_names_the_pair() {
-        let shared = |namespace: &str| EhrSubject::Shared {
-            id: "P1".to_owned(),
-            namespace: Some(namespace.to_owned()),
-        };
-        let principal = principal_with_patient("P1");
-        for (subject, passes) in [
-            (shared("test.patients"), true),
-            (shared("other.patients"), false),
-            (unique("P1"), true),
-        ] {
-            let calls = Arc::new(AtomicUsize::new(0));
-            let mut gate = gate_with_subject(Some(subject.clone()), calls);
-            gate.patient_namespace = Some("test.patients".to_owned());
-            let decided = subject_gate(&gate, &principal, Some("P1"), Some("ehr-1")).await;
-            assert_eq!(decided.is_ok(), passes, "{subject:?}");
-        }
-    }
-
-    /// An id no EHR has passes, so the route answers it.
-    #[tokio::test]
-    async fn unknown_ehr_passes_gate() {
-        let calls = Arc::new(AtomicUsize::new(0));
-        let gate = gate_with_subject(None, calls);
-        let principal = principal_with_patient("P1");
-        assert!(
-            subject_gate(&gate, &principal, Some("P1"), Some("ehr-1"))
-                .await
-                .is_ok()
-        );
-    }
-
-    #[test]
-    fn missing_patient_claim_is_forbidden() {
-        let calls = Arc::new(AtomicUsize::new(0));
-        let gate = gate_with_subject(Some(unique("P1")), calls);
-        // A principal with no patient claim configured-but-absent → 403.
-        let principal = bearer_principal("alice", serde_json::Map::new(), vec!["USER".to_owned()]);
-        let err = resolve_patient_claim(&gate, &principal).expect_err("missing claim");
-        assert_eq!(err.status(), StatusCode::FORBIDDEN);
     }
 
     /// Every ITS-REST operation the route tables name is either gated
@@ -1188,78 +312,6 @@ mod tests {
         assert_eq!(mode_of("query_execute_cohort"), Mode::Skip);
         assert_eq!(mode_of("ehr_tags_get"), Mode::Pre);
         assert_eq!(mode_of("definition_template_adl1.4_upload"), Mode::Skip);
-    }
-
-    /// A minimal authenticated principal for the pure-function tests below.
-    ///
-    /// Deliberately built HERE rather than in production code: the gates now
-    /// refuse when no principal is present, so production has no reason to
-    /// construct one, and a shared fabricated principal is exactly what #1963
-    /// removed (attributing a denial to an identity that never authenticated
-    /// writes a false subject into the audit trail).
-    fn test_principal() -> Principal {
-        bearer_principal("test-subject", serde_json::Map::new(), Vec::new())
-    }
-
-    /// The PEP reads a resource id through this adapter's one strict
-    /// decoder (BASE `base_types` `master05-identification_package.adoc`
-    /// §Syntaxes), so a well-formed id decomposes and a malformed one is
-    /// DENIED rather than degraded into a whole-string `vo_id`.
-    #[test]
-    fn object_version_id_parsing() {
-        let principal = test_principal();
-        let ok = |uid: &str| resolve_target(&principal, uid).map_err(|_resp| "denied");
-
-        let uid = "0197f1c2-3aa0-7000-8000-000000000001::ferroehr.local::2";
-        assert_eq!(
-            ok(uid),
-            Ok((
-                "0197f1c2-3aa0-7000-8000-000000000001".to_owned(),
-                Some("2".to_owned())
-            ))
-        );
-        // A branch VERSION_TREE_ID is carried whole (RM common master06
-        // §The 'Virtual Version Tree').
-        assert_eq!(
-            ok("0197f1c2-3aa0-7000-8000-000000000001::sys::2.1.3"),
-            Ok((
-                "0197f1c2-3aa0-7000-8000-000000000001".to_owned(),
-                Some("2.1.3".to_owned())
-            ))
-        );
-        // A bare HIER_OBJECT_ID (a UUID) → the versioned object, no version.
-        assert_eq!(
-            ok("0197f1c2-3aa0-7000-8000-000000000001"),
-            Ok(("0197f1c2-3aa0-7000-8000-000000000001".to_owned(), None))
-        );
-    }
-
-    /// The invalid twins: none of these is a `UID_BASED_ID` this CDR can
-    /// address, so each is a fail-closed deny (403) instead of the former
-    /// whole-string `vo_id` degradation.
-    #[test]
-    fn malformed_resource_ids_are_denied() {
-        let principal = test_principal();
-        for bad in [
-            // not a UUID at all
-            "abc",
-            // two parts, not three (BASE master05 §Syntaxes)
-            "0197f1c2-3aa0-7000-8000-000000000001::sys",
-            // an empty creating_system_id component
-            "0197f1c2-3aa0-7000-8000-000000000001::::2",
-            // a VERSION_TREE_ID that is not `N` or `N.B.V`
-            "0197f1c2-3aa0-7000-8000-000000000001::sys::v2",
-            // a three-part id whose object_id is not this CDR's UUID key
-            "not-a-uuid::sys::1",
-            "",
-        ] {
-            let denied = resolve_target(&principal, bad).expect_err("must deny");
-            assert_eq!(
-                denied.status(),
-                StatusCode::FORBIDDEN,
-                "id {bad:?} must be a fail-closed deny"
-            );
-        }
     }
 
     // ── SMART scope + launch-context gate on COMPOSITION operations ────────

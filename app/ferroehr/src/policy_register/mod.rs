@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The operational-policy admin registers: the audit category map, the EHDS
-//! Art. 3(3) access delay and the Cedar policy set.
+//! The operational-policy admin registers: the audit category map and the
+//! EHDS Art. 3(3) access delay.
 //!
 //! Each register is versioned in the clinical database
 //! ([`crate::storage::policy_register`]): a write through the admin API
@@ -10,8 +10,7 @@
 //! newest version of every register ([`LiveRegisters::refresh`]) before it
 //! decides anything, so a change applies on the next request on every replica
 //! with no restart. A register with no version holds its default: the map
-//! FerroEHR ships, no delay, and no Cedar policy (so the embedded engine
-//! permits nothing). A document is checked when it is written and refused
+//! FerroEHR ships and no delay. A document is checked when it is written and refused
 //! whole when it does not hold; a stored version that no longer compiles
 //! leaves the version in force and is logged.
 //!
@@ -25,7 +24,6 @@ use std::fmt;
 use std::str::FromStr;
 use std::sync::{Arc, PoisonError, RwLock};
 
-use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use crate::policy_register::access_delay::{AccessDelayPolicy, AccessDelayRegister};
@@ -43,17 +41,11 @@ pub enum Register {
     AuditCategories,
     /// The EHDS Art. 3(3) delay of the person's own access.
     AccessDelay,
-    /// The policy set of the embedded Cedar engine.
-    CedarPolicies,
 }
 
 impl Register {
     /// Every register, in wire order.
-    pub const ALL: [Register; 3] = [
-        Register::AuditCategories,
-        Register::AccessDelay,
-        Register::CedarPolicies,
-    ];
+    pub const ALL: [Register; 2] = [Register::AuditCategories, Register::AccessDelay];
 
     /// The register's wire and storage name.
     #[must_use]
@@ -61,7 +53,6 @@ impl Register {
         match self {
             Register::AuditCategories => "audit-categories",
             Register::AccessDelay => "access-delay",
-            Register::CedarPolicies => "cedar-policies",
         }
     }
 }
@@ -74,7 +65,7 @@ impl fmt::Display for Register {
 
 /// A name that is no register.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{0:?} is not a register: audit-categories, access-delay or cedar-policies")]
+#[error("{0:?} is not a register: audit-categories or access-delay")]
 pub struct UnknownRegister(pub String);
 
 impl FromStr for Register {
@@ -87,18 +78,6 @@ impl FromStr for Register {
             .ok_or_else(|| UnknownRegister(name.to_owned()))
     }
 }
-
-/// The Cedar register document: the policy set as Cedar text.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct CedarPolicies {
-    /// The policies, in the Cedar policy language; empty permits nothing.
-    pub policies: String,
-}
-
-/// The check a Cedar policy set passes before it is stored: it parses and
-/// validates against the schema of the engine the REST layer builds.
-pub type CedarCheck = Arc<dyn Fn(&str) -> Result<(), String> + Send + Sync>;
 
 /// Why the registers could not be read.
 #[derive(Debug, thiserror::Error)]
@@ -130,26 +109,14 @@ pub struct DelayInForce {
     pub policy: Option<Arc<AccessDelayPolicy>>,
 }
 
-/// The Cedar register in force.
-#[derive(Debug, Clone)]
-pub struct CedarInForce {
-    /// Its version; `0` is the default.
-    pub version: i64,
-    /// The document.
-    pub policies: CedarPolicies,
-}
-
 /// The registers in force on this replica, read again whenever a register
 /// gains a version.
 pub struct LiveRegisters {
     pool: PgPool,
     categories: RwLock<Arc<CategoriesInForce>>,
     access_delay: RwLock<Arc<DelayInForce>>,
-    cedar: RwLock<Arc<CedarInForce>>,
     /// The audit sender the category map in force is handed to.
     audit: RwLock<Option<AuditSender>>,
-    /// The check a Cedar policy set passes before it is stored.
-    cedar_check: RwLock<Option<CedarCheck>>,
     /// Serializes the reads that install a new version.
     installing: tokio::sync::Mutex<()>,
     /// The listener on [`CHANNEL`], which says when the registers in force
@@ -162,7 +129,6 @@ impl fmt::Debug for LiveRegisters {
         f.debug_struct("LiveRegisters")
             .field("categories", &self.categories().version)
             .field("access_delay", &self.access_delay().version)
-            .field("cedar", &self.cedar().version)
             .finish_non_exhaustive()
     }
 }
@@ -207,12 +173,7 @@ impl LiveRegisters {
                 register: AccessDelayRegister::default(),
                 policy: None,
             })),
-            cedar: RwLock::new(Arc::new(CedarInForce {
-                version: 0,
-                policies: CedarPolicies::default(),
-            })),
             audit: RwLock::new(None),
-            cedar_check: RwLock::new(None),
             installing: tokio::sync::Mutex::new(()),
         }
     }
@@ -222,18 +183,6 @@ impl LiveRegisters {
         let categories = self.categories();
         sender.set_categories(&categories.map, categories.classifier.clone());
         write(&self.audit, Some(sender));
-    }
-
-    /// Install the check a Cedar policy set passes before it is stored.
-    pub fn set_cedar_check(&self, check: CedarCheck) {
-        write(&self.cedar_check, Some(check));
-    }
-
-    /// The check a Cedar policy set passes before it is stored, when one is
-    /// installed.
-    #[must_use]
-    pub fn cedar_check(&self) -> Option<CedarCheck> {
-        read(&self.cedar_check)
     }
 
     /// The audit category register in force.
@@ -248,19 +197,12 @@ impl LiveRegisters {
         read(&self.access_delay)
     }
 
-    /// The Cedar register in force.
-    #[must_use]
-    pub fn cedar(&self) -> Arc<CedarInForce> {
-        read(&self.cedar)
-    }
-
     /// The version of `register` in force on this replica.
     #[must_use]
     pub fn version(&self, register: Register) -> i64 {
         match register {
             Register::AuditCategories => self.categories().version,
             Register::AccessDelay => self.access_delay().version,
-            Register::CedarPolicies => self.cedar().version,
         }
     }
 
@@ -330,21 +272,6 @@ impl LiveRegisters {
                     .await?
             };
             self.install_delay(delay, register.unwrap_or_else(|| held.register.clone()));
-        }
-        let cedar = newest(Register::CedarPolicies);
-        let held = self.cedar();
-        if cedar != held.version {
-            let policies = self
-                .load::<CedarPolicies>(Register::CedarPolicies, cedar)
-                .await?
-                .unwrap_or_else(|| held.policies.clone());
-            write(
-                &self.cedar,
-                Arc::new(CedarInForce {
-                    version: cedar,
-                    policies,
-                }),
-            );
         }
         Ok(())
     }

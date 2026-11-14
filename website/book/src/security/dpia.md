@@ -73,7 +73,7 @@ to a holder, is
 [the threat model](../threat-model.md#what-each-database-credential-can-reach).
 
 At the API, an access decision runs through authentication, the openEHR
-`EHR_ACCESS` gateway, RBAC, optional ABAC and optional SMART scopes, each stage
+`EHR_ACCESS` gateway with the access evaluator, RBAC, the optional patient scope and optional SMART scopes, each stage
 only able to narrow the previous one. That layering is
 [Security](../security.md#authorization).
 

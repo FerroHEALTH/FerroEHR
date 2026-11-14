@@ -307,8 +307,8 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   is built by `access_log::entry` from an `AuditEvent`: the drain's per-access
   entries, the erasure's, and the import's (`access_log::transfer`). An AQL
   statement attributes each served row to the EHR of every bound `EHR` source
-  and versioned-object root (`aql::sql` `served_ehr_ids`, the list the ABAC
-  scope collection reads too), so an EHR-only statement writes its per-EHR
+  and versioned-object root (`aql::sql` `served_ehr_ids`, the list the patient-scope
+  collection reads too), so an EHR-only statement writes its per-EHR
   entries; a management route that touches EHRs records one access per EHR
   from the service (`emit_mark_access`, `emit_extract_audit`).
   `access_log_checkpoint` keeps the signed `ACCESS_LOG_CHECKPOINT`s of the
@@ -437,7 +437,7 @@ each party's class (`version.kind`) and matches the subject reference against
 that class and its demographic RM ancestors. The planner
 marks the IR `QueryDomain::Demographic`, and the same SQL runs on the party
 pool, whose `search_path` names the `party` schema rendered from the same DDL,
-without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`, ABAC subject
+without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`, the patient
 scope). An `EHR` operand directly under the root is the join to the EHR the
 party is the subject of: `aql::join` cuts the AST into a party half and a
 clinical half, the service runs the party half on the party pool, finds the
@@ -459,7 +459,8 @@ the always-on public health family (`/health`, `/health/liveness`,
 `/health/readiness`), `/rest/status`, the ops-introspection `/management/*`
 surface, item tags (there is no EhrScape surface). **Auth:** Basic +
 OAuth 2.0 bearer tokens via `ferrohealth-smart`; authorization is the
-shipped RBAC/ABAC `access` module in `ferroehr-rest`.
+`access` module in `ferroehr-rest`: RBAC, the access evaluator and the
+patient scope.
 
 ### The access layer (`ferroehr-rest::extensions::access`) — our own design
 
@@ -608,24 +609,27 @@ which is what makes an optional stage safe to disable:
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an
    OAuth2 scope is NOT a role (RFC 6749 §3.3).
-4. **ABAC (Cedar)** — off by default, and removed by #5515. The embedded
-   Cedar engine runs only on a request the access evaluator admitted and
-   can only narrow it: it decides over subject attributes (subject, roles,
-   scopes, organization, patient) and resource attributes (patient,
-   template), fanned out over multi-valued attributes as a cartesian product
-   with **all-must-permit** and short-circuit deny.
-5. **SMART scopes** — off by default, AND-composed onto the ABAC decision, so it
-   can only narrow. Disabled SMART produces zero wire drift.
+4. **The patient scope** (`extensions::access::patient_scope`) — off by
+   default, on when `[auth] patient_claim` names an access-token claim. It
+   holds every caller to the EHR whose subject the claim names, read in
+   `[auth] patient_namespace` or by id alone, on every EHR-scoped route
+   (DIRECTORY included), every EHR an Extract names and every row of an AQL
+   query (`aql::sql::subject`); an id held under two namespaces names no
+   subject without a namespace. It is an authentication binding, not a
+   policy: our own extension, since no openEHR spec governs a patient claim.
+5. **SMART scopes** — off by default, AND-composed onto the decisions before
+   it, so it can only narrow. Disabled SMART produces zero wire drift.
 
 **Deny-by-default and fail-closed, in both senses.** No stage permits by
-omission: a gate reached without a principal refuses; Cedar is
-deny-by-default with `forbid` overriding `permit`. And a stage that cannot
+omission: a gate reached without a principal refuses. And a stage that cannot
 DECIDE is never read as a decision — an unreachable token issuer is `503`, a
-Cedar policy that errors during evaluation is a fail-closed `500`. FerroEHR
-calls no remote policy decision point: the owner removed it on 2026-11-13
-(#5487, #5516), since it is a second policy world over HTTP that receives none
-of the openEHR access facts, and ITS-REST 1.1.0 mandates no authorization
-scheme (`Requests_and_responses.md` §Authentication and authorization). Silence is never consent, and a broken control never looks
+fact the evaluator cannot read never opens data, and a subject lookup of the
+patient scope that fails is `500` or `503`. FerroEHR evaluates no policy
+language and calls no remote policy decision point: the owner removed the
+embedded Cedar engine and the remote decision point on 2026-11-13 (#5487,
+#5515, #5516), since each is a second policy world that receives none of the
+openEHR access facts, and ITS-REST 1.1.0 mandates no authorization scheme
+(`Requests_and_responses.md` §Authentication and authorization). Silence is never consent, and a broken control never looks
 like a policy outcome.
 
 Configuration is boot-validated rather than degraded at the first request: a
@@ -1122,19 +1126,19 @@ default set loads and ride every release as assets.
 ### The operational-policy admin registers (`ferroehr::policy_register`) — our own design
 
 No openEHR specification governs operational policy or where a CDR keeps it:
-our own design (#5442). Three kinds of policy change while the CDR runs and have
+our own design (#5442). Two kinds of policy change while the CDR runs and have
 no home in the RM demographic model (no `PARTY`, `ROLE` or `CAPABILITY` carries
-a category map, a Member State's access delay or a Cedar policy set), so each
-is an **admin register**: `audit-categories` (the EHDS Annex II 3.2(c) category
-map), `access-delay` (the EHDS Art. 3(3) delay) and `cedar-policies` (the
-embedded Cedar engine's policy set). The TOML keys they replace
-(`[audit.categories]`, `[privacy.access_delay]`, `[authz.abac.cedar]`) are
-removed outright and refused as unknown keys.
+a category map or a Member State's access delay), so each is an **admin
+register**: `audit-categories` (the EHDS Annex II 3.2(c) category map) and
+`access-delay` (the EHDS Art. 3(3) delay). The TOML keys they replace
+(`[audit.categories]`, `[privacy.access_delay]`) are removed outright and
+refused as unknown keys. A third register, the Cedar policy set, went with
+the Cedar engine (#5515): clinical migration 0041 deletes its stored versions
+and takes its name out of the table's check.
 
 - **Storage.** One append-only clinical table, `policy_register (register,
   version, document jsonb, committer, committed_at)`. A register with no row
-  holds its default (version 0): the shipped category map, the delay off, an
-  empty Cedar set, which permits nothing.
+  holds its default (version 0): the shipped category map and the delay off.
 - **Write.** `PUT {ext}/admin/registers/{register}` replaces the whole document
   over the version `If-Match` names; under a per-register advisory lock the
   write appends the next version only while that version is still the newest,
@@ -1142,9 +1146,7 @@ removed outright and refused as unknown keys.
   with `400`: a category map must compile (and must classify something under
   the production `no_category_map` floor, which stays TOML because it must
   hold before the register is readable); the access delay's limit and
-  categories must hold under the category map in force; a Cedar set must parse
-  and validate strictly against the schema built from the ABAC request model.
-  A category write mirrors its map into the retention register's
+  categories must hold under the category map in force. A category write mirrors its map into the retention register's
   `category_map` in the same transaction. The committer is the request's
   authenticated subject; the access record of the request is the audit entry.
 - **Read path, with no database work per request.** Each replica keeps the
@@ -1156,8 +1158,7 @@ removed outright and refused as unknown keys.
   maintenance routes) reads the newest version of each, one `GROUP BY` over
   the primary key, and installs what changed: the classifier goes to the audit
   sender, which stamps every record with its map digest; the access-delay
-  policy is recompiled against the map in force; the Cedar engine rebuilds its
-  set on its next decision. With nothing stale a request adds no transaction,
+  policy is recompiled against the map in force. With nothing stale a request adds no transaction,
   which the performance gate's transactions-per-request measure holds. The
   writing replica reads the registers before it answers, so its next request
   runs under the change; another replica runs under it from the first request
@@ -1383,7 +1384,7 @@ adapter (`ferroehr-rest`) calls directly:
 | `openehr-query` | AQL 1.1 lexer + parser + AST | hand-written |
 | `openehr-adl` | ADL 2.4 engine: ADL2/cADL/ODIN parser, AOM2 validation, flattener, OPT2, ADL 1.4→2 conversion | hand-written |
 | `openehr-codegen` | BMM/XSD/OAS → Rust generator (+ `emit-rm-model`) | tooling |
-| `ferroehr-rest` | ITS-REST protocol adapter (axum) + auth + ATNA audit middleware; `access` module = RBAC/ABAC authz; calls the concrete `FerroEhrService` | application |
+| `ferroehr-rest` | ITS-REST protocol adapter (axum) + auth + ATNA audit middleware; `access` module = RBAC, the access evaluator and the patient scope; calls the concrete `FerroEhrService` | application |
 | `ferroehr` | The platform library: storage, service layer (one module per domain area), AQL engine, `versioning` (change control plus the VERSION `signature` signing under `versioning::signature`), validation, templates, the full config tree, telemetry, `privacy`, `system_log`, `licence` (the boot-verified grant in force and the identifier stamp it keys), `usage_report` (FerroEHR's status, route groups and PostgreSQL state store for the `start` and `daily` installation reports that `ferrohealth-usage-report` sends to FerroPULSE, on by default, envelope v2 in FerroHEALTH/FerroPULSE `docs/report-v2.md`, vendored schema in `corpus/ferropulse/`) | application |
 | `ferroehr-server` | The wiring-only binary (config → pool → migrations → service → serve); bin name `ferroehr` | application |
 | `ferroehr-ext` | Optional integrations behind additive features (`multimedia`): the content-addressed multimedia store | application |

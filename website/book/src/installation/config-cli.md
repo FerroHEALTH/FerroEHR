@@ -453,8 +453,8 @@ The environment sets an array of tables only by element index
 (`FERROEHR__AUTH__ISSUER__0__ISSUER`), so the **issuers**, the **party
 tables** and the **Basic-auth user store** read more clearly from a file.
 
-Genuinely file-shaped material (the **PGP signing key**, **Cedar policies**,
-**ATNA and terminology-server PEMs**, a **JWKS blob**) is referenced by an
+Genuinely file-shaped material (the **PGP signing key**, the **ATNA and
+terminology-server PEMs**, a **JWKS blob**) is referenced by an
 in-TOML `*_path` / `*_file` key pointing at a mounted path. On Kubernetes the
 chart's `config.files` map materialises each entry under `/etc/ferroehr/`,
 read-only, from a Secret.

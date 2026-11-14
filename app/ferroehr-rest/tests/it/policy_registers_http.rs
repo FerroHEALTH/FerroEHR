@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The operational-policy admin registers at the wire
-//! (`/admin/registers/{register}`, #5442): the audit category map, the EHDS
-//! Art. 3(3) access delay and the Cedar policy set.
+//! (`/admin/registers/{register}`, #5442): the audit category map and the EHDS
+//! Art. 3(3) access delay.
 //!
 //! Each register is read, written whole over the version `If-Match` names and
-//! listed by version, by `admin_role` only; a change decides the next request
-//! on every replica, with no restart; and a Cedar policy set that does not
-//! parse or validate is refused and never replaces the set in force. No
-//! openEHR spec governs operational policy: our own design/extension.
+//! listed by version, by `admin_role` only, and a change decides the next
+//! request on every replica, with no restart. The Cedar policy register is
+//! gone (#5515) and answers as any unknown register does. No openEHR spec
+//! governs operational policy: our own design/extension.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -18,24 +18,21 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::service::FerroEhrService;
-use ferroehr_rest::extensions::access::authz::{AuthzHandle, build_engine};
+use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
 use http::{Request, StatusCode, header};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 
 use crate::common;
-use crate::common::{BASE, EXT};
+use crate::common::EXT;
 
 /// One replica of a deployment over `pool`: `root` holds `admin_role`, `dr`
-/// does not, and ABAC runs the embedded Cedar engine over the Cedar register
-/// when `abac`.
-async fn replica(pool: &PgPool, abac: bool) -> (Arc<FerroEhrService>, Router) {
+/// does not.
+async fn replica(pool: &PgPool) -> (Arc<FerroEhrService>, Router) {
     let svc = Arc::new(FerroEhrService::new(
         &ferroehr::db::domain::DomainPools::from_shared(pool),
     ));
-    svc.policy_registers()
-        .set_cedar_check(ferroehr_rest::extensions::access::authz::cedar::check());
     let mut config = common::api_config(true);
     common::with_basic_users(
         &mut config,
@@ -44,18 +41,8 @@ async fn replica(pool: &PgPool, abac: bool) -> (Arc<FerroEhrService>, Router) {
         &[("dr", &["USER"]), ("root", &["ADMIN"])],
     )
     .await;
-    let mut authz = AuthzConfig::default();
-    authz.abac.enabled = abac;
-    // No patient claim, so the Cedar policy set alone decides a request.
-    authz.abac.patient_claim = String::new();
-    let engine = build_engine(&authz.abac, svc.policy_registers()).expect("the ABAC engine");
-    let handle = AuthzHandle::build(
-        &authz,
-        &config.api.base_path,
-        engine,
-        common::null_resolvers(),
-    )
-    .map(Arc::new);
+    let handle =
+        AuthzHandle::build(&AuthzConfig::default(), &config.api.base_path, None).map(Arc::new);
     listening(&svc).await;
     let app = common::build_full(config, Arc::clone(&svc), handle, Observability::default()).await;
     (svc, app)
@@ -130,7 +117,7 @@ async fn write(app: &Router, name: &str, over: &str, document: &Value) -> (Statu
 }
 
 /// A document of each register that holds, as `(name, document)`.
-fn documents() -> [(&'static str, Value); 3] {
+fn documents() -> [(&'static str, Value); 2] {
     [
         (
             "audit-categories",
@@ -139,10 +126,6 @@ fn documents() -> [(&'static str, Value); 3] {
         (
             "access-delay",
             json!({ "enabled": true, "categories": ["Laboratory-Reports"], "max_delay": "3d" }),
-        ),
-        (
-            "cedar-policies",
-            json!({ "policies": "permit(principal, action, resource);" }),
         ),
     ]
 }
@@ -155,7 +138,7 @@ fn documents() -> [(&'static str, Value); 3] {
 #[tokio::test]
 async fn every_register_is_read_written_and_versioned() {
     let (_db, pool) = common::migrated_pool().await;
-    let (_svc, app) = replica(&pool, false).await;
+    let (_svc, app) = replica(&pool).await;
     for (name, document) in documents() {
         let (status, headers, body) = read(&app, name).await;
         assert_eq!(status, StatusCode::OK, "{name}: {body}");
@@ -196,7 +179,7 @@ async fn every_register_is_read_written_and_versioned() {
 #[tokio::test]
 async fn a_caller_without_the_admin_role_is_refused() {
     let (_db, pool) = common::migrated_pool().await;
-    let (_svc, app) = replica(&pool, false).await;
+    let (_svc, app) = replica(&pool).await;
     for (name, document) in documents() {
         for (method, tail, body) in [
             ("GET", "", None),
@@ -221,8 +204,8 @@ async fn a_caller_without_the_admin_role_is_refused() {
 #[tokio::test]
 async fn a_category_change_applies_on_the_next_request() {
     let (_db, pool) = common::migrated_pool().await;
-    let (_a, writer) = replica(&pool, false).await;
-    let (b, reader) = replica(&pool, false).await;
+    let (_a, writer) = replica(&pool).await;
+    let (b, reader) = replica(&pool).await;
     let period = json!({
         "kind": "COMPOSITION",
         "jurisdiction": "DE",
@@ -274,8 +257,8 @@ async fn a_category_change_applies_on_the_next_request() {
 #[tokio::test]
 async fn an_access_delay_change_applies_on_the_next_request() {
     let (_db, pool) = common::migrated_pool().await;
-    let (_a, writer) = replica(&pool, false).await;
-    let (b, reader) = replica(&pool, false).await;
+    let (_a, writer) = replica(&pool).await;
+    let (b, reader) = replica(&pool).await;
     let hold = |app: Router| async move {
         common::send_body(
             &app,
@@ -324,60 +307,50 @@ async fn an_access_delay_change_applies_on_the_next_request() {
     );
 }
 
-/// The Cedar policy set written through one replica decides the next request
-/// to another: the default set permits nothing, a permitting set admits the
-/// request, and a set that does not parse or validate is refused and leaves
-/// the set in force.
+/// The Cedar policy register is gone: its name is no register, so a read, a
+/// write and a history read each answer `404`, as an unknown register does.
 #[tokio::test]
-async fn a_cedar_change_applies_on_the_next_request_and_a_bad_set_is_refused() {
+async fn the_cedar_register_is_no_register() {
     let (_db, pool) = common::migrated_pool().await;
-    let (_a, writer) = replica(&pool, true).await;
-    let (b, reader) = replica(&pool, true).await;
-    let create = |app: Router| async move {
-        common::send_body(
-            &app,
-            Request::post(format!("{BASE}/ehr"))
-                .header(header::AUTHORIZATION, common::basic_credential("dr"))
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await
-    };
-    let (status, body) = create(reader.clone()).await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "no policy permits: {body}");
-
-    let permit = json!({ "policies": "permit(principal, action, resource);" });
-    let seen = b.policy_registers().listened().notifications();
-    let (status, body) = write(&writer, "cedar-policies", "\"0\"", &permit).await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    delivered(&b, seen).await;
-    let (status, body) = create(reader.clone()).await;
-    assert_eq!(
-        status,
-        StatusCode::CREATED,
-        "the next request is permitted: {body}"
-    );
-
-    for bad in [
-        "this is not a cedar policy",
-        "permit(principal, action == Action::\"no_such_action\", resource);",
+    let (_svc, app) = replica(&pool).await;
+    let document = json!({ "policies": "permit(principal, action, resource);" });
+    for (method, tail, body) in [
+        ("GET", "", None),
+        ("PUT", "", Some(&document)),
+        ("GET", "/history", None),
     ] {
-        let (status, body) = write(
-            &writer,
+        let (status, _, answer) = call(
+            &app,
+            method,
+            "root",
             "cedar-policies",
-            "\"1\"",
-            &json!({ "policies": bad }),
+            tail,
+            Some("\"0\""),
+            body,
         )
         .await;
-        assert_eq!(status, StatusCode::BAD_REQUEST, "{bad}: {body}");
+        assert_eq!(
+            status,
+            StatusCode::NOT_FOUND,
+            "{method} cedar-policies{tail}: {answer}"
+        );
     }
-    let (_, headers, _) = read(&reader, "cedar-policies").await;
-    assert_eq!(common::header(&headers, header::ETAG), Some("\"1\""));
-    let (status, body) = create(reader).await;
-    assert_eq!(
-        status,
-        StatusCode::CREATED,
-        "the set in force stays: {body}"
+}
+
+/// The register table refuses a row naming the Cedar register: the migration
+/// that dropped its versions took the name out of the check (#5515).
+#[tokio::test]
+async fn the_register_table_refuses_the_cedar_name() {
+    let (_db, pool) = common::migrated_pool().await;
+    let refused = sqlx::query(
+        "INSERT INTO clinical.policy_register (register, version, document, committer) \
+         VALUES ('cedar-policies', 1, '{}'::jsonb, 'test')",
+    )
+    .execute(&pool)
+    .await;
+    assert!(
+        refused.is_err(),
+        "the name is outside the check: {refused:?}"
     );
 }
 
@@ -387,8 +360,8 @@ async fn a_cedar_change_applies_on_the_next_request_and_a_bad_set_is_refused() {
 #[tokio::test]
 async fn a_lost_listener_falls_back_to_a_read_on_every_request() {
     let (_db, pool) = common::migrated_pool().await;
-    let (_a, writer) = replica(&pool, false).await;
-    let (b, reader) = replica(&pool, false).await;
+    let (_a, writer) = replica(&pool).await;
+    let (b, reader) = replica(&pool).await;
     let listeners: Vec<i32> = sqlx::query_scalar(
         "SELECT pid FROM pg_stat_activity WHERE datname = current_database() \
          AND query LIKE 'LISTEN %'",

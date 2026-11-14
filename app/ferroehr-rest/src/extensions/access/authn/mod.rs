@@ -109,7 +109,7 @@ pub struct Principal {
     /// role — see [`Self::scopes`].
     pub roles: Vec<String>,
     /// The retained, validated JWT claim set (Bearer only; empty for Basic), so
-    /// the ABAC layer can resolve subject attributes without re-parsing the
+    /// the patient scope and the SMART gate read claims without re-parsing the
     /// token.
     pub claims: serde_json::Map<String, serde_json::Value>,
     /// Which mechanism authenticated the caller.

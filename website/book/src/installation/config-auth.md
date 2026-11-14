@@ -62,6 +62,8 @@ The section keys:
 | `capabilities` | list of string | `[]` | SMART capabilities the discovery document adds: one SMART App Launch or the SMART on openEHR draft lists, or a full URI. |
 | `scopes_supported` | list of string | `[]` | The scopes the discovery document lists. Empty, it lists the scopes the route table honours. |
 | `described_issuer` | string | unset | The issuer the discovery document describes: one of kind `persons`, `patients` or `federation` whose metadata FerroEHR has, read from it, introspected, or supplied by [`[auth.smart] issuer_metadata_file`](#authsmart). Read only with `[auth.smart] discovery = true`, where naming an unknown issuer, a `machines` issuer or one without metadata is a boot error. Required with discovery when more than one issuer could be described. It renders with any userinfo masked. See [the described issuer](#the-described-issuer). |
+| `patient_claim` | string | unset | The access-token claim naming the patient a caller is bound to. Set, it holds every request to the patient it names ([the patient scope](../security.md#the-patient-scope)); a token without the claim is refused with `403`. Unset or blank, no patient scope applies. |
+| `patient_namespace` | string | unset | The subject namespace (`EHR_STATUS.subject.external_ref.namespace`) the ids in `patient_claim` are issued in. Set, a claim names the EHR whose subject is that id under this namespace. Unset, a claim names the EHR holding that id only when no other namespace holds the same id. |
 | `product_scope` | string | `""` ⇒ `__ferroehr.platform` | FerroEHR's own scope. It admits the ADMIN API and, beside the clients the CDR grants `access_demographic`, the DEMOGRAPHIC API, the two surfaces no SMART on openEHR resource family covers. A full URI or a string starting with `__` (SMART App Launch 2.2.0, Scopes and Launch Context, §Extensibility). |
 
 The keys `audience`, `algorithms`, `token_profile`, `clock_skew_seconds`,
@@ -205,8 +207,10 @@ time a refusal takes does not say whether the user exists.
 
 ## `[authz]`
 
-Role-based (RBAC) and attribute-based (ABAC) authorization, and the
-patient-data assurance gate. The full evaluation order and design rationale are
+Role-based (RBAC) authorization, the party binding, the grant ceiling and the
+patient-data assurance gate. Which caller may read which data is the access
+evaluator's, over each EHR's `access_directives` and the controller's access
+policy, and takes no key here. The full evaluation order and design rationale are
 in [Security](../security.md).
 
 ### `[authz.assurance]`: the assurance level patient data requires
@@ -629,44 +633,6 @@ under `[authz.grants] allowed`. The keys that named a role for them before
 > [`[management.endpoints]`](#management) owns it, one level per endpoint, with
 > no global default beside it: an endpoint you do not name is `off` and is not
 > mounted. Only the `admin_only` level consults `authz.rbac.admin_role`.
-
-### `[authz.abac]`
-
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `enabled` | bool | `false` | Master ABAC switch. The table keeps `enabled` where other optional features use the table's presence, because `organization_claim` applies while it is off: the access log records it. |
-| `engine` | enum{cedar} | `cedar` | The embedded Cedar engine, the one engine. |
-| `organization_claim` | string | `organization_id` | JWT claim carrying the caller's organization. |
-| `patient_claim` | string | `patient_id` | JWT claim carrying the patient id. Set, it scopes every request to the patient it names (see below). Empty turns the patient scope off. |
-| `patient_namespace` | string | unset | The subject namespace (`EHR_STATUS.subject.external_ref.namespace`) the patient ids in `patient_claim` are issued in. Set, a claim names the EHR whose subject is that id under this namespace. Unset, a claim names the EHR holding that id only when no other namespace holds the same id. |
-| `check_directory` | bool | `false` | Submit DIRECTORY (`FOLDER`) operations to the policy engine. |
-
-**The patient scope.** With ABAC on and `patient_claim` set, a token
-without that claim is refused with `403`. With the claim:
-
-- A route that names an EHR (`/ehr/{ehr_id}/…`) answers `403` unless the
-  claim names that EHR's subject. An EHR that records no subject is in no
-  patient's scope and is refused.
-- Without `patient_namespace`, an id held under two or more namespaces names
-  none of those subjects, so it reaches none of their EHRs. Set
-  `patient_namespace` to read the claim in one namespace.
-- An AQL query returns rows only from EHRs the claim names, whatever the query
-  selects, including `SELECT e/ehr_id/value FROM EHR e`.
-
-After a query runs, the policy engine receives the subject ids of every EHR
-the query touched as its `patient` attribute, so a patient-keyed policy
-applies to queries whether or not `patient_claim` is set. Without
-`patient_namespace`, a query that touches a subject id held under several
-namespaces is refused with `403`, because a bare id would name both subjects.
-
-- **The Cedar policy set** is the
-  [Cedar admin register](../operational-policy.md#the-cedar-policy-register),
-  not a configuration key: `[authz.abac.cedar]` is an unknown table and
-  refuses boot. Until the register is written the set is empty, and Cedar,
-  deny-by-default, permits nothing.
-- **No remote policy decision point.** FerroEHR has no outbound policy
-  service. `[authz.abac.remote]` and `[authz.abac.policy.<name>]` are unknown
-  tables and refuse boot, as `engine = "remote"` does.
 
 ## `[api] admin`
 

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The subjects of EHRs as the ABAC patient scope sees them.
+//! The subjects of EHRs as the patient scope sees them.
 //!
 //! The query scope applies the subject-identity rule inside its SQL
 //! ([`crate::aql::sql::subject`]); this module reads the same rule back per EHR

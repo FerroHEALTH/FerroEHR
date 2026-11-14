@@ -415,9 +415,9 @@ pub(crate) async fn delete(state: AppState, parts: RequestParts) -> Result<Respo
 
 /// `composition_tags_get`: serve the item tags of a COMPOSITION.
 ///
-/// The response records the tagged COMPOSITION's ids, from which the ABAC
-/// post-check reads its patient and content as it does for the COMPOSITION
-/// read itself.
+/// The response records the tagged COMPOSITION's ids, from which the
+/// patient-scope post-check reads its EHR as it does for the COMPOSITION read
+/// itself.
 ///
 /// # Errors
 /// The parameter and read rejections the operation declares.

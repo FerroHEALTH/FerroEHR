@@ -247,7 +247,7 @@ impl SmartRoutes {
         }
         if under("/ehr") && relative.ends_with("/access-delay/release") {
             // NOTE: EHDS Art. 3(3), releasing a held composition changes what the person
-            // reads of it, so it needs the `u` grant its ABAC check (an update) names.
+            // reads of it, so it needs the `u` grant its patient-scope check (an update) names.
             return ehr_data(Permission::Update);
         }
         if under("/ehr") && path_param(template, path, "ehr_id").is_some() {

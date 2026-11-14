@@ -371,8 +371,8 @@ system id is never trusted that way.
 
 **The origins of data** (EHDS Annex II 3.4). An origin is recognised when a
 `data_origin` grant in force names it in its `origin` element: a retention
-period may be keyed on it (`PUT {ext}/admin/retention/policy`), and an ABAC
-rule may name it. A body with no `FEEDER_AUDIT`, committed by the holder of
+period may be keyed on it (`PUT {ext}/admin/retention/policy`), and an access
+directive's data scope may name it. A body with no `FEEDER_AUDIT`, committed by the holder of
 such a grant, is stamped with that origin in `version.origins`; any other
 direct commit keeps this server's `system_id`. A system that only sends data
 through a feed, and never commits itself, holds the grant on an `AGENT` of
@@ -404,7 +404,7 @@ Bound to a `PERSON`, it holds the roles the `role` elements of its
 `hold_scopes` grants name; a privileged role is never held this way. The one
 exception is `[authz.rbac] first_admin`, which holds `admin_role` and the
 product scope from the configuration. Every gate reads them: the role gate,
-the SMART on openEHR scopes, ABAC and the access record. A token's roles and
+the SMART on openEHR scopes, the access evaluator and the access record. A token's roles and
 scopes come from the token alone, since its issuer is their authority.
 
 **Which clients a person's token comes through.** While `ferrohealth-smart`
@@ -1777,14 +1777,13 @@ design:
 
 ## The admin registers
 
-Three kinds of operational policy have no home in the openEHR demographic
+Two kinds of operational policy have no home in the openEHR demographic
 model, so each is an admin register:
 
 | Register | What it holds | Default, before anyone writes it |
 |---|---|---|
 | `audit-categories` | The EHDS category map every access is classified through ([the audit category register](installation/config-audit.md#the-audit-category-register)) | The category map FerroEHR ships |
 | `access-delay` | The EHDS Art. 3(3) delay of the person's own access ([the access-delay register](installation/config-auth.md#the-access-delay-register)) | Off |
-| `cedar-policies` | The policy set of the embedded Cedar engine ([below](#the-cedar-policy-register)) | Empty, so Cedar permits nothing |
 
 You read and write them under `{ext}/admin/registers/{register}` with a token
 or Basic user holding `admin_role`, with `[api] admin = true`; the routes are
@@ -1798,8 +1797,8 @@ on [Admin & messaging APIs](operations-admin-apis.md#operational-policy-register
   the newest is refused with `412`, so two operators never overwrite each
   other's change unseen.
 - **Checked when written.** A document that does not hold is refused whole with
-  `400` and never reaches a request: a category map that does not compile, a
-  delay with an unusable limit, a Cedar set that does not parse or validate.
+  `400` and never reaches a request: a category map that does not compile or
+  a delay with an unusable limit.
   The register keeps its version in force.
 - **Effective without a restart.** Each replica keeps the registers in
   memory and is told of every write through PostgreSQL `LISTEN`/`NOTIFY` when
@@ -1811,10 +1810,8 @@ on [Admin & messaging APIs](operations-admin-apis.md#operational-policy-register
   guess.
 - **Audited.** Every read and write of a register is an access record.
 
-The three keys these registers replace, `[audit.categories]`,
-`[privacy.access_delay]` and `[authz.abac.cedar]`, are unknown keys in
-`ferroehr.toml` and refuse boot. A deployment provides its registers once the
-server runs, through the admin API.
+A deployment provides its registers once the server runs, through the admin
+API; neither has a key in `ferroehr.toml`.
 
 ### A worked example: turning the access delay on
 
@@ -1835,24 +1832,6 @@ curl -s -u admin:… -X PUT \
 
 The next laboratory report committed on any replica is held from the person
 for up to 72 hours.
-
-### The Cedar policy register
-
-The embedded Cedar engine (`[authz.abac] engine = "cedar"`) decides with the
-policy set of this register, in the Cedar policy language:
-
-```json
-{ "policies": "permit(principal, action, resource) when { principal has organization };" }
-```
-
-A write is parsed and validated strictly against the schema FerroEHR builds
-from its ABAC request model, and a set that does not parse or validate is
-refused with `400`; the set in force keeps deciding. Until the register is
-written the set is empty, and Cedar, deny-by-default, permits nothing, so a
-deployment that turns ABAC on writes its policies before it serves clinical
-traffic. The example policies under
-[`app/ferroehr-rest/examples/policies`](https://github.com/FerroHEALTH/FerroEHR/tree/main/app/ferroehr-rest/examples/policies)
-are a starting point.
 
 ### The security floor that stays in `ferroehr.toml`
 
