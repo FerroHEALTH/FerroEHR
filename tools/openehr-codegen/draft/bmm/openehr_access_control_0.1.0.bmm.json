@@ -94,7 +94,7 @@
         }
       },
       "invariants": {
-        "Default_access_valid": "terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_default, default_access.defining_code)",
+        "Default_access_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_default, default_access.defining_code)",
         "Gate_keepers_valid": "gate_keepers /= Void implies not gate_keepers.is_empty",
         "Directives_valid": "directives /= Void implies not directives.is_empty",
         "Labels_valid": "labels /= Void implies not labels.is_empty",
@@ -299,8 +299,8 @@
         }
       },
       "invariants": {
-        "Kind_valid": "terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_directive_kind, kind.defining_code)",
-        "Effect_valid": "terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_effect, effect.defining_code)",
+        "Kind_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_directive_kind, kind.defining_code)",
+        "Effect_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_effect, effect.defining_code)",
         "Restriction_denies": "is_restriction implies is_deny",
         "Opt_out_denies_whole_record": "is_opt_out implies (is_deny and data = Void)",
         "Exceptions_opposite": "exceptions /= Void implies exceptions.for_all (e | e.is_deny /= is_deny and e.exceptions = Void)",
@@ -345,8 +345,8 @@
       },
       "invariants": {
         "Not_empty": "party /= Void or role /= Void or relationship /= Void or caller_kind /= Void",
-        "Relationship_valid": "relationship /= Void implies terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_relationship, relationship.defining_code)",
-        "Caller_kind_valid": "caller_kind /= Void implies terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)"
+        "Relationship_valid": "relationship /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_relationship, relationship.defining_code)",
+        "Caller_kind_valid": "caller_kind /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)"
       }
     },
     "ACCESS_DATA_SCOPE": {
@@ -634,7 +634,7 @@
         "accessor_kinds": {
           "_type": "P_BMM_CONTAINER_PROPERTY",
           "name": "accessor_kinds",
-          "documentation": "The kinds of accessor the restriction applies to, coded in the openEHR Terminology `accessor kind` group of the access log, which `ACCESSOR._kind_` is coded in.",
+          "documentation": "The kinds of accessor the restriction applies to, coded in the draft `openehr_access` terminology's `accessor kind` group of the access log, which `ACCESSOR._kind_` is coded in.",
           "is_mandatory": true,
           "type_def": {
             "container_type": "List",
@@ -675,8 +675,8 @@
         }
       },
       "invariants": {
-        "Accessor_kinds_valid": "accessor_kinds.for_all (k | terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_accessor_kind, k.defining_code))",
-        "Withheld_valid": "withheld.for_all (w | terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_log_withheld, w.defining_code))"
+        "Accessor_kinds_valid": "accessor_kinds.for_all (k | terminology (Terminology_id_access).has_code_for_group_id (Group_id_accessor_kind, k.defining_code))",
+        "Withheld_valid": "withheld.for_all (w | terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_log_withheld, w.defining_code))"
       }
     },
     "VERSIONED_ACCESS_POLICY": {

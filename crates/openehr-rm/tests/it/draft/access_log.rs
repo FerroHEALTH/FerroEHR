@@ -114,7 +114,7 @@ fn each_entry_invariant_refuses_an_entry_that_breaks_it() {
             e["link"]["digest"] = json!("");
         }),
         ("ACCESS_LOG_ENTRY.Action_valid", |e| {
-            e["action"] = coded("openehr", "browse", "1");
+            e["action"] = coded("openehr_access", "browse", "browse");
         }),
         ("ACCESS_LOG_ENTRY.Items_need_ehr", |e| {
             e.as_object_mut().expect("an object").remove("ehr_id");
@@ -126,7 +126,7 @@ fn each_entry_invariant_refuses_an_entry_that_breaks_it() {
             e["outcome"]["delivered"] = json!(-1);
         }),
         ("ACCESSOR.Kind_valid", |e| {
-            e["accessor"]["kind"] = coded("openehr", "robot", "1");
+            e["accessor"]["kind"] = coded("openehr_access", "robot", "robot");
         }),
         ("ACCESS_CREDENTIAL.Issuer_valid", |e| {
             e["accessor"]["credential"]["issuer"] = json!("");
@@ -152,7 +152,7 @@ fn each_entry_invariant_refuses_an_entry_that_breaks_it() {
         }),
         ("ACCESS_AUTHORISATION.Kind_valid", |e| {
             e["authorisations"] = json!([{ "_type": "ACCESS_AUTHORISATION",
-                "kind": coded("openehr", "hunch", "1") }]);
+                "kind": coded("openehr_access", "hunch", "hunch") }]);
         }),
     ];
     for (invariant, breaking) in cases {

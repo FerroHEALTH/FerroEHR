@@ -28,19 +28,26 @@ use openehr_rm::draft::access_control::access_control::versioned_access_policy::
 use openehr_rm::draft::access_control::common::archetyped::locatable::Locatable;
 use openehr_rm::draft::access_control::common::change_control::versioned_object::VersionedObject;
 use openehr_rm::draft::access_control::invariants::{check_policy, check_settings};
-use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL;
+use openehr_rm::draft::access_control::terminology::{
+    TERMINOLOGY_ID_ACCESS, TERMINOLOGY_ID_CONSENT_PROVISION_TYPE,
+};
 use openehr_rm::draft::invariants::{Violation, Violations};
 use openehr_rm::v1_2::ehr::ehr_access::EhrAccess;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
-/// A term of the draft access control groups, its code the rubric.
+/// A term of the draft `openehr_access` terminology, its code the rubric.
 fn term(rubric: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": rubric,
             "defining_code": { "_type": "CODE_PHRASE",
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY_ID_ACCESS_CONTROL },
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY_ID_ACCESS },
                 "code_string": rubric } })
+}
+
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+fn effect(code: &str) -> Value {
+    coded(TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, code, code)
 }
 
 /// A term of an external terminology.
@@ -69,7 +76,7 @@ fn directive(name: &str, kind: &str, effect: &str, extra: Value) -> Value {
     let mut d = locatable("at0001", name);
     d.insert("_type".into(), json!("ACCESS_DIRECTIVE"));
     d.insert("kind".into(), term(kind));
-    d.insert("effect".into(), term(effect));
+    d.insert("effect".into(), self::effect(effect));
     d.insert("emergency_override".into(), json!(false));
     let Value::Object(extra) = extra else {
         panic!("the extra members are an object")
@@ -165,9 +172,9 @@ fn psychiatry_rule() -> Value {
             "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE",
                 "role": coded("urn:example:roles", "psychiatrist", "PSYCHIATRIST") }],
             "operations": [term("read")],
-            "purposes": [coded("http://terminology.hl7.org/CodeSystem/v3-ActReason", "treatment", "TREAT")],
+            "purposes": [coded("v3-ActReason", "treatment", "TREAT")],
             "data": [{ "_type": "ACCESS_DATA_SCOPE",
-                "sensitivities": [coded("http://terminology.hl7.org/CodeSystem/v3-ActCode", "PSY", "PSY")] }]
+                "sensitivities": [coded("v3-ActCode", "PSY", "PSY")] }]
         }),
     )
 }
@@ -187,15 +194,14 @@ fn settings() -> Value {
         "labels": [{ "_type": "ACCESS_LABEL",
             "target": { "_type": "OBJECT_REF", "namespace": "local", "type": "VERSIONED_COMPOSITION",
                 "id": { "_type": "HIER_OBJECT_ID", "value": "8849182c-82ad-4088-a07f-48ead4180515" } },
-            "sensitivities": [coded("http://terminology.hl7.org/CodeSystem/v3-ActCode", "HIV", "HIV")],
+            "sensitivities": [coded("v3-ActCode", "HIV", "HIV")],
             "reason": { "_type": "DV_TEXT", "value": "requested by the subject" } }]
     })
 }
 
-/// A term of the access log's openEHR `accessor kind` group, its code the
-/// rubric.
+/// A term of the draft `accessor kind` group, its code the rubric.
 fn accessor_kind(rubric: &str) -> Value {
-    coded("openehr", rubric, rubric)
+    term(rubric)
 }
 
 /// A restriction of the subject view under a national provision: the name of
@@ -235,7 +241,7 @@ fn policy() -> Value {
             "classifications": [{ "_type": "ACCESS_CLASSIFICATION",
                 "name": { "_type": "DV_TEXT", "value": "HIV results" }, "archetype_node_id": "at0002",
                 "data": { "_type": "ACCESS_DATA_SCOPE", "templates": ["lab_hiv.v1"] },
-                "sensitivities": [coded("http://terminology.hl7.org/CodeSystem/v3-ActCode", "HIV", "HIV")] }],
+                "sensitivities": [coded("v3-ActCode", "HIV", "HIV")] }],
             "care_relationship_required": true,
             "relationship_grace": { "_type": "DV_DURATION", "value": "P14D" },
             "purpose_required": true,
@@ -380,17 +386,17 @@ fn each_settings_invariant_refuses_settings_that_break_it() {
             s["directives"][0]["kind"] = coded("local", "consent", "consent");
         }),
         ("ACCESS_DIRECTIVE.Effect_valid", |s| {
-            s["directives"][0]["effect"] = term("maybe");
+            s["directives"][0]["effect"] = effect("maybe");
         }),
         ("ACCESS_DIRECTIVE.Restriction_denies", |s| {
-            s["directives"][1]["effect"] = term("permit");
-            s["directives"][1]["exceptions"][0]["effect"] = term("deny");
+            s["directives"][1]["effect"] = effect("permit");
+            s["directives"][1]["exceptions"][0]["effect"] = effect("deny");
         }),
         ("ACCESS_DIRECTIVE.Opt_out_denies_whole_record", |s| {
             s["directives"][1]["kind"] = term("opt_out");
         }),
         ("ACCESS_DIRECTIVE.Exceptions_opposite", |s| {
-            s["directives"][1]["exceptions"][0]["effect"] = term("deny");
+            s["directives"][1]["exceptions"][0]["effect"] = effect("deny");
         }),
         ("ACCESS_DIRECTIVE.Exceptions_opposite", |s| {
             let inner = directive("Nested", "consent", "deny", json!({}));
