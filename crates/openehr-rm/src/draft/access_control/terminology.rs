@@ -53,6 +53,8 @@ pub enum Group {
     /// `care relationship`: the demographic relationships that put a caller
     /// in care of a subject.
     CareRelationship,
+    /// `group kind`: what kind of group a demographic `GROUP` is.
+    GroupKind,
     /// `access refusal`: the code an access refusal is recorded under.
     AccessRefusal,
     /// `access log withheld`: the attributes of an access-log accessor the
@@ -62,7 +64,7 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 12] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -72,6 +74,7 @@ impl Group {
         Self::AccessSensitivityClearance,
         Self::AccessPermittedPurpose,
         Self::CareRelationship,
+        Self::GroupKind,
         Self::AccessRefusal,
         Self::AccessLogWithheld,
     ];
@@ -89,6 +92,7 @@ impl Group {
             Self::AccessSensitivityClearance => "access sensitivity clearance",
             Self::AccessPermittedPurpose => "access permitted purpose",
             Self::CareRelationship => "care relationship",
+            Self::GroupKind => "group kind",
             Self::AccessRefusal => "access refusal",
             Self::AccessLogWithheld => "access log withheld",
         }
@@ -107,6 +111,7 @@ impl Group {
             Self::AccessSensitivityClearance => SensitivityClearance::CODES,
             Self::AccessPermittedPurpose => PermittedPurpose::CODES,
             Self::CareRelationship => CareRelationship::CODES,
+            Self::GroupKind => GroupKind::CODES,
             Self::AccessRefusal => Refusal::CODES,
             Self::AccessLogWithheld => Withheld::CODES,
         }
@@ -350,6 +355,16 @@ group! {
         /// A patient's `PERSON` is under the care of a team `GROUP` or an
         /// organisational unit.
         UnderCareOf => "under_care_of",
+    }
+}
+
+group! {
+    /// What kind of group a demographic `GROUP` is, coded in an element of
+    /// its `details`.
+    GroupKind in GroupKind {
+        /// The `GROUP` is a care team: a `member_of` relationship to it puts
+        /// its member in the care of the subjects under its care.
+        CareTeam => "care_team",
     }
 }
 
