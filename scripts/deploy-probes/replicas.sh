@@ -77,9 +77,12 @@ probes_replicas() {
   # The overlay publishes the second instance's port on the identity issuer,
   # so the issuer is recreated, and a running container that joined its
   # network namespace keeps the old one alive with its host ports: the new
-  # issuer then cannot start. The stack therefore goes down first, its
-  # volumes kept, and comes up whole on the overlay.
-  dc down --remove-orphans >/dev/null 2>&1 || true
+  # issuer then cannot start. The stack therefore goes down first and comes up
+  # whole on the overlay. Its volumes go too: the access log the earlier
+  # families wrote carries links signed with their own probe keys, and the
+  # instance rows of the servers they stopped would be compared for 90
+  # seconds, so the two instances start on a database of their own.
+  compose_down
   dc "${files[@]}" --profile replicas --profile s3 up -d --wait \
     ferroehr ferroehr-2 >/dev/null 2>&1
   if ! wait_http "$SECOND_CDR/health/readiness" 90 || ! wait_http "$CDR/health/readiness" 90; then
@@ -89,7 +92,8 @@ probes_replicas() {
     return 0
   fi
   assert_eq "up" "$(indicator_state "$SECOND_CDR" instances)" \
-    "the second instance compared itself with the first at start"
+    "the second instance compared itself with the first at start: \
+$(curl -s -u "$BASIC" "$SECOND_CDR/management/health" | jq -c '.indicators[]? | select(.name == "instances")' 2>/dev/null)"
   probe_done
 
   probe "P-REPLICA-SHARED" "$PROBE_WORKING" "server" "#5589" \
@@ -132,11 +136,12 @@ probes_replicas() {
   dc "${files[@]}" exec -T ferroehr-2 /usr/local/bin/ferroehr access-log checkpoint >/dev/null 2>&1
   out="$(dc "${files[@]}" exec -T ferroehr /usr/local/bin/ferroehr access-log verify 2>&1)"
   assert_contains "$out" "the access log verifies" \
-    "a checkpoint sealed by one instance verifies the links both signed"
+    "a checkpoint sealed by one instance verifies the links both signed; \
+$(replica_findings "$out")"
   dc "${files[@]}" exec -T ferroehr /usr/local/bin/ferroehr audit-chain seal >/dev/null 2>&1
   out="$(dc "${files[@]}" exec -T ferroehr-2 /usr/local/bin/ferroehr audit-chain verify 2>&1)"
   assert_contains "$out" "the system chain verifies" \
-    "the system chain verifies against the other instance's seal"
+    "the system chain verifies against the other instance's seal; $(replica_findings "$out")"
   probe_done
 
   probe "P-REPLICA-KEY-MISMATCH" "$PROBE_BROKEN" "deployment" "#5589" \
@@ -158,6 +163,16 @@ probes_replicas() {
   probe_done
 
   replicas_down
+}
+
+# The findings a verification printed: how many, the first and the last, and
+# its closing line.
+replica_findings() {
+  local findings
+  findings="$(grep -c '^finding' <<<"$1" || true)"
+  printf '%s finding(s); first: %s; last: %s; end: %s' "$findings" \
+    "$(grep -m1 '^finding' <<<"$1")" "$(grep '^finding' <<<"$1" | tail -1)" \
+    "$(tail -1 <<<"$1")"
 }
 
 # What a failed boot leaves to read: each container's state and the last
