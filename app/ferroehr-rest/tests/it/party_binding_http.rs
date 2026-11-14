@@ -537,7 +537,7 @@ pub(crate) async fn refusal_rows(
 ) -> Vec<(String, Option<String>)> {
     for _ in 0..50 {
         let rows: Vec<(String, Option<String>)> = sqlx::query_as(
-            "SELECT event_code, party ->> 'id' FROM audit.audit_event \
+            "SELECT event_code, party ->> 'id' FROM audit.access_trail \
              WHERE binding = $1 AND summary IS NULL ORDER BY recorded_at",
         )
         .bind(binding)
@@ -600,7 +600,7 @@ async fn a_key_claim_refusal_is_recorded_with_the_claim_name() {
 
     refusal_rows(&db.pool(), "refused-key-claim-missing", 1).await;
     let (detail,): (Option<Value>,) = sqlx::query_as(
-        "SELECT binding_detail FROM audit.audit_event \
+        "SELECT binding_detail FROM audit.access_trail \
          WHERE binding = 'refused-key-claim-missing' AND summary IS NULL",
     )
     .fetch_one(&db.pool())

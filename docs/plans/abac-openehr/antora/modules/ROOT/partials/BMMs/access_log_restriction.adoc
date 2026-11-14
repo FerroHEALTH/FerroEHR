@@ -1,0 +1,58 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_LOG_RESTRICTION",
+  "documentation": "One restriction of the subject's view of the access log under EHDS Article 9(3). The entries whose accessor is of one of the given kinds are shown to the subject and their representative without the given attributes of the accessor; a reviewer reads the full entry.",
+  "ancestors": [
+    "LOCATABLE"
+  ],
+  "properties": {
+    "accessor_kinds": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "accessor_kinds",
+      "documentation": "The kinds of accessor the restriction applies to, coded in the openEHR Terminology `accessor kind` group of the access log, which `ACCESSOR._kind_` is coded in.",
+      "is_mandatory": true,
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 1,
+        "upper_unbounded": true
+      }
+    },
+    "withheld": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "withheld",
+      "documentation": "The attributes of `ACCESSOR` the subject view withholds, coded in the `access log withheld` group: `accessor_party`, `accessor_provider`, `accessor_roles` or `accessor_groups`.",
+      "is_mandatory": true,
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 1,
+        "upper_unbounded": true
+      }
+    },
+    "legal_grounds": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "legal_grounds",
+      "documentation": "The provisions of the Member State law that lay the restriction down under EHDS Article 9(3), coded in a terminology the jurisdiction names.",
+      "is_mandatory": true,
+      "type_def": {
+        "container_type": "List",
+        "type": "DV_CODED_TEXT"
+      },
+      "cardinality": {
+        "lower": 1,
+        "upper_unbounded": true
+      }
+    }
+  },
+  "invariants": {
+    "Accessor_kinds_valid": "accessor_kinds.for_all (k | terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_accessor_kind, k.defining_code))",
+    "Withheld_valid": "withheld.for_all (w | terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_log_withheld, w.defining_code))"
+  }
+}
+--------

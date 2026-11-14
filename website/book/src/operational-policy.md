@@ -259,7 +259,7 @@ in the element's `name`:
 | `admit_guests` | A `DV_BOOLEAN`: whether a guest is admitted too |
 | `sensitivity_clearance` | A `DV_CODED_TEXT` of the jurisdiction's sensitivity terminology: a sensitivity the capability clears |
 | `permitted_purpose` | A `DV_CODED_TEXT` of the jurisdiction's purpose-of-use terminology: a purpose the capability lets its holder declare |
-| `member_of` | On a `PARTY_RELATIONSHIP`: the source, a professional's `PERSON`, is a member of the target, a care-team `GROUP` |
+| `member_of` | On a `PARTY_RELATIONSHIP`: the source, a professional's `PERSON`, is a member of the target, a care-team `GROUP`; or the source, a provider `ORGANISATION`, is a member of the target `GROUP` |
 | `under_care_of` | On a `PARTY_RELATIONSHIP`: the source, a patient's `PERSON`, is under the care of the target, a team `GROUP` or an organisational unit |
 
 The terms of a federation agreement are named by codes of the same
@@ -334,6 +334,7 @@ group is FerroEHR's own design.
 | `access permitted purpose` | `permitted_purpose` | The `name` of a credentials element whose value is a purpose-of-use code |
 | `care relationship` | `member_of`, `under_care_of` | The `name` of a `PARTY_RELATIONSHIP` |
 | `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-purpose-not-permitted`, `refused-consent-required` | The access record of a refusal |
+| `access log withheld` | `accessor_party`, `accessor_provider`, `accessor_roles`, `accessor_groups` | `ACCESS_LOG_RESTRICTION.withheld`: the accessor members the access log's subject view withholds under EHDS Art. 9(3) |
 
 Two grants of the operation table belong to access control:
 `write_care_relationship` and `write_access_policy`.
@@ -1592,10 +1593,22 @@ the upper bound of `time_validity`, and the relationship stays, so the
 evaluator can apply a grace period after it. A care relationship of a party
 other than a `PERSON`, one whose target is no party of this store, and a
 `PARTY_RELATIONSHIP` committed on its own carrying either code are refused
-`422`. The default definitions ship
+`422`, apart from the group memberships below. The default definitions ship
 `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.0` and
 `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1.0.0` as examples
 ([Default demographic definitions](installation/default-demographic-definitions.md)).
+
+**Group memberships of a provider.** A `PARTY_RELATIONSHIP` in an
+`ORGANISATION`'s `relationships` carrying `member_of` makes that provider a
+member of the `GROUP` its `target` names, such as the providers of a
+regional health network, for as long as its `time_validity` holds. A system
+client acting for the `ORGANISATION` then acts for the `GROUP` too, so a
+consent permit naming the regional `GROUP`, such as one copied from the
+region's IHE BPPC opt-in policy, admits it. FerroEHR resolves one level: a
+`GROUP` that is itself a member of another `GROUP` adds nothing. An
+`ORGANISATION` carrying `under_care_of` is refused `422`. The same
+`write_care_relationship` rule guards a change of an `ORGANISATION`'s
+memberships.
 
 **Who writes them.** The care delivery environment does, as openEHR's
 security overview asks: "the evaluation of a role category such as 'care
@@ -1613,9 +1626,9 @@ changed, and each replica reads only the facts of the parties stamped since
 its copy, in one indexed read.
 
 No openEHR specification gives a capability or a relationship an access
-meaning: reading them as clearances, purposes and care relationships, the
-`write_care_relationship` rule, and holding them in memory are FerroEHR's
-own design.
+meaning: reading them as clearances, purposes, care relationships and group
+memberships, the `write_care_relationship` rule, and holding them in memory
+are FerroEHR's own design.
 
 ## Representatives in the patient portal
 
@@ -1852,11 +1865,13 @@ The controller's access policy states what holds for every EHR this FerroEHR
 keeps: which kinds of data carry which sensitivity (`classifications`),
 whether a professional's clinical access needs a care relationship
 (`care_relationship_required`, with a `relationship_grace`) and a declared
-purpose (`purpose_required`), and the `catalogue` of named directives a
-patient can accept by reference, such as an IHE BPPC policy. It is an
-`ACCESS_POLICY` of FerroEHR's draft access control package, written against
-the default archetype `openEHR-EHR-ACCESS_POLICY.controller.v1`, which every
-boot stores, or against one of your own. Break-glass and the default floor
+purpose (`purpose_required`), the `catalogue` of named directives a
+patient can accept by reference, such as an IHE BPPC policy, and the
+`log_restrictions` of the access log's subject view your Member State's law
+lays down under EHDS Art. 9(3) ([Audit](audit.md#restricting-the-subject-view-ehds-art-93)).
+It is an `ACCESS_POLICY` of FerroEHR's draft access control package, written
+against the default archetype `openEHR-EHR-ACCESS_POLICY.controller.v1`,
+which every boot stores, or against one of your own. Break-glass and the default floor
 stay in `ferroehr.toml`; the policy can only tighten them. Until you write
 one, nothing is tightened.
 

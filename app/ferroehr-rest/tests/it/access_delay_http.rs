@@ -216,7 +216,7 @@ async fn recorded(pool: &PgPool, resource: &str) -> Option<String> {
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
         let row: Option<(Option<String>,)> = sqlx::query_as(
-            "SELECT principal FROM audit.audit_event WHERE resource_id = $1 \
+            "SELECT principal FROM audit.access_trail WHERE resource_id = $1 \
              ORDER BY chain_seq DESC LIMIT 1",
         )
         .bind(resource)

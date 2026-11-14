@@ -75,8 +75,9 @@ fn composition_read() -> AuditEvent {
 
 #[test]
 fn a_granted_read_names_the_version_the_party_and_the_request() {
-    let entry =
-        linked(entry_of(&composition_read(), "cdr.example.org", retention()).expect("an entry"));
+    let entry = linked(
+        entry_of(&composition_read(), None, "cdr.example.org", retention()).expect("an entry"),
+    );
     assert_eq!(entry.action.value, "read");
     assert_eq!(entry.outcome.result.value, "granted");
     assert_eq!(entry.outcome.delivered, Some(1));
@@ -124,7 +125,7 @@ fn a_refusal_with_no_operation_record_is_an_entry_without_an_ehr() {
         "a refusal an operation record covers"
     );
     event.entry = EntryScope::Refusal;
-    let entry = linked(entry_of(&event, "cdr.example.org", retention()).expect("an entry"));
+    let entry = linked(entry_of(&event, None, "cdr.example.org", retention()).expect("an entry"));
     assert_eq!(entry.outcome.result.value, "refused");
     assert_eq!(entry.outcome.delivered, None);
     assert!(entry.ehr_id.is_none());
@@ -136,7 +137,7 @@ fn a_refused_read_is_refused_and_delivers_nothing() {
     let mut event = composition_read();
     event.outcome = EventOutcome::MinorFailure;
     event.decision = AccessDecision::Refused;
-    let entry = linked(entry_of(&event, "cdr.example.org", retention()).expect("an entry"));
+    let entry = linked(entry_of(&event, None, "cdr.example.org", retention()).expect("an entry"));
     assert_eq!(entry.outcome.result.value, "refused");
     assert_eq!(entry.outcome.delivered, None);
     assert!(!entry.items.as_deref().expect("an item")[0].was_delivered);
@@ -146,7 +147,7 @@ fn a_refused_read_is_refused_and_delivers_nothing() {
 fn a_failed_access_is_failed() {
     let mut event = composition_read();
     event.outcome = EventOutcome::SeriousFailure;
-    let entry = linked(entry_of(&event, "cdr.example.org", retention()).expect("an entry"));
+    let entry = linked(entry_of(&event, None, "cdr.example.org", retention()).expect("an entry"));
     assert_eq!(entry.outcome.result.value, "failed");
 }
 
@@ -163,7 +164,7 @@ fn a_query_is_named_by_its_digest_and_never_quoted() {
     event.object_id = Some(EHR.to_owned());
     event.result_count = Some(3);
     event.query = Some(QueryNaming::of("AQL", text, None));
-    let entry = linked(entry_of(&event, "cdr.example.org", retention()).expect("an entry"));
+    let entry = linked(entry_of(&event, None, "cdr.example.org", retention()).expect("an entry"));
     assert_eq!(entry.action.value, "query", "an EHR a query served");
     let query = entry.query.as_ref().expect("the query");
     assert_eq!(query.language.as_deref(), Some("AQL"));
@@ -197,7 +198,7 @@ fn a_read_of_the_log_is_an_entry_naming_the_log_by_its_search() {
         "date=ge2026-01-01&patient=p1",
         None,
     ));
-    let entry = linked(entry_of(&event, "cdr.example.org", retention()).expect("an entry"));
+    let entry = linked(entry_of(&event, None, "cdr.example.org", retention()).expect("an entry"));
     assert_eq!(entry.action.value, "read");
     assert_eq!(
         entry.operation.as_ref().map(|op| op.value.as_str()),
@@ -216,14 +217,14 @@ fn an_access_outside_the_ehr_writes_no_entry() {
         ObjectClass::Demographic,
         EventOutcome::Success,
     );
-    assert!(entry_of(&event, "cdr.example.org", retention()).is_none());
+    assert!(entry_of(&event, None, "cdr.example.org", retention()).is_none());
 }
 
 #[test]
 fn an_unparsable_ehr_segment_names_no_ehr() {
     let mut event = composition_read();
     event.ehr_id = Some("not an id".to_owned());
-    let entry = linked(entry_of(&event, "cdr.example.org", retention()).expect("an entry"));
+    let entry = linked(entry_of(&event, None, "cdr.example.org", retention()).expect("an entry"));
     assert!(entry.ehr_id.is_none());
     assert!(entry.items.is_none(), "an item needs its EHR");
 }
@@ -233,7 +234,7 @@ fn the_decision_grounds_slot_is_carried_into_the_authorisations() {
     let mut event = composition_read();
     event.permit = Some("hdab-nl/2026/0042".to_owned());
     event.emergency_access = true;
-    let entry = linked(entry_of(&event, "cdr.example.org", retention()).expect("an entry"));
+    let entry = linked(entry_of(&event, None, "cdr.example.org", retention()).expect("an entry"));
     let kinds: Vec<&str> = entry
         .authorisations
         .as_deref()

@@ -23,7 +23,7 @@ include::partial$draft_notice.adoc[]
 |admits reads and writes of the settings by xref:decision_procedure.adoc#_reading_and_writing_the_settings[Reading and Writing the Settings].
 
 |AC-5 Controller policy
-|stores `ACCESS_POLICY` as a versioned object and applies its classifications, care relationship, purpose and catalogue.
+|stores `ACCESS_POLICY` as a versioned object and applies its classifications, care relationship, purpose and catalogue, and the restrictions of the access log's subject view.
 
 |AC-6 Exchange
 |exports and imports the `EHR_ACCESS` versions in an EHR Extract.

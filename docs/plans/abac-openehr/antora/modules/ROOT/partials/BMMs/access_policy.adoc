@@ -2,7 +2,7 @@
 --------
 {
   "name": "ACCESS_POLICY",
-  "documentation": "The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps. It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, and lists the named directives a subject can accept by reference. Kept in its own versioned container, outside any EHR and outside the demographic service.",
+  "documentation": "The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps. It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, lists the named directives a subject can accept by reference, and states what the subject's view of the access log withholds. Kept in its own versioned container, outside any EHR and outside the demographic service.",
   "ancestors": [
     "LOCATABLE"
   ],
@@ -60,6 +60,19 @@
         "upper_unbounded": true
       }
     },
+    "log_restrictions": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "log_restrictions",
+      "documentation": "The restrictions a Member State law lays on the subject's view of the access log under EHDS Article 9(3). Each names the kinds of accessor and the attributes of the accessor the subject view withholds; the full entry is unchanged.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_LOG_RESTRICTION"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
     "details": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "details",
@@ -72,7 +85,8 @@
     "Grace_valid": "relationship_grace /= Void implies relationship_grace.magnitude >= 0",
     "Catalogue_identified": "catalogue /= Void implies catalogue.for_all (d | d.identifiers /= Void)",
     "Classifications_valid": "classifications /= Void implies not classifications.is_empty",
-    "Catalogue_valid": "catalogue /= Void implies not catalogue.is_empty"
+    "Catalogue_valid": "catalogue /= Void implies not catalogue.is_empty",
+    "Log_restrictions_valid": "log_restrictions /= Void implies not log_restrictions.is_empty"
   }
 }
 --------

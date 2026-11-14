@@ -11,5 +11,6 @@ pub mod access_data_scope;
 pub mod access_directive;
 pub mod access_directive_settings;
 pub mod access_label;
+pub mod access_log_restriction;
 pub mod access_policy;
 pub mod versioned_access_policy;

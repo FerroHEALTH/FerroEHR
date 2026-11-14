@@ -142,7 +142,7 @@ fn every_identifier_comes_from_the_closed_set() {
     seen.dedup();
 
     let mut expected: Vec<&str> = RECORD_COLUMNS.to_vec();
-    expected.extend(["audit", "audit_event"]);
+    expected.extend(["audit", "audit_record"]);
     expected.sort_unstable();
     expected.dedup();
     assert_eq!(

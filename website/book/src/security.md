@@ -413,7 +413,8 @@ refuses decides, and a deny overrides a permit:
   verified caller of a `federation` issuer.
 - **When a directive applies.** Every attribute an `applies_to` entry sets
   must hold for the caller: the party (its own `PERSON` or `AGENT`, a care
-  team it is a member of, or the provider its client acts for), a role it
+  team it is a member of, the provider its client acts for, or a `GROUP`
+  that provider is a member of), a role it
   holds, the `care` relationship (a live care relationship), the
   `representative` and `proxy` relationships, or its caller kind. Its
   `operations` (`read`, `write`, `export`, `query`), `purposes` and

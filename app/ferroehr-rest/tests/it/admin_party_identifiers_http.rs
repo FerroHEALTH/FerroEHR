@@ -204,7 +204,7 @@ async fn identifier_records(pool: &PgPool, principal: &str, want: usize) -> Vec<
     let deadline = Instant::now() + Duration::from_secs(60);
     loop {
         let rows: Vec<String> = sqlx::query_scalar(
-            "SELECT resource_id FROM audit.audit_event \
+            "SELECT resource_id FROM audit.access_trail \
              WHERE principal = $1 AND resource_id LIKE 'party:%#national-identifier%' \
              ORDER BY recorded_at",
         )

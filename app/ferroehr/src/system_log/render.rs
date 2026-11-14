@@ -223,20 +223,20 @@ pub(crate) fn render(
     stored: StoredRecord,
     policy: &CompiledPolicy,
 ) -> Result<serde_json::Value, AuditError> {
-    let (event, subject) = classified(stored, policy)?;
+    let (event, subject) = classified(stored, &policy.categories)?;
     crate::system_log::fhir::to_fhir(&event, &policy.context, subject.as_deref())
 }
 
-/// The event of `stored` with its classification computed again under
-/// `policy`, and the patient behind its EHR.
+/// The event of `stored` with its classification computed again through
+/// `categories`, and the patient behind its EHR.
 ///
 /// # Errors
-/// [`AuditError::Unreadable`] when the policy's map is not the one that
+/// [`AuditError::Unreadable`] when `categories` is not the map that
 /// classified the record.
 #[cfg(feature = "fhir")]
 pub(crate) fn classified(
     stored: StoredRecord,
-    policy: &CompiledPolicy,
+    categories: &Classifier,
 ) -> Result<(AuditEvent, Option<String>), AuditError> {
     let StoredRecord {
         chain_seq,
@@ -246,18 +246,14 @@ pub(crate) fn classified(
         map_digest,
     } = stored;
     if let Some(content) = content {
-        if map_digest != Some(policy.categories.digest()) {
+        if map_digest != Some(categories.digest()) {
             return Err(AuditError::Unreadable {
                 chain_seq,
                 reason: "its render policy holds a category map other than the one that \
                          classified it",
             });
         }
-        event.category = Some(
-            policy
-                .categories
-                .classify(&content.content, content.written),
-        );
+        event.category = Some(categories.classify(&content.content, content.written));
     }
     Ok((event, subject))
 }

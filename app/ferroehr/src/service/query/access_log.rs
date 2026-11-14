@@ -27,7 +27,9 @@ use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId
 use openehr_its::rest::stored_query::QualifiedQueryName;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
-use crate::access_log::view::{LOG_REFUSED, LogReader, LogStanding, view_of, withheld};
+use crate::access_log::view::{
+    LOG_REFUSED, LogReader, LogStanding, Restrictions, view_of, withheld,
+};
 use crate::aql::access_log::sql::{LogScope, statement};
 use crate::aql::access_log::{LogCell, LogPlan};
 use crate::aql::exec::{ColumnMeta, QueryResult};
@@ -87,8 +89,10 @@ impl FerroEhrService {
         } else {
             (limit, offset)
         };
+        let restrictions = Restrictions::of(self.access_policy().in_force().policy.as_deref());
         let scope = LogScope {
             reader,
+            restrictions: &restrictions,
             ehrs: &ehrs,
             limit: window.0,
             offset: window.1,
@@ -116,7 +120,7 @@ impl FerroEhrService {
         }
         let rows: Vec<Vec<Value>> = entries
             .iter()
-            .map(|record| row(plan, record, reader))
+            .map(|record| row(plan, record, reader, &restrictions))
             .collect::<Result<Vec<_>, _>>()
             .map_err(|error| {
                 Failure::analysis(ServiceError::internal("render the access-log entry", error))
@@ -175,13 +179,14 @@ fn result(plan: &LogPlan, rows: Vec<Vec<Value>>) -> QueryResult {
 }
 
 /// The row `plan` selects of `record`, read out of the view `reader` is
-/// served.
+/// served under `restrictions`.
 fn row(
     plan: &LogPlan,
     record: &AccessLogRecord,
     reader: LogReader,
+    restrictions: &Restrictions,
 ) -> Result<Vec<Value>, serde_json::Error> {
-    let view = view_of(record, reader)?.unwrap_or(Value::Null);
+    let view = view_of(record, reader, restrictions)?.unwrap_or(Value::Null);
     Ok(plan
         .columns
         .iter()

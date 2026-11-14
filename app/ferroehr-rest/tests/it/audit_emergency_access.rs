@@ -175,7 +175,7 @@ async fn composition_reads(pool: &PgPool, expected: usize) -> Vec<(Option<String
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
     loop {
         let rows: Vec<(Option<String>, i16, bool)> = sqlx::query_as(
-            "SELECT purpose, outcome, emergency_access FROM audit.audit_event \
+            "SELECT purpose, outcome, emergency_access FROM audit.access_trail \
              WHERE operation = 'composition_get' ORDER BY chain_seq",
         )
         .fetch_all(pool)

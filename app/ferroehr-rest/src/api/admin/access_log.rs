@@ -37,7 +37,7 @@ use openehr_its::rest::runtime::ApiError;
 use ferroehr::access_log::checkpoint::{Checkpoints, Verification};
 use ferroehr::access_log::store::AccessLogError;
 use ferroehr::access_log::transfer::TransferError;
-use ferroehr::access_log::view::LogReader;
+use ferroehr::access_log::view::{LogReader, Restrictions};
 use ferroehr::versioning::signature::signer::AttestError;
 
 use super::body::{AdminRefusal, required_query};
@@ -256,7 +256,12 @@ async fn review(state: AppState, parts: RequestParts) -> Result<Response, RestEr
         let filter = log_query(parts.query.as_deref(), REVIEW_PARAMETERS)?;
         let records = state.backend().access_log_search(&filter).await?;
         Ok((
-            page(&records, &filter, LogReader::Reviewer)?,
+            page(
+                &records,
+                &filter,
+                LogReader::Reviewer,
+                &Restrictions::default(),
+            )?,
             Some(records.len()),
         ))
     }

@@ -13,7 +13,7 @@ use serde_json::{Value, json};
 use sqlx::{Connection, Executor as _};
 
 use ferroehr::access_log::store::AccessLogStore;
-use ferroehr::access_log::view::{LogReader, LogStanding};
+use ferroehr::access_log::view::{LogReader, LogStanding, Restrictions};
 use ferroehr::aql::access_log::sql::{LogScope, statement};
 use ferroehr::aql::ir::{ParamValue, Params};
 use ferroehr::error::ServiceError;
@@ -269,8 +269,10 @@ async fn the_persons_lookup_by_time_reads_the_ehr_index() {
         .expect("a log query");
     let params = Params::default().with("from", ParamValue::Str("2026-11-07T00:00:00Z".to_owned()));
     let ehrs = [fx.first];
+    let restrictions = Restrictions::default();
     let scope = LogScope {
         reader: LogReader::Person,
+        restrictions: &restrictions,
         ehrs: &ehrs,
         limit: Some(100),
         offset: None,

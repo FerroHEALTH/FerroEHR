@@ -25,7 +25,7 @@ use openehr_its::rest::runtime::ApiError;
 use serde_json::{Value, json};
 
 use ferroehr::access_log::search::{LOG_QUERY, LogQuery};
-use ferroehr::access_log::view::{LogReader, LogStanding, view_of};
+use ferroehr::access_log::view::{LogReader, LogStanding, Restrictions, view_of};
 use ferroehr::ids::EhrId;
 use ferroehr::system_log::event::{EntryScope, QueryNaming};
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
@@ -202,7 +202,8 @@ fn malformed(message: String) -> RestError {
     RestError::from(ApiError::BadRequest(message))
 }
 
-/// The page of `records` for `reader`, answered under `filter`'s paging.
+/// The page of `records` for `reader`, answered under `filter`'s paging,
+/// with `restrictions` applied to the subject view.
 ///
 /// # Errors
 /// A `500` when a record has no JSON form.
@@ -210,23 +211,26 @@ pub(crate) fn page(
     records: &[AccessLogRecord],
     filter: &LogQuery,
     reader: LogReader,
+    restrictions: &Restrictions,
 ) -> Result<Value, RestError> {
     let entries = records
         .iter()
-        .filter_map(|record| record_view(record, reader).transpose())
+        .filter_map(|record| record_view(record, reader, restrictions).transpose())
         .collect::<Result<Vec<_>, _>>()?;
     Ok(json!({ "offset": filter.offset, "fetch": filter.fetch, "entries": entries }))
 }
 
-/// `record` as `reader` reads it ([`view_of`]), its rendering failure a `500`.
+/// `record` as `reader` reads it ([`view_of`]) under `restrictions`, its
+/// rendering failure a `500`.
 ///
 /// # Errors
 /// A `500` when the record has no JSON form.
 pub(crate) fn record_view(
     record: &AccessLogRecord,
     reader: LogReader,
+    restrictions: &Restrictions,
 ) -> Result<Option<Value>, RestError> {
-    view_of(record, reader).map_err(|error| {
+    view_of(record, reader, restrictions).map_err(|error| {
         RestError::from(crate::overview::error::internal_fault_caused(
             "render the access-log record",
             &error,

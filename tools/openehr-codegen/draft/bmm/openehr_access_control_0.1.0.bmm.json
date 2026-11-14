@@ -23,6 +23,7 @@
         "ACCESS_LABEL",
         "ACCESS_POLICY",
         "ACCESS_CLASSIFICATION",
+        "ACCESS_LOG_RESTRICTION",
         "VERSIONED_ACCESS_POLICY"
       ]
     }
@@ -478,7 +479,7 @@
     },
     "ACCESS_POLICY": {
       "name": "ACCESS_POLICY",
-      "documentation": "The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps. It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, and lists the named directives a subject can accept by reference. Kept in its own versioned container, outside any EHR and outside the demographic service.",
+      "documentation": "The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps. It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, lists the named directives a subject can accept by reference, and states what the subject's view of the access log withholds. Kept in its own versioned container, outside any EHR and outside the demographic service.",
       "ancestors": [
         "LOCATABLE"
       ],
@@ -536,6 +537,19 @@
             "upper_unbounded": true
           }
         },
+        "log_restrictions": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "log_restrictions",
+          "documentation": "The restrictions a Member State law lays on the subject's view of the access log under EHDS Article 9(3). Each names the kinds of accessor and the attributes of the accessor the subject view withholds; the full entry is unchanged.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_LOG_RESTRICTION"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
         "details": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "details",
@@ -548,7 +562,8 @@
         "Grace_valid": "relationship_grace /= Void implies relationship_grace.magnitude >= 0",
         "Catalogue_identified": "catalogue /= Void implies catalogue.for_all (d | d.identifiers /= Void)",
         "Classifications_valid": "classifications /= Void implies not classifications.is_empty",
-        "Catalogue_valid": "catalogue /= Void implies not catalogue.is_empty"
+        "Catalogue_valid": "catalogue /= Void implies not catalogue.is_empty",
+        "Log_restrictions_valid": "log_restrictions /= Void implies not log_restrictions.is_empty"
       }
     },
     "ACCESS_CLASSIFICATION": {
@@ -582,6 +597,61 @@
       },
       "invariants": {
         "No_objects": "data.objects = Void"
+      }
+    },
+    "ACCESS_LOG_RESTRICTION": {
+      "name": "ACCESS_LOG_RESTRICTION",
+      "documentation": "One restriction of the subject's view of the access log under EHDS Article 9(3). The entries whose accessor is of one of the given kinds are shown to the subject and their representative without the given attributes of the accessor; a reviewer reads the full entry.",
+      "ancestors": [
+        "LOCATABLE"
+      ],
+      "properties": {
+        "accessor_kinds": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "accessor_kinds",
+          "documentation": "The kinds of accessor the restriction applies to, coded in the openEHR Terminology `accessor kind` group of the access log, which `ACCESSOR._kind_` is coded in.",
+          "is_mandatory": true,
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 1,
+            "upper_unbounded": true
+          }
+        },
+        "withheld": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "withheld",
+          "documentation": "The attributes of `ACCESSOR` the subject view withholds, coded in the `access log withheld` group: `accessor_party`, `accessor_provider`, `accessor_roles` or `accessor_groups`.",
+          "is_mandatory": true,
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 1,
+            "upper_unbounded": true
+          }
+        },
+        "legal_grounds": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "legal_grounds",
+          "documentation": "The provisions of the Member State law that lay the restriction down under EHDS Article 9(3), coded in a terminology the jurisdiction names.",
+          "is_mandatory": true,
+          "type_def": {
+            "container_type": "List",
+            "type": "DV_CODED_TEXT"
+          },
+          "cardinality": {
+            "lower": 1,
+            "upper_unbounded": true
+          }
+        }
+      },
+      "invariants": {
+        "Accessor_kinds_valid": "accessor_kinds.for_all (k | terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_accessor_kind, k.defining_code))",
+        "Withheld_valid": "withheld.for_all (w | terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_log_withheld, w.defining_code))"
       }
     },
     "VERSIONED_ACCESS_POLICY": {

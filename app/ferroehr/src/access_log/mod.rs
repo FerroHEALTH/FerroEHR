@@ -15,8 +15,14 @@
 pub mod chain;
 pub mod checkpoint;
 pub mod config;
+#[cfg(feature = "fhir")]
+pub mod details;
 pub mod entry;
 pub mod expiry;
+#[cfg(feature = "fhir")]
+pub mod projection;
+#[cfg(feature = "fhir")]
+pub mod recorded;
 pub mod retention;
 pub mod schedule;
 pub mod search;

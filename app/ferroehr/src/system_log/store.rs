@@ -38,6 +38,8 @@ use uuid::Uuid;
 
 mod access_log;
 mod batch;
+#[cfg(feature = "fhir")]
+mod entries;
 pub(crate) mod lax;
 mod writers;
 
@@ -107,7 +109,7 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, 
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
 #[cfg(feature = "fhir")]
-const RECORD_COLUMNS: [&str; 36] = [
+const RECORD_COLUMNS: [&str; 42] = [
     "chain_seq",
     "recorded_at",
     "stored_at",
@@ -144,6 +146,12 @@ const RECORD_COLUMNS: [&str; 36] = [
     "category_content",
     "render_policy",
     "token_attributes",
+    "content",
+    "algorithm",
+    "previous_digest",
+    "content_digest",
+    "digest",
+    "signature",
 ];
 
 /// The oldest record the FHIR Feed owes past the chain positions in `$1`,
@@ -157,9 +165,10 @@ const OLDEST_OWED: &str = "SELECT \
      e.acting_mode, e.assurance_level, e.assurance_value, e.professional_id, \
      e.emergency_access, e.permit, e.issuer, e.client_id, e.ehr_id, \
      e.subject_namespace, e.subject_lookup_failed, e.category_content, e.render_policy, \
-     e.token_attributes \
+     e.token_attributes, e.content, e.algorithm, e.previous_digest, e.content_digest, \
+     e.digest, e.signature \
      FROM audit.fhir_feed_outbox o \
-     JOIN audit.audit_event e ON e.chain_seq = o.chain_seq \
+     JOIN audit.audit_record e ON e.chain_seq = o.chain_seq \
      WHERE NOT (o.chain_seq = ANY($1)) \
      ORDER BY o.chain_seq ASC LIMIT 1";
 
@@ -324,22 +333,11 @@ impl AuditStore {
         conn: &mut PgConnection,
         records: impl Iterator<Item = (&'a AuditEvent, Option<&'a str>)>,
     ) -> Result<(Vec<Vec<i32>>, LearnedSets), AuditError> {
-        let compiled = writing
-            .compiled
-            .get_or_try_init(|| async { writing.policy.compile().map(Arc::new) })
-            .await?;
+        let compiled = writing.compiled().await?;
         let tokens: Vec<_> = records
             .map(|(event, subject)| {
-                match crate::system_log::fhir::to_fhir(event, &compiled.context, subject) {
-                    Ok(document) => crate::system_log::search::document_tokens(&document, event),
-                    Err(e) => {
-                        crate::telemetry::metrics::metrics()
-                            .atna_audit_serialize_failed
-                            .add(1, &[]);
-                        tracing::warn!("ATNA audit record stored without search tokens: {e}");
-                        std::collections::BTreeSet::new()
-                    }
-                }
+                let document = crate::system_log::fhir::to_fhir(event, &compiled.context, subject);
+                entries::tokens_of(document, event)
             })
             .collect();
         self.tokens.record_tokens(conn, &tokens).await
@@ -375,14 +373,7 @@ impl AuditStore {
                     .map(|record| (&record.event, record.subject.as_deref())),
             )
             .await?;
-        let texts = ids
-            .iter()
-            .map(|ids| {
-                let ids: Vec<String> = ids.iter().map(ToString::to_string).collect();
-                format!("{{{}}}", ids.join(","))
-            })
-            .collect();
-        Ok((texts, learned))
+        Ok((entries::token_texts(&ids), learned))
     }
 
     /// A slim build refuses the store at start
@@ -409,6 +400,10 @@ impl AuditStore {
         event: &AuditEvent,
         subject: Option<&str>,
     ) -> Result<Uuid, AuditError> {
+        #[cfg(feature = "fhir")]
+        if crate::access_log::entry::writes_entry(event) {
+            return self.insert_entry(event, subject).await;
+        }
         let writing = self.writing.of(event);
         let policy = self.writing_digest(&writing).await?;
         let mut conn = acquire(&self.pool).await?;
@@ -489,9 +484,9 @@ impl AuditStore {
     /// per record), which the reaper honours ([`Self::reap_due`]). With `ends`
     /// empty no record states an end, and each keeps the store horizon.
     ///
-    /// The access-log entries the records carry are appended in the same
-    /// transaction, after the records, so a batch of accesses costs one commit
-    /// whatever it writes and no access is stored without its entry.
+    /// A record that carries its access-log entry is stored as the entry with
+    /// its search index row, every other one by its columns, in one
+    /// transaction, so a batch costs one commit whatever it writes.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the INSERT fails (the whole batch fails
@@ -512,6 +507,12 @@ impl AuditStore {
         if records.is_empty() {
             return Ok(());
         }
+        #[cfg(feature = "fhir")]
+        let entered = self.with_entries(records).await?;
+        #[cfg(feature = "fhir")]
+        let (rows, row_ends, entries) = entries::split(&entered, ends);
+        #[cfg(feature = "fhir")]
+        let (records, ends) = (rows.as_slice(), row_ends.as_slice());
         let runs = self.writing.runs(records);
         let mut digests = Vec::with_capacity(runs.len());
         for (writing, _, _) in &runs {
@@ -529,16 +530,8 @@ impl AuditStore {
                 .await?;
             learned_all.push(learned);
         }
-        let entries: Vec<_> = records
-            .iter()
-            .filter_map(|record| record.entry.as_deref().cloned())
-            .collect();
-        if !entries.is_empty() {
-            let access_log = self
-                .access_log()
-                .unwrap_or_else(|| AccessLogStore::new(self.pool.clone()));
-            access_log.append_in(&mut tx, entries).await?;
-        }
+        #[cfg(feature = "fhir")]
+        learned_all.push(self.append_entries(&mut tx, &entries).await?);
         tx.commit().await?;
         for learned in learned_all {
             self.remember(learned);
@@ -677,8 +670,7 @@ impl AuditStore {
     /// document cannot be written.
     #[cfg(feature = "fhir")]
     async fn render(&self, row: &PgRow) -> Result<serde_json::Value, AuditError> {
-        let (digest, stored) = stored_record(row)?;
-        let policy = self.policy(stored.chain_seq, &digest).await?;
+        let (policy, stored) = self.record_of(row).await?;
         crate::system_log::render::render(stored, &policy)
     }
 
@@ -691,17 +683,7 @@ impl AuditStore {
     /// a record that cannot be read back.
     #[cfg(feature = "fhir")]
     pub async fn rendered(&self, chain_seq: i64) -> Result<Option<serde_json::Value>, AuditError> {
-        use sea_query::{Alias, Expr, ExprTrait, PostgresQueryBuilder};
-        use sea_query_sqlx::SqlxBinder as _;
-
-        let (sql, values) = newest_first(
-            sea_query::Cond::all().add(Expr::col(Alias::new("chain_seq")).eq(chain_seq)),
-        )
-        .build_sqlx(PostgresQueryBuilder);
-        let row = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
-            .fetch_optional(&mut *acquire(&self.pool).await?)
-            .await?;
-        match row {
+        match self.row_at(chain_seq).await? {
             Some(row) => self.render(&row).await.map(Some),
             None => Ok(None),
         }
@@ -908,7 +890,7 @@ fn build_search_statements(
     use sea_query::{Alias, Expr, ExprTrait, PostgresQueryBuilder, Query};
     use sea_query_sqlx::SqlxBinder as _;
 
-    let table = (Alias::new("audit"), Alias::new("audit_event"));
+    let table = (Alias::new("audit"), Alias::new("audit_record"));
     let condition = crate::system_log::search::condition::search_condition(filter, resolved);
 
     let (count_sql, count_values) = Query::select()
@@ -932,7 +914,7 @@ pub(super) fn newest_first(condition: sea_query::Cond) -> sea_query::SelectState
 
     Query::select()
         .columns(RECORD_COLUMNS.map(Alias::new))
-        .from((Alias::new("audit"), Alias::new("audit_event")))
+        .from((Alias::new("audit"), Alias::new("audit_record")))
         .cond_where(condition)
         .order_by(Alias::new("recorded_at"), Order::Desc)
         .order_by(Alias::new("stored_at"), Order::Desc)
@@ -1201,7 +1183,7 @@ const LOGIN_OPERATION: &str = "110122";
 /// The `operation` of a session end: DCM 110123 "Logout".
 const LOGOUT_OPERATION: &str = "110123";
 
-const fn resource_class(object: ObjectClass) -> &'static str {
+pub(crate) const fn resource_class(object: ObjectClass) -> &'static str {
     match object {
         ObjectClass::Ehr => "ehr",
         ObjectClass::Composition => "composition",
@@ -1460,7 +1442,7 @@ pub(super) fn stored_record(row: &PgRow) -> Result<(Vec<u8>, StoredRecord), Audi
 
 /// The resource class `stored` names, the inverse of [`resource_class`].
 #[cfg(feature = "fhir")]
-fn object_class(stored: &str) -> Option<ObjectClass> {
+pub(crate) fn object_class(stored: &str) -> Option<ObjectClass> {
     [
         ObjectClass::Ehr,
         ObjectClass::Composition,
@@ -1479,7 +1461,7 @@ fn object_class(stored: &str) -> Option<ObjectClass> {
 
 /// The domain `stored` names, the inverse of [`AccessDomain::as_str`].
 #[cfg(feature = "fhir")]
-fn access_domain(stored: Option<&str>) -> Option<AccessDomain> {
+pub(crate) fn access_domain(stored: Option<&str>) -> Option<AccessDomain> {
     let stored = stored?;
     [
         AccessDomain::Ehr,

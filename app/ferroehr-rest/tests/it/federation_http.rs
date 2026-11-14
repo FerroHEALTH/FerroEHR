@@ -410,7 +410,7 @@ async fn a_consent_conditioned_read_without_a_decision_reference_is_recorded() {
     let pool = db.pool();
     for _ in 0..50 {
         let recorded: Option<(String, String)> = sqlx::query_as(
-            "SELECT event_code, issuer FROM audit.audit_event \
+            "SELECT event_code, issuer FROM audit.access_trail \
              WHERE principal = 'hp-remote-1' AND summary IS NULL",
         )
         .fetch_optional(&pool)
@@ -450,7 +450,7 @@ async fn a_consent_conditioned_read_carrying_its_decision_reference_is_served_an
     let pool = db.pool();
     for _ in 0..50 {
         let recorded: Option<String> = sqlx::query_scalar(
-            "SELECT external_fields -> 'consent.reference' ->> 0 FROM audit.audit_event \
+            "SELECT external_fields -> 'consent.reference' ->> 0 FROM audit.access_trail \
              WHERE operation = 'ehr_get_by_id' AND binding = 'external'",
         )
         .fetch_optional(&pool)
@@ -519,7 +519,7 @@ async fn stored(pool: &sqlx::PgPool, binding: &str) -> (String, String, String, 
     for _ in 0..50 {
         let row: Option<(String, String, String, Option<String>)> = sqlx::query_as(
             "SELECT binding, acting_mode, agreement ->> 'name', provider ->> 'id' \
-             FROM audit.audit_event WHERE operation = 'ehr_get_by_id' AND binding = $1",
+             FROM audit.access_trail WHERE operation = 'ehr_get_by_id' AND binding = $1",
         )
         .bind(binding)
         .fetch_optional(pool)
@@ -626,7 +626,7 @@ async fn a_chained_organisation_request_is_served_only_with_an_attested_correlat
     let pool = db.pool();
     stored(&pool, "organisation").await;
     let recorded: String = sqlx::query_scalar(
-        "SELECT agreement::text FROM audit.audit_event \
+        "SELECT agreement::text FROM audit.access_trail \
          WHERE operation = 'ehr_get_by_id' AND binding = 'organisation'",
     )
     .fetch_one(&pool)
@@ -703,7 +703,7 @@ async fn an_external_caller_above_its_caller_rate_is_refused_before_any_patient_
     let pool = db.pool();
     stored(&pool, "organisation").await;
     let own: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM audit.audit_event WHERE binding_detail -> 'refusal' IS NOT NULL",
+        "SELECT count(*) FROM audit.access_trail WHERE binding_detail -> 'refusal' IS NOT NULL",
     )
     .fetch_one(&pool)
     .await
@@ -1021,7 +1021,7 @@ async fn a_nuts_token_without_a_user_credential_is_an_external_organisation() {
         ("organisation", "external")
     );
     let party: Option<Value> = sqlx::query_scalar(
-        "SELECT party FROM audit.audit_event \
+        "SELECT party FROM audit.access_trail \
          WHERE operation = 'ehr_get_by_id' AND binding = 'organisation'",
     )
     .fetch_one(&db.pool())

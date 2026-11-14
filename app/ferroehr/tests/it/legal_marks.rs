@@ -769,7 +769,7 @@ async fn setting_and_lifting_a_mark_is_recorded_in_the_access_trail() {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
     loop {
         let recorded: Vec<String> = sqlx::query_scalar(
-            "SELECT resource_id FROM audit.audit_event \
+            "SELECT resource_id FROM audit.access_trail \
              WHERE resource_id IS NOT NULL ORDER BY recorded_at",
         )
         .fetch_all(&pool)

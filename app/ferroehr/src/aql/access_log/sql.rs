@@ -21,7 +21,7 @@ use sea_query_sqlx::{SqlxBinder as _, SqlxValues};
 
 use super::path::{Leaf, LogPath};
 use super::{LogCondition, LogPlan, LogQueryError, LogValue, feature};
-use crate::access_log::view::{LogReader, subject_withholds};
+use crate::access_log::view::{LogReader, Restrictions, subject_withholds};
 use crate::aql::error::AqlError;
 use crate::aql::ir::{ParamValue, Params};
 use crate::aql::sql::expr::aql_like_to_sql;
@@ -35,6 +35,8 @@ const RECORD: &str = "r";
 pub struct LogScope<'a> {
     /// The reader, whose view decides what a path reaches.
     pub reader: LogReader,
+    /// The access policy's restrictions of the subject view (EHDS Art. 9(3)).
+    pub restrictions: &'a Restrictions,
     /// The EHRs whose entries are read; empty reads every entry.
     pub ehrs: &'a [EhrId],
     /// The most entries answered.
@@ -104,6 +106,7 @@ pub fn statement(
 ) -> Result<(String, SqlxValues), AqlError> {
     let builder = Builder {
         reader: scope.reader,
+        restrictions: scope.restrictions,
         params,
     };
     let mut select = Query::select();
@@ -173,6 +176,8 @@ fn direction(descending: bool) -> Order {
 struct Builder<'a> {
     /// The reader.
     reader: LogReader,
+    /// The policy's restrictions of the subject view.
+    restrictions: &'a Restrictions,
     /// The bound parameters.
     params: &'a Params,
 }
@@ -181,7 +186,7 @@ impl Builder<'_> {
     /// Where `path` is read for this reader.
     fn reach(&self, path: &LogPath) -> Reach {
         let names = path.names();
-        if self.reader == LogReader::Person && subject_withholds(&names) {
+        if self.reader == LogReader::Person && subject_withholds(&names, self.restrictions) {
             return Reach::Withheld;
         }
         if let Some((_, name, typed)) = COLUMNS.iter().find(|(steps, ..)| *steps == names) {
@@ -414,6 +419,7 @@ mod tests {
             .expect("a log query");
         let scope = LogScope {
             reader,
+            restrictions: &Restrictions::default(),
             ehrs,
             limit: Some(10),
             offset: None,
@@ -472,6 +478,7 @@ mod tests {
         .expect("a log query");
         let scope = LogScope {
             reader: LogReader::Reviewer,
+            restrictions: &Restrictions::default(),
             ehrs: &[],
             limit: None,
             offset: None,

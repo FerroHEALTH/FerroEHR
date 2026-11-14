@@ -24,10 +24,12 @@ use crate::draft::access_control::access_control::access_classification::AccessC
 use crate::draft::access_control::access_control::access_data_scope::AccessDataScope;
 use crate::draft::access_control::access_control::access_directive::AccessDirective;
 use crate::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
+use crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
 use crate::draft::access_control::access_control::access_policy::AccessPolicy;
 use crate::draft::access_control::terminology::{
-    AccessDefault, CallerKind, DirectiveKind, Effect, Relationship, Term,
+    AccessDefault, CallerKind, DirectiveKind, Effect, Relationship, Term, Withheld,
 };
+use crate::draft::access_log::invariants::{ACCESSOR_KIND, in_group};
 use crate::draft::invariants::{Check, Violations};
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
@@ -109,7 +111,29 @@ pub fn check_policy(policy: &AccessPolicy) -> Result<(), Violations> {
     for directive in catalogue {
         directive_rules(&mut check, directive);
     }
+    for restriction in policy.log_restrictions.as_deref().unwrap_or_default() {
+        log_restriction_rules(&mut check, restriction);
+    }
     check.finish()
+}
+
+fn log_restriction_rules(check: &mut Check, restriction: &AccessLogRestriction) {
+    check.hold(
+        restriction
+            .accessor_kinds
+            .iter()
+            .all(|kind| in_group(kind, ACCESSOR_KIND)),
+        "ACCESS_LOG_RESTRICTION",
+        "Accessor_kinds_valid",
+    );
+    check.hold(
+        restriction
+            .withheld
+            .iter()
+            .all(|withheld| Withheld::read_coded(withheld).is_ok()),
+        "ACCESS_LOG_RESTRICTION",
+        "Withheld_valid",
+    );
 }
 
 fn directive_rules(check: &mut Check, directive: &AccessDirective) {

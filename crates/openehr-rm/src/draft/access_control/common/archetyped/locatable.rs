@@ -8,6 +8,7 @@
 
 use crate::draft::access_control::access_control::access_classification::AccessClassification;
 use crate::draft::access_control::access_control::access_directive::AccessDirective;
+use crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
 use crate::draft::access_control::access_control::access_policy::AccessPolicy;
 use crate::draft::access_control::ehr_extract::common::extract::Extract;
 use crate::draft::access_control::ehr_extract::common::extract_chapter::ExtractChapter;
@@ -61,6 +62,8 @@ pub enum Locatable {
     AccessClassification(AccessClassification),
     /// The `ACCESS_DIRECTIVE` subtype of `LOCATABLE`.
     AccessDirective(AccessDirective),
+    /// The `ACCESS_LOG_RESTRICTION` subtype of `LOCATABLE`.
+    AccessLogRestriction(AccessLogRestriction),
     /// The `ACCESS_POLICY` subtype of `LOCATABLE`.
     AccessPolicy(AccessPolicy),
     /// The `ACTION` subtype of `LOCATABLE`.

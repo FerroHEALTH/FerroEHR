@@ -650,7 +650,11 @@ In the subject view a path the view leaves out (the credential, the delegation,
 the binding, the channel, the query text and digest, the security labels,
 `other_details`, each origin's endpoint and the link) reads as absent: its
 column is `null` and a condition on it matches nothing, so it cannot be probed
-through `WHERE`. A person who scopes another EHR gets `404`. The SMART `aql-…`
+through `WHERE`. An accessor member the access policy's EHDS Art. 9(3)
+restrictions withhold is left out of the column for the accessor kinds they
+name, and reads as absent in a condition for every entry, since a condition
+cannot tell the kinds apart without reading the member. A person who scopes
+another EHR gets `404`. The SMART `aql-…`
 scopes that govern every query still apply.
 
 **Paths and conditions.** Paths name the entry's attributes as the draft model
