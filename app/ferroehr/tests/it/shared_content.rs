@@ -499,7 +499,7 @@ async fn resend_records(pool: &PgPool, expected: usize) -> Vec<(String, String)>
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
     loop {
         let rows: Vec<(String, String)> = sqlx::query_as(
-            "SELECT resource_id, resource_class FROM audit.audit_event \
+            "SELECT resource_id, resource_class FROM audit.access_trail \
              WHERE operation = $1 ORDER BY recorded_at",
         )
         .bind(RESEND_OPERATION)

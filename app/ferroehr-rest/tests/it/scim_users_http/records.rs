@@ -43,7 +43,7 @@ async fn records_of(pool: &sqlx::PgPool, person: &str, operations: &[&str]) -> V
     for _ in 0..100 {
         let rows: Vec<Stored> = sqlx::query_as(
             "SELECT operation, binding, party ->> 'id', party_groups::text, provider ->> 'id' \
-             FROM audit.audit_event WHERE party ->> 'id' = $1 ORDER BY recorded_at",
+             FROM audit.access_trail WHERE party ->> 'id' = $1 ORDER BY recorded_at",
         )
         .bind(person)
         .fetch_all(pool)
@@ -58,7 +58,7 @@ async fn records_of(pool: &sqlx::PgPool, person: &str, operations: &[&str]) -> V
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
     let all: Vec<(String, Option<String>, Option<String>)> =
-        sqlx::query_as("SELECT operation, binding, party::text FROM audit.audit_event")
+        sqlx::query_as("SELECT operation, binding, party::text FROM audit.access_trail")
             .fetch_all(pool)
             .await
             .expect("read the trail");
@@ -149,7 +149,7 @@ async fn a_bound_persons_read_query_and_write_record_its_party_groups_and_provid
 
     // The SCIM client's own requests are a system caller's records.
     let outcomes: Vec<Option<String>> =
-        sqlx::query_scalar("SELECT binding FROM audit.audit_event WHERE principal = $1")
+        sqlx::query_scalar("SELECT binding FROM audit.access_trail WHERE principal = $1")
             .bind(CLIENT)
             .fetch_all(&pool)
             .await

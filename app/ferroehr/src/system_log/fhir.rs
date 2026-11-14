@@ -563,7 +563,15 @@ pub(crate) fn render_audit_event(
     ctx: &AuditContext,
     subject: Option<&str>,
 ) -> Option<serde_json::Value> {
-    match to_fhir(event, ctx, subject) {
+    metered(to_fhir(event, ctx, subject))
+}
+
+/// The rendered document, or `None` when the rendering failed (metered and
+/// logged, never silent).
+pub(crate) fn metered(
+    rendered: Result<serde_json::Value, AuditError>,
+) -> Option<serde_json::Value> {
+    match rendered {
         Ok(document) => Some(document),
         Err(e) => {
             crate::telemetry::metrics::metrics()

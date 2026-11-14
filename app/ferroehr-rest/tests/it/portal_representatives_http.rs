@@ -504,7 +504,7 @@ async fn recorded(
         let rows: Vec<(Option<String>, Option<String>, Option<String>)> = sqlx::query_as(
             "SELECT party ->> 'id', representation ->> 'represented', \
                     representation ->> 'relationship' \
-             FROM audit.audit_event WHERE binding = 'bound' AND party ->> 'id' = $1 \
+             FROM audit.access_trail WHERE binding = 'bound' AND party ->> 'id' = $1 \
              ORDER BY recorded_at",
         )
         .bind(party)

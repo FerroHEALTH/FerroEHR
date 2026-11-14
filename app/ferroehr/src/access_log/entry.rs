@@ -98,11 +98,15 @@ pub fn writes_entry(event: &AuditEvent) -> bool {
 /// The access-log entry `event` writes, recorded by `system_id` and kept
 /// under `retention`; `None` when it writes none ([`writes_entry`]).
 ///
-/// The entry's link is a placeholder the store replaces, since the chain
-/// decides a record's position and digests.
+/// `subject` is the subject of care of the event's EHR, when the drain found
+/// one; the entry keeps it with the other facts its projections carry in
+/// `other_details` ([`crate::access_log::recorded::details`]). The entry's
+/// link is a placeholder the store replaces, since the chain decides a
+/// record's position and digests.
 #[must_use]
 pub fn entry_of(
     event: &AuditEvent,
+    subject: Option<&str>,
     system_id: &str,
     retention: AccessRetention,
 ) -> Option<AccessLogEntry> {
@@ -149,11 +153,12 @@ pub fn entry_of(
         channel: channel(event),
         security_labels: None,
         retention,
-        other_details: None,
+        other_details: details(event, subject),
     })
 }
 
-/// The access-log entry `event` writes beside its record in the store.
+/// The access-log entry `event` writes as its record, its EHR belonging to
+/// the subject of care `subject` when the drain found one.
 ///
 /// The audit source records it. A classified access is kept for the period
 /// its categories and origins call for
@@ -161,7 +166,11 @@ pub fn entry_of(
 /// record has ([`crate::system_log::fhir::record_end`]).
 #[cfg(feature = "fhir")]
 #[must_use]
-pub fn for_store(event: &AuditEvent, ctx: &AuditContext) -> Option<Box<AccessLogEntry>> {
+pub fn for_store(
+    event: &AuditEvent,
+    subject: Option<&str>,
+    ctx: &AuditContext,
+) -> Option<Box<AccessLogEntry>> {
     if !writes_entry(event) {
         return None;
     }
@@ -177,7 +186,7 @@ pub fn for_store(event: &AuditEvent, ctx: &AuditContext) -> Option<Box<AccessLog
             RecordEnd::Never => None,
         }),
     };
-    entry_of(event, &ctx.source_id, retention).map(Box::new)
+    entry_of(event, subject, &ctx.source_id, retention).map(Box::new)
 }
 
 /// A `DV_CODED_TEXT` of `code` in `terminology`, displayed as `rubric`.
@@ -645,6 +654,25 @@ pub fn horizon_retention(end: Option<Date>) -> AccessRetention {
             "the retention horizon of the audit store",
         )),
     }
+}
+
+/// FerroEHR's access details of the access `event` records, which its
+/// projections read ([`crate::access_log::recorded::details`]).
+#[cfg(feature = "fhir")]
+fn details(
+    event: &AuditEvent,
+    subject: Option<&str>,
+) -> Option<openehr_rm::v1_2::data_structures::item_structure::item_structure::ItemStructure> {
+    crate::access_log::recorded::details(event, subject)
+}
+
+/// A slim build projects no entry, so its entries keep no access details.
+#[cfg(not(feature = "fhir"))]
+fn details(
+    _event: &AuditEvent,
+    _subject: Option<&str>,
+) -> Option<openehr_rm::v1_2::data_structures::item_structure::item_structure::ItemStructure> {
+    None
 }
 
 #[cfg(test)]

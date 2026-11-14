@@ -424,6 +424,6 @@ fn import_entry(
     event.outcome = EventOutcome::Success;
     event.ehr_id = Some(ehr_id.to_owned());
     event.object_id = None;
-    Ok(entry::entry_of(&event, system_id, record.retention)
+    Ok(entry::entry_of(&event, None, system_id, record.retention)
         .expect("an import of an EHR's extract should write an access-log entry"))
 }

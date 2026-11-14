@@ -305,7 +305,7 @@ async fn every_read_is_one_access_record() {
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
         let reads: Vec<(Option<String>, String)> = sqlx::query_as(
-            "SELECT principal, action FROM audit.audit_event \
+            "SELECT principal, action FROM audit.access_trail \
              WHERE operation = 'admin_outbox_read' ORDER BY chain_seq",
         )
         .fetch_all(&pool)

@@ -140,7 +140,7 @@ async fn delete_records(pool: &PgPool, principal: &str) -> Vec<(String, String, 
     let deadline = Instant::now() + Duration::from_secs(60);
     loop {
         let rows: Vec<(String, String, Option<String>)> = sqlx::query_as(
-            "SELECT action, resource_class, resource_id FROM audit.audit_event \
+            "SELECT action, resource_class, resource_id FROM audit.access_trail \
              WHERE principal = $1 AND operation = 'admin_party_delete'",
         )
         .bind(principal)
