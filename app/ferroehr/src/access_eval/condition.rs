@@ -313,6 +313,13 @@ impl RequestAccess {
         Policy::of(self.policy.as_deref())
     }
 
+    /// The controller's access policy in force when the request began;
+    /// `None` when no version is committed.
+    #[must_use]
+    pub fn policy_in_force(&self) -> Option<&AccessPolicy> {
+        self.policy.as_deref()
+    }
+
     /// The moment the request began.
     #[must_use]
     pub fn now(&self) -> jiff::Timestamp {
@@ -415,6 +422,11 @@ impl RequestAccess {
                 emergency: self.emergency,
             },
             policy: self.policy(),
+            rules: self
+                .policy
+                .as_deref()
+                .and_then(|policy| policy.rules.as_deref())
+                .unwrap_or_default(),
             ehr: Ehr {
                 settings,
                 server_default: self.server_default,
@@ -572,6 +584,7 @@ impl RequestAccess {
                     Lifted::OptOut => "opt_out",
                     Lifted::Restriction => "restriction",
                     Lifted::Consent => "consent",
+                    Lifted::Rule => "rule",
                     Lifted::Policy => "policy",
                 };
                 metrics

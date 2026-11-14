@@ -74,12 +74,12 @@ these lookups are not counted: each request reads the database and counts in
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
 | `access_decisions_total` | counter | `outcome`, `code` | One decision per EHR a request reached: `outcome` is `admitted` or `refused`, and `code` is the `refused-*` code of the refusal (`none` for an admitted access). |
-| `access_emergency_overrides_total` | counter | `lifted` | What an emergency lifted: `opt_out` (EHDS Art. 10(2)), `restriction` (EHDS Art. 11(5)), `consent` (a consent deny) or `policy` (steps 4 to 7, by the break-glass role). |
+| `access_emergency_overrides_total` | counter | `lifted` | What an emergency lifted: `opt_out` (EHDS Art. 10(2)), `restriction` (EHDS Art. 11(5)), `consent` (a consent deny), `rule` (a deny rule of the access policy) or `policy` (steps 5 to 8, by the break-glass role). |
 
 The `refused-*` codes are the evaluator's own (`refused-opt-out`,
-`refused-restricted`, `refused-consent-denied`, `refused-sensitivity`,
-`refused-no-care-relationship`, `refused-purpose-missing`,
-`refused-purpose-not-permitted`, `refused-consent-required`,
+`refused-restricted`, `refused-consent-denied`, `refused-policy-denied`,
+`refused-sensitivity`, `refused-no-care-relationship`,
+`refused-purpose-missing`, `refused-consent-required`,
 `refused-not-subject`, `refused-not-represented`); the access
 record of each refusal names the step and the directive that decided it. A
 refusal is the evaluator working as configured, so alert on a change in the

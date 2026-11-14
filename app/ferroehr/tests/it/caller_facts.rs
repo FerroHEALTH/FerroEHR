@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The caller facts (#5511): sensitivity clearances and permitted purposes
-//! read from a capability's credentials, and care relationships read from a
-//! `PERSON`'s relationships, each by its code of `ferroehr-operations` in an
-//! archetype of the deployment's own, held on every replica beside the
-//! grants. An admission and a discharge decide the next request on another
+//! The caller facts (#5511, #5621): the roles a caller performs, read from
+//! the coded `name` of each `ROLE` in force it performs, and care
+//! relationships read from a `PERSON`'s relationships by their code of
+//! `ferroehr-operations`, in an archetype of the deployment's own, held on
+//! every replica beside the grants. An admission and a discharge decide the next request on another
 //! replica, a replica reads only the facts of the parties that changed, with
 //! one indexed read, and only a caller holding `write_care_relationship` (or
 //! an administrator) changes a care relationship. A provider
@@ -31,8 +31,8 @@ use openehr_rm::draft::access_control::terminology::ForeignCode;
 
 /// The HL7 v3 `ActCode` sensitivity terminology id.
 const ACT_CODE: &str = "2.16.840.1.113883.5.25";
-/// The HL7 v3 `PurposeOfUse` terminology id.
-const PURPOSE_OF_USE: &str = "2.16.840.1.113883.5.8";
+/// The jurisdiction's role code system.
+const ROLES: &str = "urn:example:roles";
 
 fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
@@ -205,53 +205,90 @@ fn day(days: i64) -> String {
         .to_string()
 }
 
-#[tokio::test]
-async fn a_capability_clears_and_permits_by_its_coded_credentials() {
-    let db = testkit::db().await.expect("testkit database");
-    let svc = replica(&db.pool()).await;
-    granted(
-        &svc,
-        "psychiatry",
-        &[capability(
-            "access_demographic",
-            &[
-                qualifier("sensitivity_clearance", &coded(ACT_CODE, "PSY")),
-                qualifier("permitted_purpose", &coded(PURPOSE_OF_USE, "TREAT")),
-            ],
-        )],
-    )
-    .await;
-    let facts = of_client(&svc, "psychiatry").await.facts().clone();
-    assert!(facts.clears(&foreign(ACT_CODE, "PSY")));
-    assert!(!facts.clears(&foreign(ACT_CODE, "HIV")));
-    assert!(facts.permits(&foreign(PURPOSE_OF_USE, "TREAT")));
-    assert!(!facts.permits(&foreign(PURPOSE_OF_USE, "HOPERAT")));
+/// A `ROLE` of the deployment's archetype performed by `performer`, named
+/// `name`, over `validity`, granting `access_demographic`.
+fn named_role(performer: VoId, name: &Value, validity: Option<Value>) -> Value {
+    let mut role =
+        crate::policy_fixtures::role(performer, &[capability("access_demographic", &[])]);
+    role["name"] = name.clone();
+    if let Some(validity) = validity {
+        role["time_validity"] = validity;
+    }
+    role
 }
 
 #[tokio::test]
-async fn a_clearance_that_is_no_foreign_code_is_refused_at_commit() {
+async fn a_role_is_the_coded_name_of_a_role_in_force_the_caller_performs() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = replica(&db.pool()).await;
+    let nurse = coded(ROLES, "NURSE");
+    let rows = [
+        ("a coded name", "nurse-client", nurse.clone(), None, true),
+        ("a text name", "text-client", text("Nurse"), None, false),
+        (
+            "an operation code",
+            "operation-client",
+            coded(TERMINOLOGY, "NURSE"),
+            None,
+            false,
+        ),
+        (
+            "a role that ended",
+            "ended-client",
+            nurse.clone(),
+            Some(interval(&day(-30), Some(&day(-1)))),
+            false,
+        ),
+        (
+            "a role from today",
+            "today-client",
+            nurse,
+            Some(interval(&day(0), None)),
+            true,
+        ),
+    ];
+    for (name, client_id, role_name, validity, holds) in rows {
+        let (agent, _) = granted(&svc, client_id, &[capability("access_demographic", &[])]).await;
+        create(
+            &svc,
+            PartyKind::Role,
+            &named_role(agent, &role_name, validity),
+        )
+        .await
+        .expect("the ROLE commits");
+        let facts = of_client(&svc, client_id).await.facts().clone();
+        assert_eq!(
+            facts.roles().contains(&foreign(ROLES, "NURSE")),
+            holds,
+            "{name}: {:?}",
+            facts.roles()
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_clearance_or_purpose_element_is_no_qualifier_any_more() {
     let db = testkit::db().await.expect("testkit database");
     let svc = replica(&db.pool()).await;
     let (agent, _) = create(&svc, PartyKind::Person, &person("Dr C", &[]))
         .await
         .expect("the PERSON commits");
-    let role = crate::policy_fixtures::role(
-        agent,
-        &[capability(
-            "access_demographic",
-            &[qualifier(
-                "sensitivity_clearance",
-                &coded(TERMINOLOGY, "open"),
+    for name in ["sensitivity_clearance", "permitted_purpose"] {
+        let role = crate::policy_fixtures::role(
+            agent,
+            &[capability(
+                "access_demographic",
+                &[qualifier(name, &coded(ACT_CODE, "PSY"))],
             )],
-        )],
-    );
-    let refused = create(&svc, PartyKind::Role, &role)
-        .await
-        .expect_err("a clearance of FerroEHR's own terminology is refused");
-    assert!(
-        matches!(refused, ServiceError::Unprocessable { .. }),
-        "{refused:?}"
-    );
+        );
+        let refused = create(&svc, PartyKind::Role, &role)
+            .await
+            .expect_err("a removed code names no element");
+        assert!(
+            matches!(refused, ServiceError::Unprocessable { .. }),
+            "{name}: {refused:?}"
+        );
+    }
 }
 
 #[tokio::test]

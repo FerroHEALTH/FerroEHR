@@ -18,39 +18,49 @@
 //!    exception that applies, refuses (`refused-consent-denied`), lifted the
 //!    same way. A representative named by a `delegation` directive reads only
 //!    what an applying delegation permit covers (EHDS Art. 4(2)).
-//! 4. **Sensitivity**: data carrying a sensitivity, from an `ACCESS_LABEL` or
-//!    the controller's classifications, that the caller's capabilities do not
-//!    clear and no applying permit names (`refused-sensitivity`).
-//! 5. **Care relationship**: where the policy requires one, a professional
+//! 4. **Controller rule** (EHDS Art. 11(3)): a deny rule of the controller's
+//!    `ACCESS_POLICY` that applies, with no exception that applies, refuses
+//!    whatever the subject's directives permit (`refused-policy-denied`),
+//!    unless its `emergency_override` holds and the break-glass role declares
+//!    an emergency purpose.
+//! 5. **Sensitivity**: data carrying a sensitivity, from an `ACCESS_LABEL` or
+//!    the controller's classifications, that no applying permit directive or
+//!    permit rule names (`refused-sensitivity`).
+//! 6. **Care relationship**: where the policy requires one, a professional
 //!    needs a live care relationship to the subject, a permit naming them, or
 //!    a gate-keeper entry (`refused-no-care-relationship`; BASE Architecture
 //!    Overview `master07-security.adoc` §Security Policy, "Time-limitation of
 //!    access").
-//! 6. **Purpose**: where the policy requires one, a declared purpose the
-//!    caller's capabilities permit (`refused-purpose-missing`,
-//!    `refused-purpose-not-permitted`).
-//! 7. **Default disposition**: `open` admits, `restricted` admits a permit, a
+//! 7. **Purpose**: where the policy requires one, a declared purpose
+//!    (`refused-purpose-missing`); which purposes a caller may declare is a
+//!    rule of step 4.
+//! 8. **Default disposition**: `open` admits, `restricted` admits a permit, a
 //!    gate-keeper or a live care relationship, `consent_required` a permit or
 //!    a gate-keeper (`refused-consent-required`); an EHR with no settings
 //!    takes the server's default.
 //!
-//! The subject reading their own record skips every step (EHDS Art. 3). A
+//! The subject reading their own record skips every step (EHDS Art. 3): the
+//! patient's own right of access is not the controller's to deny. A
 //! confined caller is refused every EHR but its own before step 1 (step 0):
 //! the subject, or one whose grants are `patient/` grants alone, every EHR
 //! but the one its patient context names (`refused-not-subject`), and a
 //! representative every EHR but the one whose subject its recorded
 //! representation `PARTY_RELATIONSHIP` names (`refused-not-represented`,
 //! EHDS Art. 4(2)). On its own EHR a confined professional takes every step,
-//! and a representative is held to steps 1 to 3, the `delegation` directives
-//! of that EHR's `EHR_ACCESS` included, and skips 4 to 7. A declared
-//! emergency by the break-glass role lifts steps 4 to 7.
+//! and a representative is held to steps 1 to 4, the `delegation` directives
+//! of that EHR's `EHR_ACCESS` included, and skips 5 to 8: a controller rule
+//! can keep, say, a minor's confidential data from a parent. A declared
+//! emergency by the break-glass role lifts steps 5 to 8.
+//!
+//! A directive permit decides only through steps 5, 6 and 8; a permit rule
+//! only through step 5, and a rule's permit exception only inside its deny.
 //!
 //! The same procedure decides a settings class ([`crate::access_eval::class`])
 //! for a query: where it reads a value the class leaves to each EHR, the
 //! verdict holds an atom of that fact ([`crate::access_eval::scope::EhrFact`], [`crate::access_eval::scope::Held`])
 //! in place of its answer, and a direct read, which knows every value,
 //! answers each at once. No openEHR spec governs the procedure: our own
-//! design (#5487, #5513, #5588).
+//! design (#5487, #5513, #5588, #5621).
 
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::terminology::{
@@ -84,9 +94,7 @@ pub struct Caller {
     /// The ids of the parties the caller acts for or is a member of: its
     /// provider, the `GROUP`s that provider is a member of, its care teams.
     pub acts_for: Vec<String>,
-    /// The functional roles the caller holds, upper-case.
-    pub roles: Vec<String>,
-    /// The caller's clearances, permitted purposes and care teams.
+    /// The roles the caller performs and its care teams.
     pub facts: CallerFacts,
     /// Whether the caller holds `admin_role`, the controller acting on the
     /// subject's instruction.
@@ -217,9 +225,9 @@ pub struct Rule {
     pub when: Pred,
     /// The answer.
     pub then: Outcome,
-    /// The positions in the settings' `directives` of the directives the rule
-    /// rests on; empty for a rule of the access policy or the default
-    /// disposition.
+    /// The positions of the directives the rule rests on: in the settings'
+    /// `directives`, or for step 4 in the policy's `rules`; empty for a
+    /// requirement of the access policy or the default disposition.
     pub by: Vec<usize>,
 }
 
@@ -234,6 +242,9 @@ pub struct Grounds {
     pub permits: Vec<usize>,
     /// The positions of the denies an emergency lifted.
     pub lifted: Vec<usize>,
+    /// The positions in the policy's `rules` of the deny rules an emergency
+    /// lifted.
+    pub lifted_rules: Vec<usize>,
     /// The verdict reads a live care relationship to the subject.
     pub cared: bool,
     /// The verdict reads the caller as a gate-keeper or the controller.
@@ -249,7 +260,9 @@ pub enum Lifted {
     Restriction,
     /// A consent deny.
     Consent,
-    /// Steps 4 to 7, by the break-glass role.
+    /// A deny rule of the controller's policy.
+    Rule,
+    /// Steps 5 to 8, by the break-glass role.
     Policy,
 }
 
@@ -363,6 +376,8 @@ pub struct Judged<'a> {
     pub asked: Asked<'a>,
     /// What the controller requires.
     pub policy: Policy,
+    /// The controller's rules (`ACCESS_POLICY.rules`).
+    pub rules: &'a [AccessDirective],
     /// The EHR.
     pub ehr: Ehr<'a>,
     /// The EHR's labels and the controller's classifications.
@@ -399,8 +414,10 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     denials(&read, directives, &mut verdict);
     if caller.kind == CallerKind::Representative {
         delegation(&read, directives, &mut verdict);
+        controller_denials(&read, &mut verdict);
         return verdict;
     }
+    controller_denials(&read, &mut verdict);
     if judged.asked.emergency.break_glass() {
         verdict.lifted.push(Lifted::Policy);
         return verdict;
@@ -424,7 +441,22 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
         .filter(|permit| permit.certain)
         .map(|permit| permit.at)
         .collect();
-    sensitivity(&read, &permits, &mut verdict);
+    let rule_permits: Vec<Permit<'_>> = judged
+        .rules
+        .iter()
+        .enumerate()
+        .filter(|(_, rule)| kind_and_effect(rule).1 == Effect::Permit)
+        .filter_map(|(at, rule)| {
+            let binds = read.binds(DirectiveKind::ControllerRule, rule, None);
+            (binds != Pred::False).then(|| Permit {
+                at,
+                directive: rule,
+                certain: binds == Pred::True,
+                cover: Pred::all(vec![binds, read.cover(rule, Effect::Permit, None)]),
+            })
+        })
+        .collect();
+    sensitivity(&read, permits.iter().chain(&rule_permits), &mut verdict);
     let keeper = Pred::any(vec![Pred::of(caller.administrator), read.keeper()]);
     let live = judged.ehr.cared && !held_closed;
     let default = judged
@@ -436,7 +468,7 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
         verdict.grounds.cared = live;
         verdict.grounds.keeper = keeper == Pred::True;
     }
-    // Step 5: a care relationship.
+    // Step 6: a care relationship.
     let uncared = Pred::negate(Pred::any(vec![Pred::of(live), keeper.clone()]));
     if care_read && uncared != Pred::False {
         let naming = permits
@@ -450,24 +482,15 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
             by: Vec::new(),
         });
     }
-    // Step 6: a purpose.
-    if judged.policy.purpose_required {
-        let refused = match judged.asked.purpose {
-            None => Some(Refusal::PurposeMissing),
-            Some(purpose) if !caller.facts.purposes().iter().any(|p| p.code == purpose) => {
-                Some(Refusal::PurposeNotPermitted)
-            }
-            Some(_) => None,
-        };
-        if let Some(refusal) = refused {
-            verdict.rules.push(Rule {
-                when: Pred::True,
-                then: Outcome::Refused(refusal),
-                by: Vec::new(),
-            });
-        }
+    // Step 7: a purpose.
+    if judged.policy.purpose_required && judged.asked.purpose.is_none() {
+        verdict.rules.push(Rule {
+            when: Pred::True,
+            then: Outcome::Refused(Refusal::PurposeMissing),
+            by: Vec::new(),
+        });
     }
-    // Step 7: the default disposition.
+    // Step 8: the default disposition.
     let admitted = match default {
         AccessDefault::Open => Pred::True,
         AccessDefault::Restricted => Pred::any(vec![keeper, Pred::of(live)]),
@@ -477,7 +500,7 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     verdict
 }
 
-/// Step 7: what the default disposition `admitted` does not admit, a permit
+/// Step 8: what the default disposition `admitted` does not admit, a permit
 /// may.
 fn disposition(admitted: Pred, permits: Vec<Permit<'_>>, verdict: &mut Verdict) {
     if admitted == Pred::True {
@@ -529,6 +552,7 @@ fn denials(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &mut 
                 Lifted::Consent,
                 emergency.break_glass(),
             ),
+            // NOTE: draft BMM `Directives_not_controller_rules`, an EHR's settings hold no rule.
             DirectiveKind::ControllerRule => continue,
         };
         if directive.emergency_override && lifts {
@@ -597,16 +621,45 @@ fn delegation(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &m
     });
 }
 
-/// Step 4: data whose sensitivity the caller is not cleared for, unless an
-/// applying permit names that sensitivity.
-fn sensitivity(read: &Reader<'_, '_>, permits: &[Permit<'_>], verdict: &mut Verdict) {
-    let scopes = read.judged.scopes;
-    for code in scopes.sensitivity_codes() {
-        if read.judged.caller.facts.clears(&code) {
+/// Step 4: every deny rule of the controller's policy that binds the
+/// caller, or the mark of an emergency that lifts it. A rule binds every
+/// caller but the subject, whatever the subject's directives permit.
+fn controller_denials(read: &Reader<'_, '_>, verdict: &mut Verdict) {
+    let break_glass = read.judged.asked.emergency.break_glass();
+    for (at, rule) in read.judged.rules.iter().enumerate() {
+        if kind_and_effect(rule).1 != Effect::Deny {
             continue;
         }
+        let binds = read.binds(DirectiveKind::ControllerRule, rule, None);
+        if binds == Pred::False {
+            continue;
+        }
+        if rule.emergency_override && break_glass {
+            if binds == Pred::True {
+                verdict.lifted.push(Lifted::Rule);
+                verdict.grounds.lifted_rules.push(at);
+            }
+            continue;
+        }
+        verdict.rules.push(Rule {
+            when: Pred::all(vec![binds, read.cover(rule, Effect::Deny, None)]),
+            then: Outcome::Refused(Refusal::PolicyDenied),
+            by: vec![at],
+        });
+    }
+}
+
+/// Step 5: data whose sensitivity no applying permit, a directive of the
+/// EHR or a rule of the policy, names.
+fn sensitivity<'p>(
+    read: &Reader<'_, '_>,
+    permits: impl Iterator<Item = &'p Permit<'p>> + Clone,
+    verdict: &mut Verdict,
+) {
+    let scopes = read.judged.scopes;
+    for code in scopes.sensitivity_codes() {
         let named = permits
-            .iter()
+            .clone()
             .filter(|permit| names_sensitivity(permit.directive, &code))
             .map(|permit| permit.cover.clone())
             .collect();

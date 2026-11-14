@@ -3,9 +3,9 @@
 
 //! Two worked examples of the ABAC design end to end through the service and
 //! the store, against a real `PostgreSQL` 18 (shared testkit harness): the
-//! care relationships the ADT system writes and the clearance a capability
-//! carries are read from the replica's copy of the caller facts, and the
-//! decision holds for a named composition and for a query alike.
+//! care relationships the ADT system writes and the role a `ROLE` names are
+//! read from the replica's copy of the caller facts, and the decision holds
+//! for a named composition and for a query alike.
 //!
 //! BASE Architecture Overview `master07-security.adoc` §Security Policy,
 //! "Time-limitation of access", bounds access by the episode of care "plus
@@ -202,7 +202,6 @@ fn access(
             own_ehr: None,
             patient_grants_only: false,
             acts_for,
-            roles: Vec::new(),
             facts,
             administrator: false,
             settings: SettingsCaller::new(false, false, Some(party.to_string())),
@@ -319,9 +318,10 @@ async fn the_ward_with_its_grace_period() {
     }
 }
 
-/// HIV results: the policy classifies the results; the specialist whose
-/// capability clears `HIV` reads them, and a professional without the
-/// clearance reads the rest of the record without them.
+/// HIV results: the policy classifies the results and a rule clears the
+/// infectious-disease role for them; the specialist performing that role
+/// reads them, and a professional who does not reads the rest of the record
+/// without them.
 #[tokio::test]
 async fn hiv_results() {
     let db = testkit::db().await.expect("testkit database");
@@ -329,20 +329,12 @@ async fn hiv_results() {
         &ferroehr::db::domain::DomainPools::from_shared(&db.pool()),
     ))
     .await;
-    let qualifier = |name: &str, value: &Value| {
-        json!({ "_type": "ELEMENT", "archetype_node_id": "at0040",
-                "name": coded(TERMINOLOGY, name), "value": value })
-    };
     let (specialist, _) = create(&svc, PartyKind::Person, &person("Dr ID", &[]))
         .await
         .expect("the specialist commits");
-    let role = crate::policy_fixtures::role(
-        specialist,
-        &[capability(
-            "access_demographic",
-            &[qualifier("sensitivity_clearance", &coded(ACT_CODE, "HIV"))],
-        )],
-    );
+    let mut role =
+        crate::policy_fixtures::role(specialist, &[capability("access_demographic", &[])]);
+    role["name"] = coded("urn:example:roles", "INFECTIOUS_DISEASE");
     create(&svc, PartyKind::Role, &role)
         .await
         .expect("the ROLE commits");
@@ -366,7 +358,13 @@ async fn hiv_results() {
         "data": { "_type": "ACCESS_DATA_SCOPE",
                   "archetypes": [{ "_type": "ARCHETYPE_ID",
                                    "value": "openEHR-EHR-COMPOSITION.encounter.v1" }] },
-        "sensitivities": [coded(ACT_CODE, "HIV")] }] }));
+        "sensitivities": [coded(ACT_CODE, "HIV")] }],
+        "rules": [{ "_type": "ACCESS_DIRECTIVE", "name": text("Infectious disease reads HIV"),
+            "archetype_node_id": "at0003",
+            "kind": coded(TERMINOLOGY, "controller_rule"), "effect": coded(TERMINOLOGY, "permit"),
+            "applies_to": [{ "role": coded("urn:example:roles", "INFECTIOUS_DISEASE") }],
+            "data": [{ "sensitivities": [coded(ACT_CODE, "HIV")] }],
+            "emergency_override": false }] }));
     let now = jiff::Timestamp::now();
     let (_, read, rows) = decided(
         &svc,

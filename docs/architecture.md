@@ -601,24 +601,25 @@ which is what makes an optional stage safe to disable:
    **The access evaluator** (`access_eval`, #5513) decides every EHR a
    request reaches by a fixed procedure over three fact sets held in memory:
    the subject's directives and labels (the copy above), the caller's
-   capabilities, clearances, permitted purposes and care teams
-   (`party_binding::grants::live`, #5511), and the controller's
-   `ACCESS_POLICY` (`access_policy`, #5512). The first step that refuses
+   capabilities, the roles of the `ROLE`s it performs and its care teams
+   (`party_binding::grants::live`, #5511, #5621), and the controller's
+   `ACCESS_POLICY` with its rules (`access_policy`, #5512, #5621). The first step that refuses
    decides, deny overrides permit, and one level of exceptions narrows each
    directive: (1) an `opt_out` binding an access service, `404`
    `refused-opt-out` (EHDS Art. 10); (2) a `restriction` binding a
    professional, a system or an access service, its data `404`
    `refused-restricted` (Art. 8); (3) any other deny that applies, `403`
    `refused-consent-denied`, and a representative a `delegation` names reads
-   only what it permits (Art. 4(2)); (4) a sensitivity from a label or a
-   classification the caller is not cleared for, `403`
-   `refused-sensitivity`; (5) no live care relationship, plus the policy's
-   grace, where the policy requires one, `403`
+   only what it permits (Art. 4(2)); (4) a deny rule of the controller's
+   policy that applies, `403` `refused-policy-denied`, which no permit of the
+   subject lifts (Art. 11(3)); (5) a sensitivity from a label or a
+   classification that no applying permit directive or permit rule names,
+   `403` `refused-sensitivity`; (6) no live care relationship, plus the
+   policy's grace, where the policy requires one, `403`
    `refused-no-care-relationship` (BASE Architecture Overview §Security
-   Policy, "Time-limitation of access"); (6) no declared purpose, or one the
-   capabilities do not permit, where the policy requires one, `403`
-   `refused-purpose-missing` or `refused-purpose-not-permitted`; (7) the
-   default disposition, `403` `refused-consent-required`, an EHR with no
+   Policy, "Time-limitation of access"); (7) no declared purpose where the
+   policy requires one, `403` `refused-purpose-missing`, the purposes a
+   caller may declare being a rule of step 4; (8) the default disposition, `403` `refused-consent-required`, an EHR with no
    settings taking `[authz.rbac] ehr_access_default`. The subject skips every
    step on their own EHR (Art. 3). A confined caller is refused `403`
    `refused-not-subject` on every other EHR, before step 1 (#5605): the
@@ -640,11 +641,39 @@ which is what makes an optional stage safe to disable:
    added query), refused `403` `refused-not-represented` on every other EHR
    and on an operation that names none, recorded as step 0 (representation)
    (#5609, our own design under EHDS Art. 4(2)). On that EHR it is held to
-   steps 1 to 3, the `delegation` directives of its `EHR_ACCESS` included,
-   and skips steps 4 to 7. An emergency purpose lifts
-   an opt-out for an access service that may override it (Art. 10(2)), and,
-   with `[authz.rbac] emergency_access_role`, a restriction or a consent deny
-   whose `emergency_override` holds and steps 4 to 7 (Art. 11(5)). A
+   steps 1 to 4, the `delegation` directives of its `EHR_ACCESS` and the
+   controller's rules included, and skips steps 5 to 8. An emergency purpose
+   lifts an opt-out for an access service that may override it
+   (Art. 10(2)), and, with `[authz.rbac] emergency_access_role`, a
+   restriction, a consent deny or a deny rule whose `emergency_override`
+   holds and steps 5 to 8 (Art. 11(5)).
+
+   **Controller rules** (#5621, #5624, #5627; our own design, proposed in
+   the draft specification). `ACCESS_POLICY.rules` holds the controller's
+   rules for every EHR, each an `ACCESS_DIRECTIVE` of kind
+   `controller_rule`, the form EHDS Art. 11(3) asks a Member State's rules
+   to take and IHE APPC gives a foundational policy. A deny rule binds every
+   caller but the subject (whose own right of access, Art. 3, is not the
+   controller's to deny), representatives included; a permit rule acts only
+   in step 5, and a rule's permit exception only by narrowing its deny. An
+   actor scope's `role` matches the coded `name` of a `ROLE` in force the
+   caller performs (RM Demographic IM `PARTY.type()`), held as a caller fact
+   (`FactKind::Role`, migration `party/0041`); a token's role claims stay
+   the coarse RBAC class gate and drive no rule. The `ROLE` is the
+   assignment and the rule the permission, the split of the XACML
+   Hierarchical RBAC Profile. Clearances and permitted purposes are rules
+   too: the capability codes `sensitivity_clearance` and `permitted_purpose`
+   and their caller facts are gone, and a purpose limit is a deny rule with a
+   permit exception. Which templates a caller commits is a rule as well, for
+   every caller: the `template` element of a `commit_composition` grant is
+   gone. A federation agreement's `template` elements stay the contract with
+   the partner, and the rules hold for its persons too, deny winning. A write
+   is judged by steps 1 and 2 for the EHR and by steps 3 to 8 for the version
+   it commits (`versioning::restriction::Written`): a restriction and an
+   opt-out limit access to existing data, writing new data is no access to
+   them, so no write reveals one. Where a decision depends on the datum, the
+   route guard judges a named object, and the commit a written version,
+   before any step about the EHR alone decides (#5627). A
    directive applies by `applies_to` (every attribute of an actor scope
    holds), `operations`, `purposes` and `time_validity`; a fact that cannot
    be read (a validity bound with no offset, an undeclared purpose, an
@@ -800,15 +829,15 @@ design.**
 (`openehr_rm::draft::access_control::terminology`, #5507, beside the draft
 it codes since #5540)
 adds the groups the ABAC design of #5487 reads to `ferroehr-operations`:
-`access default`, `access directive kind`, `access effect`, `access
-relationship`, `access caller kind`, `access operation`, `access
-sensitivity clearance`, `access permitted purpose`, `care relationship`,
-`access refusal` and `access log withheld` (#5570), each a closed set of rubrics read into a typed term
+`access default`, `access directive kind` (with `controller_rule`, #5621),
+`access effect`, `access relationship`, `access caller kind`, `access
+operation`, `care relationship`, `access refusal` (with
+`refused-policy-denied`, #5621) and `access log withheld` (#5570), each a closed set of rubrics read into a typed term
 (`Term::read`), with a value of another terminology or a code outside its
 group refused. The operations gain the grants `write_care_relationship` and
-`write_access_policy`, and the clearance, purpose and care relationship codes
-are qualifiers, never operations. Sensitivity, category, purpose and legal
-ground stay in the terminology the jurisdiction names and are compared by
+`write_access_policy`, and the care relationship codes are qualifiers, never
+operations. Role, sensitivity, category, purpose and legal ground stay in the
+terminology the jurisdiction names and are compared by
 terminology id and code (`ForeignCode`). The draft invariants of
 `access_control_invariants` read their groups through it, and the evaluator
 and the `EHR_ACCESS` and `ACCESS_POLICY` write checks read no other code. RM
@@ -868,7 +897,7 @@ its `credentials` hold, at any depth, an element whose value is a
 `hold_roles`, `hold_scopes`, `create_at_login`, `query_system_wide`,
 `access_demographic`); elements named by the
 qualifier codes `not_before` and `not_after` bound it finer than a day,
-`template`, `facility` (an element of a `DV_IDENTIFIER`, or a cluster of
+`template` (a federation agreement's), `facility` (an element of a `DV_IDENTIFIER`, or a cluster of
 `issuer` with `identifier` or `identifier_prefix`), `subject_namespace`,
 `creating_system`, `origin`, `reader`, `binding_issuer` and `token_scope`
 scope it, `origin` (`relay` or `device`) and `device_identifier_issuer`
@@ -925,12 +954,11 @@ which the performance gate's transactions-per-request measure refuses
 (#5459).
 
 **Caller facts** (#5511). Beside the grants, the side table holds what the
-access evaluator reads about a caller (migration `party/0039`):
-`binding_caller_fact`, one row per sensitivity clearance and permitted
-purpose a `CAPABILITY` carries (an element named `sensitivity_clearance` or
-`permitted_purpose` of `ferroehr-operations` whose value is a
-`DV_CODED_TEXT` of the jurisdiction's terminology, read with
-`ForeignCode::read`), and per care relationship a `PERSON` holds (an inline
+access evaluator reads about a caller (migrations `party/0039`, `party/0041`):
+`binding_caller_fact`, one row per `ROLE` whose `name` is a `DV_CODED_TEXT`
+of the jurisdiction's terminology (the role its performer holds while the
+`ROLE` is in force, read with `ForeignCode::read`, #5621), and per care
+relationship a `PERSON` holds (an inline
 `PARTY_RELATIONSHIP` whose `name` or `details` carry `member_of` or
 `under_care_of`, RM demographic `party_relationship.adoc`: `source`,
 `target`, `time_validity`), each with the term of its holder. The patient's
@@ -942,8 +970,8 @@ only the facts of the parties stamped since its copy, one indexed read
 (`grants::caller::store::FACTS`), so an admission costs each replica one
 small read and the request path still adds no transaction. A refill and an
 erasure move the grant revision, which reads every fact again.
-`Capabilities::facts()` gives a request's caller its clearances, purposes
-and care teams in force; `LiveGrants::under_care_of` gives a subject's care
+`Capabilities::facts()` gives a request's caller its roles and care teams in
+force; `LiveGrants::under_care_of` gives a subject's care
 relationships with their dates, so the evaluator applies the grace after a
 discharge. A `PERSON` version that changes its care relationships commits
 only for a caller holding `write_care_relationship` or an administrator
@@ -957,7 +985,7 @@ relationship of another party kind or of its own container is refused
 which `Capabilities::facts().provider_groups()` carries and the request's
 caller adds to the parties it acts for, one level deep, from the copy held,
 so the regional sharing example adds no transaction. **Our own design:** no
-openEHR spec gives a capability or a relationship an access meaning.
+openEHR spec gives a role or a relationship an access meaning.
 
 **The client lists are grants** (#5437). A backend client, whose
 `system/aql-*` scope "would grant access to all registered and ad-hoc AQL
@@ -1108,12 +1136,12 @@ governs a data-sharing agreement's form.
 `[[authz.system_client]]` table is gone: a system caller
 (`CallerKind::System`) is what the policy parties say. Its commit into an EHR
 (`versioning::system`) needs a `commit_composition` grant, or it is `403`, and a
-`COMPOSITION` is admitted when one grant lists its template, has the origin
+`COMPOSITION` is admitted when one grant has the origin
 the act needs (a device's registration under `device`, recognised by a
 composer identifier of a `device_identifier_issuer` equal to
 `feeder_audit.originating_system_audit.system_id`; any other act under
 `relay`, naming the professional) and covers the facility it names (EHDS
-Art. 13(4)). A `ROLE` whose grant lacks the terms its operation is checked by
+Art. 13(4)). Which templates it commits is a controller rule (#5624). A `ROLE` whose grant lacks the terms its operation is checked by
 is `422` at its commit (`party_binding::grants::check_role`), the boot
 refusals the table had. The import grant of #5438 is held to its scope:
 `message_import_ehr` needs an `import_ehr` grant whose `subject_namespace` names the subject namespace of the

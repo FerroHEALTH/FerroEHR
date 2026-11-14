@@ -92,9 +92,9 @@ The caller is authenticated, and the access policy (roles, SMART scopes, EHR
 access, assurance level) refuses the operation. `detail` names the missing
 grant. When the EHR's access directives or the access policy refuse, `detail`
 starts with the refusal code (`refused-consent-denied`,
-`refused-consent-required`, `refused-sensitivity`,
+`refused-policy-denied`, `refused-consent-required`, `refused-sensitivity`,
 `refused-no-care-relationship`, `refused-purpose-missing`,
-`refused-purpose-not-permitted`, `refused-not-subject`,
+`refused-not-subject`,
 `refused-not-represented`; see
 [Access directives](../security.md)).
 

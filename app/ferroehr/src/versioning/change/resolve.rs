@@ -14,14 +14,15 @@ use serde_json::Value;
 use sqlx::PgConnection;
 
 use super::{
-    ResolvedWrite, canonical_body_text, next_version, reject_deleted_with_data, resolve_lifecycle,
-    stamp_version_uid, validate_transition,
+    Committed, ResolvedWrite, canonical_body_text, next_version, reject_deleted_with_data,
+    resolve_lifecycle, stamp_version_uid, validate_transition,
 };
 use crate::error::ServiceError;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
 use crate::storage::codec::decompose;
 use crate::storage::identifier_repo;
 use crate::storage::row::NodeRow;
+use crate::versioning::audit::AuditInput;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::{
     Kind, SigningCtx, attestation, external, lifecycle, person, profile, system,
@@ -54,7 +55,7 @@ pub(super) async fn resolve_delete(
     )
     .await?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
-    system::admit_delete(tx, kind, vo_id).await?;
+    system::admit_delete(kind)?;
     external::admit_delete(tx, kind, vo_id).await?;
     lifecycle::refuse_already_deleted(kind, vo_id, &next.preceding_lifecycle)?;
     retire_protected_identifiers(tx, ctx, kind, vo_id).await?;
@@ -239,11 +240,7 @@ pub(super) async fn resolve_create(
     // a first version can only be `complete`/`incomplete`.
     validate_transition(None, &lifecycle)?;
     person::refuse_composing_for_others(content.kind, &content.canonical)?;
-    system::admit_content(
-        content.kind,
-        &content.canonical,
-        content.template_id.as_deref(),
-    )?;
+    system::admit_content(content.kind, &content.canonical)?;
     external::admit_content(
         content.kind,
         &content.canonical,
@@ -307,7 +304,7 @@ pub(super) async fn resolve_modify(
     )
     .await?;
     person::refuse_composing_for_others(kind, &content.canonical)?;
-    system::admit_content(kind, &content.canonical, content.template_id.as_deref())?;
+    system::admit_content(kind, &content.canonical)?;
     external::admit_content(kind, &content.canonical, content.template_id.as_deref())?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
     // the transition from the preceding version's state must be legal
@@ -406,4 +403,49 @@ async fn retire_protected_identifiers(
     }
     identifier_repo::retire_live(tx, vo_id).await?;
     Ok(())
+}
+
+/// `resolved`, a create or a modify, once the access evaluator admits its
+/// content as `written` judges it; a delete carries none.
+///
+/// # Errors
+/// [`ServiceError::Forbidden`] naming the refusal code.
+pub(super) fn admit_written(
+    written: &crate::versioning::restriction::Written,
+    resolved: ResolvedWrite,
+) -> Result<ResolvedWrite, ServiceError> {
+    if resolved.canonical_text.is_some() {
+        written.admit(
+            resolved.vo_id,
+            super::root_archetype(&resolved.rows).as_deref(),
+            &resolved.origins,
+            resolved.time_committed,
+        )?;
+    }
+    Ok(resolved)
+}
+
+/// The opt-in answer to an identical re-send (#4415): the existing version
+/// `r` shares its content with, and no commit, when `r` is a modify whose
+/// content equalled the preceding tip's; `None` otherwise. The tip is the
+/// one version the `If-Match` names, so an earlier version's content is
+/// never matched. ITS-REST does not govern skipping an identical commit: our
+/// own design, after what Cadasto answers.
+pub(super) fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
+    let (Some(preceding), Some(_)) = (&r.preceding, r.shared_from) else {
+        return None;
+    };
+    Some(Committed {
+        vo_id: r.vo_id,
+        sys_version: preceding.sys_version,
+        tree: preceding.tree,
+        creating_system_id: preceding.creating_system_id.clone(),
+        kind: r.kind,
+        change_type: audit.change_type.clone(),
+        template_id: r.template_id.clone(),
+        root_archetype: super::root_archetype(&r.rows),
+        time_committed: preceding.committed_at,
+        skipped: true,
+        content_digest: r.content_digest,
+    })
 }

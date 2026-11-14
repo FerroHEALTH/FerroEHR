@@ -49,6 +49,7 @@ No openEHR or other specification governs the following; each is this proposal's
 * facts with a fixed procedure, deny-overrides, and one level of exceptions;
 * the order of the procedure's steps and its refusals;
 * care relationships through care-team `GROUP` membership and an under-care-of relationship, with a grace period;
-* sensitivity clearances and permitted purposes as codes on a `CAPABILITY`;
+* `ACCESS_POLICY._rules_`, the `controller_rule` kind, the place of step 4 in the procedure, and where a permit may decide;
+* reading `ACCESS_ACTOR_SCOPE._role_` from the coded `_name_` of a `ROLE` the caller performs;
 * `ACCESS_POLICY` as a versioned root outside the EHR and the demographic service, and its ITS-REST resources;
 * the read and write rule for `EHR_ACCESS`.

@@ -14,6 +14,7 @@ use ferroehr::error::ServiceError;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::access_policy::PolicyPrecondition;
 use ferroehr::service::demographic::default_definitions::Seeded;
+use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL;
 use serde_json::{Value, json};
 
 const HOSPITAL: &str = "2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f7";
@@ -58,10 +59,10 @@ fn nurse_rule() -> Value {
     json!({ "_type": "ACCESS_DIRECTIVE",
         "name": { "_type": "DV_TEXT", "value": "Nurses do not record diagnoses" },
         "archetype_node_id": "id15",
-        "kind": coded("ferroehr-operations", "controller_rule"),
-        "effect": coded("ferroehr-operations", "deny"),
+        "kind": coded(TERMINOLOGY_ID_ACCESS_CONTROL, "controller_rule"),
+        "effect": coded(TERMINOLOGY_ID_ACCESS_CONTROL, "deny"),
         "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "role": coded("urn:example:roles", "NURSE") }],
-        "operations": [coded("ferroehr-operations", "write")],
+        "operations": [coded(TERMINOLOGY_ID_ACCESS_CONTROL, "write")],
         "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": ["diagnosis.v1"] }],
         "emergency_override": false })
 }
@@ -235,12 +236,12 @@ async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
     let cases: [Defect; 11] = [
         ("Rules_kind", |p| {
             let mut rule = nurse_rule();
-            rule["kind"] = coded("ferroehr-operations", "consent");
+            rule["kind"] = coded(TERMINOLOGY_ID_ACCESS_CONTROL, "consent");
             p["rules"] = json!([rule]);
         }),
         ("a rule's role in FerroEHR's own terminology", |p| {
             let mut rule = nurse_rule();
-            rule["applies_to"][0]["role"] = coded("ferroehr-operations", "NURSE");
+            rule["applies_to"][0]["role"] = coded(TERMINOLOGY_ID_ACCESS_CONTROL, "NURSE");
             p["rules"] = json!([rule]);
         }),
         ("an empty list of rules", |p| p["rules"] = json!([])),
@@ -263,7 +264,7 @@ async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
         }),
         ("a sensitivity in FerroEHR's own terminology", |p| {
             p["classifications"][0]["sensitivities"][0]["defining_code"]["terminology_id"]["value"] =
-                json!("ferroehr-operations");
+                json!(TERMINOLOGY_ID_ACCESS_CONTROL);
         }),
         ("a controller that is no ORGANISATION", |p| {
             p["controller"]["type"] = json!("PERSON");

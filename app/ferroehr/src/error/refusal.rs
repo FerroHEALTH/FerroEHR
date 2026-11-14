@@ -216,9 +216,8 @@ impl super::ServiceError {
             E::NotFound(r) => r.message.clone(),
             E::BadRequest(r) => r.message.clone(),
             E::Conflict(r) => r.message.clone(),
-            E::VersionConflict(r) | E::Unrecorded(r) | E::Restricted(r) | E::Forbidden(r) => {
-                r.message.clone()
-            }
+            E::VersionConflict(r) | E::Unrecorded(r) | E::Restricted(r) => r.message.clone(),
+            E::Forbidden(r) => r.message.clone(),
             E::Fault(f) | E::Overloaded(f) => f.message.to_owned(),
             // A server fault's detail is a log record, never client text.
             E::Internal(_)

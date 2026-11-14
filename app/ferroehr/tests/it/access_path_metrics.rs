@@ -51,7 +51,6 @@ fn request(emergency: Emergency) -> Arc<RequestAccess> {
             own_ehr: None,
             patient_grants_only: false,
             acts_for: Vec::new(),
-            roles: Vec::new(),
             facts: CallerFacts::default(),
             administrator: false,
             settings: SettingsCaller::new(false, false, Some(party)),

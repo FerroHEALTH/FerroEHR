@@ -80,15 +80,19 @@ pub(crate) async fn enforce(
         .ehr_verdict(&access, ehr_id)
         .await
         .map_err(|e| Box::new(unavailable(principal.as_ref(), e)))?;
-    if let Some(refusal) = refusal_of(&access, op, principal.as_ref(), ehr_id, &verdict) {
+    // NOTE: our own design (#5627), a datum the path names is judged before any step about
+    // its EHR alone, so the first step that refuses that datum answers.
+    let objects = named_objects(parts);
+    let judged = !objects.is_empty()
+        && verdict.item_dependent()
+        && enforce_objects(state, op, principal.as_ref(), &objects).await?;
+    if !judged
+        && !written_at_commit(op, &verdict)
+        && let Some(refusal) = refusal_of(&access, op, principal.as_ref(), ehr_id, &verdict)
+    {
         return Err(Box::new(refusal));
     }
-    record_overrides(state, &[ehr_id]).await?;
-    let objects = named_objects(parts);
-    if !objects.is_empty() && verdict.item_dependent() {
-        return enforce_objects(state, op, principal.as_ref(), &objects).await;
-    }
-    Ok(())
+    record_overrides(state, &[ehr_id]).await
 }
 
 /// How an operation whose path names no EHR addresses one.
@@ -172,25 +176,28 @@ async fn enforce_unnamed(
 }
 
 /// Judge each object `objects` names by the verdict of its own EHR: the
-/// `404` of an object that reads as absent, the `403` of one refused. An
-/// object this store does not hold is the dispatch's to answer.
+/// `404` of an object that reads as absent, the `403` of one refused.
+/// `Ok(true)` when the store holds one of them; an object it does not hold
+/// is the dispatch's to answer.
 async fn enforce_objects(
     state: &AppState,
     op: &str,
     principal: Option<&Principal>,
     objects: &[(&str, VoId)],
-) -> Result<(), Box<Response>> {
+) -> Result<bool, Box<Response>> {
     let Some(access) = current() else {
-        return Ok(());
+        return Ok(false);
     };
     let backend = state.backend();
     let ids: Vec<VoId> = objects.iter().map(|(_, vo_id)| *vo_id).collect();
     let fault = |e: ServiceError| Box::new(unavailable(principal, e));
     let facts = backend.object_access_facts(&ids).await.map_err(fault)?;
+    let mut held_any = false;
     for held in &facts {
         let Some(ehr_id) = held.ehr_id else {
             continue;
         };
+        held_any = true;
         let verdict = backend
             .ehr_verdict_at(&access, ehr_id, held.revision)
             .await
@@ -205,7 +212,7 @@ async fn enforce_objects(
             Outcome::Refused(code) => return Err(Box::new(forbidden(principal, code))),
         }
     }
-    Ok(())
+    Ok(held_any)
 }
 
 /// Enforce the evaluator on every EHR an operation names in its body, such as
@@ -253,6 +260,17 @@ fn refusal_of(
         Outcome::Absent(_) => Some(ehr_not_found(op, ehr_id)),
         Outcome::Refused(code) => Some(forbidden(principal, code)),
     }
+}
+
+/// Whether `op`, a write into the EHR its path names, is refused under
+/// `verdict` only for a datum: its commit judges the version it writes
+/// (`ferroehr::versioning::restriction`), so no step about the EHR alone
+/// decides first, while an EHR that reads as absent is refused at once.
+fn written_at_commit(op: &str, verdict: &Verdict) -> bool {
+    // NOTE: our own design (#5627), the first step that refuses the written datum answers.
+    operation(op).is_some_and(|row| matches!(row.verb, Verb::Create | Verb::Update))
+        && verdict.item_dependent()
+        && matches!(verdict.outcome(&Item::Ehr), Outcome::Refused(_))
 }
 
 /// Record the EHDS Art. 10(2) override of each opt-out an emergency lifted
@@ -368,14 +386,12 @@ fn forbidden(principal: Option<&Principal>, code: Refusal) -> Response {
 const fn reason(code: Refusal) -> &'static str {
     match code {
         Refusal::ConsentDenied => "a directive of the subject denies this access",
+        Refusal::PolicyDenied => "a rule of the controller's access policy denies this access",
         Refusal::Sensitivity => "the data carry a sensitivity the caller is not cleared for",
         Refusal::NoCareRelationship => {
             "the access policy requires a care relationship to the subject and the caller has none"
         }
         Refusal::PurposeMissing => "the access policy requires a declared purpose of use",
-        Refusal::PurposeNotPermitted => {
-            "the caller's capabilities do not permit the declared purpose of use"
-        }
         Refusal::ConsentRequired => "the EHR needs consent and no permit directive applies",
         Refusal::NotSubject => "the caller's patient context names another EHR",
         Refusal::NotRepresented => "the caller represents the subject of another EHR",
@@ -425,10 +441,10 @@ mod tests {
     fn a_visible_refusal_is_403() {
         for code in [
             Refusal::ConsentDenied,
+            Refusal::PolicyDenied,
             Refusal::Sensitivity,
             Refusal::NoCareRelationship,
             Refusal::PurposeMissing,
-            Refusal::PurposeNotPermitted,
             Refusal::ConsentRequired,
             Refusal::NotSubject,
             Refusal::NotRepresented,

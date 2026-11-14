@@ -405,14 +405,13 @@ impl LiveGrants {
     }
 
     /// The caller facts of the party `party` at `now`, from the copy held:
-    /// the clearances and purposes of the capabilities of the `ROLE`s it
-    /// performs that hold on the date of `now` in UTC and at `now`, and the
-    /// care teams it is a member of on that date.
+    /// the roles of the `ROLE`s it performs that hold on the date of `now` in
+    /// UTC, and the care teams it is a member of on that date.
     #[must_use]
     pub fn facts_of(&self, party: Uuid, now: jiff::Timestamp) -> CallerFacts {
         let held = self.held_facts();
         let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
-        let (mut clearances, mut purposes, mut care_teams) = (Vec::new(), Vec::new(), Vec::new());
+        let (mut roles, mut care_teams) = (Vec::new(), Vec::new());
         for row in held
             .by_party
             .get(&party)
@@ -423,15 +422,14 @@ impl LiveGrants {
                 continue;
             }
             match (row.kind, &row.value) {
-                (FactKind::Clearance, FactValue::Code(code)) => clearances.push(code.clone()),
-                (FactKind::Purpose, FactValue::Code(code)) => purposes.push(code.clone()),
+                (FactKind::Role, FactValue::Code(code)) => roles.push(code.clone()),
                 (FactKind::MemberOf, FactValue::Team(team)) => {
                     care_teams.extend(row.term.dates.map(|dates| CareTeam::new(*team, dates)));
                 }
                 _ => {}
             }
         }
-        CallerFacts::new(clearances, purposes, care_teams)
+        CallerFacts::new(roles, care_teams)
     }
 
     /// The care teams and units the subject `subject` is under the care of,

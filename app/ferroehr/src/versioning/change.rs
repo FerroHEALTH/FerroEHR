@@ -670,14 +670,14 @@ async fn apply_change(
         known_now,
         preplaced,
     } = scope;
-    restriction::ensure_not_restricted_tx(tx, ehr_id, change.target_vo_id()).await?;
+    let written = restriction::ensure_writable_tx(tx, ehr_id, &change).await?;
     let at = Placing {
         ehr_id,
         known_now,
         preplaced,
     };
     let access = crate::service::ehr::access_projection::AccessCommit::of(&change);
-    let mut resolved = match change {
+    let resolved = match change {
         Change::Create {
             allocated,
             kind,
@@ -743,7 +743,8 @@ async fn apply_change(
             .await?
         }
     };
-    if skip_identical && let Some(existing) = skipped_resend(&resolved, audit) {
+    let mut resolved = resolve::admit_written(&written, resolved)?;
+    if skip_identical && let Some(existing) = resolve::skipped_resend(&resolved, audit) {
         return Ok((existing, Uuid::nil()));
     }
     let party_facts = resolved.party_facts.take();
@@ -895,34 +896,9 @@ async fn commit_resolved(
     ))
 }
 
-/// The opt-in answer to an identical re-send (#4415): the existing version
-/// `r` shares its content with, and no commit, when `r` is a modify whose
-/// content equalled the preceding tip's; `None` otherwise. The tip is the
-/// one version the `If-Match` names, so an earlier version's content is
-/// never matched. ITS-REST does not govern skipping an identical commit: our
-/// own design, after what Cadasto answers.
-fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
-    let (Some(preceding), Some(_)) = (&r.preceding, r.shared_from) else {
-        return None;
-    };
-    Some(Committed {
-        vo_id: r.vo_id,
-        sys_version: preceding.sys_version,
-        tree: preceding.tree,
-        creating_system_id: preceding.creating_system_id.clone(),
-        kind: r.kind,
-        change_type: audit.change_type.clone(),
-        template_id: r.template_id.clone(),
-        root_archetype: root_archetype(&r.rows),
-        time_committed: preceding.committed_at,
-        skipped: true,
-        content_digest: r.content_digest,
-    })
-}
-
 /// The root's `archetype_node_id` off the decomposed rows, for the outbox
 /// envelope and the audit record.
-fn root_archetype(rows: &[NodeRow]) -> Option<String> {
+pub(super) fn root_archetype(rows: &[NodeRow]) -> Option<String> {
     rows.first()
         .filter(|root| root.num == 0)
         .and_then(|root| root.data.get("archetype_node_id"))

@@ -57,13 +57,15 @@ pub enum Step {
     Restriction,
     /// 3, a consent deny.
     ConsentDeny,
-    /// 4, a sensitivity the caller is not cleared for.
+    /// 4, a deny rule of the controller's policy.
+    ControllerRule,
+    /// 5, a sensitivity no applying permit names.
     Sensitivity,
-    /// 5, a care relationship the policy requires.
+    /// 6, a care relationship the policy requires.
     CareRelationship,
-    /// 6, a purpose the policy requires.
+    /// 7, a purpose the policy requires.
     Purpose,
-    /// 7, the default disposition.
+    /// 8, the default disposition.
     DefaultDisposition,
 }
 
@@ -75,9 +77,10 @@ impl Step {
             Refusal::OptOut => Self::OptOut,
             Refusal::Restricted => Self::Restriction,
             Refusal::ConsentDenied => Self::ConsentDeny,
+            Refusal::PolicyDenied => Self::ControllerRule,
             Refusal::Sensitivity => Self::Sensitivity,
             Refusal::NoCareRelationship => Self::CareRelationship,
-            Refusal::PurposeMissing | Refusal::PurposeNotPermitted => Self::Purpose,
+            Refusal::PurposeMissing => Self::Purpose,
             Refusal::ConsentRequired => Self::DefaultDisposition,
             Refusal::NotSubject => Self::Subject,
             Refusal::NotRepresented => Self::Representation,
@@ -92,10 +95,11 @@ impl Step {
             Self::OptOut => 1,
             Self::Restriction => 2,
             Self::ConsentDeny => 3,
-            Self::Sensitivity => 4,
-            Self::CareRelationship => 5,
-            Self::Purpose => 6,
-            Self::DefaultDisposition => 7,
+            Self::ControllerRule => 4,
+            Self::Sensitivity => 5,
+            Self::CareRelationship => 6,
+            Self::Purpose => 7,
+            Self::DefaultDisposition => 8,
         }
     }
 
@@ -108,6 +112,7 @@ impl Step {
             Self::OptOut => "opt-out",
             Self::Restriction => "restriction",
             Self::ConsentDeny => "consent deny",
+            Self::ControllerRule => "controller rule",
             Self::Sensitivity => "sensitivity",
             Self::CareRelationship => "care relationship",
             Self::Purpose => "purpose",
@@ -214,7 +219,7 @@ impl RequestAccess {
         }
     }
 
-    /// The capabilities and roles the caller held.
+    /// The capabilities the caller held and the roles it performs.
     fn role_grounds(&self) -> Vec<AccessAuthorisation> {
         let capabilities = self
             .record_facts()
@@ -225,10 +230,15 @@ impl RequestAccess {
                 reference: Some(role_reference(*role)),
                 ..authorisation("role")
             });
-        let roles = self.caller().roles.iter().map(|role| AccessAuthorisation {
-            name: Some(role.clone()),
-            ..authorisation("role")
-        });
+        let roles = self
+            .caller()
+            .facts
+            .roles()
+            .iter()
+            .map(|role| AccessAuthorisation {
+                name: Some(format!("{}::{}", role.terminology, role.code)),
+                ..authorisation("role")
+            });
         capabilities.chain(roles).collect()
     }
 
@@ -271,6 +281,12 @@ impl RequestAccess {
                 .iter()
                 .filter_map(|at| directive(*at, Some("emergency"))),
         );
+        grounds.extend(
+            found
+                .lifted_rules
+                .iter()
+                .filter_map(|at| self.rule_ground(*at, "emergency")),
+        );
         if verdict.lifted.contains(&Lifted::Policy) {
             grounds.push(self.policy_ground("emergency"));
         }
@@ -284,6 +300,26 @@ impl RequestAccess {
             version,
             ..authorisation(kind)
         }
+    }
+
+    /// The rules of the access policy in force.
+    fn rules(&self) -> &[AccessDirective] {
+        self.policy_in_force()
+            .and_then(|policy| policy.rules.as_deref())
+            .unwrap_or_default()
+    }
+
+    /// The ground the rule at `at` of the access policy gives, of `kind`.
+    fn rule_ground(&self, at: usize, kind: &str) -> Option<AccessAuthorisation> {
+        let rule = self.rules().get(at)?;
+        Some(AccessAuthorisation {
+            reference: Some(identify(rule, at)),
+            legal_grounds: rule
+                .legal_grounds
+                .as_ref()
+                .map(|grounds| grounds.iter().cloned().collect()),
+            ..self.policy_ground(kind)
+        })
     }
 
     /// The refusal `noted` names, with what decided it.
@@ -302,7 +338,19 @@ impl RequestAccess {
                 |version| format!("{ACCESS_POLICY} {version}"),
             )
         };
-        let by = if noted.by.is_empty() {
+        let by = if step == Step::ControllerRule {
+            let named: Vec<String> = noted
+                .by
+                .iter()
+                .map(|at| {
+                    self.rules()
+                        .get(*at)
+                        .map_or_else(|| position(*at), |rule| identify(rule, *at))
+                        .id
+                })
+                .collect();
+            format!("rule {} of {}", named.join(", "), policy())
+        } else if noted.by.is_empty() {
             match step {
                 Step::Sensitivity => format!("{} and the labels of {}", policy(), carrier()),
                 Step::CareRelationship | Step::Purpose => policy(),
@@ -493,10 +541,11 @@ mod tests {
                 "refused-opt-out" => 1,
                 "refused-restricted" => 2,
                 "refused-consent-denied" => 3,
-                "refused-sensitivity" => 4,
-                "refused-no-care-relationship" => 5,
-                "refused-purpose-missing" | "refused-purpose-not-permitted" => 6,
-                "refused-consent-required" => 7,
+                "refused-policy-denied" => 4,
+                "refused-sensitivity" => 5,
+                "refused-no-care-relationship" => 6,
+                "refused-purpose-missing" => 7,
+                "refused-consent-required" => 8,
                 "refused-not-subject" | "refused-not-represented" => 0,
                 other => panic!("an unknown refusal code {other}"),
             };
