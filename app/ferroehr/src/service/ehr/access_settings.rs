@@ -57,10 +57,13 @@ pub const DEFINITIONS: [(&str, &str); 1] = [(
     ),
 )];
 
-/// The EHRs whose current `EHR_ACCESS` carries settings, with those settings,
-/// shared from the service's copy
-/// ([`crate::service::FerroEhrService::ehr_access_settings_index`]).
-pub type EhrAccessIndex = std::sync::Arc<Vec<(crate::ids::EhrId, EhrAccessSettings)>>;
+/// The EHRs whose current `EHR_ACCESS` carries settings, ordered by EHR.
+///
+/// Each is held as a direct read finds it: the settings, never `None` here,
+/// the subject and the version that carries them; shared from the service's
+/// copy ([`crate::service::FerroEhrService::ehr_access_settings_index`]).
+pub type EhrAccessIndex =
+    std::sync::Arc<Vec<(crate::ids::EhrId, crate::access_eval::condition::EhrEntry)>>;
 
 /// The current `EHR_ACCESS.settings` of an EHR, as the access rules read them.
 #[derive(Debug, Clone, PartialEq)]
