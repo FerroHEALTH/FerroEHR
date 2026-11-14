@@ -487,7 +487,8 @@ mod tests {
                    "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-ROLE.nurse.v2",
                    "name": name,
                    "capabilities": [{"_type": "CAPABILITY", "credentials": {"items": [
-                       element(&coded(TERMINOLOGY, "read_ehr"), &coded("local", "x"))]}}]})
+                       element(&json!({"_type": "DV_TEXT", "value": "operation"}),
+                               &coded(TERMINOLOGY, "access_demographic"))]}}]})
         };
         let facts = GrantFacts::of(Kind::Role, &role(coded("urn:example:roles", "NURSE")));
         let read: Vec<(i32, FactKind, FactValue)> = facts
