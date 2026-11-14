@@ -25,6 +25,10 @@ The steps run in order for each EHR the access reaches. The first step that refu
 |===
 |Step |Rule |Refusal
 
+|0. Subject
+|A caller of kind `subject` is the subject of the one EHR its authenticated context names. Every other EHR MUST be refused to it, whatever that EHR's directives permit.
+|`refused-not-subject`
+
 |1. Opt-out
 |An `opt_out` directive in force binds callers of kind `access_service`. Unless its `_emergency_override_` holds and the caller declares an emergency, and the caller does not act for the subject, the EHR MUST be answered as one that does not exist.
 |`refused-opt-out`, not shown
