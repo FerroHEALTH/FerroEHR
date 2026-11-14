@@ -100,6 +100,34 @@ impl FerroEhrService {
         Ok(matches!(verdict.outcome(&Item::Ehr), Outcome::Absent(_)))
     }
 
+    /// The ids of `ids` that name an EHR of this store the running request
+    /// may see: an EHR the evaluator answers as absent (EHDS Art. 8 and 10)
+    /// is named by no query.
+    ///
+    /// # Errors
+    /// The storage error of the existence read, and as
+    /// [`Self::ehr_verdict`].
+    pub(crate) async fn visible_ehr_ids(
+        &self,
+        ids: &[EhrId],
+    ) -> Result<std::collections::HashSet<uuid::Uuid>, ServiceError> {
+        let existing = crate::storage::ehr_repo::existing_ehr_ids(&self.pool, ids)
+            .await
+            .map_err(|e| match e {
+                crate::storage::error::StorageError::Acquire(acquire) => {
+                    ServiceError::Acquire(acquire)
+                }
+                other => ServiceError::internal("resolve the requested ehr_ids", other),
+            })?;
+        let mut present = std::collections::HashSet::with_capacity(existing.len());
+        for id in existing {
+            if !self.ehr_hidden_from_request(id).await? {
+                present.insert(id.0);
+            }
+        }
+        Ok(present)
+    }
+
     /// The condition a query of the running request applies: every EHR with
     /// settings judged from the copied index, every other by the default;
     /// unrestricted outside a request.
@@ -108,7 +136,7 @@ impl FerroEhrService {
     /// `service_overloaded` (`503`) when the index cannot be read.
     pub async fn request_access_condition(&self) -> Result<AccessCondition, ServiceError> {
         let Some(access) = current() else {
-            return Ok(AccessCondition::unrestricted());
+            return Ok(AccessCondition::default());
         };
         let index = self.ehr_access_settings_index().await?;
         Ok(access.condition(&index, access.cared_subjects()))

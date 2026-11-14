@@ -12,12 +12,13 @@
 
 mod examples;
 mod steps;
+mod steps_policy;
 
 use std::sync::Arc;
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
-    AccessDefault, CallerKind, ForeignCode, OperationClass,
+    AccessDefault, CallerKind, ForeignCode, OperationClass, Refusal,
 };
 use serde_json::{Value, json};
 use uuid::Uuid;
@@ -59,6 +60,25 @@ pub(super) const CONFIDENTIALITY: &str = "2.16.840.1.113883.5.25";
 pub(super) const PURPOSE: &str = "2.16.840.1.113883.5.8";
 /// The national category system of the test map.
 pub(super) const CATEGORIES: &str = "urn:example:categories";
+
+/// An opt-out reads as absent.
+pub(super) const ABSENT_OPT_OUT: Outcome = Outcome::Absent(Refusal::OptOut);
+/// A restriction reads as absent.
+pub(super) const ABSENT_RESTRICTED: Outcome = Outcome::Absent(Refusal::Restricted);
+/// A consent deny refuses.
+pub(super) const DENIED: Outcome = Outcome::Refused(Refusal::ConsentDenied);
+
+/// The break-glass role declaring an emergency.
+pub(super) fn break_glass(asked: Asked<'_>) -> Asked<'_> {
+    Asked {
+        emergency: Emergency {
+            declared: true,
+            break_glass: true,
+            opt_out_override: false,
+        },
+        ..asked
+    }
+}
 
 /// A term of the access control groups.
 pub(super) fn term(code: &str) -> Value {

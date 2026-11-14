@@ -320,12 +320,6 @@ impl From<ConditionGroups> for AccessCondition {
 }
 
 impl AccessCondition {
-    /// The condition admitting every row.
-    #[must_use]
-    pub fn unrestricted() -> Self {
-        Self::default()
-    }
-
     /// The condition of `groups`, `default` for every other EHR.
     fn new(
         groups: BTreeMap<VerdictPair, Vec<Uuid>>,
@@ -339,7 +333,7 @@ impl AccessCondition {
             .map(|(pair, ids)| (ids, Arc::new(pair)))
             .collect();
         if default_admits && groups.iter().all(|(_, pair)| pair.admits_all()) {
-            return Self::unrestricted();
+            return Self::default();
         }
         ConditionGroups {
             groups,

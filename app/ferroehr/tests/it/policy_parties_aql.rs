@@ -489,7 +489,7 @@ async fn plan_of(
         ehr_ids: Vec::new(),
         ehr_scope_kind: EhrScopeKind::Named,
         subject_scope: None,
-        ehr_access: ferroehr::access_eval::condition::AccessCondition::unrestricted(),
+        ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit: ir.limit,
         offset: None,
         archetype_lineage: std::sync::Arc::default(),

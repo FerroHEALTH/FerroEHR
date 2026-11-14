@@ -190,7 +190,7 @@ async fn query(dsn: &str, case: &Case, ehr: Uuid, plan: &Path) -> anyhow::Result
         },
         ehr_scope_kind: EhrScopeKind::Named,
         subject_scope: None,
-        ehr_access: ferroehr::access_eval::condition::AccessCondition::unrestricted(),
+        ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit: Some(case.limit),
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),

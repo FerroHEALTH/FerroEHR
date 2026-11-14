@@ -33,7 +33,6 @@ use crate::error::refusal::{Missing, Refusal};
 use crate::error::{ErrorChain, ServiceError};
 use crate::service::FerroEhrService;
 use crate::service::query::request::{AqlQueryRequest, QueryOutcome};
-use crate::storage::ehr_repo;
 use crate::storage::error::StorageError;
 use crate::system_log::categories::{AccessedContent, ContentIds};
 
@@ -306,26 +305,7 @@ impl FerroEhrService {
         }
         // Verify existence in one round-trip and report the first absent id, as
         // a set: a cohort names 100 000 EHRs and a probe per id is quadratic (#3159).
-        let existing = ehr_repo::existing_ehr_ids(&self.pool, ids)
-            .await
-            .map_err(|e| {
-                Failure::analysis(match e {
-                    StorageError::Acquire(acquire) => ServiceError::Acquire(acquire),
-                    other => ServiceError::internal("resolve the requested ehr_ids", other),
-                })
-            })?;
-        // NOTE: EHDS Art. 8 and Art. 10 (`docs/law/eu/ehds/text.html`), an EHR the access
-        // evaluator answers as absent is named by no query.
-        let mut present = std::collections::HashSet::with_capacity(existing.len());
-        for id in existing {
-            if !self
-                .ehr_hidden_from_request(id)
-                .await
-                .map_err(Failure::analysis)?
-            {
-                present.insert(id.0);
-            }
-        }
+        let present = self.visible_ehr_ids(ids).await.map_err(Failure::analysis)?;
         if let Some(missing) = ids.iter().find(|id| !present.contains(&id.0)) {
             return Err(Failure::analysis(ServiceError::not_found(
                 Missing::Ehr,
@@ -764,7 +744,7 @@ mod tests {
             ehr_ids: Vec::new(),
             ehr_scope_kind: crate::aql::sql::EhrScopeKind::Named,
             subject_scope: None,
-            ehr_access: crate::access_eval::condition::AccessCondition::unrestricted(),
+            ehr_access: crate::access_eval::condition::AccessCondition::default(),
             limit: None,
             offset: None,
             archetype_lineage: std::sync::Arc::new(crate::aql::lineage::ArchetypeLineage::default()),

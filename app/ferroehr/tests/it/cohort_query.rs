@@ -613,7 +613,7 @@ fn the_two_statements_never_cross_the_boundary() {
         ehr_ids: ehr_ids.clone(),
         ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: None,
-        ehr_access: ferroehr::access_eval::condition::AccessCondition::unrestricted(),
+        ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit: None,
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),

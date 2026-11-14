@@ -137,7 +137,7 @@ impl FerroEhrService {
             ehr_ids: Vec::new(),
             ehr_scope_kind: EhrScopeKind::Named,
             subject_scope: None,
-            ehr_access: crate::access_eval::condition::AccessCondition::unrestricted(),
+            ehr_access: crate::access_eval::condition::AccessCondition::default(),
             limit: ceiling.map(|c| c.saturating_add(1)),
             offset: None,
             archetype_lineage: self.archetype_lineage().await,
