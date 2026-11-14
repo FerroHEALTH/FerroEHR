@@ -25,13 +25,19 @@ use openehr_its::rest::runtime::ApiError;
 use serde_json::{Value, json};
 
 use ferroehr::access_log::search::{LOG_QUERY, LogQuery};
-use ferroehr::access_log::view::subject_view;
-use ferroehr::service::admin::access_log_read::LogReader;
+use ferroehr::access_log::view::{LogReader, LogStanding, view_of};
+use ferroehr::ids::EhrId;
 use ferroehr::system_log::event::{EntryScope, QueryNaming};
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
+use crate::extensions::access::authn::{Principal, current_principal};
+use crate::extensions::access::authz::AuthzHandle;
+use crate::extensions::access::authz::classify::OperationClass;
+use crate::extensions::access::authz::roles::RbacDecision;
+use crate::extensions::access::delay;
 use crate::overview::error::RestError;
 use crate::overview::params::query_pairs;
+use crate::state::AppState;
 use crate::system_log::middleware::AuditObject;
 
 /// The parameters of an EHR's log (the draft's ITS-REST page).
@@ -63,6 +69,45 @@ pub(crate) const REVIEW_PARAMETERS: &[&str] = &[
     "offset",
     "fetch",
 ];
+
+/// What the current caller may read of the access log, whichever resource
+/// names it: the subject of care and a representative bound through the party
+/// binding read the subject view of the EHR they are confined to (the EHR of
+/// the patient token's launch context, or of the subject the representation
+/// names, #5446, #5532), any other caller the admin class admits reads the
+/// full view, and any other caller is refused.
+pub(crate) fn standing(state: &AppState) -> LogStanding {
+    // NOTE: our own design, a server with authentication off is open, as the admin review is.
+    let Some(principal) = current_principal() else {
+        return LogStanding::Reviewer;
+    };
+    if delay::acts_for_the_person(&principal) {
+        return confined(&principal)
+            .and_then(|ehr| ehr.parse::<uuid::Uuid>().ok())
+            .map_or(LogStanding::Refused, |ehr| LogStanding::Person(EhrId(ehr)));
+    }
+    let authz = state.authz();
+    let admitted = authz
+        .as_deref()
+        .and_then(AuthzHandle::rbac)
+        .is_none_or(|rbac| {
+            rbac.decide(OperationClass::Admin, &principal.roles) == RbacDecision::Allow
+        });
+    if admitted {
+        LogStanding::Reviewer
+    } else {
+        LogStanding::Refused
+    }
+}
+
+/// The EHR the person's caller is confined to: the represented subject's for
+/// a representative, else the launch context's of the patient's token.
+fn confined(principal: &Principal) -> Option<&str> {
+    match &principal.represented {
+        Some(represented) => represented.ehr_id.as_deref(),
+        None => principal.access.ehr_id(),
+    }
+}
 
 /// The largest page served: our own design.
 const MAX_FETCH: i64 = 1000;
@@ -173,9 +218,7 @@ pub(crate) fn page(
     Ok(json!({ "offset": filter.offset, "fetch": filter.fetch, "entries": entries }))
 }
 
-/// `record` as `reader` reads it: the full ITS-JSON record for a reviewer,
-/// the subject view of an entry for the person, and `None` for a tombstone
-/// the person is never served.
+/// `record` as `reader` reads it ([`view_of`]), its rendering failure a `500`.
 ///
 /// # Errors
 /// A `500` when the record has no JSON form.
@@ -183,12 +226,7 @@ pub(crate) fn record_view(
     record: &AccessLogRecord,
     reader: LogReader,
 ) -> Result<Option<Value>, RestError> {
-    let value = match (record, reader) {
-        (_, LogReader::Reviewer) => serde_json::to_value(record),
-        (AccessLogRecord::AccessLogEntry(entry), LogReader::Person) => subject_view(entry),
-        (AccessLogRecord::AccessLogTombstone(_), LogReader::Person) => return Ok(None),
-    };
-    value.map(Some).map_err(|error| {
+    view_of(record, reader).map_err(|error| {
         RestError::from(crate::overview::error::internal_fault_caused(
             "render the access-log record",
             &error,

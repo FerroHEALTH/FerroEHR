@@ -115,13 +115,8 @@ impl FerroEhrService {
                 QueryDomain::Clinical,
             )?,
         };
-        let run = self.run_joined(job, &halves, (limit, offset));
-        match self.query_timeout {
-            Some(budget) => tokio::time::timeout(budget, run)
-                .await
-                .map_err(|_elapsed| Failure::timeout(budget))?,
-            None => run.await,
-        }
+        self.within_budget(self.run_joined(job, &halves, (limit, offset)))
+            .await?
     }
 
     /// The three statements and the join, under the caller's execution budget.
@@ -587,15 +582,7 @@ fn cut_page(
 
 /// An empty clinical answer, for a party set no EHR is linked to.
 fn empty_result() -> QueryResult {
-    QueryResult {
-        columns: Vec::new(),
-        rows: Vec::new(),
-        served_ehrs: Vec::new(),
-        served_origins: Vec::new(),
-        origin_count: 0,
-        served_content: Vec::new(),
-        constraints: crate::system_log::categories::QueryConstraints::default(),
-    }
+    QueryResult::of_rows(Vec::new(), Vec::new())
 }
 
 #[cfg(test)]

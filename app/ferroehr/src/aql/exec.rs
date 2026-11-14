@@ -75,6 +75,23 @@ pub struct QueryResult {
     pub constraints: crate::system_log::categories::QueryConstraints,
 }
 
+impl QueryResult {
+    /// A result of `columns` and `rows` that attributes no row to an EHR, an
+    /// origin or a version, and states no query constraint.
+    #[must_use]
+    pub fn of_rows(columns: Vec<ColumnMeta>, rows: Vec<Vec<Value>>) -> Self {
+        Self {
+            columns,
+            rows,
+            served_ehrs: Vec::new(),
+            served_origins: Vec::new(),
+            origin_count: 0,
+            served_content: Vec::new(),
+            constraints: crate::system_log::categories::QueryConstraints::default(),
+        }
+    }
+}
+
 /// Plan, execute, and assemble an AQL query.
 ///
 /// `profile` is the ACTIVE `spec_profile`: whole-object cells serve stored

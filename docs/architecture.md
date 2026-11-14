@@ -332,7 +332,17 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `access_log::search` pages the records over the trigger's search columns,
   `service::admin::access_log_read` holds the EHR check and the EHDS Art.
   3(3) holds the person's view leaves out, and every read writes its own
-  `LogRead` entry naming the log it read.
+  `LogRead` entry naming the log it read. AQL reads the log as the top-level
+  class `ACCESS_LOG_ENTRY` (#5131): `aql::access_log` plans it apart from the
+  clinical engine and its plan cache (alone in `FROM`, never inside or around
+  an `EHR`), its `sql` statement reads the trigger's search columns where a
+  path has one (the `(ehr_id, time_recorded)` index serves the person's lookup)
+  and the canonical form elsewhere, and `service::query::access_log` applies
+  the caller's `LogStanding` (the REST resources' rules, decided once in
+  `api::access_log_query::standing`), reads each column out of
+  `access_log::view::view_of` and reports a `LogRead` the query's record
+  writes; a withheld path reads as absent in a condition
+  (`view::subject_withholds`).
   No openEHR spec governs audit storage: our own design.
 - **One pool and one DSN per storage domain.** `[database.clinical]`,
   `[database.party]` and `[database.audit]` each carry a

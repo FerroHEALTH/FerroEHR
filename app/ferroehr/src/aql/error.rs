@@ -162,6 +162,11 @@ pub enum AqlFeatureError {
     )]
     DemographicRootPlacement(String),
 
+    /// A query over the access log outside what it takes: the placement of
+    /// `ACCESS_LOG_ENTRY`, its paths and its clauses. Our own design (#5131).
+    #[error(transparent)]
+    AccessLog(#[from] crate::aql::access_log::LogQueryError),
+
     /// An aggregate column in a query that joins a demographic root to its
     /// `EHR`: the aggregate would need the joined rows inside one statement,
     /// and the two domains never meet in one. Our own design.

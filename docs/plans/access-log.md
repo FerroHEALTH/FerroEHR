@@ -762,8 +762,14 @@ The limits, in the proposal: `ACCESS_LOG_ENTRY` is a top-level class
 expression only; it never appears inside `EHR CONTAINS`, so a query cannot
 join log entries to clinical content in one result; it needs its own
 permission, never granted with clinical query rights; and each such query is
-itself an entry. FerroEHR builds it after the ITS-REST resources, as its
-own issue.
+itself an entry. FerroEHR built it after the ITS-REST resources (#5131):
+the permission is the log's own, the same standing as the ITS-REST resources
+(a reviewer the admin class admits reads the full view across EHRs, the
+person and a bound representative the subject view of their EHR, where a
+withheld path reads as absent in a column and in a condition); a path that
+crosses a list reads as the list of what it reaches and a condition on it
+holds when any member matches; aggregates, functions, `DISTINCT` and path
+predicates are refused.
 
 ## Legal requirements and where the model meets them
 

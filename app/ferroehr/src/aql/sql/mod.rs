@@ -53,7 +53,7 @@ mod archetype;
 mod attestation;
 mod compact;
 mod condition;
-mod expr;
+pub(crate) mod expr;
 mod from;
 mod gates;
 mod head;

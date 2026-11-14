@@ -37,7 +37,7 @@ use openehr_its::rest::runtime::ApiError;
 use ferroehr::access_log::checkpoint::{Checkpoints, Verification};
 use ferroehr::access_log::store::AccessLogError;
 use ferroehr::access_log::transfer::TransferError;
-use ferroehr::service::admin::access_log_read::LogReader;
+use ferroehr::access_log::view::LogReader;
 use ferroehr::versioning::signature::signer::AttestError;
 
 use super::body::{AdminRefusal, required_query};

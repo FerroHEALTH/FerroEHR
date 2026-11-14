@@ -30,6 +30,7 @@ use openehr_its::rest::runtime::ApiError;
 use crate::api::RequestParts;
 use crate::negotiate;
 use crate::overview::error::RestError;
+use ferroehr::access_log::view::LogStanding;
 use ferroehr::aql::sql::EhrAccessScope;
 use ferroehr::aql::sql::subject::SubjectScope;
 use ferroehr::ids::EhrId;
@@ -50,6 +51,8 @@ pub(super) struct QueryScope {
     pub(super) collect: bool,
     /// The EHRs the caller's `EHR_ACCESS` decision lets the query read.
     pub(super) ehr_access: EhrAccessScope,
+    /// What the caller may read of the access log (#5131).
+    pub(super) log_standing: LogStanding,
 }
 
 impl QueryScope {
@@ -63,6 +66,7 @@ impl QueryScope {
             .and_then(|s| s.namespace.clone());
         request.ehr_access.clone_from(&self.ehr_access);
         request.collect_attributes = self.collect;
+        request.log_standing = self.log_standing;
         request
     }
 }
@@ -553,6 +557,7 @@ mod tests {
             }),
             collect: true,
             ehr_access: EhrAccessScope::Excluding(vec![withheld]),
+            log_standing: LogStanding::Reviewer,
         };
         let req = scope.apply(AqlQueryRequest::default());
         assert_eq!(req.subject_scope.as_deref(), Some("patient-1"));
@@ -562,6 +567,7 @@ mod tests {
         );
         assert!(req.collect_attributes);
         assert_eq!(req.ehr_access, EhrAccessScope::Excluding(vec![withheld]));
+        assert_eq!(req.log_standing, LogStanding::Reviewer);
     }
 }
 

@@ -614,6 +614,60 @@ relationship. The rule applies under every root, the abstract `PARTY` and
 half of a join, and counts, pages and aggregates see only what you may read
 ([Operational policy](operational-policy.md) has the rule in full).
 
+## Querying the access log
+
+The access log is queryable with AQL as its own top-level class,
+`ACCESS_LOG_ENTRY`, on the same `POST /query/aql` and `GET /query/aql` routes
+and through stored queries. It serves review and analysis of the log (EHDS
+Annex II 3.3) and record demerging. No openEHR specification defines AQL over an
+access log: the class comes from the draft access-log model FerroEHR proposes,
+and everything below is FerroEHR's own design.
+
+```
+SELECT l/time_recorded/value, l/ehr_id/value, l/accessor/party/external_ref/id/value
+FROM ACCESS_LOG_ENTRY l
+WHERE l/items/version_id/value = $version
+ORDER BY l/time_recorded/value DESC
+```
+
+**The class stands alone.** `ACCESS_LOG_ENTRY` is the one class of its `FROM`
+clause. It never appears inside an `EHR` containment, it never contains an
+`EHR` or any other class, and it takes no predicate in `FROM`, so no query
+returns log entries and clinical data in one result. A query that breaks this
+gets `400` with a message naming the rule.
+
+**Who may run it, and what they see.** The log has its own access control,
+apart from any clinical query right, and the query follows the rules of the
+[access log's own resources](audit.md#reading-the-access-log-over-its-rest):
+
+| Caller | Reads |
+|---|---|
+| A caller the admin class admits | every EHR's entries in the full view; an `ehr_id` scope narrows them |
+| The patient, or a representative bound to them | the entries of the EHR they are confined to, in the subject view, without those about data held from them |
+| Anyone else | nothing: `403` |
+
+In the subject view a path the view leaves out (the credential, the delegation,
+the binding, the channel, the query text and digest, the security labels,
+`other_details`, each origin's endpoint and the link) reads as absent: its
+column is `null` and a condition on it matches nothing, so it cannot be probed
+through `WHERE`. A person who scopes another EHR gets `404`. The SMART `aql-…`
+scopes that govern every query still apply.
+
+**Paths and conditions.** Paths name the entry's attributes as the draft model
+defines them, checked against that model. A path that crosses a list, such as
+`l/items/version_id/value`, reads as the list of every value it reaches, and a
+condition on it holds when any member matches. `WHERE` takes the comparison
+operators, `LIKE`, `matches` over a value list, `EXISTS`, `AND`, `OR` and `NOT`;
+`ORDER BY`, `LIMIT`, `OFFSET` and the `offset` and `fetch` parameters page the
+entries as they page any query. Without `ORDER BY` the newest entries come
+first. `l/time_recorded/value` compares as an instant, written as an ISO 8601
+date-time with its offset. Aggregates, functions, `SELECT DISTINCT`, path
+predicates and `TERMINOLOGY()` are refused.
+
+**Every query is recorded.** A query of the log is a read of the log, and it
+writes its own access-log entry: the action `read`, the query named by its
+digest, and for the person the log of their EHR.
+
 ## Version scope: LATEST_VERSION and ALL_VERSIONS
 
 By default a query sees the **latest** version of each object. FerroEHR also
@@ -852,6 +906,9 @@ silently incorrect answer:
   the root, and a query mixing a demographic root with `EHR` or clinical
   content other than the join (see
   [Queries rooted at a demographic class](#queries-rooted-at-a-demographic-class)).
+- **The access log beside anything else.** `ACCESS_LOG_ENTRY` inside an `EHR`
+  containment, over or beside another class, or with a predicate in `FROM`
+  (see [Querying the access log](#querying-the-access-log)).
 - **`TOP … BACKWARD`.** `TOP` is deprecated as of AQL 1.1.0 and the direction
   variant is not implemented; the error carries the specification's own rewrite
   (`ORDER BY <path> DESC LIMIT n`). `TOP` and `LIMIT` in one query are also

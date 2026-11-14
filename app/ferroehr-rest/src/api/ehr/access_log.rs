@@ -29,15 +29,14 @@ use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use ferroehr::service::admin::access_log_read::LogReader;
+use ferroehr::access_log::view::{LOG_REFUSED, LogReader, LogStanding};
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
-use crate::api::access_log_query::{EHR_PARAMETERS, log_query, page, record_view, recorded};
+use crate::api::access_log_query::{
+    EHR_PARAMETERS, log_query, page, record_view, recorded, standing,
+};
 use crate::api::{RequestParts, guarded_handler};
-use crate::extensions::access::authn::{Principal, current_principal};
-use crate::extensions::access::authz::AuthzHandle;
-use crate::extensions::access::authz::classify::OperationClass;
-use crate::extensions::access::authz::roles::RbacDecision;
+use crate::extensions::access::authn::current_principal;
 use crate::extensions::access::delay;
 use crate::overview::error::RestError;
 use crate::overview::version_id::parse_ehr_id;
@@ -168,51 +167,30 @@ async fn get(state: &AppState, parts: &RequestParts) -> Response {
     recorded(&parts.headers, answered, Some(ehr), Some(uid), None)
 }
 
-/// Who the current caller reads the log of `ehr` as.
+/// Who the current caller reads the log of `ehr` as: their [`standing`]
+/// held to `ehr`.
 ///
 /// # Errors
 /// A `404` for the subject or a representative addressing an EHR other than
 /// the one they are confined to, and a `403` for a caller the admin class
 /// does not admit.
 fn reader(state: &AppState, ehr: &str) -> Result<LogReader, RestError> {
-    // NOTE: our own design, a server with authentication off is open, as the admin review is.
-    let Some(principal) = current_principal() else {
-        return Ok(LogReader::Reviewer);
-    };
-    if delay::acts_for_the_person(&principal) {
+    let unknown = || RestError::from(ApiError::NotFound(format!("no EHR has the id {ehr}")));
+    match standing(state) {
+        LogStanding::Reviewer => Ok(LogReader::Reviewer),
         // NOTE: EHDS Art. 9(2), the person reads the log of their own EHR only, and another
         // EHR answers as an unknown one does, so its existence is not disclosed.
-        return if confined(&principal).is_some_and(|confined| confined.eq_ignore_ascii_case(ehr)) {
+        LogStanding::Person(confined) if confined.to_string().eq_ignore_ascii_case(ehr) => {
             Ok(LogReader::Person)
-        } else {
-            Err(RestError::from(ApiError::NotFound(format!(
-                "no EHR has the id {ehr}"
-            ))))
-        };
-    }
-    let authz = state.authz();
-    let admitted = authz
-        .as_deref()
-        .and_then(AuthzHandle::rbac)
-        .is_none_or(|rbac| {
-            rbac.decide(OperationClass::Admin, &principal.roles) == RbacDecision::Allow
-        });
-    if admitted {
-        return Ok(LogReader::Reviewer);
-    }
-    Err(RestError::from(ApiError::Forbidden(
-        "the access log is read by its subject, their representative, or a reviewer the \
-         admin class admits"
-            .to_owned(),
-    )))
-}
-
-/// The EHR the person's caller is confined to: the represented subject's for
-/// a representative, else the launch context's of the patient's token.
-fn confined(principal: &Principal) -> Option<&str> {
-    match &principal.represented {
-        Some(represented) => represented.ehr_id.as_deref(),
-        None => principal.access.ehr_id(),
+        }
+        LogStanding::Person(_) => Err(unknown()),
+        LogStanding::Refused
+            if current_principal()
+                .is_some_and(|principal| delay::acts_for_the_person(&principal)) =>
+        {
+            Err(unknown())
+        }
+        LogStanding::Refused => Err(RestError::from(ApiError::Forbidden(LOG_REFUSED.to_owned()))),
     }
 }
 

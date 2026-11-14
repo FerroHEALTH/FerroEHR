@@ -30,25 +30,25 @@ use crate::portal_representatives_http::{
 };
 
 /// The role every portal token carries, so the clinical class admits it.
-const PATIENT_ROLE: &str = "PATIENT";
+pub(crate) const PATIENT_ROLE: &str = "PATIENT";
 
 /// The assembled server and what a test reads beside it.
-struct Fixture {
+pub(crate) struct Fixture {
     _db: testkit::TestDb,
     _drain: ferroehr::system_log::sender::AuditHandle,
-    pool: PgPool,
-    app: Router,
+    pub(crate) pool: PgPool,
+    pub(crate) app: Router,
     /// The child's EHR, which the parent represents.
-    ehr: String,
+    pub(crate) ehr: String,
     /// Another person's EHR.
-    elsewhere: String,
+    pub(crate) elsewhere: String,
 }
 
 /// The server over a fresh database: the patient portal trusted with its
 /// roles, the professional `dr` and the administrator `root`, the RBAC gate
 /// on, and the audit drain writing the access log; `root` has read the
 /// child's EHR once, so its log holds a professional's access.
-async fn fixture() -> Fixture {
+pub(crate) async fn fixture() -> Fixture {
     let (db, pool) = common::migrated_pool().await;
     let (sender, drain) =
         ferroehr::system_log::sender::start(common::local_audit(), None, Some(pool.clone()))
@@ -112,7 +112,7 @@ async fn fixture() -> Fixture {
 }
 
 /// The administrator's credential.
-fn root() -> String {
+pub(crate) fn root() -> String {
     common::basic_credential("root")
 }
 
@@ -127,7 +127,7 @@ fn parent(ehr: &str) -> String {
 }
 
 /// A portal token for `ehr`, its actor `actor`, carrying [`PATIENT_ROLE`].
-fn token_with_role(actor: Option<&str>, ehr: &str) -> String {
+pub(crate) fn token_with_role(actor: Option<&str>, ehr: &str) -> String {
     let mut claims = json!({ "roles": [PATIENT_ROLE] });
     if let Some(actor) = actor {
         claims["act"] = json!({ "sub": actor });
@@ -136,7 +136,7 @@ fn token_with_role(actor: Option<&str>, ehr: &str) -> String {
 }
 
 /// The status and JSON body of `GET uri` as `credential`.
-async fn get(app: &Router, uri: &str, credential: &str) -> (StatusCode, Value) {
+pub(crate) async fn get(app: &Router, uri: &str, credential: &str) -> (StatusCode, Value) {
     let (status, body) = common::send_body(
         app,
         common::req("GET", uri)
@@ -155,7 +155,11 @@ fn log_of(ehr: &str, query: &str) -> String {
 
 /// The stored entries `keep` selects, as their canonical JSON, polled until
 /// there are at least `expected`.
-async fn stored(pool: &PgPool, expected: usize, keep: impl Fn(&Value) -> bool) -> Vec<Value> {
+pub(crate) async fn stored(
+    pool: &PgPool,
+    expected: usize,
+    keep: impl Fn(&Value) -> bool,
+) -> Vec<Value> {
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let rows: Vec<String> = sqlx::query_scalar(

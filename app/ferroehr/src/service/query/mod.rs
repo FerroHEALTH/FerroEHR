@@ -19,11 +19,15 @@
 //! - `result_set` — `RESULT_SET` / `RESULT_SET_COLUMN` / `RESULT_SET_ROW`
 //!   assembly to the ITS-REST `ResultSet` schema + parameter substitution,
 //!   isolated in one spec-cited place.
+//! - `access_log` — a query over `ACCESS_LOG_ENTRY`, run against the access
+//!   log under the log's own access control (no openEHR spec governs it — our
+//!   own design, #5131).
 //! - [`plan_cache`] — the bounded cache of lowered AQL plans keyed on query
 //!   text (no openEHR spec governs it — our own performance design).
 //! - [`config`] — the `[record.query]` tuning knobs (no openEHR spec governs
 //!   configuration — our own design).
 
+mod access_log;
 pub mod config;
 mod execute;
 mod join;

@@ -108,6 +108,12 @@ impl FerroEhrService {
         });
         let outcome = match planned {
             Ok(Planned::Single(ir)) => self.execute_single(&ir, aql, name, request, &params).await,
+            Ok(Planned::AccessLog(plan)) => {
+                let exec_start = Instant::now();
+                let outcome =
+                    Box::pin(self.execute_access_log(&plan, aql, name, request, &params)).await;
+                outcome.inspect(|_| record_phase("execute", exec_start))
+            }
             Ok(Planned::Joined(plan)) => {
                 let exec_start = Instant::now();
                 let joined = super::join::JoinRequest {
@@ -205,13 +211,7 @@ impl FerroEhrService {
                 Ok((exec.await?, None))
             }
         };
-        let (result, scope) = match self.query_timeout {
-            Some(budget) => tokio::time::timeout(budget, run)
-                .await
-                .map_err(|_elapsed| Failure::timeout(budget))?,
-            None => run.await,
-        }
-        .map_err(Failure::exec)?;
+        let (result, scope) = self.within_budget(run).await?.map_err(Failure::exec)?;
         record_phase("execute", exec_start);
 
         // `_executed_aql` carries the parameter-SUBSTITUTED text; `q` keeps
@@ -272,6 +272,12 @@ impl FerroEhrService {
             let message = format!("invalid AQL: {}", ErrorChain::new(&e));
             Failure::analysis(ServiceError::bad_request(message, e))
         })?;
+        // A query over the access log stands apart from the clinical engine and its
+        // cache: it reads the log's own store under the log's own access control.
+        if let Some(plan) = aql::access_log::plan(&ast).map_err(Failure::plan)? {
+            plan.check_params(params).map_err(Failure::plan)?;
+            return Ok(Planned::AccessLog(Box::new(plan)));
+        }
         // Semantic-analysis pre-pass: resolve every `TERMINOLOGY('expand', …)`
         // used in a `matches` operand through the terminology-service seam
         // and merge the codes into the value list, before planning
@@ -293,6 +299,26 @@ impl FerroEhrService {
         Ok(Planned::Single(ir))
     }
 
+    /// `run`'s output, or the timeout failure when it overruns
+    /// `[record.query] timeout`, so an over-long query is `408` rather than
+    /// hanging to the global request timeout.
+    ///
+    /// # Errors
+    /// [`Failure::timeout`] when the budget runs out first.
+    pub(super) async fn within_budget<T>(
+        &self,
+        run: impl Future<Output = T>,
+    ) -> Result<T, Failure> {
+        // Boxed, so the caller's future holds the statement once and never beside its timer.
+        let run = Box::pin(run);
+        match self.query_timeout {
+            Some(budget) => tokio::time::timeout(budget, run)
+                .await
+                .map_err(|_elapsed| Failure::timeout(budget)),
+            None => Ok(run.await),
+        }
+    }
+
     /// Check that every EHR the request scopes exists. An empty list scopes
     /// nothing (the population gate over `is_queryable` EHRs applies).
     ///
@@ -301,7 +327,7 @@ impl FerroEhrService {
     /// [`Failure`] (all labelled `analysis_error`) on a database fault during
     /// the existence check (exception), or a listed EHR that does not exist
     /// (`ehr_id_does_not_exist`).
-    async fn check_ehr_ids(&self, ids: &[EhrId]) -> Result<(), Failure> {
+    pub(super) async fn check_ehr_ids(&self, ids: &[EhrId]) -> Result<(), Failure> {
         if ids.is_empty() {
             return Ok(());
         }
@@ -340,6 +366,8 @@ enum Planned {
     Single(Arc<QueryIr>),
     /// The party and clinical halves of a joined query.
     Joined(Box<aql::join::JoinPlan>),
+    /// A query over the access log.
+    AccessLog(Box<aql::access_log::LogPlan>),
 }
 
 /// What a statement touched, for the access record's category classification:

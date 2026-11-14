@@ -686,6 +686,10 @@ curl -H "Authorization: Bearer $PATIENT_TOKEN" \
   "https://cdr.example.org/ferroehr/rest/extensions/v1/ehr/$EHR_ID/access_log?from=2026-11-01T00:00:00Z"
 ```
 
+The same entries are queryable with AQL as the top-level class
+`ACCESS_LOG_ENTRY`, under the same rules of who reads which view, and each such
+query writes its own entry ([Querying the access log](querying-aql.md#querying-the-access-log)).
+
 ## Sinks
 
 Records fan out to independently configured sinks (`[audit]` in
