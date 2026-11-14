@@ -197,6 +197,9 @@ pub struct Stored {
     /// The promoted `ehr.subject_id`; `None` for an unknown EHR or a status
     /// naming no subject.
     pub subject: Option<String>,
+    /// The uid of the `EHR_ACCESS` version the settings row was projected
+    /// from; `None` when the EHR has no settings row.
+    pub version: Option<String>,
 }
 
 /// One EHR's settings row and its subject, in one statement.
@@ -206,10 +209,12 @@ pub struct Stored {
 /// when no connection can be had.
 pub async fn settings_of(pool: &PgPool, ehr_id: EhrId) -> Result<Stored, StorageError> {
     let row = sqlx::query(
-        "SELECT e.subject_id, s.ehr_id IS NOT NULL AS has_settings, s.settings::text AS settings \
+        "SELECT e.subject_id, s.ehr_id IS NOT NULL AS has_settings, s.settings::text AS settings, \
+                s.vo_id, v.creating_system_id, v.trunk_version, v.branch_number, v.branch_version \
          FROM (SELECT $1::uuid AS id) k \
          LEFT JOIN ehr e ON e.id = k.id \
-         LEFT JOIN access_settings s ON s.ehr_id = k.id",
+         LEFT JOIN access_settings s ON s.ehr_id = k.id \
+         LEFT JOIN version v ON v.vo_id = s.vo_id AND v.sys_version = s.sys_version",
     )
     .bind(ehr_id)
     .fetch_one(&mut *acquire(pool).await?)
@@ -220,10 +225,34 @@ pub async fn settings_of(pool: &PgPool, ehr_id: EhrId) -> Result<Stored, Storage
         None if has_settings => StoredSettings::HeldClosed,
         None => StoredSettings::None,
     };
+    let version = version_of(&row)?;
     Ok(Stored {
         settings,
         subject: row.try_get("subject_id")?,
+        version,
     })
+}
+
+/// The uid of the version a row names by its `vo_id`, `creating_system_id`,
+/// `trunk_version`, `branch_number` and `branch_version` columns; `None` when
+/// the row joined no version.
+///
+/// # Errors
+/// [`sqlx::Error`] when a column does not decode.
+pub(crate) fn version_of(row: &sqlx::postgres::PgRow) -> Result<Option<String>, sqlx::Error> {
+    match (
+        row.try_get::<Option<VoId>, _>("vo_id")?,
+        row.try_get::<Option<String>, _>("creating_system_id")?,
+    ) {
+        (Some(vo_id), Some(system_id)) => Ok(Some(crate::storage::compact::version_uid(
+            vo_id,
+            &system_id,
+            row.try_get("trunk_version")?,
+            row.try_get("branch_number")?,
+            row.try_get("branch_version")?,
+        ))),
+        _ => Ok(None),
+    }
 }
 
 /// Every EHR's settings row, as `(ehr_id, settings)`, a held-closed EHR's

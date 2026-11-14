@@ -31,4 +31,5 @@
 
 pub mod condition;
 pub mod procedure;
+pub mod record;
 pub mod scope;

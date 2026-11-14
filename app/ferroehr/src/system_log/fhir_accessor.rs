@@ -62,7 +62,7 @@ pub(super) fn accessor(
         alt_id: None,
         purposes,
         // NOTE: Regulation (EU) 2025/327 Art 68 names the data permit; FHIR R4 AuditEvent.agent.policy carries it.
-        policies: event.permit.iter().cloned().collect(),
+        policies: event.policies(),
         relayed: members.relayed,
         binding: members.binding,
         actors: members.actors,

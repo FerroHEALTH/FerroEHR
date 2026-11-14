@@ -637,3 +637,75 @@ async fn recording_and_reversing_an_opt_out_each_write_an_entry() {
         );
     }
 }
+
+/// The canonical entry of the first stored access-log entry of `ehr` that
+/// `keep` selects.
+async fn entry_of(pool: &PgPool, ehr: &str, keep: impl Fn(&Value) -> bool) -> Value {
+    let read = |stored: &crate::access_log_http::Stored| {
+        serde_json::from_str::<Value>(&stored.content).expect("a canonical entry")
+    };
+    let kept = crate::access_log_http::entries(pool, 1, |stored| {
+        stored.ehr_id.as_deref() == Some(ehr) && keep(&read(stored))
+    })
+    .await;
+    read(&kept[0])
+}
+
+/// The absent answer of an opt-out is an access-log entry refused under
+/// `refused-opt-out` with its step, though the `404` says nothing (EHDS Art.
+/// 8); the vital-interest override is an entry marked as an emergency with a
+/// ground naming the opt-out it lifted and the `EHR_ACCESS` version (EHDS
+/// Annex II 3.2, Art. 10(2), Art. 11(5)).
+#[tokio::test]
+async fn the_absent_answer_and_the_override_are_recorded_with_their_grounds() {
+    let (_db, pool, app) = Box::pin(app(true)).await;
+    let (ehr, vo) = ehr_with_composition(&app).await;
+    assert_eq!(opt_out(&app, &ehr, false).await.0, StatusCode::OK);
+    let composition = format!("{BASE}/ehr/{ehr}/composition/{vo}");
+
+    let (status, body) = send(&app, "GET", &composition, "service", Some("TREAT"), None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+    assert!(
+        !body.contains("refused-"),
+        "the answer says nothing: {body}"
+    );
+    let refused = entry_of(&pool, &ehr, |entry| {
+        entry["outcome"]["result"]["value"] == "refused"
+    })
+    .await;
+    assert_eq!(
+        refused["outcome"]["reason"]["defining_code"]["code_string"], "refused-opt-out",
+        "{refused}"
+    );
+    let step = refused["outcome"]["description"]["value"]
+        .as_str()
+        .unwrap_or_default();
+    assert!(
+        step.starts_with("step 1 (opt-out): directive 1 of EHR_ACCESS "),
+        "{step}"
+    );
+
+    let (status, body) = send(&app, "GET", &composition, "service", Some("ETREAT"), None).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let marked = entry_of(&pool, &ehr, |entry| {
+        entry["is_emergency"] == true && entry["outcome"]["result"]["value"] == "granted"
+    })
+    .await;
+    let grounds = marked["authorisations"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let lifted = grounds
+        .iter()
+        .find(|ground| ground["kind"]["value"] == "emergency")
+        .unwrap_or_else(|| panic!("an emergency ground: {marked}"));
+    assert_eq!(lifted["name"], "EHR_ACCESS", "{marked}");
+    let version = lifted["version"].as_str().expect("the EHR_ACCESS version");
+    assert!(
+        grounds
+            .iter()
+            .any(|ground| ground["kind"]["value"] == "role" && ground["name"] == "access_service"),
+        "the capability it acted under: {marked}"
+    );
+    assert!(version.contains("::"), "an OBJECT_VERSION_ID: {version}");
+}

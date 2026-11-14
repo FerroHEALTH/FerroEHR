@@ -72,6 +72,7 @@ pub mod system;
 
 use std::borrow::Cow;
 use std::future::Future;
+use std::sync::Arc;
 
 use axum::Router;
 use axum::response::{IntoResponse, Response};
@@ -388,7 +389,13 @@ where
     let delayed_guard = ferroehr::system_log::access_context::with_access_delay(delayed, guarded);
     let mut resp = match access {
         Some(access) => {
-            ferroehr::access_eval::condition::with_request_access(access, delayed_guard).await
+            let judged = Arc::clone(&access);
+            let mut resp =
+                ferroehr::access_eval::condition::with_request_access(access, delayed_guard).await;
+            // NOTE: EHDS Annex II 3.2 (`docs/law/eu/ehds/text.html`), the access record names
+            // the grounds of the decision, which the audit layer reads off the response.
+            resp.extensions_mut().insert(judged);
+            resp
         }
         None => delayed_guard.await,
     };

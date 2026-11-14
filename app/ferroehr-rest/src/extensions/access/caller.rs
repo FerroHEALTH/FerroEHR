@@ -20,7 +20,7 @@
 
 use std::sync::Arc;
 
-use ferroehr::access_eval::condition::{Asking, RequestAccess};
+use ferroehr::access_eval::condition::{Asking, RecordFacts, RequestAccess};
 use ferroehr::access_eval::procedure::{Caller, Emergency};
 use ferroehr::config::authz::EhrAccessDefault;
 use ferroehr::party_binding::grants::agreement::Accessor;
@@ -91,11 +91,18 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
         EhrAccessDefault::Open => AccessDefault::Open,
         EhrAccessDefault::Restricted => AccessDefault::Restricted,
     };
-    Some(Arc::new(RequestAccess::new(
-        caller,
-        asking,
-        backend.access_in_force(default),
-    )))
+    let (in_force, policy_version) = backend.access_in_force(default);
+    let record = RecordFacts {
+        policy_version,
+        capabilities: capabilities
+            .grants()
+            .iter()
+            .map(|grant| (grant.operation().code(), grant.role()))
+            .collect(),
+    };
+    Some(Arc::new(
+        RequestAccess::new(caller, asking, in_force).with_record_facts(record),
+    ))
 }
 
 /// The caller's kind (`access caller kind`).

@@ -348,7 +348,10 @@ one coded in `ferroehr-operations`, which holds none.
 **Refusals.** `refused-opt-out` and `refused-restricted` answer `404`, as if
 the data did not exist, and appear only in the access record, so that a
 restriction or an opt-out is not visible to the caller (EHDS Art. 8). Every
-other refusal answers `403` and names its code.
+other refusal answers `403` and names its code. The access record of every
+refusal names its code, the step that refused and the directive or policy of
+that step, and the record of an admitted access names the grounds it rested
+on ([The openEHR access-log entry](audit.md#the-openehr-access-log-entry)).
 
 ### What the grants decide
 

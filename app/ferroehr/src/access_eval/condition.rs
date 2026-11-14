@@ -20,7 +20,7 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
-use openehr_rm::draft::access_control::terminology::{AccessDefault, OperationClass};
+use openehr_rm::draft::access_control::terminology::{AccessDefault, OperationClass, Refusal};
 use tokio::task_local;
 use uuid::Uuid;
 
@@ -51,7 +51,66 @@ pub struct RequestAccess {
     server_default: AccessDefault,
     now: jiff::Timestamp,
     grants: Option<Arc<LiveGrants>>,
-    verdicts: Mutex<BTreeMap<EhrId, Arc<Verdict>>>,
+    verdicts: Mutex<BTreeMap<EhrId, Judgement>>,
+    recorded: Recorded,
+}
+
+/// One EHR as the access evaluator reads it from this replica's copy: its
+/// current `EHR_ACCESS` settings, the version that carries them, and the
+/// `PERSON` its `EHR_STATUS` names.
+#[derive(Debug, Clone)]
+pub struct EhrEntry {
+    /// The settings; `None` when the EHR's `EHR_ACCESS` carries none.
+    pub settings: Arc<Option<EhrAccessSettings>>,
+    /// The subject's `PERSON` container; `None` when the status names no
+    /// party of this store.
+    pub subject: Option<Uuid>,
+    /// The uid of the `EHR_ACCESS` version the settings were read from, which
+    /// the access record names; `None` for an EHR with no settings.
+    pub version: Option<String>,
+}
+
+/// One EHR's verdict in a request, with what it was judged from.
+#[derive(Debug, Clone)]
+pub struct Judgement {
+    /// The verdict.
+    pub verdict: Arc<Verdict>,
+    /// The settings it was judged on.
+    pub settings: Arc<Option<EhrAccessSettings>>,
+    /// The uid of the `EHR_ACCESS` version that carries them; `None` when
+    /// it could not be read.
+    pub version: Option<String>,
+}
+
+/// What the access record of a request names beside the verdicts: the
+/// capabilities in force, the version of the access policy, and the
+/// refusals each EHR answered.
+#[derive(Debug, Default)]
+struct Recorded {
+    facts: RecordFacts,
+    refusals: Mutex<BTreeMap<EhrId, Noted>>,
+}
+
+/// The facts of a request the access record names that the decision does
+/// not read.
+#[derive(Debug, Clone, Default)]
+pub struct RecordFacts {
+    /// The uid of the `ACCESS_POLICY` version in force; `None` when no
+    /// version is committed.
+    pub policy_version: Option<String>,
+    /// The grants in force: each operation code with the container of the
+    /// `ROLE` whose `CAPABILITY` grants it.
+    pub capabilities: Vec<(&'static str, Uuid)>,
+}
+
+/// A refusal an EHR answered: the code and the directives of the rule that
+/// decided it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Noted {
+    /// The refusal code.
+    pub refusal: Refusal,
+    /// The positions of the directives the deciding rule rests on.
+    pub by: Vec<usize>,
 }
 
 /// What a request asks, beside who asks it.
@@ -96,13 +155,83 @@ impl RequestAccess {
             now: in_force.now,
             grants: in_force.grants,
             verdicts: Mutex::new(BTreeMap::new()),
+            recorded: Recorded::default(),
         }
+    }
+
+    /// This evaluator, its access record naming `facts`.
+    #[must_use]
+    pub fn with_record_facts(mut self, facts: RecordFacts) -> Self {
+        self.recorded.facts = facts;
+        self
     }
 
     /// The caller.
     #[must_use]
     pub fn caller(&self) -> &Caller {
         &self.caller
+    }
+
+    /// What the caller declared in an emergency.
+    #[must_use]
+    pub fn emergency(&self) -> Emergency {
+        self.emergency
+    }
+
+    /// The facts the access record names that the decision does not read.
+    #[must_use]
+    pub fn record_facts(&self) -> &RecordFacts {
+        &self.recorded.facts
+    }
+
+    /// The judgement of `ehr_id` in this request.
+    #[must_use]
+    pub fn judgement(&self, ehr_id: EhrId) -> Option<Judgement> {
+        self.verdicts
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(&ehr_id)
+            .cloned()
+    }
+
+    /// The answer `verdict`, the verdict of `ehr_id`, gives `item`, noting a
+    /// refusal for the access record of the request (EHDS Annex II 3.2): the
+    /// first refusal of an EHR is the one its record names.
+    pub fn note(&self, ehr_id: EhrId, verdict: &Verdict, item: &Item<'_>) -> Outcome {
+        let rule = verdict.rule_for(item);
+        let outcome = rule.map_or(verdict.otherwise, |rule| rule.then);
+        let refusal = match outcome {
+            Outcome::Admit => return outcome,
+            Outcome::Absent(refusal) | Outcome::Refused(refusal) => refusal,
+        };
+        self.recorded
+            .refusals
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .entry(ehr_id)
+            .or_insert_with(|| Noted {
+                refusal,
+                by: rule.map(|rule| rule.by.clone()).unwrap_or_default(),
+            });
+        outcome
+    }
+
+    /// The refusal noted for `ehr_id`; with no EHR, the first refusal of the
+    /// request.
+    #[must_use]
+    pub fn noted(&self, ehr_id: Option<EhrId>) -> Option<(EhrId, Noted)> {
+        let refusals = self
+            .recorded
+            .refusals
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        match ehr_id {
+            Some(ehr_id) => refusals.get(&ehr_id).map(|noted| (ehr_id, noted.clone())),
+            None => refusals
+                .iter()
+                .next()
+                .map(|(ehr_id, noted)| (*ehr_id, noted.clone())),
+        }
     }
 
     /// What the controller requires.
@@ -195,34 +324,32 @@ impl RequestAccess {
         })
     }
 
-    /// Judges the EHR `ehr_id` with `settings` whose subject is the `PERSON`
-    /// `subject`, and keeps the verdict for the rest of the request.
-    pub fn judge_ehr(
-        &self,
-        ehr_id: EhrId,
-        settings: Option<&EhrAccessSettings>,
-        subject: Option<Uuid>,
-    ) -> Arc<Verdict> {
-        let under_care_of = match (&self.grants, subject) {
+    /// Judges the EHR `ehr_id` as `entry` reads it, and keeps the verdict for
+    /// the rest of the request.
+    pub fn judge_ehr(&self, ehr_id: EhrId, entry: &EhrEntry) -> Arc<Verdict> {
+        let under_care_of = match (&self.grants, entry.subject) {
             (Some(grants), Some(subject)) => grants.under_care_of(subject),
             _ => Vec::new(),
         };
-        let verdict = Arc::new(self.judge(settings, self.cared(&under_care_of)));
+        let verdict = Arc::new(self.judge((*entry.settings).as_ref(), self.cared(&under_care_of)));
         self.verdicts
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
-            .insert(ehr_id, Arc::clone(&verdict));
+            .insert(
+                ehr_id,
+                Judgement {
+                    verdict: Arc::clone(&verdict),
+                    settings: Arc::clone(&entry.settings),
+                    version: entry.version.clone(),
+                },
+            );
         verdict
     }
 
     /// The verdict judged for `ehr_id` in this request.
     #[must_use]
     pub fn verdict(&self, ehr_id: EhrId) -> Option<Arc<Verdict>> {
-        self.verdicts
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .get(&ehr_id)
-            .cloned()
+        self.judgement(ehr_id).map(|judged| judged.verdict)
     }
 
     /// The answer for `item` of `ehr_id`; an EHR this request never judged
@@ -233,7 +360,7 @@ impl RequestAccess {
             verdict.outcome(item)
         } else {
             tracing::error!(%ehr_id, "an EHR this request did not judge is withheld");
-            Outcome::Absent(openehr_rm::draft::access_control::terminology::Refusal::Restricted)
+            Outcome::Absent(Refusal::Restricted)
         }
     }
 
@@ -247,8 +374,8 @@ impl RequestAccess {
         cared: Vec<String>,
     ) -> AccessCondition {
         let pair = |settings: Option<&EhrAccessSettings>| VerdictPair {
-            cared: self.judge(settings, true),
-            uncared: self.judge(settings, false),
+            cared: self.judge(settings, true).bare(),
+            uncared: self.judge(settings, false).bare(),
         };
         let mut groups: BTreeMap<VerdictPair, Vec<Uuid>> = BTreeMap::new();
         for (ehr_id, settings) in index {

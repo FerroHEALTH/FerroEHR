@@ -53,6 +53,9 @@ pub const CHANNEL: &str = "ferroehr_access_policy";
 pub struct PolicyInForce {
     /// Its trunk version; `0` when no version is committed.
     pub version: i32,
+    /// The uid of the version, `OBJECT_VERSION_ID`; `None` when no version
+    /// is committed.
+    pub uid: Option<String>,
     /// The policy; `None` when no version is committed, which tightens
     /// nothing.
     pub policy: Option<Arc<AccessPolicy>>,
@@ -165,6 +168,11 @@ impl LivePolicy {
         };
         let installed = Arc::new(PolicyInForce {
             version: row.version,
+            uid: Some(crate::versioning::object_version_id::object_version_id(
+                crate::ids::VoId(row.vo_id),
+                &row.system_id,
+                crate::versioning::object_version_id::TreeId::trunk(row.version),
+            )),
             policy,
         });
         *self
