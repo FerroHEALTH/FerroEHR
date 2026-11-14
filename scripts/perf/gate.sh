@@ -24,7 +24,12 @@
 # scopes and role after). The seed writes one EHR the reads use and
 # never changes, one EHR the commits write into, the lab-results template with
 # a result, and a PERSON, and the plan is rendered with their ids
-# (perf/plan.toml, `@NAME@`).
+# (perf/plan.toml, `@NAME@`). It then writes the population the population
+# query reads, PERF_POPULATION more EHRs through the arm's own server, so the
+# query serves its whole LIMIT from a populated store and writes one
+# access-log entry per EHR it served. After the run the gate counts those
+# entries in each arm's store and adds them to the summary, so the report
+# shows the per-EHR entry cost beside the base's (#5564).
 #
 # Usage:
 #   scripts/perf/gate.sh install                     the pinned ferrohealth-perf into target/tools/perf
@@ -40,6 +45,8 @@
 #
 # Environment:
 #   PERF_OUT      the report directory (default target/perf)
+#   PERF_POPULATION  the EHRs the seed adds for the population query
+#                 (default 2000; the release lane seeds 20000)
 #   PERF_BIN      a ferrohealth-perf binary (default target/tools/perf/bin/ferrohealth-perf)
 #   PERF_SERVER   with PERF_DATABASE and PERF_TARGET, measure a server already
 #                 running (its base URL), whose database URL and ferrohealth-perf
@@ -74,6 +81,9 @@ readonly PERSON_PATH=corpus/fixtures/demographic/person.v1.json
 readonly TEMPLATE="$ROOT/$TEMPLATE_PATH"
 readonly COMPOSITION="$ROOT/$COMPOSITION_PATH"
 readonly BASE_TREE="$ROOT/target/perf-base"
+# The population query of the plan (`@AQL_POPULATION@`): it names no EHR, so
+# the access log writes one entry for each EHR it serves.
+readonly POPULATION_AQL="SELECT e/ehr_id/value FROM EHR e LIMIT 20"
 OUT="${PERF_OUT:-$ROOT/target/perf}"
 readonly OUT
 
@@ -207,6 +217,7 @@ seed() {
   write_ehr=$(call POST /ehr "" - 201 | jq -er '.ehr_id.value')
   uid=$(call POST "/ehr/$read_ehr/composition" application/json "$tree/$COMPOSITION_PATH" 201 | jq -er '.uid.value')
   party=$(call POST /demographic/person application/json "$tree/$PERSON_PATH" 201 | jq -er '.uid.value')
+  populate
   SEED=(
     "READ_EHR=$read_ehr"
     "WRITE_EHR=$write_ehr"
@@ -214,6 +225,63 @@ seed() {
     "READ_PARTY=$party"
     "READ_PARTY_VO=${party%%::*}"
   )
+}
+
+# populate: PERF_POPULATION more EHRs, created eight at a time through the
+# arm's own server.
+populate() {
+  local count="${PERF_POPULATION:-2000}" created
+  [[ "$count" =~ ^[0-9]+$ ]] || die "PERF_POPULATION must be a whole number, got '$count'"
+  ((count > 0)) || return 0
+  seq "$count" | xargs -P 8 -I{} curl -sS -o /dev/null -w '%{http_code}\n' -X POST \
+    -H "authorization: $AUTH" -H "prefer: return=minimal" "$SERVER_URL$BASE/ehr" \
+    >"$OUT/populate.status"
+  created=$(grep -c '^201$' "$OUT/populate.status" || true)
+  [[ "$created" == "$count" ]] || die "seed: $created of $count population EHRs were created"
+}
+
+# population_entries <pg-container>: the access-log entries the population
+# query wrote in that arm's store, as "<statements> <per-EHR entries>", or
+# "none" for a store with no access log. Entries name a query by the SHA-256
+# of its text, never the text.
+population_entries() {
+  local -a psql=(docker exec "$1" psql -U postgres -d ferroehr -Atq -c)
+  local digest
+  digest=$(printf '%s' "$POPULATION_AQL" | { sha256sum 2>/dev/null || shasum -a 256; } | awk '{ print $1 }')
+  if [[ "$("${psql[@]}" "SELECT to_regclass('audit.access_log_record') IS NOT NULL")" != t ]]; then
+    echo none
+    return 0
+  fi
+  "${psql[@]}" "SELECT count(*) FILTER (WHERE ehr_id IS NULL) || ' ' || \
+    count(*) FILTER (WHERE ehr_id IS NOT NULL) FROM audit.access_log_record \
+    WHERE content LIKE '%${digest}%'"
+}
+
+# population_summary <summary>: each arm's population entries appended to the
+# summary, with the per-EHR entries one statement wrote.
+population_summary() {
+  local arm container counts statements per_ehr
+  {
+    echo
+    echo "### The population query's access-log entries"
+    echo
+    echo "\`$POPULATION_AQL\` over $((${PERF_POPULATION:-2000} + 2)) EHRs and those the load creates."
+    echo
+    echo "| arm | statements | per-EHR entries | per statement |"
+    echo "|---|---:|---:|---:|"
+    for arm in head base; do
+      container="$PG"
+      [[ "$arm" == base ]] && container="$PG-base"
+      counts=$(population_entries "$container" 2>/dev/null) || counts="unreadable"
+      if [[ "$counts" =~ ^([0-9]+)\ ([0-9]+)$ ]]; then
+        statements="${BASH_REMATCH[1]}"
+        per_ehr="${BASH_REMATCH[2]}"
+        echo "| $arm | $statements | $per_ehr | $(awk -v e="$per_ehr" -v s="$statements" 'BEGIN { if (s > 0) printf "%.1f", e / s; else print "-" }') |"
+      else
+        echo "| $arm | $counts | | |"
+      fi
+    done
+  } >>"$1"
 }
 
 # The AQL body of the lab-results query (Cadasto/FerroHEALTH-backlog#25),
@@ -245,6 +313,7 @@ render() {
   plan="${plan//@TEMPLATE@/$(<"$TEMPLATE")}"
   plan="${plan//@AQL_ORDER_BY@/$(aql "$read_ehr" true)}"
   plan="${plan//@AQL_UNORDERED@/$(aql "$read_ehr" false)}"
+  plan="${plan//@AQL_POPULATION@/$(jq -cn --arg q "$POPULATION_AQL" '{q: $q}')}"
   local -a left=()
   # A fully rendered plan holds no placeholder, so grep finding none is no error.
   while IFS= read -r name; do
@@ -315,6 +384,7 @@ ab() {
     --head-url "$head_url" --head-container "$head_container" --head-database-url "$head_db" \
     --base-url "$SERVER_URL" --base-container "${TARGET[1]}" --base-database-url "$DATABASE_URL" \
     "${vars[@]}" --out-dir "$OUT" --summary "$OUT/summary.md" || status=$?
+  population_summary "$OUT/summary.md"
   return "$status"
 }
 

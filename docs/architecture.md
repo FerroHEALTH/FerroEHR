@@ -301,7 +301,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (`access_log::expiry`); an erasure a law orders takes the same path through
   `POST /admin/access-log/erase`, which writes the access-log entry recording
   the erasure in the tombstone's own transaction, after the audit sender has
-  said it would take the record, so the log holds both or neither.
+  said it would take the record, so the log holds both or neither. Every entry
+  is built by `access_log::entry` from an `AuditEvent`: the drain's per-access
+  entries, the erasure's, and the import's (`access_log::transfer`). An AQL
+  statement attributes each served row to the EHR of every bound `EHR` source
+  and versioned-object root (`aql::sql` `served_ehr_ids`, the list the ABAC
+  scope collection reads too), so an EHR-only statement writes its per-EHR
+  entries; a management route that touches EHRs records one access per EHR
+  from the service (`emit_mark_access`, `emit_extract_audit`).
   `access_log_checkpoint` keeps the signed `ACCESS_LOG_CHECKPOINT`s of the
   head, signed with the version-signing keyring's OpenPGP key. Whenever the
   keyring holds one, every local link is signed and `access_log::schedule`
@@ -489,7 +496,20 @@ which is what makes an optional stage safe to disable:
    whole EHR, a directive holds until its validity ends, and one that no
    emergency may lift is refused `400` until the evaluator reads
    `emergency_override`. The projection and its rules are our own design;
-   no specification governs them.
+   no specification governs them. The commit of an `EHR_ACCESS` version also
+   projects the settings in its own transaction (RM Common IM change control:
+   every change is a version in a contribution) into `access_settings`, one
+   `access_directive` row per directive and exception (kind, effect, actor
+   party, role, relationship, caller kind, operation, purpose, category,
+   sensitivity, validity) and one `access_label` row per label
+   (`service::ehr::access_projection`); a trigger on `access_settings`
+   notifies `ferroehr_ehr_access` with the EHR id, and the first boot and
+   `party-binding refill` rebuild the rows. Each replica copies an EHR's
+   settings on first read and drops the copy on that notification
+   (`policy_register::listen::Listened` with a `Subscriber`); while the
+   listener is down it reads the projection per request, and a projection
+   that cannot be read is `503`. No openEHR spec governs the projection or
+   the copy: our own design (#5509).
 3. **RBAC** — the coarse operation class (public / clinical / admin /
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an

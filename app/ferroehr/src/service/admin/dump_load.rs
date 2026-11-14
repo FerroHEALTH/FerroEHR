@@ -94,6 +94,7 @@ use crate::storage::dump_repo::{
 use crate::storage::error::StorageError;
 use crate::storage::identifier_repo::{self, IdentifierRepoError, SealedRow};
 use crate::storage::{node_write, version_repo};
+use crate::system_log::event::EventActionCode;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::wire::{OriginalVersionParts, build_original_version, contribution_ref};
@@ -1016,6 +1017,8 @@ impl FerroEhrService {
     /// - `exception` — a database/codec fault while collecting records or
     ///   serializing a version payload, or a blob-store fault while exporting
     ///   referenced multimedia.
+    /// - `service_overloaded` — the export record of an EHR was refused under
+    ///   `[audit] fail_mode = "closed"`.
     pub async fn export_ehrs(
         &self,
         file_sys_loc: String,
@@ -1128,7 +1131,9 @@ impl FerroEhrService {
         let manifest_bytes = serde_json::to_vec_pretty(&manifest).map_err(ServiceError::from)?;
         archive.write(MANIFEST_ENTRY, &manifest_bytes)?;
         archive.finish()?;
-
+        for record in &records {
+            self.emit_extract_audit(record.ehr.id, EventActionCode::Read, None)?;
+        }
         // Every EHR dumped successfully → no failure entries.
         Ok(Vec::new())
     }
@@ -1162,6 +1167,8 @@ impl FerroEhrService {
     ///   transaction is rolled back).
     /// - `exception` — a database/codec fault while re-persisting, or a
     ///   blob-store fault while importing.
+    /// - `service_overloaded` — the import record of a loaded EHR was refused
+    ///   under `[audit] fail_mode = "closed"`.
     pub async fn load_ehrs(
         &self,
         file_sys_loc: String,
@@ -1209,13 +1216,16 @@ impl FerroEhrService {
         }
 
         let mut reports = Vec::new();
+        let mut loaded = Vec::new();
         for segment in &manifest.segments {
             let bytes = archive.read(segment)?;
             let records: Vec<EhrRecord> =
                 serde_json::from_slice(&bytes).map_err(|e| archive_refusal(dir, segment, e))?;
             for record in records {
-                if let Some(report) = self.load_ehr_record(&mut archive, record, format).await? {
-                    reports.push(report);
+                let ehr_id = record.ehr.id;
+                match self.load_ehr_record(&mut archive, record, format).await? {
+                    Some(report) => reports.push(report),
+                    None => loaded.push(ehr_id),
                 }
             }
         }
@@ -1251,6 +1261,9 @@ impl FerroEhrService {
             (&self.demographic_pool, Domain::Party),
         ] {
             parent_statistics::report(&parent_statistics::refresh_store(pool, store).await);
+        }
+        for ehr_id in loaded {
+            self.emit_extract_audit(ehr_id, EventActionCode::Create, None)?;
         }
         Ok(reports)
     }
@@ -1682,12 +1695,12 @@ impl FerroEhrService {
             )));
         }
 
-        // Every loaded row went into the hot tier; the ones the record marks
-        // archived belong in the cold one, so a loaded EHR carries the same
-        // tier placement AND the same marker a locally archived one does.
+        // Every loaded row went into the hot tier; the ones the record marks archived go to
+        // the cold one, so a loaded EHR carries the tier and marker a locally archived one does.
         dump_repo::write::restore_archives(&mut tx, &record.archives).await?;
-
+        crate::service::ehr::access_projection::project_current(&mut tx, ehr_id).await?;
         tx.commit().await?;
+        self.invalidate_ehr_access(ehr_id).await;
         Ok(())
     }
 }
@@ -1818,37 +1831,4 @@ async fn load_versions(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::plan_segments;
-
-    #[test]
-    fn segments_group_greedily_under_the_limit() {
-        // Three 40-byte records, limit 100 → [0,1] then [2].
-        assert_eq!(plan_segments(&[40, 40, 40], 100), vec![0..2, 2..3]);
-    }
-
-    #[test]
-    fn one_record_per_segment_when_each_exceeds_the_limit() {
-        assert_eq!(plan_segments(&[200, 200], 100), vec![0..1, 1..2]);
-    }
-
-    #[test]
-    fn a_single_oversized_record_is_its_own_segment() {
-        // The 250-byte record cannot fit but still gets a segment of its own;
-        // the two small ones share the next.
-        assert_eq!(plan_segments(&[250, 10, 10], 100), vec![0..1, 1..3]);
-    }
-
-    #[test]
-    fn everything_fits_in_one_segment() {
-        assert_eq!(plan_segments(&[10, 10, 10], 1000), vec![0..3]);
-    }
-
-    #[test]
-    fn no_records_no_segments() {
-        assert_eq!(
-            plan_segments(&[], 100),
-            Vec::<std::ops::Range<usize>>::new()
-        );
-    }
-}
+mod tests;

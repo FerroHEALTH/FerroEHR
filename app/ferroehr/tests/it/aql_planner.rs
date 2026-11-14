@@ -2718,7 +2718,7 @@ fn the_scope_collection_reports_ehr_sources() {
     assert_eq!(scope.template_columns, vec!["scope_template_1".to_owned()]);
 }
 /// The branch bindings are reported to the access log: one EHR column and one
-/// version locator per bound branch.
+/// version locator per bound branch, beside the EHR source's own column.
 #[test]
 fn or_branch_bindings_are_logged_as_served_roots() {
     let prepared = prepare(
@@ -2727,8 +2727,55 @@ fn or_branch_bindings_are_logged_as_served_roots() {
         None,
         None,
     );
-    assert_eq!(prepared.access_ehr_cols.len(), 2);
+    assert_eq!(prepared.access_ehr_cols.len(), 3);
     assert_eq!(prepared.access_version_cols.len(), 2);
+}
+
+/// A statement that reads only the `ehr` row, with no versioned object under
+/// it, still names the EHR each row serves, so the access log writes one
+/// entry per EHR it served (#5564); it carries no version locator, since it
+/// served no version.
+#[test]
+fn an_ehr_only_statement_names_the_ehrs_it_serves() {
+    for q in [
+        "SELECT e/ehr_id/value FROM EHR e",
+        "SELECT e/ehr_status/subject FROM EHR e",
+        "SELECT e/ehr_id/value FROM EHR e WHERE e/time_created/value > '2020-01-01'",
+    ] {
+        let prepared = prepare(q, Vec::new(), None, Some(20));
+        assert_eq!(
+            prepared.access_ehr_cols,
+            vec!["access_ehr_0".to_owned()],
+            "{q}"
+        );
+        assert!(
+            prepared.sql.contains(r#""e0"."id" AS "access_ehr_0""#),
+            "{q}: the statement selects the EHR source's id: {}",
+            prepared.sql
+        );
+        assert!(prepared.access_version_cols.is_empty(), "{q}");
+    }
+    let rooted = prepare(
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
+        Vec::new(),
+        None,
+        Some(20),
+    );
+    assert_eq!(
+        rooted.access_ehr_cols,
+        vec!["access_ehr_0".to_owned(), "access_ehr_1".to_owned()]
+    );
+    for q in [
+        "SELECT DISTINCT e/ehr_id/value FROM EHR e",
+        "SELECT COUNT(e/ehr_id/value) FROM EHR e",
+    ] {
+        assert!(
+            prepare(q, Vec::new(), None, None)
+                .access_ehr_cols
+                .is_empty(),
+            "{q}"
+        );
+    }
 }
 
 /// A LIMIT does not move an OR read onto the streaming shape: the bindings

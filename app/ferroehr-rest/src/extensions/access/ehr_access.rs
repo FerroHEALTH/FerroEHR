@@ -32,6 +32,7 @@
 use axum::response::{IntoResponse, Response};
 use ferroehr::aql::sql::EhrAccessScope;
 use ferroehr::config::authz::EhrAccessDefault;
+use ferroehr::error::ServiceError;
 use ferroehr::ids::EhrId;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use ferroehr::service::ehr::access_settings::EhrAccessSettings;
@@ -117,8 +118,9 @@ impl EhrAccessGate {
 
 /// Enforce the `EHR_ACCESS` policy for an EHR-scoped request, after
 /// authentication and before dispatch. `Err(response)` short-circuits with a
-/// ready `403` (deny) or `500` (settings unavailable — fail-closed, consistent
-/// with the ABAC PEP); `Ok(())` lets the request proceed. A route without an
+/// ready `403` (deny), `503` (the settings store cannot answer) or `500`
+/// (settings that do not read — fail-closed, consistent with the ABAC PEP);
+/// `Ok(())` lets the request proceed. A route without an
 /// `ehr_id` path param is not EHR-scoped and always proceeds.
 pub(crate) async fn enforce(state: &AppState, parts: &RequestParts) -> Result<(), Box<Response>> {
     let Some(ehr_id_raw) = parts.path.get("ehr_id") else {
@@ -135,7 +137,7 @@ pub(crate) async fn enforce(state: &AppState, parts: &RequestParts) -> Result<()
 /// Enforce the per-EHR gate on every EHR an operation names in its body, such
 /// as the manifest of `POST /message/export`, before any of their content is
 /// read: the first EHR the caller may not reach refuses the whole operation
-/// with the `403` or fail-closed `500` its path route would answer.
+/// with the `403`, `503` or fail-closed `500` its path route would answer.
 pub(crate) async fn enforce_each(state: &AppState, ehr_ids: &[EhrId]) -> Result<(), Box<Response>> {
     let principal = current_principal();
     for ehr_id in ehr_ids {
@@ -146,8 +148,8 @@ pub(crate) async fn enforce_each(state: &AppState, ehr_ids: &[EhrId]) -> Result<
 
 /// The per-EHR gate for one EHR. A setting-less EHR falls back to the
 /// configured server-wide disposition, whether or not the RBAC gate is on; no
-/// handle means that disposition is `open`. Settings that cannot be read fail
-/// closed with `500`.
+/// handle means that disposition is `open`. A settings store that cannot
+/// answer is `503`, and settings that do not read fail closed with `500`.
 async fn enforce_ehr(
     state: &AppState,
     principal: Option<&Principal>,
@@ -157,7 +159,7 @@ async fn enforce_ehr(
         .backend()
         .current_ehr_access_settings(ehr_id)
         .await
-        .map_err(|e| Box::new(unavailable(principal, &e)))?;
+        .map_err(|e| Box::new(unavailable(principal, e)))?;
     Decider::of(state, principal)
         .decide((*settings).as_ref())
         .map_err(|reason| Box::new(forbidden(principal, &reason)))
@@ -198,12 +200,22 @@ impl Decider {
     }
 }
 
-/// The fail-closed `500` of settings that cannot be read.
-fn unavailable(principal: Option<&Principal>, error: &impl std::fmt::Display) -> Response {
-    server_error(
-        principal,
-        &format!("EHR_ACCESS settings unavailable: {error}"),
-    )
+/// The `503` of a settings store that cannot answer, and the fail-closed
+/// `500` of settings that cannot be read.
+fn unavailable(principal: Option<&Principal>, error: ServiceError) -> Response {
+    let mut resp = match error {
+        overloaded @ ServiceError::Overloaded(_) => RestError::from(overloaded).into_response(),
+        other => {
+            return server_error(
+                principal,
+                &format!("EHR_ACCESS settings unavailable: {other}"),
+            );
+        }
+    };
+    if let Some(principal) = principal {
+        resp.extensions_mut().insert(principal.clone());
+    }
+    resp
 }
 
 /// The per-EHR decision for an AQL execution: the EHRs the authenticated caller
@@ -211,15 +223,15 @@ fn unavailable(principal: Option<&Principal>, error: &impl std::fmt::Display) ->
 ///
 /// An EHR with no settings follows the server-wide default, so the scope lists
 /// the settings-bearing EHRs only: the ones withheld when setting-less EHRs are
-/// readable, or the ones permitted when they are not. `Err(response)` is a
-/// fail-closed `500` when the settings cannot be read.
+/// readable, or the ones permitted when they are not. `Err(response)` is the
+/// `503` of a settings store that cannot answer.
 pub(crate) async fn query_scope(state: &AppState) -> Result<EhrAccessScope, Box<Response>> {
     let principal = current_principal();
     let index = state
         .backend()
         .ehr_access_settings_index()
         .await
-        .map_err(|e| Box::new(unavailable(principal.as_ref(), &e)))?;
+        .map_err(|e| Box::new(unavailable(principal.as_ref(), e)))?;
     let decider = Decider::of(state, principal.as_ref());
     let readable = |settings: Option<&EhrAccessSettings>| decider.decide(settings).is_ok();
     let scope = if readable(None) {
@@ -360,6 +372,25 @@ mod tests {
             &user,
             EhrAccessDefault::Open
         ));
+    }
+
+    /// A settings store that cannot answer is `503`, and settings that do
+    /// not read are `500`.
+    #[test]
+    fn an_unanswering_store_is_503_and_unreadable_settings_500() {
+        let overloaded = ServiceError::overloaded(
+            "the EHR access settings could not be read",
+            std::io::Error::other("no connection"),
+        );
+        assert_eq!(
+            unavailable(None, overloaded).status(),
+            http::StatusCode::SERVICE_UNAVAILABLE
+        );
+        let unreadable = ServiceError::internal("settings", std::io::Error::other("bogus"));
+        assert_eq!(
+            unavailable(None, unreadable).status(),
+            http::StatusCode::INTERNAL_SERVER_ERROR
+        );
     }
 
     /// A restricted EHR admits the administrator, and an EHR held closed

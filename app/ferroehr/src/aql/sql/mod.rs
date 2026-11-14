@@ -266,8 +266,8 @@ pub struct PreparedQuery {
     pub values: SqlxValues,
     /// The `RESULT_SET` column read-back plan, in SELECT order.
     pub columns: Vec<ColumnSpec>,
-    /// The SQL aliases of the hidden access-logging columns, one per bound VO
-    /// root, appended after the projection.
+    /// The SQL aliases of the hidden access-logging columns, one per bound
+    /// `EHR` source and per bound VO root, appended after the projection.
     ///
     /// Empty when the plan cannot carry them (see [`ACCESS_EHR_PREFIX`]); the
     /// executor then reports no per-EHR breakdown rather than a wrong one.
@@ -279,14 +279,15 @@ pub struct PreparedQuery {
     pub access_version_cols: Vec<(String, String)>,
 }
 
-/// The alias prefix of the hidden per-root EHR column the access log reads.
+/// The alias prefix of the hidden per-row EHR columns the access log reads.
 ///
 /// An AQL statement is one access to every EHR it actually served, and NEN 7513
 /// and EHDS Art. 9 ask which records were accessed rather than how many. The
-/// executed statement therefore carries each bound VO root's `ehr_id` beside
-/// the projection, so the served set is read off the rows that were served —
-/// not off a second, unpaged scan, which would name EHRs the query matched and
-/// never disclosed.
+/// executed statement therefore carries the EHR id of each bound `EHR` source
+/// and each bound VO root beside the projection, so the served set is read off
+/// the rows that were served, and a statement that projects only an EHR names
+/// it too. It is never read off a second, unpaged scan, which would name EHRs
+/// the query matched and never disclosed.
 ///
 /// Two plan shapes cannot carry it and get none: `SELECT DISTINCT`, where an
 /// extra column changes which rows are distinct, and an aggregate projection,
@@ -475,6 +476,26 @@ impl<'a> Builder<'a> {
             .collect()
     }
 
+    /// The EHR id of every EHR a row of this query is drawn from: each bound
+    /// `EHR` source's `id`, then each served root's `ehr_id`.
+    ///
+    /// A query that reads only the `ehr` row (`FROM EHR e` with no
+    /// containment, or an `ehr_status` path) binds no versioned-object root
+    /// and still serves the EHR its row names, so the access log
+    /// ([`ACCESS_EHR_PREFIX`]) and the ABAC scope collection both read this
+    /// one list. No openEHR spec governs this: our own design.
+    fn served_ehr_ids(&self) -> Vec<sea_query::Expr> {
+        self.ehr_alias
+            .values()
+            .map(|alias| col(alias, Ehr::Id))
+            .chain(
+                self.served_roots()
+                    .iter()
+                    .map(|(root, _)| col(root, Node::EhrId)),
+            )
+            .collect()
+    }
+
     pub(super) fn next_ctr(&mut self) -> usize {
         let n = self.sub_ctr;
         self.sub_ctr += 1;
@@ -613,36 +634,34 @@ pub fn build_scope(
     b.apply_population_gate();
     b.bind_select_paths()?;
     b.build_where()?;
-    let roots = b.served_roots();
-    let ehrs: Vec<String> = b.ehr_alias.values().cloned().collect();
-    if roots.is_empty() && ehrs.is_empty() {
+    let served = b.served_ehr_ids();
+    if served.is_empty() {
         return Ok(None);
     }
     // The row-wise cartesian of the bound EHR sources and roots, DISTINCT-ed,
     // so every touched EHR/template across every bound variable is collected.
     // One index runs over the EHR sources, the roots, then the `EHR_STATUS`
     // roots, so `scope_ehr_{i}` and its root's `scope_template_{i}` share it.
-    let mut ehr_columns = Vec::with_capacity(ehrs.len() + roots.len());
+    let first_root = b.ehr_alias.len();
+    let roots = b.served_roots();
+    let mut ehr_columns = Vec::with_capacity(served.len());
     let mut template_columns = Vec::with_capacity(roots.len());
-    for (i, alias) in ehrs.iter().enumerate() {
+    for (i, ehr) in served.into_iter().enumerate() {
         let ehr_col = format!("scope_ehr_{i}");
-        b.q.expr_as(col(alias, Ehr::Id), Alias::new(ehr_col.as_str()));
+        b.q.expr_as(ehr, Alias::new(ehr_col.as_str()));
         ehr_columns.push(ehr_col);
     }
-    for (i, (node, vo)) in (ehrs.len()..).zip(roots.iter()) {
-        let ehr_col = format!("scope_ehr_{i}");
+    for (i, (_, vo)) in (first_root..).zip(roots.iter()) {
         let template_col = format!("scope_template_{i}");
-        b.q.expr_as(col(node, Node::EhrId), Alias::new(ehr_col.as_str()));
         b.q.expr_as(
             col(vo, VersionRow::TemplateId),
             Alias::new(template_col.as_str()),
         );
-        ehr_columns.push(ehr_col);
         template_columns.push(template_col);
     }
     // A joined `EHR_STATUS` root belongs to its EHR source, whose id is already
     // collected; it adds its template.
-    let first_status = ehrs.len() + roots.len();
+    let first_status = first_root + roots.len();
     for (i, vo) in (first_status..).zip(b.ehr_status_vo.values().cloned().collect::<Vec<_>>()) {
         let template_col = format!("scope_template_{i}");
         b.q.expr_as(

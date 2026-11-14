@@ -20,6 +20,7 @@
 //! `403` follows the ITS-REST 401/403 discipline.
 //!
 //! The concrete scheme is our own design — no openEHR spec governs it.
+use ferroehr::service::ehr::access_projection::Rebuild;
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 
@@ -339,8 +340,9 @@ async fn query_app() -> (testkit::TestDb, Router) {
 }
 
 /// [`query_app`], with `stored_default_access` written over the committed
-/// `default_access` of [`EHR_ID`] in storage when it is `Some`: settings that
-/// no longer parse, as only a write before the write-time check could store.
+/// `default_access` of [`EHR_ID`] in storage when it is `Some`, and the
+/// projection refilled from storage: settings that no longer parse, as only a
+/// write before the write-time check could store.
 async fn query_app_with(stored_default_access: Option<&str>) -> (testkit::TestDb, Router) {
     let (pg, pool) = common::migrated_pool().await;
     let svc = service(&pool);
@@ -365,6 +367,9 @@ async fn query_app_with(stored_default_access: Option<&str>) -> (testkit::TestDb
         .execute(&pool)
         .await
         .expect("store settings that do not parse");
+        svc.rebuild_ehr_access_projection(Rebuild::Refill)
+            .await
+            .expect("the projection is rebuilt from the stored bodies");
     }
     let app = common::build_full(
         rest_config(true),
