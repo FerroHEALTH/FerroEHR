@@ -52,7 +52,8 @@ pub struct Fingerprint {
     /// hex, or `digest` for a keyring that holds none.
     pub signing_key: String,
     /// The SHA-256, as hex, of the configuration tree with
-    /// [`OWN_SECTIONS`] left out and every secret redacted.
+    /// the sections each instance holds its own left out and every secret
+    /// redacted.
     pub configuration: String,
 }
 
@@ -73,7 +74,12 @@ impl Fingerprint {
             signing_key: signer
                 .key_fingerprint()
                 .unwrap_or_else(|| "digest".to_owned()),
-            configuration: digest.iter().map(|byte| format!("{byte:02x}")).collect(),
+            configuration: digest.iter().fold(String::new(), |mut hex, byte| {
+                use std::fmt::Write as _;
+                // NOTE: writing to a String cannot fail (std::fmt::Write for String).
+                let _written = write!(hex, "{byte:02x}");
+                hex
+            }),
         })
     }
 }

@@ -360,8 +360,9 @@ pub fn observe(meter: &Meter, service: &Arc<FerroEhrService>) {
         .build();
 }
 
-/// Register how many live instances of the deployment differ from this one
-/// at its last comparison, by what differs (`differs = signing_key |
+/// Register how many live instances of the deployment differ from this one.
+///
+/// Counted at its last comparison, by what differs (`differs = signing_key |
 /// configuration`); nothing before the first comparison or after one that
 /// could not read the rows, which the `instances` health indicator names.
 pub fn observe_instances(meter: &Meter, instances: &Arc<Instances>) {
@@ -379,7 +380,7 @@ pub fn observe_instances(meter: &Meter, instances: &Arc<Instances>) {
                 Agreement::Unread | Agreement::Unknown => return,
             };
             let count = |pick: fn(&crate::instance::Difference) -> bool| {
-                differences.iter().filter(|d| pick(d)).count() as u64
+                u64::try_from(differences.iter().filter(|d| pick(d)).count()).unwrap_or(u64::MAX)
             };
             observer.observe(
                 count(|d| d.signing_key),

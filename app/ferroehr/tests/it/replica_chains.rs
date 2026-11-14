@@ -64,7 +64,10 @@ async fn replica(pool: &sqlx::PgPool, signer: &Arc<Signer>) -> Replica {
         Arc::clone(signer),
         Arc::new(TrustedCertificates::default()),
     );
-    assert!(sender.use_access_log(checkpoints.store().clone()));
+    assert!(
+        sender.use_access_log(checkpoints.store().clone()),
+        "the drain appends through the signing store"
+    );
     let svc = FerroEhrService::new(&pools)
         .with_system_id(SYSTEM)
         .with_audit(sender.clone())

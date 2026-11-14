@@ -100,9 +100,10 @@ pub fn admits_stored(stored: &crate::storage::version_repo::read::StoredVersion)
     crate::access_eval::condition::admits(stored.ehr_id, stored.access_revision, &item)
 }
 
-/// Whether `stored` may be served to the current request: the access
-/// evaluator admits it ([`admits_stored`]), and an object an EHDS Art. 3(3)
-/// delay withholds is absent to a patient-context request
+/// Whether `stored` may be served to the current request.
+///
+/// The access evaluator admits it ([`admits_stored`]), and an object an EHDS
+/// Art. 3(3) delay withholds is absent to a patient-context request
 /// (`docs/law/eu/ehds/text.html`). No openEHR spec governs either: our own
 /// design/extension.
 #[must_use]

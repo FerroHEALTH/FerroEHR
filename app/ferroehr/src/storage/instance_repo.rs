@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The rows of the deployment's running instances (`instance`, migration
-//! `clinical/0044`): what each must share with the others, and when it was
-//! last seen ([`crate::instance`]). No openEHR spec governs the process
-//! model or its storage SQL: our own design (#5589).
+//! The rows of the deployment's running instances.
+//!
+//! The `instance` table (migration `clinical/0044`) holds what each must
+//! share with the others and when it was last seen ([`crate::instance`]). No
+//! openEHR spec governs the process model or its storage SQL: our own design
+//! (#5589).
 
 use sqlx::{PgPool, Row};
 use uuid::Uuid;

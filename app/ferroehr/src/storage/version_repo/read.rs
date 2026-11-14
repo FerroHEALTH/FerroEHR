@@ -30,6 +30,7 @@ use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
+use crate::storage::access_facts::visible;
 use crate::storage::error::StorageError;
 use crate::versioning::object_version_id::TreeId;
 
@@ -194,6 +195,17 @@ macro_rules! version_select {
             $tail
         )
     };
+}
+
+/// The versions `rows` hold that the running request may see.
+fn served(rows: Vec<PgRow>) -> Result<Vec<StoredVersion>, StorageError> {
+    rows.into_iter()
+        .map(|row| {
+            let vo_id: VoId = row.try_get("vo_id")?;
+            stored_version(vo_id, &row)
+        })
+        .filter(|decoded| decoded.as_ref().map_or(true, visible))
+        .collect()
 }
 
 // ── the rendered statements ──────────────────────────────────────────────────
@@ -442,17 +454,7 @@ pub async fn read_currents(
         .bind(&ids)
         .fetch_all(&mut *acquire(pool).await?)
         .await?;
-    rows.into_iter()
-        .map(|row| {
-            let vo_id: VoId = row.try_get("vo_id")?;
-            stored_version(vo_id, &row)
-        })
-        .filter(|decoded| {
-            decoded
-                .as_ref()
-                .map_or(true, crate::storage::access_facts::visible)
-        })
-        .collect()
+    served(rows)
 }
 
 /// Read a SET of specific versions in ONE statement.
@@ -488,17 +490,7 @@ pub async fn read_versions_by_tree(
         .bind(&branch_versions)
         .fetch_all(&mut *acquire(pool).await?)
         .await?;
-    rows.into_iter()
-        .map(|row| {
-            let vo_id: VoId = row.try_get("vo_id")?;
-            stored_version(vo_id, &row)
-        })
-        .filter(|decoded| {
-            decoded
-                .as_ref()
-                .map_or(true, crate::storage::access_facts::visible)
-        })
-        .collect()
+    served(rows)
 }
 
 /// The statement [`read_one`] runs for [`VersionAt::CurrentOfKind`]: the
@@ -619,7 +611,7 @@ pub async fn read_one(
         Body::Parsed => stored_version(vo_id, &row)?,
         Body::Text => stored_version_raw(vo_id, &row)?,
     };
-    Ok(Some(stored).filter(crate::storage::access_facts::visible))
+    Ok(Some(stored).filter(visible))
 }
 
 /// The stored canonical body BYTES of one version, across both storage tiers

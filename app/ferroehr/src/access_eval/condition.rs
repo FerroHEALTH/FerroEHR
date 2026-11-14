@@ -701,10 +701,12 @@ where
     output
 }
 
-/// Whether `item` of `ehr_id`, read beside the revision `seen` of the EHR's
-/// settings row, may leave the store for the running request: always outside
-/// a request, and for an object of no EHR. A verdict judged on another
-/// revision admits nothing ([`RequestAccess::stale`]).
+/// Whether `item` of `ehr_id` may leave the store for the running request.
+///
+/// `seen` is the revision of the EHR's settings row the read found beside
+/// the item. Always outside a request, and for an object of no EHR; a
+/// verdict judged on another revision admits nothing
+/// ([`RequestAccess::stale`]).
 #[must_use]
 pub fn admits(ehr_id: Option<EhrId>, seen: Revision, item: &Item<'_>) -> bool {
     match (current(), ehr_id) {
