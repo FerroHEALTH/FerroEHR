@@ -366,8 +366,8 @@ fn provisioning_client(
         .any(|issuer| issuer == binding_issuer)
     {
         return Err(forbidden(format!(
-            "the scim_provision grant names the binding_issuer {binding_issuer:?}, which is \
-             neither the identifier_issuer of an [[auth.party]] table nor a patients issuer"
+            "the scim_provision grant names the binding_issuer {binding_issuer:?}, which is the \
+             identifier_issuer of no [[auth.party]] table and no patients issuer"
         )));
     }
     let own = capabilities.client().map(|client| client.party);
