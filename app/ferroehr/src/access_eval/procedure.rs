@@ -530,6 +530,7 @@ fn denials(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &mut 
                 Lifted::Consent,
                 emergency.break_glass(),
             ),
+            DirectiveKind::ControllerRule => continue,
         };
         if directive.emergency_override && lifts {
             if binds == Pred::True {

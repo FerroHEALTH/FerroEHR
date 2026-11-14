@@ -268,6 +268,9 @@ group! {
         OptOut => "opt_out",
         /// The scope of what a proxy may do (EHDS Art. 4(2)).
         Delegation => "delegation",
+        /// A rule of the controller's `ACCESS_POLICY` for every EHR it keeps,
+        /// never a directive of an EHR (EHDS Art. 11(3)).
+        ControllerRule => "controller_rule",
     }
 }
 
@@ -451,6 +454,9 @@ pub enum ForeignKind {
     Purpose,
     /// A legal provision, such as GDPR Art. 9(2)(a).
     LegalGround,
+    /// A role a `ROLE` is named by, such as a professional role code
+    /// (RM Demographic IM, `PARTY.type()`).
+    Role,
 }
 
 impl fmt::Display for ForeignKind {
@@ -460,6 +466,7 @@ impl fmt::Display for ForeignKind {
             Self::Category => "category",
             Self::Purpose => "purpose",
             Self::LegalGround => "legal ground",
+            Self::Role => "role",
         })
     }
 }

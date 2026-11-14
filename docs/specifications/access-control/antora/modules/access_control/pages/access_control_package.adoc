@@ -6,7 +6,7 @@ include::partial$draft_notice.adoc[]
 
 == Overview
 
-An `ACCESS_DIRECTIVE_SETTINGS` is the `_settings_` of one `EHR_ACCESS`, and `EHR_ACCESS.scheme()` returns `access_directives` for it. It holds the default disposition of the EHR, the gate-keepers, the `ACCESS_DIRECTIVE` instances the subject gave and the `ACCESS_LABEL` instances on single objects. An `ACCESS_POLICY`, kept in a `VERSIONED_ACCESS_POLICY`, holds the controller's facts, the restrictions of the access log's subject view among them. `ACCESS_ACTOR_SCOPE` and `ACCESS_DATA_SCOPE` describe callers and data, and are used by directives, labels and classifications alike.
+An `ACCESS_DIRECTIVE_SETTINGS` is the `_settings_` of one `EHR_ACCESS`, and `EHR_ACCESS.scheme()` returns `access_directives` for it. It holds the default disposition of the EHR, the gate-keepers, the `ACCESS_DIRECTIVE` instances the subject gave and the `ACCESS_LABEL` instances on single objects. An `ACCESS_POLICY`, kept in a `VERSIONED_ACCESS_POLICY`, holds the controller's facts, its own rules for every EHR and the restrictions of the access log's subject view among them. `ACCESS_ACTOR_SCOPE` and `ACCESS_DATA_SCOPE` describe callers and data, and are used by directives, labels and classifications alike.
 
 == Design
 
@@ -16,9 +16,9 @@ An `ACCESS_DIRECTIVE_SETTINGS` is the `_settings_` of one `EHR_ACCESS`, and `EHR
 
 === Directives
 
-An `ACCESS_DIRECTIVE` is one instruction about access to the data of the EHR. `_kind_` says what it is (`consent`, `restriction`, `opt_out`, `delegation`) and `_effect_` whether it permits or denies. It applies to an access when every attribute it sets matches the access:
+An `ACCESS_DIRECTIVE` is one instruction about access to the data of the EHR. `_kind_` says what it is (`consent`, `restriction`, `opt_out`, `delegation`, or `controller_rule` for a rule of the controller's policy) and `_effect_` whether it permits or denies. It applies to an access when every attribute it sets matches the access:
 
-* `_applies_to_`: the callers, as `ACCESS_ACTOR_SCOPE` instances, any one of which is enough. A scope names a demographic party (a `PERSON` or `AGENT` matches itself; an `ORGANISATION` or `GROUP` matches whoever acts for it or is a member), a functional role, a relationship to the subject (`care`, `representative`, `proxy`) or a kind of caller.
+* `_applies_to_`: the callers, as `ACCESS_ACTOR_SCOPE` instances, any one of which is enough. A scope names a demographic party (a `PERSON` or `AGENT` matches itself; an `ORGANISATION` or `GROUP` matches whoever acts for it or is a member), a role, a relationship to the subject (`care`, `representative`, `proxy`) or a kind of caller. A role is matched against the coded `_name_` of each `ROLE` in force the caller performs, the type of the role (RM Demographic IM, `PARTY.type()`, invariant `type = name`), so the demographic service is the one source of who holds which role.
 * `_operations_` and `_purposes_`: the operations and the purposes of use, coded in the terminologies the system documents and accepts.
 * `_data_`: the data, as `ACCESS_DATA_SCOPE` instances: single versioned objects, templates, archetypes (with their specialisations), categories, sensitivities, origins, and the interval in which the data were committed.
 * `_time_validity_`: when the directive is in force, to the second.
@@ -44,6 +44,9 @@ The kinds carry the rights of the subject:
 
 |`delegation`
 |The scope of what a proxy or representative may read (EHDS Art 4(2)), narrowing the relationship the demographic service records.
+
+|`controller_rule`
+|A rule of the controller's `ACCESS_POLICY` for every EHR it keeps (see <<_the_controllers_rules>>). Never a directive of an EHR, of the catalogue or of an exception of either.
 |===
 
 === Labels and Classifications
@@ -53,6 +56,16 @@ The kinds carry the rights of the subject:
 === The Controller Policy
 
 `ACCESS_POLICY._controller_` names the `ORGANISATION` whose policy it is. `_care_relationship_required_` makes a professional's clinical access depend on a live care relationship to the subject, and `_relationship_grace_` extends the relationship after it ends for follow-up (Security Policy, "Time-limitation of access"). `_purpose_required_` makes a declared purpose of use mandatory. `_catalogue_` lists named directives a subject accepts by an identifier, such as an IHE BPPC policy or a national consent choice; accepting one copies its directive into the subject's settings, with the signed acknowledgement as `_evidence_`.
+
+=== The Controller's Rules
+
+EHDS Art 11(3) asks each Member State to lay down "the categories of personal electronic health data accessible by different categories of health professionals or for different healthcare tasks", and Art 11(4) applies the rules of the Member State of treatment. IHE APPC places the same kind of rule in a foundational privacy policy of the policy domain, which says "which functional roles may access which document, and under which conditions" (ITI TF-1 43.4.1), and FHIR R5 leaves role-based rules out of `Consent` (R5 `Consent` §6.2.3). `ACCESS_POLICY._rules_` holds these rules: one `ACCESS_DIRECTIVE` of kind `controller_rule` each, with the scopes, operations, purposes, validity, exceptions and legal grounds a directive carries.
+
+A rule binds every caller of every EHR the controller keeps, apart from the subject reading or writing their own record, whose right of access (EHDS Art 3) is not the controller's to deny. A deny rule refuses what it covers whatever the subject's directives permit: who may record or read which kind of data is the competence of the care delivery environment (xref:BASE:architecture_overview:security.adoc[Security], The Problem of Roles), not the subject's to grant. A permit rule clears callers for the sensitivities it names, the way a subject's permit directive does, and decides nothing else. A rule with a permit exception states "only": "nurses may write no template except these", or "professionals may declare no purpose except treatment". Each rule's exceptions are rules too.
+
+The rules name kinds of data best by the sensitivities `_classifications_` assign, so a template id appears in one place, the classification. A rule may name `_templates_` directly, as a rule about writing usually does: for a write, the data are the version being committed. `_evidence_` and `_instructed_by_` have no use on a rule; `_legal_grounds_` names the provision it rests on.
+
+The rules, their place in the procedure and the reading of `_role_` from the demographic `ROLE` are this proposal's own; no openEHR specification has a controller rule.
 
 === Restrictions of the Access Log's Subject View
 

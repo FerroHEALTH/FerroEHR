@@ -546,8 +546,25 @@ ferroehr party-binding grant --basic-user clinician --operation hold_scopes \
 
 Every later grant is an administrator's write through the Demographic API.
 `[authz.rbac] first_admin` is that administrator in a deployment whose people
-sign in with HTTP Basic: it holds `admin_role` and the product scope before
-any policy party exists.
+sign in with HTTP Basic and no `[[auth.party]]` table binds logins: it holds
+`admin_role` and the product scope before any policy party exists.
+
+No HTTP route grants an operation before an administrator exists. A
+deployment whose staff sign in through a `persons` issuer bound by an
+`[[auth.party]]` table starts in this order:
+
+1. The operator grants the SCIM client `scim_provision` with
+   `ferroehr party-binding grant`, as above.
+2. The SCIM client provisions the staff, the administrator among them.
+3. The administrator signs in in one of two ways. The first is a token of an
+   issuer `[authz.rbac] role_issuers` lists, carrying `admin_role`. The
+   second is `first_admin`, mapped with `[[authz.party_binding.basic_user]]`
+   to the key of the `PERSON` the SCIM client provisioned. A Basic user beside
+   an `[[auth.party]]` table must map to a key, so an unmapped `first_admin`
+   refuses the start, and a mapped one is refused as unbound until its
+   `PERSON` exists.
+4. The administrator writes every other policy party through the Demographic
+   API.
 
 ### The grant ceiling
 
@@ -1847,7 +1864,9 @@ The controller's access policy states what holds for every EHR this FerroEHR
 keeps: which kinds of data carry which sensitivity (`classifications`),
 whether a professional's clinical access needs a care relationship
 (`care_relationship_required`, with a `relationship_grace`) and a declared
-purpose (`purpose_required`), the `catalogue` of named directives a
+purpose (`purpose_required`), the controller's own `rules` on which callers
+may do what with which kinds of data (each an `ACCESS_DIRECTIVE` of kind
+`controller_rule`, EHDS Art. 11(3)), the `catalogue` of named directives a
 patient can accept by reference, such as an IHE BPPC policy, and the
 `log_restrictions` of the access log's subject view your Member State's law
 lays down under EHDS Art. 9(3) ([Audit](audit.md#restricting-the-subject-view-ehds-art-93)).
@@ -1862,7 +1881,10 @@ one, nothing is tightened.
 - **Whole, over a version.** Name the version you replace in `If-Match`, or
   create the first with `If-None-Match: *`. A stale condition is `412`.
 - **Checked when written.** A body that is no canonical-JSON `ACCESS_POLICY`
-  or breaks an invariant of the draft model is refused whole with `400`.
+  or breaks an invariant of the draft model is refused whole with `400`, as
+  is a rule of another kind than `controller_rule`, a catalogue entry of that
+  kind, and a rule naming a role, purpose, sensitivity, category or legal
+  ground in `ferroehr-operations`.
 - **Effective without a restart**, as the registers above.
 - **Read by the access evaluator** on every request: a classification gives
   the data it covers its sensitivities (step 4), and the two requirements

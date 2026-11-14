@@ -2,7 +2,7 @@
 --------
 {
   "name": "ACCESS_DIRECTIVE",
-  "documentation": "One instruction about access to the data of one EHR, given by the subject, their representative or the controller on their instruction: a consent permit or deny, an EHDS Art. 8 restriction, an EHDS Art. 10 opt-out, or the scope of a delegation. A directive applies to an access when every attribute it sets matches the access (the actor, the operation, the purpose, the data, the time), and none of its exceptions applies. Where a permit and a deny both apply, the deny wins.",
+  "documentation": "One instruction about access to the data of one EHR, given by the subject, their representative or the controller on their instruction: a consent permit or deny, an EHDS Art. 8 restriction, an EHDS Art. 10 opt-out, or the scope of a delegation; or one rule of a controller's `ACCESS_POLICY` for every EHR it keeps. A directive applies to an access when every attribute it sets matches the access (the actor, the operation, the purpose, the data, the time), and none of its exceptions applies. Where a permit and a deny both apply, the deny wins.",
   "ancestors": [
     "LOCATABLE"
   ],
@@ -10,7 +10,7 @@
     "kind": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "kind",
-      "documentation": "What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).",
+      "documentation": "What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation` for a directive of an EHR, `controller_rule` for a rule of an `ACCESS_POLICY`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).",
       "is_mandatory": true,
       "type": "DV_CODED_TEXT"
     },
@@ -182,6 +182,14 @@
     "is_opt_out": {
       "name": "is_opt_out",
       "documentation": "True when `_kind_` is the `opt_out` code of the `access directive kind` group.",
+      "result": {
+        "_type": "P_BMM_SIMPLE_TYPE",
+        "type": "Boolean"
+      }
+    },
+    "is_controller_rule": {
+      "name": "is_controller_rule",
+      "documentation": "True when `_kind_` is the `controller_rule` code of the `access directive kind` group.",
       "result": {
         "_type": "P_BMM_SIMPLE_TYPE",
         "type": "Boolean"

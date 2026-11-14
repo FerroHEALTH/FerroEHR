@@ -4,7 +4,7 @@ h|*Class*
 2+^h|*ACCESS_DIRECTIVE*
 
 h|*Description*
-2+a|One instruction about access to the data of one EHR, given by the subject, their representative or the controller on their instruction: a consent permit or deny, an EHDS Art. 8 restriction, an EHDS Art. 10 opt-out, or the scope of a delegation. A directive applies to an access when every attribute it sets matches the access (the actor, the operation, the purpose, the data, the time), and none of its exceptions applies. Where a permit and a deny both apply, the deny wins.
+2+a|One instruction about access to the data of one EHR, given by the subject, their representative or the controller on their instruction: a consent permit or deny, an EHDS Art. 8 restriction, an EHDS Art. 10 opt-out, or the scope of a delegation; or one rule of a controller's `ACCESS_POLICY` for every EHR it keeps. A directive applies to an access when every attribute it sets matches the access (the actor, the operation, the purpose, the data, the time), and none of its exceptions applies. Where a permit and a deny both apply, the deny wins.
 
 h|*Inherit*
 2+|`xref:common:archetyped_package.adoc#_locatable_class[LOCATABLE]`
@@ -15,7 +15,7 @@ h|*Attributes*
 
 h|*1..1*
 |*kind*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
-a|What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).
+a|What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation` for a directive of an EHR, `controller_rule` for a rule of an `ACCESS_POLICY`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).
 
 h|*1..1*
 |*effect*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
@@ -88,6 +88,10 @@ a|True when `_kind_` is the `restriction` code of the `access directive kind` gr
 h|*1..1*
 |*is_opt_out* (): `xref:{class_boolean}[Boolean]`
 a|True when `_kind_` is the `opt_out` code of the `access directive kind` group.
+
+h|*1..1*
+|*is_controller_rule* (): `xref:{class_boolean}[Boolean]`
+a|True when `_kind_` is the `controller_rule` code of the `access directive kind` group.
 
 h|*Invariants*
 2+a|__Kind_valid__: `terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_directive_kind, kind.defining_code)`
