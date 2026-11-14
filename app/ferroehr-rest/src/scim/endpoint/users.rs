@@ -96,10 +96,10 @@ pub(crate) async fn create(
         }
         let map = &users.inner.map;
         let values = map
-            .values(&users.service, resource, &client.binding_issuer)
+            .values(&users.service, resource, (&client.binding_issuer, client.portal))
             .await?;
         let user = NewUser {
-            template_id: map.template_id().to_owned(),
+            template_id: map.template_id(client.portal)?.to_owned(),
             namespace: map.namespace().to_owned(),
             values,
         };
@@ -250,7 +250,7 @@ pub(crate) async fn modify(
             let active = active_of(&replaced);
             (replaced, active)
         };
-        write(&users, issuer, user, (&current, &after), active).await
+        write(&users, (issuer, client.portal), user, (&current, &after), active).await
     }
     .await;
     let op = if patching {
@@ -297,11 +297,12 @@ async fn current(
     Ok((user, current))
 }
 
-/// Commits the User `user` going from `old` to `new` with the request's
-/// `active`, returning the User after.
+/// Commits the User `user` of the client of `issuer`, a portal client when
+/// `portal`, going from `old` to `new` with the request's `active`,
+/// returning the User after.
 async fn write(
     users: &Users,
-    issuer: &str,
+    (issuer, portal): (&str, bool),
     user: ProvisionedUser,
     (old, new): (&Resource, &Resource),
     active: Option<bool>,
@@ -309,7 +310,7 @@ async fn write(
     let (set, clear) = users
         .inner
         .map
-        .changes(&users.service, &user.body, (old, new), issuer)
+        .changes(&users.service, &user.body, (old, new), (issuer, portal))
         .await?;
     let update = UserUpdate {
         set,

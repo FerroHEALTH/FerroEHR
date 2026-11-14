@@ -129,7 +129,7 @@ fn resource_types(
         endpoint: "/Users".to_owned(),
         description: Some(
             "A health professional, held as a demographic PERSON performing the professional \
-             ROLE"
+             ROLE, or a patient portal's representative, a PERSON of the patient template"
                 .to_owned(),
         ),
         schema: SchemaSelection::only(core_user, core),

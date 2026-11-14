@@ -16,7 +16,7 @@
 //! demographic template: our own design.
 
 use ferroehr::config::binding::PartyBindingConfig;
-use ferroehr::config::binding::person::{PersonAttribute, Selector};
+use ferroehr::config::binding::person::{PersonAttribute, PersonTemplate, Selector};
 use ferroehr::error::ServiceError;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::mapped_write::mapped_value;
@@ -64,13 +64,43 @@ struct Mapped {
 /// The User mapping of a deployment.
 #[derive(Debug, Clone)]
 pub(crate) struct UserMap {
-    template_id: String,
+    /// The default person template, a professional's.
+    professional: Written,
+    /// The patient template, a portal representative's, when it is a person
+    /// template.
+    portal: Option<Written>,
     role_template: String,
     namespace: String,
+    attributes: Vec<Mapped>,
+}
+
+/// The template a User is created in, with the selectors of its key,
+/// `userName` and `externalId`.
+#[derive(Debug, Clone)]
+struct Written {
+    template_id: String,
     key: Selector,
     user_name: Selector,
     external_id: Option<Selector>,
-    attributes: Vec<Mapped>,
+}
+
+impl Written {
+    /// The selectors of `template`, which must name a `user_name`.
+    fn of(template: &PersonTemplate) -> Result<Self, String> {
+        let user_name = template.user_name.clone().ok_or_else(|| {
+            format!(
+                "SCIM writes userName at the user_name selector, which the template {:?} does \
+                 not name",
+                template.template_id
+            )
+        })?;
+        Ok(Self {
+            template_id: template.template_id.clone(),
+            key: template.key.clone(),
+            user_name,
+            external_id: template.external_id.clone(),
+        })
+    }
 }
 
 impl UserMap {
@@ -87,13 +117,12 @@ impl UserMap {
             .iter()
             .find(|template| template.default)
             .ok_or("SCIM creates Users with the default [[authz.party_binding.person.template]], and none sets default = true")?;
-        let user_name = template.user_name.clone().ok_or_else(|| {
-            format!(
-                "SCIM writes userName at the user_name selector, which the default template {:?} \
-                 does not name",
-                template.template_id
-            )
-        })?;
+        let professional = Written::of(template)?;
+        // NOTE: our own design (#5622), a portal client writes the patient template, a person template.
+        let portal = binding
+            .portal_person_template()
+            .map(Written::of)
+            .transpose()?;
         let role_template = binding
             .professional_role
             .as_ref()
@@ -121,19 +150,41 @@ impl UserMap {
             });
         }
         Ok(Self {
-            template_id: template.template_id.clone(),
+            professional,
+            portal,
             role_template,
             namespace: binding.namespace.clone(),
-            key: template.key.clone(),
-            user_name,
-            external_id: template.external_id.clone(),
             attributes,
         })
     }
 
-    /// The template new Users' `PERSON`s are created with.
-    pub(crate) fn template_id(&self) -> &str {
-        &self.template_id
+    /// The template a client's new Users' `PERSON`s are created with: the
+    /// default person template, or for a portal client the patient template.
+    ///
+    /// # Errors
+    /// A `400` `invalidValue` for a portal client when the patient template
+    /// is no person template of the mapping.
+    fn written(&self, portal: bool) -> Result<&Written, ScimError> {
+        if !portal {
+            return Ok(&self.professional);
+        }
+        self.portal.as_ref().ok_or_else(|| {
+            ScimError::bad_request(
+                ScimType::InvalidValue,
+                "This client provisions a patient portal's representatives, in the template of \
+                 [authz.party_binding.patient], which no [[authz.party_binding.person.template]] \
+                 names.",
+            )
+        })
+    }
+
+    /// The template a client's new Users' `PERSON`s are created with
+    /// ([`Self::written`]).
+    ///
+    /// # Errors
+    /// The refusal of [`Self::written`].
+    pub(crate) fn template_id(&self, portal: bool) -> Result<&str, ScimError> {
+        Ok(&self.written(portal)?.template_id)
     }
 
     /// The template of the professional `ROLE`.
@@ -147,18 +198,21 @@ impl UserMap {
     }
 
     /// The data value of each mapped path of a new User's `PERSON`, from the
-    /// create body `resource` of the client of `issuer`.
+    /// create body `resource` of the client of `issuer`, a portal client when
+    /// `portal`.
     ///
     /// # Errors
     /// A `400` `invalidValue` when the body carries no `loginIdentifier`, a
-    /// mapped value is not a string, or the template draws no data value a
-    /// text fills at a mapped path; a storage failure as a `500`.
+    /// mapped value is not a string, the template draws no data value a text
+    /// fills at a mapped path, or a portal client's template is unmapped; a
+    /// storage failure as a `500`.
     pub(crate) async fn values(
         &self,
         service: &FerroEhrService,
         resource: &Resource,
-        issuer: &str,
+        (issuer, portal): (&str, bool),
     ) -> Result<Vec<(String, Value)>, ScimError> {
+        let written = self.written(portal)?;
         let login = text(resource.get(
             Container::Extension(EXTENSION_URN),
             schemas::LOGIN_IDENTIFIER,
@@ -178,18 +232,18 @@ impl UserMap {
         })?;
         let mut wanted = vec![
             (
-                self.key.path.clone(),
+                written.key.path.clone(),
                 login,
-                self.key.identifier_type.clone(),
+                written.key.identifier_type.clone(),
             ),
             (
-                self.user_name.path.clone(),
+                written.user_name.path.clone(),
                 user_name,
-                self.user_name.identifier_type.clone(),
+                written.user_name.identifier_type.clone(),
             ),
         ];
         if let Some(external_id) = text(resource.get(Container::Core, "externalId"))? {
-            let selector = self.external_id.as_ref().ok_or_else(|| {
+            let selector = written.external_id.as_ref().ok_or_else(|| {
                 ScimError::bad_request(
                     ScimType::InvalidValue,
                     "This provider maps no 'externalId'.",
@@ -202,7 +256,7 @@ impl UserMap {
             ));
         }
         for mapped in &self.attributes {
-            let Some(path) = mapped.attribute.path_for(&self.template_id) else {
+            let Some(path) = mapped.attribute.path_for(&written.template_id) else {
                 continue;
             };
             if let Some(value) = text(read(resource, &mapped.target))? {
@@ -212,7 +266,7 @@ impl UserMap {
         let mut values = Vec::with_capacity(wanted.len());
         for (path, value, identifier_type) in wanted {
             let data = service
-                .mapped_text_value(&self.template_id, &path, &value, (issuer, &identifier_type))
+                .mapped_text_value(&written.template_id, &path, &value, (issuer, &identifier_type))
                 .await
                 .map_err(|error| service_refusal(&error))?;
             values.push((path, data));
@@ -221,8 +275,8 @@ impl UserMap {
     }
 
     /// The mapped values to set and the mapped paths to clear in the
-    /// `PERSON` `body` of the client of `issuer`, for its User to go from
-    /// `old` to `new`.
+    /// `PERSON` `body` of the client of `issuer`, a portal client when
+    /// `portal`, for its User to go from `old` to `new`.
     ///
     /// # Errors
     /// A `400` `mutability` when the binding key changes; the
@@ -232,7 +286,7 @@ impl UserMap {
         service: &FerroEhrService,
         body: &Value,
         (old, new): (&Resource, &Resource),
-        issuer: &str,
+        (issuer, portal): (&str, bool),
     ) -> Result<
         (
             Vec<(String, Value)>,
@@ -250,10 +304,11 @@ impl UserMap {
             ));
         }
         let template = template_of(body);
+        let written = self.written(portal)?;
         let mut set = Vec::new();
         let mut clear = Vec::new();
-        let mut selectors = vec![("userName", &self.user_name)];
-        if let Some(external_id) = &self.external_id {
+        let mut selectors = vec![("userName", &written.user_name)];
+        if let Some(external_id) = &written.external_id {
             selectors.push(("externalId", external_id));
         }
         for (name, selector) in selectors {
