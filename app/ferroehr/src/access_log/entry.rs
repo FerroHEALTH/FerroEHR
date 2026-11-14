@@ -177,7 +177,7 @@ pub fn for_store(event: &AuditEvent, ctx: &AuditContext) -> Option<Box<AccessLog
 }
 
 /// A `DV_CODED_TEXT` of `code` in `terminology`, displayed as `rubric`.
-fn coded(terminology: &str, code: &str, rubric: &str) -> DvCodedText {
+pub(crate) fn coded(terminology: &str, code: &str, rubric: &str) -> DvCodedText {
     DvCodedText {
         value: rubric.to_owned(),
         hyperlink: None,

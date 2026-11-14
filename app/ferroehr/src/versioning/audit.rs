@@ -440,13 +440,19 @@ pub(crate) fn openehr_coded_text(code: &str, rubric: String) -> DvCodedText {
 /// A `DV_DATE_TIME` carrying an instant's ISO 8601 form — the shape
 /// `AUDIT_DETAILS.time_committed` (1..1) takes.
 pub(crate) fn dv_date_time(instant: &jiff::Timestamp) -> DvDateTime {
+    dv_date_time_text(instant.to_string())
+}
+
+/// A `DV_DATE_TIME` carrying `value` as given, an ISO 8601 form read from
+/// elsewhere.
+pub(crate) fn dv_date_time_text(value: String) -> DvDateTime {
     DvDateTime {
         normal_status: None,
         normal_range: None,
         other_reference_ranges: None,
         magnitude_status: None,
         accuracy: None,
-        value: instant.to_string(),
+        value,
     }
 }
 

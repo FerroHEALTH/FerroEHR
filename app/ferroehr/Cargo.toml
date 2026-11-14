@@ -18,10 +18,11 @@ publish = false
 # --no-default-features build is the slim CDR. Additive only.
 # `fhir` covers the FHIR the CDR keeps: the ATNA `AuditEvent` rendering (the
 # local store, the ATX:FHIR Feed, the ITI-81 retrieval) and the FHIR R4B
-# terminology client. FHIR R4 resource mapping is FerroBRIDGE's, outside this
-# workspace.
+# terminology client, and the exchange of access directives as FHIR R4 and R5
+# `Consent` (`access_exchange::fhir`). Every other FHIR resource mapping is
+# FerroBRIDGE's, outside this workspace.
 default = ["fhir", "multimedia"]
-fhir = ["dep:ferrobridge-term", "ehds-logging/balp", "ihe-atna/balp", "ihe-atna/smart"]
+fhir = ["dep:ferrobridge-term", "dep:fhir-types", "ehds-logging/balp", "ihe-atna/balp", "ihe-atna/smart"]
 multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 # `schemars::JsonSchema` on the configuration tree and every type it reaches,
 # which tools/config-reference renders into the reference page and the default
@@ -53,6 +54,10 @@ ferrohealth-smart = { workspace = true, features = ["server-tls"] }
 # The client of the one FHIR terminology server (`service::terminology::fhir`),
 # behind `fhir`: a slim build refuses a configured server at boot.
 ferrobridge-term = { workspace = true, optional = true }
+# The FHIR R4 and R5 `Consent` the access directives are exchanged as
+# (`access_exchange::fhir`), read and written through the generated model,
+# behind `fhir`.
+fhir-types = { workspace = true, optional = true, features = ["r5-resources"] }
 url.workspace = true
 async-trait.workspace = true
 ferrohealth-config.workspace = true
