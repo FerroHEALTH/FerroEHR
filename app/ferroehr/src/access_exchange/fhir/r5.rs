@@ -30,10 +30,18 @@ pub(super) fn read(object: &Object) -> Result<Document, Refused> {
         .map_err(|error| Refused::new(FORMAT, "Consent", Loss::Malformed(error.to_string())))?;
     unmodified(&consent.modifier_extension, "Consent")?;
     if consent.implicit_rules.is_some() {
-        return Err(Refused::new(FORMAT, "Consent.implicitRules", Loss::NoDirectiveForm));
+        return Err(Refused::new(
+            FORMAT,
+            "Consent.implicitRules",
+            Loss::NoDirectiveForm,
+        ));
     }
     if !consent.contained.is_empty() {
-        return Err(Refused::new(FORMAT, "Consent.contained", Loss::NoDirectiveForm));
+        return Err(Refused::new(
+            FORMAT,
+            "Consent.contained",
+            Loss::NoDirectiveForm,
+        ));
     }
     let mut kept = Vec::new();
     for attachment in &consent.source_attachment {
@@ -153,8 +161,14 @@ fn verification_kept(verification: &ConsentVerification) -> Result<(String, Stri
             .verification_type
             .as_ref()
             .and_then(|t| t.coding.first().map(|c| code_in(c).token())),
-        verification.verified_by.as_ref().map(|r| ref_in(r).render()),
-        verification.verified_with.as_ref().map(|r| ref_in(r).render()),
+        verification
+            .verified_by
+            .as_ref()
+            .map(|r| ref_in(r).render()),
+        verification
+            .verified_with
+            .as_ref()
+            .map(|r| ref_in(r).render()),
         Some(
             verification
                 .verification_date

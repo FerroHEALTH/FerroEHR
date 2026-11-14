@@ -31,10 +31,18 @@ pub(super) fn read(object: &Object) -> Result<Document, Refused> {
         .map_err(|error| Refused::new(FORMAT, "Consent", Loss::Malformed(error.to_string())))?;
     unmodified(&consent.modifier_extension, "Consent")?;
     if consent.implicit_rules.is_some() {
-        return Err(Refused::new(FORMAT, "Consent.implicitRules", Loss::NoDirectiveForm));
+        return Err(Refused::new(
+            FORMAT,
+            "Consent.implicitRules",
+            Loss::NoDirectiveForm,
+        ));
     }
     if !consent.contained.is_empty() {
-        return Err(Refused::new(FORMAT, "Consent.contained", Loss::NoDirectiveForm));
+        return Err(Refused::new(
+            FORMAT,
+            "Consent.contained",
+            Loss::NoDirectiveForm,
+        ));
     }
     let mut kept = Vec::new();
     let mut evidence = Vec::new();
@@ -153,7 +161,10 @@ fn verification_kept(verification: &ConsentVerification) -> Result<(String, Stri
     unmodified(&verification.modifier_extension, "Consent.verification")?;
     let rendering = line([
         verification.verified.value.map(|v| format!("verified {v}")),
-        verification.verified_with.as_ref().map(|r| ref_in(r).render()),
+        verification
+            .verified_with
+            .as_ref()
+            .map(|r| ref_in(r).render()),
         text!(verification.verification_date),
     ]);
     Ok(("Consent.verification".to_owned(), rendering))

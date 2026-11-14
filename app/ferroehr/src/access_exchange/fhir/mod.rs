@@ -120,7 +120,11 @@ impl Release {
 /// extension.
 pub fn read(release: Release, body: &[u8]) -> Result<Document, Refused> {
     let object: Object = serde_json::from_slice(body).map_err(|error| {
-        Refused::new(release.format(), "Consent", Loss::Malformed(error.to_string()))
+        Refused::new(
+            release.format(),
+            "Consent",
+            Loss::Malformed(error.to_string()),
+        )
     })?;
     match release {
         Release::R4 => r4::read(&object),
@@ -147,12 +151,19 @@ pub fn bundle(release: Release, documents: &[Document]) -> Result<Vec<u8>, Refus
         )])));
     }
     let bundle = Object::from([
-        ("resourceType".to_owned(), Value::String("Bundle".to_owned())),
+        (
+            "resourceType".to_owned(),
+            Value::String("Bundle".to_owned()),
+        ),
         ("type".to_owned(), Value::String("collection".to_owned())),
         ("entry".to_owned(), Value::Array(entries)),
     ]);
     serde_json::to_vec(&bundle).map_err(|error| {
-        Refused::new(release.format(), "Bundle", Loss::Malformed(error.to_string()))
+        Refused::new(
+            release.format(),
+            "Bundle",
+            Loss::Malformed(error.to_string()),
+        )
     })
 }
 

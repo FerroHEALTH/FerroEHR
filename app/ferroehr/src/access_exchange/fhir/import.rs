@@ -269,9 +269,11 @@ impl Reader<'_> {
     /// states: R5 `Consent.period`, or the R4 extension.
     fn consent_validity(
         &self,
-    ) -> Option<openehr_rm::v1_2::data_types::quantity::dv_interval::DvInterval<
-        openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime,
-    >> {
+    ) -> Option<
+        openehr_rm::v1_2::data_types::quantity::dv_interval::DvInterval<
+            openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime,
+        >,
+    > {
         let period = match self.release {
             Release::R5 => self.document.period.clone(),
             Release::R4 => self
@@ -333,7 +335,7 @@ impl Reader<'_> {
             .unwrap_or(kind);
         let mut exception = directive(kind, effect);
         self.criteria(rule, element, &mut exception)?;
-        meta::plumb(&mut exception, own);
+        crate::access_exchange::rm::plumb(&mut exception, own);
         Ok(exception)
     }
 
@@ -364,7 +366,10 @@ impl Reader<'_> {
                 .map(|code| self.verbatim(code, &format!("{element}.purpose")))
                 .collect::<Result<_, _>>()?,
         );
-        target.data = self.data(rule, element)?.map(|scope| vec![scope]).and_then(list);
+        target.data = self
+            .data(rule, element)?
+            .map(|scope| vec![scope])
+            .and_then(list);
         target.time_validity = rule.period.clone().map(|p| interval(p.start, p.end));
         target.emergency_override = flag(&rule.extensions, EXT_EMERGENCY_OVERRIDE);
         Ok(())
@@ -386,20 +391,34 @@ impl Reader<'_> {
             return Err(self.refused(format!("{element}.role"), Loss::Code(named.join(", "))));
         }
         let coding = |url: &str| {
-            actor.extensions.iter().find(|e| e.url == url).map(|e| match &e.value {
-                ExtValue::Coding(code) => self.verbatim(code, &format!("{element}.extension")),
-                _ => Err(self.refused(
-                    format!("{element}.extension"),
-                    Loss::Malformed(format!("{url} takes valueCoding")),
-                )),
-            })
+            actor
+                .extensions
+                .iter()
+                .find(|e| e.url == url)
+                .map(|e| match &e.value {
+                    ExtValue::Coding(code) => self.verbatim(code, &format!("{element}.extension")),
+                    _ => Err(self.refused(
+                        format!("{element}.extension"),
+                        Loss::Malformed(format!("{url} takes valueCoding")),
+                    )),
+                })
         };
         let role = coding(EXT_ROLE).transpose()?;
         let relationship = coding(EXT_RELATIONSHIP).transpose()?;
         let caller_kind = coding(EXT_CALLER_KIND).transpose()?;
         for (coded, holds) in [
-            (&relationship, relationship.as_ref().map(|c| Relationship::read_coded(c).is_ok())),
-            (&caller_kind, caller_kind.as_ref().map(|c| CallerKind::read_coded(c).is_ok())),
+            (
+                &relationship,
+                relationship
+                    .as_ref()
+                    .map(|c| Relationship::read_coded(c).is_ok()),
+            ),
+            (
+                &caller_kind,
+                caller_kind
+                    .as_ref()
+                    .map(|c| CallerKind::read_coded(c).is_ok()),
+            ),
         ] {
             if let (Some(coded), Some(false)) = (coded, holds) {
                 return Err(self.refused(

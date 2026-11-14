@@ -20,21 +20,21 @@ const MAX_DEPTH: usize = 64;
 
 /// One element.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct Node {
+pub(crate) struct Node {
     /// The local name.
-    pub name: String,
+    pub(crate) name: String,
     /// The attributes, by local name, in document order.
-    pub attributes: Vec<(String, String)>,
+    pub(crate) attributes: Vec<(String, String)>,
     /// The child elements, in document order.
-    pub children: Vec<Self>,
+    pub(crate) children: Vec<Self>,
     /// The text directly inside, trimmed.
-    pub text: String,
+    pub(crate) text: String,
 }
 
 impl Node {
     /// An element named `name` with nothing in it.
     #[must_use]
-    pub fn new(name: &str) -> Self {
+    pub(crate) fn new(name: &str) -> Self {
         Self {
             name: name.to_owned(),
             ..Self::default()
@@ -43,28 +43,28 @@ impl Node {
 
     /// The element with `key` set to `value`.
     #[must_use]
-    pub fn attr(mut self, key: &str, value: &str) -> Self {
+    pub(crate) fn attr(mut self, key: &str, value: &str) -> Self {
         self.attributes.push((key.to_owned(), value.to_owned()));
         self
     }
 
     /// The element with `child` appended.
     #[must_use]
-    pub fn child(mut self, child: Self) -> Self {
+    pub(crate) fn child(mut self, child: Self) -> Self {
         self.children.push(child);
         self
     }
 
     /// The element with `text` inside.
     #[must_use]
-    pub fn with_text(mut self, text: &str) -> Self {
+    pub(crate) fn with_text(mut self, text: &str) -> Self {
         text.clone_into(&mut self.text);
         self
     }
 
     /// The value of the attribute `key`.
     #[must_use]
-    pub fn get(&self, key: &str) -> Option<&str> {
+    pub(crate) fn get(&self, key: &str) -> Option<&str> {
         self.attributes
             .iter()
             .find(|(k, _)| k == key)
@@ -72,19 +72,19 @@ impl Node {
     }
 
     /// The child elements named `name`.
-    pub fn all<'a>(&'a self, name: &'a str) -> impl Iterator<Item = &'a Self> {
+    pub(crate) fn all<'a>(&'a self, name: &'a str) -> impl Iterator<Item = &'a Self> {
         self.children.iter().filter(move |c| c.name == name)
     }
 
     /// The first child element named `name`.
     #[must_use]
-    pub fn first(&self, name: &str) -> Option<&Self> {
+    pub(crate) fn first(&self, name: &str) -> Option<&Self> {
         self.children.iter().find(|c| c.name == name)
     }
 
     /// The document `self` is the root of, with an XML declaration.
     #[must_use]
-    pub fn document(&self) -> String {
+    pub(crate) fn document(&self) -> String {
         let mut out = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         self.write(&mut out, 0);
         out
@@ -94,7 +94,11 @@ impl Node {
         let indent = "  ".repeat(depth);
         let _ = write!(out, "{indent}<{}", self.name);
         for (key, value) in &self.attributes {
-            let _ = write!(out, " {key}=\"{}\"", quick_xml::escape::escape(value.as_str()));
+            let _ = write!(
+                out,
+                " {key}=\"{}\"",
+                quick_xml::escape::escape(value.as_str())
+            );
         }
         if self.children.is_empty() && self.text.is_empty() {
             out.push_str("/>\n");
@@ -123,7 +127,7 @@ impl Node {
 
 /// Why a document could not be read.
 #[derive(Debug, thiserror::Error)]
-pub enum XmlError {
+pub(crate) enum XmlError {
     /// The parser refused the document.
     #[error("the document is no well-formed XML")]
     Parse(#[source] quick_xml::Error),
@@ -143,7 +147,7 @@ pub enum XmlError {
 /// # Errors
 /// [`XmlError`] for text that is no well-formed XML, a document type
 /// declaration, a tree deeper than 64 levels, or anything but one root.
-pub fn parse(text: &str) -> Result<Node, XmlError> {
+pub(crate) fn parse(text: &str) -> Result<Node, XmlError> {
     let mut reader = Reader::from_str(text);
     let mut stack: Vec<Node> = Vec::new();
     let mut root = None;
@@ -163,7 +167,8 @@ pub fn parse(text: &str) -> Result<Node, XmlError> {
                 let Some(mut done) = stack.pop() else {
                     return Err(XmlError::Shape("an end tag closes nothing".to_owned()));
                 };
-                done.text = done.text.trim().to_owned();
+                let trimmed = done.text.trim().to_owned();
+                done.text = trimmed;
                 attach(&mut stack, &mut root, done)?;
             }
             Event::Text(text) => {
@@ -178,18 +183,15 @@ pub fn parse(text: &str) -> Result<Node, XmlError> {
                 }
             }
             Event::GeneralRef(reference) => {
-                let resolved = match reference
-                    .resolve_char_ref()
-                    .map_err(XmlError::Parse)?
-                {
-                    Some(c) => c.to_string(),
-                    None => {
+                let resolved =
+                    if let Some(c) = reference.resolve_char_ref().map_err(XmlError::Parse)? {
+                        c.to_string()
+                    } else {
                         let name: &str = reference.as_ref();
                         quick_xml::escape::unescape(&format!("&{name};"))
                             .map_err(XmlError::Escape)?
                             .into_owned()
-                    }
-                };
+                    };
                 if let Some(open) = stack.last_mut() {
                     open.text.push_str(&resolved);
                 }
@@ -204,7 +206,9 @@ pub fn parse(text: &str) -> Result<Node, XmlError> {
         }
     }
     if !stack.is_empty() {
-        return Err(XmlError::Shape("the document ends inside an element".to_owned()));
+        return Err(XmlError::Shape(
+            "the document ends inside an element".to_owned(),
+        ));
     }
     root.ok_or_else(|| XmlError::Shape("the document holds no element".to_owned()))
 }
@@ -218,8 +222,10 @@ fn node(start: &BytesStart<'_>) -> Result<Node, XmlError> {
         if key == "xmlns" || key.starts_with("xmlns:") {
             continue;
         }
-        let value = quick_xml::escape::unescape(attribute.value.as_ref()).map_err(XmlError::Escape)?;
-        out.attributes.push((local(key).to_owned(), value.into_owned()));
+        let value =
+            quick_xml::escape::unescape(attribute.value.as_ref()).map_err(XmlError::Escape)?;
+        out.attributes
+            .push((local(key).to_owned(), value.into_owned()));
     }
     Ok(out)
 }
@@ -234,7 +240,11 @@ fn attach(stack: &mut [Node], root: &mut Option<Node>, done: Node) -> Result<(),
     match stack.last_mut() {
         Some(parent) => parent.children.push(done),
         None if root.is_none() => *root = Some(done),
-        None => return Err(XmlError::Shape("the document holds more than one root".to_owned())),
+        None => {
+            return Err(XmlError::Shape(
+                "the document holds more than one root".to_owned(),
+            ));
+        }
     }
     Ok(())
 }

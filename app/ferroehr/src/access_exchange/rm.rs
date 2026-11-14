@@ -107,7 +107,9 @@ pub(crate) fn interval(start: Option<String>, end: Option<String>) -> DvInterval
 /// The two bounds of `interval` as written, `None` where unbounded; `None`
 /// for the whole interval when a bound is excluded, which a closed period
 /// cannot state.
-pub(crate) fn bounds(interval: &DvInterval<DvDateTime>) -> Option<(Option<String>, Option<String>)> {
+pub(crate) fn bounds(
+    interval: &DvInterval<DvDateTime>,
+) -> Option<(Option<String>, Option<String>)> {
     let bound = |unbounded: bool, at: Option<&DvDateTime>, included: bool| match at {
         Some(at) if !unbounded => included.then(|| Some(at.value.clone())),
         _ => Some(None),
@@ -157,4 +159,24 @@ pub(crate) fn details(kept: &[(String, String)]) -> Option<ItemStructure> {
         feeder_audit: None,
         items: Some(items),
     })))
+}
+
+/// Copies onto `target` the attributes `own`, the FerroEHR extension a
+/// directive was written with, carries: every attribute no evaluator reads.
+pub(crate) fn plumb(target: &mut AccessDirective, own: Option<AccessDirective>) {
+    let Some(own) = own else {
+        return;
+    };
+    target.name = own.name;
+    target.archetype_node_id = own.archetype_node_id;
+    target.uid = own.uid;
+    target.links = own.links;
+    target.archetype_details = own.archetype_details;
+    target.feeder_audit = own.feeder_audit;
+    target.instructed_by = own.instructed_by;
+    target.instructed = own.instructed;
+    target.legal_grounds = own.legal_grounds;
+    target.evidence = own.evidence;
+    target.identifiers = own.identifiers;
+    target.details = own.details;
 }

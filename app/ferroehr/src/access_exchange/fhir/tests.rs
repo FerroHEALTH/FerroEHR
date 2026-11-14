@@ -110,11 +110,23 @@ fn every_vendored_example_imports_or_is_refused_at_the_element_and_round_trips()
         (R4, "consent-example-notAuthor.json", refused(actor_role)),
         (R4, "consent-example-notOrg.json", Ok(1)),
         (R4, "consent-example-notThem.json", Ok(1)),
-        (R4, "consent-example-notThis.json", refused("Consent.provision.data.meaning")),
+        (
+            R4,
+            "consent-example-notThis.json",
+            refused("Consent.provision.data.meaning"),
+        ),
         (R4, "consent-example-notTime.json", Ok(1)),
         (R4, "consent-example-pkb.json", Ok(1)),
-        (R4, "consent-example-signature.json", refused("Consent.provision.provision.actor.role")),
-        (R4, "consent-example-smartonfhir.json", refused("Consent.provision.provision.class")),
+        (
+            R4,
+            "consent-example-signature.json",
+            refused("Consent.provision.provision.actor.role"),
+        ),
+        (
+            R4,
+            "consent-example-smartonfhir.json",
+            refused("Consent.provision.provision.class"),
+        ),
         (R5, "consent-example.json", Ok(1)),
         (R5, "consent-example-CDA.json", refused("Consent.grantee")),
         (R5, "consent-example-Emergency.json", refused(actor_role)),
@@ -123,10 +135,18 @@ fn every_vendored_example_imports_or_is_refused_at_the_element_and_round_trips()
         (R5, "consent-example-notAuthor.json", refused(actor_role)),
         (R5, "consent-example-notOrg.json", Ok(1)),
         (R5, "consent-example-notThem.json", Ok(1)),
-        (R5, "consent-example-notThis.json", refused("Consent.provision.data.meaning")),
+        (
+            R5,
+            "consent-example-notThis.json",
+            refused("Consent.provision.data.meaning"),
+        ),
         (R5, "consent-example-notTime.json", Ok(1)),
         (R5, "consent-example-pkb.json", Ok(1)),
-        (R5, "consent-example-smartonfhir.json", refused("Consent.provision.provision.resourceType")),
+        (
+            R5,
+            "consent-example-smartonfhir.json",
+            refused("Consent.provision.provision.resourceType"),
+        ),
     ];
     let mut wrong = Vec::new();
     for (release, name, expected) in cases {
@@ -137,7 +157,9 @@ fn every_vendored_example_imports_or_is_refused_at_the_element_and_round_trips()
             .map(Vec::len)
             .map_err(|refusal| refusal.element.clone());
         if seen != expected {
-            wrong.push(format!("{release:?} {name}: expected {expected:?}, got {outcome:?}"));
+            wrong.push(format!(
+                "{release:?} {name}: expected {expected:?}, got {outcome:?}"
+            ));
             continue;
         }
         if let Ok(directives) = outcome {
@@ -176,7 +198,11 @@ fn exception() -> AccessDirective {
         objects: None,
         templates: None,
         archetypes: None,
-        categories: list(vec![coded("http://loinc.org", "26436-6", "Laboratory studies")]),
+        categories: list(vec![coded(
+            "http://loinc.org",
+            "26436-6",
+            "Laboratory studies",
+        )]),
         sensitivities: None,
         origins: None,
         recorded: None,
@@ -203,7 +229,11 @@ fn every_data() -> AccessDataScope {
             coded(CONFIDENTIALITY, "M", "M"),
             coded(CONFIDENTIALITY, "N", "N"),
             coded(CONFIDENTIALITY, "R", "R"),
-            coded("http://terminology.hl7.org/CodeSystem/v3-ActCode", "PSY", "PSY"),
+            coded(
+                "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+                "PSY",
+                "PSY",
+            ),
         ]),
         origins: list(vec!["lab-system".to_owned()]),
         recorded: Some(interval(Some("2026-01-01T00:00:00Z".to_owned()), None)),
@@ -234,7 +264,10 @@ fn full(kind: DirectiveKind, effect: Effect) -> AccessDirective {
             caller_kind: None,
         },
     ]);
-    d.operations = list(vec![term(OperationClass::Read), term(OperationClass::Query)]);
+    d.operations = list(vec![
+        term(OperationClass::Read),
+        term(OperationClass::Query),
+    ]);
     d.purposes = list(vec![coded(
         "http://terminology.hl7.org/CodeSystem/v3-ActReason",
         "TREAT",
@@ -312,7 +345,8 @@ fn urls(document: &Document) -> Vec<String> {
 fn export_writes_the_extension_of_every_attribute_with_no_core_element() {
     let scoped = full(DirectiveKind::Restriction, Effect::Deny);
     for release in [Release::R4, Release::R5] {
-        let documents = export(release, &[scoped.clone()], &export_context()).expect("exports");
+        let documents =
+            export(release, std::slice::from_ref(&scoped), &export_context()).expect("exports");
         let seen = urls(&documents[0]);
         for url in [
             EXT_DIRECTIVE,
@@ -360,7 +394,7 @@ fn export_refuses_what_a_consent_cannot_state() {
     ] {
         for release in [Release::R4, Release::R5] {
             assert_eq!(
-                export(release, &[directive.clone()], &export_context()).map(|_| ()),
+                export(release, std::slice::from_ref(&directive), &export_context()).map(|_| ()),
                 Err(Refused::new(
                     Format::Directive,
                     attribute,
@@ -432,17 +466,24 @@ fn case(release: Release, consent: serde_json::Value, element: &'static str, los
     }
 }
 
-#[test]
-fn each_loss_is_refused_on_import_with_the_element_named() {
+/// The losses of the provision structure.
+fn structure_cases() -> Vec<Case> {
     use Release::{R4, R5};
     let deep = serde_json::json!({ "actor": actor(), "provision": [{ "actor": actor(),
         "provision": [{ "actor": actor() }] }] });
     let mut cases = vec![
-        case(R4, r4(&deep, "OPTIN"), "Consent.provision.provision.provision", Loss::TooDeep),
+        case(
+            R4,
+            r4(&deep, "OPTIN"),
+            "Consent.provision.provision.provision",
+            Loss::TooDeep,
+        ),
         case(
             R5,
-            r5(&serde_json::json!([{ "actor": actor(), "provision": [{ "actor": actor(),
-                "provision": [{ "actor": actor() }] }] }])),
+            r5(
+                &serde_json::json!([{ "actor": actor(), "provision": [{ "actor": actor(),
+                "provision": [{ "actor": actor() }] }] }]),
+            ),
             "Consent.provision.provision.provision",
             Loss::TooDeep,
         ),
@@ -459,7 +500,12 @@ fn each_loss_is_refused_on_import_with_the_element_named() {
     }
     let expression = serde_json::json!([{ "expression": { "language": "text/fhirpath",
         "expression": "true" } }]);
-    cases.push(case(R5, r5(&expression), "Consent.provision.expression", Loss::NoDirectiveForm));
+    cases.push(case(
+        R5,
+        r5(&expression),
+        "Consent.provision.expression",
+        Loss::NoDirectiveForm,
+    ));
     let resource_type = serde_json::json!([{ "resourceType": [{ "system":
         "http://hl7.org/fhir/resource-types", "code": "Observation" }] }]);
     cases.push(case(
@@ -477,7 +523,10 @@ fn each_loss_is_refused_on_import_with_the_element_named() {
         Loss::NotInCatalogue("https://example.org/policy".to_owned()),
     ));
     let mut no_decision = r5(&serde_json::json!([{ "actor": actor() }]));
-    no_decision.as_object_mut().expect("an object").remove("decision");
+    no_decision
+        .as_object_mut()
+        .expect("an object")
+        .remove("decision");
     cases.push(case(R5, no_decision, "Consent.decision", Loss::NoBase));
     cases.push(case(
         R4,
@@ -498,8 +547,20 @@ fn each_loss_is_refused_on_import_with_the_element_named() {
     let nested = serde_json::json!({ "actor": actor(), "provision": [{ "actor": actor() }] });
     cases.push(Case {
         default_access: AccessDefault::Open,
-        ..case(R4, r4(&nested, "OPTOUT"), "Consent.policyRule", Loss::DenyOverOpen)
+        ..case(
+            R4,
+            r4(&nested, "OPTOUT"),
+            "Consent.policyRule",
+            Loss::DenyOverOpen,
+        )
     });
+    cases
+}
+
+/// The losses of codes and extensions.
+fn code_cases() -> Vec<Case> {
+    use Release::R4;
+    let mut cases = Vec::new();
     let mut custodian = actor();
     custodian[0]["role"]["coding"][0]["code"] = serde_json::json!("CST");
     cases.push(case(
@@ -518,7 +579,12 @@ fn each_loss_is_refused_on_import_with_the_element_named() {
     ));
     let mut inactive = r4(&serde_json::json!({ "actor": actor() }), "OPTIN");
     inactive["status"] = serde_json::json!("inactive");
-    cases.push(case(R4, inactive, "Consent.status", Loss::Code("inactive".to_owned())));
+    cases.push(case(
+        R4,
+        inactive,
+        "Consent.status",
+        Loss::Code("inactive".to_owned()),
+    ));
     let mut research = r4(&serde_json::json!({ "actor": actor() }), "OPTIN");
     research["scope"]["coding"][0]["code"] = serde_json::json!("research");
     cases.push(case(
@@ -543,6 +609,12 @@ fn each_loss_is_refused_on_import_with_the_element_named() {
         "Consent.provision.extension",
         Loss::Code("urn:example:unknown".to_owned()),
     ));
+    cases
+}
+
+#[test]
+fn each_loss_is_refused_on_import_with_the_element_named() {
+    let cases = structure_cases().into_iter().chain(code_cases());
     for Case {
         release,
         consent,
@@ -564,10 +636,12 @@ fn a_foreign_action_is_named_for_translation_and_a_label_covers_the_levels_below
     let body = vendored(Release::R4, "consent-example-pkb.json");
     let document = read(Release::R4, &body).expect("reads");
     let actions = foreign_actions(&document);
-    assert!(!actions.is_empty());
-    assert!(actions
-        .iter()
-        .all(|a| a.system.as_deref() == Some(CONSENT_ACTION)));
+    assert_ne!(actions, Vec::new());
+    assert!(
+        actions
+            .iter()
+            .all(|a| a.system.as_deref() == Some(CONSENT_ACTION))
+    );
     let directives =
         import(Release::R4, &document, &context(AccessDefault::Restricted)).expect("imports");
     let scoped = directives
@@ -582,5 +656,9 @@ fn a_foreign_action_is_named_for_translation_and_a_label_covers_the_levels_below
         .iter()
         .map(|c| c.defining_code.code_string.as_str())
         .collect();
-    assert_eq!(levels, ["U", "L", "M", "N"], "N covers itself and every level below");
+    assert_eq!(
+        levels,
+        ["U", "L", "M", "N"],
+        "N covers itself and every level below"
+    );
 }

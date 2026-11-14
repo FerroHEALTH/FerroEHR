@@ -140,12 +140,14 @@ pub fn catalogue_entry<'a>(
     code: &str,
 ) -> Option<&'a AccessDirective> {
     catalogue.iter().find(|entry| {
-        rm::members(entry.identifiers.as_ref()).iter().any(|identifier| {
-            identifier.id == code
-                && match (system, identifier.issuer.as_deref()) {
-                    (Some(system), Some(issuer)) => system == issuer,
-                    _ => true,
-                }
-        })
+        rm::members(entry.identifiers.as_ref())
+            .iter()
+            .any(|identifier| {
+                identifier.id == code
+                    && match (system, identifier.issuer.as_deref()) {
+                        (Some(system), Some(issuer)) => system == issuer,
+                        _ => true,
+                    }
+            })
     })
 }

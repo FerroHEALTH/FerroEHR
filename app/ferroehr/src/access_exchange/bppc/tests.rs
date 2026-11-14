@@ -42,7 +42,13 @@ fn sample() -> String {
     let (document, event) = figures();
     document
         .lines()
-        .map(|line| if line.trim() == ":" { event.as_str() } else { line })
+        .map(|line| {
+            if line.trim() == ":" {
+                event.as_str()
+            } else {
+                line
+            }
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -74,8 +80,14 @@ fn the_vendored_sample_imports_as_the_catalogue_entry_and_round_trips() {
     assert_eq!(imported.len(), 1);
     let copy = &imported[0];
     assert_eq!(copy.operations, catalogue[0].operations);
-    assert_eq!(copy.time_validity, Some(interval(Some("2010-11-30".to_owned()), None)));
-    assert_eq!(copy.evidence.as_ref().map(|e| e[0].value.as_str()), Some(EVIDENCE));
+    assert_eq!(
+        copy.time_validity,
+        Some(interval(Some("2010-11-30".to_owned()), None))
+    );
+    assert_eq!(
+        copy.evidence.as_ref().map(|e| e[0].value.as_str()),
+        Some(EVIDENCE)
+    );
     assert_eq!(
         copy.instructed.as_ref().map(|i| i.value.as_str()),
         Some("2007-06-19T01:20:05")
@@ -106,14 +118,15 @@ fn export_writes_one_document_per_time_validity_and_names_what_it_cannot_state()
     let mut narrowed = copy("2026-01-01T00:00:00Z");
     narrowed.purposes = list(vec![term(OperationClass::Query)]);
     let restriction = directive(DirectiveKind::Restriction, Effect::Deny);
+    let directives = vec![
+        copy("2026-01-01T00:00:00Z"),
+        copy("2026-01-01T00:00:00Z"),
+        copy("2026-06-01T00:00:00+02:00"),
+        narrowed,
+        restriction,
+    ];
     let exported = export(
-        &[
-            copy("2026-01-01T00:00:00Z"),
-            copy("2026-01-01T00:00:00Z"),
-            copy("2026-06-01T00:00:00+02:00"),
-            narrowed,
-            restriction,
-        ],
+        &directives,
         &ExportContext {
             catalogue: &catalogue,
             patient: Some("2.999.1.1.1"),
@@ -123,11 +136,18 @@ fn export_writes_one_document_per_time_validity_and_names_what_it_cannot_state()
     );
     assert_eq!(exported.documents.len(), 2);
     let not_stated = |attribute: &str| {
-        Refused::new(Format::Directive, attribute, Loss::NoFormatForm(Format::Bppc))
+        Refused::new(
+            Format::Directive,
+            attribute,
+            Loss::NoFormatForm(Format::Bppc),
+        )
     };
     assert_eq!(
         exported.refused,
-        vec![(3, not_stated("applies_to")), (4, not_stated("identifiers"))]
+        vec![
+            (3, not_stated("applies_to")),
+            (4, not_stated("identifiers"))
+        ]
     );
     assert!(exported.documents[1].contains("20260601000000+0200"));
 }

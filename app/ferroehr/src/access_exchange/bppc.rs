@@ -71,6 +71,9 @@ pub struct ExportContext<'a> {
     pub now: &'a str,
 }
 
+/// The `low` and `high` of an `effectiveTime`, as HL7 `TS` values.
+type Range = (String, Option<String>);
+
 /// What an export writes.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Exported {
@@ -99,7 +102,10 @@ pub fn import(text: &str, context: &ImportContext<'_>) -> Result<Vec<AccessDirec
     if root.name != "ClinicalDocument" {
         return Err(refused(root.name.clone(), Loss::NoDirectiveForm));
     }
-    let templates: Vec<&str> = root.all("templateId").filter_map(|t| t.get("root")).collect();
+    let templates: Vec<&str> = root
+        .all("templateId")
+        .filter_map(|t| t.get("root"))
+        .collect();
     if !templates.contains(&DOCUMENT_TEMPLATE) && !templates.contains(&SCANNED_TEMPLATE) {
         return Err(refused(
             "ClinicalDocument/templateId",
@@ -109,7 +115,10 @@ pub fn import(text: &str, context: &ImportContext<'_>) -> Result<Vec<AccessDirec
     let events: Vec<&Node> = root
         .all("documentationOf")
         .flat_map(|d| d.all("serviceEvent"))
-        .filter(|e| e.all("templateId").any(|t| t.get("root") == Some(SERVICE_EVENT_TEMPLATE)))
+        .filter(|e| {
+            e.all("templateId")
+                .any(|t| t.get("root") == Some(SERVICE_EVENT_TEMPLATE))
+        })
         .collect();
     if events.is_empty() {
         return Err(malformed(
@@ -136,8 +145,13 @@ pub fn import(text: &str, context: &ImportContext<'_>) -> Result<Vec<AccessDirec
             ));
         };
         let time = event.first("effectiveTime");
-        let high = time.and_then(|t| t.first("high")).and_then(|h| h.get("value"));
-        let Some(low) = time.and_then(|t| t.first("low")).and_then(|l| l.get("value")) else {
+        let high = time
+            .and_then(|t| t.first("high"))
+            .and_then(|h| h.get("value"));
+        let Some(low) = time
+            .and_then(|t| t.first("low"))
+            .and_then(|l| l.get("value"))
+        else {
             return Err(malformed(
                 format!("{SERVICE_EVENT}/effectiveTime/low"),
                 "the low value must be provided (TF-3 5.1.2.2.7)",
@@ -175,7 +189,7 @@ pub fn import(text: &str, context: &ImportContext<'_>) -> Result<Vec<AccessDirec
 #[must_use]
 pub fn export(directives: &[AccessDirective], context: &ExportContext<'_>) -> Exported {
     let mut exported = Exported::default();
-    let mut groups: Vec<((String, Option<String>), Vec<&AccessDirective>)> = Vec::new();
+    let mut groups: Vec<(Range, Vec<&AccessDirective>)> = Vec::new();
     for (at, directive) in directives.iter().enumerate() {
         match acknowledged(directive, context.catalogue) {
             Ok(range) => match groups.iter_mut().find(|(seen, _)| *seen == range) {
@@ -198,9 +212,14 @@ pub fn export(directives: &[AccessDirective], context: &ExportContext<'_>) -> Ex
 fn acknowledged(
     directive: &AccessDirective,
     catalogue: &[AccessDirective],
-) -> Result<(String, Option<String>), Refused> {
-    let not_stated =
-        |attribute: &str| Refused::new(Format::Directive, attribute, Loss::NoFormatForm(Format::Bppc));
+) -> Result<Range, Refused> {
+    let not_stated = |attribute: &str| {
+        Refused::new(
+            Format::Directive,
+            attribute,
+            Loss::NoFormatForm(Format::Bppc),
+        )
+    };
     let entry = members(directive.identifiers.as_ref())
         .iter()
         .find_map(|i| catalogue_entry(catalogue, i.issuer.as_deref(), &i.id))
@@ -270,11 +289,9 @@ fn header(context: &ExportContext<'_>, now: &str) -> Node {
                 .child(Node::new("assignedAuthor").child(id(context.controller))),
         )
         .child(
-            Node::new("custodian").child(
-                Node::new("assignedCustodian").child(
-                    Node::new("representedCustodianOrganization").child(id(context.controller)),
-                ),
-            ),
+            Node::new("custodian").child(Node::new("assignedCustodian").child(
+                Node::new("representedCustodianOrganization").child(id(context.controller)),
+            )),
         )
 }
 

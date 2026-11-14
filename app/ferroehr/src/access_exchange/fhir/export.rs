@@ -148,8 +148,9 @@ impl Writer<'_> {
     }
 
     fn consent(&self, directive: &AccessDirective) -> Result<Document, Refused> {
-        DirectiveKind::read_coded(&directive.kind)
-            .map_err(|error| Refused::new(Format::Directive, "kind", Loss::Code(error.to_string())))?;
+        DirectiveKind::read_coded(&directive.kind).map_err(|error| {
+            Refused::new(Format::Directive, "kind", Loss::Code(error.to_string()))
+        })?;
         let effect = Effect::read_coded(&directive.effect).map_err(|error| {
             Refused::new(Format::Directive, "effect", Loss::Code(error.to_string()))
         })?;
@@ -232,7 +233,9 @@ impl Writer<'_> {
                 }
             }
             if directive.emergency_override {
-                document.extensions.push(boolean(EXT_EMERGENCY_OVERRIDE, true));
+                document
+                    .extensions
+                    .push(boolean(EXT_EMERGENCY_OVERRIDE, true));
             }
             document.extensions.push(own);
             document.rules = members(directive.exceptions.as_ref())
@@ -265,7 +268,11 @@ impl Writer<'_> {
         match &directive.instructed_by {
             Some(PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(data))) => {
                 match (&data.external_ref, &data.name) {
-                    (Some(party), _) => Ok(vec![party_reference(party, "instructed_by", self.release.format())?]),
+                    (Some(party), _) => Ok(vec![party_reference(
+                        party,
+                        "instructed_by",
+                        self.release.format(),
+                    )?]),
                     (None, Some(name)) => Ok(vec![Ref {
                         display: Some(name.clone()),
                         ..Ref::default()
@@ -282,7 +289,11 @@ impl Writer<'_> {
     /// `effect` when `effect` is given, else a root provision.
     fn exception(&self, x: &AccessDirective, effect: Option<Effect>) -> Result<Rule, Refused> {
         if x.exceptions.is_some() {
-            return Err(Refused::new(Format::Directive, "exceptions.exceptions", Loss::TooDeep));
+            return Err(Refused::new(
+                Format::Directive,
+                "exceptions.exceptions",
+                Loss::TooDeep,
+            ));
         }
         let mut rule = self.rule(x, effect)?;
         rule.extensions.push(residual(x));
@@ -309,7 +320,10 @@ impl Writer<'_> {
                 .iter()
                 .map(|op| Concept::of(code_of(op)))
                 .collect(),
-            purposes: members(directive.purposes.as_ref()).iter().map(code_of).collect(),
+            purposes: members(directive.purposes.as_ref())
+                .iter()
+                .map(code_of)
+                .collect(),
             ..Rule::default()
         };
         if directive.emergency_override {
@@ -401,8 +415,10 @@ impl Writer<'_> {
             })
             .collect();
         for archetype in members(scope.archetypes.as_ref()) {
-            rule.extensions
-                .push(ext(EXT_ARCHETYPE, ExtValue::String(archetype.value.clone())));
+            rule.extensions.push(ext(
+                EXT_ARCHETYPE,
+                ExtValue::String(archetype.value.clone()),
+            ));
         }
         for origin in members(scope.origins.as_ref()) {
             rule.extensions
@@ -417,7 +433,11 @@ impl Writer<'_> {
         Ok(())
     }
 
-    fn period(&self, interval: &DvInterval<DvDateTime>, attribute: &str) -> Result<Period, Refused> {
+    fn period(
+        &self,
+        interval: &DvInterval<DvDateTime>,
+        attribute: &str,
+    ) -> Result<Period, Refused> {
         let (start, end) = bounds(interval).ok_or_else(|| self.refused(attribute))?;
         Ok(Period { start, end })
     }

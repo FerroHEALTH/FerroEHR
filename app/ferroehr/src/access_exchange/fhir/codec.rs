@@ -138,7 +138,10 @@ macro_rules! release_codec {
             Reference {
                 reference: prim!(String, reference.reference.clone()),
                 r#type: prim!(Uri, reference.kind.clone()),
-                identifier: reference.identifier.as_ref().map(|i| Box::new(ident_out(i))),
+                identifier: reference
+                    .identifier
+                    .as_ref()
+                    .map(|i| Box::new(ident_out(i))),
                 display: prim!(String, reference.display.clone()),
                 ..Default::default()
             }
@@ -161,7 +164,9 @@ macro_rules! release_codec {
 
         fn ext_in(extension: &Extension) -> Ext {
             let value = match &extension.value {
-                Some(ExtensionValue::Boolean(b)) => b.value.map_or(ExtValue::Other, ExtValue::Boolean),
+                Some(ExtensionValue::Boolean(b)) => {
+                    b.value.map_or(ExtValue::Other, ExtValue::Boolean)
+                }
                 Some(ExtensionValue::String(s)) => {
                     s.value.clone().map_or(ExtValue::Other, ExtValue::String)
                 }

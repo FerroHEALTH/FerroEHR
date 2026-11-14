@@ -69,7 +69,7 @@ impl Shared {
     /// one, else from the `Consent`'s core elements.
     pub(super) fn stamp(&self, target: &mut AccessDirective, own: Option<AccessDirective>) {
         if own.is_some() {
-            plumb(target, own);
+            crate::access_exchange::rm::plumb(target, own);
             return;
         }
         target.identifiers = list(self.identifiers.clone());
@@ -95,26 +95,6 @@ impl Shared {
             copy.details = details(&self.kept);
         }
     }
-}
-
-/// Copies onto `target` the attributes `own`, the FerroEHR extension a
-/// directive was written with, carries: every attribute no evaluator reads.
-pub(super) fn plumb(target: &mut AccessDirective, own: Option<AccessDirective>) {
-    let Some(own) = own else {
-        return;
-    };
-    target.name = own.name;
-    target.archetype_node_id = own.archetype_node_id;
-    target.uid = own.uid;
-    target.links = own.links;
-    target.archetype_details = own.archetype_details;
-    target.feeder_audit = own.feeder_audit;
-    target.instructed_by = own.instructed_by;
-    target.instructed = own.instructed;
-    target.legal_grounds = own.legal_grounds;
-    target.evidence = own.evidence;
-    target.identifiers = own.identifiers;
-    target.details = own.details;
 }
 
 /// The RM type of the party a FHIR resource type names: our own design over
@@ -178,10 +158,11 @@ impl Reader<'_> {
             return Err(self.refused("Consent.status", Loss::Code(document.status.clone())));
         }
         if self.release == Release::R4
-            && !document
-                .scope
-                .as_ref()
-                .is_some_and(|s| s.codings.iter().any(|c| c.is(CONSENT_SCOPE, "patient-privacy")))
+            && !document.scope.as_ref().is_some_and(|s| {
+                s.codings
+                    .iter()
+                    .any(|c| c.is(CONSENT_SCOPE, "patient-privacy"))
+            })
         {
             let named = document
                 .scope
@@ -205,7 +186,9 @@ impl Reader<'_> {
             Release::R5 => "Consent.controller",
         };
         for reference in &document.controllers {
-            shared.kept.push((controller.to_owned(), reference.render()));
+            shared
+                .kept
+                .push((controller.to_owned(), reference.render()));
         }
         for extension in &document.extensions {
             if !KNOWN.contains(&extension.url.as_str()) {
@@ -217,10 +200,9 @@ impl Reader<'_> {
         self.grantees()?;
         if let Some(url) = &document.policy_basis {
             if catalogue_entry(self.context.catalogue, None, url).is_none() {
-                return Err(self.refused(
-                    "Consent.policyBasis.url",
-                    Loss::NotInCatalogue(url.clone()),
-                ));
+                return Err(
+                    self.refused("Consent.policyBasis.url", Loss::NotInCatalogue(url.clone()))
+                );
             }
             shared
                 .kept
@@ -280,7 +262,9 @@ impl Reader<'_> {
                         self.refused("Consent.category", Loss::Code(error.to_string()))
                     })?;
                 } else if !PRIVACY_CATEGORIES.iter().any(|c| code.is(LOINC, c)) {
-                    shared.kept.push(("Consent.category".to_owned(), code.token()));
+                    shared
+                        .kept
+                        .push(("Consent.category".to_owned(), code.token()));
                 }
             }
         }
