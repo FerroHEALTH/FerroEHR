@@ -13,7 +13,8 @@ use moka::future::Cache;
 use opentelemetry::KeyValue;
 
 use crate::access_eval::class::Classes;
-use crate::access_eval::condition::{EhrEntry, StaleCopies};
+use crate::access_eval::condition::EhrEntry;
+use crate::access_eval::stale::StaleCopies;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::policy_register::listen::{Dropping, Listened, Subscriber};
