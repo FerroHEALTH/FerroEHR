@@ -1,0 +1,1 @@
+- A done erasure of an access-log entry (`POST /admin/access-log/erase`) no longer stores the request's operation record as an `audit.audit_event` row beside the access-log entry that records the erasure, so the erasure is stored once; the operation record still reaches syslog. A failed erasure is still stored as its `audit_event` row.

@@ -107,7 +107,8 @@ pub struct AuditObject {
     /// The query the operation ran, named and never quoted.
     pub query: Option<QueryNaming>,
     /// Whether the operation's record writes an access-log entry by its
-    /// domain, or as a read of the access log itself.
+    /// domain or as a read of the access log itself, or is stored by the act
+    /// already ([`EntryScope::Written`]).
     pub entry: EntryScope,
 }
 

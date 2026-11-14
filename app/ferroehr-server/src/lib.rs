@@ -1019,18 +1019,15 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     )
     .await;
 
-    indicators.push(Arc::new(indicators::PolicyListenersHealth::new(vec![
-        ("ehr_access", Arc::clone(service.ehr_access_listened())),
-        ("grants", Arc::clone(service.grants().listened())),
-        (
-            "policy_registers",
-            Arc::clone(service.policy_registers().listened()),
-        ),
-        (
-            "access_policy",
-            Arc::clone(service.access_policy().listened()),
-        ),
-    ])));
+    indicators.push(Arc::new(indicators::PolicyListenersHealth::new(
+        service.policy_listeners(),
+    )));
+    // The listeners, the access copies and the audit drain, read at each
+    // collection (#5591).
+    telemetry::access_path::observe(
+        &telemetry.telemetry().meter(telemetry::metrics::SCOPE),
+        &service,
+    );
 
     // The readiness registry closes over every started subsystem, so it is
     // assembled after the last optional one.
