@@ -37,6 +37,7 @@ else; each helper has exactly ONE home.
 | `parse/patterns` | the date/time constraint-pattern validators |
 | `rules` | the `rules` section + slot assertions (BEL over `openehr_lang`) — full beom trees, plus the `slot_assertion_path`/`slot_assertion_regex` tree accessors every consumer reads through |
 | `assemble` | fold the ODIN sections + `definition` + `rules` into a complete `Archetype` (`parse_artefact(src, dialect)`) |
+| `assemble/description` | the `description` section into the BASE resource types; an ADL 1.4 item `copyright` kept in the item's `other_details` for the converter |
 | `meta` | the read-only artefact summary accessors (`ArtefactSummary`/`summarize`, `regression_tag`) |
 
 **Semantics — validation, flattening, generation, serialization.**
@@ -81,7 +82,7 @@ else; each helper has exactly ONE home.
 | `adl14/authored_flat` | `flattening_parent`: the parent a flat form is built over, none for an artefact whose `adl_version` is ADL 1.4 or earlier (authored as its own flat form), read by `flatten::flat_form` and `opt::unresolved_constituents` |
 | `adl14/walk` | the read-only definition traversals the code planning consumes + the shared `cco_data_mut` |
 | `adl14/multiplicity` | the 1.4 default-occurrences materialisation + RM-default cardinality/occurrences elision |
-| `adl14/metadata` | the description / standardised meta-data / HRID-version transform |
+| `adl14/metadata` | the description / standardised meta-data / HRID-version transform, and the AOM2 translator, copyright and conversion-record rules (`AOM2/master01-preface.adoc`) |
 | `adl14/differ` | the differential-form reducer: strips complex objects, slots and proxies the flat parent holds unchanged, and keeps only own-level terms (VTSD) |
 | `adl14/log` | the `ConversionLog` (code remaps, value sets, notes) |
 | `adl14/opt` | the OPT 1.4 → ADL 2 front end over the `openehr_its::opt14` model: `convert_opt_to_adl2` decomposes a flattened 1.4 OPT into one source archetype per embedded `C_ARCHETYPE_ROOT` (`decompose`; embedded children become slots, the fills recorded as `FillEdge`s), maps its constraints (`primitive`, `slot`, `tuple`, `value`) and runs each through `adl14/convert`, returning each root's ADL 2 text, `ConversionLog` and `conversion_details` |

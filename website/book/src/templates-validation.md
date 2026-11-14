@@ -307,8 +307,11 @@ The answer is `application/json`:
   - the ADL 2 source in `adl2`;
   - the conversion `log`: the at-codes minted for external terms, the
     value-set codes and the notes;
-  - `conversion_details`: everything the conversion dropped or changed, such
-    as a term binding outside the root's codes or an occurrences cap.
+  - `conversion_details`: the record of the conversion, under
+    `source_model` (the converted archetype id, or the template id for a
+    template's roots), `tool` (the converter's name and version) and `time`,
+    plus everything the conversion dropped or changed, such as a term binding
+    outside the root's codes or an occurrences cap.
 - `structure`: the slot fills that joined the roots in the template. An ADL
   1.4 template embeds each archetype, and the converted roots replace the
   embedded child with a slot, so this list keeps which archetype filled
@@ -322,10 +325,19 @@ lacks a term code the archetype introduces without its specialisation dots
 the dots on every code a specialisation adds. The routes only read, so the
 read-only role may call them.
 
-**No openEHR specification defines a conversion.** The ADL 2 specification
-says ADL 1.4 archetypes must be convertible, but no released text sets the
-algorithm or a route for it. Both routes and the conversion are FerroEHR's own
-design, and they are excluded from openEHR wire conformance.
+The description meta-data follows the conversion rules of the AOM 2
+specification (Release 2.3 changes): each line of a translation's
+`other_contributors` detail becomes one entry of that translation's
+`other_contributors`, and the original language's copyright becomes the
+archetype's copyright. A translation's copyright that differs from it stays
+with that translation, and an identical one is dropped.
+
+**No openEHR specification defines the rest of the conversion.** The ADL 2
+specification says ADL 1.4 archetypes must be convertible, and the AOM 2
+specification sets the meta-data rules above, but no text sets the
+constraint algorithm or a route for it. Both routes and the rest of the
+conversion are FerroEHR's own design, and they are excluded from openEHR wire
+conformance.
 
 ## The WebTemplate
 

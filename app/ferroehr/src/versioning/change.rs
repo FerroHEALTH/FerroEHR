@@ -41,6 +41,7 @@ use crate::versioning::{Kind, SigningCtx, restriction};
 
 mod construct;
 pub(crate) mod precondition;
+mod project;
 pub(crate) mod resolve;
 mod sign;
 
@@ -746,17 +747,18 @@ async fn apply_change(
         return Ok((existing, Uuid::nil()));
     }
     let party_facts = resolved.party_facts.take();
-    // Boxed: the resolved write and the folded commit hold the whole
-    // version in their state, which would otherwise put every caller's
-    // future over the size the lint allows.
+    // Boxed: the resolved write and the folded commit hold the whole version in their state,
+    // which would otherwise put every caller's future over the size the lint allows.
     let committed = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
-    let party_facts = party_facts.as_deref();
-    let hooks = crate::versioning::hooks::Hooks {
+    Box::pin(project::committed(
+        tx,
+        ctx,
         ehr_id,
-        party_facts,
+        &committed.0,
+        party_facts.as_deref(),
         access,
-    };
-    Box::pin(hooks.run(tx, ctx, &committed.0)).await?;
+    ))
+    .await?;
     Ok(committed)
 }
 

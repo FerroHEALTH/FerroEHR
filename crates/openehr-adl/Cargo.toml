@@ -23,6 +23,7 @@ openehr-lang = { path = "../openehr-lang", version = "0.0.128" }   # openehr_lan
 openehr-term = { path = "../openehr-term", version = "0.0.128" }   # the languages code set for the RM resource-meta rows
 openehr-its = { path = "../openehr-its", version = "0.0.128", default-features = false, features = ["opt14"] }   # the OPT 1.4 model `adl14::opt` converts from, and the canonical-JSON default values it carries
 uuid.workspace = true        # meta uid/build_uid (AUTHORED_ARCHETYPE.uid: Uuid)
+jiff.workspace = true        # the ISO 8601 `time` of a 1.4→2 conversion record (AOM2 master01-preface)
 indexmap.workspace = true    # OdinValue::Object body (insertion-ordered map)
 
 [lints]

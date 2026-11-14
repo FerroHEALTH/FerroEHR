@@ -10,11 +10,13 @@
 //! validity of the ADL2 OUTPUT form (which is spec-governed), not the
 //! conversion procedure.
 //!
-//! The one exception is the standardised `description/other_details` meta-data
+//! The exceptions are meta-data: the standardised `description/other_details`
 //! mapping (`build_uid` + the `RESOURCE_DESCRIPTION` governance items), which
 //! `ADL1.4/masterAppB-extended_metadata.adoc` §Standardised Items governs
 //! directly — those items are "intended to be implemented by any ADL 1.4 =>
-//! ADL 2 conversion tool". It is applied by `crate::adl14::metadata`.
+//! ADL 2 conversion tool" — and the translator, copyright and conversion-record
+//! rules of `AOM2/master01-preface.adoc` §Release 2.3 changes. Both are applied
+//! by `crate::adl14::metadata`.
 //!
 //! This module owns the code spaces (planning, renumbering, terminology
 //! rebuild) and the constraint conversion; the three stages that need no
@@ -38,7 +40,7 @@ use openehr_am::v2_4::aom2::terminology::value_set::ValueSet;
 
 use crate::adl14::code_shift::{first_num, highest_ac_number, shift_code};
 use crate::adl14::log::ConversionLog;
-use crate::adl14::metadata::{set_release_version, transform_description};
+use crate::adl14::metadata::{ConversionRecord, convert_meta_data, set_release_version};
 use crate::adl14::multiplicity::{elide_multiplicity, materialise_adl14_occurrences};
 use crate::adl14::term_constraint::{CodeSpace, TermMinter, rewrite_definition};
 use crate::adl14::walk::{
@@ -73,6 +75,15 @@ pub struct ConvertConfig {
     /// carries the lineage. No openEHR spec governs 1.4→2 conversion — our
     /// own design/extension.
     pub collapse_specialised_codes: bool,
+    /// The `"source_model"` the conversion record names; `None` names the
+    /// source archetype's own identifier (an OPT root names its template).
+    pub source_model: Option<String>,
+    /// The `"tool"` the conversion record names: the converter's name and
+    /// version.
+    pub tool: String,
+    /// The `"time"` the conversion record names, injectable so a conversion
+    /// can be reproduced.
+    pub time: jiff::Timestamp,
 }
 
 impl Default for ConvertConfig {
@@ -89,6 +100,9 @@ impl Default for ConvertConfig {
             rm_release: "1.0.3".to_owned(),
             binding_uri_templates,
             collapse_specialised_codes: false,
+            source_model: None,
+            tool: format!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")),
+            time: jiff::Timestamp::now(),
         }
     }
 }
@@ -588,6 +602,11 @@ impl<'a> Converter<'a> {
             .and_then(|o| o.get("revision"))
             .cloned();
         let version = revision.clone().unwrap_or_else(|| "1.0.0".to_owned());
+        let source_model = self
+            .cfg
+            .source_model
+            .clone()
+            .unwrap_or_else(|| data.archetype_id.semantic_id());
         set_release_version(&mut data.archetype_id, &version);
 
         // `other_details["build_uid"]` → the archetype's `build_uid`
@@ -610,18 +629,12 @@ impl<'a> Converter<'a> {
             other.remove("build_uid");
         }
 
-        if let Some(desc) = data.description.as_mut() {
-            transform_description(desc);
-            // Surface the conversion's non-mechanical decisions (collapse
-            // remaps, VCOSU re-mints) as conversion provenance — the AOM2
-            // home for it (`RESOURCE_DESCRIPTION.conversion_details`).
-            if !self.minter.log.notes.is_empty() {
-                let details = desc.conversion_details.get_or_insert_with(BTreeMap::new);
-                for (index, note) in self.minter.log.notes.iter().enumerate() {
-                    details.insert(format!("code_remap_{index:03}"), note.clone());
-                }
-            }
-        }
+        let record = ConversionRecord {
+            source_model: &source_model,
+            tool: &self.cfg.tool,
+            time: self.cfg.time,
+        };
+        convert_meta_data(data, &record, &self.minter.log.notes);
     }
 }
 

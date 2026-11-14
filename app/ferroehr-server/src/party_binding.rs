@@ -217,14 +217,14 @@ pub async fn prepare(
         .await
         .context("restoring the default EHR_ACCESS of the EHRs without one")?;
     service
+        .refill_access_marks()
+        .await
+        .context("projecting the restriction and opt-out directives of every EHR_ACCESS")?;
+    service
         .rebuild_ehr_access_projection(Rebuild::Fill)
         .await
         .context("filling the EHR_ACCESS projection")?;
     service.ehr_access_listened().spawn_listener();
-    service
-        .refill_access_marks()
-        .await
-        .context("projecting the restriction and opt-out directives of every EHR_ACCESS")?;
     service
         .read_grants()
         .await

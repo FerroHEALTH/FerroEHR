@@ -198,7 +198,7 @@ async fn a_revoked_gate_keeper_is_refused_on_the_next_request_of_another_replica
     );
 }
 
-/// A replica whose listener has lost its connection reads the settings on
+/// A replica whose listener cannot stay connected reads the settings on
 /// every request, so a revocation it was never notified of decides its next
 /// request.
 #[tokio::test]
@@ -207,21 +207,7 @@ async fn a_lost_listener_reads_the_settings_on_every_request() {
     let (a, writer) = replica(&pool, true).await;
     let (b, reader) = replica(&pool, true).await;
     let ehr = restricted_to_bob(&a, &writer, &pool).await;
-    let listeners: Vec<i32> = sqlx::query_scalar(
-        "SELECT pid FROM pg_stat_activity WHERE datname = current_database() \
-         AND query LIKE 'LISTEN %ferroehr_ehr_access%'",
-    )
-    .fetch_all(&pool)
-    .await
-    .expect("the listening sessions");
-    assert_eq!(listeners.len(), 2, "one listener per replica");
-    for pid in listeners {
-        sqlx::query("SELECT pg_terminate_backend($1)")
-            .bind(pid)
-            .execute(&pool)
-            .await
-            .expect("drop a listener's connection");
-    }
+    let cutter = tokio::spawn(cut_listeners(pool.clone()));
     wait_until(
         || !b.ehr_access_listened().is_listening(),
         "the replica notices its lost listener",
@@ -245,10 +231,23 @@ async fn a_lost_listener_reads_the_settings_on_every_request() {
         StatusCode::FORBIDDEN,
         "the revocation decides the replica's next request"
     );
-    assert!(
-        !b.ehr_access_listened().is_listening(),
-        "the replica decided with its listener down"
-    );
+    cutter.abort();
+}
+
+/// Terminates every listener session on the projection's channel, again and
+/// again, so no replica's listener stays connected while the task runs.
+async fn cut_listeners(pool: PgPool) {
+    loop {
+        // NOTE: PostgreSQL 18 pg_terminate_backend, a listener that reconnects is cut again.
+        let cut = sqlx::query(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity \
+             WHERE datname = current_database() AND query LIKE 'LISTEN %ferroehr_ehr_access%'",
+        )
+        .execute(&pool)
+        .await;
+        assert!(cut.is_ok(), "the listener sessions are cut: {cut:?}");
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
 }
 
 /// A settings store that cannot answer refuses the request `503`, and the

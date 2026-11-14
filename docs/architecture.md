@@ -460,8 +460,8 @@ which is what makes an optional stage safe to disable:
    beyond objects as the whole EHR (`service::ehr::access_marks`). The
    projection and its rules are our own design; no specification governs
    them.
-   The commit of
-   an `EHR_ACCESS` version projects the settings in its own transaction (RM Common IM change control:
+   The commit of an `EHR_ACCESS` version also
+   projects the settings in its own transaction (RM Common IM change control:
    every change is a version in a contribution) into `access_settings`, one
    `access_directive` row per directive and exception (kind, effect, actor
    party, role, relationship, caller kind, operation, purpose, category,
