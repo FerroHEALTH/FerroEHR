@@ -60,6 +60,10 @@ pub const AUDIT_SEAL_DURATION: &str = "audit_seal_duration";
 pub const AUDIT_SEAL_LAST_SUCCESS: &str = "audit_seal_last_success";
 /// Access-log entries replaced by their tombstones.
 pub const ACCESS_LOG_TOMBSTONES: &str = "access_log_tombstones";
+/// Access-log tombstones folded into gaps of the chain.
+pub const ACCESS_LOG_FOLDED: &str = "access_log_folded";
+/// Gaps written into the access log's chain, one per folded run.
+pub const ACCESS_LOG_GAPS: &str = "access_log_gaps";
 /// Access-log retention runs (`outcome`).
 pub const ACCESS_LOG_RETENTION_DURATION: &str = "access_log_retention_duration";
 /// Scheduled verifications of the audit chains (`scope`, `result`).
@@ -75,7 +79,7 @@ pub const AUDIT_DRAIN_QUEUE_DEPTH: &str = "audit_drain_queue_depth";
 pub const INSTANCE_MISMATCHES: &str = "instance_mismatches";
 
 /// Every instrument name of this module, for the naming tests.
-pub const NAMES: [&str; 24] = [
+pub const NAMES: [&str; 26] = [
     ACCESS_COPY_LOOKUPS,
     ACCESS_COPY_REFILLS,
     ACCESS_COPY_DROPS,
@@ -94,6 +98,8 @@ pub const NAMES: [&str; 24] = [
     AUDIT_SEAL_DURATION,
     AUDIT_SEAL_LAST_SUCCESS,
     ACCESS_LOG_TOMBSTONES,
+    ACCESS_LOG_FOLDED,
+    ACCESS_LOG_GAPS,
     ACCESS_LOG_RETENTION_DURATION,
     AUDIT_CHAIN_VERIFICATION_DURATION,
     AUDIT_CHAIN_LAST_VERIFICATION,
@@ -156,6 +162,10 @@ pub struct AccessPathMetrics {
     pub seal_last_success: Gauge<f64>,
     /// Access-log entries replaced by their tombstones.
     pub log_tombstones: Counter<u64>,
+    /// Access-log tombstones folded into gaps.
+    pub log_folded: Counter<u64>,
+    /// Gaps written into the access log's chain.
+    pub log_gaps: Counter<u64>,
     /// Access-log retention runs, seconds.
     pub log_retention_duration: Histogram<f64>,
     /// Chain verifications, seconds.
@@ -230,6 +240,14 @@ impl AccessPathMetrics {
             log_tombstones: make.counter(
                 ACCESS_LOG_TOMBSTONES,
                 "Access-log entries replaced by their tombstones",
+            ),
+            log_folded: make.counter(
+                ACCESS_LOG_FOLDED,
+                "Access-log tombstones folded into gaps of the chain",
+            ),
+            log_gaps: make.counter(
+                ACCESS_LOG_GAPS,
+                "Gaps written into the access log's chain, one per folded run",
             ),
             log_retention_duration: make.histogram(
                 ACCESS_LOG_RETENTION_DURATION,

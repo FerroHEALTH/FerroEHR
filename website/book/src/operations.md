@@ -707,6 +707,9 @@ rate. The space of a deleted row is not returned to the operating system:
 [Routine Vacuuming, Recovering Disk Space][pg-vacuum]).
 The reaper also deletes the search tokens no remaining record names. The
 horizon is a legal choice with floors per jurisdiction, set out on the audit page.
+The openEHR access log levels off too: each entry is kept for its own period,
+its tombstone as long again, and then a run of tombstones folds into one gap
+row ([steady-state size](audit.md#the-access-log-at-steady-state)).
 
 ### `pg_wal`
 
