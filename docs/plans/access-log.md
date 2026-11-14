@@ -704,10 +704,10 @@ proposal as an ITS-REST addition. They follow ITS-REST 1.1.0 conventions:
 |---|---|---|
 | `GET /ehr/{ehr_id}/access_log` | the subject, a representative, a professional or reviewer with the grant | The entries of one EHR, newest first. Filters: `from`, `to`, `action`, `outcome`, `accessor_kind`, `emergency`, `include_self`; `offset`, `fetch`. The subject view for the subject and a representative; the full entry for a reviewer. |
 | `GET /ehr/{ehr_id}/access_log/{entry_uid}` | as above | One entry, or its tombstone. |
-| `GET /admin/access_log` | a reviewer | Entries across EHRs. Filters: `ehr_id`, `party` (namespace, type, id), `issuer` and `subject`, `request_id`, `from`, `to`, `outcome`, `emergency`; `offset`, `fetch`. The review tool's source (Annex II 3.3). |
-| `GET /admin/access_log/chain` | a reviewer, an auditor | The links between `from_sequence` and `to_sequence`, without content, for verification. |
-| `GET /admin/access_log/checkpoint` | anyone the deployment lets verify | The latest signed checkpoint, or the one at `sequence`. |
-| `GET /admin/access_log/export?ehr_id=` | a reviewer, for an EHR transfer | The EHR's entries and tombstones with the checkpoint they verify against. |
+| `GET /admin/access-log` | a reviewer | Entries across EHRs. Filters: `ehr_id`, `party` (namespace, type, id), `issuer` and `subject`, `request_id`, `from`, `to`, `outcome`, `emergency`; `offset`, `fetch`. The review tool's source (Annex II 3.3). |
+| `GET /admin/access-log/chain` | a reviewer, an auditor | The links between `from_sequence` and `to_sequence`, without content, for verification. |
+| `GET /admin/access-log/checkpoint` | anyone the deployment lets verify | The latest signed checkpoint, or the one at `sequence`. |
+| `GET /admin/access-log/export?ehr_id=` | a reviewer, for an EHR transfer | The EHR's entries and tombstones with the checkpoint they verify against. |
 
 - **The response** is a JSON object with `offset`, `fetch` and `entries`,
   each entry in its ITS-JSON form with `_type`. No total count, since a
@@ -721,7 +721,25 @@ proposal as an ITS-REST addition. They follow ITS-REST 1.1.0 conventions:
 - **No write resource.** Entries are written by the system that served the
   access. The import that takes an exported log on an EHR transfer is an
   admin operation (§Moving the log with the EHR).
-- **Each read of these resources is itself an entry** (rule 4).
+- **Each read of these resources is itself an entry** (rule 4). Its item
+  names the log it read: `ACCESS_LOG_RECORD` and the entry's uid for one
+  entry, `ACCESS_LOG` and the EHR id for an EHR's whole log (our own design,
+  since the model names no class for the log itself).
+- **The admin paths are hyphenated** (`/admin/access-log`), as the
+  checkpoint, verification, export and erasure routes FerroEHR shipped
+  first spell them; the EHR resources keep the ITS-REST resource spelling
+  (`access_log`). In FerroEHR both sit under the extensions root, since no
+  ITS-REST release defines them (our own design, #5130).
+- **Who reads which view in FerroEHR** (#5130, our own design). The subject
+  view goes to the patient token's launch-context EHR and to the EHR of the
+  subject a bound representative represents (#5446); any other EHR answers
+  `404` to them. The full view goes to the caller the admin class admits,
+  the same caller `GET /admin/access-log` admits. The SMART requirement of
+  the EHR resources is an authenticated caller and no clinical grant, so
+  rule 8 holds: a `patient/` or `user/` composition grant reaches none of
+  the log. The chain read answers at most 10000 positions. A tombstone
+  keeps no `ehr_id`, so `GET /ehr/{ehr_id}/access_log/{uid}` answers `404`
+  for it and the review serves it.
 
 ## AQL access
 
@@ -761,7 +779,7 @@ model meets only in part says what is left and who carries it.
 | (c) the categories of data | EHDS Annex II 3.2(c) | `items.categories` |
 | (d) the time and date | EHDS Annex II 3.2(d) | `time_recorded`, `occurred` |
 | (e) the origins of the data | EHDS Annex II 3.2(e) | `items.origins` |
-| Review and analysis tools | EHDS Annex II 3.3 | `GET /admin/access_log`, the chain and checkpoint resources, AQL over `ACCESS_LOG_ENTRY` |
+| Review and analysis tools | EHDS Annex II 3.3 | `GET /admin/access-log`, the chain and checkpoint resources, AQL over `ACCESS_LOG_ENTRY` |
 | Retention and access rights by origin and category | EHDS Annex II 3.4 | `retention` per entry, tombstones in place; `security_labels`; rule 8 |
 | The person's right to the information, "including through automatic notifications" | EHDS Art 9(1) | The subject view at `GET /ehr/{ehr_id}/access_log`, filterable by `from`, which a person's access service polls. A push channel to the person is not in this design; the electronic health data access service the Member State runs carries it |
 | Free, without delay, at least three years from each access, with (a) to (c) | EHDS Art 9(2) | The subject view and its mandatory fields; the three-year floor in `retention` |

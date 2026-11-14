@@ -324,6 +324,15 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   the access's `AuditEvent` (`access_log::entry`) and `AuditStore::insert_batch`
   appends it in the transaction that stores the batch's records, so an access
   adds no transaction and the store holds a record and its entry or neither.
+  The log is read over ITS-REST (#5130): `GET {ext}/ehr/{ehr_id}/access_log`
+  and its `/{uid}` serve the subject view (`access_log::view`) to the
+  patient token's launch-context EHR and a bound representative's
+  represented EHR, and the full view to the caller the admin class admits;
+  `GET {ext}/admin/access-log`, `/chain` and `/checkpoint` serve the review.
+  `access_log::search` pages the records over the trigger's search columns,
+  `service::admin::access_log_read` holds the EHR check and the EHDS Art.
+  3(3) holds the person's view leaves out, and every read writes its own
+  `LogRead` entry naming the log it read.
   No openEHR spec governs audit storage: our own design.
 - **One pool and one DSN per storage domain.** `[database.clinical]`,
   `[database.party]` and `[database.audit]` each carry a

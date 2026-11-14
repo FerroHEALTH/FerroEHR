@@ -56,6 +56,7 @@
 //! inside each handler (a disabled group answers `404`), so a stock server
 //! exposes only the standardised ITS-REST surface.
 
+pub(crate) mod access_log_query;
 pub mod admin;
 pub mod definition;
 pub mod demographic;
@@ -262,6 +263,7 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .merge(ehr::openapi_routes::extension_routes())
         .merge(ehr::access_delay::routes())
+        .merge(ehr::access_log::routes())
         .merge(demographic::relationship::relationship_routes())
         .merge(demographic::reverse::reverse_relationship_routes())
         .merge(demographic::versioned_relationship::versioned_relationship_routes())

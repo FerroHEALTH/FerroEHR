@@ -14,16 +14,16 @@ NOTE: This page proposes an addition to the xref:ITS-REST::index.adoc[openEHR RE
 |`GET {baseUrl}/ehr/{ehr_id}/access_log/{uid}`
 |One entry or tombstone.
 
-|`GET {baseUrl}/admin/access_log`
+|`GET {baseUrl}/admin/access-log`
 |Entries across EHRs, for review. Query parameters: `ehr_id`, `party_namespace`, `party_type`, `party_id`, `issuer`, `subject`, `request_id`, `from`, `to`, `outcome`, `emergency`, `offset`, `fetch`.
 
-|`GET {baseUrl}/admin/access_log/chain`
+|`GET {baseUrl}/admin/access-log/chain`
 |The `uid` and `link` of each record between `from_sequence` and `to_sequence`.
 
-|`GET {baseUrl}/admin/access_log/checkpoint`
+|`GET {baseUrl}/admin/access-log/checkpoint`
 |The latest checkpoint, or the one at `sequence`.
 
-|`GET {baseUrl}/admin/access_log/export?ehr_id=`
+|`GET {baseUrl}/admin/access-log/export?ehr_id=`
 |The records of one EHR with the checkpoint they verify against, for a transfer of the EHR to another system.
 |===
 

@@ -20,5 +20,7 @@ pub mod entry;
 pub mod expiry;
 pub mod retention;
 pub mod schedule;
+pub mod search;
 pub mod store;
 pub mod transfer;
+pub mod view;
