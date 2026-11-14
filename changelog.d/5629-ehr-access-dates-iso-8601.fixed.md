@@ -1,0 +1,1 @@
+- `EHR_ACCESS` settings and the access policy refuse with `400 DV_DATE_TIME.Value_valid` (or `DV_DURATION.Value_valid`) a date-time or duration that is no ISO 8601 value, at every write.
