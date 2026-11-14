@@ -316,8 +316,15 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   tombstone's own transaction through the audit store
   (`AuditStore::erase_entry`), after the audit sender has said it would take
   the record, so the log holds both or neither and the act is stored once,
-  as its entry; the record the act then emits as `EntryScope::Written` only
-  reaches the forwarding sinks. Every entry
+  as its entry; the record the act then emits as `EntryScope::Written`
+  reaches syslog and the store-off feed, named by the request id and client
+  address the audit middleware publishes (`access_context::with_origin`), and
+  the middleware writes no operation record of its own for such a response,
+  so each sink carries one record of the act. Every mounted operation has a
+  row in `ferroehr-rest::api::operation` naming its audit action and resource
+  class; there is no fallback class, the dispatcher refuses an operation
+  without a row before its handler runs, and the route-coverage test fails on
+  a mounted route without one. Every entry
   is built by `access_log::entry` from an `AuditEvent`: the drain's per-access
   entries, the erasure's, and the import's (`access_log::transfer`). An AQL
   statement attributes each served row to the EHR of every bound `EHR` source

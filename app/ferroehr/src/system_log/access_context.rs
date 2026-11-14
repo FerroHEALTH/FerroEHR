@@ -23,6 +23,7 @@
 use tokio::task_local;
 
 task_local! {
+    static REQUEST_ORIGIN: RequestOrigin;
     static DECLARED_PURPOSE: Option<String>;
     static DECLARED_PERMIT: Option<String>;
     static REQUEST_ROLES: Vec<String>;
@@ -56,6 +57,32 @@ pub fn record_facility(issuer: &str, id: &str) {
                 id: id.to_owned(),
             });
     });
+}
+
+/// Where the current request came from, as every record of it names it: the
+/// server's request id and the client's network address.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RequestOrigin {
+    /// The request id the server minted for the request.
+    pub request_id: Option<String>,
+    /// The client network address the protocol adapter believed.
+    pub client_address: Option<String>,
+}
+
+/// The origin of the current request; empty outside a request scope.
+#[must_use]
+pub fn current_origin() -> RequestOrigin {
+    REQUEST_ORIGIN.try_with(Clone::clone).unwrap_or_default()
+}
+
+/// Run `fut` with `origin` published as the request's origin, so a record the
+/// service layer writes itself names the request and the client as the
+/// adapter's own records do.
+pub async fn with_origin<F>(origin: RequestOrigin, fut: F) -> F::Output
+where
+    F: Future,
+{
+    REQUEST_ORIGIN.scope(origin, fut).await
 }
 
 /// The roles the authenticated caller holds for the current request (#3239).
@@ -188,6 +215,18 @@ mod tests {
             permit_identifier(&"p".repeat(128)).map(|p| p.len()),
             Some(128)
         );
+    }
+
+    #[tokio::test]
+    async fn the_request_origin_is_seen_only_inside_its_scope() {
+        let origin = super::RequestOrigin {
+            request_id: Some("req-1".to_owned()),
+            client_address: Some("192.0.2.7".to_owned()),
+        };
+        assert_eq!(super::current_origin(), super::RequestOrigin::default());
+        let seen = super::with_origin(origin.clone(), async { super::current_origin() }).await;
+        assert_eq!(seen, origin);
+        assert_eq!(super::current_origin(), super::RequestOrigin::default());
     }
 
     #[tokio::test]

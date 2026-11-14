@@ -5,13 +5,12 @@
 //! per operation id, read by the RBAC route map, the patient-scope enforcement
 //! point, the SMART on openEHR gates and the ATNA audit trail.
 //!
-//! Every generated ITS-REST operation has a row, which the completeness tests
-//! of [`crate::extensions::access::authz::classify`] and
-//! [`crate::system_log::classify`] hold. An extension operation has a row
-//! where it is patient-scope-checked, SMART-checked or audited under a class of its own;
-//! an operation without a row is RBAC-classified by its path, skipped by the patient scope,
-//! treated as a write, and audited under the fail-closed default. No
-//! specification governs this: our own design.
+//! Every mounted operation has a row, which the completeness tests of
+//! [`crate::extensions::access::authz::classify`] and
+//! [`crate::system_log::classify`] and the route-coverage test hold, and every
+//! row names the class the operation is audited under. An extension row with
+//! no RBAC class is RBAC-classified by its path. No specification governs
+//! this: our own design.
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -20,7 +19,6 @@ use ferroehr::system_log::event::{EventActionCode, ObjectClass};
 use ferrohealth_smart::openehr::smart_scopes::Permission;
 
 use crate::extensions::access::authz::classify::{Mode, OperationClass, ResourceKind};
-use crate::system_log::classify::Classification;
 
 /// What an operation does to the resource it addresses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -68,9 +66,8 @@ pub(crate) struct Operation {
     pub(crate) kind: Option<ResourceKind>,
     /// When the patient scope checks the operation.
     pub(crate) pep: Mode,
-    /// The DICOM resource class the operation is audited under; `None` for the
-    /// fail-closed default.
-    pub(crate) audit: Option<ObjectClass>,
+    /// The DICOM resource class the operation is audited under.
+    pub(crate) audit: ObjectClass,
     /// The SMART `composition-` gate of the policy-enforcement point.
     pub(crate) composition: CompositionGate,
 }
@@ -98,10 +95,10 @@ impl Operation {
         }
     }
 
-    /// The explicit audit classification: the DICOM `EventActionCode` of the
-    /// verb (PS3.15 §A.5.1) on the operation's resource class.
+    /// The audit classification: the DICOM `EventActionCode` of the verb
+    /// (PS3.15 §A.5.1) on the operation's resource class.
     #[must_use]
-    pub(crate) fn audit(&self) -> Option<Classification> {
+    pub(crate) fn audit(&self) -> (EventActionCode, ObjectClass) {
         let action = match self.verb {
             Verb::Create => EventActionCode::Create,
             Verb::Read => EventActionCode::Read,
@@ -109,8 +106,7 @@ impl Operation {
             Verb::Delete => EventActionCode::Delete,
             Verb::Search | Verb::Execute => EventActionCode::Execute,
         };
-        self.audit
-            .map(|object| Classification::Audited { action, object })
+        (action, self.audit)
     }
 }
 
@@ -125,7 +121,8 @@ static BY_ID: LazyLock<HashMap<&str, &Operation>> =
     LazyLock::new(|| OPERATIONS.iter().map(|op| (op.id, op)).collect());
 
 /// Builds [`OPERATIONS`], one row per line: id, verb, RBAC class, resource kind,
-/// patient-scope mode, audit class and `composition-` gate, `None` for an absent value.
+/// patient-scope mode, audit class and `composition-` gate, `None` for an absent
+/// RBAC class or resource kind.
 macro_rules! operations {
     ($($id:expr => $verb:ident, $class:ident, $kind:ident, $pep:ident, $audit:ident, $gate:ident;)*) => {
         &[$(Operation {
@@ -134,7 +131,7 @@ macro_rules! operations {
             class: operations!(@opt OperationClass $class),
             kind: operations!(@opt ResourceKind $kind),
             pep: Mode::$pep,
-            audit: operations!(@opt ObjectClass $audit),
+            audit: ObjectClass::$audit,
             composition: CompositionGate::$gate,
         },)*]
     };
@@ -155,8 +152,24 @@ macro_rules! operations {
 /// totality only: the router mounts the manifest above the authentication
 /// layer.
 static OPERATIONS: &[Operation] = operations! {
+    "admin_access_delay_register" => Read, None, None, Skip, ApplicationActivity, None;
+    "admin_access_log_chain" => Read, None, None, Skip, ApplicationActivity, None;
+    "admin_access_log_erase" => Delete, None, None, Skip, ApplicationActivity, None;
+    "admin_archive_ehrs" => Update, None, None, Skip, ApplicationActivity, None;
+    "admin_archive_parties" => Update, None, None, Skip, ApplicationActivity, None;
+    "admin_config" => Read, None, None, Skip, ApplicationActivity, None;
+    "admin_delay_access" => Create, None, None, Skip, ApplicationActivity, None;
+    "admin_dump" => Read, None, None, Skip, ApplicationActivity, None;
+    "admin_ehr_access_commit" => Update, None, None, Skip, ApplicationActivity, None;
+    "admin_ehr_access_repair" => Update, None, None, Skip, ApplicationActivity, None;
+    "admin_ehr_access_versions" => Read, None, None, Skip, ApplicationActivity, None;
     "admin_ehr_delete" => Delete, Admin, None, Skip, Ehr, None;
     "admin_ehr_delete_all" => Delete, Admin, None, Skip, Ehr, None;
+    "admin_export_access_log" => Read, None, None, Skip, ApplicationActivity, None;
+    "admin_get_access_log_checkpoint" => Read, None, None, Skip, ApplicationActivity, None;
+    "admin_lift_restriction" => Update, None, None, Skip, ApplicationActivity, None;
+    "admin_list_access_log" => Read, None, None, Skip, ApplicationActivity, None;
+    "admin_load" => Create, None, None, Skip, ApplicationActivity, None;
     "admin_party_delete" => Delete, None, None, Skip, Demographic, None;
     "admin_party_identifiers" => Read, None, None, Skip, Demographic, None;
     crate::api::admin::access_policy::HISTORY => Read, None, None, Skip, ApplicationActivity, None;
@@ -168,6 +181,28 @@ static OPERATIONS: &[Operation] = operations! {
     crate::api::admin::registers::HISTORY => Read, None, None, Skip, ApplicationActivity, None;
     crate::api::admin::registers::READ => Read, None, None, Skip, ApplicationActivity, None;
     crate::api::admin::registers::WRITE => Update, None, None, Skip, ApplicationActivity, None;
+    "admin_put_retention_policy" => Update, None, None, Skip, ApplicationActivity, None;
+    "admin_query_delete" => Delete, None, None, Skip, Query, None;
+    "admin_rebuild_version_nodes" => Update, None, None, Skip, ApplicationActivity, None;
+    "admin_rekey_party" => Update, None, None, Skip, ApplicationActivity, None;
+    "admin_release_access_delay" => Update, None, None, Skip, ApplicationActivity, None;
+    "admin_report_composition_version_count" => Read, None, None, Skip, ApplicationActivity, None;
+    "admin_report_contribution_count" => Read, None, None, Skip, ApplicationActivity, None;
+    "admin_report_contributions" => Read, None, None, Skip, ApplicationActivity, None;
+    "admin_report_versioned_composition_count" => Read, None, None, Skip, ApplicationActivity, None;
+    "admin_research_objection" => Create, None, None, Skip, ApplicationActivity, None;
+    "admin_restore_archived_ehrs" => Update, None, None, Skip, ApplicationActivity, None;
+    "admin_restore_archived_parties" => Update, None, None, Skip, ApplicationActivity, None;
+    "admin_restrict_processing" => Create, None, None, Skip, ApplicationActivity, None;
+    "admin_restriction_register" => Read, None, None, Skip, ApplicationActivity, None;
+    "admin_retention_anchor" => Update, None, None, Skip, ApplicationActivity, None;
+    "admin_retention_due" => Read, None, None, Skip, ApplicationActivity, None;
+    "admin_retention_hold" => Create, None, None, Skip, ApplicationActivity, None;
+    "admin_retention_policies" => Read, None, None, Skip, ApplicationActivity, None;
+    "admin_seal_access_log_checkpoint" => Create, None, None, Skip, ApplicationActivity, None;
+    "admin_template_delete" => Delete, None, None, Skip, Template, None;
+    "admin_verify_access_log" => Execute, None, None, Skip, ApplicationActivity, None;
+    "admin_verify_storage_parity" => Execute, None, None, Skip, ApplicationActivity, None;
     "agent_create" => Create, Clinical, None, Skip, Demographic, None;
     "agent_delete" => Delete, Clinical, None, Skip, Demographic, None;
     "agent_get" => Read, Clinical, None, Skip, Demographic, None;
@@ -175,7 +210,8 @@ static OPERATIONS: &[Operation] = operations! {
     "agent_tags_get" => Read, Clinical, None, Skip, Demographic, None;
     "agent_tags_update" => Update, Clinical, None, Skip, Demographic, None;
     "agent_update" => Update, Clinical, None, Skip, Demographic, None;
-    crate::api::ehr::access_delay::RELEASE => Update, None, Composition, Pre, None, Read;
+    crate::api::ehr::access_delay::RELEASE => Update, None, Composition, Pre, Composition, Read;
+    "audit_event_search" => Search, None, None, Skip, ApplicationActivity, None;
     "composition_create" => Create, Clinical, Composition, Pre, Composition, Write;
     "composition_delete" => Delete, Clinical, Composition, Pre, Composition, Write;
     "composition_get" => Read, Clinical, Composition, Post, Composition, Read;
@@ -185,8 +221,19 @@ static OPERATIONS: &[Operation] = operations! {
     "composition_update" => Update, Clinical, Composition, Pre, Composition, Write;
     "contribution_create" => Create, Clinical, Contribution, Pre, Contribution, None;
     "contribution_get" => Read, Clinical, Contribution, Post, Contribution, None;
-    "contribution_list" => Read, None, Contribution, Pre, None, None;
+    "contribution_list" => Read, None, Contribution, Pre, Contribution, None;
+    "definition_archetype_adl14_convert" => Read, None, None, Skip, Template, None;
+    "definition_archetype_adl14_delete" => Delete, None, None, Skip, Template, None;
+    "definition_archetype_adl14_get" => Read, None, None, Skip, Template, None;
+    "definition_archetype_adl14_list" => Read, None, None, Skip, Template, None;
+    "definition_archetype_adl14_upload" => Create, None, None, Skip, Template, None;
+    "definition_archetype_adl2_count" => Read, None, None, Skip, Template, None;
+    "definition_archetype_adl2_list" => Read, None, None, Skip, Template, None;
+    "definition_artefact_adl2_count" => Read, None, None, Skip, Template, None;
+    "definition_artefact_adl2_delete" => Delete, None, None, Skip, Template, None;
+    "definition_artefact_adl2_list" => Read, None, None, Skip, Template, None;
     "definition_query_list" => Read, Clinical, None, Skip, Query, None;
+    "definition_query_list_all" => Read, None, None, Skip, Query, None;
     "definition_query_store.yaml" => Create, Clinical, None, Skip, Query, None;
     "definition_query_version_get" => Read, Clinical, None, Skip, Query, None;
     "definition_query_version_store.yaml" => Create, Clinical, None, Skip, Query, None;
@@ -208,6 +255,8 @@ static OPERATIONS: &[Operation] = operations! {
     "directory_update" => Update, Clinical, Directory, Pre, Directory, None;
     "ehr_access_get_at_time" => Read, None, Ehr, Pre, Ehr, None;
     "ehr_access_get_by_version_id" => Read, None, Ehr, Pre, Ehr, None;
+    "ehr_access_log_get" => Read, None, None, Skip, ApplicationActivity, None;
+    "ehr_access_log_list" => Read, None, None, Skip, ApplicationActivity, None;
     "ehr_create" => Create, Clinical, Ehr, Pre, Ehr, None;
     "ehr_create_with_id" => Create, Clinical, Ehr, Pre, Ehr, None;
     "ehr_get_by_id" => Read, Clinical, Ehr, Pre, Ehr, None;
@@ -237,8 +286,8 @@ static OPERATIONS: &[Operation] = operations! {
     "management_metrics" => Execute, None, None, Skip, ApplicationActivity, None;
     "management_prometheus" => Execute, None, None, Skip, ApplicationActivity, None;
     "management_status" => Execute, None, None, Skip, ApplicationActivity, None;
-    "message_export_ehr_extracts" => Read, None, Ehr, Pre, None, None;
-    "message_export_ehrs" => Read, None, Ehr, Pre, None, None;
+    "message_export_ehr_extracts" => Read, None, Ehr, Pre, ApplicationActivity, None;
+    "message_export_ehrs" => Read, None, Ehr, Pre, ApplicationActivity, None;
     "message_import_ehr" => Create, None, Ehr, Pre, Ehr, None;
     "message_import_ehr_extract" => Update, None, Ehr, Pre, Ehr, None;
     "options" => Execute, Clinical, None, Skip, ApplicationActivity, None;
@@ -249,6 +298,13 @@ static OPERATIONS: &[Operation] = operations! {
     "organisation_tags_get" => Read, Clinical, None, Skip, Demographic, None;
     "organisation_tags_update" => Update, Clinical, None, Skip, Demographic, None;
     "organisation_update" => Update, Clinical, None, Skip, Demographic, None;
+    "party_relationship_create" => Create, None, None, Skip, Demographic, None;
+    "party_relationship_delete" => Delete, None, None, Skip, Demographic, None;
+    "party_relationship_get" => Read, None, None, Skip, Demographic, None;
+    "party_relationship_revision_history" => Read, None, None, Skip, Demographic, None;
+    "party_relationship_update" => Update, None, None, Skip, Demographic, None;
+    "party_relationship_version_get_at_time" => Read, None, None, Skip, Demographic, None;
+    "party_relationship_version_get_by_id" => Read, None, None, Skip, Demographic, None;
     "party_reverse_relationships_get" => Read, None, None, Skip, Demographic, None;
     "person_create" => Create, Clinical, None, Skip, Demographic, None;
     "person_delete" => Delete, Clinical, None, Skip, Demographic, None;
@@ -283,6 +339,12 @@ static OPERATIONS: &[Operation] = operations! {
     "scim_user_list" => Search, None, None, Skip, Demographic, None;
     "scim_user_patch" => Update, None, None, Skip, Demographic, None;
     "scim_user_replace" => Update, None, None, Skip, Demographic, None;
+    "terminology_description" => Read, None, None, Skip, ApplicationActivity, None;
+    "terminology_get_term" => Read, None, None, Skip, ApplicationActivity, None;
+    "terminology_ids" => Read, None, None, Skip, ApplicationActivity, None;
+    "terminology_subsumes" => Read, None, None, Skip, ApplicationActivity, None;
+    "terminology_value_set" => Read, None, None, Skip, ApplicationActivity, None;
+    "terminology_value_set_validate" => Read, None, None, Skip, ApplicationActivity, None;
     "versioned_composition_get" => Read, Clinical, Composition, Post, Composition, Read;
     "versioned_composition_revision_history" => Read, Clinical, Composition, Post, Composition, Read;
     "versioned_composition_version_get_at_time" => Read, Clinical, Composition, Post, Composition, Read;
@@ -296,6 +358,7 @@ static OPERATIONS: &[Operation] = operations! {
     "versioned_ehr_status_version_get_at_time" => Read, Clinical, EhrStatus, Pre, Ehr, None;
     "versioned_ehr_status_version_get_by_id" => Read, Clinical, EhrStatus, Pre, Ehr, None;
     "versioned_party_get" => Read, Clinical, None, Skip, Demographic, None;
+    "versioned_party_relationship_get" => Read, None, None, Skip, Demographic, None;
     "versioned_party_revision_history" => Read, Clinical, None, Skip, Demographic, None;
     "versioned_party_version_get_at_time" => Read, Clinical, None, Skip, Demographic, None;
     "versioned_party_version_get_by_id" => Read, Clinical, None, Skip, Demographic, None;
@@ -354,7 +417,7 @@ mod tests {
                 dash()
             },
             format!("{:?}", row.map_or(Mode::Skip, |row| row.pep)),
-            format!("{:?}", row.and_then(Operation::audit)),
+            format!("{:?}", row.map(Operation::audit)),
             if generated || smart_read || smart_write {
                 format!("{:?}", row.map_or(Permission::Read, Operation::permission))
             } else {

@@ -31,7 +31,11 @@ reads and rejected attempts.
 ## The record, in both official formats
 
 Every audited operation produces one record, rendered in the two formats the
-IHE standards define. Both are written by the shared audit crates of the
+IHE standards define. Each operation the server mounts names the action and
+resource class its record carries, and an operation without one is refused
+with `500` rather than recorded under a guessed class. An act that writes its
+own record, such as an access-log erasure, is that one record on every sink:
+syslog, the store and the FHIR Feed. Both are written by the shared audit crates of the
 FerroHEALTH products (FerroAUDIT): `ehds-logging` writes the EHDS access
 record, and `ihe-atna` writes the BALP `AuditEvent` and the DICOM audit
 message and sends them. FerroEHR decides which accesses are logged, what each

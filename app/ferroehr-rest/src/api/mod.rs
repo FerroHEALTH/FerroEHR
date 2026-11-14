@@ -350,6 +350,17 @@ where
     H: FnOnce(AppState, RequestParts) -> F + Send,
     F: Future<Output = Result<Response, RestError>> + Send,
 {
+    // NOTE: our own design (#5602), an operation without a row has no audit class, so it never
+    // runs; the audit middleware refuses its response.
+    if operation::operation(op).is_none() {
+        let mut resp = RestError::from(ApiError::Internal(format!(
+            "the operation {op} has no audit classification"
+        )))
+        .into_response();
+        resp.extensions_mut()
+            .insert(crate::system_log::middleware::AuditOpId(op));
+        return resp;
+    }
     // NOTE: no specification governs operational policy: our own design; the request reads
     // the newest version of every policy register and the access policy first, so a change
     // decides this request.

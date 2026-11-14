@@ -17,10 +17,9 @@
 //!   — caller identity, client network address, and DICOM outcome from the HTTP
 //!   status — and hands it to the platform emitter (non-blocking).
 //! - [`classify`] maps every operation id to its DICOM `EventActionCode` +
-//!   resource class. Every generated ITS-REST operation is explicitly
-//!   classified (a completeness test guards this); an unrecognised operation id
-//!   (extension route or future op) fails **closed** to a documented default and
-//!   is still audited — never silently unaudited.
+//!   resource class. Every mounted route's operation is classified, which the
+//!   completeness and route-coverage tests hold; an operation without a class
+//!   is refused, never recorded under a guessed one.
 //! - [`refusals`] records every refused request within its budget, with the
 //!   summary records beyond it.
 

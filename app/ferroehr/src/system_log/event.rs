@@ -562,7 +562,8 @@ pub enum EntryScope {
     /// operation that made it; the record names the version.
     LogMeaning,
     /// No entry: the caller wrote the record's entry itself, in the
-    /// transaction of the act it records.
+    /// transaction of the act it records, and emits the record to the
+    /// forwarding sinks as the one record of the act.
     Written,
 }
 

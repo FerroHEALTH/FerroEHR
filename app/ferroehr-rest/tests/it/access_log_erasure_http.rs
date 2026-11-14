@@ -18,6 +18,7 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::access_log::store::AccessLogStore;
 use ferroehr::config::authz::AuthzConfig;
+use ferroehr::system_log::config::{AuditConfig, FhirFeedConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::AuditStore;
 use ferroehr::system_log::store::chains::VerifyScope;
@@ -27,6 +28,9 @@ use http::{Request, StatusCode, header};
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 use serde_json::{Value, json};
 use sqlx::PgPool;
+use testkit::syslog_tls::SyslogTlsListener;
+use wiremock::matchers::{method, path};
+use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use crate::common;
 
@@ -73,11 +77,15 @@ fn entry() -> Value {
 /// An audited app with RBAC on, an administrator and a clinician, over an
 /// access log that holds [`entry`].
 async fn app() -> (testkit::TestDb, PgPool, Router) {
+    app_auditing(common::local_audit()).await
+}
+
+/// [`app`] over the audit sinks `audit` configures.
+async fn app_auditing(audit: AuditConfig) -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
-    let (sender, _handle): (_, AuditHandle) =
-        start(common::local_audit(), None, Some(pool.clone()))
-            .await
-            .expect("the audit sender");
+    let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
+        .await
+        .expect("the audit sender");
     let svc = common::binding_service(&pool)
         .with_audit(sender)
         .with_audit_store(AuditStore::new(pool.clone()));
@@ -269,4 +277,134 @@ async fn an_erasure_is_refused_without_the_role_a_record_or_grounds() {
             .expect("read"),
         Some(AccessLogRecord::AccessLogEntry(_))
     ));
+}
+
+/// The local store, a TLS syslog to `syslog` and a FHIR Feed to `arr`.
+fn every_sink(syslog: &SyslogTlsListener, arr: &MockServer) -> AuditConfig {
+    AuditConfig {
+        syslog: Some(SyslogConfig {
+            url: ferrohealth_secret::secret_url::SecretUrl::new(format!(
+                "tls://127.0.0.1:{}",
+                syslog.port
+            )),
+            tls: ferrohealth_config::tls::TlsClientSection {
+                trust_roots_file: Some(syslog.ca_file.clone()),
+                ..ferrohealth_config::tls::TlsClientSection::default()
+            },
+            ..SyslogConfig::default()
+        }),
+        fhir_feed: Some(FhirFeedConfig {
+            endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+                url: ferrohealth_secret::secret_url::SecretUrl::new(format!("{}/fhir", arr.uri())),
+                ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+            },
+            poll_interval: ferrohealth_config::units::Duration::from_millis(100),
+        }),
+        ..common::local_audit()
+    }
+}
+
+/// Whether a syslog frame or a FHIR `AuditEvent` is the record of a done
+/// erasure: it names the operation and succeeded.
+fn done_erasure_frame(frame: &str) -> bool {
+    frame.contains("admin_access_log_erase") && frame.contains(r#"EventOutcomeIndicator="0""#)
+}
+
+/// Whether a syslog frame is the record of the refused second erasure.
+fn refused_erasure_frame(frame: &str) -> bool {
+    frame.contains("admin_access_log_erase") && !frame.contains(r#"EventOutcomeIndicator="0""#)
+}
+
+/// Whether a FHIR `AuditEvent` is the record of a done erasure.
+fn done_erasure_event(event: &Value) -> bool {
+    event.to_string().contains("admin_access_log_erase") && event["outcome"] == json!("0")
+}
+
+/// The syslog frames up to and including the record of the refused second
+/// erasure, which one drain ships after every record of the first.
+async fn frames_until_refused(syslog: &mut SyslogTlsListener) -> Vec<String> {
+    let deadline = std::time::Instant::now() + Duration::from_secs(60);
+    let mut frames = Vec::new();
+    loop {
+        let left = deadline.saturating_duration_since(std::time::Instant::now());
+        let Some(frame) = syslog.recv(left).await else {
+            panic!("no syslog record of the refused erasure; frames seen: {frames:#?}");
+        };
+        let frame = String::from_utf8_lossy(&frame).into_owned();
+        let last = refused_erasure_frame(&frame);
+        frames.push(frame);
+        if last {
+            return frames;
+        }
+    }
+}
+
+/// The `AuditEvent` documents the FHIR Feed delivered, once its outbox is
+/// empty after the record of the refused second erasure has been stored.
+async fn delivered_when_drained(pool: &PgPool, arr: &MockServer) -> Vec<Value> {
+    failed_erasure(pool).await;
+    let deadline = std::time::Instant::now() + Duration::from_secs(60);
+    loop {
+        let (pending,): (i64,) = sqlx::query_as("SELECT count(*) FROM audit.fhir_feed_outbox")
+            .fetch_one(pool)
+            .await
+            .expect("read the feed outbox");
+        if pending == 0 {
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the FHIR Feed never drained its outbox"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    arr.received_requests()
+        .await
+        .expect("the ARR records its requests")
+        .iter()
+        .map(|request| serde_json::from_slice(&request.body).expect("a FHIR AuditEvent"))
+        .collect()
+}
+
+/// A done erasure, whose act writes and emits its own record, is one record
+/// on syslog, one in the store and one on the FHIR Feed (#5602).
+#[tokio::test]
+async fn an_erasure_is_one_record_on_every_sink() {
+    let mut syslog = SyslogTlsListener::bind(0).await.expect("syslog listener");
+    let arr = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/fhir/AuditEvent"))
+        .respond_with(ResponseTemplate::new(201))
+        .mount(&arr)
+        .await;
+    let (_db, pool, app) = Box::pin(app_auditing(every_sink(&syslog, &arr))).await;
+
+    let (status, body) = erase(&app, "root", &json!({ "uid": UID, "grounds": ordered() })).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) = erase(&app, "root", &json!({ "uid": UID, "grounds": ordered() })).await;
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
+
+    let frames = frames_until_refused(&mut syslog).await;
+    let on_syslog = frames.iter().filter(|f| done_erasure_frame(f)).count();
+    assert_eq!(
+        on_syslog, 1,
+        "one syslog record of the erasure: {frames:#?}"
+    );
+
+    let delivered = delivered_when_drained(&pool, &arr).await;
+    let on_feed = delivered.iter().filter(|e| done_erasure_event(e)).count();
+    assert_eq!(
+        on_feed, 1,
+        "one FHIR Feed record of the erasure: {delivered:#?}"
+    );
+
+    let (stored,): (i64,) = sqlx::query_as(
+        "SELECT count(*) FROM audit.access_trail \
+          WHERE operation = 'admin_access_log_erase' AND resource_id = $1",
+    )
+    .bind(UID)
+    .fetch_one(&pool)
+    .await
+    .expect("count the stored records of the erasure");
+    assert_eq!(stored, 1, "one stored record of the erasure");
 }

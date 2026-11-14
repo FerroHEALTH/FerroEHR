@@ -322,8 +322,8 @@ pub fn router(state: ManagementState) -> Router {
 }
 
 /// Stamp the audit operation id on every management response (#3244), so the
-/// audit middleware records the request under a `management_*` operation the
-/// classification table names, rather than the anonymous default.
+/// audit middleware records the request under the `management_*` operation the
+/// classification table names.
 async fn stamp_audit_op(req: Request, next: Next) -> Response {
     let op = audit_op_for(req.method(), req.uri().path());
     let mut resp = next.run(req).await;
@@ -735,5 +735,35 @@ mod tests {
         ] {
             assert_eq!(audit_op_for(&method, path), op, "{method} {path}");
         }
+    }
+
+    /// Every audit operation a management request can carry, the fallback
+    /// included, has an audit classification (#5602).
+    #[test]
+    fn every_management_audit_operation_is_classified() {
+        let mut unclassified = Vec::new();
+        for (method, path) in [
+            (Method::GET, "/management/info"),
+            (Method::GET, "/management/prometheus"),
+            (Method::GET, "/management/metrics"),
+            (Method::GET, "/management/metrics/status"),
+            (Method::GET, "/management/env"),
+            (Method::GET, "/management/flamegraph"),
+            (Method::GET, "/management/health"),
+            (Method::GET, "/management/status"),
+            (Method::GET, "/management/loggers"),
+            (Method::POST, "/management/loggers"),
+            (Method::DELETE, "/management/loggers"),
+            (Method::GET, "/management/unmatched"),
+        ] {
+            let op = audit_op_for(&method, path);
+            if crate::system_log::classify::audit_for(op).is_none() {
+                unclassified.push(op);
+            }
+        }
+        assert!(
+            unclassified.is_empty(),
+            "management audit operations without a classification: {unclassified:?}"
+        );
     }
 }

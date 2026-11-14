@@ -252,10 +252,13 @@ impl FerroEhrService {
     }
 
     /// Stamp `event` as one act on one object of the current request: one
-    /// result, the request's purpose and permit, the deployment's legal basis,
-    /// and the caller ([`stamp_caller`]).
+    /// result, the request's origin, purpose and permit, the deployment's
+    /// legal basis, and the caller ([`stamp_caller`]).
     pub(crate) fn stamp_one_access(&self, event: &mut AuditEvent) {
         event.result_count = Some(1);
+        let origin = access_context::current_origin();
+        event.request_id = origin.request_id;
+        event.client_ip = origin.client_address;
         event.purpose = access_context::current_purpose();
         event.permit = access_context::current_permit();
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);

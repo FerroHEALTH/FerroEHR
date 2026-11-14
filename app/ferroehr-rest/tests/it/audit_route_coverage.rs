@@ -30,6 +30,7 @@ use ferroehr::system_log::store::AuditStore;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
+use ferroehr_rest::system_log::classify::audit_for;
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use tower::ServiceExt;
@@ -333,6 +334,44 @@ async fn settled(pool: &PgPool, subjects: &[String]) -> BTreeMap<String, Vec<Opt
     }
 }
 
+/// Whether the exempt table names `method` `path`.
+fn exempt(method: &str, path: &str) -> bool {
+    EXEMPT.iter().any(|(m, p, _)| *m == method && *p == path)
+}
+
+/// The operation id the access record of `method` `path` carries: the one the
+/// served document declares, or the released id of a divergent route.
+fn recorded_operation(method: &str, path: &str, served: Option<&str>) -> String {
+    let served = served.unwrap_or_else(|| panic!("{method} {path} declares no operation id"));
+    DIVERGENT
+        .iter()
+        .find(|(m, p, _, _)| *m == method && *p == path)
+        .map_or(served, |(_, _, recorded, _)| recorded)
+        .to_owned()
+}
+
+/// Every mounted route outside the exempt table carries an operation the
+/// operation table classifies, so its access record names its own action,
+/// resource class and domain; no fallback class exists (#5602).
+#[test]
+fn every_audited_route_has_an_audit_classification() {
+    let mut unclassified = Vec::new();
+    for ((method, path), operation_id) in &mounted(&config()) {
+        if exempt(method, path) {
+            continue;
+        }
+        let recorded = recorded_operation(method, path, operation_id.as_deref());
+        if audit_for(&recorded).is_none() {
+            unclassified.push(format!("{method} {path} ({recorded})"));
+        }
+    }
+    assert!(
+        unclassified.is_empty(),
+        "mounted routes whose operation has no audit classification \
+         (add a row to app/ferroehr-rest/src/api/operation.rs): {unclassified:#?}"
+    );
+}
+
 /// The exempt and divergent tables name only mounted routes, and every other
 /// mounted route writes exactly one access record carrying its operation id,
 /// or the released id a divergent route's record keeps.
@@ -365,16 +404,10 @@ async fn every_route_writes_exactly_one_access_record() {
     let (_db, pool, app) = app().await;
     let mut probes = Vec::new();
     for ((method, path), operation_id) in &mounted {
-        if EXEMPT.iter().any(|(m, p, _)| m == method && p == path) {
+        if exempt(method, path) {
             continue;
         }
-        let served = operation_id
-            .clone()
-            .unwrap_or_else(|| panic!("{method} {path} declares no operation id"));
-        let expected = DIVERGENT
-            .iter()
-            .find(|(m, p, _, _)| m == method && p == path)
-            .map_or(served, |(_, _, recorded, _)| (*recorded).to_owned());
+        let expected = recorded_operation(method, path, operation_id.as_deref());
         let subject = format!("route-probe-{}", probes.len());
         drive(&app, &subject, method, path).await;
         probes.push((format!("{method} {path}"), expected, subject));
