@@ -55,6 +55,7 @@ fn request(emergency: Emergency) -> Arc<RequestAccess> {
             facts: CallerFacts::default(),
             administrator: false,
             settings: SettingsCaller::new(false, false, Some(party)),
+            lacks_consent_reference: false,
         },
         Asking {
             operation: OperationClass::Read,

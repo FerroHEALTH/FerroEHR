@@ -425,6 +425,42 @@ async fn a_consent_conditioned_read_without_a_decision_reference_is_recorded() {
     panic!("the refused read was not recorded");
 }
 
+/// The access evaluator refuses a consent-conditioned read that names no
+/// consent decision with `refused-consent-reference-missing`, the code its
+/// answer and its access-log entry carry (#5614).
+#[tokio::test]
+async fn a_consent_conditioned_read_without_a_decision_reference_is_refused_with_its_code() {
+    let conditioned = agreement(Accessor::Person).text("consent", "local");
+    let (db, svc, app) = serve(vec![conditioned]).await;
+    let target = ehr(&svc).await.to_string();
+    let (status, body) = common::send_body(
+        &app,
+        common::req("GET", format!("{BASE}/ehr/{target}"))
+            .auth(&professional(Some(&target), &json!({})))
+            .accept("application/json")
+            .prefer_representation()
+            .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    let problem: Value = serde_json::from_str(&body).expect("a problem body");
+    assert_eq!(
+        problem["refusal"],
+        json!("refused-consent-reference-missing"),
+        "{body}"
+    );
+    let refused = crate::access_log_http::entries(&db.pool(), 1, |stored| {
+        stored.result.as_deref() == Some("refused")
+    })
+    .await;
+    let entry: Value = serde_json::from_str(&refused[0].content).expect("a canonical entry");
+    assert_eq!(
+        entry["outcome"]["reason"]["defining_code"]["code_string"],
+        "refused-consent-reference-missing",
+        "{entry}"
+    );
+}
+
 #[tokio::test]
 async fn a_consent_conditioned_read_carrying_its_decision_reference_is_served_and_recorded() {
     let conditioned = agreement(Accessor::Person).text("consent", "local");
