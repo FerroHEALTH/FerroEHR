@@ -366,7 +366,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `audit.audit_record`, the view of the `audit_event` records and the entries
   with their index rows in `access_log_search` (the search columns, the
   search tokens of the projection and the render policy, removed with the
-  entry's content when a tombstone replaces it), and the drain sends the
+  entry's content when a tombstone replaces it). An ITI-81 page reads each
+  chain's first `offset + count` records through its `recorded_at` index,
+  the access log's candidates from `access_log_search` with the records tied
+  on the last instant, and takes the page from their union. The exact total
+  counts the access log on its index rows alone, one per entry
+  (`system_log::store::search_page`, #5646). The drain sends the
   syslog message and the store-off feed's document from the entry it built
   (`audit/0030_access_log_projections.sql`, `system_log::store::entries`,
   `system_log::sender::records`).
@@ -681,7 +686,12 @@ which is what makes an optional stage safe to disable:
    the class (`scope::Held`, `scope::EhrFact`), which the SQL reads from the
    EHR's `access_settings.facts`, so one evaluator decides a direct read and a
    query alike, and an EHR of a class the condition does not hold contributes
-   no row. The request path
+   no row. The subjects the caller cares for are bound once per statement, as
+   a `jsonb` object keyed by subject id in a `WITH` clause that each care
+   probe reads with `?`, so the planner's estimate and each probe cost the
+   same whatever the census, and only the one parse of the bound object grows
+   with it (#5645). The care relationships stay in the party domain, which the
+   clinical statement does not read. The request path
    adds no transaction: every fact is a copy, and a named object is read by
    its head row only when the verdict depends on the object. The procedure,
    its order and its codes are our own design; RM EHR IM §EHR Access only
