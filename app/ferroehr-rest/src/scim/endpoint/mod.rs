@@ -58,7 +58,9 @@ use axum::middleware::{Next, from_fn, from_fn_with_state};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
-use ferroehr::party_binding::grants::operation::{BINDING_ISSUER, Operation, TOKEN_SCOPE};
+use ferroehr::party_binding::grants::operation::{
+    BINDING_ISSUER, Operation, ROLE, ROLE_TERMINOLOGY, TOKEN_SCOPE,
+};
 use ferroehr::service::FerroEhrService;
 use ferrohealth_server::caller_rate::{self, CallerLimit};
 use ferrohealth_smart::kind::CallerKind;
@@ -89,6 +91,22 @@ pub struct ScimClient {
     /// The issuer its Groups' `externalId`s are written under
     /// ([`ferroehr::config::scim::group_issuer`]).
     pub group_issuer: String,
+    /// The roles its Users may hold: the terminology its `scim_provision`
+    /// grants code them in, and the codes they admit.
+    pub roles: RoleCeiling,
+}
+
+/// The roles a SCIM client may assign its Users (#5625): the
+/// `role_terminology` and the `role` elements of its `scim_provision`
+/// grants. No openEHR spec or RFC 7643 gives `roles` a meaning: our own
+/// design.
+#[derive(Debug, Clone, Default)]
+pub struct RoleCeiling {
+    /// The terminology the roles are coded in; `None` when the grants admit
+    /// no role.
+    pub terminology: Option<String>,
+    /// The role codes the grants admit.
+    pub allowed: Vec<String>,
 }
 
 /// The provisioning client a request was admitted as, on its extensions.
@@ -389,11 +407,27 @@ fn provisioning_client(
         );
         return Err(response);
     }
+    let mut allowed: Vec<String> = granted
+        .iter()
+        .flat_map(|grant| grant.credentials().texts(ROLE))
+        .map(str::to_owned)
+        .collect();
+    allowed.sort_unstable();
+    allowed.dedup();
+    let terminology = granted
+        .iter()
+        .flat_map(|grant| grant.credentials().identified(ROLE_TERMINOLOGY))
+        .find(|terminology| !terminology.is_empty())
+        .map(str::to_owned);
     Ok(ScimClient {
         issuer,
         client_id,
         binding_issuer: binding_issuer.to_owned(),
         group_issuer: ferroehr::config::scim::group_issuer(binding_issuer, &gate.parties),
+        roles: RoleCeiling {
+            terminology,
+            allowed,
+        },
     })
 }
 
