@@ -825,6 +825,14 @@ async fn bound_already(pool: &PgPool, issuer: &str, key: &str) -> bool {
     bound_person(pool, issuer, key).await.is_some()
 }
 
+/// The `PERSON` the subject `sub` of the issuer `issuer` of [`bind_subjects`]
+/// is bound to.
+pub(crate) async fn issuer_person(pool: &PgPool, issuer: &str, sub: &str) -> uuid::Uuid {
+    bound_person(pool, &logins_of(issuer), sub)
+        .await
+        .expect("the subject is bound to a PERSON")
+}
+
 /// The `PERSON` the Basic user `user` of [`grant_basic_users`] is bound to.
 pub(crate) async fn basic_person(pool: &PgPool, user: &str) -> uuid::Uuid {
     bound_person(pool, BASIC_LOGIN, user)

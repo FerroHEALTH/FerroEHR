@@ -38,6 +38,7 @@
 
 mod access_delay_sinks;
 mod access_eval_aql;
+mod access_eval_examples;
 mod access_event_fail_closed;
 mod access_log_checkpoint;
 mod access_log_retention;
