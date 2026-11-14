@@ -163,7 +163,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// `service_overloaded` (`503`) when the projection cannot be read, and
-    /// as [`entry_of`].
+    /// as `entry_of`.
     async fn load_ehr_access(&self, ehr_id: EhrId) -> Result<EhrEntry, ServiceError> {
         let stored = crate::storage::access_projection::settings_of(&self.pool, ehr_id)
             .await
@@ -177,7 +177,8 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// `service_overloaded` (`503`) when the projection cannot be read, and
-    /// as [`entry_of`].
+    /// an internal fault naming an EHR whose settings do not read as the
+    /// `access_directives` scheme.
     pub async fn ehr_access_entries(
         &self,
         ehr_ids: &[EhrId],

@@ -375,18 +375,10 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
   fills the side table from the stored versions, and
   `ferroehr party-binding refill` rebuilds it.
 - **What a replica holds does not grow with the EHRs that carry settings:**
-  at most 4096 EHRs' settings, about 10 KB each, so about 40 MB, and the
-  settings classes, a few kilobytes each. Measured on one Apple M5 Pro with
-  two opt-out and restriction shapes:
+  at most 4096 EHRs' settings and the settings classes. The measured sizes
+  and times, against the whole-set copy this replaced:
 
-  | EHRs with settings | Whole-set copy before v5.7.2 | Its reload | Its per-query condition | Classes now | Per-query condition now |
-  |---|---|---|---|---|---|
-  | 10 000 | 99 MB | 34 ms | 9 ms | 2 | 9 µs |
-  | 100 000 | 993 MB | 386 ms | 84 ms | 2 | 8 µs |
-  | 1 000 000 | 10.1 GB | 3.6 s | 880 ms | 2 | 8 µs |
-
-  The reload column is the parse and sort alone, after the settings text
-  (1.27 KB per EHR) was read from the database.
+{{#include ../generated/access-index-bench.md}}
 - **The access evaluator decides every request:** see
   [Access directives](#access-directives) below.
 - **The default definition:** every boot stores the archetype
