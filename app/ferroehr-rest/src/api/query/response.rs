@@ -299,7 +299,7 @@ pub(super) fn merge_body_and_url_parameters(
 mod tests {
     use super::*;
     use bytes::Bytes;
-    use ferroehr::access_eval::condition::{CallerKeys, ConditionGroups, VerdictPair};
+    use ferroehr::access_eval::groups::{CallerKeys, ConditionGroups, VerdictPair};
     use ferroehr::access_eval::procedure::Verdict;
 
     fn headers(pairs: &[(&str, &str)]) -> HeaderMap {

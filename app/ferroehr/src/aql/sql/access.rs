@@ -26,7 +26,8 @@ use uuid::Uuid;
 
 use super::expr::{archetype_node_id, col};
 use crate::access_eval::class::Keepers;
-use crate::access_eval::condition::{AccessCondition, CallerKeys, ConditionGroups, VerdictPair};
+use crate::access_eval::condition::AccessCondition;
+use crate::access_eval::groups::{CallerKeys, ConditionGroups, VerdictPair};
 use crate::access_eval::scope::{
     CategoryMatch, DataMatch, Edge, EhrFact, Held, Polarity, Pred, Recorded,
 };

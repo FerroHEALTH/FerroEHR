@@ -43,7 +43,7 @@ use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use serde_json::Value;
 use sha2::{Digest as _, Sha256};
 
-use crate::access_eval::condition::CallerKeys;
+use crate::access_eval::groups::CallerKeys;
 use crate::access_eval::procedure::{Rule, Verdict};
 use crate::access_eval::scope::{DataMatch, Edge, EhrFact, Held, Pred, Recorded};
 use crate::service::ehr::access_projection::{Validity, validity};

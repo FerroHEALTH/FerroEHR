@@ -12,7 +12,7 @@
 //! openEHR spec governs the classes: our own design.
 
 use ferroehr::access_eval::class::{Class, DataLayout, KeeperLayout, classify, resolve};
-use ferroehr::access_eval::condition::CallerKeys;
+use ferroehr::access_eval::groups::CallerKeys;
 use ferroehr::access_eval::scope::Pred;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::ehr::access_rule::SettingsCaller;

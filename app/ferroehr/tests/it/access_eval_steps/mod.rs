@@ -25,7 +25,7 @@ use serde_json::{Value, json};
 use uuid::Uuid;
 
 use ferroehr::access_eval::class::{Class, classify, resolve_verdict};
-use ferroehr::access_eval::condition::CallerKeys;
+use ferroehr::access_eval::groups::CallerKeys;
 use ferroehr::access_eval::procedure::{
     Asked, Caller, Ehr, Emergency, Judged, Outcome, Policy, Verdict, decide,
 };
