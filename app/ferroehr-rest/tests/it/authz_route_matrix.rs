@@ -293,6 +293,18 @@ const CLINICAL_READ: &[(&str, &str)] = &[
     ),
     ("GET", "/message/export/{ehr_id}"),
     ("POST", "/message/export"),
+    // One EHR's access log (#5130), an extension spelled at its full path: the
+    // clinical class lets the subject and a representative reach it, and its
+    // handler admits only them, to the EHR they are confined to, and a
+    // reviewer the admin class admits.
+    (
+        "GET",
+        "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/access_log",
+    ),
+    (
+        "GET",
+        "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/access_log/{uid}",
+    ),
 ];
 
 /// Clinical writes (relative to their namespace). The `/message` imports sit here
@@ -383,6 +395,11 @@ const ADMIN_READ: &[(&str, &str)] = &[
     // (#5129), and its export reads the log.
     ("POST", "/admin/access-log/verify"),
     ("GET", "/admin/access-log/export"),
+    // The review of the access log across EHRs, the links of a span of its
+    // chain and a stored checkpoint (#5130).
+    ("GET", "/admin/access-log"),
+    ("GET", "/admin/access-log/chain"),
+    ("GET", "/admin/access-log/checkpoint"),
     // The legal registers, read side: the restriction sequence a controller
     // answers an Art. 18(3) notice from, the declared retention periods, and
     // what has fallen due. They carry ids, grounds and citations, never

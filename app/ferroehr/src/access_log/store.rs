@@ -172,6 +172,11 @@ impl AccessLogStore {
         }
     }
 
+    /// The audit pool the records are kept in.
+    pub(super) fn pool(&self) -> &PgPool {
+        &self.pool
+    }
+
     /// The store that signs the digest of each link it appends with
     /// `signer`'s key, the optional `ACCESS_LOG_LINK.signature`, written
     /// with the row.
@@ -327,20 +332,8 @@ impl AccessLogStore {
     /// [`AccessLogError::Interleaved`] when a position between holds no
     /// access-log record, and the store errors when the statement fails.
     pub async fn links(&self, from: i64, to: i64) -> Result<Vec<AccessLogLink>, AccessLogError> {
-        let rows = sqlx::query(
-            "SELECT chain_seq, algorithm, previous_digest, content_digest, digest, signature \
-             FROM audit.access_log_record WHERE chain_seq BETWEEN $1 AND $2 ORDER BY chain_seq",
-        )
-        .bind(from)
-        .bind(to)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
-        let links = rows.iter().map(link).collect::<Result<Vec<_>, _>>()?;
-        let expected = to.checked_sub(from).and_then(|span| span.checked_add(1));
-        if i64::try_from(links.len()).ok() != expected {
-            return Err(AccessLogError::Interleaved { from, to });
-        }
-        Ok(links)
+        let span = self.chain(from, to).await?;
+        Ok(span.into_iter().map(|(_uid, link)| link).collect())
     }
 
     /// The record whose uid is `uid`, entry or tombstone, with its link.
@@ -508,7 +501,7 @@ async fn replace(
 }
 
 /// The link the columns of `row` hold.
-fn link(row: &PgRow) -> Result<AccessLogLink, sqlx::Error> {
+pub(super) fn link(row: &PgRow) -> Result<AccessLogLink, sqlx::Error> {
     Ok(AccessLogLink {
         sequence: row.try_get("chain_seq")?,
         algorithm: row.try_get("algorithm")?,
@@ -521,7 +514,7 @@ fn link(row: &PgRow) -> Result<AccessLogLink, sqlx::Error> {
 
 /// The record `row` holds, read as a `T`: its canonical form with its link
 /// joined.
-fn stored<T: serde::de::DeserializeOwned>(row: &PgRow) -> Result<T, AccessLogError> {
+pub(super) fn stored<T: serde::de::DeserializeOwned>(row: &PgRow) -> Result<T, AccessLogError> {
     let chain_seq: i64 = row.try_get("chain_seq")?;
     let unreadable = |source| AccessLogError::Unreadable { chain_seq, source };
     let content: String = row.try_get("content")?;

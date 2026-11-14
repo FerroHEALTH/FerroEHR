@@ -212,8 +212,7 @@ impl FerroEhrService {
     /// The register of the holds on the EHRs `ehrs`, replayed oldest first,
     /// or `None` when none of them is in force at `now`, so nothing is
     /// withheld from the person's trail.
-    #[cfg(feature = "fhir")]
-    async fn person_holds(
+    pub(crate) async fn person_holds(
         &self,
         ehrs: &[String],
         now: jiff::Timestamp,

@@ -36,7 +36,7 @@ pub(crate) const QUERY_RESERVED_KEYS: &[&str] =
 ///
 /// Octets that do not decode to UTF-8 are replaced, never dropped, so a pair
 /// keeps its place.
-fn query_pairs(query: &str) -> Vec<(String, String)> {
+pub(crate) fn query_pairs(query: &str) -> Vec<(String, String)> {
     let decode = |text: &str| String::from_utf8_lossy(&query_component_octets(text)).into_owned();
     query
         .split('&')
