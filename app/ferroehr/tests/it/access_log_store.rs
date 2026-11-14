@@ -5,7 +5,8 @@
 //! kept as its canonical form and chained by the link the draft defines
 //! (`docs/plans/access-log.md` §Integrity), the verifier finds a removed, an inserted and a reordered
 //! record, a tombstone replaces an entry and leaves the chain intact, and the
-//! records of `audit_event` and of the access log verify as one chain.
+//! access log is a chain of its own, apart from the records of `audit_event`
+//! (#5573).
 //!
 //! No openEHR spec governs audit storage: our own design.
 
@@ -19,7 +20,8 @@ use sqlx::{AssertSqlSafe, Connection, PgConnection, PgPool, Row};
 
 use ferroehr::access_log::store::{AccessLogStore, canonical_form};
 use ferroehr::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
-use ferroehr::system_log::store::{AuditStore, VerifyScope};
+use ferroehr::system_log::store::AuditStore;
+use ferroehr::system_log::store::chains::{AuditChain, VerifyScope};
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
@@ -54,10 +56,10 @@ pub(crate) fn sha256_hex(text: &str) -> String {
     hex(&Sha256::digest(text.as_bytes()))
 }
 
-/// The digest the first record of the chain links back to
-/// (`audit.audit_chain_genesis()`).
+/// The digest the first record of the access log links back to
+/// (`audit.access_log_genesis()`).
 fn genesis() -> String {
-    sha256_hex("ferroehr.audit_chain.v1")
+    sha256_hex("ferroehr.access_log.v1")
 }
 
 /// Append entries `numbers` through the store, in their order.
@@ -357,12 +359,7 @@ async fn a_tombstone_replaces_an_entry_and_the_chain_stays_intact() {
     let middle = written.get(1).expect("the second entry");
 
     let tombstone = store
-        .tombstone(
-            middle.uid.value(),
-            at("2031-11-08T00:00:00Z"),
-            expiry(),
-            None,
-        )
+        .tombstone(middle.uid.value(), at("2031-11-08T00:00:00Z"), expiry())
         .await
         .expect("the tombstone is written")
         .expect("the entry is there");
@@ -397,12 +394,7 @@ async fn a_tombstone_replaces_an_entry_and_the_chain_stays_intact() {
     );
     assert_eq!(
         store
-            .tombstone(
-                middle.uid.value(),
-                at("2031-11-09T00:00:00Z"),
-                expiry(),
-                None
-            )
+            .tombstone(middle.uid.value(), at("2031-11-09T00:00:00Z"), expiry(),)
             .await
             .expect("a second removal answers"),
         None,
@@ -476,12 +468,7 @@ async fn the_table_admits_the_tombstone_replacement_and_nothing_else() {
     }
 
     store
-        .tombstone(
-            first.uid.value(),
-            at("2031-11-08T00:00:00Z"),
-            expiry(),
-            None,
-        )
+        .tombstone(first.uid.value(), at("2031-11-08T00:00:00Z"), expiry())
         .await
         .expect("the tombstone replacement is admitted")
         .expect("the entry is there");
@@ -508,12 +495,14 @@ fn legacy_event(at: Timestamp) -> AuditEvent {
     event
 }
 
-/// The `audit_event` records and the access-log records are one chain: each
-/// links to the record before it whatever its form, a full and an incremental
-/// verification walk both, and the incremental one finds a change to an
-/// access-log record written after its checkpoint.
+/// The access log and the `audit_event` records are two chains: an entry
+/// written between two `audit_event` records takes the next position of the
+/// access log and links to the entry before it, the `audit_event` records
+/// stay adjacent and link to each other, and each chain verifies from its own
+/// cursor, the access log's incremental run finding a change to an entry
+/// written after its cursor.
 #[tokio::test]
-async fn both_forms_verify_in_one_chain_from_the_checkpoint_on() {
+async fn each_chain_verifies_apart_from_its_own_cursor_on() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let audit = AuditStore::new(pool.clone());
@@ -529,74 +518,101 @@ async fn both_forms_verify_in_one_chain_from_the_checkpoint_on() {
         .await
         .expect("an audit_event record after the entries");
 
-    let legacy_link: Vec<u8> =
-        sqlx::query_scalar("SELECT row_hash FROM audit.audit_event WHERE chain_seq = 1")
-            .fetch_one(&pool)
-            .await
-            .expect("the first record's link");
-    let legacy_hex = hex(&legacy_link);
     let opening = first.first().expect("the first entry");
-    assert_eq!(opening.link.sequence, 2, "the entry continues the chain");
-    assert_eq!(opening.link.previous_digest, legacy_hex);
-    let after: Vec<u8> =
-        sqlx::query_scalar("SELECT prev_hash FROM audit.audit_event WHERE chain_seq = 4")
-            .fetch_one(&pool)
-            .await
-            .expect("the last record's predecessor link");
-    let closing = first.last().expect("the second entry");
     assert_eq!(
-        hex(&after),
-        closing.link.digest,
-        "an audit_event record links to the entry before it"
+        opening.link.sequence, 1,
+        "the access log starts its own chain"
+    );
+    assert_eq!(opening.link.previous_digest, genesis());
+    let system: Vec<(i64, Vec<u8>, Vec<u8>)> = sqlx::query_as(
+        "SELECT chain_seq, prev_hash, row_hash FROM audit.audit_event ORDER BY chain_seq",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("the audit_event records");
+    let positions: Vec<i64> = system.iter().map(|(seq, _, _)| *seq).collect();
+    assert_eq!(
+        positions,
+        [1, 2],
+        "the system chain holds no access-log position"
+    );
+    let (_, second_previous, _) = system.get(1).expect("the second record");
+    let (_, _, first_link) = system.first().expect("the first record");
+    assert_eq!(
+        second_previous, first_link,
+        "an audit_event record links to the audit_event record before it"
+    );
+    let system_links: Vec<String> = system.iter().map(|(_, _, link)| hex(link)).collect();
+    assert!(
+        first
+            .iter()
+            .all(|entry| !system_links.contains(&entry.link.previous_digest)),
+        "no entry links to an audit_event record"
     );
 
     assert_eq!(findings(&pool).await, Vec::new());
-    assert!(
-        audit
-            .verify_chain_advancing(VerifyScope::SinceCheckpoint)
-            .await
-            .expect("verify")
-            .is_empty()
+    for chain in AuditChain::ALL {
+        assert!(
+            audit
+                .verify_chain_advancing(chain, VerifyScope::SinceCheckpoint)
+                .await
+                .expect("verify")
+                .is_empty()
+        );
+    }
+    let cursor = |sql: &'static str| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query_scalar::<_, i64>(sql)
+                .fetch_one(&pool)
+                .await
+                .expect("the cursor")
+        }
+    };
+    assert_eq!(
+        cursor("SELECT through_seq FROM audit.audit_chain_checkpoint").await,
+        2
     );
-    let checkpoint: i64 =
-        sqlx::query_scalar("SELECT through_seq FROM audit.audit_chain_checkpoint")
-            .fetch_one(&pool)
-            .await
-            .expect("the checkpoint");
-    assert_eq!(checkpoint, 4);
+    assert_eq!(
+        cursor("SELECT through_seq FROM audit.access_log_chain_verified").await,
+        2
+    );
 
     append(&log, 3..=4).await;
     assert!(
         audit
-            .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+            .verify_chain_advancing(AuditChain::AccessLog, VerifyScope::SinceCheckpoint)
             .await
             .expect("verify")
             .is_empty()
     );
-    let checkpoint: i64 =
-        sqlx::query_scalar("SELECT through_seq FROM audit.audit_chain_checkpoint")
-            .fetch_one(&pool)
-            .await
-            .expect("the checkpoint");
     assert_eq!(
-        checkpoint, 6,
-        "the checkpoint moves to the newest access-log record"
+        cursor("SELECT through_seq FROM audit.access_log_chain_verified").await,
+        4,
+        "the access log's cursor moves to its newest record"
+    );
+    assert_eq!(
+        cursor("SELECT through_seq FROM audit.audit_chain_checkpoint").await,
+        2,
+        "the system chain's cursor stays where it was"
     );
 
     append(&log, 5..=5).await;
     tamper(
         &pool,
         &["UPDATE audit.access_log_record SET content = replace(content, '\"read\"', '\"delete\"') \
-           WHERE chain_seq = 7"],
+           WHERE chain_seq = 5"],
     )
     .await;
     let found = audit
-        .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+        .verify_chains_advancing(VerifyScope::SinceCheckpoint)
         .await
         .expect("verify");
     assert!(
-        found.iter().any(|finding| finding.chain_seq == Some(7)),
-        "the incremental run finds the record changed after its checkpoint: {found:?}"
+        found
+            .iter()
+            .any(|finding| finding.chain == AuditChain::AccessLog && finding.chain_seq == Some(5)),
+        "the incremental run finds the entry changed after its cursor: {found:?}"
     );
 }
 
@@ -624,12 +640,7 @@ async fn the_application_role_appends_and_replaces_by_a_tombstone_only() {
     let written = append(&store, 1..=2).await;
     let first = written.first().expect("the first entry");
     store
-        .tombstone(
-            first.uid.value(),
-            at("2031-11-08T00:00:00Z"),
-            expiry(),
-            None,
-        )
+        .tombstone(first.uid.value(), at("2031-11-08T00:00:00Z"), expiry())
         .await
         .expect("the app role replaces an entry by its tombstone")
         .expect("the entry is there");
@@ -651,9 +662,9 @@ async fn the_application_role_appends_and_replaces_by_a_tombstone_only() {
             "the application role must not run `{statement}`"
         );
     }
-    let clean: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.verify_audit_chain()")
+    let clean: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.verify_access_log_chain()")
         .fetch_one(&mut conn)
         .await
-        .expect("the application role verifies the chain");
+        .expect("the application role verifies the access log");
     assert_eq!(clean, 0);
 }

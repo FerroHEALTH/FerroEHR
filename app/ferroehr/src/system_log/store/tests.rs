@@ -191,7 +191,8 @@ fn token(system: AuditTokenSystem, code: Option<&str>) -> AuditToken {
     }
 }
 
-/// The FHIR Feed reads a record back by the same columns the search does.
+/// The FHIR Feed reads a record back by the same columns the search does,
+/// after the outbox id it delivers the record by.
 #[test]
 fn the_feed_reads_every_record_column() {
     let selected: Vec<&str> = super::OLDEST_OWED
@@ -202,7 +203,9 @@ fn the_feed_reads_every_record_column() {
         .split(',')
         .map(|column| column.trim().trim_start_matches("e."))
         .collect();
-    assert_eq!(selected, RECORD_COLUMNS);
+    let (owed, record) = selected.split_first().expect("the select list");
+    assert_eq!(*owed, "o.id AS owed");
+    assert_eq!(record, RECORD_COLUMNS);
 }
 
 /// A rendered document with an agent, the patient and an object entity.

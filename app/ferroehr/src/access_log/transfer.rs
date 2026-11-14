@@ -183,11 +183,14 @@ impl Checkpoints {
     /// the newest checkpoint that covers them, sealing one when none does,
     /// and that checkpoint, verified before it is returned.
     ///
+    /// The access log holds only the accesses to EHR data, in a chain of its
+    /// own, so the span carries the links of the other EHRs' records between
+    /// and never a record outside the log.
+    ///
     /// # Errors
     /// [`TransferError::NoRecords`] for an EHR the log holds nothing of,
-    /// [`AccessLogError::Interleaved`] when the span holds `audit_event`
-    /// records, [`TransferError::Unverified`] when the span does not verify,
-    /// and the store and signing errors.
+    /// [`TransferError::Unverified`] when the span does not verify, and the
+    /// store and signing errors.
     pub async fn export(&self, ehr_id: &str) -> Result<LogExport, TransferError> {
         let store = self.store();
         let records = store.of_ehr(ehr_id).await?;

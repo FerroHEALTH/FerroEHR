@@ -172,7 +172,7 @@ async fn a_tombstone_never_comes_back() {
     .expect("the time reads");
     assert!(
         store
-            .tombstone(&uid(3), removed, grounds, None)
+            .tombstone(&uid(3), removed, grounds)
             .await
             .expect("the store answers")
             .is_none(),

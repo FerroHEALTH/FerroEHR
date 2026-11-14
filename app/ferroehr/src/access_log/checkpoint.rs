@@ -8,8 +8,9 @@
 //! digest, signed with the keyring's `OpenPGP` key in the form
 //! `ATTESTATION._proof_` takes (RM common `master04-generic_package.adoc`
 //! §Attestation). A verifier that holds one detects any later rewrite of the
-//! records it covers. The chain itself is verified where it is stored, by
-//! `audit.verify_audit_chain()` through
+//! records it covers. The access log is a chain of its own, apart from the
+//! records outside it (#5573), verified where it is stored by
+//! `audit.verify_access_log_chain()` through
 //! [`AuditStore::verify_chain_advancing`], which accepts a tombstone in place
 //! of its entry; this module adds what a checkpoint adds: its proof, the link
 //! it seals, and the signature of each signed link.
@@ -26,7 +27,9 @@ use crate::access_log::chain::{ALGORITHM, ChainFinding};
 use crate::access_log::store::{AccessLogError, AccessLogStore, canonical_form};
 use crate::access_log::transfer::named_party;
 use crate::db::acquire::acquire;
-use crate::system_log::store::{AuditChainFinding, AuditStore, VerifyScope};
+use crate::system_log::seal::Seals;
+use crate::system_log::store::AuditStore;
+use crate::system_log::store::chains::{AuditChain, AuditChainFinding, VerifyScope};
 use crate::versioning::audit::dv_date_time;
 use crate::versioning::signature::signer::Signer;
 use crate::versioning::signature::trust::TrustedCertificates;
@@ -44,7 +47,7 @@ pub struct Verification {
     pub checkpoint: Option<AccessLogCheckpoint>,
     /// What the checkpoint and the signed links fail.
     pub findings: Vec<ChainFinding>,
-    /// What the chain fails, as the audit chain's verifier reports it.
+    /// What the access log's chain fails, as its verifier reports it.
     pub chain: Vec<AuditChainFinding>,
 }
 
@@ -113,6 +116,18 @@ impl Checkpoints {
         &self.pool
     }
 
+    /// The seals of the system chain, the records outside the access log,
+    /// made and verified with the same keyring and trusted certificates.
+    #[must_use]
+    pub fn system_seals(&self) -> Seals {
+        Seals::new(
+            self.pool.clone(),
+            self.system_id.clone(),
+            Arc::clone(&self.signer),
+            Arc::clone(&self.trusted),
+        )
+    }
+
     /// The access-log store over the same pool, signing links whenever the
     /// keyring holds a key.
     #[must_use]
@@ -127,8 +142,8 @@ impl Checkpoints {
         self.signer.attests(data, signature) || self.trusted.verifies(data, signature)
     }
 
-    /// Seal the head of the chain in a signed checkpoint, stored and
-    /// returned; `None` while the chain is empty.
+    /// Seal the head of the access log in a signed checkpoint, stored and
+    /// returned; `None` while the log is empty.
     ///
     /// A head already sealed returns its stored checkpoint, so a run on an
     /// idle log writes nothing.
@@ -139,8 +154,8 @@ impl Checkpoints {
     /// an invariant, and the store errors when a statement fails.
     pub async fn seal(&self) -> Result<Option<AccessLogCheckpoint>, AccessLogError> {
         let head = sqlx::query(
-            "SELECT newest.chain_seq, encode(newest.link, 'hex') AS digest \
-             FROM audit.audit_chain_newest() AS newest",
+            "SELECT chain_seq, digest FROM audit.access_log_record \
+             ORDER BY chain_seq DESC LIMIT 1",
         )
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?;
@@ -237,7 +252,7 @@ impl Checkpoints {
     /// at its sequence is the one it seals, and the signature of every signed
     /// link.
     ///
-    /// A run that finds nothing moves the audit chain's verification cursor
+    /// A run that finds nothing moves the access log's verification cursor
     /// to the newest record, as a scheduled full pass does.
     ///
     /// # Errors
@@ -251,7 +266,7 @@ impl Checkpoints {
             None => self.latest(None).await?,
         };
         let chain = AuditStore::new(self.pool.clone())
-            .verify_chain_advancing(VerifyScope::Full)
+            .verify_chain_advancing(AuditChain::AccessLog, VerifyScope::Full)
             .await
             .map_err(|error| AccessLogError::Chain(Box::new(error)))?;
         let mut findings = Vec::new();
@@ -276,10 +291,11 @@ impl Checkpoints {
         if !self.signed(canonical_form(checkpoint)?.as_bytes(), &checkpoint.proof) {
             findings.push(ChainFinding::CheckpointProof { sequence });
         }
-        let sealed: Option<String> = sqlx::query_scalar("SELECT audit.audit_chain_link_at($1)")
-            .bind(sequence)
-            .fetch_one(&mut *acquire(&self.pool).await?)
-            .await?;
+        let sealed: Option<String> =
+            sqlx::query_scalar("SELECT digest FROM audit.access_log_record WHERE chain_seq = $1")
+                .bind(sequence)
+                .fetch_optional(&mut *acquire(&self.pool).await?)
+                .await?;
         if sealed.as_deref() != Some(checkpoint.digest.as_str()) {
             findings.push(ChainFinding::CheckpointDigest { sequence });
         }

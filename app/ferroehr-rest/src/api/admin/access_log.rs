@@ -121,9 +121,8 @@ guarded_handler! {
             (status = 200, description = "`links`: the `uid` and `link` of each record from \
                                           `from_sequence` to `to_sequence`, in chain order.",
              body = serde_json::Value),
-            (status = 400, description = "A bound is missing or outside its form, the span \
-                                          is longer than 10000, or it holds `audit_event` \
-                                          records, which only this database verifies.",
+            (status = 400, description = "A bound is missing or outside its form, or the \
+                                          span is longer than 10000.",
              body = serde_json::Value),
             (status = 409, description = "The local audit store, which holds the access \
                                           log, is off.", body = serde_json::Value),
@@ -227,9 +226,6 @@ guarded_handler! {
              body = serde_json::Value),
             (status = 409, description = "No checkpoint covers the records and the keyring \
                                           holds no OpenPGP key to seal one.",
-             body = serde_json::Value),
-            (status = 422, description = "The span holds `audit_event` records, which cannot \
-                                          be verified apart from this database.",
              body = serde_json::Value),
             AdminRefusal
         )
@@ -377,9 +373,6 @@ fn log_error(error: AccessLogError) -> RestError {
     match error {
         AccessLogError::Sign(AttestError::NoKey) => {
             RestError::from(ApiError::Conflict(AttestError::NoKey.to_string()))
-        }
-        AccessLogError::Interleaved { .. } => {
-            RestError::from(ApiError::Unprocessable(error.to_string()))
         }
         other => {
             tracing::error!(error = %other, "the access-log operation failed");
