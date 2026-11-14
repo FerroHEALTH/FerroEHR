@@ -31,6 +31,7 @@
 
 pub mod class;
 pub mod condition;
+mod directive;
 pub mod procedure;
 pub mod record;
 pub mod scope;
