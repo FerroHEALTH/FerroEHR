@@ -144,9 +144,6 @@ impl FerroEhrService {
     /// the subject lookup (`get_ehrs_for_subject`) and bound by
     /// the one-EHR-per-subject rule (RM ehr master04 §EHR Status) like any
     /// other. An EHR with no current `EHR_STATUS` keeps its column defaults.
-    /// The marks of the EHDS Art. 8 restriction and Art. 10 opt-out directives
-    /// are projected again from the current `EHR_ACCESS`
-    /// ([`crate::service::ehr::access_marks::project`]).
     ///
     /// A subject already owned by another EHR is rejected before the UPDATE so
     /// the caller can report which subject clashed and which EHR holds it. The
@@ -156,15 +153,12 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// [`ServiceError::Conflict`] when another EHR already owns the status's
-    /// subject; [`ServiceError::BadRequest`] for a restriction or opt-out
-    /// directive no emergency may lift; [`ServiceError::Database`] on a
-    /// storage failure.
+    /// subject; [`ServiceError::Database`] on a storage failure.
     pub(in crate::service) async fn resync_promoted_columns(
         &self,
         tx: &mut PgConnection,
         ehr_id: EhrId,
     ) -> Result<(), ServiceError> {
-        crate::service::ehr::access_marks::project(tx, ehr_id).await?;
         let Some(status) = ehr_repo::current_status_root(tx, ehr_id).await? else {
             return Ok(());
         };

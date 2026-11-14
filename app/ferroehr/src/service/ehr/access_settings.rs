@@ -23,11 +23,15 @@
               by specification)"
 )]
 
+use openehr_base::v1_3::base_types::identification::object_id::ObjectId;
+use openehr_base::v1_3::base_types::identification::object_ref::ObjectRef;
+use openehr_base::v1_3::base_types::identification::uid_based_id::UidBasedId;
 use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use serde_json::Value;
 
 use crate::error::ServiceError;
+use crate::ids::VoId;
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
 use openehr_rm::draft::access_control::terminology::{
@@ -252,6 +256,20 @@ fn check_directive(path: &str, directive: &AccessDirective) -> Result<(), Defect
         .enumerate()
     {
         let scope_path = format!("{path}.data[{index}]");
+        for (at, object) in scope
+            .objects
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+        {
+            if object_id(object).is_none() {
+                return Err(Defect::Code {
+                    path: format!("{scope_path}.objects[{at}]"),
+                    reason: format!("{} names no versioned object", object_text(object)),
+                });
+            }
+        }
         foreign(
             &format!("{scope_path}.categories"),
             ForeignKind::Category,
@@ -273,6 +291,39 @@ fn check_directive(path: &str, directive: &AccessDirective) -> Result<(), Defect
         check_directive(&format!("{path}.exceptions[{index}]"), exception)?;
     }
     Ok(())
+}
+
+/// The id text of an `OBJECT_REF` whose id is a `HIER_OBJECT_ID` or an
+/// `OBJECT_VERSION_ID`; `None` for a reference of any other id class.
+fn id_text(object: &ObjectRef) -> Option<&str> {
+    match object {
+        ObjectRef::ObjectRef(data) => match &data.id {
+            ObjectId::HierObjectId(id) => Some(id.value()),
+            ObjectId::ObjectVersionId(id) => Some(id.value()),
+            _ => None,
+        },
+        ObjectRef::LocatableRef(locatable) => match &locatable.id {
+            UidBasedId::HierObjectId(id) => Some(id.value()),
+            UidBasedId::ObjectVersionId(id) => Some(id.value()),
+        },
+        ObjectRef::AccessGroupRef(_) | ObjectRef::PartyRef(_) => None,
+    }
+}
+
+/// The versioned-object id an `OBJECT_REF` names, by its id or the head of its
+/// version id; `None` for a reference to anything else.
+pub(crate) fn object_id(object: &ObjectRef) -> Option<uuid::Uuid> {
+    id_text(object)
+        .and_then(|text| VoId::from_uid_head(text).ok())
+        .map(|vo_id| vo_id.0)
+}
+
+/// An `OBJECT_REF` as a refusal names it: its id, or its class.
+fn object_text(object: &ObjectRef) -> String {
+    id_text(object).map_or_else(
+        || "a reference to a party or an access group".to_owned(),
+        |text| format!("{text:?}"),
+    )
 }
 
 /// Refuses the first of `codes`, at `path`, that is no code of `kind`.
@@ -591,5 +642,63 @@ mod tests {
         assert_eq!(held, EhrAccessSettings::HeldClosed);
         assert_eq!(held.default_access(), AccessDefault::Restricted);
         assert_eq!(held.gate_keepers(), &[]);
+    }
+
+    /// A data scope naming an object by an id that names no versioned object,
+    /// or by a reference to a party, is refused naming the reference; one
+    /// naming an object by its id or a version of it is accepted.
+    #[test]
+    fn an_object_reference_that_names_no_object_is_refused() {
+        const OBJECT: &str = "8849182c-82ad-4088-a07f-48ead4180515";
+        let scoped = |reference: Value| {
+            settings(
+                "open",
+                &[directive(
+                    "restriction",
+                    "deny",
+                    &json!({ "data": [{ "objects": [reference] }] }),
+                )],
+            )
+        };
+        let by_id = |id: &str| {
+            json!({ "_type": "OBJECT_REF", "namespace": "local",
+                    "type": "VERSIONED_COMPOSITION",
+                    "id": { "_type": "HIER_OBJECT_ID", "value": id } })
+        };
+        let defect = refused(&scoped(by_id("not-a-uuid")));
+        assert!(
+            defect.starts_with("EHR_ACCESS.settings.directives[0].data[0].objects[0]: "),
+            "{defect}"
+        );
+        assert!(
+            defect.contains("\"not-a-uuid\" names no versioned object"),
+            "{defect}"
+        );
+        let party = json!({ "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+                            "id": { "_type": "HIER_OBJECT_ID", "value": OBJECT } });
+        assert!(refused(&scoped(party)).contains("a reference to a party"));
+        for id in [OBJECT.to_owned(), format!("{OBJECT}::local.ehrbase.org::2")] {
+            check_written_settings(&scoped(by_id(&id))).expect("an object it names");
+        }
+    }
+
+    /// No configuration names an access service: it is a grant of
+    /// `access_service`, which the default ceiling does not allow, and the
+    /// removed role list is refused from the environment (#5521).
+    #[test]
+    fn an_access_service_is_a_grant_and_the_removed_role_list_is_refused() {
+        use crate::party_binding::grants::operation::{GrantCeiling, Operation};
+        assert!(!GrantCeiling::default().allows(Operation::AccessService));
+        let env: std::collections::HashMap<String, String> = [(
+            "FERROEHR__AUTHZ__RBAC__ACCESS_SERVICE_ROLES",
+            "EHDS-PORTAL,EHDS-PROFESSIONAL",
+        )]
+        .into_iter()
+        .map(|(k, v)| (k.to_owned(), v.to_owned()))
+        .collect();
+        let refused = crate::config::assemble(None, &env, &[])
+            .expect_err("the removed key is unknown")
+            .to_string();
+        assert!(refused.contains("ACCESS_SERVICE_ROLES"), "{refused}");
     }
 }

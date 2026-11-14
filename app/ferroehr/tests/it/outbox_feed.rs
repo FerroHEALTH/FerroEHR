@@ -98,7 +98,7 @@ async fn boot_registers_the_named_readers_and_deactivates_the_rest() {
         ]
     );
     assert_eq!(
-        read(&pool, OutboxDomain::Clinical, READER, 100)
+        read(&pool, OutboxDomain::Clinical, READER, None, 100)
             .await
             .expect("read"),
         None,
@@ -110,7 +110,7 @@ async fn boot_registers_the_named_readers_and_deactivates_the_rest() {
         .await
         .expect("third boot");
     assert_eq!(third.registered, names(&[READER]));
-    let resumed = read(&pool, OutboxDomain::Clinical, READER, 100)
+    let resumed = read(&pool, OutboxDomain::Clinical, READER, None, 100)
         .await
         .expect("read")
         .expect("an active reader");
@@ -266,7 +266,7 @@ async fn a_read_waits_for_a_commit_that_drew_a_lower_seq() {
     // The read cannot serve the quick row before the slow one ends.
     let reader_pool = pool.clone();
     let pending = tokio::spawn(async move {
-        read(&reader_pool, OutboxDomain::Clinical, READER, 100)
+        read(&reader_pool, OutboxDomain::Clinical, READER, None, 100)
             .await
             .expect("read")
             .expect("an active reader")
