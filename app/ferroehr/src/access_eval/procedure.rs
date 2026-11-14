@@ -195,7 +195,7 @@ pub struct Ehr<'a> {
     pub server_default: AccessDefault,
     /// Whether the caller has a live care relationship to its subject.
     pub cared: bool,
-    /// Whether the EHR is the [`Caller::own_ehr`] of a confined caller.
+    /// Whether the EHR is one of the [`Caller::own_ehrs`] of a confined caller.
     pub own: bool,
 }
 

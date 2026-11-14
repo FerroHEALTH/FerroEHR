@@ -109,7 +109,7 @@ pub(crate) async fn write(
 }
 
 /// Replaces the facts and the record subjects of the `PERSON` `head` on its
-/// commit transaction `tx`, as [`write`] does, stamping the `PERSON` too
+/// commit transaction `tx`, as [`write()`] does, stamping the `PERSON` too
 /// when its record subjects changed.
 ///
 /// # Errors
