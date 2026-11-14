@@ -274,6 +274,15 @@ pub enum BindingError {
     /// The shared crate refuses a party table or a Basic user's key.
     #[error(transparent)]
     Party(#[from] PartyError),
+    /// A Basic user maps to no key while an `[[auth.party]]` table binds
+    /// logins, so the user resolves to no `PERSON`.
+    #[error(
+        "beside an [[auth.party]] table a Basic user is a person's credential: map it with \
+         [[authz.party_binding.basic_user]] to the key of its PERSON, which SCIM provisions \
+         once the operator grant (`ferroehr party-binding grant --operation scim_provision`) \
+         admits the SCIM client"
+    )]
+    BasicUnmapped(#[source] PartyError),
 }
 
 /// Returns the party binding the configuration describes, looking logins up
@@ -284,7 +293,9 @@ pub enum BindingError {
 /// the section must map to a key.
 ///
 /// # Errors
-/// [`BindingError`] naming the table, the adapter or the Basic user refused.
+/// [`BindingError`] naming the table, the adapter or the Basic user refused;
+/// [`BindingError::BasicUnmapped`] names the operator grant that bootstraps
+/// the `PERSON` an unmapped Basic user needs.
 pub fn party_binding(
     binding: &PartyBindingConfig,
     resolved: &Resolved,
@@ -295,7 +306,9 @@ pub fn party_binding(
         built = built.with_basic_user(&user.user, &user.key_issuer, &user.key)?;
     }
     if let Some(store) = &resolved.basic {
-        built.check_basic(store)?;
+        built
+            .check_basic(store)
+            .map_err(BindingError::BasicUnmapped)?;
     }
     Ok(built)
 }
