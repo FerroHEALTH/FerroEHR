@@ -28,20 +28,66 @@ use crate::party_binding::grants::store::{CHANNEL, GrantHead, Term};
 use crate::storage::error::StorageError;
 use openehr_rm::draft::access_control::terminology::ForeignCode;
 
-/// Every fact of the parties stamped after the facts revision `$1`.
+/// The columns of one fact, over `binding_caller_fact f`.
+macro_rules! fact_columns {
+    () => {
+        "f.holder_id, f.kind, f.terminology_id, f.code_string, f.target_id, \
+         f.lifecycle_state, isempty(f.role_validity) AS role_empty, \
+         lower(f.role_validity) AS role_lower, upper(f.role_validity) AS role_upper, \
+         isempty(f.validity) AS empty, lower(f.validity) AS lower, upper(f.validity) AS upper, \
+         f.not_before, f.not_after"
+    };
+}
+
+/// Every caller fact of the parties stamped after the facts revision `$1`:
+/// the facts a replica's copy holds, so no care relationship of a subject
+/// (#5615).
 ///
 /// A stamped party that holds none reads one row of `NULL` facts. It is
 /// answered from `ix_binding_caller_fact_party_revision` and
 /// `ix_binding_caller_fact_party`, and public so a test can `EXPLAIN` it.
-pub const FACTS: &str = "SELECT p.party_id AS stamped, f.holder_id, f.kind, f.terminology_id, \
-            f.code_string, f.target_id, f.lifecycle_state, \
-            isempty(f.role_validity) AS role_empty, lower(f.role_validity) AS role_lower, \
-            upper(f.role_validity) AS role_upper, isempty(f.validity) AS empty, \
-            lower(f.validity) AS lower, upper(f.validity) AS upper, f.not_before, f.not_after \
-     FROM binding_caller_fact_party p \
-     LEFT JOIN binding_caller_fact f ON f.party_id = p.party_id \
+pub const FACTS: &str = concat!(
+    "SELECT p.party_id AS stamped, ",
+    fact_columns!(),
+    " FROM binding_caller_fact_party p \
+     LEFT JOIN binding_caller_fact f ON f.party_id = p.party_id AND f.kind <> 'under_care_of' \
      WHERE p.revision > $1 \
-     ORDER BY p.party_id, f.holder_id, f.ordinal, f.kind";
+     ORDER BY p.party_id, f.holder_id, f.ordinal, f.kind"
+);
+
+/// Every caller fact, the read of a whole copy: the parties that hold none,
+/// patients in care among them, are not read.
+const HELD_FACTS: &str = concat!(
+    "SELECT f.party_id AS stamped, ",
+    fact_columns!(),
+    " FROM binding_caller_fact f WHERE f.kind <> 'under_care_of' \
+     ORDER BY f.party_id, f.holder_id, f.ordinal, f.kind"
+);
+
+/// The care teams the subjects stamped after the facts revision `$1` are
+/// under the care of now, whose cached patients a replica drops.
+const CARED_TEAMS: &str = "SELECT DISTINCT f.target_id FROM binding_caller_fact_party p \
+     JOIN binding_caller_fact f ON f.party_id = p.party_id AND f.kind = 'under_care_of' \
+     WHERE p.revision > $1";
+
+/// The care relationships of the subject `$1`. Answered from
+/// `ix_binding_caller_fact_party`.
+const CARE_OF_SUBJECT: &str = concat!(
+    "SELECT f.party_id AS stamped, ",
+    fact_columns!(),
+    " FROM binding_caller_fact f WHERE f.party_id = $1 AND f.kind = 'under_care_of' \
+     ORDER BY f.holder_id, f.ordinal"
+);
+
+/// The care relationships to the team `$1`, one per subject under its care.
+/// Answered from `ix_binding_caller_fact_care_team`, and public so a test can
+/// `EXPLAIN` it.
+pub const CARE_OF_TEAM: &str = concat!(
+    "SELECT f.party_id AS stamped, ",
+    fact_columns!(),
+    " FROM binding_caller_fact f WHERE f.target_id = $1 AND f.kind = 'under_care_of' \
+     ORDER BY f.party_id, f.holder_id, f.ordinal"
+);
 
 /// The text of one stored fact, as a commit compares the facts of a head
 /// before and after.
@@ -62,14 +108,17 @@ pub(crate) struct FactRow {
 }
 
 /// The facts read since a facts revision: the revision read, every party
-/// stamped since, and the facts each holds.
+/// stamped since, the caller facts each holds, and the care teams the
+/// stamped subjects are under the care of now.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Changed {
     /// The facts revision the read saw.
     pub(crate) revision: i64,
-    /// Every party read, each with its facts; empty facts for a party that
-    /// holds none any more.
+    /// Every party read, each with its caller facts; empty facts for a party
+    /// that holds none, such as a patient in care.
     pub(crate) parties: Vec<(Uuid, Vec<FactRow>)>,
+    /// The care teams the stamped subjects are under the care of now.
+    pub(crate) cared_teams: Vec<Uuid>,
 }
 
 /// Replaces the facts of `head` on its commit transaction `tx`: the facts
@@ -272,10 +321,62 @@ pub(crate) async fn load(
     since: Option<i64>,
 ) -> Result<Changed, StorageError> {
     let (_, revision) = crate::party_binding::grants::store::revisions(conn).await?;
-    let rows = sqlx::query(FACTS)
-        .bind(since.unwrap_or(-1))
+    let (rows, cared_teams) = match since {
+        Some(since) => (
+            sqlx::query(FACTS).bind(since).fetch_all(&mut *conn).await?,
+            sqlx::query_scalar(CARED_TEAMS)
+                .bind(since)
+                .fetch_all(&mut *conn)
+                .await?,
+        ),
+        None => (
+            sqlx::query(HELD_FACTS).fetch_all(&mut *conn).await?,
+            Vec::new(),
+        ),
+    };
+    Ok(Changed {
+        revision,
+        parties: by_party(rows)?,
+        cared_teams,
+    })
+}
+
+/// The care relationships of `subject`, read on `conn`.
+///
+/// # Errors
+/// As [`load`].
+pub(crate) async fn care_of_subject(
+    conn: &mut PgConnection,
+    subject: Uuid,
+) -> Result<Vec<FactRow>, StorageError> {
+    let rows = sqlx::query(CARE_OF_SUBJECT)
+        .bind(subject)
         .fetch_all(&mut *conn)
         .await?;
+    Ok(by_party(rows)?
+        .into_iter()
+        .flat_map(|(_, facts)| facts)
+        .collect())
+}
+
+/// The care relationships to `team`, by subject, read on `conn`.
+///
+/// # Errors
+/// As [`load`].
+pub(crate) async fn care_of_team(
+    conn: &mut PgConnection,
+    team: Uuid,
+) -> Result<Vec<(Uuid, Vec<FactRow>)>, StorageError> {
+    let rows = sqlx::query(CARE_OF_TEAM)
+        .bind(team)
+        .fetch_all(&mut *conn)
+        .await?;
+    by_party(rows)
+}
+
+/// `rows`, ordered by their `stamped` party, grouped by it; a party whose
+/// row carries no fact holds none.
+fn by_party(rows: Vec<sqlx::postgres::PgRow>) -> Result<Vec<(Uuid, Vec<FactRow>)>, StorageError> {
     let mut parties: Vec<(Uuid, Vec<FactRow>)> = Vec::new();
     for row in rows {
         let stamped: Uuid = row.try_get("stamped")?;
@@ -290,7 +391,7 @@ pub(crate) async fn load(
             facts.push(fact);
         }
     }
-    Ok(Changed { revision, parties })
+    Ok(parties)
 }
 
 /// The fact `row` of `holder` holds.
@@ -332,7 +433,9 @@ mod tests {
             .split(',')
             .map(|column| column.split_whitespace().last().unwrap_or_default())
         {
-            assert!(FACTS.contains(column), "{column} is not read");
+            for read in [FACTS, HELD_FACTS, CARE_OF_SUBJECT, CARE_OF_TEAM] {
+                assert!(read.contains(column), "{column} is not read");
+            }
         }
     }
 }
