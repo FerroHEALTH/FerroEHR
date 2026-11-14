@@ -88,7 +88,6 @@ fn checkpoints(pool: &PgPool, system_id: &str, signer: Arc<Signer>) -> Checkpoin
         system_id.to_owned(),
         signer,
         Arc::new(TrustedCertificates::default()),
-        false,
     )
 }
 
@@ -354,7 +353,6 @@ async fn an_ehrs_log_round_trips_through_export_and_import() {
         SYSTEM_B.to_owned(),
         keyring(&generate_key()),
         trusting(&key_a),
-        false,
     );
     let imported = target
         .import(&received, import_record())
@@ -428,26 +426,32 @@ async fn an_ehrs_log_round_trips_through_export_and_import() {
     assert!(own.chain.is_empty(), "{own:?}");
 }
 
-/// With link signing on, each appended link carries a signature the keyring
-/// verifies, and a replaced signature is a finding.
+/// Under an `OpenPGP` key each appended link carries a signature the keyring
+/// verifies, written with its row, and a replaced signature is a finding
+/// (#5562).
 #[tokio::test]
 async fn a_signed_link_verifies_and_a_replaced_signature_does_not() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = &testdb.pool();
-    let log = Checkpoints::new(
-        pool.clone(),
-        SYSTEM_A.to_owned(),
-        keyring(&generate_key()),
-        Arc::new(TrustedCertificates::default()),
-        true,
-    );
+    let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
+    assert!(log.seals());
     let entries = append(&log, SYSTEM_A).await;
     assert!(entries.iter().all(|entry| entry.link.signature.is_some()));
+    let first = entries.first().expect("an entry");
+    let read = log
+        .store()
+        .read(first.uid.value())
+        .await
+        .expect("read")
+        .expect("the entry");
+    assert!(
+        matches!(&read, AccessLogRecord::AccessLogEntry(entry) if entry.link == first.link),
+        "the stored link is the signed one: {read:?}"
+    );
     log.seal().await.expect("seal").expect("a checkpoint");
     let verification = log.verify(None).await.expect("verify");
     assert!(verification.intact(), "{verification:?}");
 
-    let first = entries.first().expect("an entry");
     let second = entries.get(1).expect("a second entry");
     let foreign = second.link.signature.clone().expect("signed");
     tamper(
@@ -465,6 +469,103 @@ async fn a_signed_link_verifies_and_a_replaced_signature_does_not() {
         vec![ChainFinding::LinkSignature {
             sequence: first.link.sequence
         }]
+    );
+}
+
+/// A stored signature is part of the record: the table refuses to set or
+/// change it after the insert, as it refuses every change but a tombstone.
+#[tokio::test]
+async fn a_stored_link_signature_is_never_updated() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = &testdb.pool();
+    let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
+    let entries = append(&log, SYSTEM_A).await;
+    let first = entries.first().expect("an entry");
+    let refused =
+        sqlx::query("UPDATE audit.access_log_record SET signature = NULL WHERE chain_seq = $1")
+            .bind(first.link.sequence)
+            .execute(pool)
+            .await
+            .expect_err("the signature does not change");
+    assert!(refused.to_string().contains("append-only"), "{refused}");
+}
+
+/// Two appends in one transaction sign the links the chain gives them: the
+/// second foresees its links from the head the first one moved.
+#[tokio::test]
+async fn appends_in_one_transaction_sign_the_links_the_chain_gives() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = &testdb.pool();
+    let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
+    let mut conn = pool.acquire().await.expect("connection");
+    let mut tx = conn.begin().await.expect("begin");
+    let first = log
+        .store()
+        .append_in(
+            &mut tx,
+            vec![entry(1, SYSTEM_A, MOVED), entry(2, SYSTEM_A, STAYS)],
+        )
+        .await
+        .expect("the first append");
+    let second = log
+        .store()
+        .append_in(&mut tx, vec![entry(3, SYSTEM_A, MOVED)])
+        .await
+        .expect("the second append");
+    tx.commit().await.expect("commit");
+    let last = first.last().expect("an entry");
+    let next = second.first().expect("an entry");
+    assert_eq!(next.link.previous_digest, last.link.digest);
+    assert!(
+        first
+            .iter()
+            .chain(&second)
+            .all(|e| e.link.signature.is_some())
+    );
+    log.seal().await.expect("seal").expect("a checkpoint");
+    let verification = log.verify(None).await.expect("verify");
+    assert!(verification.intact(), "{verification:?}");
+}
+
+/// Without an `OpenPGP` key nothing is signed and nothing is sealed.
+#[tokio::test]
+async fn a_keyring_without_a_key_signs_no_link() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let log = checkpoints(&testdb.pool(), SYSTEM_A, Arc::new(Signer::digest_default()));
+    assert!(!log.seals());
+    let entries = append(&log, SYSTEM_A).await;
+    assert!(entries.iter().all(|entry| entry.link.signature.is_none()));
+}
+
+/// The signed links of another system's export verify under a trusted key,
+/// and a signature over another link is a finding at its position.
+#[tokio::test]
+async fn a_foreign_signed_link_verifies_and_a_replaced_signature_does_not() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let signer = keyring(&generate_key());
+    let source = checkpoints(&testdb.pool(), SYSTEM_A, Arc::clone(&signer));
+    append(&source, SYSTEM_A).await;
+    let mut export = source.export(MOVED).await.expect("export");
+    assert!(export.links.iter().all(|link| link.signature.is_some()));
+    let trusted = |data: &[u8], signature: &str| signer.attests(data, signature);
+    assert_eq!(
+        chain::verify(export.span(), &trusted).expect("verify"),
+        Vec::new()
+    );
+
+    let first = export.links.first().expect("a link").sequence;
+    let foreign = export.links.get(1).and_then(|link| link.signature.clone());
+    export.links.first_mut().expect("a link").signature = foreign.clone();
+    for record in &mut export.records {
+        if let AccessLogRecord::AccessLogEntry(entry) = record
+            && entry.link.sequence == first
+        {
+            entry.link.signature = foreign.clone();
+        }
+    }
+    assert_eq!(
+        chain::verify(export.span(), &trusted).expect("verify"),
+        vec![ChainFinding::LinkSignature { sequence: first }]
     );
 }
 

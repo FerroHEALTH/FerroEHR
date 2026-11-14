@@ -207,7 +207,7 @@ impl FerroEhrService {
                 Violation::new(format!("stored OPT no longer parses: {e:?}")).with_source(e),
             )
         })?;
-        convert_opt_to_adl2(&opt).map_err(|e| {
+        convert_opt_to_adl2(&opt, jiff::Timestamp::now()).map_err(|e| {
             ServiceError::content_invalid(
                 Violation::new(format!("OPT 1.4 → 2 conversion failed: {e}")).with_source(e),
             )

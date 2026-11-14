@@ -22,6 +22,7 @@ mod adl14_cadl_gates;
 mod adl14_cnf_fixture_slot;
 mod adl14_conversion;
 mod adl14_conversion_ckm_cases;
+mod adl14_conversion_metadata;
 mod adl14_custom_constraints;
 mod adl14_dadl_breadth;
 mod adl14_header_sections;

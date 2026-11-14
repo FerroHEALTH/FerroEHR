@@ -384,8 +384,8 @@ pub struct AuditConfig {
     /// `[audit.fhir_feed]` — the RESTful-ATNA FHIR `AuditEvent` feed; absent,
     /// off.
     pub fhir_feed: Option<FhirFeedConfig>,
-    /// `[audit.access_log]`: the signed checkpoints and link signatures of
-    /// the access log, and the systems whose exported logs are imported.
+    /// `[audit.access_log]`: the systems whose exported access logs are
+    /// imported.
     pub access_log: crate::access_log::config::AccessLogConfig,
 }
 

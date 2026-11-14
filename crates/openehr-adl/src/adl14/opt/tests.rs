@@ -13,6 +13,11 @@ use super::slot::{binary_symbol, map_code_reference, unary_symbol};
 use super::tuple::{map_constraint_ref, quantity_tuple, unbounded_occurrences};
 use super::*;
 
+/// A fixed conversion time, so two conversions of one template compare equal.
+fn conversion_time() -> jiff::Timestamp {
+    "2026-11-11T09:30:00Z".parse().expect("a valid timestamp")
+}
+
 /// Paths under `corpus/fixtures/service`, the vendored OPT corpus of real
 /// Ocean/EHRbase-generated operational templates. One minimal
 /// COMPOSITION+OBSERVATION, one minimal EVALUATION
@@ -38,8 +43,8 @@ fn parse_opt(rel: &str) -> opt14::types::OperationalTemplate {
 /// runs the same `validate_integrity(&got, None)` gate).
 fn assert_converts_clean(rel: &str, min_roots: usize) {
     let opt = parse_opt(rel);
-    let (archetypes, structure) =
-        convert_opt_to_archetypes(&opt).unwrap_or_else(|e| panic!("convert {rel}: {e}"));
+    let (archetypes, structure) = convert_opt_to_archetypes(&opt, conversion_time())
+        .unwrap_or_else(|e| panic!("convert {rel}: {e}"));
     assert!(
         archetypes.len() >= min_roots,
         "{rel}: expected >= {min_roots} converted roots, got {}",
@@ -108,8 +113,10 @@ fn vital_signs_converts_clean() {
 #[test]
 fn conversion_is_deterministic() {
     let opt = parse_opt(MINIMAL_OBSERVATION);
-    let (first, first_edges) = convert_opt_to_archetypes(&opt).expect("first convert");
-    let (second, second_edges) = convert_opt_to_archetypes(&opt).expect("second convert");
+    let (first, first_edges) =
+        convert_opt_to_archetypes(&opt, conversion_time()).expect("first convert");
+    let (second, second_edges) =
+        convert_opt_to_archetypes(&opt, conversion_time()).expect("second convert");
     assert_eq!(first, second, "OPT conversion is not deterministic");
     assert_eq!(
         first_edges, second_edges,
@@ -136,8 +143,8 @@ fn whole_opt_corpus_converts_and_reparses() {
         let name = path.display().to_string();
         let xml = std::fs::read_to_string(&path).expect("read opt");
         let opt = opt14::from_xml(&xml).unwrap_or_else(|e| panic!("parse {name}: {e:?}"));
-        let (archetypes, _) =
-            convert_opt_to_archetypes(&opt).unwrap_or_else(|e| panic!("convert {name}: {e}"));
+        let (archetypes, _) = convert_opt_to_archetypes(&opt, conversion_time())
+            .unwrap_or_else(|e| panic!("convert {name}: {e}"));
         for ConvertedArchetype {
             archetype_id: id,
             archetype: art,
@@ -525,8 +532,8 @@ fn role_template_converts_with_its_defects_reported() {
     );
     let xml = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
     let opt = opt14::from_xml(&xml).unwrap_or_else(|e| panic!("parse Role.v2: {e:?}"));
-    let (archetypes, _) =
-        convert_opt_to_archetypes(&opt).unwrap_or_else(|e| panic!("convert Role.v2: {e}"));
+    let (archetypes, _) = convert_opt_to_archetypes(&opt, conversion_time())
+        .unwrap_or_else(|e| panic!("convert Role.v2: {e}"));
     let role = &archetypes
         .iter()
         .find(|root| root.archetype_id == "openEHR-DEMOGRAPHIC-ROLE.Role.v1")
@@ -605,7 +612,8 @@ fn test_cx() -> RootCx {
 #[test]
 fn embedded_root_recorded_in_structure() {
     let opt = parse_opt(MINIMAL_OBSERVATION);
-    let (archetypes, structure) = convert_opt_to_archetypes(&opt).expect("convert");
+    let (archetypes, structure) =
+        convert_opt_to_archetypes(&opt, conversion_time()).expect("convert");
     assert!(
         archetypes
             .iter()

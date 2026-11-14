@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The `[audit]` section's boot rules: the retention floors and ceilings of
-//! each jurisdiction, and the flat `[audit.syslog]` TLS keys refused as unknown.
+//! each jurisdiction, the flat `[audit.syslog]` TLS keys refused as unknown,
+//! and the removed `[audit.access_log]` switches refused as unknown (#5562).
+
+use std::path::PathBuf;
 
 use super::assemble;
-use super::tests::{env, file_refusal, standalone, toml_file};
+use super::tests::{assemble_ok, env, file_refusal, standalone, toml_file};
 use crate::config::retention::RetentionPeriod;
 
 /// A retention below a jurisdiction's floor is a boot error naming both
@@ -207,4 +210,52 @@ fn a_flat_syslog_tls_key_is_refused_as_unknown() {
             "{key}: {text}"
         );
     }
+}
+
+/// `[audit.access_log] key = value` refused by the file loader and by its
+/// environment variable, each naming `key` (#5562).
+fn assert_removed_access_log_key(key: &str, value: &str) {
+    let file = toml_file(&format!("[audit.access_log]\n{key} = {value}\n"));
+    let err = assemble(Some(file.path()), &env(&[]), &[]).expect_err("the removed key");
+    assert!(err.to_string().contains(key), "{key}: {err}");
+    let variable = format!("FERROEHR__AUDIT__ACCESS_LOG__{}", key.to_uppercase());
+    let err = assemble(
+        None,
+        &env(&[(variable.as_str(), value.trim_matches('"'))]),
+        &[],
+    )
+    .expect_err("the removed variable");
+    assert!(err.to_string().contains(&variable), "{variable}: {err}");
+}
+
+/// Checkpoints follow from an `OpenPGP` key in the keyring, so the switch
+/// that turned them on is an unknown key (#5562).
+#[test]
+fn the_removed_checkpoints_switch_is_an_unknown_key() {
+    assert_removed_access_log_key("checkpoints", "true");
+}
+
+/// Checkpoints run on a built-in schedule, so the interval is an unknown
+/// key (#5562).
+#[test]
+fn the_removed_checkpoint_interval_is_an_unknown_key() {
+    assert_removed_access_log_key("checkpoint_interval", "\"1h\"");
+}
+
+/// Links are not signed one by one, so the switch that signed them is an
+/// unknown key (#5562).
+#[test]
+fn the_removed_sign_links_switch_is_an_unknown_key() {
+    assert_removed_access_log_key("sign_links", "true");
+}
+
+/// `trusted_key_files` is trust and stays a key of the section.
+#[test]
+fn the_trusted_key_files_stay_a_key() {
+    let file = toml_file("[audit.access_log]\ntrusted_key_files = [\"/etc/ferroehr/peer.asc\"]\n");
+    let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
+    assert_eq!(
+        c.audit.access_log.trusted_key_files,
+        vec![PathBuf::from("/etc/ferroehr/peer.asc")]
+    );
 }

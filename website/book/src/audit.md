@@ -813,15 +813,21 @@ is our own design.
 
 - **The key** is the keyring of [version signing](signing/pgp.md):
   `[record.signing]` in `pgp` mode, with its `retired_key_files` still
-  verifying what an earlier key signed. `[audit.access_log] checkpoints` or
-  `sign_links` without it is a configuration error.
-- **The schedule.** With `checkpoints = true` the server seals the head every
-  `checkpoint_interval` (one hour by default) when the chain grew since the
-  last checkpoint. `ferroehr access-log checkpoint` and
-  `POST /admin/access-log/checkpoint` seal one on demand. Keep a copy of a
-  checkpoint somewhere the database owner does not control (a ticket, a
-  timestamping service, the data protection officer's mailbox): that copy is
-  what makes a rewrite of the whole tail detectable.
+  verifying what an earlier key signed. With that key every link is signed
+  and the log is sealed; a deployment without it signs nothing, and
+  `ferroehr access-log checkpoint` answers that the keyring holds no key.
+- **Use an Ed25519 key.** Each access writes one entry per EHR it reached,
+  and each entry's link is signed in the audit writer's transaction while
+  the head of the chain is locked. RSA signing is far slower than Ed25519,
+  and every other audit write waits on it.
+- **The schedule.** The server seals the head every five minutes when the
+  chain grew since the last checkpoint; a run on a log that did not grow
+  writes nothing. There is no switch and no interval to set.
+  `ferroehr access-log checkpoint` and `POST /admin/access-log/checkpoint`
+  seal one on demand. Keep a copy of a checkpoint somewhere the database
+  owner does not control (a ticket, a timestamping service, the data
+  protection officer's mailbox): that copy is what makes a rewrite of the
+  whole tail detectable.
 - **Verification.** `ferroehr access-log verify` and
   `POST /admin/access-log/verify` recompute the whole chain (an entry
   replaced by its tombstone verifies through the content digest the
@@ -829,9 +835,11 @@ is our own design.
   position is the one it sealed, and check the signature of every signed
   link. Each finding is reported; the command exits 1 when the log does not
   verify, and the route answers `200` with `intact: false`.
-- **Signed links.** `sign_links = true` signs the digest of each new link, as
-  the eHDSI Audit Trail Profile §2.2 asks of a national contact point. It
-  costs one signature per record.
+- **Signed links.** Each link's digest is signed as the eHDSI Audit Trail
+  Profile §2.2 asks of a national contact point. The server locks the head
+  of the chain, computes the links the new records will get, signs them and
+  writes each signature with its record in one `INSERT`; a stored signature
+  never changes.
 - **Moving the log with the EHR.** EHDS Annex II 2.6 and Art 9(2) keep the
   access information available when an EHR moves to another system.
   `ferroehr access-log export --ehr-id <id>` and
