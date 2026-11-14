@@ -645,7 +645,11 @@ async fn a_query_over_an_id_held_under_two_namespaces_reads_nothing() {
     seed_ehr_in(&seed, EHR_UNIQUE, "test.patients", "PATIENT-U").await;
 
     let served = query_first_column(&app, "SELECT e/ehr_id/value FROM EHR e", "PATIENT-X").await;
-    assert_eq!(served, Vec::<Value>::new(), "the bare id names neither subject");
+    assert_eq!(
+        served,
+        Vec::<Value>::new(),
+        "the bare id names neither subject"
+    );
     let served = query_first_column(&app, "SELECT e/ehr_id/value FROM EHR e", "PATIENT-U").await;
     assert_eq!(served, vec![json!(EHR_UNIQUE)], "a unique id reads its EHR");
 }
