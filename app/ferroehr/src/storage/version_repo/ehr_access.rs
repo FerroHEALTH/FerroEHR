@@ -92,11 +92,13 @@ pub async fn current_ehr_access(
     conn: &mut sqlx::PgConnection,
     ehr_id: EhrId,
 ) -> Result<Option<CurrentAccess>, StorageError> {
-    let statement = format!("{CURRENT} WHERE h.ehr_id = $1");
-    let row = sqlx::query(sqlx::AssertSqlSafe(statement))
-        .bind(ehr_id)
-        .fetch_optional(conn)
-        .await?;
+    const SQL: &str = "SELECT h.ehr_id, h.vo_id, h.trunk_head_sys_version AS sys_version, \
+                              version.body \
+                       FROM vo_head h \
+                       JOIN version ON version.vo_id = h.vo_id \
+                            AND version.sys_version = h.trunk_head_sys_version \
+                       WHERE h.ehr_id = $1 AND h.kind = 'EHR_ACCESS'";
+    let row = sqlx::query(SQL).bind(ehr_id).fetch_optional(conn).await?;
     row.as_ref().map(current_of).transpose()
 }
 
@@ -108,23 +110,18 @@ pub async fn current_ehr_access(
 pub async fn every_current_with_settings(
     conn: &mut sqlx::PgConnection,
 ) -> Result<Vec<CurrentAccess>, StorageError> {
-    let statement =
-        format!("{CURRENT} WHERE strpos(version.body, '\"settings\"') > 0 ORDER BY h.ehr_id");
-    let rows = sqlx::query(sqlx::AssertSqlSafe(statement))
-        .fetch_all(conn)
-        .await?;
-    rows.iter().map(current_of).collect()
-}
-
-/// The read of the current `EHR_ACCESS` versions, before its condition.
-const CURRENT: &str = "SELECT h.ehr_id, h.vo_id, h.trunk_head_sys_version AS sys_version, \
+    const SQL: &str = "SELECT h.ehr_id, h.vo_id, h.trunk_head_sys_version AS sys_version, \
                               version.body \
                        FROM vo_head h \
                        JOIN version ON version.vo_id = h.vo_id \
                             AND version.sys_version = h.trunk_head_sys_version \
-                            AND h.kind = 'EHR_ACCESS'";
+                       WHERE h.kind = 'EHR_ACCESS' AND strpos(version.body, '\"settings\"') > 0 \
+                       ORDER BY h.ehr_id";
+    let rows = sqlx::query(SQL).fetch_all(conn).await?;
+    rows.iter().map(current_of).collect()
+}
 
-/// One row of [`CURRENT`].
+/// One row of a read of the current `EHR_ACCESS` versions.
 fn current_of(row: &sqlx::postgres::PgRow) -> Result<CurrentAccess, StorageError> {
     Ok(CurrentAccess {
         ehr_id: row.try_get("ehr_id")?,
