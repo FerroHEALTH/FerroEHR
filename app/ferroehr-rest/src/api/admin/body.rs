@@ -16,6 +16,7 @@ use axum::response::Response;
 use openehr_its::rest::runtime::ApiError;
 
 use crate::api::RequestParts;
+use crate::api::refusals::{ResponseMap, json_responses};
 use crate::overview::error::RestError;
 use crate::state::AppState;
 
@@ -104,28 +105,6 @@ impl utoipa::IntoResponses for AdminRefusal {
             (405, "The admin API is disabled on this server."),
         ])
     }
-}
-
-/// The responses of an [`utoipa::IntoResponses`] map, by status.
-type ResponseMap =
-    std::collections::BTreeMap<String, utoipa::openapi::RefOr<utoipa::openapi::response::Response>>;
-
-/// One `application/json` response per `(status, description)`, whose body is
-/// any JSON value.
-fn json_responses(answers: &[(u16, &str)]) -> ResponseMap {
-    answers
-        .iter()
-        .map(|&(status, description)| {
-            let content = utoipa::openapi::ContentBuilder::new()
-                .schema(Some(<serde_json::Value as utoipa::PartialSchema>::schema()))
-                .build();
-            let response = utoipa::openapi::ResponseBuilder::new()
-                .description(description)
-                .content("application/json", content)
-                .build();
-            (status.to_string(), response.into())
-        })
-        .collect()
 }
 
 /// An admin route's unauthenticated refusal, with the released operations' `security: []` named.

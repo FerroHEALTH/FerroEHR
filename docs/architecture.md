@@ -516,7 +516,24 @@ which is what makes an optional stage safe to disable:
    Art. 8). An EHR Extract also carries them for the holder of an
    `export_ehr_extract` grant covering the EHR, since the extract transfers
    the whole EHR (RM EHR Extract IM, `X_VERSIONED_EHR_ACCESS`). Who writes and
-   reads them is our own design (`service::ehr::access_rule`). The EHDS
+   reads them is our own design (`service::ehr::access_rule`). Those callers
+   read them over the wire through FerroEHR's own extension,
+   `GET {extensions}/ehr/{ehr_id}/ehr_access` and `…/versioned_ehr_access`
+   with its version and revision-history reads, since ITS-REST 1.1.0 has no
+   `EHR_ACCESS` operation (#5517). The routes are shaped on the `EHR_STATUS`
+   and `VERSIONED_EHR_STATUS` operations and run their handlers, generic over
+   the RM class (`api::ehr::ehr_access`, `service::ehr::object`), behind the
+   same `guarded_dispatch`; a read that carries the settings is canonical
+   JSON only, since canonical XML maps no class of the scheme. Every write
+   path (CONTRIBUTION, the controller's commit, EHR Extract import, archive
+   load) refuses with `422` a gate-keeper whose `external_ref`, or a
+   directive whose actor-scope `party` or `instructed_by.external_ref`, in
+   the directive or an exception, names no
+   party of the demographic store of its type, nor one the import's
+   demographics chapter or the archive's demographic records carry
+   (`service::ehr::access_parties`); `PARTY_SELF` needs no lookup. An import
+   and an archive load check only the head version, the one in force, since
+   an earlier version is the immutable record of what was in force then. The EHDS
    Art. 8 restriction and Art. 10 opt-out are `restriction` and `opt_out` directives of these settings,
    committed by the controller over `POST /admin/ehr-access` (which names the
    EHR in its body, so it reaches an EHR a restriction hides) or by a

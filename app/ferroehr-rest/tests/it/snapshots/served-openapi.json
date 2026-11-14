@@ -7004,6 +7004,204 @@
         }
       }
     },
+    "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/ehr_access": {
+      "get": {
+        "tags": [
+          "EHR_ACCESS"
+        ],
+        "summary": "Read the `EHR_ACCESS` of an EHR, current or at a point in time\n(`GET /ehr/{ehr_id}/ehr_access`). **Our own extension** (module docs).",
+        "operationId": "ehr_access_get_at_time",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "path",
+            "description": "The EHR, by `EHR.ehr_id.value`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version_at_time",
+            "in": "query",
+            "description": "An extended ISO 8601 date-time: the version extant then. Absent reads the current version.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The bare EHR_ACCESS with its `uid`, its `settings` the `ACCESS_DIRECTIVE_SETTINGS` of the EHR's directives, as canonical JSON. `ETag` is the weak `W/\"<version_uid>\"` of the version served and `Last-Modified` its commit instant.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`ehr_id` is not a UUID, `version_uid` is not an OBJECT_VERSION_ID, or `version_at_time` is not an extended ISO 8601 date-time.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid credential.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The access evaluator refuses the caller this EHR, naming its `refused-*` code, or the role, scope or ABAC layer refuses the read.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such EHR, an EHR an EHDS restriction or opt-out hides from the caller, or no EHR_ACCESS version at the addressed version or instant.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The `Accept` header cannot be satisfied: EHR_ACCESS is not templated, so no Simplified Format serves it, and a read that carries the EHR_ACCESS is `application/json` only, since no canonical-XML class maps its settings.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "OUR OWN EXTENSION — no openEHR spec governs runtime specification-generation selection. The stored version body uses openEHR specification surface this deployment's active `spec_profile` does not define, so it is refused rather than served under a generation set that cannot express it — and never down-converted. Reachable only where `spec_profile = \"stable\"` is configured; the body names switching back to `development` as the remedy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/ehr_access/{version_uid}": {
+      "get": {
+        "tags": [
+          "EHR_ACCESS"
+        ],
+        "summary": "Read the `EHR_ACCESS` of an EHR at a version\n(`GET /ehr/{ehr_id}/ehr_access/{version_uid}`). **Our own extension**\n(module docs).",
+        "operationId": "ehr_access_get_by_version_id",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "path",
+            "description": "The EHR, by `EHR.ehr_id.value`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version_uid",
+            "in": "path",
+            "description": "The version, its full `object_id::creating_system_id::version_tree_id`; one naming another system is `404`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The bare EHR_ACCESS of that version, its weak `ETag` and its `Last-Modified`.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`ehr_id` is not a UUID, `version_uid` is not an OBJECT_VERSION_ID, or `version_at_time` is not an extended ISO 8601 date-time.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid credential.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The access evaluator refuses the caller this EHR, naming its `refused-*` code, or the role, scope or ABAC layer refuses the read.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such EHR, an EHR an EHDS restriction or opt-out hides from the caller, or no EHR_ACCESS version at the addressed version or instant.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The `Accept` header cannot be satisfied: EHR_ACCESS is not templated, so no Simplified Format serves it, and a read that carries the EHR_ACCESS is `application/json` only, since no canonical-XML class maps its settings.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "OUR OWN EXTENSION — no openEHR spec governs runtime specification-generation selection. The stored version body uses openEHR specification surface this deployment's active `spec_profile` does not define, so it is refused rather than served under a generation set that cannot express it — and never down-converted. Reachable only where `spec_profile = \"stable\"` is configured; the body names switching back to `development` as the remedy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release": {
       "post": {
         "tags": [
@@ -7068,6 +7266,384 @@
           },
           "404": {
             "description": "No such EHR, or no such object in it.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_ehr_access": {
+      "get": {
+        "tags": [
+          "EHR_ACCESS"
+        ],
+        "summary": "Read the `VERSIONED_EHR_ACCESS` of an EHR\n(`GET /ehr/{ehr_id}/versioned_ehr_access`). **Our own extension**\n(module docs).",
+        "operationId": "versioned_ehr_access_get",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "path",
+            "description": "The EHR, by `EHR.ehr_id.value`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The VERSIONED_EHR_ACCESS: its uid, `owner_id` and `time_created`. `ETag` is the weak `W/\"<versioned_object_uid>\"` and `Last-Modified` the commit instant of its newest version.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`ehr_id` is not a UUID, `version_uid` is not an OBJECT_VERSION_ID, or `version_at_time` is not an extended ISO 8601 date-time.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid credential.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The access evaluator refuses the caller this EHR, naming its `refused-*` code, or the role, scope or ABAC layer refuses the read.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such EHR, an EHR an EHDS restriction or opt-out hides from the caller, or no EHR_ACCESS version at the addressed version or instant.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The `Accept` header cannot be satisfied: EHR_ACCESS is not templated, so no Simplified Format serves it, and a read that carries the EHR_ACCESS is `application/json` only, since no canonical-XML class maps its settings.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "OUR OWN EXTENSION — no openEHR spec governs runtime specification-generation selection. The stored version body uses openEHR specification surface this deployment's active `spec_profile` does not define, so it is refused rather than served under a generation set that cannot express it — and never down-converted. Reachable only where `spec_profile = \"stable\"` is configured; the body names switching back to `development` as the remedy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_ehr_access/revision_history": {
+      "get": {
+        "tags": [
+          "EHR_ACCESS"
+        ],
+        "summary": "Read the revision history of an EHR's `EHR_ACCESS`\n(`GET /ehr/{ehr_id}/versioned_ehr_access/revision_history`). **Our own\nextension** (module docs).",
+        "operationId": "versioned_ehr_access_revision_history",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "path",
+            "description": "The EHR, by `EHR.ehr_id.value`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The REVISION_HISTORY of the EHR_ACCESS, one item per version with its commit audit.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`ehr_id` is not a UUID, `version_uid` is not an OBJECT_VERSION_ID, or `version_at_time` is not an extended ISO 8601 date-time.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid credential.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The access evaluator refuses the caller this EHR, naming its `refused-*` code, or the role, scope or ABAC layer refuses the read.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such EHR, an EHR an EHDS restriction or opt-out hides from the caller, or no EHR_ACCESS version at the addressed version or instant.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The `Accept` header cannot be satisfied: EHR_ACCESS is not templated, so no Simplified Format serves it, and a read that carries the EHR_ACCESS is `application/json` only, since no canonical-XML class maps its settings.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "OUR OWN EXTENSION — no openEHR spec governs runtime specification-generation selection. The stored version body uses openEHR specification surface this deployment's active `spec_profile` does not define, so it is refused rather than served under a generation set that cannot express it — and never down-converted. Reachable only where `spec_profile = \"stable\"` is configured; the body names switching back to `development` as the remedy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_ehr_access/version": {
+      "get": {
+        "tags": [
+          "EHR_ACCESS"
+        ],
+        "summary": "Read the VERSION of an EHR's `EHR_ACCESS` extant at a point in time\n(`GET /ehr/{ehr_id}/versioned_ehr_access/version`). **Our own\nextension** (module docs).",
+        "operationId": "versioned_ehr_access_version_get_at_time",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "path",
+            "description": "The EHR, by `EHR.ehr_id.value`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version_at_time",
+            "in": "query",
+            "description": "An extended ISO 8601 date-time: the version extant then. Absent reads the newest version.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The ORIGINAL_VERSION or IMPORTED_VERSION wrapping the EHR_ACCESS, with its commit audit, its weak `ETag` and its `Last-Modified`.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`ehr_id` is not a UUID, `version_uid` is not an OBJECT_VERSION_ID, or `version_at_time` is not an extended ISO 8601 date-time.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid credential.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The access evaluator refuses the caller this EHR, naming its `refused-*` code, or the role, scope or ABAC layer refuses the read.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such EHR, an EHR an EHDS restriction or opt-out hides from the caller, or no EHR_ACCESS version at the addressed version or instant.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The `Accept` header cannot be satisfied: EHR_ACCESS is not templated, so no Simplified Format serves it, and a read that carries the EHR_ACCESS is `application/json` only, since no canonical-XML class maps its settings.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "OUR OWN EXTENSION — no openEHR spec governs runtime specification-generation selection. The stored version body uses openEHR specification surface this deployment's active `spec_profile` does not define, so it is refused rather than served under a generation set that cannot express it — and never down-converted. Reachable only where `spec_profile = \"stable\"` is configured; the body names switching back to `development` as the remedy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_ehr_access/version/{version_uid}": {
+      "get": {
+        "tags": [
+          "EHR_ACCESS"
+        ],
+        "summary": "Read one VERSION of an EHR's `EHR_ACCESS`\n(`GET /ehr/{ehr_id}/versioned_ehr_access/version/{version_uid}`).\n**Our own extension** (module docs).",
+        "operationId": "versioned_ehr_access_version_get_by_id",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "path",
+            "description": "The EHR, by `EHR.ehr_id.value`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version_uid",
+            "in": "path",
+            "description": "The version, its full `object_id::creating_system_id::version_tree_id`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The ORIGINAL_VERSION or IMPORTED_VERSION of that uid, with its weak `ETag` and its `Last-Modified`.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`ehr_id` is not a UUID, `version_uid` is not an OBJECT_VERSION_ID, or `version_at_time` is not an extended ISO 8601 date-time.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid credential.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The access evaluator refuses the caller this EHR, naming its `refused-*` code, or the role, scope or ABAC layer refuses the read.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such EHR, an EHR an EHDS restriction or opt-out hides from the caller, or no EHR_ACCESS version at the addressed version or instant.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "The `Accept` header cannot be satisfied: EHR_ACCESS is not templated, so no Simplified Format serves it, and a read that carries the EHR_ACCESS is `application/json` only, since no canonical-XML class maps its settings.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "OUR OWN EXTENSION — no openEHR spec governs runtime specification-generation selection. The stored version body uses openEHR specification surface this deployment's active `spec_profile` does not define, so it is refused rather than served under a generation set that cannot express it — and never down-converted. Reachable only where `spec_profile = \"stable\"` is configured; the body names switching back to `development` as the remedy.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -27178,6 +27754,10 @@
     {
       "name": "admin-integrity",
       "description": "The storage-parity sweep: every stored version is re-derived from its decomposed node rows and compared with its materialized body, so tampering or corruption of either copy is reported. OUR OWN EXTENSION: no ITS-REST operation governs this route, and no openEHR spec governs storage mechanics (same admin gate + RBAC Admin class)."
+    },
+    {
+      "name": "EHR_ACCESS",
+      "description": "The EHR_ACCESS reads and their VERSIONED_EHR_ACCESS reads, shaped on the EHR_STATUS reads: the access directives a CONTRIBUTION wrote, for the administrator, the record's person and the gate-keepers. OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no EHR_ACCESS operation."
     },
     {
       "name": "ACCESS_LOG",

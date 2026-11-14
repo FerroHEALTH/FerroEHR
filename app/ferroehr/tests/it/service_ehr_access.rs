@@ -25,8 +25,6 @@ use serde_json::{Value, json};
 
 use crate::fixtures::change_type;
 
-/// The `PERSON` of the subject's guardian, a gate-keeper.
-const GUARDIAN: uuid::Uuid = uuid::Uuid::from_u128(0x0190_b3a2_5a3e_7c1d_9e2f_3b4c_5d6e_7f80);
 /// The `PERSON` of a representative no gate-keeper names.
 const STRANGER: uuid::Uuid = uuid::Uuid::from_u128(0x0190_b3a2_5a3e_7c1d_9e2f_3b4c_5d6e_7f81);
 
@@ -127,8 +125,9 @@ fn term(code: &str) -> Value {
                 "code_string": code } })
 }
 
-/// Restricted settings whose gate-keepers are the subject and the guardian.
-fn kept() -> Value {
+/// Restricted settings whose gate-keepers are the subject and the guardian,
+/// the `PERSON` `guardian`.
+fn kept(guardian: uuid::Uuid) -> Value {
     json!({
         "_type": "ACCESS_DIRECTIVE_SETTINGS",
         "default_access": term("restricted"),
@@ -136,7 +135,7 @@ fn kept() -> Value {
             { "_type": "PARTY_SELF" },
             { "_type": "PARTY_RELATED",
               "external_ref": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
-                                "id": { "_type": "HIER_OBJECT_ID", "value": GUARDIAN.to_string() } },
+                                "id": { "_type": "HIER_OBJECT_ID", "value": guardian.to_string() } },
               "relationship": { "_type": "DV_CODED_TEXT", "value": "guardian",
                   "defining_code": { "_type": "CODE_PHRASE",
                       "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
@@ -145,12 +144,30 @@ fn kept() -> Value {
     })
 }
 
-/// A service whose administrator role is `ADMIN`, and a fresh EHR.
-async fn setup() -> (testkit::TestDb, FerroEhrService, EhrId) {
+/// A service whose administrator role is `ADMIN`, a fresh EHR, and the
+/// `PERSON` of the subject's guardian, a gate-keeper, which the demographic
+/// store holds as every party the settings name must be.
+async fn setup() -> (testkit::TestDb, FerroEhrService, EhrId, uuid::Uuid) {
     let (db, svc) = crate::fixtures::service().await;
     let svc = svc.with_binding_mapping(BindingMapping::default().with_admin_role("ADMIN"));
     let ehr_id = crate::fixtures::create_ehr(&svc).await;
-    (db, svc, ehr_id)
+    let guardian = crate::fixtures::create_party(
+        &svc,
+        crate::fixtures::uv(
+            &crate::admin_fixture::person(
+                "Guardian",
+                &json!([{ "_type": "ELEMENT", "archetype_node_id": "at0003",
+                    "name": { "_type": "DV_TEXT", "value": "family" },
+                    "value": { "_type": "DV_TEXT", "value": "Guardian" } }]),
+            ),
+            "249",
+            None,
+        ),
+    )
+    .await
+    .expect("the guardian is created")
+    .0;
+    (db, svc, ehr_id, guardian)
 }
 
 /// The placeholder committer naming `caller`'s login.
@@ -223,33 +240,33 @@ fn forbidden(outcome: &Result<String, ServiceError>, who: &str) {
 /// representative and a professional are refused `403`.
 #[tokio::test]
 async fn each_writer_kind_is_decided_by_the_gate_keepers() {
-    let (_db, svc, ehr_id) = setup().await;
+    let (_db, svc, ehr_id, guardian) = setup().await;
     forbidden(
-        &write(&svc, ehr_id, &subject(), 1, &kept()).await,
+        &write(&svc, ehr_id, &subject(), 1, &kept(guardian)).await,
         "the subject no settings name",
     );
     forbidden(
-        &write(&svc, ehr_id, &professional(), 1, &kept()).await,
+        &write(&svc, ehr_id, &professional(), 1, &kept(guardian)).await,
         "a professional",
     );
-    write(&svc, ehr_id, &administrator(), 1, &kept())
+    write(&svc, ehr_id, &administrator(), 1, &kept(guardian))
         .await
         .expect("the administrator writes the first settings");
-    write(&svc, ehr_id, &subject(), 2, &kept())
+    write(&svc, ehr_id, &subject(), 2, &kept(guardian))
         .await
         .expect("the subject named PARTY_SELF writes");
-    write(&svc, ehr_id, &representative(GUARDIAN), 3, &kept())
+    write(&svc, ehr_id, &representative(guardian), 3, &kept(guardian))
         .await
         .expect("the named guardian writes");
     forbidden(
-        &write(&svc, ehr_id, &representative(STRANGER), 4, &kept()).await,
+        &write(&svc, ehr_id, &representative(STRANGER), 4, &kept(guardian)).await,
         "an unnamed representative",
     );
     forbidden(
-        &write(&svc, ehr_id, &professional(), 4, &kept()).await,
+        &write(&svc, ehr_id, &professional(), 4, &kept(guardian)).await,
         "a professional no gate-keeper names",
     );
-    write(&svc, ehr_id, &server(), 4, &kept())
+    write(&svc, ehr_id, &server(), 4, &kept(guardian))
         .await
         .expect("the server's own write");
     let settings = svc
@@ -267,7 +284,7 @@ async fn each_writer_kind_is_decided_by_the_gate_keepers() {
 /// `400` naming the defect, even to the administrator.
 #[tokio::test]
 async fn a_body_of_the_old_scheme_or_breaking_an_invariant_is_refused() {
-    let (_db, svc, ehr_id) = setup().await;
+    let (_db, svc, ehr_id, _guardian) = setup().await;
     let old = json!({ "_type": "FERROEHR_ACCESS_CONTROL_V1", "default_access": "restricted" });
     let refused = write(&svc, ehr_id, &administrator(), 1, &old).await;
     assert!(
@@ -282,6 +299,39 @@ async fn a_body_of_the_old_scheme_or_breaking_an_invariant_is_refused() {
             if r.message.contains("Default_access_valid")),
         "a broken invariant is a 400: {refused:?}"
     );
+}
+
+/// The controller's commit refuses with `422` a gate-keeper naming a party
+/// the demographic store does not hold, which would lock the settings to
+/// nobody, naming the gate-keeper and the party, and commits the same
+/// settings kept by a stored party (#5517).
+#[tokio::test]
+async fn the_controllers_commit_refuses_a_gate_keeper_naming_nobody() {
+    let (_db, svc, ehr_id, guardian) = setup().await;
+    let nobody = STRANGER.to_string();
+    let mut unknown = kept(guardian);
+    unknown["gate_keepers"][1]["external_ref"]["id"]["value"] = json!(nobody);
+    let versions = svc
+        .ehr_access_versions(ehr_id)
+        .await
+        .expect("the EHR_ACCESS versions");
+    let (current, _) = versions.first().expect("a current EHR_ACCESS version");
+    let refused = svc
+        .commit_ehr_access_settings(ehr_id, current, unknown)
+        .await
+        .expect_err("a gate-keeper naming nobody is refused");
+    let detail = format!("{refused:?}");
+    assert!(
+        matches!(&refused, ServiceError::Unprocessable { .. }),
+        "a 422: {refused:?}"
+    );
+    assert!(
+        detail.contains("gate-keeper gate_keepers[1]") && detail.contains(&nobody),
+        "the gate-keeper and the party are named: {detail}"
+    );
+    svc.commit_ehr_access_settings(ehr_id, current, kept(guardian))
+        .await
+        .expect("settings kept by a stored party commit");
 }
 
 /// How many `EHR_ACCESS` rows of `ehr_id` an AQL query answers `caller`.
@@ -313,15 +363,15 @@ async fn extract_carries(svc: &FerroEhrService, ehr_id: EhrId, caller: &Caller) 
 /// CONTRIBUTION is unknown.
 #[tokio::test]
 async fn each_reader_kind_reads_or_finds_nothing() {
-    let (_db, svc, ehr_id) = setup().await;
-    let contribution = write(&svc, ehr_id, &administrator(), 1, &kept())
+    let (_db, svc, ehr_id, guardian) = setup().await;
+    let contribution = write(&svc, ehr_id, &administrator(), 1, &kept(guardian))
         .await
         .expect("the administrator writes");
     let contribution: uuid::Uuid = contribution.parse().expect("a uuid");
     for (who, caller, reads) in [
         ("the administrator", administrator(), true),
         ("the subject", subject(), true),
-        ("the named guardian", representative(GUARDIAN), true),
+        ("the named guardian", representative(guardian), true),
         ("a professional", professional(), false),
         ("an unnamed representative", representative(STRANGER), false),
     ] {
@@ -351,7 +401,7 @@ async fn each_reader_kind_reads_or_finds_nothing() {
 /// EHR that holds one is left alone.
 #[tokio::test]
 async fn a_missing_ehr_access_is_restored_at_boot() {
-    let (db, svc, ehr_id) = setup().await;
+    let (db, svc, ehr_id, _guardian) = setup().await;
     let other = crate::fixtures::create_ehr(&svc).await;
     let pool = db.pool();
     let vo: uuid::Uuid =
@@ -389,7 +439,7 @@ async fn a_missing_ehr_access_is_restored_at_boot() {
 /// restores the default.
 #[tokio::test]
 async fn the_migration_drops_an_ehr_access_of_the_removed_scheme() {
-    let (db, svc, ehr_id) = setup().await;
+    let (db, svc, ehr_id, _guardian) = setup().await;
     let other = crate::fixtures::create_ehr(&svc).await;
     let pool = db.pool();
     let head = |ehr: EhrId| {
@@ -446,7 +496,7 @@ async fn the_migration_drops_an_ehr_access_of_the_removed_scheme() {
 #[tokio::test]
 async fn the_default_definition_is_stored_at_boot_only_when_absent() {
     use ferroehr::service::demographic::default_definitions::Seeded;
-    let (_db, svc, _ehr_id) = setup().await;
+    let (_db, svc, _ehr_id, _guardian) = setup().await;
     let id = "openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0";
     let first = svc
         .seed_default_definitions()
@@ -504,9 +554,9 @@ fn the_settings_definition_is_refused_by_the_rm_without_the_drafts() {
 }
 
 /// Settings with one consent deny on professionals' reads and one
-/// sensitivity label, kept by the subject and the guardian.
-fn with_a_directive() -> Value {
-    let mut settings = kept();
+/// sensitivity label, kept by the subject and the guardian `guardian`.
+fn with_a_directive(guardian: uuid::Uuid) -> Value {
+    let mut settings = kept(guardian);
     settings["directives"] = json!([{
         "_type": "ACCESS_DIRECTIVE",
         "name": { "_type": "DV_TEXT", "value": "No professional reads" },
@@ -565,12 +615,18 @@ async fn projected(
 /// leaves no row, and a refill rebuilds the rows from the stored versions.
 #[tokio::test]
 async fn a_commit_projects_the_settings_and_a_refill_rebuilds_them() {
-    let (db, svc, ehr_id) = setup().await;
+    let (db, svc, ehr_id, guardian) = setup().await;
     let pool = db.pool();
     assert_eq!(projected(&pool, ehr_id).await, (None, vec![], vec![]));
-    write(&svc, ehr_id, &administrator(), 1, &with_a_directive())
-        .await
-        .expect("the administrator writes the settings");
+    write(
+        &svc,
+        ehr_id,
+        &administrator(),
+        1,
+        &with_a_directive(guardian),
+    )
+    .await
+    .expect("the administrator writes the settings");
     let expected = (
         Some((2, "restricted".to_owned())),
         vec!["consent/deny/professional/read".to_owned()],
@@ -578,7 +634,7 @@ async fn a_commit_projects_the_settings_and_a_refill_rebuilds_them() {
     );
     assert_eq!(projected(&pool, ehr_id).await, expected);
     forbidden(
-        &write(&svc, ehr_id, &professional(), 2, &kept()).await,
+        &write(&svc, ehr_id, &professional(), 2, &kept(guardian)).await,
         "a professional",
     );
     assert_eq!(

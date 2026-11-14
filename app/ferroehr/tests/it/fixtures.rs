@@ -13,6 +13,7 @@
 //! composer or committer name) takes the parameterized builder rather than a
 //! private copy.
 
+use ferroehr::service::ehr::object::EhrObject;
 use serde_json::{Value, json};
 
 use ferroehr::ids::{EhrId, VoId};
@@ -330,7 +331,7 @@ pub(crate) fn shared_layout() -> ferroehr::db::domain::DomainLayout {
 /// in population queries").
 pub(crate) async fn set_not_queryable(svc: &ferroehr::service::FerroEhrService, ehr: EhrId) {
     let mut body = svc
-        .ehr_status(ehr, None)
+        .ehr_object(ehr, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("the current EHR_STATUS reads");
@@ -716,7 +717,7 @@ pub(crate) async fn seed_extract_ehr(svc: &ferroehr::service::FerroEhrService) -
     let ehr_uuid = create_ehr(svc).await;
 
     let mut status = svc
-        .ehr_status(ehr_uuid, None)
+        .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status get");

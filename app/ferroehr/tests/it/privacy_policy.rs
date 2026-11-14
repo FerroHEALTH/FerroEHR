@@ -20,6 +20,7 @@
 //! Every identifier here is synthetic, constructed by running a published
 //! algorithm forward over a chosen prefix. None is issued to anyone.
 
+use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 
@@ -206,7 +207,7 @@ async fn the_subject_rule_also_binds_the_ehr_status_update_path() {
     .map(|(id, _)| id)
     .expect("create");
     let status = svc
-        .ehr_status(ehr_id, None)
+        .ehr_object(ehr_id, EhrObject::Status, None)
         .await
         .expect("read the status")
         .body;

@@ -154,6 +154,7 @@ const SECURITY_SCHEME: &str = "openehr_auth";
         (name = "admin-report", description = "The activity-report calls (contribution/version statistics per platform service). OUR OWN EXTENSION: the released Admin API is the two EHR deletes alone, so no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
         (name = "admin-archive", description = "Move selected EHRs / parties to archival storage, and restore them from it. OUR OWN EXTENSION: no ITS-REST operation governs these routes (same admin gate + RBAC Admin class)."),
         (name = "admin-integrity", description = "The storage-parity sweep: every stored version is re-derived from its decomposed node rows and compared with its materialized body, so tampering or corruption of either copy is reported. OUR OWN EXTENSION: no ITS-REST operation governs this route, and no openEHR spec governs storage mechanics (same admin gate + RBAC Admin class)."),
+        (name = "EHR_ACCESS", description = "The EHR_ACCESS reads and their VERSIONED_EHR_ACCESS reads, shaped on the EHR_STATUS reads: the access directives a CONTRIBUTION wrote, for the administrator, the record's person and the gate-keepers. OUR OWN EXTENSION: ITS-REST 1.1.0 publishes no EHR_ACCESS operation."),
         (name = "ACCESS_LOG", description = "One EHR's access log, newest first, and one entry of it: the subject view for the subject of care and their representative (EHDS Art. 9(2)), the full ITS-JSON records for a reviewer the admin class admits; any other EHR answers 404 to the person. Every read writes its own access-log entry. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes."),
         (name = "admin-access-log", description = "The review and the integrity of the access log: list its records across EHRs, read the links of a span of its chain and a stored checkpoint, seal its head in a checkpoint signed with the keyring's OpenPGP key, verify the chain and the signatures against a checkpoint, and export one EHR's log with the checkpoint it verifies against for a transfer to another system. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes (same admin gate + RBAC Admin class)."),
         (name = "admin-identifiers", description = "The audited read of a party's protected national identifiers: a party version with the identifiers `[privacy.identifier_protection]` seals put back to their values. OUR OWN EXTENSION: no ITS-REST operation governs this route. It needs the RBAC Admin class and a `read_identifiers` grant in the CDR, and every read is an access record naming the reader, the party and the scheme, never the value."),
@@ -186,8 +187,7 @@ struct ExtensionsInfo;
 pub fn extensions_document(cfg: &AppConfig) -> utoipa::openapi::OpenApi {
     let mut doc = ExtensionsInfo::openapi();
 
-    // Public (no lock). The health family is the family stack's route set,
-    // served under `server.base_path`.
+    // Public (no lock): the family stack's health routes, under `server.base_path`.
     doc.merge(health::openapi(&cfg.server.base_path));
     let rest_root = cfg.api.rest_root();
     doc.merge(status::openapi(&rest_root));
