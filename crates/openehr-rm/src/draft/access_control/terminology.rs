@@ -380,6 +380,9 @@ group! {
         /// subject a recorded representation names: it acts for that
         /// subject alone.
         NotRepresented => "refused-not-represented",
+        /// A caller admitted under an agreement that conditions its reads on
+        /// a consent decision asks to read with no reference to one.
+        ConsentReferenceMissing => "refused-consent-reference-missing",
     }
 }
 

@@ -703,3 +703,25 @@ async fn the_absent_answer_and_the_override_are_recorded_with_their_grounds() {
     );
     assert!(version.contains("::"), "an OBJECT_VERSION_ID: {version}");
 }
+
+/// The controller's commit refuses settings whose `DV_DATE_TIME` is no ISO
+/// 8601 date-time with `400` naming `DV_DATE_TIME.Value_valid`, and stores
+/// nothing (RM Data Types, `DV_DATE_TIME` §Invariants; #5629).
+#[tokio::test]
+async fn settings_holding_a_date_time_that_is_no_iso_8601_are_refused() {
+    let (_db, _pool, app) = Box::pin(app(true)).await;
+    let (ehr, _) = ehr_with_composition(&app).await;
+    let current = versions(&app, &ehr).await.expect("the versions read");
+    let preceding = current[0]["version_uid"].as_str().expect("version uid");
+    let mut directive = common::access_directive("restriction", &[]);
+    directive["time_validity"] = json!({ "_type": "DV_INTERVAL",
+        "lower": { "_type": "DV_DATE_TIME", "value": "T00:00:00Z" },
+        "lower_unbounded": false, "upper_unbounded": true,
+        "lower_included": true, "upper_included": false });
+    let settings = common::directive_settings(&[directive]);
+    let (status, body) = commit_settings(&app, &ehr, preceding, &settings).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert!(body.contains("DV_DATE_TIME.Value_valid"), "{body}");
+    let after = versions(&app, &ehr).await.expect("the versions read");
+    assert_eq!(after.len(), current.len(), "nothing was stored");
+}

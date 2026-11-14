@@ -33,6 +33,10 @@ The steps run in order for each EHR the access reaches. The first step that refu
 |A caller of kind `representative` acts for the subject a recorded representation `PARTY_RELATIONSHIP` names, and reaches the one EHR of that subject alone. Every other EHR, and an operation on EHR data that names no EHR, MUST be refused to it, whatever any EHR's directives permit. On that EHR it takes steps 1 to 3, the `delegation` directives of its `EHR_ACCESS` included.
 |`refused-not-represented`
 
+|0. Consent reference
+|A caller admitted under an agreement that conditions its reads on a consent decision, whose credential carries no reference to that decision, MUST be refused every read, query and export, whatever any EHR's directives permit. The rule judges the caller's agreement, never the EHR.
+|`refused-consent-reference-missing`
+
 |1. Opt-out
 |An `opt_out` directive in force binds callers of kind `access_service`. Unless its `_emergency_override_` holds and the caller declares an emergency, and the caller does not act for the subject, the EHR MUST be answered as one that does not exist.
 |`refused-opt-out`, not shown
@@ -76,7 +80,7 @@ A query MUST apply the same procedure to every row it could return, so that a co
 
 == Reading and Writing the Settings
 
-. A new version of an `EHR_ACCESS` whose settings are `ACCESS_DIRECTIVE_SETTINGS` MUST be committed only by a party its current `_gate_keepers_` name, by the subject, or by the controller acting on the subject's instruction.
+. A new version of an `EHR_ACCESS` whose settings are `ACCESS_DIRECTIVE_SETTINGS` MUST be committed only by a party its current `_gate_keepers_` name, by the subject while the current `_gate_keepers_` is empty, or by the controller acting on the subject's instruction. A competent subject is their own gate-keeper until one is named; `_gate_keepers_` that do not include `PARTY_SELF` take the subject's write away, and changing `_gate_keepers_` is itself such a write.
 . The settings MUST be read only by the same parties. To everyone else the `EHR_ACCESS` is answered as one that does not exist, because a restriction must not be visible to providers (EHDS Art 8).
 . A system MUST check every new version against the invariants of the classes and the terminology groups of xref:terminology.adoc[Terminology] before it stores it, and refuse it whole when a check fails.
 . A directive is withdrawn by a later version without it, so the history of the subject's choices is the version history of the `EHR_ACCESS` (Security Policy, "Audit trailing").

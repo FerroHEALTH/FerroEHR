@@ -42,6 +42,19 @@ impl FerroEhrService {
         (in_force, policy.uid.clone())
     }
 
+    /// Whether the store holds the EHR `ehr_id`, read only when a verdict
+    /// refuses, so an admitted request reads nothing more: an EHR that does
+    /// not exist answers `404` before any step of the procedure, as a
+    /// restricted one does (EHDS Art. 8; our own design, #5623).
+    ///
+    /// # Errors
+    /// `service_overloaded` (`503`) when no connection is free, and the
+    /// storage error of the read.
+    pub async fn ehr_held(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
+        let mut conn = crate::db::acquire::acquire(&self.pool).await?;
+        Ok(crate::storage::ehr_repo::ehr_exists(&mut *conn, ehr_id).await?)
+    }
+
     /// The verdict of `access` on `ehr_id`, judged from this replica's copy
     /// on first use and kept for the rest of the request.
     ///

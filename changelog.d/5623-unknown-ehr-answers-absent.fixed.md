@@ -1,0 +1,1 @@
+- An EHR id that names no EHR answers `404` before any access-evaluator step refuses, for every caller under every disposition, so a restricted EHR is never told apart from an unknown one (EHDS Art. 8). A confined caller asking for an EHR that does not exist now gets that `404` in place of `403 refused-not-subject`.
