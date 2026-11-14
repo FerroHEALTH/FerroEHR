@@ -252,6 +252,9 @@ pub enum Detail {
     CurrentVersion(String),
     /// `archive`: the entry or declared format an `archive-invalid` names.
     Archive(ArchiveFault),
+    /// `refusal`: the `refused-*` code of the access control terminology the
+    /// access evaluator refused under.
+    Refusal(&'static str),
 }
 
 impl Detail {
@@ -263,6 +266,7 @@ impl Detail {
             Self::Errors(_) => "errors",
             Self::CurrentVersion(_) => "current_version",
             Self::Archive(_) => "archive",
+            Self::Refusal(_) => "refusal",
         }
     }
 
@@ -273,6 +277,7 @@ impl Detail {
             Self::Errors(errors) => problem.with_extension(self.name(), errors),
             Self::CurrentVersion(version) => problem.with_extension(self.name(), version),
             Self::Archive(fault) => problem.with_extension(self.name(), fault),
+            Self::Refusal(code) => problem.with_extension(self.name(), code),
         }
     }
 }

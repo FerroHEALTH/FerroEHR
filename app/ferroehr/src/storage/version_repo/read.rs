@@ -116,10 +116,9 @@ pub struct StoredVersion {
     /// processing (`docs/law/eu/gdpr/text.html`), so the seam a stored body
     /// leaves storage through refuses a marked object. Our own design.
     pub restricted_at: Option<jiff::Timestamp>,
-    /// The EHDS Art. 8 access-restriction mark (`vo_head.access_restricted_at`),
-    /// `None` when unrestricted; every read here answers it as absent while
-    /// the request enforces the restriction.
-    pub access_restricted_at: Option<jiff::Timestamp>,
+    /// The commit instant of the object's trunk head (`vo_head.committed_at`),
+    /// the commit time the access evaluator judges a `recorded` data scope by.
+    pub head_committed_at: Option<jiff::Timestamp>,
     /// Whether an EHDS Art. 3(3) delay withholds the object from the person.
     pub person_withheld: bool,
     /// The materialized canonical body (`version.body` — written from the
@@ -173,7 +172,7 @@ macro_rules! version_select {
             "v.branch_version, v.lifecycle_state, v.creating_system_id, v.preceding_version_uid, ",
             "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
             "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, v.origins, ",
-            "v.body, h.restricted_at, h.access_restricted_at, (h.person_withheld_until > now()) IS TRUE AS person_withheld, ",
+            "v.body, h.restricted_at, h.committed_at AS head_committed_at, (h.person_withheld_until > now()) IS TRUE AS person_withheld, ",
             "(SELECT COALESCE(n.data->>'archetype_node_id', ext.node_archetype_node_id(n.archetype, n.rm_version)) FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
             "AND n.sys_version = v.content_key AND n.num = 0) AS root_archetype, ",
             "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
@@ -194,14 +193,14 @@ macro_rules! version_select {
     };
 }
 
-/// Whether `stored` may be served to the current request: an object under an
-/// EHDS Art. 8 access restriction is absent while the request enforces it, and
-/// one an Art. 3(3) delay withholds is absent to a patient-context request
-/// (`docs/law/eu/ehds/text.html`). No openEHR spec governs either: our own
-/// design/extension.
+/// Whether `stored` may be served to the current request: the access
+/// evaluator admits it ([`crate::storage::access_facts::admits_stored`]), and
+/// an object an EHDS Art. 3(3) delay withholds is absent to a patient-context
+/// request (`docs/law/eu/ehds/text.html`). No openEHR spec governs either:
+/// our own design/extension.
 fn visible(stored: &StoredVersion) -> bool {
-    use crate::system_log::access_context::{access_delay_enforced, access_restriction_enforced};
-    (stored.access_restricted_at.is_none() || !access_restriction_enforced())
+    use crate::system_log::access_context::access_delay_enforced;
+    crate::storage::access_facts::admits_stored(stored)
         && (!stored.person_withheld || !access_delay_enforced())
 }
 
@@ -331,8 +330,8 @@ fn stored_version_fields(
         restricted_at: row
             .try_get::<Option<jiff_sqlx::Timestamp>, _>("restricted_at")?
             .map(jiff_sqlx::Timestamp::to_jiff),
-        access_restricted_at: row
-            .try_get::<Option<jiff_sqlx::Timestamp>, _>("access_restricted_at")?
+        head_committed_at: row
+            .try_get::<Option<jiff_sqlx::Timestamp>, _>("head_committed_at")?
             .map(jiff_sqlx::Timestamp::to_jiff),
         person_withheld: row.try_get("person_withheld")?,
         canonical,

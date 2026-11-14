@@ -309,15 +309,15 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
 ```
 
 - **Default access:** `open` admits any caller the other layers admit.
-  `restricted` and `consent_required` admit the administrator
-  (`authz.rbac.admin_role`), the record's person and the gate-keepers; every
-  other caller gets `403`. An EHR Extract export by manifest
-  (`POST /message/export`) passes this gate for every EHR the manifest names
-  before it reads any content, so one EHR the caller may not reach refuses the
-  whole export. The directives a subject gives (consent, restriction, opt-out
-  and delegation) and the sensitivity labels are stored and checked with the
-  settings; the access evaluator that decides each request by them ships in
-  the same release.
+  `restricted` admits the administrator (`authz.rbac.admin_role`), the
+  gate-keepers, a caller with a live care relationship to the subject and a
+  caller a consent permit names; `consent_required` admits the
+  administrator, the gate-keepers and a caller a consent permit names. Every
+  other caller gets `403` with `refused-consent-required`. The record's
+  person always reads their own record. An EHR Extract export by manifest
+  (`POST /message/export`) passes the access evaluator for every EHR the
+  manifest names before it reads any content, so one EHR the caller may not
+  reach refuses the whole export.
 - **Who writes the settings:** a new `EHR_ACCESS` version is committed by a
   gate-keeper the current settings name, or by an administrator acting on the
   person's instruction. `PARTY_SELF` names the record's person; any other
@@ -368,6 +368,8 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
   and a settings store that cannot answer is `503`. The first boot fills the
   side tables from the stored versions, and `ferroehr party-binding refill`
   rebuilds them.
+- **The access evaluator decides every request:** see
+  [Access directives](#access-directives) below.
 - **The default definition:** every boot stores the archetype
   `openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0` when no definition of its
   id is stored, and never over a stored one. It constrains the settings to
@@ -378,10 +380,72 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
 
 The scheme is a FerroEHR extension: openEHR mandates the `EHR_ACCESS` object
 and its change control but publishes no concrete access-control scheme. The
-per-EHR decision also holds for AQL, ad-hoc and stored queries alike: an EHR
-the caller may not reach contributes no rows, whether the query names it in
-its `WHERE` clause, in an `EHR` predicate, through the `ehr_id` parameter, or
-not at all, as in a population query.
+decision also holds for AQL, ad-hoc and stored queries alike: data the caller
+may not read contribute no rows, whether the query names the EHR in its
+`WHERE` clause, in an `EHR` predicate, through the `ehr_id` parameter, or not
+at all, as in a population query, and `COUNT`, `LIMIT` and `OFFSET` count only
+the rows the caller reads.
+
+### Access directives
+
+The access evaluator decides every request that reaches an EHR, after
+authentication, the operation grants and the SMART scopes, by a fixed
+procedure over three sets of facts: the person's directives and labels in the
+EHR's `EHR_ACCESS` settings, the caller's facts in the demographic service
+(the operations, sensitivity clearances and permitted purposes its
+capabilities grant, and the care teams it is a member of), and the
+controller's [access policy](operational-policy.md#the-access-policy). The first step that
+refuses decides, and a deny overrides a permit:
+
+| Step | What refuses | Answer |
+|---|---|---|
+| 1. Opt-out (EHDS Art. 10) | an `opt_out` directive, for an access service | `404`, as for an unknown EHR |
+| 2. Restriction (EHDS Art. 8) | a `restriction` directive, for a professional, a system or an access service, over the data it covers | `404`, as for unknown data |
+| 3. Consent deny | any other deny directive that applies; a representative a `delegation` directive names reads only what it permits | `403 refused-consent-denied` |
+| 4. Sensitivity | data whose label or classification the caller is not cleared for, and no applying permit names | `403 refused-sensitivity` |
+| 5. Care relationship | no live care relationship to the subject, where the access policy requires one | `403 refused-no-care-relationship` |
+| 6. Purpose | no declared purpose, or one the caller may not declare, where the access policy requires one | `403 refused-purpose-missing`, `403 refused-purpose-not-permitted` |
+| 7. Default access | the settings' `default_access`, or `authz.rbac.ehr_access_default` for an EHR with none | `403 refused-consent-required` |
+
+- **Who is bound.** The record's person skips every step (EHDS Art. 3). A
+  representative is held to steps 1 to 3 and skips the others (Art. 4(2)).
+  An access service is a caller holding an `access_service` grant or a
+  verified caller of a `federation` issuer.
+- **When a directive applies.** Every attribute an `applies_to` entry sets
+  must hold for the caller: the party (its own `PERSON` or `AGENT`, a care
+  team it is a member of, or the provider its client acts for), a role it
+  holds, the `care` relationship (a live care relationship), the
+  `representative` and `proxy` relationships, or its caller kind. Its
+  `operations` (`read`, `write`, `export`, `query`), `purposes` and
+  `time_validity` must hold too, and its `data` scopes say which data it
+  covers: objects, templates, root archetypes, categories (through the
+  [category map](audit.md)), sensitivities, origins and commit time. One
+  level of `exceptions` of the opposite effect narrows it.
+- **A fact that cannot be read never opens data.** A `time_validity` bound
+  with no offset, a purpose the request does not declare, or a commit with no
+  recorded origin is read as covered by a deny and not by a permit.
+- **Emergencies.** An access service that may override an opt-out and
+  declares one of `[audit] emergency_purpose_codes` reads an opted-out EHR
+  where the directive's `emergency_override` holds, unless it acts for the
+  person (Art. 10(2)). The holder of `authz.rbac.emergency_access_role`
+  declaring such a purpose reads data a restriction or a consent deny covers
+  where its `emergency_override` holds, and passes steps 4 to 7 (Art. 11(5)).
+  A directive whose `emergency_override` is false binds in every emergency,
+  as an absolute opt-out of the Member State's law does (recital 55). Each
+  such access carries the emergency mark.
+- **Every decision is a copy.** The settings, the caller facts and the access
+  policy are held on each replica and dropped on the notification of the
+  commit that changes them, so a decision adds no database transaction. A
+  named object is read for its template, archetype, origins and commit time
+  only when a directive, label or classification of the EHR depends on them.
+- **Refusals.** A `403` names its code in `detail`, and with
+  `Prefer: return=representation` in the `refusal` member
+  ([problem types](using-the-api/problems.md#forbidden)). Steps 1 and 2 say
+  nothing.
+
+The decision procedure, its order and its codes are FerroEHR's own design:
+RM EHR IM §EHR Access requires every decision to follow `EHR_ACCESS`, and
+publishes no procedure.
 
 Upgrading drops every stored `EHR_ACCESS` of the removed
 `FERROEHR_ACCESS_CONTROL_V1` scheme, with its history, and the next boot
@@ -411,15 +475,12 @@ openEHR specification governs this; it is our own design.
   `GET /ferroehr/rest/extensions/v1/admin/ehr-access` reads every version, so a
   lifted restriction stays in the history, and an EHR Extract carries the
   versions. A whole-EHR restriction covers data recorded after it too.
-- **What the server reads of it.** Each commit projects the restriction
-  directives in force onto marks on the EHR and on its objects, in the
-  commit's own transaction. The projection never reads a directive more
-  permissively than it is written: a `data` scope beyond `objects`
-  (templates, categories and the rest) restricts the whole EHR, a directive
-  holds until its `time_validity` ends whether or not it has begun, and
-  `applies_to`, `operations`, `purposes` and `exceptions` do not narrow it
-  yet. A directive with `emergency_override` false is refused with **400**,
-  because the emergency override below lifts every restriction.
+- **What the server reads of it.** The access evaluator reads every
+  attribute of the directive for each caller ([Access directives](#access-directives)):
+  its `data` scope, `applies_to`, `operations`, `purposes`, `time_validity`
+  and `exceptions`. The event stream, which has no caller, withholds every
+  object a restriction in force covers, and the whole EHR for a `data` scope
+  beyond `objects`.
 - **What a professional sees.** Restricted data reads as absent: a restricted
   composition or EHR answers **404** exactly as an unknown one does, a query
   leaves it out at every scope (and a query scoped to a restricted EHR answers
@@ -433,9 +494,10 @@ openEHR specification governs this; it is our own design.
   processing, which answers **403** and stops processing itself.
 - **The emergency override.** A caller holding the role
   `authz.rbac.emergency_access_role` names that declares one of
-  `[audit] emergency_purpose_codes` reads the restricted data, and its access
-  record carries the [emergency mark](audit.md#emergency-access-ehds-art-115).
-  Either alone lifts nothing. Unset, nobody may override.
+  `[audit] emergency_purpose_codes` reads the restricted data where the
+  directive's `emergency_override` holds, and its access record carries the
+  [emergency mark](audit.md#emergency-access-ehds-art-115). Either alone lifts
+  nothing. Unset, nobody may override.
 
 ```toml
 [authz.rbac]
@@ -484,9 +546,8 @@ opt-out in its own services, leave the mark unused.
   ([the routes](operations-admin-apis.md#legal-marks-restriction-objection-and-retention)).
   The reversed opt-out stays readable as a past version, and a version
   without one is accepted whatever the configuration, so an opt-out can
-  always be reversed. Its `emergency_override` must be true: a directive that
-  sets it false is refused with **400**, because the vital-interest override
-  below lifts every opt-out.
+  always be reversed. Its `emergency_override` false makes it absolute: no
+  vital-interest override lifts it (EHDS recital 55).
 - **What an access service sees.** A request from a caller holding an
   `access_service` grant reads the EHR as absent: a route that names the EHR or an
   object in it answers **404** as for an unknown EHR, a population query leaves
@@ -499,7 +560,8 @@ opt-out in its own services, leave the mark unused.
   restriction above, which reaches every professional route and leaves the
   person's own access open.
 - **The vital-interest override.** An access-service caller that declares one
-  of `[audit] emergency_purpose_codes` reads the EHR, unless it acts for the
+  of `[audit] emergency_purpose_codes` reads the EHR where the opt-out's
+  `emergency_override` holds, unless it acts for the
   person (a SMART `patient/` grant or the patient claim), because Art. 10(2)
   names a healthcare provider or health professional. Its access record
   carries the [emergency mark](audit.md#emergency-access-ehds-art-115), and a

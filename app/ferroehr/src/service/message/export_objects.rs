@@ -92,7 +92,6 @@ impl FerroEhrService {
 /// honours.
 pub(super) fn enforced() -> Enforced {
     Enforced {
-        access_restriction: crate::system_log::access_context::access_restriction_enforced(),
         access_delay: crate::system_log::access_context::access_delay_enforced(),
     }
 }

@@ -30,7 +30,9 @@ use openehr_its::rest::runtime::ApiError;
 use crate::api::RequestParts;
 use crate::negotiate;
 use crate::overview::error::RestError;
-use ferroehr::aql::sql::EhrAccessScope;
+use ferroehr::access_eval::condition::AccessCondition;
+#[cfg(test)]
+use ferroehr::access_eval::condition::ConditionGroups;
 use ferroehr::aql::sql::subject::SubjectScope;
 use ferroehr::ids::EhrId;
 use ferroehr::service::query::request::AqlQueryRequest;
@@ -48,8 +50,8 @@ pub(super) struct QueryScope {
     /// Whether the executor must collect the touched EHR/template ids for the
     /// ABAC post-check.
     pub(super) collect: bool,
-    /// The EHRs the caller's `EHR_ACCESS` decision lets the query read.
-    pub(super) ehr_access: EhrAccessScope,
+    /// The rows the access evaluator lets the query read.
+    pub(super) ehr_access: AccessCondition,
 }
 
 impl QueryScope {
@@ -552,7 +554,10 @@ mod tests {
                 namespace: Some("nl.example.patients".to_owned()),
             }),
             collect: true,
-            ehr_access: EhrAccessScope::Excluding(vec![withheld]),
+            ehr_access: AccessCondition::from(ConditionGroups {
+                known: vec![withheld.0],
+                ..ConditionGroups::default()
+            }),
         };
         let req = scope.apply(AqlQueryRequest::default());
         assert_eq!(req.subject_scope.as_deref(), Some("patient-1"));
@@ -561,7 +566,7 @@ mod tests {
             Some("nl.example.patients")
         );
         assert!(req.collect_attributes);
-        assert_eq!(req.ehr_access, EhrAccessScope::Excluding(vec![withheld]));
+        assert_eq!(scope.ehr_access, req.ehr_access);
     }
 }
 

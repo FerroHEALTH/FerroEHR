@@ -474,7 +474,7 @@ async fn plan_of(
     aql: &str,
     policy_parties: ferroehr::aql::sql::PolicyParties,
 ) -> Value {
-    use ferroehr::aql::sql::{EhrAccessScope, EhrScopeKind, SqlCtx};
+    use ferroehr::aql::sql::{EhrScopeKind, SqlCtx};
 
     let ast = openehr_query::parser::parse_str(aql).expect("the AQL parses");
     let params = ferroehr::aql::ir::Params::default();
@@ -489,7 +489,7 @@ async fn plan_of(
         ehr_ids: Vec::new(),
         ehr_scope_kind: EhrScopeKind::Named,
         subject_scope: None,
-        ehr_access: EhrAccessScope::Unrestricted,
+        ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit: ir.limit,
         offset: None,
         archetype_lineage: std::sync::Arc::default(),

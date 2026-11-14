@@ -420,6 +420,40 @@ impl LiveGrants {
         out
     }
 
+    /// The subjects under the care of any of `teams` on `day`, with `grace`
+    /// after each relationship ends, from the copy held: the patients a
+    /// member of those teams has a live care relationship to
+    /// ([`CareTeam::live_on`]), sorted.
+    #[must_use]
+    pub fn cared_for_by(
+        &self,
+        teams: &[Uuid],
+        day: jiff::civil::Date,
+        grace: jiff::Span,
+    ) -> Vec<Uuid> {
+        if teams.is_empty() {
+            return Vec::new();
+        }
+        let held = self.held_facts();
+        held.by_party
+            .iter()
+            .filter(|(_, rows)| {
+                rows.iter().any(|row| {
+                    row.kind == FactKind::UnderCareOf
+                        && matches!(row.term.lifecycle_state.as_str(), "532" | "553")
+                        && match (&row.value, row.term.dates) {
+                            (FactValue::Team(team), Some(dates)) => {
+                                teams.contains(team)
+                                    && CareTeam::new(*team, dates).live_on(day, grace)
+                            }
+                            _ => false,
+                        }
+                })
+            })
+            .map(|(subject, _)| *subject)
+            .collect()
+    }
+
     /// Every federation agreement in force at `now`, once per client
     /// identifier of its partner, from the copy held: what the boot line and
     /// `/management/info` list.

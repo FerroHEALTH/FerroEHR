@@ -158,6 +158,15 @@ module.**
   `chain` is the one verifier of a span held apart from the database (an
   export or an import), and both accept a tombstone by its recorded content
   digest; `transfer` exports and imports one EHR's log (#5129).
+- **Access evaluator** (`src/access_eval/`, #5513): `procedure::decide` is
+  the one decision procedure over the subject's directives, the caller's
+  facts and the access policy, a pure function whose `Verdict` is an ordered
+  list of rules over an EHR's data (`scope::Pred`). `condition` holds the
+  running request's evaluator (task-local) and a query's `AccessCondition`,
+  which `aql::sql::access` renders as SQL; `storage::access_facts` judges an
+  object where it leaves the store. Never decide access anywhere else, and
+  never read a directive, label or policy fact outside these modules: a
+  second reading drifts from the first.
 - **Consume `openehr-*` types directly** — never re-model the RM or re-serialize;
   canonical JSON/XML goes through `openehr-its`.
 - DB tests take their database from the shared harness — `testkit::db()`
