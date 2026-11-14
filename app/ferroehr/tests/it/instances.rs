@@ -71,6 +71,28 @@ async fn an_instance_with_another_key_or_configuration_is_named_in_health() {
         "{detail}"
     );
 
+    let telemetry = ferrohealth_telemetry::telemetry::Telemetry::new(
+        &ferrohealth_telemetry::section::TelemetrySection::default(),
+        ferrohealth_telemetry::telemetry::Service::new("ferroehr", "test"),
+    )
+    .expect("the Prometheus reader builds");
+    ferroehr::telemetry::access_path::observe_instances(
+        &telemetry.meter(ferroehr::telemetry::metrics::SCOPE),
+        &first,
+    );
+    let rendered = telemetry
+        .render_prometheus()
+        .expect("the exposition encodes");
+    for line in [
+        "instance_mismatches{differs=\"signing_key\"} 1",
+        "instance_mismatches{differs=\"configuration\"} 1",
+    ] {
+        assert!(
+            rendered.lines().any(|rendered| rendered.starts_with(line)),
+            "the exposition carries no line starting {line}: {rendered}"
+        );
+    }
+
     third.leave().await.expect("the third instance leaves");
     sqlx::query("UPDATE clinical.instance SET seen_at = now() - interval '5 minutes' WHERE instance_id = $1")
         .bind(second.id())

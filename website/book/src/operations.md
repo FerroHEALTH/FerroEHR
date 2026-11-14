@@ -1054,7 +1054,12 @@ patient is possible only through the [audit trail](audit.md).
   validation failures and version-signature faults; WebTemplate cache events;
   events published; the whole ATNA audit pipeline; Tokio runtime gauges;
   process start time and resident memory; and the `ferroehr_build_info`
-  identity.
+  identity. The access path has its own set: the policy copies and their
+  listeners, the access evaluator's decisions by `refused-*` code, the
+  access log's appends, signatures, seals and retention, and the
+  verification of the audit chains. [Access path metrics and
+  runbooks](operations-access-path.md) lists them with a runbook for each
+  failure.
 
   Instrument names carry **no** `_total` suffix and no unit suffix: units are
   declared on the instrument and the Prometheus exporter derives
@@ -1203,8 +1208,8 @@ Not every indicator blocks readiness, and the distinction is deliberate:
 | `migrations` | this build's schema is present, re-tested on every probe | yes |
 | `audit_sender` | the audit posture: `DEGRADED` with the consequence stated when auditing is off (no access log, no EHDS logging component); `UP` with `fail_mode`, the local store and its retention in the detail, and a stated caution under `fail_mode = "open"` | no: reports `DEGRADED`, never `503` |
 | `audit_delivery` | each forwarder to an external Audit Record Repository (present when `[audit.syslog]` or `[audit.fhir_feed]` is on): the records waiting, those the repository refused, those delivered, and whether the last attempt reached it; `DEGRADED` when the repository is unreachable or a record was refused | no: records wait in their spool or the store, so delivery problems never take the instance out of rotation |
-| `audit_chain` | the latest scheduled verification of the local audit store's hash chain (incremental from the last intact link, with a periodic full pass) (present when the local store is on and `[audit.store] verify_interval` is not `0`): `UP` while intact or before the first run, `DOWN` naming the finding count and the first damaged position, `DEGRADED` when the verification could not run | no: a damaged chain reports `DOWN` in the body, never `503`, because the trail keeps recording while the damage is investigated |
-| `policy_listeners` | whether each policy copy's `LISTEN` connection is up: `ehr_access`, `grants`, `policy_registers` and `access_policy` (always present): `UP` while all four listen, `DEGRADED` naming each lost listener, while that copy reads the database on every request ([Running several instances](installation/several-instances.md)) | no: every decision stays correct while a listener is down, so the instance stays in rotation |
+| `audit_chain` | the latest scheduled verification of the local audit store's hash chain (incremental from the last intact link, with a periodic full pass) (present when the local store is on and `[audit.store] verify_interval` is not `0`): `UP` while intact or before the first run, `DEGRADED` naming the finding count and the first damaged position, or the reason the verification could not run; `audit_chain_intact` and [its runbook](operations-access-path.md#a-chain-verification-that-fails) | no: a damaged chain reports `DEGRADED` in the body, never `503`, because the trail keeps recording while the damage is investigated |
+| `policy_listeners` | whether each policy copy's `LISTEN` connection is up: `ehr_access`, `grants`, `policy_registers` and `access_policy` (always present): `UP` while all four listen, `DEGRADED` naming each lost listener, while that copy reads the database on every request ([Running several instances](installation/several-instances.md)); `policy_listener_up` and [its runbook](operations-access-path.md#a-lost-policy-listener) | no: every decision stays correct while a listener is down, so the instance stays in rotation |
 | `instances` | whether every instance of the deployment that touched its row in the last 90 seconds signs with this instance's key and runs its configuration (always present): `UP` while they agree, `DEGRADED` naming each instance that runs another signing key or another configuration, or when the comparison could not run ([Running several instances](installation/several-instances.md)) | no: each instance keeps serving, so a difference is reported without taking any out of rotation |
 
 An instance whose audit repository is unreachable therefore keeps taking

@@ -86,7 +86,9 @@ While a listener is down, its copy reads the database on every request. The
 instance keeps serving and every decision stays correct. The health document
 shows the lost listener under `policy_listeners`, which reads `DEGRADED` and
 names each listener until it connects again. A degraded indicator does not
-withdraw readiness, so the instance stays in rotation.
+withdraw readiness, so the instance stays in rotation. The metric
+`policy_listener_up` reads `0` for the lost listener; see [a lost policy
+listener](../operations-access-path.md#a-lost-policy-listener).
 
 ## Connection budget
 
@@ -126,6 +128,9 @@ each instance's own: `[server]`, `[telemetry]`, `[management]`,
 `[usage_report]` and `[database]`; secrets are compared in their redacted form.
 A difference is logged at start and shown in the health document under
 `instances`, which reads `DEGRADED` and names each instance that runs another
-key or another configuration. During a rolling upgrade the old and the new
+key or another configuration, and the `instance_mismatches` metric counts
+them; see [a signing key mismatch between
+instances](../operations-access-path.md#a-signing-key-mismatch-between-instances).
+During a rolling upgrade the old and the new
 release can report a difference until the old instances stop; an instance
 that stops removes its row.

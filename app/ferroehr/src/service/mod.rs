@@ -45,6 +45,7 @@ pub mod terminology;
 pub(crate) mod contribution;
 pub(crate) mod datetime;
 pub mod list;
+mod observed;
 pub mod platform_service;
 pub mod response;
 pub mod version_update;

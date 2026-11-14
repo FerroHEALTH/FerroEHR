@@ -37,13 +37,22 @@ pub async fn expire(store: &AccessLogStore, now: jiff::Timestamp) -> Result<u64,
     }
 }
 
-/// [`expire`] as the retention worker runs it: the count goes to the
-/// `atna_audit_reaped` counter, and a failure is logged and retried on the
-/// next run.
+/// [`expire`] as the retention worker runs it: the run is timed under
+/// `access_log_retention_duration`, the entries replaced go to the
+/// `access_log_tombstones` and `atna_audit_reaped` counters, and a failure is
+/// logged and retried on the next run.
 pub(crate) async fn scheduled(store: &AccessLogStore, now: jiff::Timestamp) {
-    match expire(store, now).await {
+    let started = std::time::Instant::now();
+    let expired = expire(store, now).await;
+    let metrics = crate::telemetry::access_path::metrics();
+    metrics.log_retention_duration.record(
+        crate::telemetry::access_path::seconds_since(started),
+        &[crate::telemetry::access_path::outcome(&expired)],
+    );
+    match expired {
         Ok(0) => {}
         Ok(n) => {
+            metrics.log_tombstones.add(n, &[]);
             crate::telemetry::metrics::metrics()
                 .atna_audit_reaped
                 .add(n, &[]);

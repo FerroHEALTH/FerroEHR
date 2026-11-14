@@ -14,6 +14,7 @@
 //! No openEHR specification governs this: our own design. Operational
 //! telemetry is separate from the ATNA audit trail (`crate::system_log`).
 
+pub mod access_path;
 pub mod indicators;
 pub mod metrics;
 pub mod samplers;
@@ -101,6 +102,7 @@ pub fn init(
 
     let meter = telemetry.meter(metrics::SCOPE);
     metrics::init(&meter);
+    access_path::init(&meter);
     metrics::register_static_gauges(&meter, build);
 
     Ok(TelemetryGuard {
