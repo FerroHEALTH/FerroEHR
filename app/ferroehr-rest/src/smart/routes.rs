@@ -32,7 +32,9 @@
 //!   permission alone. The token's launch context (`master07 §Context
 //!   Selection`) becomes the caller's own EHR, and the access evaluator alone
 //!   confines a subject caller to it on every route that names an EHR
-//!   (`refused-not-subject`, #5606).
+//!   (`refused-not-subject`, #5606). A representative is confined the same
+//!   way, by the evaluator alone, to the EHR of the subject it represents
+//!   (`refused-not-represented`, #5609).
 //! - A route the table does not know is refused, so a route mounted without a
 //!   classification fails closed.
 
@@ -307,8 +309,8 @@ fn path_param(template: &str, path: &str, name: &str) -> Option<String> {
         .map(std::borrow::Cow::into_owned)
 }
 
-/// The EHR a request addresses, for the representative's and the contact
-/// point's confinement: a query's
+/// The EHR a request addresses, for the contact point's confinement: a
+/// query's
 /// single-EHR scope (the `ehr_id` parameter or the `openehr-ehr-id` header,
 /// ITS-REST `query/Request.md` §About the `ehr_id` parameter), otherwise the
 /// route's `{ehr_id}` segment.
@@ -343,8 +345,7 @@ pub(crate) fn target_ehr(
     matched.and_then(|template| path_param(template, uri.path(), "ehr_id"))
 }
 
-/// Checks `requirement` for `principal`, and confines a bound representative
-/// to the EHR of the subject it represents.
+/// Checks `requirement` for `principal`: the scope check alone.
 ///
 /// A `patient/` grant meets a requirement by its resource family and
 /// permission; which EHR it reaches is the access evaluator's decision, on the
@@ -353,9 +354,9 @@ pub(crate) fn target_ehr(
 /// patient's EHR"). SMART App Launch requires the server to hold the patient
 /// context and names no layer, so the evaluator holding it is our own design.
 ///
-/// A representative reaches only the EHR whose `EHR_STATUS` names the subject
-/// it represents ([`Principal::represented`], #5086) on the EHR's data and its
-/// queries, whatever its grants cover; a template is no patient's data.
+/// Which EHR a representative reaches is the access evaluator's decision as
+/// well, on the EHR whose `EHR_STATUS` names the subject it represents
+/// (`refused-not-represented`, #5609).
 ///
 /// A read under a federation agreement whose `consent` condition applies
 /// needs the consent decision reference for that patient (Wabvpz Art. 1(j) and
@@ -364,28 +365,10 @@ pub(crate) fn target_ehr(
 ///
 /// # Errors
 /// The reason the debug log records: the grants do not meet the requirement,
-/// a representative addresses an EHR other than the represented subject's, or a
-/// consent-conditioned read carries no consent decision reference.
-pub(crate) fn check(
-    requirement: &Requirement,
-    principal: &Principal,
-    target: Option<&str>,
-) -> Result<(), &'static str> {
+/// or a consent-conditioned read carries no consent decision reference.
+pub(crate) fn check(requirement: &Requirement, principal: &Principal) -> Result<(), &'static str> {
     if !requirement.met_by(&principal.access, principal.honoured) {
         return Err("the grants do not meet the route's requirement");
-    }
-    if let (
-        Requirement::OpenEhr {
-            family: ResourceFamily::Composition | ResourceFamily::Aql,
-            ..
-        },
-        Some(represented),
-    ) = (requirement, &principal.represented)
-        && !target
-            .zip(represented.ehr_id.as_deref())
-            .is_some_and(|(target, ehr)| target.eq_ignore_ascii_case(ehr))
-    {
-        return Err("a representative reaches only the EHR of the subject it represents");
     }
     if let (Requirement::OpenEhr { permission, .. }, Some(agreement)) = (
         requirement,

@@ -432,6 +432,7 @@ refuses decides, and a deny overrides a permit:
 | Step | What refuses | Answer |
 |---|---|---|
 | 0. Subject | a patient (the `subject` caller kind), or a caller whose grants are `patient/` grants alone, on an EHR other than the one its launch context names, or on an operation that names no EHR | `403 refused-not-subject` |
+| 0. Representation | a representative on an EHR other than the one whose subject its recorded representation names, or on an operation that names no EHR | `403 refused-not-represented` |
 | 1. Opt-out (EHDS Art. 10) | an `opt_out` directive, for an access service | `404`, as for an unknown EHR |
 | 2. Restriction (EHDS Art. 8) | a `restriction` directive, for a professional, a system or an access service, over the data it covers | `404`, as for unknown data |
 | 3. Consent deny | any other deny directive that applies; a representative a `delegation` directive names reads only what it permits | `403 refused-consent-denied` |
@@ -442,7 +443,9 @@ refuses decides, and a deny overrides a permit:
 
 - **Who is bound.** The record's person skips every step on their own EHR
   (EHDS Art. 3) and is refused at step 0 on any other. A
-  representative is held to steps 1 to 3 and skips the others (Art. 4(2)).
+  representative reaches only the EHR of the subject it represents, refused
+  at step 0 on any other, and is held there to steps 1 to 3 and skips the
+  others (Art. 4(2)).
   An access service is a caller holding an `access_service` grant or a
   verified caller of a `federation` issuer.
 - **When a directive applies.** Every attribute an `applies_to` entry sets

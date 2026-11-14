@@ -187,14 +187,14 @@ fn permission_mapping() {
 #[test]
 fn a_user_grant_meets_its_family_and_not_another() {
     let alice = principal("user/composition-*.r", None, Honoured::default());
-    assert!(check(&ehr_data(Permission::Read), &alice, Some("ehr-9")).is_ok());
-    assert!(check(&ehr_data(Permission::Create), &alice, Some("ehr-9")).is_err());
+    assert!(check(&ehr_data(Permission::Read), &alice).is_ok());
+    assert!(check(&ehr_data(Permission::Create), &alice).is_err());
     let query = Requirement::OpenEhr {
         family: ResourceFamily::Aql,
         permission: Permission::Search,
         resource: None,
     };
-    assert!(check(&query, &alice, None).is_err());
+    assert!(check(&query, &alice).is_err());
 }
 
 /// master07 §Context Selection: a `patient/` grant counts only for a bound
@@ -207,19 +207,17 @@ fn a_patient_grant_is_checked_for_its_family_and_permission_alone() {
         patient: true,
     };
     let patient = principal("patient/composition-*.r", None, bound);
-    for target in [Some("ehr-1"), Some("ehr-2"), None] {
-        assert!(check(&ehr_data(Permission::Read), &patient, target).is_ok());
-        assert!(check(&ehr_data(Permission::Create), &patient, target).is_err());
-        assert!(
-            check(&routes().product(), &patient, target).is_err(),
-            "a patient grant meets no product-scope surface"
-        );
-    }
+    assert!(check(&ehr_data(Permission::Read), &patient).is_ok());
+    assert!(check(&ehr_data(Permission::Create), &patient).is_err());
+    assert!(
+        check(&routes().product(), &patient).is_err(),
+        "a patient grant meets no product-scope surface"
+    );
     let unbound = principal("patient/composition-*.r", None, Honoured::default());
-    assert!(check(&ehr_data(Permission::Read), &unbound, Some("ehr-1")).is_err());
+    assert!(check(&ehr_data(Permission::Read), &unbound).is_err());
     // A user/ grant beside it widens the permissions (the union of the grants).
     let both = principal("patient/composition-*.r user/composition-*.c", None, bound);
-    assert!(check(&ehr_data(Permission::Create), &both, Some("ehr-2")).is_ok());
+    assert!(check(&ehr_data(Permission::Create), &both).is_ok());
 }
 
 /// A subject granted `access_without_scope` whose token carries no
@@ -243,14 +241,14 @@ fn a_scopeless_subject_meets_an_openehr_requirement_only_without_scopes() {
         )
     };
     let read = ehr_data(Permission::Read);
-    assert!(check(&read, &caller("openid", true), Some("ehr-1")).is_ok());
-    assert!(check(&read, &caller("openid", false), Some("ehr-1")).is_err());
+    assert!(check(&read, &caller("openid", true)).is_ok());
+    assert!(check(&read, &caller("openid", false)).is_err());
     assert!(
-        check(&read, &caller("user/template-*.r", true), Some("ehr-1")).is_err(),
+        check(&read, &caller("user/template-*.r", true)).is_err(),
         "a token carrying scopes gets only its scopes"
     );
     assert!(
-        check(&routes().product(), &caller("openid", true), None).is_err(),
+        check(&routes().product(), &caller("openid", true)).is_err(),
         "the allowlist reaches no product-scope surface"
     );
 }
@@ -274,20 +272,12 @@ fn the_demographic_api_needs_a_granted_client_or_the_product_scope() {
             panic!("a demographic route reads the caller's grants: {template}");
         };
         assert_eq!(requirement, table.product());
-        assert!(
-            check(
-                &requirement,
-                &principal("__ferroehr.platform", None, none),
-                None
-            )
-            .is_ok()
-        );
+        assert!(check(&requirement, &principal("__ferroehr.platform", None, none),).is_ok());
         for client in ["mpi", "app"] {
             assert!(
                 check(
                     &requirement,
                     &principal("system/composition-*.cruds", Some(client), none),
-                    None
                 )
                 .is_err(),
                 "no client name meets it: {client}"
@@ -330,15 +320,15 @@ fn the_outbox_feed_needs_the_outbox_scope_alone() {
             panic!("the feed is checked at once");
         };
         assert_eq!(requirement, Requirement::Scope(OUTBOX_SCOPE.to_owned()));
-        assert!(check(&requirement, &reader, None).is_ok());
-        assert!(check(&requirement, &platform, None).is_err());
+        assert!(check(&requirement, &reader).is_ok());
+        assert!(check(&requirement, &platform).is_err());
     }
     let report = format!("{ext}/admin/report/statistics");
     let Need::Now(requirement) = table.need(&Method::GET, Some(&report), &report) else {
         panic!("an admin route is checked at once");
     };
     assert!(
-        check(&requirement, &reader, None).is_err(),
+        check(&requirement, &reader).is_err(),
         "the outbox scope reaches no other admin route"
     );
 }
@@ -357,19 +347,11 @@ fn a_system_wide_aql_grant_counts_for_a_backend_client_alone() {
         backend: true,
         patient: false,
     };
-    assert!(
-        check(
-            &query,
-            &principal("system/aql-*.s", Some("etl"), backend),
-            None
-        )
-        .is_ok()
-    );
+    assert!(check(&query, &principal("system/aql-*.s", Some("etl"), backend),).is_ok());
     assert!(
         check(
             &query,
             &principal("system/aql-*.s", Some("app"), Honoured::default()),
-            None
         )
         .is_err()
     );

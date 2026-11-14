@@ -130,8 +130,9 @@ fn addressed(op: &str, parts: &RequestParts) -> Addressed {
 
 /// Enforce the evaluator on a request of `op` whose path names no EHR: a
 /// confined caller is judged on the single EHR its query or import names, and
-/// refused `refused-not-subject` when it names none (step 0); every other
-/// caller is judged on each EHR the dispatch reaches.
+/// refused `refused-not-subject` (`refused-not-represented` for a
+/// representative) when it names none (step 0); every other caller is judged
+/// on each EHR the dispatch reaches.
 async fn enforce_unnamed(
     state: &AppState,
     access: &RequestAccess,
@@ -377,6 +378,7 @@ const fn reason(code: Refusal) -> &'static str {
         }
         Refusal::ConsentRequired => "the EHR needs consent and no permit directive applies",
         Refusal::NotSubject => "the caller's patient context names another EHR",
+        Refusal::NotRepresented => "the caller represents the subject of another EHR",
         Refusal::OptOut | Refusal::Restricted => "the data cannot be read",
     }
 }
@@ -429,6 +431,7 @@ mod tests {
             Refusal::PurposeNotPermitted,
             Refusal::ConsentRequired,
             Refusal::NotSubject,
+            Refusal::NotRepresented,
         ] {
             assert!(!code.is_invisible());
             assert_eq!(forbidden(None, code).status(), http::StatusCode::FORBIDDEN);

@@ -470,10 +470,12 @@ A representative reaches only the EHR whose `EHR_STATUS.subject.external_ref`
 names the subject it represents: the issuer's `representation` claim carries
 the subject's party id, matched without regard to case, and the subject must
 be the target of one of the representative's live relationships, so a
-representative of an issuer no `[[auth.party]]` table binds is refused. Every
-composition, `EHR_STATUS`, directory, contribution and query request is held
-to that EHR, whatever the token's scopes cover; a query must name it with
-`ehr_id`. Templates stay readable. A `persons` token whose only clinical scopes
+representative of an issuer no `[[auth.party]]` table binds is refused. The
+access evaluator holds every request that names an EHR to that EHR, whatever
+the token's scopes cover, and refuses any other with `403`
+`refused-not-represented`; a query must name it with `ehr_id`, and an
+operation that names no EHR is refused the same way. Templates stay
+readable. A `persons` token whose only clinical scopes
 are `patient/` is a professional confined to its launch EHR, and its commits
 record the professional, never `PARTY_SELF`. A representative signing in
 through a `patients` issuer is bound by FerroEHR itself, with no
