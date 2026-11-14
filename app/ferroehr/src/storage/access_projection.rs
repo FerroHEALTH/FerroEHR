@@ -1,16 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The rows of the `EHR_ACCESS` projection: each EHR's settings, its
-//! directives and its labels (`access_settings`, `access_directive`,
-//! `access_label`).
+//! The rows of the `EHR_ACCESS` projection: each EHR's settings with its
+//! settings class and facts (`access_settings`), and the classes
+//! (`access_class`, [`crate::access_eval::class`]).
 //!
-//! An EHR's rows are replaced whole in the transaction that commits its
-//! `EHR_ACCESS` version, and every change to its settings row notifies every
-//! replica on [`CHANNEL`] at commit (the trigger of migration 0040). No
-//! openEHR spec governs the projection or its storage SQL: our own design.
+//! An EHR's row is replaced in the transaction that commits its `EHR_ACCESS`
+//! version, and every change to it notifies every replica on [`CHANNEL`] at
+//! commit (the trigger of migration 0040); a new class notifies [`NEW_CLASS`]
+//! (migration 0042). No openEHR spec governs the projection or its storage
+//! SQL: our own design.
 
-use serde::Serialize;
 use sqlx::{PgConnection, PgPool, Row};
 
 use crate::db::acquire::acquire;
@@ -23,6 +23,9 @@ pub const CHANNEL: &str = "ferroehr_ehr_access";
 
 /// The payload of a notification that drops every EHR's copy.
 pub const EVERY_EHR: &str = "*";
+
+/// The payload of a notification that a new settings class is stored.
+pub const NEW_CLASS: &str = "class";
 
 /// The `EHR_ACCESS` version an EHR's rows are projected from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,56 +43,22 @@ pub struct Source {
 pub struct SettingsRow {
     /// The access default code.
     pub default_access: &'static str,
-    /// The settings in canonical JSON text; `None` holds the EHR closed.
-    pub settings: Option<String>,
+    /// The settings in canonical JSON text, their class and their facts;
+    /// `None` holds the EHR closed.
+    pub settings: Option<Classed>,
 }
 
-/// One `access_directive` row, as the write binds it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct DirectiveRow {
-    /// The position in a depth-first walk of the settings.
-    pub ordinal: i32,
-    /// The ordinal of the directive this one is an exception of.
-    pub parent: Option<i32>,
-    /// The access directive kind code.
-    pub kind: &'static str,
-    /// The access effect code.
-    pub effect: &'static str,
-    /// Whether an emergency lifts the directive.
-    pub emergency_override: bool,
-    /// The party id values of the actor scopes.
-    pub parties: Vec<String>,
-    /// The roles of the actor scopes, as `terminology::code`.
-    pub roles: Vec<String>,
-    /// The access relationship codes.
-    pub relationships: Vec<&'static str>,
-    /// The access caller kind codes.
-    pub caller_kinds: Vec<&'static str>,
-    /// The access operation codes.
-    pub operations: Vec<&'static str>,
-    /// The purposes, as `terminology::code`.
-    pub purposes: Vec<String>,
-    /// The categories of the data scopes, as `terminology::code`.
-    pub categories: Vec<String>,
-    /// The sensitivities of the data scopes, as `terminology::code`.
-    pub sensitivities: Vec<String>,
-    /// The `tstzrange` literal of the validity; `None` when unreadable.
-    pub validity: Option<String>,
-}
-
-/// One `access_label` row, as the write binds it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct LabelRow {
-    /// The position in `ACCESS_DIRECTIVE_SETTINGS.labels`.
-    pub ordinal: i32,
-    /// The labelled object's `OBJECT_REF` namespace, type and id value.
-    pub target_namespace: String,
-    /// The `OBJECT_REF.type`.
-    pub target_type: String,
-    /// The `OBJECT_REF.id` value.
-    pub target_id: String,
-    /// The sensitivities, as `terminology::code`.
-    pub sensitivities: Vec<String>,
+/// Settings as the projection stores them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Classed {
+    /// The settings in canonical JSON text.
+    pub settings: String,
+    /// The SHA-256 of the class's JSON text.
+    pub digest: Vec<u8>,
+    /// The class in canonical JSON text.
+    pub class: String,
+    /// The facts the class sets aside, as JSON array text.
+    pub facts: String,
 }
 
 /// What one EHR's rows become.
@@ -97,19 +66,12 @@ pub struct LabelRow {
 pub enum Rows {
     /// The EHR's `EHR_ACCESS` carries no settings: it has no row.
     None,
-    /// The settings row and the rows of its directives and labels.
-    Settings {
-        /// The settings row.
-        settings: SettingsRow,
-        /// The directive rows.
-        directives: Vec<DirectiveRow>,
-        /// The label rows.
-        labels: Vec<LabelRow>,
-    },
+    /// The settings row.
+    Settings(SettingsRow),
 }
 
-/// Replaces the rows of `source.ehr_id` with `rows`, on `tx`, in one
-/// statement.
+/// Replaces the row of `source.ehr_id` with `rows`, on `tx`, storing its
+/// class when no EHR made it before.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -118,63 +80,75 @@ pub async fn replace(
     source: Source,
     rows: &Rows,
 ) -> Result<(), StorageError> {
-    let Rows::Settings {
-        settings,
-        directives,
-        labels,
-    } = rows
-    else {
-        sqlx::query(
-            "WITH directives AS (DELETE FROM access_directive WHERE ehr_id = $1), \
-                  labels AS (DELETE FROM access_label WHERE ehr_id = $1) \
-             DELETE FROM access_settings WHERE ehr_id = $1",
-        )
-        .bind(source.ehr_id)
-        .execute(&mut *tx)
-        .await?;
+    let Rows::Settings(row) = rows else {
+        sqlx::query("DELETE FROM access_settings WHERE ehr_id = $1")
+            .bind(source.ehr_id)
+            .execute(&mut *tx)
+            .await?;
         return Ok(());
     };
+    let class_id = match &row.settings {
+        Some(classed) => Some(class_id(tx, classed).await?),
+        None => None,
+    };
+    let classed = row.settings.as_ref();
     sqlx::query(
-        "WITH header AS ( \
-             INSERT INTO access_settings \
-                 (ehr_id, vo_id, sys_version, held_closed, default_access, settings) \
-             VALUES ($1, $2, $3, $4 IS NULL, $5, $4::jsonb) \
-             ON CONFLICT (ehr_id) DO UPDATE SET vo_id = EXCLUDED.vo_id, \
-                 sys_version = EXCLUDED.sys_version, held_closed = EXCLUDED.held_closed, \
-                 default_access = EXCLUDED.default_access, settings = EXCLUDED.settings), \
-         gone_directives AS (DELETE FROM access_directive WHERE ehr_id = $1), \
-         gone_labels AS (DELETE FROM access_label WHERE ehr_id = $1), \
-         directives AS ( \
-             INSERT INTO access_directive \
-                 (ehr_id, vo_id, ordinal, parent, kind, effect, emergency_override, parties, \
-                  roles, relationships, caller_kinds, operations, purposes, categories, \
-                  sensitivities, validity) \
-             SELECT $1, $2, t.ordinal, t.parent, t.kind, t.effect, t.emergency_override, \
-                    t.parties, t.roles, t.relationships, t.caller_kinds, t.operations, \
-                    t.purposes, t.categories, t.sensitivities, t.validity::tstzrange \
-             FROM jsonb_to_recordset($6::jsonb) AS t( \
-                 ordinal integer, parent integer, kind text, effect text, \
-                 emergency_override boolean, parties text[], roles text[], \
-                 relationships text[], caller_kinds text[], operations text[], \
-                 purposes text[], categories text[], sensitivities text[], validity text)) \
-         INSERT INTO access_label \
-             (ehr_id, vo_id, ordinal, target_namespace, target_type, target_id, sensitivities) \
-         SELECT $1, $2, t.ordinal, t.target_namespace, t.target_type, t.target_id, \
-                t.sensitivities \
-         FROM jsonb_to_recordset($7::jsonb) AS t( \
-             ordinal integer, target_namespace text, target_type text, target_id text, \
-             sensitivities text[])",
+        "INSERT INTO access_settings \
+             (ehr_id, vo_id, sys_version, held_closed, default_access, settings, class_id, facts) \
+         VALUES ($1, $2, $3, $4 IS NULL, $5, $4::jsonb, $6, $7::jsonb) \
+         ON CONFLICT (ehr_id) DO UPDATE SET vo_id = EXCLUDED.vo_id, \
+             sys_version = EXCLUDED.sys_version, held_closed = EXCLUDED.held_closed, \
+             default_access = EXCLUDED.default_access, settings = EXCLUDED.settings, \
+             class_id = EXCLUDED.class_id, facts = EXCLUDED.facts",
     )
     .bind(source.ehr_id)
     .bind(source.vo_id)
     .bind(source.sys_version)
-    .bind(settings.settings.as_deref())
-    .bind(settings.default_access)
-    .bind(sqlx::types::Json(directives))
-    .bind(sqlx::types::Json(labels))
+    .bind(classed.map(|c| c.settings.as_str()))
+    .bind(row.default_access)
+    .bind(class_id)
+    .bind(classed.map(|c| c.facts.as_str()))
     .execute(&mut *tx)
     .await?;
     Ok(())
+}
+
+/// The id of the class of `classed`, stored on `tx` when no EHR made it
+/// before. A class a concurrent commit stores first is read once that commit
+/// ends: the insert waits for it, and the read after it is a statement of its
+/// own (PostgreSQL 18, `INSERT … ON CONFLICT`).
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure, and
+/// [`StorageError::InvalidRows`] when no class row can be found after the
+/// insert.
+async fn class_id(tx: &mut PgConnection, classed: &Classed) -> Result<i64, StorageError> {
+    let find = "SELECT id FROM access_class WHERE digest = $1";
+    if let Some(id) = sqlx::query_scalar::<_, i64>(find)
+        .bind(&classed.digest)
+        .fetch_optional(&mut *tx)
+        .await?
+    {
+        return Ok(id);
+    }
+    let inserted = sqlx::query_scalar::<_, i64>(
+        "INSERT INTO access_class (digest, settings) VALUES ($1, $2::jsonb) \
+         ON CONFLICT (digest) DO NOTHING RETURNING id",
+    )
+    .bind(&classed.digest)
+    .bind(&classed.class)
+    .fetch_optional(&mut *tx)
+    .await?;
+    if let Some(id) = inserted {
+        return Ok(id);
+    }
+    sqlx::query_scalar::<_, i64>(find)
+        .bind(&classed.digest)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or_else(|| {
+            StorageError::InvalidRows("a settings class vanished after its insert".into())
+        })
 }
 
 /// One EHR's settings row as stored.
@@ -219,13 +193,22 @@ pub async fn settings_of(pool: &PgPool, ehr_id: EhrId) -> Result<Stored, Storage
     .bind(ehr_id)
     .fetch_one(&mut *acquire(pool).await?)
     .await?;
+    Ok(stored(&row)?)
+}
+
+/// The settings row and subject one row of [`settings_of`] or
+/// [`settings_of_many`] reads.
+///
+/// # Errors
+/// [`sqlx::Error`] when a column does not decode.
+fn stored(row: &sqlx::postgres::PgRow) -> Result<Stored, sqlx::Error> {
     let has_settings: bool = row.try_get("has_settings")?;
     let settings = match row.try_get::<Option<String>, _>("settings")? {
         Some(settings) => StoredSettings::Settings(settings),
         None if has_settings => StoredSettings::HeldClosed,
         None => StoredSettings::None,
     };
-    let version = version_of(&row)?;
+    let version = version_of(row)?;
     Ok(Stored {
         settings,
         subject: row.try_get("subject_id")?,
@@ -255,45 +238,45 @@ pub(crate) fn version_of(row: &sqlx::postgres::PgRow) -> Result<Option<String>, 
     }
 }
 
-/// One EHR's settings row as the settings index holds it.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct IndexedSettings {
-    /// The EHR.
-    pub ehr_id: EhrId,
-    /// The settings in canonical JSON text; `None` for a held-closed EHR.
-    pub settings: Option<String>,
-    /// The promoted `ehr.subject_id`; `None` for a status naming no subject.
-    pub subject: Option<String>,
-    /// The uid of the `EHR_ACCESS` version the row was projected from.
-    pub version: Option<String>,
-}
-
-/// Every EHR's settings row with its subject and the uid of the
-/// `EHR_ACCESS` version it was projected from, ordered by EHR.
+/// The settings rows of `ehr_ids` and their subjects, in one statement: an
+/// id with no EHR answers [`Stored::default`].
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure, and the acquire failure
 /// when no connection can be had.
-pub async fn every_settings(pool: &PgPool) -> Result<Vec<IndexedSettings>, StorageError> {
+pub async fn settings_of_many(
+    pool: &PgPool,
+    ehr_ids: &[EhrId],
+) -> Result<Vec<(EhrId, Stored)>, StorageError> {
+    let ids: Vec<uuid::Uuid> = ehr_ids.iter().map(|id| id.0).collect();
     let rows = sqlx::query(
-        "SELECT s.ehr_id, s.settings::text AS settings, e.subject_id, \
-                s.vo_id, v.creating_system_id, v.trunk_version, v.branch_number, v.branch_version \
-         FROM access_settings s \
-         LEFT JOIN ehr e ON e.id = s.ehr_id \
-         LEFT JOIN version v ON v.vo_id = s.vo_id AND v.sys_version = s.sys_version \
-         ORDER BY s.ehr_id",
+        "SELECT k.id AS ehr_id, e.subject_id, s.ehr_id IS NOT NULL AS has_settings, \
+                s.settings::text AS settings, s.vo_id, v.creating_system_id, v.trunk_version, \
+                v.branch_number, v.branch_version \
+         FROM unnest($1::uuid[]) AS k(id) \
+         LEFT JOIN ehr e ON e.id = k.id \
+         LEFT JOIN access_settings s ON s.ehr_id = k.id \
+         LEFT JOIN version v ON v.vo_id = s.vo_id AND v.sys_version = s.sys_version",
     )
+    .bind(&ids)
     .fetch_all(&mut *acquire(pool).await?)
     .await?;
     rows.iter()
-        .map(|row| {
-            Ok(IndexedSettings {
-                ehr_id: row.try_get("ehr_id")?,
-                settings: row.try_get("settings")?,
-                subject: row.try_get("subject_id")?,
-                version: version_of(row)?,
-            })
-        })
+        .map(|row| Ok((row.try_get("ehr_id")?, stored(row)?)))
+        .collect()
+}
+
+/// Every settings class, by id, as its JSON text.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure, and the acquire failure
+/// when no connection can be had.
+pub async fn every_class(pool: &PgPool) -> Result<Vec<(i64, String)>, StorageError> {
+    let rows = sqlx::query("SELECT id, settings::text AS settings FROM access_class ORDER BY id")
+        .fetch_all(&mut *acquire(pool).await?)
+        .await?;
+    rows.iter()
+        .map(|row| Ok((row.try_get("id")?, row.try_get("settings")?)))
         .collect()
 }
 
@@ -304,7 +287,7 @@ pub async fn every_settings(pool: &PgPool) -> Result<Vec<IndexedSettings>, Stora
 /// [`StorageError::Database`] on a driver failure.
 pub async fn lock(tx: &mut PgConnection) -> Result<(), StorageError> {
     sqlx::query(
-        "LOCK TABLE access_settings, access_directive, access_label, access_projection_state \
+        "LOCK TABLE access_settings, access_class, access_projection_state \
          IN SHARE ROW EXCLUSIVE MODE",
     )
     .execute(&mut *tx)
@@ -325,17 +308,17 @@ pub async fn filled(tx: &mut PgConnection) -> Result<bool, StorageError> {
     .await?)
 }
 
-/// Deletes every row, before a refill writes them again.
+/// Deletes every row and every class, before a refill writes them again.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn clear(tx: &mut PgConnection) -> Result<(), StorageError> {
-    sqlx::query(
-        "WITH directives AS (DELETE FROM access_directive), labels AS (DELETE FROM access_label) \
-         DELETE FROM access_settings",
-    )
-    .execute(&mut *tx)
-    .await?;
+    sqlx::query("DELETE FROM access_settings")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM access_class")
+        .execute(&mut *tx)
+        .await?;
     Ok(())
 }
 

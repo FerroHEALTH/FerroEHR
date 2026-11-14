@@ -24,6 +24,8 @@ use openehr_rm::draft::access_control::terminology::{
 use serde_json::{Value, json};
 use uuid::Uuid;
 
+use ferroehr::access_eval::class::{Class, classify, resolve_verdict};
+use ferroehr::access_eval::condition::CallerKeys;
 use ferroehr::access_eval::procedure::{
     Asked, Caller, Ehr, Emergency, Judged, Outcome, Policy, Verdict, decide,
 };
@@ -294,8 +296,58 @@ impl Case {
         }
     }
 
-    /// The verdict for `caller` asking `asked`.
+    /// The verdict for `caller` asking `asked`, checked against the verdict
+    /// of the settings' class with the settings' facts resolved, which a
+    /// query reads in SQL (#5588): both answer every probe item alike.
     pub(super) fn verdict(&self, caller: &Caller, asked: Asked<'_>) -> Verdict {
+        let verdict = self.direct(caller, asked);
+        if let Some(EhrAccessSettings::Directives(settings)) = &self.settings {
+            let classified = classify(settings).expect("the settings classify");
+            let class = Class::read(&classified.class.to_string()).expect("the class reads");
+            let classifications = self
+                .policy
+                .as_ref()
+                .and_then(|p| p.classifications.as_deref())
+                .unwrap_or_default();
+            let scopes = Scopes::of_class(categories(), Arc::clone(&class.layout), classifications);
+            let symbolic = decide(&Judged {
+                caller,
+                asked,
+                policy: Policy::of(self.policy.as_ref()),
+                ehr: Ehr {
+                    settings: (*class.settings).as_ref(),
+                    server_default: self.server_default.unwrap_or(AccessDefault::Open),
+                    cared: self.cared,
+                },
+                scopes: &scopes,
+                now: self.now.unwrap_or_else(now),
+            });
+            let mut parties = caller.acts_for.clone();
+            parties.extend(caller.party.clone());
+            let keys = CallerKeys {
+                now: self.now.unwrap_or_else(now),
+                parties: parties.into(),
+                keeper: caller.settings.party().map(str::to_owned),
+            };
+            let resolved = resolve_verdict(&symbolic, &classified.facts, &keys);
+            for item in probes() {
+                assert_eq!(
+                    resolved.outcome(&item),
+                    verdict.outcome(&item),
+                    "the class verdict answers {item:?} as the direct read does: {resolved:?}"
+                );
+            }
+            assert_eq!(
+                resolved.reaches().constant(),
+                Some(verdict.admits_any()),
+                "the class verdict reaches the EHR as the direct read does"
+            );
+        }
+        verdict
+    }
+
+    /// The verdict for `caller` asking `asked`, read from the settings.
+    fn direct(&self, caller: &Caller, asked: Asked<'_>) -> Verdict {
         let labels = match &self.settings {
             Some(EhrAccessSettings::Directives(s)) => s.labels.as_deref().unwrap_or_default(),
             _ => &[],
@@ -319,6 +371,37 @@ impl Case {
             now: self.now.unwrap_or_else(now),
         })
     }
+}
+
+/// The items a class verdict is checked on: the EHR itself, and each test
+/// object under each test template, with and without origins and a commit
+/// time, inside and outside November 2026.
+fn probes() -> Vec<Item<'static>> {
+    const STAMPED: &[String] = &[];
+    let mut items = vec![Item::Ehr];
+    for id in [OBJECT, OTHER] {
+        for template in [Some("psych_note.v1"), Some("lab_hiv.v1"), None] {
+            for origins in [Some(STAMPED), None] {
+                for recorded in ["2026-11-12T08:00:00Z", "2025-01-01T00:00:00Z"] {
+                    items.push(Item::Object(Object {
+                        vo_id: uuid(id),
+                        template,
+                        archetype: None,
+                        origins,
+                        recorded: Some(recorded.parse().expect("an instant")),
+                    }));
+                }
+                items.push(Item::Object(Object {
+                    vo_id: uuid(id),
+                    template,
+                    archetype: None,
+                    origins,
+                    recorded: None,
+                }));
+            }
+        }
+    }
+    items
 }
 
 /// The object `id` of `template`, committed on 12 November 2026.

@@ -3,26 +3,32 @@
 
 //! The access evaluator's condition in a query's one SQL statement.
 //!
-//! The evaluator judges every EHR with settings, and the EHR with none, in
-//! memory ([`crate::access_eval::condition::RequestAccess::condition`]); this
-//! module renders the verdicts as predicates on the head row of each
+//! The evaluator judges every settings class, an EHR held closed and the EHR
+//! with none in memory ([`crate::access_eval::condition::RequestAccess::condition`]);
+//! this module renders the verdicts as predicates on the head row of each
 //! versioned object a query reads, and on the id of each EHR it reads, so
 //! `COUNT`, `LIMIT` and paging see only the rows the caller may read and
-//! nothing else leaves the database. Each [`Pred`] reads the same row
-//! attributes the in-memory check reads: the object id, the template, the
-//! root archetype, the origins of the trunk head and its commit time. Every
-//! atom is null-safe, so a missing attribute decides by the polarity of the
-//! fact and never by SQL's unknown. No openEHR spec governs this: our own
-//! design (#5513).
+//! nothing else leaves the database. The EHR's projected settings row is
+//! joined by its id, its class selects the verdict, and each fact the
+//! verdict leaves to the EHR is read from the row's facts; an EHR of a class
+//! the condition does not know contributes no row. Each [`Pred`] reads the
+//! same row attributes the in-memory check reads: the object id, the
+//! template, the root archetype, the origins of the trunk head and its commit
+//! time. Every atom is null-safe, so a missing attribute decides by the
+//! polarity of the fact and never by SQL's unknown. No openEHR spec governs
+//! this: our own design (#5513, #5588).
 
 use sea_query::extension::postgres::PgFunc;
-use sea_query::{Alias, Expr, ExprTrait, Func, Query};
+use sea_query::{Alias, Expr, ExprTrait, Func, Query, SelectStatement};
 use uuid::Uuid;
 
 use super::expr::{archetype_node_id, col};
-use crate::access_eval::condition::{AccessCondition, ConditionGroups, VerdictPair};
-use crate::access_eval::scope::{CategoryMatch, DataMatch, Polarity, Pred, Recorded};
-use crate::db::iden::{Ehr, Node, VersionRow, VoHead};
+use crate::access_eval::class::Keepers;
+use crate::access_eval::condition::{AccessCondition, CallerKeys, ConditionGroups, VerdictPair};
+use crate::access_eval::scope::{
+    CategoryMatch, DataMatch, Edge, EhrFact, Held, Polarity, Pred, Recorded,
+};
+use crate::db::iden::{AccessSettings, Ehr, Node, VersionRow, VoHead};
 
 /// The alias of the root node an archetype probe reads.
 const ROOT: &str = "access_root";
@@ -30,43 +36,48 @@ const ROOT: &str = "access_root";
 const TRUNK: &str = "access_trunk";
 /// The alias of the `ehr` row a care probe reads.
 const CARE: &str = "access_ehr";
+/// The alias of the projected settings row of the EHR.
+const SETTINGS: &str = "access_settings_row";
+
+/// What a predicate is read against: the caller's facts, which a class's
+/// facts are compared with; `None` outside a class.
+#[derive(Clone, Copy)]
+struct Facts<'a> {
+    caller: Option<&'a CallerKeys>,
+}
 
 /// The predicate on the head row `h` of a versioned object; `None` when the
 /// condition admits every row.
 pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
     let condition = condition.groups()?;
     let target = col(h, VoHead::EhrId);
-    let mut branches = Vec::new();
-    for (ids, pair) in &condition.groups {
-        if pair.admits_all() && condition.default.is_none() {
-            continue;
+    let admits = |pair: &VerdictPair, facts: Facts<'_>| -> Option<Expr> {
+        if pair.admits_all() {
+            Some(Expr::val(true))
+        } else if pair.admits_none() {
+            None
+        } else {
+            Some(admitted(condition, pair, h, target.clone(), facts))
         }
-        if pair.admits_none() {
-            continue;
-        }
-        let admitted = admitted(condition, pair, h, target.clone());
-        branches.push(in_ids(target.clone(), ids).and(admitted));
-    }
-    let others = match &condition.default {
-        None => {
-            let held: Vec<Uuid> = condition
-                .groups
-                .iter()
-                .filter(|(_, pair)| !pair.admits_all())
-                .flat_map(|(ids, _)| ids.iter().copied())
-                .collect();
-            Some(not_in_ids(target.clone(), &held))
-        }
-        Some(pair) if pair.admits_none() => None,
-        Some(pair) => Some(not_in_ids(target.clone(), &condition.known).and(admitted(
-            condition,
-            pair,
-            h,
-            target.clone(),
-        ))),
     };
-    branches.extend(others);
-    Some(or_all(branches))
+    let caller = Facts {
+        caller: Some(&condition.facts),
+    };
+    let none = Facts { caller: None };
+    let mut branches = Vec::new();
+    if let Some(admitted) = admits(&condition.closed, none) {
+        branches.push(col(SETTINGS, AccessSettings::HeldClosed).and(admitted));
+    }
+    for (ids, pair) in &condition.groups {
+        if let Some(admitted) = admits(pair, caller) {
+            branches.push(in_classes(ids).and(admitted));
+        }
+    }
+    let default = condition
+        .default
+        .as_deref()
+        .map(|pair| admits(pair, none).unwrap_or_else(|| Expr::val(false)));
+    Some(by_settings(target, or_all(branches), default))
 }
 
 /// The predicate on the EHR id `target` of an EHR a query reads: an EHR no
@@ -74,36 +85,124 @@ pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
 /// [`on_head`]'s.
 pub(super) fn on_ehr_id(condition: &AccessCondition, target: &Expr) -> Option<Expr> {
     let condition = condition.groups()?;
-    let reaches = |pair: &VerdictPair| -> Option<Expr> {
-        match (pair.cared.admits_any(), pair.uncared.admits_any()) {
-            (true, true) => Some(Expr::val(true)),
-            (false, false) => None,
-            (true, false) => Some(cared(condition, target.clone())),
-            (false, true) => Some(cared(condition, target.clone()).not()),
+    let reaches = |pair: &VerdictPair, facts: Facts<'_>| -> Option<Expr> {
+        let (cared, uncared) = (pair.cared.reaches(), pair.uncared.reaches());
+        if cared == Pred::False && uncared == Pred::False {
+            return None;
         }
+        if cared == uncared {
+            return Some(pred(&cared, CARE, facts));
+        }
+        Some(Expr::cust_with_exprs(
+            "CASE WHEN $1 THEN $2 ELSE $3 END",
+            [
+                self::cared(condition, target.clone()),
+                pred(&cared, CARE, facts),
+                pred(&uncared, CARE, facts),
+            ],
+        ))
     };
+    let caller = Facts {
+        caller: Some(&condition.facts),
+    };
+    let none = Facts { caller: None };
     let mut branches = Vec::new();
+    if let Some(reach) = reaches(&condition.closed, none) {
+        branches.push(col(SETTINGS, AccessSettings::HeldClosed).and(reach));
+    }
     for (ids, pair) in &condition.groups {
-        if let Some(reach) = reaches(pair) {
-            branches.push(in_ids(target.clone(), ids).and(reach));
+        if let Some(reach) = reaches(pair, caller) {
+            branches.push(in_classes(ids).and(reach));
         }
     }
-    let default = condition.default.as_deref();
-    if let Some(reach) = default.map_or(Some(Expr::val(true)), reaches) {
-        branches.push(not_in_ids(target.clone(), &condition.known).and(reach));
+    let default = condition
+        .default
+        .as_deref()
+        .map(|pair| reaches(pair, none).unwrap_or_else(|| Expr::val(false)));
+    Some(by_settings(target.clone(), or_all(branches), default))
+}
+
+/// The predicate on the head row `h` that only a gate-keeper `keepers` names
+/// reads an `EHR_ACCESS` object.
+pub(super) fn keeper_reads(keepers: &Keepers, h: &str) -> Expr {
+    let facts = CallerKeys {
+        now: jiff::Timestamp::UNIX_EPOCH,
+        parties: Vec::new().into(),
+        keeper: keepers.party.clone(),
+    };
+    let facts = Facts {
+        caller: Some(&facts),
+    };
+    let branches = keepers
+        .groups
+        .iter()
+        .map(|(ids, named)| in_classes(ids).and(pred(named, h, facts)))
+        .collect();
+    let mut probe = settings_row(col(h, VoHead::EhrId));
+    probe.and_where(or_all(branches));
+    Expr::exists(probe)
+}
+
+/// Whether the EHR `target` carries `EHR_ACCESS` settings.
+pub(super) fn settled(target: Expr) -> Expr {
+    Expr::exists(settings_row(target))
+}
+
+/// For the EHR `target`: with a settings row, `with` over that row; with
+/// none, `default`, or every row when `default` is `None`.
+fn by_settings(target: Expr, with: Expr, default: Option<Expr>) -> Expr {
+    match default {
+        // NOTE: our own design (#5588), one probe of the settings row when an EHR with
+        // none admits every row: the row is absent or its class admits.
+        None => {
+            let mut held = settings_row(target);
+            held.and_where(Expr::cust_with_exprs("NOT COALESCE($1, false)", [with]));
+            Expr::exists(held).not()
+        }
+        Some(default) => {
+            let mut held = settings_row(target.clone());
+            held.and_where(with);
+            Expr::exists(settings_row(target))
+                .not()
+                .and(default)
+                .or(Expr::exists(held))
+        }
     }
-    Some(or_all(branches))
+}
+
+/// The settings row of the EHR `target`.
+fn settings_row(target: Expr) -> SelectStatement {
+    let mut row = Query::select();
+    row.expr(Expr::val(1))
+        .from_as(AccessSettings::Table, Alias::new(SETTINGS))
+        .and_where(col(SETTINGS, AccessSettings::EhrId).eq(target));
+    row
+}
+
+/// The settings row is of one of the classes `ids`.
+fn in_classes(ids: &[i64]) -> Expr {
+    col(SETTINGS, AccessSettings::ClassId).eq(Expr::from(PgFunc::any(Expr::val(ids.to_vec()))))
 }
 
 /// The rows of an EHR of `pair` admitted, on head row `h` of EHR `target`.
-fn admitted(condition: &ConditionGroups, pair: &VerdictPair, h: &str, target: Expr) -> Expr {
+fn admitted(
+    condition: &ConditionGroups,
+    pair: &VerdictPair,
+    h: &str,
+    target: Expr,
+    facts: Facts<'_>,
+) -> Expr {
     let (with, without) = (pair.cared.admitted(), pair.uncared.admitted());
     if with == without {
-        return pred(&with, h);
+        return pred(&with, h, facts);
     }
     Expr::cust_with_exprs(
         "CASE WHEN $1 THEN $2 ELSE $3 END",
-        [cared(condition, target), pred(&with, h), pred(&without, h)],
+        [
+            cared(condition, target),
+            pred(&with, h, facts),
+            pred(&without, h, facts),
+        ],
     )
 }
 
@@ -122,19 +221,87 @@ fn cared(condition: &ConditionGroups, target: Expr) -> Expr {
     Expr::exists(probe)
 }
 
-/// `pred` on the head row `h`.
-fn pred(pred: &Pred, h: &str) -> Expr {
+/// `pred` on the head row `h`, its facts read with `facts`.
+fn pred(pred: &Pred, h: &str, facts: Facts<'_>) -> Expr {
     match pred {
         Pred::True => Expr::val(true),
         Pred::False => Expr::val(false),
-        Pred::Not(inner) => self::pred(inner, h).not(),
+        Pred::Not(inner) => self::pred(inner, h, facts).not(),
         Pred::All(preds) => preds
             .iter()
-            .map(|p| self::pred(p, h))
+            .map(|p| self::pred(p, h, facts))
             .reduce(ExprTrait::and)
             .unwrap_or_else(|| Expr::val(true)),
-        Pred::Any(preds) => or_all(preds.iter().map(|p| self::pred(p, h)).collect()),
+        Pred::Any(preds) => or_all(preds.iter().map(|p| self::pred(p, h, facts)).collect()),
         Pred::Data(data, polarity) => data_match(data, *polarity, h),
+        Pred::Ehr(fact) => ehr_fact(*fact, facts),
+    }
+}
+
+/// The text of the fact at `at` of the settings row.
+fn fact_text(at: usize) -> Expr {
+    Expr::cust_with_exprs(
+        "($1 ->> $2)",
+        [col(SETTINGS, AccessSettings::Facts), position(at)],
+    )
+}
+
+/// The JSON of the fact at `at` of the settings row.
+fn fact_json(at: usize) -> Expr {
+    Expr::cust_with_exprs(
+        "($1 -> $2)",
+        [col(SETTINGS, AccessSettings::Facts), position(at)],
+    )
+}
+
+/// The instant the fact at `at` of the settings row holds.
+fn fact_instant(at: usize) -> Expr {
+    fact_text(at).cast_as(Alias::new("timestamptz"))
+}
+
+/// A fact position as an `integer` operand of `->` and `->>`; a position no
+/// `integer` holds reads as no fact, which is SQL's unknown.
+fn position(at: usize) -> Expr {
+    Expr::val(i32::try_from(at).unwrap_or(i32::MAX))
+}
+
+/// `fact`, read against the caller; no fact holds outside a class.
+fn ehr_fact(fact: EhrFact, facts: Facts<'_>) -> Expr {
+    let Some(caller) = facts.caller else {
+        return Expr::val(false);
+    };
+    match fact {
+        EhrFact::Within { from, until } => {
+            let now = instant(caller.now);
+            let mut atoms = Vec::new();
+            if let Some((at, included)) = from {
+                let bound = fact_instant(at);
+                atoms.push(if included {
+                    bound.lte(now.clone())
+                } else {
+                    bound.lt(now.clone())
+                });
+            }
+            if let Some((at, included)) = until {
+                let bound = fact_instant(at);
+                atoms.push(if included {
+                    now.lte(bound)
+                } else {
+                    now.lt(bound)
+                });
+            }
+            atoms
+                .into_iter()
+                .reduce(ExprTrait::and)
+                .unwrap_or_else(|| Expr::val(true))
+        }
+        EhrFact::Party(at) => {
+            fact_text(at).eq(Expr::from(PgFunc::any(Expr::val(caller.parties.to_vec()))))
+        }
+        EhrFact::Keeper(at) => match &caller.keeper {
+            Some(party) => fact_text(at).eq(Expr::val(party.clone())),
+            None => Expr::val(false),
+        },
     }
 }
 
@@ -142,7 +309,13 @@ fn pred(pred: &Pred, h: &str) -> Expr {
 fn data_match(data: &DataMatch, polarity: Polarity, h: &str) -> Expr {
     let mut atoms: Vec<Expr> = Vec::new();
     if let Some(objects) = &data.objects {
-        atoms.push(in_ids(col(h, VoHead::VoId), objects));
+        atoms.push(match objects {
+            Held::Known(objects) => in_ids(col(h, VoHead::VoId), objects),
+            Held::Fact(at) => in_fact(
+                *at,
+                Expr::cust_with_exprs("($1)::text", [col(h, VoHead::VoId)]),
+            ),
+        });
     }
     if let Some(templates) = &data.templates {
         atoms.push(null_safe(template_in(h, templates), false));
@@ -190,9 +363,20 @@ fn archetype_in(h: &str, archetypes: &[String]) -> Expr {
     Expr::exists(probe)
 }
 
+/// The JSON array of strings the fact at `at` holds has `text` among them.
+fn in_fact(at: usize, text: Expr) -> Expr {
+    Expr::cust_with_exprs("COALESCE($1 @> to_jsonb($2), false)", [fact_json(at), text])
+}
+
 /// The trunk head of `h` names one of `origins` among its originating
 /// systems; a head nothing stamped is read by `polarity`.
-fn origin_in(h: &str, origins: &[String], polarity: Polarity) -> Expr {
+fn origin_in(h: &str, origins: &Held<Vec<String>>, polarity: Polarity) -> Expr {
+    let named = match origins {
+        Held::Known(origins) => {
+            Expr::cust("o.id").eq(Expr::from(PgFunc::any(Expr::val(origins.clone()))))
+        }
+        Held::Fact(at) => in_fact(*at, Expr::cust("o.id")),
+    };
     let mut probe = Query::select();
     probe
         .expr(Expr::val(1))
@@ -202,11 +386,11 @@ fn origin_in(h: &str, origins: &[String], polarity: Polarity) -> Expr {
         .and_where(col(TRUNK, VersionRow::SysVersion).eq(col(h, VoHead::TrunkHeadSysVersion)))
         .and_where(Expr::cust_with_exprs(
             "CASE WHEN $1 IS NULL THEN $2 ELSE EXISTS (SELECT 1 FROM \
-             jsonb_array_elements_text($1) AS o(id) WHERE o.id = ANY($3)) END",
+             jsonb_array_elements_text($1) AS o(id) WHERE $3) END",
             [
                 col(TRUNK, VersionRow::Origins),
                 Expr::val(polarity.unreadable()),
-                Expr::val(origins.to_vec()),
+                named,
             ],
         ));
     Expr::exists(probe)
@@ -231,7 +415,7 @@ fn recorded_in(h: &str, recorded: &Recorded) -> Expr {
     let at = col(h, VoHead::CommittedAt);
     let mut atoms = Vec::new();
     if let Some(from) = recorded.from {
-        let bound = instant(from.at);
+        let bound = edge(from);
         atoms.push(if from.included {
             at.clone().gte(bound)
         } else {
@@ -239,7 +423,7 @@ fn recorded_in(h: &str, recorded: &Recorded) -> Expr {
         });
     }
     if let Some(until) = recorded.until {
-        let bound = instant(until.at);
+        let bound = edge(until);
         atoms.push(if until.included {
             at.clone().lte(bound)
         } else {
@@ -250,6 +434,14 @@ fn recorded_in(h: &str, recorded: &Recorded) -> Expr {
         .into_iter()
         .reduce(ExprTrait::and)
         .unwrap_or_else(|| Expr::val(true))
+}
+
+/// The instant of `edge`, known or a fact.
+fn edge(edge: Edge) -> Expr {
+    match edge.at {
+        Held::Known(at) => instant(at),
+        Held::Fact(at) => fact_instant(at),
+    }
 }
 
 /// `at` as a `timestamptz` value.
@@ -265,14 +457,6 @@ fn null_safe(e: Expr, unknown: bool) -> Expr {
 /// `target` is one of `ids`.
 fn in_ids(target: Expr, ids: &[Uuid]) -> Expr {
     target.eq(Expr::from(PgFunc::any(Expr::val(ids.to_vec()))))
-}
-
-/// `target` is none of `ids`; every id when `ids` is empty.
-fn not_in_ids(target: Expr, ids: &[Uuid]) -> Expr {
-    if ids.is_empty() {
-        return Expr::val(true);
-    }
-    target.ne(Expr::from(PgFunc::all(Expr::val(ids.to_vec()))))
 }
 
 /// The disjunction of `branches`; false when empty.

@@ -11,10 +11,12 @@
 //! write, and a query, whose one SQL statement carries the
 //! [`AccessCondition`] so counts and pages see only readable rows. Every fact
 //! it reads is held in memory on the replica (the per-EHR copy of the
-//! settings, the access policy, the caller facts), so a decision adds no
-//! transaction. Outside a request, a background task or a test, nothing is
-//! published and nothing is withheld. No openEHR spec governs this: our own
-//! design (#5513).
+//! settings, the settings classes, the access policy, the caller facts), so a
+//! decision adds no transaction. A query's condition is judged per settings
+//! class, never per EHR ([`crate::access_eval::class`]), so what a replica
+//! holds does not grow with the EHRs that carry settings. Outside a request,
+//! a background task or a test, nothing is published and nothing is
+//! withheld. No openEHR spec governs this: our own design (#5513, #5588).
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, PoisonError};
@@ -24,6 +26,7 @@ use openehr_rm::draft::access_control::terminology::{AccessDefault, OperationCla
 use tokio::task_local;
 use uuid::Uuid;
 
+use crate::access_eval::class::{Class, Classes};
 use crate::access_eval::procedure::{
     Asked, Caller, Ehr, Emergency, Judged, Outcome, Policy, Verdict, decide,
 };
@@ -31,7 +34,7 @@ use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::CareTeam;
 use crate::party_binding::grants::live::LiveGrants;
-use crate::service::ehr::access_settings::{EhrAccessIndex, EhrAccessSettings};
+use crate::service::ehr::access_settings::EhrAccessSettings;
 
 task_local! {
     static REQUEST_ACCESS: Arc<RequestAccess>;
@@ -52,7 +55,6 @@ pub struct RequestAccess {
     now: jiff::Timestamp,
     grants: Option<Arc<LiveGrants>>,
     verdicts: Mutex<BTreeMap<EhrId, Judgement>>,
-    reached: Mutex<Option<EhrAccessIndex>>,
     recorded: Recorded,
 }
 
@@ -156,7 +158,6 @@ impl RequestAccess {
             now: in_force.now,
             grants: in_force.grants,
             verdicts: Mutex::new(BTreeMap::new()),
-            reached: Mutex::new(None),
             recorded: Recorded::default(),
         }
     }
@@ -275,19 +276,43 @@ impl RequestAccess {
     /// subject or not.
     #[must_use]
     pub fn judge(&self, settings: Option<&EhrAccessSettings>, cared: bool) -> Verdict {
-        let (labels, classifications) = (
-            match settings {
-                Some(EhrAccessSettings::Directives(settings)) => {
-                    settings.labels.as_deref().unwrap_or_default()
-                }
-                _ => &[],
-            },
-            self.policy
-                .as_deref()
-                .and_then(|policy| policy.classifications.as_deref())
-                .unwrap_or_default(),
+        let labels = match settings {
+            Some(EhrAccessSettings::Directives(settings)) => {
+                settings.labels.as_deref().unwrap_or_default()
+            }
+            _ => &[],
+        };
+        let scopes = Scopes::new(self.categories.clone(), labels, self.classifications());
+        self.decide(settings, cared, &scopes)
+    }
+
+    /// The verdict for every EHR of `class`, the caller `cared` for its
+    /// subject or not, its facts left to the query.
+    #[must_use]
+    pub fn judge_class(&self, class: &Class, cared: bool) -> Verdict {
+        let scopes = Scopes::of_class(
+            self.categories.clone(),
+            Arc::clone(&class.layout),
+            self.classifications(),
         );
-        let scopes = Scopes::new(self.categories.clone(), labels, classifications);
+        self.decide((*class.settings).as_ref(), cared, &scopes)
+    }
+
+    /// The controller's classifications.
+    fn classifications(&self) -> &[openehr_rm::draft::access_control::access_control::access_classification::AccessClassification]{
+        self.policy
+            .as_deref()
+            .and_then(|policy| policy.classifications.as_deref())
+            .unwrap_or_default()
+    }
+
+    /// The verdict for an EHR with `settings` read through `scopes`.
+    fn decide(
+        &self,
+        settings: Option<&EhrAccessSettings>,
+        cared: bool,
+        scopes: &Scopes,
+    ) -> Verdict {
         decide(&Judged {
             caller: &self.caller,
             asked: Asked {
@@ -301,7 +326,7 @@ impl RequestAccess {
                 server_default: self.server_default,
                 cared,
             },
-            scopes: &scopes,
+            scopes,
             now: self.now,
         })
     }
@@ -358,36 +383,26 @@ impl RequestAccess {
         }
     }
 
-    /// The judgement of `ehr_id`, an EHR a query of this request reached
-    /// through its condition, judged as a direct read judges it: from the
-    /// entry of the index the condition was built on, or, for an EHR with no
-    /// settings, the default; `None` when no query built a condition.
+    /// Judges `ehr_id`, an EHR with no settings a query of this request
+    /// served, by the default, and keeps the verdict for the rest of the
+    /// request.
     ///
-    /// An EHR with no settings is in no index, so its subject is not known
-    /// here. A row of it was served, so the caller cares for its subject
-    /// when only the verdict with a care relationship admits anything; when
-    /// both verdicts admit, care decided nothing and no care ground is named.
-    /// Our own design (#5581).
-    pub(super) fn reached_judgement(&self, ehr_id: EhrId) -> Option<Judgement> {
-        let index = self
-            .reached
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .clone()?;
-        let indexed = index
-            .binary_search_by_key(&ehr_id, |(id, _)| *id)
-            .ok()
-            .and_then(|at| index.get(at));
-        if let Some((_, entry)) = indexed {
-            return Some(self.judgement_of(entry, self.cares_for(entry)));
-        }
+    /// Its subject is not known here. A row of it was served, so the caller
+    /// cares for its subject when only the verdict with a care relationship
+    /// admits anything; when both verdicts admit, care decided nothing and no
+    /// care ground is named. Our own design (#5581).
+    pub fn judge_unsettled(&self, ehr_id: EhrId) {
         let entry = EhrEntry {
             settings: Arc::new(None),
             subject: None,
             version: None,
         };
         let cared = self.judge(None, true).admits_any() && !self.judge(None, false).admits_any();
-        Some(self.judgement_of(&entry, cared))
+        let judged = self.judgement_of(&entry, cared);
+        self.verdicts
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(ehr_id, judged);
     }
 
     /// The verdict judged for `ehr_id` in this request.
@@ -408,25 +423,40 @@ impl RequestAccess {
         }
     }
 
-    /// The condition a query applies, over every EHR whose settings are in
-    /// `index` and the default for every other, the caller caring for the
-    /// subjects `cared`; the access record of each EHR the query serves names
-    /// its grounds from `index`.
+    /// The condition a query applies, over every EHR of a class among
+    /// `classes`, an EHR held closed, and the default for an EHR with no
+    /// settings, the caller caring for the subjects `cared`. An EHR of a
+    /// class this replica does not hold is withheld.
     #[must_use]
-    pub fn condition(&self, index: &EhrAccessIndex, cared: Vec<String>) -> AccessCondition {
-        *self.reached.lock().unwrap_or_else(PoisonError::into_inner) = Some(Arc::clone(index));
+    pub fn condition(&self, classes: &Classes, cared: Vec<String>) -> AccessCondition {
         let pair = |settings: Option<&EhrAccessSettings>| VerdictPair {
             cared: self.judge(settings, true).bare(),
             uncared: self.judge(settings, false).bare(),
         };
-        let mut groups: BTreeMap<VerdictPair, Vec<Uuid>> = BTreeMap::new();
-        for (ehr_id, entry) in index.iter() {
-            groups
-                .entry(pair((*entry.settings).as_ref()))
-                .or_default()
-                .push(ehr_id.0);
+        let mut groups: BTreeMap<VerdictPair, Vec<i64>> = BTreeMap::new();
+        for (id, class) in &classes.classes {
+            let judged = VerdictPair {
+                cared: self.judge_class(class, true).bare(),
+                uncared: self.judge_class(class, false).bare(),
+            };
+            groups.entry(judged).or_default().push(*id);
         }
-        AccessCondition::new(groups, pair(None), cared)
+        let mut parties: Vec<String> = self.caller.acts_for.clone();
+        parties.extend(self.caller.party.clone());
+        parties.sort_unstable();
+        parties.dedup();
+        let facts = CallerKeys {
+            now: self.now,
+            parties: parties.into(),
+            keeper: self.caller.settings.party().map(str::to_owned),
+        };
+        AccessCondition::new(
+            groups,
+            pair(Some(&EhrAccessSettings::HeldClosed)),
+            pair(None),
+            cared,
+            facts,
+        )
     }
 }
 
@@ -458,19 +488,35 @@ impl VerdictPair {
     }
 }
 
-/// The verdicts a restrictive condition holds: the EHRs grouped by verdict,
-/// the verdict of an EHR with no settings, and the subjects the caller cares
-/// for.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+/// The verdicts a restrictive condition holds.
+///
+/// They are the settings classes grouped by verdict, the verdict of an EHR
+/// held closed and of an EHR with no settings, the subjects the caller cares
+/// for, and what the classes' facts are read against.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConditionGroups {
-    /// The EHRs with settings, grouped by their verdicts.
-    pub groups: Vec<(Vec<Uuid>, Arc<VerdictPair>)>,
+    /// The settings classes, by id, grouped by their verdicts.
+    pub groups: Vec<(Vec<i64>, Arc<VerdictPair>)>,
+    /// The verdicts of an EHR held closed.
+    pub closed: Arc<VerdictPair>,
     /// The verdicts of an EHR with no settings; `None` admits every row.
     pub default: Option<Arc<VerdictPair>>,
-    /// Every EHR with settings.
-    pub known: Vec<Uuid>,
     /// The subjects the caller has a live care relationship to.
     pub cared: Arc<[String]>,
+    /// What the facts of a class are read against.
+    pub facts: CallerKeys,
+}
+
+/// What the facts of a class are read against: the moment of the request,
+/// the parties the caller is or acts for, and the party it is bound to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CallerKeys {
+    /// The moment the request began.
+    pub now: jiff::Timestamp,
+    /// The caller's own party and every party it acts for, sorted.
+    pub parties: Arc<[String]>,
+    /// The party the caller is bound to, which a gate-keeper names.
+    pub keeper: Option<String>,
 }
 
 /// The access condition of one query; shared, so a query request stays
@@ -489,37 +535,36 @@ impl From<ConditionGroups> for AccessCondition {
 }
 
 impl AccessCondition {
-    /// The condition of `groups`, `default` for every other EHR.
+    /// The condition of the classes `groups`, `closed` for an EHR held
+    /// closed and `default` for an EHR with no settings.
     fn new(
-        groups: BTreeMap<VerdictPair, Vec<Uuid>>,
+        groups: BTreeMap<VerdictPair, Vec<i64>>,
+        closed: VerdictPair,
         default: VerdictPair,
         cared: Vec<String>,
+        facts: CallerKeys,
     ) -> Self {
-        let known = groups.values().flatten().copied().collect::<Vec<_>>();
         let default_admits = default.admits_all();
-        let groups: Vec<(Vec<Uuid>, Arc<VerdictPair>)> = groups
+        let groups: Vec<(Vec<i64>, Arc<VerdictPair>)> = groups
             .into_iter()
             .map(|(pair, ids)| (ids, Arc::new(pair)))
             .collect();
-        if default_admits && groups.iter().all(|(_, pair)| pair.admits_all()) {
-            return Self::default();
-        }
         ConditionGroups {
             groups,
+            closed: Arc::new(closed),
             default: (!default_admits).then(|| Arc::new(default)),
-            known,
             cared: cared.into(),
+            facts,
         }
         .into()
     }
 
     /// The verdicts of a condition that withholds something; `None` when it
-    /// admits every row.
+    /// admits every row. A condition that admits every row of every class
+    /// it knows still withholds the rows of a class it does not.
     #[must_use]
     pub fn groups(&self) -> Option<&ConditionGroups> {
-        self.groups.as_deref().filter(|groups| {
-            groups.default.is_some() || groups.groups.iter().any(|(_, pair)| !pair.admits_all())
-        })
+        self.groups.as_deref()
     }
 }
 

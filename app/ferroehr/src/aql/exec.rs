@@ -57,6 +57,9 @@ pub struct QueryResult {
     /// and when the result is empty. The access log reads it to record one
     /// access per record accessed, rather than one per statement.
     pub served_ehrs: Vec<(Uuid, u64)>,
+    /// The EHRs among [`Self::served_ehrs`] whose `EHR_ACCESS` carried
+    /// settings when the statement ran, whose access record reads them.
+    pub settled_ehrs: Vec<Uuid>,
     /// The distinct origins of the version bodies the served rows came from
     /// (EHDS Annex II 3.2(e), #3212), capped at the record cap
     /// (`versioning::origins::RECORD_CAP`); empty when no row could be
@@ -84,6 +87,7 @@ impl QueryResult {
             columns,
             rows,
             served_ehrs: Vec::new(),
+            settled_ehrs: Vec::new(),
             served_origins: Vec::new(),
             origin_count: 0,
             served_content: Vec::new(),
@@ -180,6 +184,11 @@ pub async fn execute(
         columns,
         rows: out_rows,
         served_ehrs: served_ehrs(&rows, &prepared.access_ehr_cols)?,
+        settled_ehrs: settled_ehrs(
+            &rows,
+            &prepared.access_ehr_cols,
+            &prepared.access_settled_cols,
+        )?,
         served_origins: served.origins,
         origin_count: served.origin_count,
         served_content: served.content,
@@ -246,6 +255,30 @@ fn served_ehrs(rows: &[PgRow], access_cols: &[String]) -> Result<Vec<(Uuid, u64)
         }
     }
     Ok(served.into_iter().collect())
+}
+
+/// The served EHRs whose `EHR_ACCESS` carried settings, read off the hidden
+/// columns the builder appended beside each access-EHR column, in order and
+/// without repeats.
+///
+/// # Errors
+/// [`ExecError`] when a column the builder declared cannot be read back.
+fn settled_ehrs(
+    rows: &[PgRow],
+    access_cols: &[String],
+    settled_cols: &[String],
+) -> Result<Vec<Uuid>, AqlError> {
+    let mut settled: indexmap::IndexSet<Uuid> = indexmap::IndexSet::new();
+    for row in rows {
+        for (name, flag) in access_cols.iter().zip(settled_cols) {
+            let ehr: Option<Uuid> = row.try_get(name.as_str()).map_err(ExecError::from)?;
+            let held: Option<bool> = row.try_get(flag.as_str()).map_err(ExecError::from)?;
+            if let (Some(ehr), Some(true)) = (ehr, held) {
+                settled.insert(ehr);
+            }
+        }
+    }
+    Ok(settled.into_iter().collect())
 }
 
 /// The result of scanning the SQL rows: the assembled cells, the subtree

@@ -41,22 +41,32 @@ impl Builder<'_> {
     /// distinct, and an aggregate projection, where an ungrouped column is not
     /// valid SQL. The contract those two exclusions leave is on
     /// [`super::ACCESS_EHR_PREFIX`].
-    pub(super) fn build_access_ehr_columns(&mut self, ir: &QueryIr) -> Vec<String> {
+    ///
+    /// Beside each it appends whether that EHR carries `EHR_ACCESS` settings
+    /// ([`super::ACCESS_SETTLED_PREFIX`]), returned second.
+    pub(super) fn build_access_ehr_columns(&mut self, ir: &QueryIr) -> (Vec<String>, Vec<String>) {
         let aggregates = ir
             .select
             .iter()
             .any(|column| matches!(column.value, SelectValue::Aggregate { .. }));
         let served = self.served_ehr_ids();
         if ir.distinct || aggregates || served.is_empty() {
-            return Vec::new();
+            return (Vec::new(), Vec::new());
         }
         let mut aliases = Vec::with_capacity(served.len());
+        let mut settled = Vec::with_capacity(served.len());
         for (i, ehr) in served.into_iter().enumerate() {
             let alias = format!("{}{i}", super::ACCESS_EHR_PREFIX);
+            let flag = format!("{}{i}", super::ACCESS_SETTLED_PREFIX);
+            self.q.expr_as(
+                super::access::settled(ehr.clone()),
+                Alias::new(flag.as_str()),
+            );
             self.q.expr_as(ehr, Alias::new(alias.as_str()));
             aliases.push(alias);
+            settled.push(flag);
         }
-        aliases
+        (aliases, settled)
     }
 
     /// Append the hidden version-locator columns: one `(vo_id, sys_version)`

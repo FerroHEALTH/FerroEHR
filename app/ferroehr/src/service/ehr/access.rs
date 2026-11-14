@@ -13,8 +13,11 @@
 //! The copy is read from the projection on a miss and kept until a
 //! notification on [`CHANNEL`] names the EHR, which every commit that changes
 //! its settings sends; while the listener is down every request reads the
-//! projection, and a projection that cannot be read is `503`. No openEHR spec
-//! governs the copy: our own design.
+//! projection, and a projection that cannot be read is `503`. The copy holds
+//! at most [`EhrAccessCache`]'s capacity of EHRs, and beside them the
+//! settings classes a query is judged over ([`crate::access_eval::class`]),
+//! never every EHR that carries settings. No openEHR spec governs the copy:
+//! our own design (#5588).
 
 #![expect(
     clippy::disallowed_types,
@@ -26,12 +29,13 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use crate::access_eval::class::{Class, Classes, Keepers};
 use crate::access_eval::condition::EhrEntry;
 use crate::aql::sql::EhrAccessReaders;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::ehr::access_rule::SettingsCaller;
-use crate::service::ehr::access_settings::{EhrAccessIndex, EhrAccessSettings, UnreadableSettings};
+use crate::service::ehr::access_settings::{EhrAccessSettings, UnreadableSettings};
 use moka::future::Cache;
 use openehr_rm::prelude::{DvText, DvTextData, EhrAccess};
 use serde_json::Value;
@@ -39,7 +43,7 @@ use sqlx::PgConnection;
 
 use crate::policy_register::listen::{Dropping, Listened, Subscriber};
 use crate::service::FerroEhrService;
-use crate::storage::access_projection::{CHANNEL, StoredSettings};
+use crate::storage::access_projection::{CHANNEL, NEW_CLASS, Stored, StoredSettings};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, commit_contribution};
@@ -158,38 +162,50 @@ impl FerroEhrService {
     /// carries none, which the server-wide default governs.
     ///
     /// # Errors
-    /// `service_overloaded` (`503`) when the projection cannot be read, and an
-    /// internal fault naming the EHR when its settings do not read as the
-    /// `access_directives` scheme: a privacy control that cannot be read
-    /// refuses the EHR.
+    /// `service_overloaded` (`503`) when the projection cannot be read, and
+    /// as [`entry_of`].
     async fn load_ehr_access(&self, ehr_id: EhrId) -> Result<EhrEntry, ServiceError> {
         let stored = crate::storage::access_projection::settings_of(&self.pool, ehr_id)
             .await
             .map_err(|e| ServiceError::overloaded(UNANSWERED, e))?;
-        let unreadable = |error: Option<UnreadableSettings>| {
-            tracing::error!(%ehr_id, "EHR_ACCESS settings do not parse; the EHR is refused");
-            let message = format!(
-                "the EHR_ACCESS settings of EHR {ehr_id} do not parse, so the EHR is refused"
-            );
-            match error {
-                Some(error) => ServiceError::internal(message, error),
-                None => ServiceError::internal(message, HeldClosed),
+        entry_of(ehr_id, stored)
+    }
+
+    /// The entries of `ehr_ids` from this replica's copy, the ones it does not
+    /// hold read in one statement and copied: the EHRs a query served, whose
+    /// access record names the grounds a direct read names (#5581).
+    ///
+    /// # Errors
+    /// `service_overloaded` (`503`) when the projection cannot be read, and
+    /// as [`entry_of`].
+    pub async fn ehr_access_entries(
+        &self,
+        ehr_ids: &[EhrId],
+    ) -> Result<Vec<(EhrId, EhrEntry)>, ServiceError> {
+        let listening = self.ehr_access_listened.is_listening();
+        let mut entries = Vec::with_capacity(ehr_ids.len());
+        let mut missing = Vec::new();
+        for ehr_id in ehr_ids {
+            match self.ehr_access.held(*ehr_id).await.filter(|_| listening) {
+                Some(entry) => entries.push((*ehr_id, entry)),
+                None => missing.push(*ehr_id),
             }
-        };
-        let subject = subject_of(stored.subject.as_deref());
-        let settings = match stored.settings {
-            StoredSettings::None => None,
-            StoredSettings::HeldClosed => return Err(unreadable(None)),
-            StoredSettings::Settings(settings) => Some(
-                EhrAccessSettings::from_projected(&settings)
-                    .map_err(|error| unreadable(Some(error)))?,
-            ),
-        };
-        Ok(EhrEntry {
-            version: settings.as_ref().and(stored.version),
-            settings: Arc::new(settings),
-            subject,
-        })
+        }
+        if missing.is_empty() {
+            return Ok(entries);
+        }
+        let seen = self.ehr_access.drops();
+        let read = crate::storage::access_projection::settings_of_many(&self.pool, &missing)
+            .await
+            .map_err(|e| ServiceError::overloaded(UNANSWERED, e))?;
+        for (ehr_id, stored) in read {
+            let entry = entry_of(ehr_id, stored)?;
+            if listening {
+                self.ehr_access.keep(ehr_id, entry.clone(), seen).await;
+            }
+            entries.push((ehr_id, entry));
+        }
+        Ok(entries)
     }
 
     /// The EHR's current `EHR_ACCESS` settings and its subject, from this
@@ -228,31 +244,28 @@ impl FerroEhrService {
         Ok(self.ehr_access_entry(ehr_id).await?.settings)
     }
 
-    /// Every EHR whose current `EHR_ACCESS` carries settings, with those
-    /// settings: the input of the per-EHR decision a
-    /// query applies to every EHR it could reach, where the path routes decide
-    /// one EHR at a time ([`Self::current_ehr_access_settings`]). An EHR absent
-    /// from the list has no settings and falls to the server-wide default.
+    /// The settings classes the store holds: the input of the condition a
+    /// query applies to every EHR it could reach, where the path routes
+    /// decide one EHR at a time ([`Self::current_ehr_access_settings`]). An
+    /// EHR with no settings is of no class and falls to the server-wide
+    /// default; an EHR of a class this copy does not hold is withheld.
     ///
-    /// Copied as one entry, dropped on every notification like the per-EHR
-    /// entries, and read on every call while the listener is down. No openEHR
-    /// spec governs this index — our own design.
+    /// Copied as one entry, dropped by the notification of a new class, and
+    /// read on every call while the listener is down. No openEHR spec
+    /// governs the classes: our own design (#5588).
     ///
     /// # Errors
     /// `service_overloaded` (`503`) when the projection cannot be read.
-    pub async fn ehr_access_settings_index(&self) -> Result<EhrAccessIndex, ServiceError> {
+    pub async fn ehr_access_classes(&self) -> Result<Arc<Classes>, ServiceError> {
         if !self.ehr_access_listened.is_listening() {
-            return self.load_ehr_access_index().await.map(Arc::new);
+            return self.load_classes().await.map(Arc::new);
         }
         let svc = self.clone();
         let loaded = self
             .ehr_access
-            .index_or_load(async move { svc.load_ehr_access_index().await })
+            .classes_or_load(async move { svc.load_classes().await })
             .await;
-        owned_or_reload(loaded, || async {
-            self.load_ehr_access_index().await.map(Arc::new)
-        })
-        .await
+        owned_or_reload(loaded, || async { self.load_classes().await.map(Arc::new) }).await
     }
 
     /// Refuses a caller who may not commit the next `EHR_ACCESS` version of
@@ -307,65 +320,77 @@ impl FerroEhrService {
 
     /// The EHRs whose `EHR_ACCESS` objects the running request's query reads:
     /// every EHR's for a caller who reads them all, otherwise the EHRs whose
-    /// settings name the caller a gate-keeper.
+    /// settings name the caller a gate-keeper, judged per class.
     ///
     /// # Errors
-    /// [`ServiceError`] when the settings index cannot be read.
+    /// [`ServiceError`] when the classes cannot be read.
     pub async fn ehr_access_readers(&self) -> Result<EhrAccessReaders, ServiceError> {
         let caller = self.settings_caller();
         if caller.reads_every() {
             return Ok(EhrAccessReaders::Every);
         }
-        let index = self.ehr_access_settings_index().await?;
-        Ok(EhrAccessReaders::Only(
-            index
-                .iter()
-                .filter(|(_, entry)| caller.is_gate_keeper((*entry.settings).as_ref()))
-                .map(|(ehr_id, _)| *ehr_id)
-                .collect(),
-        ))
+        let classes = self.ehr_access_classes().await?;
+        Ok(EhrAccessReaders::Only(Arc::new(Keepers::of(
+            &classes, &caller,
+        ))))
     }
 
-    /// The miss path of [`Self::ehr_access_settings_index`]: each EHR with
-    /// settings as [`Self::ehr_access_entry`] reads it, so a query's access
-    /// record names the grounds a direct read names (#5581).
-    async fn load_ehr_access_index(&self) -> Result<Vec<(EhrId, EhrEntry)>, ServiceError> {
-        let stored = crate::storage::access_projection::every_settings(&self.pool)
+    /// The miss path of [`Self::ehr_access_classes`]: every class the store
+    /// holds. A class that does not read is left out, so every EHR of it is
+    /// withheld.
+    async fn load_classes(&self) -> Result<Classes, ServiceError> {
+        let stored = crate::storage::access_projection::every_class(&self.pool)
             .await
             .map_err(|e| ServiceError::overloaded(UNANSWERED, e))?;
-        let mut index: Vec<(EhrId, EhrEntry)> = stored
+        let classes = stored
             .into_iter()
-            .map(|row| {
-                let ehr_id = row.ehr_id;
-                let read = row
-                    .settings
-                    .as_deref()
-                    .map(EhrAccessSettings::from_projected)
-                    .transpose();
-                let settings = match read {
-                    Ok(Some(settings)) => settings,
-                    Ok(None) => EhrAccessSettings::HeldClosed,
-                    Err(error) => {
-                        let cause: &(dyn std::error::Error + 'static) = &error;
-                        tracing::error!(
-                            %ehr_id,
-                            error = cause,
-                            "EHR_ACCESS settings do not parse; no query reaches the EHR"
-                        );
-                        EhrAccessSettings::HeldClosed
-                    }
-                };
-                let entry = EhrEntry {
-                    settings: Arc::new(Some(settings)),
-                    subject: subject_of(row.subject.as_deref()),
-                    version: row.version,
-                };
-                (ehr_id, entry)
+            .filter_map(|(id, text)| match Class::read(&text) {
+                Ok(class) => Some((id, class)),
+                Err(error) => {
+                    let cause: &(dyn std::error::Error + 'static) = &error;
+                    tracing::error!(
+                        class = id,
+                        error = cause,
+                        "a settings class does not read; no query reaches its EHRs"
+                    );
+                    None
+                }
             })
             .collect();
-        index.sort_unstable_by_key(|(ehr_id, _)| *ehr_id);
-        Ok(index)
+        Ok(Classes { classes })
     }
+}
+
+/// The entry of `ehr_id` as `stored` reads it.
+///
+/// # Errors
+/// An internal fault naming the EHR when its settings do not read as the
+/// `access_directives` scheme: a privacy control that cannot be read refuses
+/// the EHR.
+fn entry_of(ehr_id: EhrId, stored: Stored) -> Result<EhrEntry, ServiceError> {
+    let unreadable = |error: Option<UnreadableSettings>| {
+        tracing::error!(%ehr_id, "EHR_ACCESS settings do not parse; the EHR is refused");
+        let message =
+            format!("the EHR_ACCESS settings of EHR {ehr_id} do not parse, so the EHR is refused");
+        match error {
+            Some(error) => ServiceError::internal(message, error),
+            None => ServiceError::internal(message, HeldClosed),
+        }
+    };
+    let subject = subject_of(stored.subject.as_deref());
+    let settings = match stored.settings {
+        StoredSettings::None => None,
+        StoredSettings::HeldClosed => return Err(unreadable(None)),
+        StoredSettings::Settings(settings) => Some(
+            EhrAccessSettings::from_projected(&settings)
+                .map_err(|error| unreadable(Some(error)))?,
+        ),
+    };
+    Ok(EhrEntry {
+        version: settings.as_ref().and(stored.version),
+        settings: Arc::new(settings),
+        subject,
+    })
 }
 
 /// The `PERSON` container a stored `ehr.subject_id` names.
@@ -448,7 +473,7 @@ pub(in crate::service) fn initial_ehr_access() -> Value {
 #[derive(Debug)]
 pub(crate) struct EhrAccessCache {
     inner: Cache<EhrId, EhrEntry>,
-    index: Cache<(), EhrAccessIndex>,
+    classes: Cache<(), Arc<Classes>>,
     /// Moved by every drop, so a load that started before one keeps nothing.
     drops: AtomicU64,
 }
@@ -458,8 +483,28 @@ impl EhrAccessCache {
     fn new(capacity: u64) -> Self {
         Self {
             inner: Cache::builder().max_capacity(capacity).build(),
-            index: Cache::builder().max_capacity(1).build(),
+            classes: Cache::builder().max_capacity(1).build(),
             drops: AtomicU64::new(0),
+        }
+    }
+
+    /// The copied entry of `ehr_id`, if this replica holds one.
+    pub(in crate::service) async fn held(&self, ehr_id: EhrId) -> Option<EhrEntry> {
+        self.inner.get(&ehr_id).await
+    }
+
+    /// How many drops this copy has seen, read before a load so
+    /// [`Self::keep`] keeps nothing a drop overtook.
+    pub(in crate::service) fn drops(&self) -> u64 {
+        self.drops.load(Ordering::Acquire)
+    }
+
+    /// Copy `entry` for `ehr_id`, read after `seen` drops, unless a drop
+    /// overtook the read.
+    pub(in crate::service) async fn keep(&self, ehr_id: EhrId, entry: EhrEntry, seen: u64) {
+        self.inner.insert(ehr_id, entry).await;
+        if self.drops() != seen {
+            self.inner.invalidate(&ehr_id).await;
         }
     }
 
@@ -493,40 +538,45 @@ impl EhrAccessCache {
         self.inner.insert(ehr_id, entry).await;
     }
 
-    /// Drop the copied settings for `ehr_id` and the index.
+    /// Drop the copied settings for `ehr_id`.
     pub(in crate::service) async fn forget(&self, ehr_id: EhrId) {
         self.drops.fetch_add(1, Ordering::AcqRel);
         self.inner.invalidate(&ehr_id).await;
-        self.index.invalidate(&()).await;
     }
 
-    /// Drop every copied entry.
+    /// Drop the copied classes.
+    pub(in crate::service) fn forget_classes(&self) {
+        self.drops.fetch_add(1, Ordering::AcqRel);
+        self.classes.invalidate_all();
+    }
+
+    /// Drop every copied entry and the classes.
     pub(in crate::service) fn forget_every(&self) {
         self.drops.fetch_add(1, Ordering::AcqRel);
         self.inner.invalidate_all();
-        self.index.invalidate_all();
+        self.classes.invalidate_all();
     }
 
-    /// The copied settings index, or load it via `init` (run at most once
-    /// under contention) and copy the result unless a drop overtook the load.
+    /// The copied classes, or load them via `init` (run at most once under
+    /// contention) and copy the result unless a drop overtook the load.
     ///
     /// # Errors
     /// Propagates the `init` error (shared across concurrent callers as an
     /// `Arc<ServiceError>`).
-    pub(in crate::service) async fn index_or_load<Fut>(
+    pub(in crate::service) async fn classes_or_load<Fut>(
         &self,
         init: Fut,
-    ) -> Result<EhrAccessIndex, Arc<ServiceError>>
+    ) -> Result<Arc<Classes>, Arc<ServiceError>>
     where
-        Fut: Future<Output = Result<Vec<(EhrId, EhrEntry)>, ServiceError>>,
+        Fut: Future<Output = Result<Classes, ServiceError>>,
     {
-        let seen = self.drops.load(Ordering::Acquire);
+        let seen = self.drops();
         let loaded = self
-            .index
+            .classes
             .try_get_with((), async move { init.await.map(Arc::new) })
             .await;
-        if self.drops.load(Ordering::Acquire) != seen {
-            self.index.invalidate(&()).await;
+        if self.drops() != seen {
+            self.classes.invalidate(&()).await;
         }
         loaded
     }
@@ -535,9 +585,11 @@ impl EhrAccessCache {
 impl Subscriber for EhrAccessCache {
     fn notified<'a>(&'a self, payload: &'a str) -> Dropping<'a> {
         Box::pin(async move {
-            // NOTE: our own design, a payload that names no EHR, the refill's, drops every EHR.
+            // NOTE: our own design, a payload that names no EHR and no new class, the
+            // refill's, drops every EHR and every class.
             match payload.parse::<uuid::Uuid>() {
                 Ok(ehr_id) => self.forget(EhrId(ehr_id)).await,
+                Err(_) if payload == NEW_CLASS => self.forget_classes(),
                 Err(_) => self.forget_every(),
             }
         })

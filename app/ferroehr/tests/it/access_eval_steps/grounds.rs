@@ -426,7 +426,7 @@ fn a_query_served_ehr_with_no_settings_names_the_grounds_of_a_direct_read() {
     let subject = || request(caller(CallerKind::Subject, GUARDIAN), read(None), None);
     let (_, direct) = decide_on(&subject(), None, &Item::Ehr);
     let queried = subject();
-    let _condition = queried.condition(&Arc::new(Vec::new()), Vec::new());
+    queried.judge_unsettled(EhrId(uuid(EHR)));
     let queried = queried.decision(Some(EhrId(uuid(EHR))));
     assert_eq!(queried, direct);
     assert_eq!(of_kind(&queried, "subject of care").len(), 1, "{queried:?}");
