@@ -80,7 +80,9 @@ pub(crate) async fn enforce(
         .ehr_verdict(&access, ehr_id)
         .await
         .map_err(|e| Box::new(unavailable(principal.as_ref(), e)))?;
-    if let Some(refusal) = refusal_of(&access, op, principal.as_ref(), ehr_id, &verdict) {
+    if let Some(refusal) =
+        refusal_of(state, &access, op, principal.as_ref(), ehr_id, &verdict).await?
+    {
         return Err(Box::new(refusal));
     }
     record_overrides(state, &[ehr_id]).await?;
@@ -165,7 +167,7 @@ async fn enforce_unnamed(
         .ehr_verdict(access, ehr_id)
         .await
         .map_err(|e| Box::new(unavailable(principal, e)))?;
-    match refusal_of(access, op, principal, ehr_id, &verdict) {
+    match refusal_of(state, access, op, principal, ehr_id, &verdict).await? {
         Some(refusal) => Err(Box::new(refusal)),
         None => Ok(()),
     }
@@ -228,7 +230,9 @@ pub(crate) async fn enforce_each(
             .ehr_verdict(&access, *ehr_id)
             .await
             .map_err(|e| Box::new(unavailable(principal.as_ref(), e)))?;
-        if let Some(refusal) = refusal_of(&access, op, principal.as_ref(), *ehr_id, &verdict) {
+        if let Some(refusal) =
+            refusal_of(state, &access, op, principal.as_ref(), *ehr_id, &verdict).await?
+        {
             return Err(Box::new(refusal));
         }
     }
@@ -238,21 +242,38 @@ pub(crate) async fn enforce_each(
 /// The refusal an EHR-wide `verdict` answers for `ehr_id`, noted for the
 /// access record of the request; `None` when it admits some data, which the
 /// reads then judge one by one.
-fn refusal_of(
+///
+/// An EHR the store does not hold answers the `404` of an unknown EHR before
+/// any step refuses, for every caller under every disposition, so a
+/// restriction's `404` is never told apart from it (EHDS Art. 8). Existence
+/// is read only when the verdict refuses (#5623).
+async fn refusal_of(
+    state: &AppState,
     access: &RequestAccess,
     op: &str,
     principal: Option<&Principal>,
     ehr_id: EhrId,
     verdict: &Verdict,
-) -> Option<Response> {
+) -> Result<Option<Response>, Box<Response>> {
     if verdict.item_dependent() && verdict.admits_any() {
-        return None;
+        return Ok(None);
     }
-    match access.note(ehr_id, verdict, &Item::Ehr) {
+    if verdict.outcome(&Item::Ehr) == Outcome::Admit {
+        return Ok(None);
+    }
+    let held = state
+        .backend()
+        .ehr_held(ehr_id)
+        .await
+        .map_err(|e| Box::new(unavailable(principal, e)))?;
+    if !held {
+        return Ok(Some(ehr_not_found(op, ehr_id)));
+    }
+    Ok(match access.note(ehr_id, verdict, &Item::Ehr) {
         Outcome::Admit => None,
         Outcome::Absent(_) => Some(ehr_not_found(op, ehr_id)),
         Outcome::Refused(code) => Some(forbidden(principal, code)),
-    }
+    })
 }
 
 /// Record the EHDS Art. 10(2) override of each opt-out an emergency lifted
@@ -379,6 +400,10 @@ const fn reason(code: Refusal) -> &'static str {
         Refusal::ConsentRequired => "the EHR needs consent and no permit directive applies",
         Refusal::NotSubject => "the caller's patient context names another EHR",
         Refusal::NotRepresented => "the caller represents the subject of another EHR",
+        Refusal::ConsentReferenceMissing => {
+            "the caller's agreement conditions this read on a consent decision it names no \
+             reference to"
+        }
         Refusal::OptOut | Refusal::Restricted => "the data cannot be read",
     }
 }
@@ -432,6 +457,7 @@ mod tests {
             Refusal::ConsentRequired,
             Refusal::NotSubject,
             Refusal::NotRepresented,
+            Refusal::ConsentReferenceMissing,
         ] {
             assert!(!code.is_invisible());
             assert_eq!(forbidden(None, code).status(), http::StatusCode::FORBIDDEN);

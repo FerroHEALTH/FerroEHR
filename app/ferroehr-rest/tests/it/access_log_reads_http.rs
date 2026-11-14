@@ -43,12 +43,14 @@ pub(crate) struct Fixture {
     _db: testkit::TestDb,
     _drain: ferroehr::system_log::sender::AuditHandle,
     pub(crate) pool: PgPool,
-    svc: Arc<FerroEhrService>,
+    pub(crate) svc: Arc<FerroEhrService>,
     pub(crate) app: Router,
     /// The child's EHR, which the parent represents.
     pub(crate) ehr: String,
     /// Another person's EHR.
     pub(crate) elsewhere: String,
+    /// The parent's `PERSON`, who represents the child.
+    pub(crate) parent: ferroehr::ids::VoId,
 }
 
 /// The server over a fresh database: the patient portal trusted with its
@@ -69,7 +71,7 @@ pub(crate) async fn fixture() -> Fixture {
     );
     let (subject, ehr) = child(&svc).await;
     let (_, elsewhere) = child(&svc).await;
-    representative(
+    let parent = representative(
         &svc,
         PARENT,
         json!([representation(subject, subject, "254", None)]),
@@ -97,6 +99,7 @@ pub(crate) async fn fixture() -> Fixture {
         app,
         ehr,
         elsewhere,
+        parent,
     };
     let (status, body) = get(
         &fixture.app,

@@ -358,32 +358,18 @@ pub(crate) fn target_ehr(
 /// well, on the EHR whose `EHR_STATUS` names the subject it represents
 /// (`refused-not-represented`, #5609).
 ///
-/// A read under a federation agreement whose `consent` condition applies
-/// needs the consent decision reference for that patient (Wabvpz Art. 1(j) and
-/// Art. 15a(1), `docs/law/nl/wabvpz/text.html`): the token's mapped
-/// `consent.reference`, which its `patient/` grants confine to that patient.
+/// A read under a federation agreement whose `consent` condition applies,
+/// and which carries no consent decision reference, is the access
+/// evaluator's refusal (`refused-consent-reference-missing`, #5614).
 ///
 /// # Errors
-/// The reason the debug log records: the grants do not meet the requirement,
-/// or a consent-conditioned read carries no consent decision reference.
+/// The reason the debug log records: the grants do not meet the requirement.
 pub(crate) fn check(requirement: &Requirement, principal: &Principal) -> Result<(), &'static str> {
-    if !requirement.met_by(&principal.access, principal.honoured) {
-        return Err("the grants do not meet the route's requirement");
+    if requirement.met_by(&principal.access, principal.honoured) {
+        Ok(())
+    } else {
+        Err("the grants do not meet the route's requirement")
     }
-    if let (Requirement::OpenEhr { permission, .. }, Some(agreement)) = (
-        requirement,
-        crate::extensions::access::authn::declared::admitted(&principal.access),
-    ) && agreement.consent.is_some()
-        && principal
-            .access
-            .caller()
-            .and_then(ferrohealth_smart::resource::Caller::consent_reference)
-            .is_none()
-        && matches!(permission, Permission::Read | Permission::Search)
-    {
-        return Err("a consent-conditioned read carries no consent decision reference");
-    }
-    Ok(())
 }
 
 #[cfg(test)]

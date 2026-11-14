@@ -31,7 +31,7 @@ use openehr_rm::draft::access_control::terminology::ForeignCode;
 
 /// The HL7 v3 `ActCode` sensitivity terminology id.
 const ACT_CODE: &str = "v3-ActCode";
-/// The HL7 v3 `ActReason` terminology id, whose PurposeOfUse codes these are.
+/// The HL7 v3 `ActReason` terminology id, whose `PurposeOfUse` codes these are.
 const PURPOSE_OF_USE: &str = "v3-ActReason";
 
 fn text(value: &str) -> Value {

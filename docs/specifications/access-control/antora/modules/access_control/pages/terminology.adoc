@@ -104,7 +104,7 @@ The groups of this package follow. The codes in `openehr_access` are proposed; a
 |The `_name_` or `_details_` of a `PARTY_RELATIONSHIP` whose source represents its target, the subject; the openEHR `subject_relationship` code beside it says how, such as 264 guardian or 254 parent
 
 |access refusal
-|refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required, refused-not-subject, refused-not-represented
+|refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required, refused-not-subject, refused-not-represented, refused-consent-reference-missing
 |The refusal of each step of xref:decision_procedure.adoc#_procedure[the procedure]
 
 |access log withheld

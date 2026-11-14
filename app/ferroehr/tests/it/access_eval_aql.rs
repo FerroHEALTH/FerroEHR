@@ -256,6 +256,7 @@ impl Ask {
                 facts: CallerFacts::default(),
                 administrator: false,
                 settings: SettingsCaller::new(false, false, Some(world.nurse.clone())),
+                lacks_consent_reference: false,
             },
             purpose: None,
             policy: None,

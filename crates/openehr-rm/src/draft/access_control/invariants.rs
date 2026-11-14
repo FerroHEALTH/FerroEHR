@@ -14,6 +14,11 @@
 //! non-empty are not checked here: the generated types hold each such list
 //! as an `Option<NonEmptyVec<_>>`, so the reader refuses an empty one.
 //!
+//! The RM data values the classes hold keep their own invariants wherever
+//! they are used: each `DV_DATE_TIME` and `DV_DURATION` is checked by its
+//! `Value_valid`, through the BASE validator the RM types use (RM Data Types,
+//! `DV_DATE_TIME` and `DV_DURATION` §Invariants, #5629).
+//!
 //! The terminology invariants name `Terminology_id_access`, the draft
 //! `openehr_access` terminology, whose groups take an HL7 code where one
 //! means the same: a coded value holds when
@@ -31,7 +36,11 @@ use crate::draft::access_control::terminology::{
     AccessDefault, AccessorKind, CallerKind, DirectiveKind, Effect, Relationship, Term, Withheld,
 };
 use crate::draft::invariants::{Check, Violations};
+use crate::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
+use crate::v1_2::data_types::quantity::date_time::dv_duration::DvDuration;
+use crate::v1_2::data_types::quantity::dv_interval::DvInterval;
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
+use crate::v1_2::validate::{valid_iso8601_date_time, valid_iso8601_duration};
 
 /// `ACCESS_DIRECTIVE.is_deny`: the effect is the `deny` code.
 fn is_deny(directive: &AccessDirective) -> bool {
@@ -114,6 +123,9 @@ pub fn check_policy(policy: &AccessPolicy) -> Result<(), Violations> {
         "ACCESS_POLICY",
         "Is_archetype_root",
     );
+    if let Some(grace) = &policy.relationship_grace {
+        duration(&mut check, grace);
+    }
     check.hold(
         policy
             .relationship_grace
@@ -200,6 +212,12 @@ fn directive_rules(check: &mut Check, directive: &AccessDirective) {
         "ACCESS_DIRECTIVE",
         "Exceptions_opposite",
     );
+    if let Some(validity) = &directive.time_validity {
+        interval(check, validity);
+    }
+    if let Some(instructed) = &directive.instructed {
+        date_time(check, instructed);
+    }
     for scope in directive.applies_to.as_deref().unwrap_or_default() {
         actor_scope_rules(check, scope);
     }
@@ -232,7 +250,35 @@ fn actor_scope_rules(check: &mut Check, scope: &AccessActorScope) {
     );
 }
 
+/// `DV_DATE_TIME.Value_valid`: the value is an ISO 8601 date-time.
+fn date_time(check: &mut Check, value: &DvDateTime) {
+    check.hold(
+        valid_iso8601_date_time(&value.value),
+        "DV_DATE_TIME",
+        "Value_valid",
+    );
+}
+
+/// `DV_DURATION.Value_valid`: the value is an ISO 8601 duration.
+fn duration(check: &mut Check, value: &DvDuration) {
+    check.hold(
+        valid_iso8601_duration(&value.value),
+        "DV_DURATION",
+        "Value_valid",
+    );
+}
+
+/// Each limit of `interval` by [`date_time`].
+fn interval(check: &mut Check, interval: &DvInterval<DvDateTime>) {
+    for limit in [&interval.lower, &interval.upper].into_iter().flatten() {
+        date_time(check, limit);
+    }
+}
+
 fn data_scope_rules(check: &mut Check, scope: &AccessDataScope) {
+    if let Some(recorded) = &scope.recorded {
+        interval(check, recorded);
+    }
     check.hold(
         scope.objects.is_some()
             || scope.templates.is_some()
