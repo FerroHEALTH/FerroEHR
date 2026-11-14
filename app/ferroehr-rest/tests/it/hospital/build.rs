@@ -619,15 +619,16 @@ pub(crate) fn eva_directives(world: &World, consent: Option<(i64, i64)>, extra: 
     })
 }
 
-/// Eva commits `settings` as the next `EHR_ACCESS` version of her EHR
-/// through an ITS-REST CONTRIBUTION, as its subject; the answer.
+/// `root`, the controller's administrator acting on Eva's instruction,
+/// commits `settings` as the next `EHR_ACCESS` version of her EHR through an
+/// ITS-REST CONTRIBUTION; the answer.
 pub(crate) async fn commit_settings(
     world: &World,
     settings: &Value,
 ) -> crate::hospital::world::Answer {
     let preceding = current_access(world).await;
     let committer = json!({ "_type": "PARTY_IDENTIFIED",
-        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": PATIENTS, "id": "eva-login" }] });
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": crate::hospital::world::PERSONS, "id": ROOT }] });
     let contribution = json!({
         "_type": "CONTRIBUTION",
         "versions": [{
@@ -652,10 +653,10 @@ pub(crate) async fn commit_settings(
     });
     call(
         &world.app,
-        &format!("eva:{}", world.ehr),
+        ROOT,
         "POST",
         &format!("{BASE}/ehr/{}/contribution", world.ehr),
-        None,
+        Some("HOPERAT"),
         Some(&contribution),
     )
     .await
@@ -680,14 +681,14 @@ pub(crate) async fn settle(world: &mut World, settings: &Value) {
     world.access = current_access(world).await;
 }
 
-/// The current version of Eva's `EHR_ACCESS`, as she reads it.
+/// The current version of Eva's `EHR_ACCESS`, as `root` reads it.
 async fn current_access(world: &World) -> String {
     let answer = call(
         &world.app,
-        &format!("eva:{}", world.ehr),
+        ROOT,
         "GET",
         &format!("{EXT}/ehr/{}/ehr_access", world.ehr),
-        None,
+        Some("HOPERAT"),
         None,
     )
     .await;
