@@ -341,15 +341,16 @@ fn from(today: &str) -> Value {
 /// The validity of a role from `lower` (unbounded when `None`) ended before
 /// `today`.
 fn until(lower: Option<&str>, today: &str) -> Value {
-    let mut interval = json!({ "_type": "DV_INTERVAL",
-        "upper": { "_type": "DV_DATE", "value": today },
-        "upper_included": false, "upper_unbounded": false,
-        "lower_unbounded": lower.is_none() });
-    if let Some(lower) = lower {
-        interval["lower"] = json!({ "_type": "DV_DATE", "value": lower });
-        interval["lower_included"] = json!(true);
+    match lower {
+        Some(lower) => json!({ "_type": "DV_INTERVAL",
+            "lower": { "_type": "DV_DATE", "value": lower },
+            "upper": { "_type": "DV_DATE", "value": today },
+            "lower_included": true, "upper_included": false,
+            "lower_unbounded": false, "upper_unbounded": false }),
+        None => json!({ "_type": "DV_INTERVAL",
+            "upper": { "_type": "DV_DATE", "value": today },
+            "upper_included": false, "lower_unbounded": true, "upper_unbounded": false }),
     }
-    interval
 }
 
 #[cfg(test)]
