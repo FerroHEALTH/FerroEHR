@@ -247,9 +247,10 @@ in the element's `name`:
 | `reader` | On `read_change_feed`: the reader's name, exactly one, matching `^[a-z][a-z0-9-]{0,62}$` |
 | `binding_issuer` | On `scim_provision`: the `identifier_issuer` of the binding keys the client owns, exactly one |
 | `token_scope` | On `scim_provision`: a scope the client's access token must hold, at least one |
+| `role_terminology` | On `scim_provision`: the terminology the client's User `roles` are coded in, exactly one when it names a `role` |
 | `acts_for` | On a `PARTY_RELATIONSHIP`: the source acts for the target |
 | `represents` | On a `PARTY_RELATIONSHIP`: the source represents the target, the subject, on the subject's own record ([Representatives in the patient portal](#representatives-in-the-patient-portal)); it makes no policy party |
-| `role` | A `DV_TEXT`: a role a `hold_roles` grant gives |
+| `role` | A `DV_TEXT`: a role a `hold_roles` grant gives, or a role code a `scim_provision` grant lets its client assign its Users ([SCIM roles](installation/config-auth.md#roles)) |
 | `scope` | A `DV_TEXT`: a SMART scope a `hold_scopes` grant gives |
 | `login_issuer` | A text or `DV_URI`: a token issuer whose first logins a `create_at_login` grant admits |
 | `admit_idp` | A text: an identity provider an admitted login comes from |
@@ -1600,7 +1601,10 @@ named in text, or by a code of `ferroehr-operations`, names no role. A
 token's role claims never count for a rule: they decide only the coarse RBAC
 class gate ([Security](security.md)). Which sensitivities a caller may read
 and which purposes it may declare are rules of the access policy too, never
-elements of a capability.
+elements of a capability. A SCIM client writes these `ROLE`s from a User's
+`roles`, within the roles its grant admits
+([SCIM roles](installation/config-auth.md#roles)), so your identity
+provider assigns roles and the access policy says what each may do.
 
 **Care relationships.** A `PARTY_RELATIONSHIP` in a `PERSON`'s
 `relationships` whose `name` or `details` carry `member_of` makes the

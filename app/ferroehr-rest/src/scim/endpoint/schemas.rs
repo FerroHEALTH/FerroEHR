@@ -330,7 +330,7 @@ mod tests {
     }
 
     #[test]
-    fn the_user_schema_carries_exactly_the_mapped_attributes() {
+    fn the_user_schema_carries_exactly_the_mapped_attributes_and_roles() {
         let binding = mapped(&[
             "name.givenName",
             "name.familyName",
@@ -341,7 +341,7 @@ mod tests {
         let discovery = discovery(&enabled(), base(), &binding).expect("the documents build");
         let user = discovery.schema(urn::CORE_USER).expect("the User schema");
         let names: Vec<&str> = user.attributes.iter().map(|a| a.name.as_str()).collect();
-        assert_eq!(names, ["userName", "name", "active", "emails"]);
+        assert_eq!(names, ["userName", "name", "active", "emails", "roles"]);
         let ours = discovery.schema(EXTENSION_URN).expect("the extension");
         let names: Vec<&str> = ours.attributes.iter().map(|a| a.name.as_str()).collect();
         assert_eq!(

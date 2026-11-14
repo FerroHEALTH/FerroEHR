@@ -690,7 +690,16 @@ which is what makes an optional stage safe to disable:
    (`FactKind::Role`, migration `party/0042`); a token's role claims stay
    the coarse RBAC class gate and drive no rule. The `ROLE` is the
    assignment and the rule the permission, the split of the XACML
-   Hierarchical RBAC Profile. Clearances and permitted purposes are rules
+   Hierarchical RBAC Profile. A SCIM User's `roles` (RFC 7643 §4.1.2) are
+   such `ROLE`s (#5625, `service::demographic::user_roles`): each value one
+   `ROLE` of the professional role template its `PERSON` performs, named by
+   the value coded in the `role_terminology` of the client's `scim_provision`
+   grant and limited to the `role` codes that grant lists; a removed value
+   ends its `ROLE` the day before and leaves the `PERSON`'s `roles`, and the
+   caller facts decide the next request. The `ROLE`s carry no capability, so
+   the SCIM client writes them and only an administrator grants. The SCIM
+   client is the Role Enablement Authority of the XACML profile; the policy
+   holds the permissions. Clearances and permitted purposes are rules
    too: the capability codes `sensitivity_clearance` and `permitted_purpose`
    and their caller facts are gone, and a purpose limit is a deny rule with a
    permit exception. Which templates a caller commits is a rule as well, for
