@@ -12,6 +12,7 @@
 //! openEHR specification governs FerroEHR's access-control scheme: our own
 //! design.
 
+use ferroehr::service::ehr::access_projection::Rebuild;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -92,6 +93,9 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     .execute(&pool)
     .await
     .expect("store settings that do not parse");
+    svc.rebuild_ehr_access_projection(Rebuild::Refill)
+        .await
+        .expect("the projection is rebuilt from the stored bodies");
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
     let authz = AuthzHandle::build(

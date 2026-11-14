@@ -11,9 +11,14 @@
 //! marks the copy stale, and the next request reads it again; while the
 //! listener is not connected, every request reads it, so a lost notification
 //! never serves an outdated policy. The admin registers listen on
-//! [`CHANNEL`] and the policy grants on their own channel. No openEHR spec
-//! governs operational policy: our own design.
+//! [`CHANNEL`], the policy grants and the `EHR_ACCESS` projection on their
+//! own channels; a [`Subscriber`] drops what each notification names before
+//! the notification counts as received. No openEHR spec governs operational
+//! policy: our own design.
 
+use std::fmt;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
@@ -26,6 +31,20 @@ pub const CHANNEL: &str = "ferroehr_policy_register";
 
 /// The pause before a lost listener connects again.
 const RECONNECT: Duration = Duration::from_secs(1);
+
+/// The future a [`Subscriber`] answers with.
+pub type Dropping<'a> = Pin<Box<dyn Future<Output = ()> + Send + 'a>>;
+
+/// What a copy keyed by the notification payload drops when its listener
+/// hears of a change.
+pub trait Subscriber: fmt::Debug + Send + Sync {
+    /// Drops what the notification `payload` names.
+    fn notified<'a>(&'a self, payload: &'a str) -> Dropping<'a>;
+
+    /// Drops everything: the listener connected or lost its connection, so
+    /// notifications may have been missed.
+    fn reset(&self) -> Dropping<'_>;
+}
 
 /// Whether this replica's copy of one kind of policy may be trusted: the
 /// listener on its channel, and the notifications it has received.
@@ -43,6 +62,8 @@ pub struct Listened {
     /// The notifications received, and the wake of a task waiting on one.
     notified: AtomicU64,
     wake: tokio::sync::Notify,
+    /// The copy each notification's payload is dropped from, if any.
+    subscriber: Option<Arc<dyn Subscriber>>,
 }
 
 impl Listened {
@@ -57,6 +78,36 @@ impl Listened {
             stale: AtomicBool::new(false),
             notified: AtomicU64::new(0),
             wake: tokio::sync::Notify::new(),
+            subscriber: None,
+        }
+    }
+
+    /// The listener state of `channel` over `pool`, as [`Self::new`], whose
+    /// every notification `subscriber` drops from its copy before it counts
+    /// as received.
+    #[must_use]
+    pub fn with_subscriber(
+        pool: PgPool,
+        channel: &'static str,
+        subscriber: Arc<dyn Subscriber>,
+    ) -> Self {
+        Self {
+            subscriber: Some(subscriber),
+            ..Self::new(pool, channel)
+        }
+    }
+
+    /// Lets the subscriber drop what `payload` names.
+    async fn drop_notified(&self, payload: &str) {
+        if let Some(subscriber) = &self.subscriber {
+            subscriber.notified(payload).await;
+        }
+    }
+
+    /// Lets the subscriber drop everything.
+    async fn drop_all(&self) {
+        if let Some(subscriber) = &self.subscriber {
+            subscriber.reset().await;
         }
     }
 
@@ -121,11 +172,13 @@ async fn listen(state: Arc<Listened>) {
     loop {
         match connect(&state).await {
             Ok(mut listener) => {
+                state.drop_all().await;
                 state.mark_stale();
                 state.listening.store(true, Ordering::Release);
                 loop {
                     match listener.try_recv().await {
-                        Ok(Some(_notification)) => {
+                        Ok(Some(notification)) => {
+                            state.drop_notified(notification.payload()).await;
                             state.mark_stale();
                             state.notified.fetch_add(1, Ordering::AcqRel);
                             state.wake.notify_waiters();
@@ -138,6 +191,7 @@ async fn listen(state: Arc<Listened>) {
                     }
                 }
                 state.listening.store(false, Ordering::Release);
+                state.drop_all().await;
             }
             Err(error) => {
                 tracing::warn!(channel, %error, "the policy listener could not connect");

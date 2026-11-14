@@ -58,7 +58,7 @@ pub const DEFINITIONS: [(&str, &str); 1] = [(
 )];
 
 /// The EHRs whose current `EHR_ACCESS` carries settings, with those settings,
-/// shared from the service's cache
+/// shared from the service's copy
 /// ([`crate::service::FerroEhrService::ehr_access_settings_index`]).
 pub type EhrAccessIndex = std::sync::Arc<Vec<(crate::ids::EhrId, EhrAccessSettings)>>;
 
@@ -93,6 +93,18 @@ impl EhrAccessSettings {
         read_settings(settings)
             .map(|read| Some(Self::Directives(Box::new(read))))
             .map_err(UnreadableSettings)
+    }
+
+    /// Reads the settings the projection stored as their canonical JSON
+    /// text, which were read as the scheme before they were stored
+    /// ([`crate::service::ehr::access_projection`]).
+    ///
+    /// # Errors
+    /// [`UnreadableSettings`] when the text does not decode as the class.
+    pub fn from_projected(settings: &str) -> Result<Self, UnreadableSettings> {
+        serde_json::from_str::<AccessDirectiveSettings>(settings)
+            .map(|read| Self::Directives(Box::new(read)))
+            .map_err(|error| UnreadableSettings(Defect::Decode(error)))
     }
 
     /// The settings `access` carries, or [`Self::HeldClosed`] for settings
