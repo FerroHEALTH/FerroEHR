@@ -506,21 +506,30 @@ pub(crate) async fn subject_ehr_ids(
     }
 }
 
-/// Every finding of the full tamper check, `audit.verify_audit_chain()`, run
-/// on `pool` without moving the verification checkpoint.
+/// Every finding of the full tamper checks of both chains,
+/// `audit.verify_audit_chain()` (the system chain) and
+/// `audit.verify_access_log_chain()` (the access log), the system chain's
+/// first, run on `pool` without moving either verification cursor.
 pub(crate) async fn verify_chain(
     pool: &sqlx::PgPool,
-) -> Result<Vec<ferroehr::system_log::store::AuditChainFinding>, sqlx::Error> {
+) -> Result<Vec<ferroehr::system_log::store::chains::AuditChainFinding>, sqlx::Error> {
+    use ferroehr::system_log::store::chains::{AuditChain, AuditChainFinding};
     use sqlx::Row;
     sqlx::query(
-        "SELECT chain_seq, record_id, recorded_at, finding \
-         FROM audit.verify_audit_chain() ORDER BY chain_seq NULLS FIRST",
+        "SELECT 'system' AS chain, chain_seq, record_id, recorded_at, finding \
+         FROM audit.verify_audit_chain() \
+         UNION ALL \
+         SELECT 'access_log', chain_seq, record_id, recorded_at, finding \
+         FROM audit.verify_access_log_chain() \
+         ORDER BY 1 DESC, 2 NULLS FIRST",
     )
     .fetch_all(pool)
     .await?
     .iter()
     .map(|row| {
-        Ok(ferroehr::system_log::store::AuditChainFinding {
+        let chain: String = row.try_get("chain")?;
+        Ok(AuditChainFinding {
+            chain: AuditChain::named(&chain).unwrap_or(AuditChain::System),
             chain_seq: row.try_get("chain_seq")?,
             record_id: row.try_get("record_id")?,
             recorded_at: row

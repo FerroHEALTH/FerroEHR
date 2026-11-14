@@ -2,12 +2,25 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! What an act asks of the sender before it changes anything: whether a
-//! record would be taken now, and the access-log entry the act writes in its
-//! own transaction. No openEHR spec governs the audit trail: our own design.
+//! record would be taken now, and the store an act that writes its record in
+//! its own transaction writes it through. No openEHR spec governs the audit trail: our own design.
 
 use std::sync::atomic::Ordering;
 
+#[cfg(feature = "fhir")]
+use openehr_base::containers::NonEmptyVec;
+#[cfg(feature = "fhir")]
+use openehr_rm::draft::access_log::access_log::access_log_tombstone::AccessLogTombstone;
+#[cfg(feature = "fhir")]
+use openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
+#[cfg(feature = "fhir")]
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
+
+#[cfg(feature = "fhir")]
+use crate::system_log::AuditError;
 use crate::system_log::config::FailMode;
+#[cfg(feature = "fhir")]
+use crate::system_log::event::AuditEvent;
 use crate::system_log::sender::AuditSender;
 
 impl AuditSender {
@@ -27,18 +40,25 @@ impl AuditSender {
         }
     }
 
-    /// The access-log entry `event` writes, as the drain would build it, for
-    /// an act that writes the entry in its own transaction; `None` when the
-    /// event writes none or the local store is off.
+    /// Replace the access-log entry `uid` by its tombstone, removed at
+    /// `time_removed` on `grounds`, and store `event`, the record of the act,
+    /// as its own access-log entry, in one transaction of the local store;
+    /// `None` when the local store is off. The answer within is `None` when
+    /// no entry has the uid.
+    ///
+    /// # Errors
+    /// The errors of [`crate::system_log::store::AuditStore::erase_entry`].
     #[cfg(feature = "fhir")]
-    #[must_use]
-    pub fn entry_for(
+    pub async fn erase_entry(
         &self,
-        event: &crate::system_log::event::AuditEvent,
-    ) -> Option<Box<openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry>>
-    {
-        self.inner.store.as_ref()?;
-        crate::access_log::entry::for_store(event, None, &self.inner.context)
+        uid: &str,
+        time_removed: DvDateTime,
+        grounds: NonEmptyVec<DvCodedText>,
+        event: &AuditEvent,
+    ) -> Option<Result<Option<AccessLogTombstone>, AuditError>> {
+        let store = self.inner.store.as_ref()?;
+        let erased = store.erase_entry(uid, time_removed, grounds, event).await;
+        Some(erased)
     }
 
     /// Append the access-log entries the drain writes through `access_log`,

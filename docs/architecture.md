@@ -289,10 +289,20 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (RFC 8785), the search columns its insert trigger derives from that form,
   and its `ACCESS_LOG_LINK`: the content digest over the canonical form and
   the digest over the previous digest, the sequence and the content digest.
-  Both tables continue one hash chain under one cursor and one head
-  (`audit_chain_state`), each `audit_event` row keeps verifying under its
-  `digest_version`, and `audit.verify_audit_chain()` and its incremental form
-  walk both in position order. An entry changes only by its replacement with
+  The two tables are two hash chains (#5573, our own design): the access log
+  holds only the accesses to EHR data, one chain per system from 1 with no
+  gaps, under its own head (`access_log_chain_state`), verified by
+  `audit.verify_access_log_chain()` and its incremental form; `audit_event`,
+  the system chain, keeps its head (`audit_chain_state`), its retention gaps
+  and `audit.verify_audit_chain()`. Writers of a chain serialise on its head
+  row, which holds across replicas, and the scheduled chain check verifies
+  both. The split ran once in `audit/0031_access_log_own_chain.sql`: the
+  positions the access log held in the shared chain became recorded gaps of
+  the system chain, and the access log was renumbered and linked again from
+  its own genesis, its link signatures and checkpoints of the shared chain
+  removed. A record of the ITI-81 search, the person's trail and the FHIR
+  Feed's outbox is named by its chain and position (`audit_record.chain`,
+  `fhir_feed_outbox`). An entry changes only by its replacement with
   its own tombstone, which keeps its uid, time and link, so the chain verifies
   after its content is gone (`audit/0027_access_log_record.sql`,
   `access_log::store`). Each entry states its retention when it is written
@@ -302,8 +312,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `retain_until` by its tombstone, in any order of expiry
   (`access_log::expiry`); an erasure a law orders takes the same path through
   `POST /admin/access-log/erase`, which writes the access-log entry recording
-  the erasure in the tombstone's own transaction, after the audit sender has
-  said it would take the record, so the log holds both or neither. Every entry
+  the erasure, with its index row and the FHIR Feed's debt, in the
+  tombstone's own transaction through the audit store
+  (`AuditStore::erase_entry`), after the audit sender has said it would take
+  the record, so the log holds both or neither and the act is stored once,
+  as its entry; the record the act then emits as `EntryScope::Written` only
+  reaches the forwarding sinks. Every entry
   is built by `access_log::entry` from an `AuditEvent`: the drain's per-access
   entries, the erasure's, and the import's (`access_log::transfer`). An AQL
   statement attributes each served row to the EHR of every bound `EHR` source
@@ -317,13 +331,15 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   seals the head every five minutes when it grew; without one nothing is
   signed or sealed, and no key of `[audit.access_log]` switches either
   (#5562, our own design). `AccessLogStore::append_in` locks the head
-  (`audit.audit_chain_reserve()`), computes the links its rows will get by
+  (`audit.access_log_chain_reserve()`), computes the links its rows will get by
   the chain rule the insert trigger applies, signs each digest and writes the
   signature in the same `INSERT`, refusing the transaction when the trigger
   gave another link (`audit/0029_access_log_link_signed_at_insert.sql`).
   `access_log::checkpoint` seals and verifies (the chain through
-  `audit.verify_audit_chain()`, the checkpoint and the link signatures beside
-  it), `access_log::chain` verifies a span of links apart from the database
+  `audit.verify_access_log_chain()`, the checkpoint and the link signatures
+  beside it). The system chain is sealed on the same schedule with the same
+  key (`system_log::seal`, `audit_chain_seal`, `ferroehr audit-chain seal`
+  and `verify`). `access_log::chain` verifies a span of links apart from the database
   (an export), and `access_log::transfer` exports one EHR's records with the
   span and checkpoint and imports another system's into
   `access_log_imported_*`, outside this system's chain

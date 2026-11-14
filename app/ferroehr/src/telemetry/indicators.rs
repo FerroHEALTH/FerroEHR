@@ -270,11 +270,15 @@ impl HealthIndicator for AuditChainHealth {
                             || "chain state".to_owned(),
                             |seq| format!("position {seq}"),
                         );
-                        format!("; first at {position}: {}", finding.finding)
+                        format!(
+                            "; first in the {} chain at {position}: {}",
+                            finding.chain.as_str(),
+                            finding.finding
+                        )
                     });
                     Outcome::degraded(format!(
                         "hash chain DAMAGED at {at}: {total} finding(s){first}; see \
-                         audit.verify_audit_chain()"
+                         audit.verify_audit_chain() and audit.verify_access_log_chain()"
                     ))
                 }
                 ChainCheckState::Unverifiable { at, reason } => Outcome::degraded(format!(

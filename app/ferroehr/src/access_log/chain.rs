@@ -14,10 +14,10 @@
 //! taken as recorded and only its link is recomputed, which is how a log
 //! verifies after retention removed content in its middle.
 //!
-//! The chain of the local database is verified where it is stored, by
-//! `audit.verify_audit_chain()`, since it interleaves the records of
-//! `audit_event`, whose digest only the database recomputes. No openEHR spec
-//! governs log integrity: our own design.
+//! The chain of the local database is verified where it is stored as well,
+//! by `audit.verify_access_log_chain()`, which also matches the newest
+//! record to the head. No openEHR spec governs log integrity: our own
+//! design.
 
 use crate::access_log::store::{AccessLogError, canonical_form};
 use crate::digest::sha256_hex;

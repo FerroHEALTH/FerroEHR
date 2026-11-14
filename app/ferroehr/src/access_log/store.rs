@@ -9,18 +9,17 @@
 //! the chain: the canonical form of a record is its ITS-JSON serialisation
 //! without its link, canonicalised by RFC 8785; `content_digest` is the
 //! SHA-256 of that form and `digest` the SHA-256 of `previous_digest`, the
-//! sequence and
-//! `content_digest`, one per line. The store writes the canonical form, and
-//! the insert trigger of `audit.access_log_record`
-//! (`migrations/audit/0027_access_log_record.sql`) gives it its link in the
-//! chain the `audit_event` records share, so the database is the one place a
-//! position is decided. The retention rules (§Retention) let an entry be
-//! replaced by a tombstone that keeps its uid, `system_id`, `time_recorded`
-//! and link, the one change the table's triggers admit.
+//! sequence and `content_digest`, one per line. The store writes the
+//! canonical form, and the insert trigger of `audit.access_log_record`
+//! (`migrations/audit/0031_access_log_own_chain.sql`) gives it its link in
+//! this system's own access log, one chain from 1 with no gaps, apart from
+//! the records outside the log, so the database is the one place a position
+//! is decided. The retention rules (§Retention) let an entry be replaced by
+//! a tombstone that keeps its uid, `system_id`, `time_recorded` and link, the
+//! one change the table's triggers admit.
 //!
-//! Verification is the audit chain's: `audit.verify_audit_chain()` and
-//! [`crate::system_log::store::AuditStore::verify_chain_advancing`] walk the
-//! `audit_event` records and these in one pass.
+//! Verification is the access log's own: `audit.verify_access_log_chain()`
+//! and [`crate::system_log::store::chains::AuditChains::verify`].
 
 #![expect(
     clippy::disallowed_types,
@@ -99,19 +98,6 @@ pub enum AccessLogError {
     /// A link was to be signed and the keyring could not sign it.
     #[error("the access-log link could not be signed")]
     Sign(#[from] AttestError),
-    /// The chain between two positions holds a record of the `audit_event`
-    /// form, whose link only the database that wrote it recomputes, so the
-    /// span cannot be carried apart from it.
-    #[error(
-        "the chain between positions {from} and {to} holds audit_event records, which cannot be \
-         verified apart from the database that wrote them"
-    )]
-    Interleaved {
-        /// The first position of the span.
-        from: i64,
-        /// The last position of the span.
-        to: i64,
-    },
     /// The chain gave a link another digest than the one its signature was
     /// made over, so the transaction is refused.
     #[error("the access-log link at {sequence} is not the link that was signed")]
@@ -290,9 +276,10 @@ impl AccessLogStore {
         signer: &Signer,
         contents: &[String],
     ) -> Result<Vec<(String, String)>, AccessLogError> {
-        let head = sqlx::query("SELECT head_seq, head_digest FROM audit.audit_chain_reserve()")
-            .fetch_one(&mut *conn)
-            .await?;
+        let head =
+            sqlx::query("SELECT head_seq, head_digest FROM audit.access_log_chain_reserve()")
+                .fetch_one(&mut *conn)
+                .await?;
         let mut sequence: i64 = head.try_get("head_seq")?;
         let mut previous: String = head.try_get("head_digest")?;
         let mut foreseen = Vec::with_capacity(contents.len());
@@ -329,8 +316,7 @@ impl AccessLogStore {
     /// content: what a verifier of the records between needs.
     ///
     /// # Errors
-    /// [`AccessLogError::Interleaved`] when a position between holds no
-    /// access-log record, and the store errors when the statement fails.
+    /// The store errors when the statement fails.
     pub async fn links(&self, from: i64, to: i64) -> Result<Vec<AccessLogLink>, AccessLogError> {
         let span = self.chain(from, to).await?;
         Ok(span.into_iter().map(|(_uid, link)| link).collect())
@@ -360,39 +346,48 @@ impl AccessLogStore {
     /// when no entry has the uid, which is also the answer for one already
     /// replaced: a tombstone is never replaced again.
     ///
-    /// `recorded`, the entry that records the change to the log, is appended
-    /// in the same transaction, so the log holds the tombstone and the record
-    /// of its making or neither.
-    ///
     /// # Errors
-    /// [`AccessLogError::Invalid`] for a tombstone or a record that breaks an
-    /// invariant, and the store and read errors of [`Self::read`].
+    /// [`AccessLogError::Invalid`] for a tombstone that breaks an invariant,
+    /// and the store and read errors of [`Self::read`].
     pub async fn tombstone(
         &self,
         uid: &str,
         time_removed: DvDateTime,
         grounds: NonEmptyVec<DvCodedText>,
-        recorded: Option<Box<AccessLogEntry>>,
     ) -> Result<Option<AccessLogTombstone>, AccessLogError> {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
+        let tombstone = Self::tombstone_in(&mut tx, uid, time_removed, grounds).await?;
+        tx.commit().await?;
+        Ok(tombstone)
+    }
+
+    /// [`Self::tombstone`] inside the caller's transaction on `conn`, so the
+    /// record of the change to the log commits with it (the draft's recording
+    /// rule 7, what changes the log is recorded).
+    ///
+    /// # Errors
+    /// As [`Self::tombstone`].
+    pub async fn tombstone_in(
+        conn: &mut PgConnection,
+        uid: &str,
+        time_removed: DvDateTime,
+        grounds: NonEmptyVec<DvCodedText>,
+    ) -> Result<Option<AccessLogTombstone>, AccessLogError> {
         let row = sqlx::query(
             "SELECT chain_seq, content, algorithm, previous_digest, content_digest, digest, \
              signature FROM audit.access_log_record \
              WHERE uid = $1 AND record_type = 'ACCESS_LOG_ENTRY' FOR UPDATE",
         )
         .bind(uid)
-        .fetch_optional(&mut *tx)
+        .fetch_optional(&mut *conn)
         .await?;
         let Some(row) = row else {
             return Ok(None);
         };
         let entry: AccessLogEntry = stored(&row)?;
         let tombstone = tombstone_of(entry, time_removed, grounds);
-        let replaced = replace(&mut tx, &[(row.try_get("chain_seq")?, &tombstone)]).await?;
-        self.append_in(&mut tx, recorded.into_iter().map(|entry| *entry).collect())
-            .await?;
-        tx.commit().await?;
+        let replaced = replace(conn, &[(row.try_get("chain_seq")?, &tombstone)]).await?;
         Ok(replaced.then_some(tombstone))
     }
 

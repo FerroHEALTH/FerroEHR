@@ -8,10 +8,11 @@
 //! the local audit store is on.
 //!
 //! The store is the feed's outbox: a record not yet delivered has a row in
-//! `audit.fhir_feed_outbox`, which the store writes with the record while the
-//! feed is configured, read oldest first by its chain position, and removed
-//! once the repository accepted it, when the record's `delivered_fhir_feed_at`
-//! is stamped. The document is rendered from the record's columns when it is
+//! `audit.fhir_feed_outbox`, naming its chain and position under an id of the
+//! outbox's own, which the store writes with the record while the feed is
+//! configured, read oldest first by that id, and removed once the repository
+//! accepted it, when a system-chain record's `delivered_fhir_feed_at` is
+//! stamped. The document is rendered from the record's columns when it is
 //! read. A record the repository refused, or one that cannot be rendered, is
 //! held aside in memory until the next start, because the table is
 //! append-only beside its two delivery stamps (no specification governs where
@@ -62,7 +63,7 @@ pub(super) struct StoreOutbox {
     notify: Arc<Notify>,
     /// How long to wait for a wake before reading the store again.
     idle: Duration,
-    /// The chain positions the repository refused, held aside.
+    /// The outbox ids of the records the repository refused, held aside.
     refused: Mutex<BTreeSet<i64>>,
     /// The rows awaiting delivery at the last read.
     waiting: AtomicUsize,
@@ -84,7 +85,7 @@ impl StoreOutbox {
         }
     }
 
-    /// The chain positions held aside.
+    /// The outbox ids held aside.
     fn refused(&self) -> Vec<i64> {
         self.refused
             .lock()
@@ -132,7 +133,7 @@ impl Outbox for StoreOutbox {
                 Ok(document) => break (sequence, document),
                 Err(e) => {
                     tracing::error!(
-                        chain_seq = sequence,
+                        owed = sequence,
                         error = %crate::error::ErrorChain::new(&e),
                         "ATNA audit FHIR feed: the record cannot be rendered; it is held aside \
                          until the next start"
@@ -170,7 +171,7 @@ impl Outbox for StoreOutbox {
     async fn quarantine(&self, sequence: u64) -> Result<(), OutboxError> {
         let sequence = i64::try_from(sequence).map_err(|e| OutboxError(Box::new(e)))?;
         tracing::error!(
-            chain_seq = sequence,
+            owed = sequence,
             "ATNA audit FHIR feed: the repository refused the record; it is held aside until \
              the next start"
         );

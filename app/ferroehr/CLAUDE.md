@@ -150,11 +150,14 @@ module.**
 - **Access log** (`src/access_log/`, #5121): `store` keeps each draft
   `ACCESS_LOG_ENTRY` in `audit.access_log_record` as its RFC 8785 canonical
   form without its link; the insert trigger gives it its `ACCESS_LOG_LINK` in
-  the chain `audit_event` shares and derives the search columns from it, and
+  the access log's own chain, apart from the `audit_event` records (#5573),
+  and derives the search columns from it, and
   an entry changes only by its replacement with its own tombstone. Never
   compute a link outside the trigger, and never write a search column: both
   are read from the content. `checkpoint` seals the head with the
-  version-signing keyring and verifies through `audit.verify_audit_chain()`;
+  version-signing keyring and verifies through
+  `audit.verify_access_log_chain()`; `system_log::seal` seals the system
+  chain the same way;
   `chain` is the one verifier of a span held apart from the database (an
   export or an import), and both accept a tombstone by its recorded content
   digest; `transfer` exports and imports one EHR's log (#5129).

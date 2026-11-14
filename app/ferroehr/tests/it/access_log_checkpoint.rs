@@ -272,7 +272,6 @@ async fn an_export_verifies_with_a_tombstone_and_fails_with_a_tampered_entry() {
             first.uid.value(),
             first.time_recorded.clone(),
             NonEmptyVec::new(vec![ground]).expect("one ground"),
-            None,
         )
         .await
         .expect("tombstone")

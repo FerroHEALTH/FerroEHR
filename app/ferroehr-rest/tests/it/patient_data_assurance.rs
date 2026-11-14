@@ -180,7 +180,7 @@ async fn a_delegate_acting_for_a_professional_passes_and_is_recorded() {
     for _ in 0..50 {
         row = sqlx::query(
             "SELECT principal, acting_mode, assurance_level, assurance_value, professional_id, \
-             chain_seq FROM audit.access_trail WHERE operation = 'ehr_get_by_id'",
+             chain, chain_seq FROM audit.access_trail WHERE operation = 'ehr_get_by_id'",
         )
         .fetch_optional(&pool)
         .await
@@ -213,7 +213,8 @@ async fn a_delegate_acting_for_a_professional_passes_and_is_recorded() {
     );
     // BALP 1.1.4 §3:5.7.5.4: the token's subject is the requesting
     // `agent:user`, with the professional's identifier as its `ihe-otherId`.
-    let fhir: Value = common::rendered_audit_event(&pool, row.get("chain_seq")).await;
+    let fhir: Value =
+        common::rendered_audit_event(&pool, row.get("chain"), row.get("chain_seq")).await;
     let user = fhir["agent"]
         .as_array()
         .expect("agents")

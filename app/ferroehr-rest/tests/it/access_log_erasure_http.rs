@@ -19,7 +19,8 @@ use axum::body::Body;
 use ferroehr::access_log::store::AccessLogStore;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::system_log::sender::{AuditHandle, start};
-use ferroehr::system_log::store::{AuditStore, VerifyScope};
+use ferroehr::system_log::store::AuditStore;
+use ferroehr::system_log::store::chains::VerifyScope;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
 use http::{Request, StatusCode, header};
@@ -120,16 +121,16 @@ fn ordered() -> Value {
     json!([coded("local", "court-order")])
 }
 
-/// The `(action, principal)` of the access records on `resource`, polled
+/// The `(action, principal)` of the access records of `operation`, polled
 /// until one has landed.
-async fn trail(pool: &PgPool, resource: &str) -> Vec<(String, String)> {
+async fn trail(pool: &PgPool, operation: &str) -> Vec<(String, String)> {
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
         let rows: Vec<(String, Option<String>)> = sqlx::query_as(
             "SELECT action, principal FROM audit.access_trail \
-             WHERE resource_id = $1 ORDER BY chain_seq",
+             WHERE operation = $1 ORDER BY chain, chain_seq",
         )
-        .bind(resource)
+        .bind(operation)
         .fetch_all(pool)
         .await
         .expect("read the trail");
@@ -141,7 +142,7 @@ async fn trail(pool: &PgPool, resource: &str) -> Vec<(String, String)> {
         }
         assert!(
             std::time::Instant::now() < deadline,
-            "no record on {resource} landed"
+            "no record of {operation} landed"
         );
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
@@ -177,10 +178,26 @@ async fn an_administrator_erases_an_entry_by_its_tombstone() {
             .expect("read"),
         Some(AccessLogRecord::AccessLogTombstone(_))
     ));
-    let trail = trail(&pool, &format!("access-log-erasure:{UID}")).await;
+    let trail = trail(&pool, "admin_access_log_erase").await;
     assert_eq!(trail, [("D".to_owned(), "root".to_owned())]);
+    let (entries, rows): (i64, i64) = sqlx::query_as(
+        "SELECT (SELECT count(*) FROM audit.access_trail \
+                  WHERE operation = 'admin_access_log_erase' AND chain = 'access_log' \
+                    AND resource_id = $1), \
+                (SELECT count(*) FROM audit.audit_event \
+                  WHERE operation = 'admin_access_log_erase')",
+    )
+    .bind(UID)
+    .fetch_one(&pool)
+    .await
+    .expect("count the records of the erasure");
+    assert_eq!(
+        (entries, rows),
+        (1, 0),
+        "the erasure is stored once, as its access-log entry naming the erased entry"
+    );
     let findings = AuditStore::new(pool.clone())
-        .verify_chain_advancing(VerifyScope::Full)
+        .verify_chains_advancing(VerifyScope::Full)
         .await
         .expect("verify");
     assert!(findings.is_empty(), "{findings:?}");

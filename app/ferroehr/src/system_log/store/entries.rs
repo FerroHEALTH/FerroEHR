@@ -6,11 +6,13 @@
 //! (#5127).
 //!
 //! A record whose access writes an entry is stored as the entry alone, in the
-//! chain the `audit_event` records share, with one row of
-//! `audit.access_log_search` beside it: the columns the search filters on,
+//! access log's own chain, apart from the `audit_event` records, with one row
+//! of `audit.access_log_search` beside it: the columns the search filters on,
 //! read from the entry's projection, and the render policy that projection is
 //! written under (`migrations/audit/0030_access_log_projections.sql`). A read
-//! renders the document from the entry's content. No openEHR spec governs
+//! renders the document from the entry's content. A record an act wrote as
+//! its entry in its own transaction ([`EntryScope::Written`]) is stored by
+//! that act alone, so it is stored once. No openEHR spec governs
 //! audit storage: our own design.
 
 #![expect(
@@ -23,15 +25,20 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use jiff_sqlx::Timestamp;
+use openehr_base::containers::NonEmptyVec;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
-use sqlx::Row;
+use openehr_rm::draft::access_log::access_log::access_log_tombstone::AccessLogTombstone;
+use openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use sqlx::postgres::{PgConnection, PgRow};
+use sqlx::{Connection, Row};
 
+use super::chains::AuditChain;
 use super::{AuditRecord, AuditStore, LearnedSets, RecordEnd, stored_record};
 use crate::access_log::projection::Projection;
 use crate::access_log::store::AccessLogStore;
 use crate::system_log::AuditError;
-use crate::system_log::event::{AuditEvent, EventOutcome};
+use crate::system_log::event::{AuditEvent, EntryScope, EventOutcome};
 use crate::system_log::render::{CompiledPolicy, StoredRecord};
 
 /// The index rows of a batch of entries, one element per entry, as the
@@ -62,7 +69,8 @@ const INDEX: &str = "INSERT INTO audit.access_log_search (chain_seq, recorded_at
      AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12)";
 
 /// The records of a batch that are stored by their columns, with their
-/// retention ends, and the records that are stored as their entry.
+/// retention ends, and the records that are stored as their entry; a record
+/// whose act wrote its entry itself is neither.
 pub(super) fn split<'a>(
     records: &'a [AuditRecord],
     ends: &[RecordEnd],
@@ -71,6 +79,9 @@ pub(super) fn split<'a>(
     let mut row_ends = Vec::new();
     let mut entries = Vec::new();
     for (index, record) in records.iter().enumerate() {
+        if record.event.entry == EntryScope::Written {
+            continue;
+        }
         if record.entry.is_some() {
             entries.push(record);
         } else {
@@ -141,7 +152,9 @@ impl AuditStore {
             .await?;
         if self.fhir_feed {
             sqlx::query(
-                "INSERT INTO audit.fhir_feed_outbox (chain_seq) SELECT unnest($1::bigint[])",
+                "INSERT INTO audit.fhir_feed_outbox (chain, chain_seq) \
+                 SELECT 'access_log', u.chain_seq FROM unnest($1::bigint[]) WITH ORDINALITY \
+                 AS u(chain_seq, n) ORDER BY u.n",
             )
             .bind(&rows.chain_seqs)
             .execute(&mut *conn)
@@ -177,6 +190,44 @@ impl AuditStore {
         Ok(entered)
     }
 
+    /// Replace the access-log entry `uid` by its tombstone, removed at
+    /// `time_removed` on `grounds`, and store `event`, the record of the
+    /// change, as its own entry with its index row and the FHIR Feed's debt,
+    /// in one transaction, so the log holds the tombstone and the record of
+    /// its making or neither; `None` when no entry has the uid.
+    ///
+    /// The record is stored once, as its entry: the act emits it after as
+    /// [`EntryScope::Written`], which the store leaves to this write.
+    ///
+    /// # Errors
+    /// [`AuditError::AccessLog`] when the tombstone or the entry cannot be
+    /// written, and the projection and store errors of the index row.
+    pub async fn erase_entry(
+        &self,
+        uid: &str,
+        time_removed: DvDateTime,
+        grounds: NonEmptyVec<DvCodedText>,
+        event: &AuditEvent,
+    ) -> Result<Option<AccessLogTombstone>, AuditError> {
+        let record = AuditRecord {
+            event: event.clone(),
+            subject: None,
+            entry: None,
+        };
+        let entered = self.with_entries(std::slice::from_ref(&record)).await?;
+        let recorded: Vec<&AuditRecord> = entered.iter().collect();
+        let mut conn = crate::db::acquire::acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
+        let tombstone = AccessLogStore::tombstone_in(&mut tx, uid, time_removed, grounds).await?;
+        if tombstone.is_none() {
+            return Ok(None);
+        }
+        let learned = self.append_entries(&mut tx, &recorded).await?;
+        tx.commit().await?;
+        self.remember(learned);
+        Ok(tombstone)
+    }
+
     /// Store `event`, an access the log covers, as its entry; returns the
     /// entry's uid.
     ///
@@ -201,16 +252,22 @@ impl AuditStore {
             .ok_or(AuditError::SearchToken)
     }
 
-    /// The row of `audit.audit_record` at chain position `chain_seq`.
+    /// The row of `audit.audit_record` at position `chain_seq` of `chain`.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the read fails.
-    pub(super) async fn row_at(&self, chain_seq: i64) -> Result<Option<PgRow>, AuditError> {
+    pub(super) async fn row_at(
+        &self,
+        chain: AuditChain,
+        chain_seq: i64,
+    ) -> Result<Option<PgRow>, AuditError> {
         use sea_query::{Alias, Expr, ExprTrait, PostgresQueryBuilder};
         use sea_query_sqlx::SqlxBinder as _;
 
         let (sql, values) = super::newest_first(
-            sea_query::Cond::all().add(Expr::col(Alias::new("chain_seq")).eq(chain_seq)),
+            sea_query::Cond::all()
+                .add(Expr::col(Alias::new("chain")).eq(chain.as_str()))
+                .add(Expr::col(Alias::new("chain_seq")).eq(chain_seq)),
         )
         .build_sqlx(PostgresQueryBuilder);
         Ok(sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
@@ -218,18 +275,19 @@ impl AuditStore {
             .await?)
     }
 
-    /// The audit record at chain position `chain_seq`, of either form, with
-    /// its classification computed again and the subject of care of its EHR,
-    /// as its projections read it; `None` when no record holds the position.
+    /// The audit record at position `chain_seq` of `chain`, with its
+    /// classification computed again and the subject of care of its EHR, as
+    /// its projections read it; `None` when no record holds the position.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the read fails, and the errors of
     /// reading the row and of the classification.
     pub async fn record(
         &self,
+        chain: AuditChain,
         chain_seq: i64,
     ) -> Result<Option<(AuditEvent, Option<String>)>, AuditError> {
-        let row = self.row_at(chain_seq).await?;
+        let row = self.row_at(chain, chain_seq).await?;
         let Some(row) = row else {
             return Ok(None);
         };

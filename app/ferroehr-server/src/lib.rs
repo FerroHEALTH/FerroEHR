@@ -63,6 +63,7 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::telemetry::{self, indicators};
 use ferrohealth_telemetry::request_log::RequestLog;
 pub mod access_log;
+pub mod audit_chain;
 pub mod db_cmd;
 pub mod definitions;
 pub mod party_binding;
@@ -140,6 +141,13 @@ pub enum Command {
         #[command(subcommand)]
         cmd: access_log::AccessLogCmd,
     },
+    /// The system chain, the records outside the access log: seal its head
+    /// and verify it.
+    AuditChain {
+        /// Which step to run.
+        #[command(subcommand)]
+        cmd: audit_chain::AuditChainCmd,
+    },
     /// The party binding side table: `refill` it after a mapping change.
     PartyBinding {
         /// Which step to run.
@@ -192,6 +200,7 @@ pub(crate) async fn dispatch(cli: Cli) -> anyhow::Result<()> {
         Some(Command::Db { cmd }) => db_cmd::run(&cmd, config, set).await,
         Some(Command::Definitions { cmd }) => Box::pin(definitions::run(&cmd, config, set)).await,
         Some(Command::AccessLog { cmd }) => Box::pin(access_log::run(&cmd, config, set)).await,
+        Some(Command::AuditChain { cmd }) => Box::pin(audit_chain::run(&cmd, config, set)).await,
         Some(Command::PartyBinding { cmd }) => {
             Box::pin(party_binding::run(&cmd, config, set)).await
         }

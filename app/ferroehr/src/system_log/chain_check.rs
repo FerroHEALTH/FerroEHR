@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The scheduled verification of the local store's hash chain.
+//! The scheduled verification of the local store's hash chains: the system
+//! chain and the access log.
 //!
 //! No openEHR spec governs audit tamper detection — our own design/extension.
 //! `docs/law/eu/cra/text.html Annex I Part I(2)(f)` asks a product to "protect
@@ -25,7 +26,8 @@ use std::time::Duration;
 
 use jiff::Timestamp;
 
-use crate::system_log::store::{AuditChainFinding, AuditStore, VerifyScope};
+use crate::system_log::store::AuditStore;
+use crate::system_log::store::chains::{AuditChainFinding, VerifyScope};
 
 /// How many findings one run keeps for the health surface and logs one by one;
 /// the total is always reported in full.
@@ -90,7 +92,7 @@ impl ChainCheck {
     /// or `unverifiable`); an intact trail is logged at `DEBUG`.
     pub async fn run_scope(&self, store: &AuditStore, scope: VerifyScope) -> ChainCheckState {
         let at = Timestamp::now();
-        let state = match store.verify_chain_advancing(scope).await {
+        let state = match store.verify_chains_advancing(scope).await {
             Ok(findings) if findings.is_empty() => {
                 tracing::debug!(?scope, "audit hash chain verified intact");
                 ChainCheckState::Intact { at }
@@ -101,11 +103,13 @@ impl ChainCheck {
                 tracing::error!(
                     findings = total,
                     "the audit hash chain is damaged: records were modified or deleted outside \
-                     retention; see audit.verify_audit_chain()"
+                     retention; see audit.verify_audit_chain() and \
+                     audit.verify_access_log_chain()"
                 );
                 findings.truncate(KEPT_FINDINGS);
                 for finding in &findings {
                     tracing::error!(
+                        chain = finding.chain.as_str(),
                         chain_seq = ?finding.chain_seq,
                         record_id = ?finding.record_id,
                         recorded_at = ?finding.recorded_at,

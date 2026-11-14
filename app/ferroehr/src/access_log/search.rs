@@ -177,9 +177,11 @@ impl AccessLogStore {
     /// The uid and link of every access-log record from `from` to `to`, both
     /// included, in chain order, without their content.
     ///
+    /// The access log is one chain with no gaps, so the span holds every
+    /// position between; a missing one is a deletion the verifier reports.
+    ///
     /// # Errors
-    /// [`AccessLogError::Interleaved`] when a position between holds no
-    /// access-log record, and the store errors when the statement fails.
+    /// The store errors when the statement fails.
     pub async fn chain(
         &self,
         from: i64,
@@ -197,10 +199,6 @@ impl AccessLogStore {
             .iter()
             .map(|row| Ok((row.try_get::<String, _>("uid")?, link(row)?)))
             .collect::<Result<Vec<_>, sqlx::Error>>()?;
-        let expected = to.checked_sub(from).and_then(|span| span.checked_add(1));
-        if i64::try_from(links.len()).ok() != expected {
-            return Err(AccessLogError::Interleaved { from, to });
-        }
         Ok(links)
     }
 }
