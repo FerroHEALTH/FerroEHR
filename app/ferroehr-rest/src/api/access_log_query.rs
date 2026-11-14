@@ -64,9 +64,6 @@ pub(crate) const REVIEW_PARAMETERS: &[&str] = &[
     "fetch",
 ];
 
-/// The page size when the request names none; no specification governs it
-/// (`fetch.yaml`: "the default depends on the implementation").
-const DEFAULT_FETCH: i64 = 100;
 /// The largest page served: our own design.
 const MAX_FETCH: i64 = 1000;
 
@@ -78,7 +75,6 @@ const MAX_FETCH: i64 = 1000;
 /// outside its form.
 pub(crate) fn log_query(query: Option<&str>, offered: &[&str]) -> Result<LogQuery, RestError> {
     let mut filter = LogQuery {
-        fetch: DEFAULT_FETCH,
         without_own_log_reads: offered.contains(&"include_self"),
         ..LogQuery::default()
     };

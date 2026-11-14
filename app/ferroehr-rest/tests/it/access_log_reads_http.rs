@@ -297,13 +297,19 @@ async fn the_subject_reads_only_their_own_log() {
     assert_eq!(status, StatusCode::OK, "{one}");
     assert!(one.get("link").is_none(), "the subject view: {one}");
 
-    for elsewhere in [
-        log_of(&fx.elsewhere, ""),
-        log_of(&fx.elsewhere, &format!("/{uid}")),
-        log_of("00000000-0000-4000-8000-000000000000", ""),
+    for (case, elsewhere) in [
+        ("another EHR's log", log_of(&fx.elsewhere, "")),
+        (
+            "an entry under another EHR",
+            log_of(&fx.elsewhere, &format!("/{uid}")),
+        ),
+        (
+            "an unknown EHR",
+            log_of("00000000-0000-4000-8000-000000000000", ""),
+        ),
     ] {
-        let (status, body) = get(&fx.app, &elsewhere, &credential).await;
-        assert_eq!(status, StatusCode::NOT_FOUND, "{elsewhere}: {body}");
+        let (status, _) = get(&fx.app, &elsewhere, &credential).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "{case}");
     }
     for widening in ["?issuer=x", "?view=full", "?ehr_id=x", "?party_id=x"] {
         let (status, body) = get(&fx.app, &log_of(&fx.ehr, widening), &credential).await;

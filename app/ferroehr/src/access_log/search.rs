@@ -44,7 +44,7 @@ pub struct PartyFilter {
 }
 
 /// What a read of the log selects; every filter left `None` selects all.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LogQuery {
     /// The EHR the entries are about.
     pub ehr_id: Option<String>,
@@ -74,6 +74,29 @@ pub struct LogQuery {
     pub offset: i64,
     /// The most records answered.
     pub fetch: i64,
+}
+
+impl Default for LogQuery {
+    /// Every record, the first page of 100.
+    fn default() -> Self {
+        Self {
+            ehr_id: None,
+            from: None,
+            to: None,
+            action: None,
+            outcome: None,
+            accessor_kind: None,
+            emergency: None,
+            party: PartyFilter::default(),
+            issuer: None,
+            subject: None,
+            request_id: None,
+            without_own_log_reads: false,
+            offset: 0,
+            // NOTE: ITS-REST `fetch.yaml`, "the default depends on the implementation": ours.
+            fetch: 100,
+        }
+    }
 }
 
 impl AccessLogStore {
