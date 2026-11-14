@@ -144,6 +144,12 @@ fn reference(proxy: &PartyProxy) -> Option<&PartyRef> {
     }
 }
 
+/// The id the party a `PARTY_PROXY` references names; `None` for
+/// `PARTY_SELF` with no reference and for a reference that names no party.
+pub(crate) fn proxy_key(proxy: &PartyProxy) -> Option<String> {
+    reference(proxy).and_then(party_key)
+}
+
 /// The id a party reference names, `None` for an id kind that names no
 /// party.
 // NOTE: our own design, the local party source names each party by its container's

@@ -208,16 +208,20 @@ impl FerroEhrService {
             &ctx,
             self.spec_profile,
         );
-        if job.request.collect_attributes {
+        let (result, scope) = if job.request.collect_attributes {
             let (result, scope) = tokio::try_join!(
                 exec,
                 aql::exec::collect_scope(&self.pool, &halves.clinical, job.params, &ctx)
             )
             .map_err(Failure::exec)?;
-            Ok((result, Some(scope)))
+            (result, Some(scope))
         } else {
-            Ok((exec.await.map_err(Failure::exec)?, None))
-        }
+            (exec.await.map_err(Failure::exec)?, None)
+        };
+        Box::pin(self.judge_served_ehrs(&result))
+            .await
+            .map_err(Failure::analysis)?;
+        Ok((result, scope))
     }
 
     /// Builds the served page's rows from the two halves, records the party
@@ -276,6 +280,7 @@ impl FerroEhrService {
                 .collect(),
             rows,
             served_ehrs: served,
+            settled_ehrs: clinical.settled_ehrs.clone(),
             served_origins: Vec::new(),
             origin_count: 0,
             served_content: Vec::new(),

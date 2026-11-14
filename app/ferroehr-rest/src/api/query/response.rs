@@ -31,8 +31,6 @@ use crate::api::RequestParts;
 use crate::negotiate;
 use crate::overview::error::RestError;
 use ferroehr::access_eval::condition::AccessCondition;
-#[cfg(test)]
-use ferroehr::access_eval::condition::ConditionGroups;
 use ferroehr::access_log::view::LogStanding;
 use ferroehr::aql::sql::subject::SubjectScope;
 use ferroehr::ids::EhrId;
@@ -314,6 +312,8 @@ pub(super) fn merge_body_and_url_parameters(
 mod tests {
     use super::*;
     use bytes::Bytes;
+    use ferroehr::access_eval::condition::{CallerKeys, ConditionGroups, VerdictPair};
+    use ferroehr::access_eval::procedure::Verdict;
 
     fn headers(pairs: &[(&str, &str)]) -> HeaderMap {
         let mut h = HeaderMap::new();
@@ -551,7 +551,10 @@ mod tests {
 
     #[test]
     fn query_scope_apply_stamps_subject_collect_and_ehr_access() {
-        let withheld = EhrId(Uuid::nil());
+        let pair = std::sync::Arc::new(VerdictPair {
+            cared: Verdict::admit(),
+            uncared: Verdict::admit(),
+        });
         let scope = QueryScope {
             subject_scope: Some(SubjectScope {
                 id: "patient-1".to_owned(),
@@ -559,8 +562,15 @@ mod tests {
             }),
             collect: true,
             ehr_access: AccessCondition::from(ConditionGroups {
-                known: vec![withheld.0],
-                ..ConditionGroups::default()
+                groups: vec![(vec![1], std::sync::Arc::clone(&pair))],
+                closed: pair,
+                default: None,
+                cared: Vec::new().into(),
+                facts: CallerKeys {
+                    now: jiff::Timestamp::UNIX_EPOCH,
+                    parties: Vec::new().into(),
+                    keeper: None,
+                },
             }),
             log_standing: LogStanding::Reviewer,
         };

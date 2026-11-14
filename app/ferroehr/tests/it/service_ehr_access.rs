@@ -580,12 +580,12 @@ fn with_a_directive(guardian: uuid::Uuid) -> Value {
 }
 
 /// The projection of `ehr_id` as `(sys_version, default_access)` of its
-/// settings row and `kind/effect/caller kinds/operations` of each directive
-/// row, with the sensitivities of each label row.
+/// settings row, `kind/effect` of each directive of its settings class, and
+/// its facts.
 async fn projected(
     pool: &sqlx::PgPool,
     ehr_id: EhrId,
-) -> (Option<(i32, String)>, Vec<String>, Vec<Vec<String>>) {
+) -> (Option<(i32, String)>, Vec<String>, Option<Value>) {
     let settings =
         sqlx::query_as("SELECT sys_version, default_access FROM access_settings WHERE ehr_id = $1")
             .bind(ehr_id)
@@ -593,21 +593,23 @@ async fn projected(
             .await
             .expect("the settings row reads");
     let directives = sqlx::query_scalar(
-        "SELECT kind || '/' || effect || '/' || array_to_string(caller_kinds, ',') || '/' || \
-         array_to_string(operations, ',') FROM access_directive WHERE ehr_id = $1 ORDER BY ordinal",
+        "SELECT (d->'kind'->'defining_code'->>'code_string') || '/' || \
+                (d->'effect'->'defining_code'->>'code_string') \
+         FROM access_settings s JOIN access_class c ON c.id = s.class_id \
+         CROSS JOIN LATERAL jsonb_array_elements(c.settings->'directives') WITH ORDINALITY AS t(d, n) \
+         WHERE s.ehr_id = $1 ORDER BY n",
     )
     .bind(ehr_id)
     .fetch_all(pool)
     .await
-    .expect("the directive rows read");
-    let labels = sqlx::query_scalar(
-        "SELECT sensitivities FROM access_label WHERE ehr_id = $1 ORDER BY ordinal",
-    )
-    .bind(ehr_id)
-    .fetch_all(pool)
-    .await
-    .expect("the label rows read");
-    (settings, directives, labels)
+    .expect("the class reads");
+    let facts = sqlx::query_scalar("SELECT facts FROM access_settings WHERE ehr_id = $1")
+        .bind(ehr_id)
+        .fetch_optional(pool)
+        .await
+        .expect("the facts read")
+        .flatten();
+    (settings, directives, facts)
 }
 
 /// A commit of an `EHR_ACCESS` version projects its settings in its own
@@ -617,7 +619,7 @@ async fn projected(
 async fn a_commit_projects_the_settings_and_a_refill_rebuilds_them() {
     let (db, svc, ehr_id, guardian) = setup().await;
     let pool = db.pool();
-    assert_eq!(projected(&pool, ehr_id).await, (None, vec![], vec![]));
+    assert_eq!(projected(&pool, ehr_id).await, (None, vec![], None));
     write(
         &svc,
         ehr_id,
@@ -629,8 +631,8 @@ async fn a_commit_projects_the_settings_and_a_refill_rebuilds_them() {
     .expect("the administrator writes the settings");
     let expected = (
         Some((2, "restricted".to_owned())),
-        vec!["consent/deny/professional/read".to_owned()],
-        vec![vec!["v3-ActCode::HIV".to_owned()]],
+        vec!["consent/deny".to_owned()],
+        Some(json!([guardian.to_string(), [STRANGER.to_string()]])),
     );
     assert_eq!(projected(&pool, ehr_id).await, expected);
     forbidden(
@@ -642,7 +644,7 @@ async fn a_commit_projects_the_settings_and_a_refill_rebuilds_them() {
         expected,
         "a refused write projects nothing"
     );
-    for table in ["access_directive", "access_label", "access_settings"] {
+    for table in ["access_settings", "access_class"] {
         sqlx::query(sqlx::AssertSqlSafe(format!("DELETE FROM {table}")))
             .execute(&pool)
             .await
@@ -661,7 +663,7 @@ async fn a_commit_projects_the_settings_and_a_refill_rebuilds_them() {
         .expect("the subject withdraws the settings");
     assert_eq!(
         projected(&pool, ehr_id).await,
-        (None, vec![], vec![]),
+        (None, vec![], None),
         "a version with no settings leaves no row"
     );
 }

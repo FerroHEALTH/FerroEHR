@@ -212,6 +212,9 @@ impl FerroEhrService {
         };
         let (result, scope) = self.within_budget(run).await?.map_err(Failure::exec)?;
         record_phase("execute", exec_start);
+        Box::pin(self.judge_served_ehrs(&result))
+            .await
+            .map_err(Failure::analysis)?;
 
         // `_executed_aql` carries the parameter-SUBSTITUTED text; `q` keeps
         // the original query as submitted.

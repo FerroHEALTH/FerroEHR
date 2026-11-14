@@ -274,12 +274,9 @@ async fn run_query(
 ) -> QueryOutcome {
     let svc = &world.svc;
     let run = async {
-        let index = svc
-            .ehr_access_settings_index()
-            .await
-            .expect("the index reads");
+        let classes = svc.ehr_access_classes().await.expect("the classes read");
         let request = AqlQueryRequest {
-            ehr_access: access.condition(&index, ask.cared.clone()),
+            ehr_access: access.condition(&classes, ask.cared.clone()),
             offset: page.map(|(offset, _)| offset),
             fetch: page.map(|(_, fetch)| fetch),
             ..AqlQueryRequest::default()
@@ -579,9 +576,9 @@ async fn step_7_the_default_disposition_bounds_the_query() {
     .await;
 }
 
-/// An EHR a query reaches only through its condition is recorded with the
-/// grounds a direct read of it records: the permit, with the uid of the
-/// `EHR_ACCESS` version that carries it, read from the copied index (#5581).
+/// An EHR a query serves is recorded with the grounds a direct read of it
+/// records: the permit, with the uid of the `EHR_ACCESS` version that carries
+/// it, judged from the per-EHR copy once the query ran (#5581, #5588).
 #[tokio::test]
 async fn a_query_served_ehr_names_the_grounds_of_a_direct_read() {
     let world = Box::pin(World::new()).await;
@@ -606,8 +603,8 @@ async fn a_query_served_ehr_names_the_grounds_of_a_direct_read() {
         "the query serves the EHR"
     );
     assert!(
-        queried.judgement(ehr_id).is_none(),
-        "the query reaches the EHR only through its condition"
+        queried.judgement(ehr_id).is_some(),
+        "the query judges the EHR it served from the per-EHR copy"
     );
 
     let direct = request_of(&ask);
@@ -636,4 +633,181 @@ async fn a_query_served_ehr_names_the_grounds_of_a_direct_read() {
         "{version}"
     );
     assert_eq!(queried.policies, [version]);
+}
+
+/// A `PARTY_REF` to the `PERSON` `id`.
+fn person(id: &str) -> Value {
+    json!({ "_type": "PARTY_REF", "namespace": "local", "type": "PERSON",
+            "id": { "_type": "HIER_OBJECT_ID", "value": id } })
+}
+
+/// An opt-out in force from `from`.
+fn opt_out_from(from: &str) -> Value {
+    directive(
+        "opt_out",
+        "deny",
+        &json!({ "time_validity": { "_type": "DV_INTERVAL",
+            "lower": { "_type": "DV_DATE_TIME", "value": from },
+            "lower_unbounded": false, "upper_unbounded": true,
+            "lower_included": true, "upper_included": false } }),
+    )
+}
+
+/// The number of settings classes the store holds.
+async fn classes(world: &World) -> usize {
+    world
+        .svc
+        .ehr_access_classes()
+        .await
+        .expect("the classes read")
+        .classes
+        .len()
+}
+
+/// Two opt-outs that differ only in when they start share one class, and
+/// the query reads each EHR's own start: the one in force withholds its EHR
+/// from an access service, the one that starts next year withholds nothing
+/// (#5588).
+#[tokio::test]
+async fn a_shared_class_reads_each_ehrs_validity() {
+    let world = Box::pin(World::new()).await;
+    world
+        .settings(
+            0,
+            &settings("open", &[opt_out_from("2020-01-01T00:00:00Z")], &[]),
+        )
+        .await;
+    world
+        .settings(
+            1,
+            &settings("open", &[opt_out_from("2999-01-01T00:00:00Z")], &[]),
+        )
+        .await;
+    assert_eq!(classes(&world).await, 1, "one class for both opt-outs");
+    assert_reads(
+        &world,
+        &Ask::of(&world, CallerKind::AccessService),
+        &except(&world, &[0], &[]),
+        "an access service",
+    )
+    .await;
+}
+
+/// Two consent denies that differ only in the party they name share one
+/// class, and the query reads each EHR's own party: only the EHR whose deny
+/// names the caller leaves its query (#5588).
+#[tokio::test]
+async fn a_shared_class_reads_each_ehrs_party() {
+    let world = Box::pin(World::new()).await;
+    let other = crate::fixtures::create_party(
+        &world.svc,
+        uv(
+            &crate::admin_fixture::person(
+                "Doctor",
+                &json!([{ "_type": "ELEMENT", "archetype_node_id": "at0003",
+                    "name": { "_type": "DV_TEXT", "value": "family" },
+                    "value": { "_type": "DV_TEXT", "value": "Doctor" } }]),
+            ),
+            "249",
+            None,
+        ),
+    )
+    .await
+    .expect("the doctor is created")
+    .0
+    .to_string();
+    let nurse = world.nurse.clone();
+    let deny = |party: &str| {
+        directive(
+            "consent",
+            "deny",
+            &json!({ "applies_to": [{ "party": person(party) }] }),
+        )
+    };
+    world
+        .settings(0, &settings("open", &[deny(&nurse)], &[]))
+        .await;
+    world
+        .settings(1, &settings("open", &[deny(&other)], &[]))
+        .await;
+    assert_eq!(classes(&world).await, 1, "one class for both denies");
+    assert_reads(
+        &world,
+        &Ask::professional(&world),
+        &except(&world, &[0], &[]),
+        "the nurse",
+    )
+    .await;
+}
+
+/// A label on one EHR's object and on another's share one class, and the
+/// query reads each EHR's own labelled object (#5588).
+#[tokio::test]
+async fn a_shared_class_reads_each_ehrs_labels() {
+    let world = Box::pin(World::new()).await;
+    let label = |object: &str| {
+        json!({ "_type": "ACCESS_LABEL", "target": object_ref(object),
+                "sensitivities": [coded("2.16.840.1.113883.5.25", "HIV")] })
+    };
+    let (first, second) = (world.objects(0)[0].clone(), world.objects(2)[1].clone());
+    world
+        .settings(0, &settings("open", &[], &[label(&first)]))
+        .await;
+    world
+        .settings(2, &settings("open", &[], &[label(&second)]))
+        .await;
+    assert_eq!(classes(&world).await, 1, "one class for both labels");
+    assert_reads(
+        &world,
+        &Ask::professional(&world),
+        &except(&world, &[], &[&first, &second]),
+        "uncleared",
+    )
+    .await;
+}
+
+/// A query judged on classes read before a commit made a new one withholds
+/// every EHR of the new class, never admits it under what it held before;
+/// once the classes are read again the EHR is back (#5588).
+#[tokio::test]
+async fn an_ehr_of_a_class_the_condition_does_not_hold_is_withheld() {
+    let world = Box::pin(World::new()).await;
+    let ask = Ask::professional(&world);
+    let access = request_of(&ask);
+    let stale = Box::pin(with_request_access(Arc::clone(&access), async {
+        access.condition(
+            &world
+                .svc
+                .ehr_access_classes()
+                .await
+                .expect("the classes read"),
+            Vec::new(),
+        )
+    }))
+    .await;
+    world.settings(1, &settings("open", &[], &[])).await;
+    let request = AqlQueryRequest {
+        ehr_access: stale,
+        ..AqlQueryRequest::default()
+    };
+    let outcome = Box::pin(with_request_access(
+        Arc::clone(&access),
+        world.svc.execute_aql(COMPOSITIONS, None, &request),
+    ))
+    .await
+    .expect("the query runs");
+    let served: Vec<String> = outcome.result_set["rows"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|row| row[0].as_str())
+        .map(|uid| uid.split("::").next().unwrap_or_default().to_owned())
+        .collect();
+    assert_eq!(
+        served,
+        except(&world, &[1], &[]),
+        "the new class is withheld"
+    );
+    assert_reads(&world, &ask, &world.every(), "the classes read again").await;
 }
