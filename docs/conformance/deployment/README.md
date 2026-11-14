@@ -25,6 +25,21 @@ uploads its record on every run, passing or failing. A failed run is exactly
 when the per-probe layer attribution and the not-exercised ledger are worth
 reading.
 
+The **hospital** family (#5610) runs a hospital scenario on two instances
+with Keycloak as the `persons` issuer, the quickstart's `machines` issuer and a
+patient portal's `patients` issuer. It sets everything up through public
+interfaces (SCIM, the demographic API, ITS-REST and the admin API) and checks
+RBAC, the access evaluator, AQL, the SCIM lifecycle, the access log and SMART
+discovery over HTTP, each change made on one instance and read on the other.
+It runs the care-relationship and representation assertions again under the
+default `pixm` subject index. It does not run in the required `deploy-probe`
+job yet: its own lane, `deploy-probe-hospital.yml`, runs it with
+`PROBE_ONLY=hospital` against the image published from main and writes
+`hospital.json`. Each failing probe names the issue it is tracked by, and
+`scripts/deploy-probes/hospital_summary.sh` refuses a failing probe whose
+tracking issues are all closed, or one that names none. The family moves into
+the required job once its findings land (#5642).
+
 The **terminology** family does not run there. It needs a licensed SNOMED
 release that may not be fetched onto a shared runner, and it is opt-in locally.
 
