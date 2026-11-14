@@ -6,7 +6,7 @@
 //!
 //! The entry is the record (`docs/plans/access-log.md` §Mappings and their
 //! losses). Each projection reads it through
-//! [`crate::access_log::recorded::stored`], computes its categories again
+//! `crate::access_log::recorded::stored`, computes its categories again
 //! through the category map that classified it, and hands the result to the
 //! FerroAUDIT crates: `ehds-logging` writes the EHDS access record
 //! (Regulation (EU) 2025/327 Annex II 3.2) and, from it, the BALP

@@ -750,29 +750,77 @@ grows ([Storage sizing](operations.md#audit-retention)).
 
 ### Getting the log out
 
-Two routes, and they answer different questions.
+Three routes, and they answer different questions.
 
-- **ITI-81 retrieval** — the [audit search](#retrieving-audit-records-iti-81)
+- **The access log over ITS-REST:** the [access-log
+  resources](#reading-the-access-log-over-its-rest) serve the openEHR
+  access-log entries: one EHR's log to the person it is about and their
+  representative, and the full log to a reviewer. This is the person's own
+  route (EHDS Art. 9(2)).
+- **ITI-81 retrieval:** the [audit search](#retrieving-audit-records-iti-81)
   serves the records back as FHIR `AuditEvent` resources, filtered by patient,
-  agent, date and outcome. This is the operator's route and the one a patient
-  portal would build on: everything Annex II 3.2 records is reachable through
+  agent, date and outcome. This is the operator's route and the one an IHE
+  Audit Consumer uses: everything Annex II 3.2 records is reachable through
   it, including the purpose and the organisation, which the syslog feed's
   DICOM form cannot carry.
-- **The BALP feed** — records fan out to syslog and to a FHIR feed as they are
+- **The BALP feed:** records fan out to syslog and to a FHIR feed as they are
   written, for a SIEM or a central Audit Record Repository.
 
-There is no patient-facing route in the product: a portal that shows a person
-who accessed their record builds on ITI-81 and authenticates the person itself.
-What the product gives that portal is a grant of its own size: a
-`read_subject_audit` grant in the CDR
-([Operational policy](operational-policy.md#what-the-grants-decide)) reads
-the log for one subject at a time, with
-the `patient` parameter required, so the portal never holds an admin credential
-over every patient's log ([GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj)
-Art. 15 with Recital 63, under which the controller "should be able to provide
-remote access to a secure system" where possible; EHDS Art. 9; for Dutch
-deployments Wabvpz Art. 15e). The portal's build is the deployment's, and the
-[shared-responsibility page](compliance/shared-responsibility.md) says so.
+## Reading the access log over ITS-REST
+
+The openEHR access-log entries are served under the extensions root,
+`/ferroehr/rest/extensions/v1`. No openEHR ITS-REST release defines these
+resources: they are part of FerroEHR's access-log proposal to openEHR, and they
+follow the ITS-REST 1.1.0 conventions, `offset` and `fetch` paging as the Query
+API's and ISO 8601 date-times.
+
+| Method and path | Who | What |
+|---|---|---|
+| `GET /ehr/{ehr_id}/access_log` | the subject of care, their representative, a reviewer | The entries of one EHR, newest first. Filters: `from`, `to`, `action`, `outcome`, `accessor_kind`, `emergency`, `include_self`; `offset`, `fetch` (1 to 1000, default 100). |
+| `GET /ehr/{ehr_id}/access_log/{uid}` | as above | One entry. |
+| `GET /admin/access-log` | a reviewer | Records across EHRs, entries and tombstones. Filters: `ehr_id`, `party_namespace`, `party_type`, `party_id`, `issuer`, `subject`, `request_id`, `from`, `to`, `outcome`, `emergency`; `offset`, `fetch`. |
+| `GET /admin/access-log/chain` | a reviewer | The `uid` and `link` of each record from `from_sequence` to `to_sequence` (at most 10000), without content, for verification. |
+| `GET /admin/access-log/checkpoint` | a reviewer | The newest stored checkpoint, or the one at `sequence`. |
+
+A list answers `offset`, `fetch` and `entries`, and no total count, since a
+count over a large log costs a scan. A parameter a resource does not take, or a
+value outside its form, is a `400`.
+
+**The caller's authorisation selects the view, and no parameter widens it.**
+
+- The **subject view** goes to the person the EHR is about and to their
+  representative, bound through the party binding: a patient-portal token
+  reads the EHR of its launch context, and a representative, through a
+  `persons` issuer or as the actor of the patient's token, reads the EHR of
+  the subject the representation names
+  ([Operational policy](operational-policy.md)). It shows who accessed (the
+  provider and the party), when, the action and outcome, the items and their
+  categories, the purposes and the emergency mark, and leaves out the
+  credential, the delegation chain, the binding outcome, the channel, the
+  query text and its digest, the security labels, `other_details` and the
+  link. An entry about a composition held from the person under EHDS Art.
+  3(3) is left out until the hold ends, as in the [subject-scoped ITI-81
+  read](#while-a-composition-is-held-from-the-person). Any other EHR answers
+  `404`, the same as an unknown one, so its existence is not disclosed.
+- The **full view**, each record in its ITS-JSON form with its link, goes to
+  a reviewer: a caller the admin class admits (`admin_role` under RBAC), the
+  same caller `GET /admin/access-log` admits.
+- Every other caller is refused with `403`. The log has its own access
+  control: a clinical grant such as `patient/composition-*.r` or
+  `user/composition-*.r` reaches none of it.
+
+The person's own reads of their log are recorded like every other read and
+are left out of their default view; `include_self=true` adds them. Every read
+of these resources, refused and failed ones included, writes an access-log
+entry whose item names the log it read (`ACCESS_LOG_RECORD` for an entry,
+`ACCESS_LOG` for an EHR's whole log), with the filter named by its digest. A
+tombstone keeps no EHR, so a removed entry is read through the review.
+
+```bash
+# Who accessed my record this month? (the patient portal's token)
+curl -H "Authorization: Bearer $PATIENT_TOKEN" \
+  "https://cdr.example.org/ferroehr/rest/extensions/v1/ehr/$EHR_ID/access_log?from=2026-11-01T00:00:00Z"
+```
 
 ## Sinks
 
@@ -1046,7 +1094,8 @@ not ask for, is a `400` with `not-supported`; a parameter the crate does not
 know is ignored
 (§3.81.4.1.3). Under RBAC the
 unscoped retrieval is **admin-only**; a caller holding a
-`read_subject_audit` grant reads it **scoped to one subject**: one
+`read_subject_audit` grant, a patient portal acting for the people it
+serves, reads it **scoped to one subject**: one
 `patient` or `patient.identifier` with one value is required, and the caller
 is refused with a `403` that names the parameter when it omits
 it. Reading a subject's log is itself recorded as an access naming that
@@ -1054,6 +1103,13 @@ subject and the record count served. An
 [emergency access](#emergency-access-ehds-art-115) in the subject's log
 carries its mark as the `ehds-emergency-access` entity. The surface answers `404` when the local
 store is disabled.
+
+The subject-scoped ITI-81 read stays beside the [access-log
+resources](#reading-the-access-log-over-its-rest). It serves the ATNA records
+as FHIR `AuditEvent`s to a portal that holds a `read_subject_audit` grant and
+names the subject itself; `GET /ehr/{ehr_id}/access_log` serves the openEHR
+access-log entries of the same accesses to the person, or their
+representative, under the person's own credential.
 
 ```bash
 # Who accessed patient-42's data this month?

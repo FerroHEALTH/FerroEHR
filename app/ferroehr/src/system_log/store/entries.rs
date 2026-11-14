@@ -9,7 +9,7 @@
 //! chain the `audit_event` records share, with one row of
 //! `audit.access_log_search` beside it: the columns the search filters on,
 //! read from the entry's projection, and the render policy that projection is
-//! written under (`migrations/audit/0029_access_log_projections.sql`). A read
+//! written under (`migrations/audit/0030_access_log_projections.sql`). A read
 //! renders the document from the entry's content. No openEHR spec governs
 //! audit storage: our own design.
 
@@ -224,7 +224,7 @@ impl AuditStore {
     ///
     /// # Errors
     /// [`AuditError::Store`] when the read fails, and the errors of
-    /// [`Self::record_of`] and of the classification.
+    /// reading the row and of the classification.
     pub async fn record(
         &self,
         chain_seq: i64,

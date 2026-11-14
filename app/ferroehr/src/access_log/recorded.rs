@@ -6,10 +6,10 @@
 //!
 //! [`details`] writes the facts of an access the draft's core does not hold
 //! into the entry's `other_details` ([`crate::access_log::details`]), and
-//! [`stored`] reads the entry back as the record the renderings take: the
+//! `stored` reads the entry back as the record the renderings take: the
 //! core for what it holds (the time, the request, the operation, the query,
 //! the authorisations, the decision) and the details for the rest. Every
-//! projection reads the entry through [`stored`], so the BALP `AuditEvent`,
+//! projection reads the entry through `stored`, so the BALP `AuditEvent`,
 //! the DICOM message and the EHDS access record are written from what the
 //! log keeps and from nothing else. No openEHR spec governs the audit trail:
 //! our own design.

@@ -53,6 +53,7 @@ mod statistics;
 
 pub mod access_delay;
 pub mod access_log_erasure;
+pub mod access_log_read;
 pub mod access_policy;
 pub mod access_repair;
 pub mod integrity;

@@ -15,7 +15,7 @@
 use openehr_base::containers::NonEmptyVec;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
-use crate::access_log::store::{AccessLogError, AccessLogStore};
+use crate::access_log::store::AccessLogError;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::error::refusal::Refusal;
@@ -24,7 +24,6 @@ use crate::service::FerroEhrService;
 use crate::system_log::event::{
     AuditEvent, EntryScope, EventActionCode, EventOutcome, EventType, ObjectClass,
 };
-use crate::system_log::sender::AuditSender;
 use crate::versioning::audit::dv_date_time;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 use openehr_rm::draft::access_log::access_log::access_log_tombstone::AccessLogTombstone;
@@ -53,16 +52,7 @@ impl FerroEhrService {
         uid: &str,
         grounds: NonEmptyVec<DvCodedText>,
     ) -> Result<AccessLogTombstone, ServiceError> {
-        let Some(audit_store) = &self.audit_store else {
-            return Err(ServiceError::conflict(
-                "the local audit store is off, so this server keeps no access log",
-            ));
-        };
-        let log = self
-            .audit
-            .as_ref()
-            .and_then(AuditSender::access_log)
-            .unwrap_or_else(|| AccessLogStore::new(audit_store.pool.clone()));
+        let log = self.access_log_store()?;
         let entry = match log.read(uid).await.map_err(refused)? {
             None => {
                 return Err(ServiceError::not_found(

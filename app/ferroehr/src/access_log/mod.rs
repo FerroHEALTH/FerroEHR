@@ -26,5 +26,7 @@ pub mod projection;
 pub mod recorded;
 pub mod retention;
 pub mod schedule;
+pub mod search;
 pub mod store;
 pub mod transfer;
+pub mod view;

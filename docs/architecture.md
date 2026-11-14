@@ -338,9 +338,18 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   search tokens of the projection and the render policy, removed with the
   entry's content when a tombstone replaces it), and the drain sends the
   syslog message and the store-off feed's document from the entry it built
-  (`audit/0029_access_log_projections.sql`, `system_log::store::entries`,
-  `system_log::sender::records`). No openEHR spec governs audit storage: our
-  own design.
+  (`audit/0030_access_log_projections.sql`, `system_log::store::entries`,
+  `system_log::sender::records`).
+  The log is read over ITS-REST (#5130): `GET {ext}/ehr/{ehr_id}/access_log`
+  and its `/{uid}` serve the subject view (`access_log::view`) to the
+  patient token's launch-context EHR and a bound representative's
+  represented EHR, and the full view to the caller the admin class admits;
+  `GET {ext}/admin/access-log`, `/chain` and `/checkpoint` serve the review.
+  `access_log::search` pages the records over the trigger's search columns,
+  `service::admin::access_log_read` holds the EHR check and the EHDS Art.
+  3(3) holds the person's view leaves out, and every read writes its own
+  `LogRead` entry naming the log it read.
+  No openEHR spec governs audit storage: our own design.
 - **One pool and one DSN per storage domain.** `[database.clinical]`,
   `[database.party]` and `[database.audit]` each carry a
   `url`/`url_file`, defaulting to the shared `[database].url`, and

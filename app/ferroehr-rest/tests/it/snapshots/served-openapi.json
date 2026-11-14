@@ -339,7 +339,367 @@
         }
       }
     },
+    "/ferroehr/rest/extensions/v1/admin/access-log": {
+      "get": {
+        "tags": [
+          "admin-access-log"
+        ],
+        "summary": "The records of the access log across EHRs, newest first, for review\n(`GET /admin/access-log`). **Our own extension.**",
+        "operationId": "admin_list_access_log",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "query",
+            "description": "The EHR the entries are about.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "party_namespace",
+            "in": "query",
+            "description": "The `PARTY_REF.namespace` of the accessing party.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "party_type",
+            "in": "query",
+            "description": "The `PARTY_REF.type` of the accessing party.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "party_id",
+            "in": "query",
+            "description": "The `PARTY_REF.id` of the accessing party.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "issuer",
+            "in": "query",
+            "description": "The issuer of the accessor's credential.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "description": "The subject of the accessor's credential.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "request_id",
+            "in": "query",
+            "description": "The request the entries were written in.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "The first `time_recorded` selected, an ISO 8601 date-time.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "The last `time_recorded` selected, an ISO 8601 date-time.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "description": "An `access outcome` rubric.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "emergency",
+            "in": "query",
+            "description": "Only the entries whose `is_emergency` is this.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Records skipped; default 0.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "fetch",
+            "in": "query",
+            "description": "The most records answered, 1 to 1000; default 100.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`offset`, `fetch` and `entries`, each record, entry or tombstone, in its ITS-JSON form with its link. No total count.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "A parameter the route does not take, or a value outside its form.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The local audit store, which holds the access log, is off.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/access-log/chain": {
+      "get": {
+        "tags": [
+          "admin-access-log"
+        ],
+        "summary": "The uid and link of each record of a span of the access log's chain,\nwithout their content (`GET /admin/access-log/chain`). **Our own\nextension.**",
+        "operationId": "admin_access_log_chain",
+        "parameters": [
+          {
+            "name": "from_sequence",
+            "in": "query",
+            "description": "The first position of the span.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "to_sequence",
+            "in": "query",
+            "description": "The last position of the span, at most 10000 after the first.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`links`: the `uid` and `link` of each record from `from_sequence` to `to_sequence`, in chain order.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "A bound is missing or outside its form, the span is longer than 10000, or it holds `audit_event` records, which only this database verifies.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The local audit store, which holds the access log, is off.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ferroehr/rest/extensions/v1/admin/access-log/checkpoint": {
+      "get": {
+        "tags": [
+          "admin-access-log"
+        ],
+        "summary": "The newest stored checkpoint of the access log, or the one at\n`sequence` (`GET /admin/access-log/checkpoint`). **Our own extension.**",
+        "operationId": "admin_get_access_log_checkpoint",
+        "parameters": [
+          {
+            "name": "sequence",
+            "in": "query",
+            "description": "The sequence of the checkpoint; the newest when absent.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The checkpoint, as its ITS-JSON `ACCESS_LOG_CHECKPOINT`.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "`sequence` is not an integer.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No checkpoint is stored, or none at `sequence`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "admin-access-log"
@@ -6294,6 +6654,258 @@
           },
           "415": {
             "description": "The request DECLARES a Simplified `Content-Type`, refused before the read (`Resources.md` §\"Simplified Formats\").",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/access_log": {
+      "get": {
+        "tags": [
+          "ACCESS_LOG"
+        ],
+        "summary": "The entries of one EHR's access log, newest first\n(`GET /ehr/{ehr_id}/access_log`). **Our own extension** (module docs).",
+        "operationId": "ehr_access_log_list",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "path",
+            "description": "The EHR whose log is read.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "The first `time_recorded` selected, an ISO 8601 date-time.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "The last `time_recorded` selected, an ISO 8601 date-time.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "description": "An `access action` rubric.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "description": "An `access outcome` rubric.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "accessor_kind",
+            "in": "query",
+            "description": "An `accessor kind` rubric.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "emergency",
+            "in": "query",
+            "description": "Only the entries whose `is_emergency` is this.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_self",
+            "in": "query",
+            "description": "Whether the subject's own reads of their log are included; default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Entries skipped; default 0.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "fetch",
+            "in": "query",
+            "description": "The most entries answered, 1 to 1000; default 100.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`offset`, `fetch` and `entries`: each entry in its ITS-JSON form for a reviewer, or in the subject view for the subject of care and their representative. No total count.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "A parameter the route does not take, or a value outside its form.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid credential.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is neither the subject, their representative nor a reviewer.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such EHR, or one the caller may not see.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The local audit store, which holds the access log, is off.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/access_log/{uid}": {
+      "get": {
+        "tags": [
+          "ACCESS_LOG"
+        ],
+        "summary": "One entry of an EHR's access log\n(`GET /ehr/{ehr_id}/access_log/{uid}`). **Our own extension** (module\ndocs).",
+        "operationId": "ehr_access_log_get",
+        "parameters": [
+          {
+            "name": "ehr_id",
+            "in": "path",
+            "description": "The EHR whose log is read.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "uid",
+            "in": "path",
+            "description": "The entry's `uid`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The entry, in its ITS-JSON form for a reviewer or in the subject view for the subject of care and their representative.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "The EHR id is not a UUID.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid credential.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller is neither the subject, their representative nor a reviewer.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such EHR, one the caller may not see, or no entry of it with this uid. A tombstone keeps no EHR, so it is read through the review.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The local audit store, which holds the access log, is off.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -26578,8 +27190,12 @@
       "description": "The storage-parity sweep: every stored version is re-derived from its decomposed node rows and compared with its materialized body, so tampering or corruption of either copy is reported. OUR OWN EXTENSION: no ITS-REST operation governs this route, and no openEHR spec governs storage mechanics (same admin gate + RBAC Admin class)."
     },
     {
+      "name": "ACCESS_LOG",
+      "description": "One EHR's access log, newest first, and one entry of it: the subject view for the subject of care and their representative (EHDS Art. 9(2)), the full ITS-JSON records for a reviewer the admin class admits; any other EHR answers 404 to the person. Every read writes its own access-log entry. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes."
+    },
+    {
       "name": "admin-access-log",
-      "description": "The integrity of the access log: seal its head in a checkpoint signed with the keyring's OpenPGP key, verify the chain and the signatures against a checkpoint, and export one EHR's log with the checkpoint it verifies against for a transfer to another system. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes (same admin gate + RBAC Admin class)."
+      "description": "The review and the integrity of the access log: list its records across EHRs, read the links of a span of its chain and a stored checkpoint, seal its head in a checkpoint signed with the keyring's OpenPGP key, verify the chain and the signatures against a checkpoint, and export one EHR's log with the checkpoint it verifies against for a transfer to another system. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes (same admin gate + RBAC Admin class)."
     },
     {
       "name": "admin-identifiers",

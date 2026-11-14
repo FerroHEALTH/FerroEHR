@@ -37,11 +37,11 @@ use crate::party_binding_http::{
 
 /// The patient portal's issuer, under which a representative's login is
 /// their binding key.
-const PORTAL: &str = "https://portal.example";
+pub(crate) const PORTAL: &str = "https://portal.example";
 /// The patient's login.
-const CHILD_LOGIN: &str = "child-login";
+pub(crate) const CHILD_LOGIN: &str = "child-login";
 /// The parent's login, the binding key of their `PERSON`.
-const PARENT: &str = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+pub(crate) const PARENT: &str = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
 /// The login of a parent whose representation has ended.
 const FORMER: &str = "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e";
 /// The login of the proxy the patient authorises.
@@ -52,7 +52,7 @@ const SCOPES: &str = "patient/composition-*.cruds";
 /// The configuration trusting `PORTAL` as a `patients` issuer that reads an
 /// `act` as the patient's representative, with its `patient/` grants
 /// honoured.
-fn config() -> AppConfig {
+pub(crate) fn config() -> AppConfig {
     let mut auth = common::auth(AuthSection {
         issuer: vec![IssuerEntry {
             kind: Some(IssuerKind::Patients),
@@ -80,7 +80,7 @@ async fn router(svc: &Arc<FerroEhrService>) -> Router {
 }
 
 /// A portal token naming `ehr` for `sub`, with `extra` claims.
-fn token(sub: &str, ehr: &str, extra: &Value) -> String {
+pub(crate) fn token(sub: &str, ehr: &str, extra: &Value) -> String {
     let exp = jiff::Timestamp::now().as_second() + 3600;
     let mut claims = json!({ "sub": sub, "iss": PORTAL, "aud": AUDIENCE, "exp": exp,
         "ehrId": ehr, "scope": SCOPES });
@@ -91,7 +91,7 @@ fn token(sub: &str, ehr: &str, extra: &Value) -> String {
 }
 
 /// The child's token, its actor `actor` when one signs in for the child.
-fn acting(ehr: &str, actor: Option<&str>) -> String {
+pub(crate) fn acting(ehr: &str, actor: Option<&str>) -> String {
     let extra = actor.map_or_else(|| json!({}), |sub| json!({ "act": { "sub": sub } }));
     token(CHILD_LOGIN, ehr, &extra)
 }
@@ -118,7 +118,12 @@ fn person_ref(id: VoId) -> Value {
 /// `subject_relationship` code `code`, valid over `validity`: its details
 /// carry `ferroehr-operations::represents`, in an archetype of the
 /// deployment's own.
-fn representation(source: VoId, target: VoId, code: &str, validity: Option<Value>) -> Value {
+pub(crate) fn representation(
+    source: VoId,
+    target: VoId,
+    code: &str,
+    validity: Option<Value>,
+) -> Value {
     let coded = |terminology: &str, code: &str| {
         json!({ "_type": "DV_CODED_TEXT", "value": code,
             "defining_code": { "_type": "CODE_PHRASE",
@@ -154,7 +159,7 @@ fn interval(lower: &str, upper: &str) -> Value {
 
 /// A `PERSON` of the mapped template carrying the binding key `key` under
 /// the portal, holding `relationships`; its container.
-async fn representative(svc: &FerroEhrService, key: &str, relationships: Value) -> VoId {
+pub(crate) async fn representative(svc: &FerroEhrService, key: &str, relationships: Value) -> VoId {
     representative_at(svc, key, relationships).await.0
 }
 
@@ -200,7 +205,7 @@ async fn representative_at(
 }
 
 /// The child's `PERSON` and the EHR whose `EHR_STATUS` names it.
-async fn child(svc: &FerroEhrService) -> (VoId, String) {
+pub(crate) async fn child(svc: &FerroEhrService) -> (VoId, String) {
     let body = json!({
         "_type": "PERSON", "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
         "archetype_details": { "_type": "ARCHETYPED", "rm_version": "1.1.0",
