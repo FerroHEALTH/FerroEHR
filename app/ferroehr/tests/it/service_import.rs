@@ -33,6 +33,7 @@
 //!    subject lookup (`operations/ehr_get_by_subject.yaml`) and bound by the
 //!    one-EHR-per-subject rule (RM ehr master04 §EHR Status) like any other EHR.
 
+use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::service::version_update::WriteRequest;
 use std::sync::Arc;
 
@@ -108,7 +109,7 @@ async fn import_ehr_clone_into_fresh_target_reuses_source_id() {
 
     let ehr = seed_extract_ehr(&source).await.0;
     let source_status = source
-        .ehr_status(ehr, None)
+        .ehr_object(ehr, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("source status");
@@ -120,7 +121,7 @@ async fn import_ehr_clone_into_fresh_target_reuses_source_id() {
     // The clone exists under the *same* EHR id in the target, which holds no
     // other EHR.
     let target_status = target
-        .ehr_status(ehr, None)
+        .ehr_object(ehr, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("cloned status readable under the reused ehr_id");
@@ -338,7 +339,7 @@ async fn import_ehr_into_fixed_fresh_id() {
 
     let ehr = seed_extract_ehr(&source).await.0;
     let source_status = source
-        .ehr_status(ehr, None)
+        .ehr_object(ehr, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("source status");
@@ -361,7 +362,7 @@ async fn import_ehr_into_fixed_fresh_id() {
         ServiceError::NotFound(r) if r.kind == Missing::Ehr
     ));
     let mut target_status = target
-        .ehr_status(fixed, None)
+        .ehr_object(fixed, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status under the fixed id");
@@ -423,6 +424,137 @@ async fn import_ehr_refuses_access_settings_that_do_not_parse() {
     )
     .await
     .expect("settings that parse import");
+}
+
+/// An extract whose head `EHR_ACCESS` version, the one the import puts in
+/// force, has a directive naming a party neither this CDR nor the extract
+/// holds is refused with the `422` a CONTRIBUTION writing it gets, naming the
+/// directive and the party, and so is a head gate-keeper naming one; the same
+/// directive and gate-keeper in an earlier version, the record of what was in
+/// force then, import (#5517).
+#[tokio::test]
+async fn import_ehr_refuses_a_head_directive_naming_an_unknown_party() {
+    const NOBODY: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f99";
+    let (_source_db, source) = crate::fixtures::service().await;
+    let (_target_db, svc) = crate::fixtures::service().await;
+    let ehr = seed_extract_ehr(&source).await.0;
+    let term = |code: &str| {
+        json!({ "_type": "DV_CODED_TEXT", "value": code,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID",
+                    "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
+                "code_string": code } })
+    };
+    let open = json!({ "_type": "ACCESS_DIRECTIVE_SETTINGS", "default_access": term("open") });
+    let versions = source
+        .ehr_access_versions(ehr)
+        .await
+        .expect("the EHR_ACCESS versions");
+    let (first, _) = versions.first().expect("the default EHR_ACCESS");
+    source
+        .commit_ehr_access_settings(ehr, first, open.clone())
+        .await
+        .expect("a second EHR_ACCESS version");
+    let exported = openehr_its::json::to_canonical_value(&export_one(&source, ehr).await);
+    let naming_nobody = json!({ "_type": "ACCESS_DIRECTIVE_SETTINGS",
+        "default_access": term("open"),
+        "directives": [{ "_type": "ACCESS_DIRECTIVE",
+            "name": { "_type": "DV_TEXT", "value": "consent" }, "archetype_node_id": "at0001",
+            "kind": term("consent"), "effect": term("permit"), "emergency_override": false,
+            "applies_to": [{ "party": { "_type": "PARTY_REF", "namespace": "demographic",
+                "type": "PERSON", "id": { "_type": "HIER_OBJECT_ID", "value": NOBODY } } }] }] });
+    // The export carries the newest version only; the version it supersedes
+    // goes beside it, as an extract carrying the whole history would hold it.
+    let mut exported = exported;
+    for item in exported["chapters"][0]["items"]
+        .as_array_mut()
+        .expect("chapter items")
+    {
+        if item["item"]["_type"] == json!("X_VERSIONED_EHR_ACCESS") {
+            let head = item["item"]["versions"][0].clone();
+            let head_uid = head["uid"]["value"].as_str().expect("a version uid");
+            assert!(head_uid.ends_with("::2"), "{head_uid}");
+            let mut older = head.clone();
+            older["uid"]["value"] = json!(format!("{}1", head_uid.trim_end_matches('2')));
+            if let Some(older) = older.as_object_mut() {
+                older.remove("preceding_version_uid");
+            }
+            older["commit_audit"]["change_type"]["value"] = json!("creation");
+            older["commit_audit"]["change_type"]["defining_code"]["code_string"] = json!("249");
+            item["item"]["versions"] = json!([older, head]);
+            item["item"]["extract_version_count"] = json!(2);
+        }
+    }
+    let kept_by_nobody = json!({ "_type": "ACCESS_DIRECTIVE_SETTINGS",
+        "default_access": term("open"),
+        "gate_keepers": [{ "_type": "PARTY_IDENTIFIED", "external_ref": {
+            "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+            "id": { "_type": "HIER_OBJECT_ID", "value": NOBODY } } }] });
+    // The extract with the EHR_ACCESS version of trunk `trunk` carrying `settings`.
+    let carrying_in = |trunk: &str, settings: &Value| -> Extract {
+        let mut raw = exported.clone();
+        let mut found = false;
+        for item in raw["chapters"][0]["items"]
+            .as_array_mut()
+            .expect("chapter items")
+        {
+            if item["item"]["_type"] == json!("X_VERSIONED_EHR_ACCESS") {
+                for version in item["item"]["versions"].as_array_mut().expect("versions") {
+                    let uid = version["uid"]["value"].as_str().expect("a version uid");
+                    if uid.ends_with(&format!("::{trunk}")) {
+                        version["data"]["settings"] = settings.clone();
+                        found = true;
+                    }
+                }
+            }
+        }
+        assert!(
+            found,
+            "the extract carries EHR_ACCESS version {trunk}: {}",
+            raw["chapters"][0]["items"]
+        );
+        openehr_its::json::from_canonical_value(&raw).expect("EXTRACT with a directive")
+    };
+
+    let refused = svc
+        .import_ehr(
+            Some(ferroehr::ids::EhrId(uuid::Uuid::now_v7())),
+            carrying_in("2", &naming_nobody),
+        )
+        .await
+        .expect_err("a head directive naming nobody is refused");
+    let detail = format!("{refused:?}");
+    assert!(
+        matches!(&refused, ServiceError::Unprocessable { .. }),
+        "a 422: {refused:?}"
+    );
+    assert!(
+        detail.contains("directives[0]") && detail.contains("applies_to[0].party"),
+        "the directive and the attribute are named: {detail}"
+    );
+    assert!(detail.contains(NOBODY), "the party is named: {detail}");
+    let refused = svc
+        .import_ehr(
+            Some(ferroehr::ids::EhrId(uuid::Uuid::now_v7())),
+            carrying_in("2", &kept_by_nobody),
+        )
+        .await
+        .expect_err("a head gate-keeper naming nobody is refused");
+    let detail = format!("{refused:?}");
+    assert!(
+        matches!(&refused, ServiceError::Unprocessable { .. })
+            && detail.contains("gate_keepers[0]")
+            && detail.contains(NOBODY),
+        "a 422 naming the gate-keeper: {detail}"
+    );
+    let mut both = naming_nobody.clone();
+    both["gate_keepers"] = kept_by_nobody["gate_keepers"].clone();
+    svc.import_ehr(
+        Some(ferroehr::ids::EhrId(uuid::Uuid::now_v7())),
+        carrying_in("1", &both),
+    )
+    .await
+    .expect("an earlier version naming nobody imports");
 }
 
 #[tokio::test]
@@ -574,7 +706,7 @@ async fn an_imported_version_serves_the_wrapper_and_wrapped_split() {
         .expect("import_ehr");
 
     let served = target
-        .ehr_status_version_envelope(ehr, vo_id, &version)
+        .ehr_object_version_envelope(ehr, EhrObject::Status, vo_id, &version)
         .await
         .expect("the imported version reads back")
         .body;
@@ -651,7 +783,7 @@ async fn an_imported_container_reports_the_local_chronology() {
         .expect("import_ehr");
 
     let container = target
-        .versioned_ehr_status(ehr)
+        .versioned_ehr_object(ehr, EhrObject::Status)
         .await
         .expect("VERSIONED_EHR_STATUS");
     let time_created = container.body["time_created"]["value"]
@@ -673,7 +805,7 @@ async fn an_imported_container_reports_the_local_chronology() {
     // audit of the version IN THIS CONTAINER, which for an imported version is
     // the IMPORTED_VERSION's own, i.e. the local import act.
     let history = target
-        .ehr_status_revision_history(ehr)
+        .ehr_object_revision_history(ehr, EhrObject::Status)
         .await
         .map(|r| r.body)
         .expect("REVISION_HISTORY");
@@ -785,7 +917,7 @@ async fn a_signed_import_signs_the_wrapper_and_the_read_verifies_it() {
     // The read is the assertion: under `strict`, a wrapper signature that did
     // not recompute over the served bytes would be an Exception, not a body.
     let served = target
-        .ehr_status_version_envelope(ehr, vo_id, &version)
+        .ehr_object_version_envelope(ehr, EhrObject::Status, vo_id, &version)
         .await
         .expect("the signed IMPORTED_VERSION verifies on read")
         .body;
@@ -1012,7 +1144,7 @@ async fn a_two_hop_copy_wraps_at_each_system_over_one_unchanged_original() {
         .await
         .expect("import into B");
     let at_b = system_b
-        .ehr_status_version_envelope(ehr, vo_id, &version)
+        .ehr_object_version_envelope(ehr, EhrObject::Status, vo_id, &version)
         .await
         .expect("the version at B")
         .body;
@@ -1023,7 +1155,7 @@ async fn a_two_hop_copy_wraps_at_each_system_over_one_unchanged_original() {
         .await
         .expect("import into C");
     let at_c = system_c
-        .ehr_status_version_envelope(ehr, vo_id, &version)
+        .ehr_object_version_envelope(ehr, EhrObject::Status, vo_id, &version)
         .await
         .expect("the version at C")
         .body;
@@ -1271,7 +1403,7 @@ async fn import_accepts_a_branch_version_whose_closure_is_already_stored() {
         .await
         .expect("a closure-satisfied branch append lands");
     let served = target
-        .ehr_status_version_envelope(ehr_id, vo_id, "2.1.1")
+        .ehr_object_version_envelope(ehr_id, EhrObject::Status, vo_id, "2.1.1")
         .await
         .expect("the imported branch version reads back")
         .body;
@@ -1317,7 +1449,7 @@ async fn import_advances_an_open_branch_lineage_and_rejects_a_stale_branch_versi
         .await
         .expect("a branch advance over an open stored tip lands");
     let served = target
-        .ehr_status_version_envelope(ehr_id, vo_id, "2.1.2")
+        .ehr_object_version_envelope(ehr_id, EhrObject::Status, vo_id, "2.1.2")
         .await
         .expect("the advanced branch version reads back")
         .body;
@@ -1372,7 +1504,7 @@ async fn an_extract_carries_its_parties_into_the_receivers_demographic_domain() 
     // `demographic` namespace the extract builder follows.
     let ehr = crate::fixtures::create_ehr(&source).await;
     let mut status = source
-        .ehr_status(ehr, None)
+        .ehr_object(ehr, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status get");

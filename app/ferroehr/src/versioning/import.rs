@@ -147,7 +147,7 @@ fn wrapped_fragment(version: &ImportVersion) -> Value {
 
 impl ImportVersion {
     /// The lineage this version sits on.
-    fn lineage(&self) -> Lineage {
+    pub(crate) fn lineage(&self) -> Lineage {
         match self.tree.branch {
             None => (String::new(), 0, 0),
             Some((b, _)) => (self.creating_system_id.clone(), self.tree.trunk, b),

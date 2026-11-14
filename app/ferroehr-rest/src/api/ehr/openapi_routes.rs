@@ -13,8 +13,8 @@
               dump, management env, validity-checker input, OpenAPI schema literals)"
 )]
 
-use utoipa_axum::router::OpenApiRouter;
-use utoipa_axum::routes;
+use openehr_rm::prelude::EhrStatus;
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::api::guarded_handler;
 use crate::api::refusals::SpecProfileConflict;
@@ -685,7 +685,7 @@ guarded_handler! {
             refusals::RestrictedRead
         )
     )]
-    ehr_status_get_by_version_id => super::ehr_status::get_by_version_id
+    ehr_status_get_by_version_id => super::ehr_status::get_by_version_id::<EhrStatus>
 }
 
 guarded_handler! {
@@ -784,7 +784,7 @@ guarded_handler! {
             refusals::RestrictedRead
         )
     )]
-    ehr_status_get_at_time => super::ehr_status::get_at_time
+    ehr_status_get_at_time => super::ehr_status::get_at_time::<EhrStatus>
 }
 
 guarded_handler! {
@@ -1125,7 +1125,7 @@ guarded_handler! {
              body = serde_json::Value)
         )
     )]
-    versioned_ehr_status_get => super::versioned_ehr_status::get
+    versioned_ehr_status_get => super::versioned_ehr_status::get::<EhrStatus>
 }
 
 guarded_handler! {
@@ -1227,7 +1227,7 @@ guarded_handler! {
             refusals::RestrictedRead
         )
     )]
-    versioned_ehr_status_revision_history => super::versioned_ehr_status::revision_history
+    versioned_ehr_status_revision_history => super::versioned_ehr_status::revision_history::<EhrStatus>
 }
 
 guarded_handler! {
@@ -1375,7 +1375,7 @@ guarded_handler! {
             refusals::RestrictedRead
         )
     )]
-    versioned_ehr_status_version_get_at_time => super::versioned_ehr_status::version_get_at_time
+    versioned_ehr_status_version_get_at_time => super::versioned_ehr_status::version_get_at_time::<EhrStatus>
 }
 
 guarded_handler! {
@@ -1522,7 +1522,7 @@ guarded_handler! {
             refusals::RestrictedRead
         )
     )]
-    versioned_ehr_status_version_get_by_id => super::versioned_ehr_status::version_get_by_id
+    versioned_ehr_status_version_get_by_id => super::versioned_ehr_status::version_get_by_id::<EhrStatus>
 }
 
 // ── COMPOSITION ───────────────────────────────────────────────────────────────

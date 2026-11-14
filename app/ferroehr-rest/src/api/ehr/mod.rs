@@ -9,7 +9,9 @@
 //! Each operation's handler lives in one of seven resource modules, one per
 //! spec resource boundary: [`ehr_resource`], [`ehr_status`],
 //! [`versioned_ehr_status`], [`composition`], [`versioned_composition`],
-//! [`directory`] and [`contribution`].
+//! [`directory`] and [`contribution`]. [`ehr_access`] declares FerroEHR's own
+//! `EHR_ACCESS` reads, which run the `EHR_STATUS` read handlers for the
+//! `EHR_ACCESS` class (`EhrObjectType`).
 //!
 //! Each arm rebuilds the operation's `*Params`, decodes wire strings into the
 //! service's native argument types through [`crate::overview::version_id`],
@@ -33,6 +35,7 @@ pub mod access_log;
 pub mod composition;
 pub mod contribution;
 pub mod directory;
+pub mod ehr_access;
 pub mod ehr_resource;
 pub mod ehr_status;
 pub mod openapi_routes;
@@ -43,13 +46,20 @@ pub mod versioned_ehr_status;
 // representations through the shared `crate::formats::dispatch` adapter, called
 // by its full path (no module alias — every import names its defining module).
 
+use http::HeaderMap;
+use serde::de::DeserializeOwned;
 use serde_json::Value;
 use uuid::Uuid;
 
 use openehr_base::prelude::ObjectVersionId;
 use openehr_its::rest::runtime::ApiError;
+use openehr_its::xml::runtime::ToXml;
+use openehr_rm::prelude::{EhrAccess, EhrStatus, VersionedEhrAccess, VersionedEhrStatus};
+
+use ferroehr::service::ehr::object::EhrObject;
 
 use crate::overview::error::RestError;
+use crate::overview::negotiate::{CANONICAL, WireFormat, resolve_accept};
 use crate::overview::params::query_param;
 use crate::state::AppState;
 
@@ -64,17 +74,68 @@ use crate::state::AppState;
 /// (RM common master06 §Version and its Subtypes).
 pub(super) const VERSION_ROOT_TAG: &str = "version";
 
-// NOTE: no specification governs this: our own design. No ITS-XML bundle
-// declares an element for EHR, VERSIONED_COMPOSITION, VERSIONED_EHR_STATUS or
-// REVISION_HISTORY, so each root is named after its class until #4652 settles.
+// NOTE: no specification governs this: our own design. No ITS-XML bundle declares
+// an element for EHR, VERSIONED_COMPOSITION, VERSIONED_EHR_STATUS, VERSIONED_EHR_ACCESS
+// or REVISION_HISTORY, so each root is named after its class until #4652 settles.
 /// The canonical-XML root tag of the `EHR` document.
 pub(super) const EHR_ROOT_TAG: &str = "ehr";
 /// The canonical-XML root tag of the `VERSIONED_COMPOSITION` document.
 pub(super) const VERSIONED_COMPOSITION_ROOT_TAG: &str = "versioned_composition";
 /// The canonical-XML root tag of the `VERSIONED_EHR_STATUS` document.
 pub(super) const VERSIONED_EHR_STATUS_ROOT_TAG: &str = "versioned_ehr_status";
+/// The canonical-XML root tag of the `VERSIONED_EHR_ACCESS` document.
+pub(super) const VERSIONED_EHR_ACCESS_ROOT_TAG: &str = "versioned_ehr_access";
 /// The canonical-XML root tag of the `REVISION_HISTORY` document.
 pub(super) const REVISION_HISTORY_ROOT_TAG: &str = "revision_history";
+
+/// An RM object an EHR holds exactly one of (RM ehr, EHR class), as the
+/// `EHR_STATUS` reads serve it and the `EHR_ACCESS` reads serve it the same way.
+pub(crate) trait EhrObjectType: DeserializeOwned + ToXml {
+    /// The object the service reads.
+    const OBJECT: EhrObject;
+    /// The canonical-XML root tag of its versioned object.
+    const VERSIONED_ROOT_TAG: &'static str;
+    /// Whether the object maps onto canonical XML. `EHR_ACCESS` does not: its
+    /// settings are of a scheme no published class defines, and canonical XML
+    /// maps only published classes (`openehr_its::xml::runtime`).
+    const CANONICAL_XML: bool;
+    /// Its versioned object.
+    type Versioned: DeserializeOwned + ToXml;
+}
+
+impl EhrObjectType for EhrStatus {
+    const OBJECT: EhrObject = EhrObject::Status;
+    const VERSIONED_ROOT_TAG: &'static str = VERSIONED_EHR_STATUS_ROOT_TAG;
+    const CANONICAL_XML: bool = true;
+    type Versioned = VersionedEhrStatus;
+}
+
+impl EhrObjectType for EhrAccess {
+    const OBJECT: EhrObject = EhrObject::Access;
+    const VERSIONED_ROOT_TAG: &'static str = VERSIONED_EHR_ACCESS_ROOT_TAG;
+    const CANONICAL_XML: bool = false;
+    type Versioned = VersionedEhrAccess;
+}
+
+/// Refuses with `406` a request whose `Accept` wins canonical XML for an
+/// object of `T` that has no canonical-XML mapping, which the service "cannot
+/// fulfill" (`Resources.md` §"XML Format").
+///
+/// # Errors
+/// [`ApiError::NotAcceptable`] for such a request.
+pub(super) fn refuse_unmapped_xml<T: EhrObjectType>(headers: &HeaderMap) -> Result<(), RestError> {
+    if !T::CANONICAL_XML
+        && resolve_accept(headers, CANONICAL, WireFormat::CanonicalJson)
+            == Some(WireFormat::CanonicalXml)
+    {
+        return Err(RestError::from(ApiError::NotAcceptable(
+            "the settings of this object are of a scheme no canonical-XML class maps, so it is \
+             served as application/json only"
+                .to_owned(),
+        )));
+    }
+    Ok(())
+}
 
 /// Re-inlines externalized `DV_MULTIMEDIA` content when the caller asked for it
 /// with `?expand_multimedia=true`, verifying each blob's integrity.

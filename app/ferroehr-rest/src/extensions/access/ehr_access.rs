@@ -199,10 +199,18 @@ pub(crate) fn named_objects(parts: &RequestParts) -> Vec<(&str, VoId)> {
         .collect()
 }
 
-/// The `404` an unknown EHR answers for `op`.
+/// Whether `op` reads the `EHR_ACCESS` extension routes
+/// (`crate::api::ehr::ehr_access`).
+fn reads_ehr_access(op: &str) -> bool {
+    op.starts_with("ehr_access_get") || op.starts_with("versioned_ehr_access")
+}
+
+/// The `404` an unknown EHR answers for `op`, worded as the dispatch words it.
 fn ehr_not_found(op: &str, ehr_id: EhrId) -> Response {
     let message = if op.contains("ehr_status") {
         format!("EHR_STATUS for EHR {ehr_id}")
+    } else if reads_ehr_access(op) {
+        format!("EHR_ACCESS for EHR {ehr_id}")
     } else {
         format!("EHR {ehr_id}")
     };
@@ -215,6 +223,8 @@ pub(crate) fn object_not_found(op: &str, raw: &str) -> Response {
         not_found(Missing::Composition, format!("COMPOSITION {raw}"))
     } else if op.contains("ehr_status") {
         not_found(Missing::VersionedObject, format!("EHR_STATUS {raw}"))
+    } else if reads_ehr_access(op) {
+        not_found(Missing::VersionedObject, format!("EHR_ACCESS {raw}"))
     } else if op.contains("directory") || op.contains("folder") {
         not_found(Missing::VersionedObject, format!("DIRECTORY {raw}"))
     } else {

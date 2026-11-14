@@ -5,7 +5,8 @@ Implements the **generated** ITS-REST contract (server traits + DTOs from
 Modules (`src/`): `api` (one impl group per API area —
 ehr/definition/demographic/query/admin/system, each group carrying its own
 spec-flagged extension routes beside the released ones: `demographic::relationship`,
-`definition::archetype`, `admin::{archive, report, dump_load}` — plus `api::message`,
+`definition::archetype`, `admin::{archive, report, dump_load}`, `ehr::ehr_access`
+(the `EHR_ACCESS` reads, running the `EHR_STATUS` read handlers) — plus `api::message`,
 a group that is extension ALL THE WAY DOWN: the release publishes no
 message/extract API at all, so `message::extract` mounts EHR-Extract export and
 import under a `/message` resource root of

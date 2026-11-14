@@ -32,6 +32,7 @@
 
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::{ArchiveDefect, Malformed};
+use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::service::version_update::WriteRequest;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -104,7 +105,7 @@ async fn counts(pool: &PgPool, ehr_id: Uuid) -> (i64, i64, i64, i64) {
 /// comparison surface.
 async fn canonical_snapshot(svc: &FerroEhrService, ehr_id: EhrId) -> (String, String) {
     let status = svc
-        .ehr_status(ehr_id, None)
+        .ehr_object(ehr_id, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status read");
@@ -450,7 +451,7 @@ async fn seed_mixed_kind_ehr(svc: &FerroEhrService) -> (EhrId, Vec<String>) {
     let ehr = crate::fixtures::create_ehr(svc).await;
 
     let mut status = svc
-        .ehr_status(ehr, None)
+        .ehr_object(ehr, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status get");
@@ -1057,12 +1058,12 @@ async fn an_imported_version_round_trips_through_the_archive() {
     // The loaded copy serves the same IMPORTED_VERSION the middle repository
     // does — wrapper act and wrapped original alike.
     let status_vo = middle
-        .versioned_ehr_status(ehr)
+        .versioned_ehr_object(ehr, EhrObject::Status)
         .await
         .expect("VERSIONED_EHR_STATUS");
     let vo_id: ferroehr::ids::VoId = uid(&status_vo.body).parse().expect("container uid");
     let version = middle
-        .ehr_status_revision_history(ehr)
+        .ehr_object_revision_history(ehr, EhrObject::Status)
         .await
         .map(|r| r.body)
         .expect("REVISION_HISTORY")["items"][0]["version_id"]["value"]
@@ -1074,12 +1075,12 @@ async fn an_imported_version_round_trips_through_the_archive() {
         .to_owned();
 
     let before = middle
-        .ehr_status_version_envelope(ehr, vo_id, &version)
+        .ehr_object_version_envelope(ehr, EhrObject::Status, vo_id, &version)
         .await
         .expect("pre-dump version")
         .body;
     let after = target
-        .ehr_status_version_envelope(ehr, vo_id, &version)
+        .ehr_object_version_envelope(ehr, EhrObject::Status, vo_id, &version)
         .await
         .expect("post-load version")
         .body;
@@ -1661,6 +1662,133 @@ fn store_access_settings(dir: &str, settings: &Value) {
         std::fs::write(&path, serde_json::to_vec(&records).expect("segment bytes"))
             .expect("rewrite the segment");
     }
+}
+
+/// An archive whose head `EHR_ACCESS` version, the one in force, has a
+/// directive naming a party neither the target CDR nor the archive holds is
+/// refused with the `422` a CONTRIBUTION writing it gets, naming the party
+/// and the EHR, and nothing of it is written; so is a head gate-keeper
+/// naming one. The same directive and gate-keeper in an earlier version, the
+/// record of what was in force then, load, as does a head naming a party the
+/// archive carries, although the load writes the party after the EHR (#5517).
+#[tokio::test]
+async fn an_archive_whose_head_directive_names_an_unknown_party_is_refused() {
+    const NOBODY: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f99";
+    let (_src_db, _src_pool, source) = repository().await;
+    let (_dst_db, dst_pool, target) = repository().await;
+    let person = crate::fixtures::create_party(&source, wave_uv(&wave_person("Dita")))
+        .await
+        .expect("create_party");
+    let term = |code: &str| {
+        json!({ "_type": "DV_CODED_TEXT", "value": code,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID",
+                    "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
+                "code_string": code } })
+    };
+    let naming = |id: &str| {
+        json!({ "_type": "ACCESS_DIRECTIVE_SETTINGS", "default_access": term("open"),
+            "directives": [{ "_type": "ACCESS_DIRECTIVE",
+                "name": { "_type": "DV_TEXT", "value": "consent" }, "archetype_node_id": "at0001",
+                "kind": term("consent"), "effect": term("permit"), "emergency_override": false,
+                "applies_to": [{ "party": { "_type": "PARTY_REF", "namespace": "demographic",
+                    "type": "PERSON", "id": { "_type": "HIER_OBJECT_ID", "value": id } } }] }] })
+    };
+    let ehr = seed_full_ehr(&source).await;
+    let versions = source
+        .ehr_access_versions(ehr)
+        .await
+        .expect("the EHR_ACCESS versions");
+    let (first, _) = versions.first().expect("the default EHR_ACCESS");
+    source
+        .commit_ehr_access_settings(ehr, first, naming(&person.0.to_string()))
+        .await
+        .expect("a second EHR_ACCESS version");
+    let dir = archive_dir();
+    let reports = source
+        .export_ehrs(dir.clone(), ExportSpec::canonical_json(1024))
+        .await
+        .expect("export");
+    assert_clean(&reports, "export");
+
+    store_access_settings_of(&dir, 2, &naming(NOBODY));
+    let err = target
+        .load_ehrs(dir.clone())
+        .await
+        .expect_err("a head directive naming nobody is refused");
+    let detail = format!("{err:?}");
+    assert!(
+        matches!(err, ServiceError::Unprocessable { .. }),
+        "the write path's refusal, got {err:?}"
+    );
+    assert!(detail.contains(NOBODY), "the party is named: {detail}");
+    assert!(
+        detail.contains(&ehr.to_string()),
+        "the EHR is named: {detail}"
+    );
+    assert!(
+        !ehr_row_exists(&dst_pool, ehr.into()).await,
+        "a refused load commits nothing"
+    );
+
+    let mut kept_by_nobody = naming(&person.0.to_string());
+    kept_by_nobody["gate_keepers"] = json!([{ "_type": "PARTY_IDENTIFIED", "external_ref": {
+        "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+        "id": { "_type": "HIER_OBJECT_ID", "value": NOBODY } } }]);
+    store_access_settings_of(&dir, 2, &kept_by_nobody);
+    let err = target
+        .load_ehrs(dir.clone())
+        .await
+        .expect_err("a head gate-keeper naming nobody is refused");
+    let detail = format!("{err:?}");
+    assert!(
+        matches!(err, ServiceError::Unprocessable { .. })
+            && detail.contains("gate_keepers[0]")
+            && detail.contains(NOBODY),
+        "a 422 naming the gate-keeper: {detail}"
+    );
+    assert!(
+        !ehr_row_exists(&dst_pool, ehr.into()).await,
+        "a refused load commits nothing"
+    );
+
+    let mut older = naming(NOBODY);
+    older["gate_keepers"] = kept_by_nobody["gate_keepers"].clone();
+    store_access_settings_of(&dir, 2, &naming(&person.0.to_string()));
+    store_access_settings_of(&dir, 1, &older);
+    let reports = target
+        .load_ehrs(dir.clone())
+        .await
+        .expect("an earlier version naming nobody and a head naming an archived party load");
+    assert_clean(&reports, "load");
+    assert!(
+        ehr_row_exists(&dst_pool, ehr.into()).await,
+        "the EHR loaded"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Rewrite the archived `EHR_ACCESS` version of trunk `trunk` under `dir` to
+/// carry `settings`.
+fn store_access_settings_of(dir: &str, trunk: i64, settings: &Value) {
+    let mut found = false;
+    for segment in manifest_of(dir)["segments"].as_array().expect("segments") {
+        let path = std::path::Path::new(dir).join(segment.as_str().expect("segment entry"));
+        let mut records: Value =
+            serde_json::from_slice(&std::fs::read(&path).expect("segment")).expect("segment json");
+        for record in records.as_array_mut().expect("records") {
+            for version in record["versions"].as_array_mut().expect("versions") {
+                if version["kind"] == "EHR_ACCESS" && version["trunk_version"] == json!(trunk) {
+                    version["body"]["settings"] = settings.clone();
+                    found = true;
+                }
+            }
+        }
+        std::fs::write(&path, serde_json::to_vec(&records).expect("segment bytes"))
+            .expect("rewrite the segment");
+    }
+    assert!(found, "the archive carries EHR_ACCESS version {trunk}");
 }
 
 /// An archive whose `EHR_ACCESS` settings break an invariant is refused with

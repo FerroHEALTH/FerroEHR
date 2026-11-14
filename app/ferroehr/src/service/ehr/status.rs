@@ -1,10 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `EHR_STATUS` operations — the `EHR_STATUS` reads, the five
-//! discrete mutators, the versioned-object views, plus two EHR-owned commit
-//! hooks: the `is_modifiable` content-write guard and the promoted-subject
-//! sync.
+//! The `EHR_STATUS` operations: the five discrete mutators, plus two EHR-owned
+//! commit hooks: the `is_modifiable` content-write guard and the promoted-subject
+//! sync. The reads live in [`super::object`], shared with `EHR_ACCESS`.
 //!
 //! Spec: RM ehr `ehr_status.adoc` + `master04-ehr_package.adoc` §EHR Status /
 //! §EHR Active Status; the versioned-object mechanics are RM common master06,
@@ -19,8 +18,8 @@
 )]
 
 use crate::error::refusal::{Clash, Missing, Refusal};
-use crate::ids::{EhrId, VoId};
-use crate::service::response::{ResourceMeta, ServiceResponse};
+use crate::ids::EhrId;
+use crate::service::response::ResourceMeta;
 use openehr_rm::prelude::EhrStatus;
 use serde_json::Value;
 use sqlx::PgConnection;
@@ -31,210 +30,12 @@ use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
 use crate::storage::ehr_repo::{self, PromotedColumns};
 use crate::storage::error::StorageError;
-use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::precondition::{ensure_preceding, lock_current, tip_uid};
 use crate::versioning::change::{Change, Write};
-use crate::versioning::object_version_id::{VersionIdError, parse_tree_id};
-use crate::versioning::read::VersionRead;
-use crate::versioning::wire::{revision_history, versioned_object};
 
-use crate::service::datetime::parse_at_time;
 impl FerroEhrService {
-    /// The `EHR_STATUS` of an EHR with its `uid` set, the current version or
-    /// the one current at `a_time` (time-travel), with the version metadata
-    /// the wire's `ETag`/`Last-Modified` need.
-    ///
-    /// # Errors
-    /// [`ServiceError`] for a malformed `a_time` (400-equivalent);
-    /// [`ServiceError::NotFound`] when the EHR has no current `EHR_STATUS` or
-    /// none existed at that instant; [`ServiceError::Database`] on a storage
-    /// failure.
-    pub async fn ehr_status(
-        &self,
-        ehr_id: EhrId,
-        a_time: Option<String>,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let at = match a_time.as_deref().map(parse_at_time).transpose()? {
-            Some(at) => VersionAt::InstantOfKind(ehr_id, Kind::EhrStatus.as_str(), at),
-            None => VersionAt::CurrentOfKind(ehr_id, Kind::EhrStatus.as_str()),
-        };
-        // ONE statement: the container resolution and the version read merged
-        // (an EHR holds exactly one EHR_STATUS container — RM ehr `ehr.adoc`).
-        let read = crate::versioning::read::read(&self.pool, self.spec_profile, at)
-            .await?
-            .ok_or_else(|| {
-                ServiceError::not_found(Missing::Ehr, format!("EHR_STATUS for EHR {ehr_id}"))
-            })?;
-        let vo_id = read.vo_id;
-        Ok(self.version_response(ehr_id, vo_id, read)?)
-    }
-
-    /// The **bare** `EHR_STATUS` at a specific version (not the
-    /// `ORIGINAL_VERSION` wrapper), `GET …/ehr_status/{version_uid}`, with the
-    /// version metadata the wire's `ETag`/`Last-Modified` need. `a_version` is
-    /// the `VERSION_TREE_ID` lexical form.
-    ///
-    /// # Errors
-    /// [`ServiceError`] for a malformed version id;
-    /// [`ServiceError::NotFound`] when the version does not exist or belongs to
-    /// another EHR; [`ServiceError::Database`] on a storage failure.
-    pub async fn ehr_status_at_version(
-        &self,
-        ehr_id: EhrId,
-        vo_id: VoId,
-        a_version: &str,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let read = self.status_version_read(ehr_id, vo_id, a_version).await?;
-        Ok(self.version_response(ehr_id, vo_id, read)?)
-    }
-
-    /// The `VERSIONED_EHR_STATUS` container object with the container
-    /// metadata the wire's `ETag`/`Last-Modified` need: the container uid
-    /// identity plus the newest held version's commit instant (ITS-REST
-    /// overview `Requests_and_responses.md` §"`ETag` and Last-Modified" — both
-    /// headers SHOULD accompany a `VERSIONED_OBJECT` response).
-    ///
-    /// # Errors
-    /// [`ServiceError`] when the EHR has no current `EHR_STATUS` (404-equivalent) or
-    /// a read fails.
-    pub async fn versioned_ehr_status(
-        &self,
-        ehr_id: EhrId,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = self.status_vo(ehr_id).await?;
-        let (body, last_modified) =
-            versioned_object(&self.pool, vo_id, ehr_id, "VERSIONED_EHR_STATUS")
-                .await?
-                .ok_or_else(|| {
-                    ServiceError::not_found(
-                        Missing::VersionedObject,
-                        format!("versioned object {vo_id}"),
-                    )
-                })?;
-        Ok(ServiceResponse::new(
-            body,
-            super::meta::container_meta(ehr_id, vo_id, last_modified),
-        ))
-    }
-
-    /// The `REVISION_HISTORY` of the EHR's `EHR_STATUS` (RM common
-    /// `versioned_object.adoc` `revision_history()`) with the container
-    /// metadata the wire's `ETag`/`Last-Modified` need (container uid + newest
-    /// commit instant, the derivation of [`Self::versioned_ehr_status`]).
-    ///
-    /// # Errors
-    /// [`ServiceError::NotFound`] when the EHR has no current `EHR_STATUS`;
-    /// [`ServiceError::Database`] on a storage failure.
-    pub async fn ehr_status_revision_history(
-        &self,
-        ehr_id: EhrId,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let vo_id = self.status_vo(ehr_id).await?;
-        let (body, last_modified) = revision_history(&self.pool, ehr_id, vo_id).await?;
-        Ok(ServiceResponse::new(
-            body,
-            super::meta::container_meta(ehr_id, vo_id, last_modified),
-        ))
-    }
-
-    /// The VERSION envelope of an `EHR_STATUS` at a specific version
-    /// (`GET …/versioned_ehr_status/version/{version_uid}`): an
-    /// `ORIGINAL_VERSION`, or an `IMPORTED_VERSION` when the version was
-    /// received from another system (RM common master06 §Version and its
-    /// Subtypes), with the version metadata the wire's `ETag`/`Last-Modified`
-    /// need. `a_version` is the `VERSION_TREE_ID` lexical form.
-    ///
-    /// # Errors
-    /// [`ServiceError`] for a malformed version id;
-    /// [`ServiceError::NotFound`] when the version does not exist or belongs to
-    /// another EHR; [`ServiceError::Database`] on a storage failure.
-    pub async fn ehr_status_version_envelope(
-        &self,
-        ehr_id: EhrId,
-        vo_id: VoId,
-        a_version: &str,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let read = self.status_version_read(ehr_id, vo_id, a_version).await?;
-        self.envelope_response(ehr_id, &read)
-    }
-
-    /// The VERSION envelope of the EHR's `EHR_STATUS` extant at `a_time`, or
-    /// the latest when `a_time` is `None` (`GET …/versioned_ehr_status/version`),
-    /// with the version metadata the wire's `ETag`/`Last-Modified` need.
-    ///
-    /// # Errors
-    /// [`ServiceError`] for a malformed `a_time` (400-equivalent);
-    /// [`ServiceError::NotFound`] when the EHR has no current `EHR_STATUS` or
-    /// none existed at that instant; [`ServiceError::Database`] on a storage
-    /// failure.
-    pub async fn ehr_status_version_at_time(
-        &self,
-        ehr_id: EhrId,
-        a_time: Option<String>,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let at = a_time.as_deref().map(parse_at_time).transpose()?;
-        let vo_id = self.status_vo(ehr_id).await?;
-        let at = match at {
-            Some(at) => VersionAt::Instant(vo_id, at),
-            None => VersionAt::Current(vo_id),
-        };
-        let read = crate::versioning::read::read(&self.pool, self.spec_profile, at)
-            .await?
-            .ok_or_else(|| {
-                ServiceError::not_found(
-                    Missing::ObjectVersion,
-                    format!("EHR_STATUS version at time for EHR {ehr_id}"),
-                )
-            })?;
-        self.envelope_response(ehr_id, &read)
-    }
-
-    /// The `vo_id` of the EHR's `EHR_STATUS` container.
-    ///
-    /// # Errors
-    /// [`ServiceError::NotFound`] when the EHR has no current `EHR_STATUS`;
-    /// [`ServiceError::Database`] on a storage failure.
-    async fn status_vo(&self, ehr_id: EhrId) -> Result<VoId, ServiceError> {
-        let (vo_id, _) = self
-            .current_vo(ehr_id, Kind::EhrStatus)
-            .await?
-            .ok_or_else(|| {
-                ServiceError::not_found(Missing::Ehr, format!("EHR_STATUS for EHR {ehr_id}"))
-            })?;
-        Ok(vo_id)
-    }
-
-    /// One `EHR_STATUS` version of this EHR, addressed by its container and
-    /// `VERSION_TREE_ID` lexical form.
-    ///
-    /// # Errors
-    /// [`ServiceError`] for a malformed version id;
-    /// [`ServiceError::NotFound`] when the version does not exist or belongs to
-    /// another EHR; [`ServiceError::Database`] on a storage failure.
-    async fn status_version_read(
-        &self,
-        ehr_id: EhrId,
-        vo_id: VoId,
-        a_version: &str,
-    ) -> Result<VersionRead, ServiceError> {
-        let version = parse_tree_id(a_version).map_err(VersionIdError::into_argument)?;
-        crate::versioning::read::read(
-            &self.pool,
-            self.spec_profile,
-            VersionAt::Tree(vo_id, version),
-        )
-        .await?
-        .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::EhrStatus)
-        .ok_or_else(|| {
-            ServiceError::not_found(
-                Missing::ObjectVersion,
-                format!("EHR_STATUS {vo_id} v{version}"),
-            )
-        })
-    }
-
     /// Whether the EHR is modifiable (RM ehr `EHR_STATUS.is_modifiable`, 1..1
     /// Boolean, RM ehr master04 §EHR Active Status). Read from the promoted
     /// `ehr.is_modifiable` column, kept in lockstep with the current

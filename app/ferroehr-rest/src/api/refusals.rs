@@ -32,3 +32,30 @@ pub(crate) struct SpecProfileConflict;
     description = "The request `Content-Type` is not `application/json`."
 )]
 pub(crate) struct JsonBodyRequired;
+
+/// The responses of an [`utoipa::IntoResponses`] map, by status.
+pub(crate) type ResponseMap =
+    std::collections::BTreeMap<String, utoipa::openapi::RefOr<utoipa::openapi::response::Response>>;
+
+/// One `application/json` response per `(status, description)`, whose body is
+/// any JSON value.
+#[expect(
+    clippy::disallowed_types,
+    reason = "owner-approved 2026-08-03 (#1694 family 8): genuinely open operational JSON (OpenAPI \
+              schema literals)"
+)]
+pub(crate) fn json_responses(answers: &[(u16, &str)]) -> ResponseMap {
+    answers
+        .iter()
+        .map(|&(status, description)| {
+            let content = utoipa::openapi::ContentBuilder::new()
+                .schema(Some(<serde_json::Value as utoipa::PartialSchema>::schema()))
+                .build();
+            let response = utoipa::openapi::ResponseBuilder::new()
+                .description(description)
+                .content("application/json", content)
+                .build();
+            (status.to_string(), response.into())
+        })
+        .collect()
+}
