@@ -61,6 +61,8 @@ PROBE_OUT="${PROBE_OUT:-docs/conformance/deployment/compose.json}"
 . scripts/deploy-probes/signing_pgp.sh
 # shellcheck source=scripts/deploy-probes/replicas.sh
 . scripts/deploy-probes/replicas.sh
+# shellcheck source=scripts/deploy-probes/hospital.sh
+. scripts/deploy-probes/hospital.sh
 # shellcheck source=scripts/deploy-probes/reset.sh
 . scripts/deploy-probes/reset.sh
 
@@ -139,6 +141,9 @@ run_family observability && probes_observability
 run_family terminology_ferroterm && probes_terminology_ferroterm
 run_family terminology && probes_terminology
 run_family replicas && probes_replicas
+# The hospital scenario runs only when asked for by name: its own lane,
+# deploy-probe-hospital.yml, runs it until its tracked findings land (#5610).
+[[ "${PROBE_ONLY:-}" = hospital ]] && probes_hospital
 # Last: it deletes the stack's volumes, which is the procedure under test.
 run_family original_state && probes_original_state
 run_family decommission && probes_decommission
