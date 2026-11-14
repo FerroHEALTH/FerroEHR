@@ -86,6 +86,55 @@ obs_wait_traces() {
   return 1
 }
 
+# TODO(#5662): temporary timeline sampler, removed before the fix merges.
+obs_diag_value() {
+  local uid="$1" query="$2"
+  curl -s -m 3 -u "$GRAFANA_AUTH" --get --data-urlencode "query=$query" \
+    "$GRAFANA/api/datasources/proxy/uid/$uid/api/v1/query" \
+    | jq -r '[.data.result[].value[1] | tonumber] | add // "none"' 2>/dev/null
+}
+obs_diag_line() {
+  local prom tempo acc ref sent fail recv live search
+  prom="$(obs_datasource_uid prometheus)"; tempo="$(obs_datasource_uid tempo)"
+  if [[ -n "$prom" ]]; then
+    acc="$(obs_diag_value "$prom" '{__name__=~"otelcol_receiver_accepted_spans.*"}')"
+    ref="$(obs_diag_value "$prom" '{__name__=~"otelcol_receiver_refused_spans.*"}')"
+    sent="$(obs_diag_value "$prom" '{__name__=~"otelcol_exporter_sent_spans.*"}')"
+    fail="$(obs_diag_value "$prom" '{__name__=~"otelcol_exporter_send_failed_spans.*"}')"
+  fi
+  if [[ -n "$tempo" ]]; then
+    local m
+    m="$(curl -s -m 3 -u "$GRAFANA_AUTH" "$GRAFANA/api/datasources/proxy/uid/$tempo/metrics")"
+    recv="$(grep -E '^tempo_distributor_spans_received_total' <<<"$m" | awk '{print $2}')"
+    live="$(grep -E '^tempo_live_store_traces_created_total' <<<"$m" | awk '{print $2}')"
+    search="$(curl -s -m 3 -u "$GRAFANA_AUTH" --get \
+      --data-urlencode 'q={ resource.service.name="ferroehr" }' \
+      "$GRAFANA/api/datasources/proxy/uid/$tempo/api/search" | jq -r '.traces | length' 2>/dev/null)"
+  fi
+  printf 'diag %s accepted=%s refused=%s sent=%s failed=%s tempo_received=%s live_created=%s search=%s\n' \
+    "$(date -u +%T)" "${acc:--}" "${ref:--}" "${sent:--}" "${fail:--}" "${recv:--}" "${live:--}" "${search:--}"
+}
+obs_diag_start() {
+  ( while :; do obs_diag_line; sleep 5; done ) >"$PROBE_TMP/obs-diag.txt" 2>&1 &
+  OBS_DIAG_PID=$!
+}
+obs_diag_stop() {
+  kill "$OBS_DIAG_PID" 2>/dev/null
+  wait "$OBS_DIAG_PID" 2>/dev/null
+  dim "    obs-diag timeline:"
+  sed 's/^/      /' "$PROBE_TMP/obs-diag.txt"
+  local c
+  for c in ferroehr otel-lgtm; do
+    dim "    obs-diag $c started: $(docker inspect -f '{{.State.StartedAt}}' "$(dc ps -q "$c")" 2>&1)"
+  done
+  dim "    obs-diag otel-lgtm log:"
+  dc -f docker-compose.yml -f docker-compose.observability.yml logs --no-color --timestamps otel-lgtm 2>&1 \
+    | grep -i -E 'up and running|startup time|error|warn|drop|refus|fail' | tail -80 | sed 's/^/      /'
+  dim "    obs-diag ferroehr log (export lines):"
+  dc -f docker-compose.yml -f docker-compose.observability.yml logs --no-color --timestamps ferroehr 2>&1 \
+    | grep -i -E 'opentelemetry|otlp|export|span' | tail -40 | sed 's/^/      /'
+}
+
 probes_observability() {
   observability_family
   obs_down
@@ -94,15 +143,20 @@ probes_observability() {
 observability_family() {
   bold "observability (traces + metrics at the collector)"
 
+  dim "    obs-diag up at $(date -u +%T)"
   obs_up
+  dim "    obs-diag up returned at $(date -u +%T)"
+  obs_diag_start
   if ! wait_http "$CDR/health/readiness" 150; then
     probe "P-OBS-UP" "$PROBE_WORKING" "compose" "-" "the observability overlay starts"
     probe_fail "a serving CDR under the observability overlay" "readiness never returned"
     probe_done
     return 0
   fi
+  dim "    obs-diag ready at $(date -u +%T)"
   # Grafana takes a while to come up inside the bundle.
   wait_http "$GRAFANA/api/health" 120 || true
+  dim "    obs-diag grafana at $(date -u +%T)"
 
   # Give the server something to report. How long it takes to ARRIVE is the
   # pipeline's business, so each probe below waits on its own observation
@@ -111,6 +165,7 @@ observability_family() {
   for _n in $(seq 1 5); do
     curl -s -o /dev/null -u "$BASIC" -X POST "$API/ehr" || true
   done
+  dim "    obs-diag posts done at $(date -u +%T)"
 
   local prom_uid
   prom_uid="$(obs_datasource_uid prometheus)"
@@ -167,4 +222,6 @@ observability_family() {
       "an OTLP exporter that cannot reach its collector fails silently, so this is the only place it shows"
   fi
   probe_done
+  sleep 60
+  obs_diag_stop
 }
