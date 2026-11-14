@@ -1,0 +1,1 @@
+- The record's person commits their own `EHR_ACCESS` settings while the current settings name no gate-keeper. Once settings name gate-keepers, only those gate-keepers and the administrator write: naming gate-keepers without `PARTY_SELF`, such as a guardian, takes the person's own write away.

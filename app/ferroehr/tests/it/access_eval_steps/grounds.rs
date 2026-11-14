@@ -445,6 +445,18 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
             Item::Ehr,
             "the EHR of the subject the caller represents",
         ),
+        (
+            Refusal::ConsentReferenceMissing,
+            Caller {
+                lacks_consent_reference: true,
+                ..caller(CallerKind::AccessService, DR_B)
+            },
+            None,
+            None,
+            settings("open", &[], &[], &[]),
+            Item::Ehr,
+            "the consent condition of the caller's agreement",
+        ),
     ];
     assert_eq!(rows.len(), Refusal::ALL.len(), "a row per refusal code");
     for (refusal, who, declared, policy, settings, item, by) in rows {

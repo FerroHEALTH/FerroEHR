@@ -320,13 +320,19 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
   (`POST /message/export`) passes the access evaluator for every EHR the
   manifest names before it reads any content, so one EHR the caller may not
   reach refuses the whole export.
-- **Who writes the settings:** a new `EHR_ACCESS` version is committed by a
-  gate-keeper the current settings name, or by an administrator acting on the
-  person's instruction. `PARTY_SELF` names the record's person; any other
-  gate-keeper names a party of the demographic service by its
-  `external_ref`, matched against the `PERSON` the caller is bound to. With
-  no gate-keeper, only an administrator changes the settings. Every other
-  caller is refused with `403`. A gate-keeper commits changes with a
+- **Who writes the settings:** while the current settings name no
+  gate-keeper, the record's person writes their own settings, as a
+  mentally competent adult is their own gate-keeper (BASE Architecture
+  Overview, Access Control). Once the settings name gate-keepers, a new
+  `EHR_ACCESS` version is committed only by a gate-keeper they name.
+  `PARTY_SELF` names the record's person; any other gate-keeper names a
+  party of the demographic service by its `external_ref`, matched against
+  the `PERSON` the caller is bound to. Naming gate-keepers without
+  `PARTY_SELF`, such as a guardian, takes the person's own write away.
+  Changing `gate_keepers` is itself a write, so only a current writer
+  changes them. An administrator acting on the person's instruction writes
+  in every case. Settings held closed are written only by an administrator.
+  Every other caller is refused with `403`. A gate-keeper commits changes with a
   CONTRIBUTION (there is no dedicated `EHR_ACCESS` endpoint in the openEHR
   REST API). The controller commits them on the person's instruction with
   `POST /ferroehr/rest/extensions/v1/admin/ehr-access`, which names the EHR
@@ -352,7 +358,9 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
   the first defect: settings of another scheme (the removed
   `FERROEHR_ACCESS_CONTROL_V1` among them), a member the class does not
   declare, or a broken invariant of the draft package, named as
-  `CLASS.Invariant`, such as `ACCESS_DIRECTIVE.Restriction_denies`. The
+  `CLASS.Invariant`, such as `ACCESS_DIRECTIVE.Restriction_denies`, or a
+  `DV_DATE_TIME` or `DV_DURATION` that is no ISO 8601 value
+  (`DV_DATE_TIME.Value_valid`). The
   same writes, and the controller's commit, refuse with `422` a directive
   that names a party the demographic service does not hold, naming the
   directive and the party: an actor scope's `party`, or the `external_ref`
@@ -427,12 +435,18 @@ EHR's `EHR_ACCESS` settings, the caller's facts in the demographic service
 (the operations, sensitivity clearances and permitted purposes its
 capabilities grant, and the care teams it is a member of), and the
 controller's [access policy](operational-policy.md#the-access-policy). The first step that
-refuses decides, and a deny overrides a permit:
+refuses decides, and a deny overrides a permit. An EHR id that names no EHR
+answers `404` before any step refuses, for every caller under every
+disposition, so a restricted EHR is never told apart from an unknown one
+(EHDS Art. 8). A write is judged on the content it carries, its template,
+root archetype, origins and commit instant, before anything is stored, so a
+write a directive refuses changes nothing:
 
 | Step | What refuses | Answer |
 |---|---|---|
 | 0. Subject | a patient (the `subject` caller kind), or a caller whose grants are `patient/` grants alone, on an EHR other than the one its launch context names, or on an operation that names no EHR | `403 refused-not-subject` |
 | 0. Representation | a representative on an EHR other than the one whose subject its recorded representation names, or on an operation that names no EHR | `403 refused-not-represented` |
+| 0. Consent reference | a read, query or export by a caller admitted under a federation agreement whose `consent` condition applies, whose token names no consent decision reference | `403 refused-consent-reference-missing` |
 | 1. Opt-out (EHDS Art. 10) | an `opt_out` directive, for an access service | `404`, as for an unknown EHR |
 | 2. Restriction (EHDS Art. 8) | a `restriction` directive, for a professional, a system or an access service, over the data it covers | `404`, as for unknown data |
 | 3. Consent deny | any other deny directive that applies; a representative a `delegation` directive names reads only what it permits | `403 refused-consent-denied` |
@@ -772,8 +786,14 @@ and nothing else, so a user with none is refused every Clinical operation;
 `roles = ["USER"]` satisfies the Clinical class and no Admin operation. A
 bearer token whose SMART on openEHR resource scopes are all `system/` scopes,
 such as `system/template-*.r`, is a backend client and needs no role for a
-Clinical operation: its scopes decide what it reaches. A `user/` or `patient/`
-token belongs to a person and still needs a role. The former `user_role` key is refused at boot.
+Clinical operation: its scopes decide what it reaches. The record's person and
+their representative need no role either: a patient's portal token (a
+`patients` issuer, `patient/` grants alone) and a caller acting for the
+person, through a `patients` or a `persons` issuer, pass the Clinical class,
+and the access evaluator decides from who they are (EHDS Art. 3 and 4(2)),
+confining them to the one EHR. The read-only role still refuses their writes.
+Any other `user/` or `patient/` token belongs to a professional and still needs
+a role. The former `user_role` key is refused at boot.
 Disabling RBAC restores authentication-only behaviour.
 
 > [!IMPORTANT]
