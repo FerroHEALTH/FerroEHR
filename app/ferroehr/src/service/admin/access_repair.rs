@@ -7,11 +7,11 @@
 //! The controller commits the person's instructions, the EHDS Art. 8
 //! restriction and the Art. 10 opt-out among them, as a new `EHR_ACCESS`
 //! version over the one it read (`docs/law/eu/ehds/text.html`): the settings
-//! hold them as `restriction` and `opt_out` directives, and the commit
-//! projects them onto the marks the read paths filter on
-//! (`service::ehr::access_marks`). Its read returns every version, so
-//! the history of the person's choices is the version history (BASE
-//! Architecture Overview §Security and Confidentiality, "Audit trailing").
+//! hold them as `restriction` and `opt_out` directives, which the access
+//! evaluator reads for every caller ([`crate::access_eval`]). Its read
+//! returns every version, so the history of the person's choices is the
+//! version history (BASE Architecture Overview §Security and
+//! Confidentiality, "Audit trailing").
 //!
 //! An EHR whose `access_directives` settings cannot be read is held closed:
 //! every path route refuses it and every query leaves it out
@@ -109,17 +109,16 @@ impl FerroEhrService {
     ///
     /// This is the controller's route for the EHDS Art. 8 restriction and the
     /// Art. 10 opt-out, which are `restriction` and `opt_out` directives of
-    /// the settings; the commit projects them onto the marks the read paths
-    /// filter on (`service::ehr::access_marks`). `settings` is the
-    /// whole new `EHR_ACCESS.settings` object, or `null` for none.
+    /// the settings. `settings` is the whole new `EHR_ACCESS.settings`
+    /// object, or `null` for none.
     ///
     /// # Errors
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown or has no
     ///   `EHR_ACCESS`.
     /// - `bad_request` (`400`) — `settings` are not settings of the
-    ///   `access_directives` scheme whose every invariant holds, or hold a
-    ///   `restriction` or `opt_out` directive the projection refuses
-    ///   (`service::ehr::access_marks::refused`).
+    ///   `access_directives` scheme whose every invariant holds, or a data
+    ///   scope names an object by a reference that names no versioned
+    ///   object.
     /// - `version_conflict` (`412`) — `preceding_version_uid` is not the
     ///   current version, or the `EHR_ACCESS` moved on while the commit ran.
     /// - `exception` — a database fault (rolled back).

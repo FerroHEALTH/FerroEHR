@@ -537,14 +537,15 @@ which is what makes an optional stage safe to disable:
    Art. 8 restriction and Art. 10 opt-out are `restriction` and `opt_out` directives of these settings,
    committed by the controller over `POST /admin/ehr-access` (which names the
    EHR in its body, so it reaches an EHR a restriction hides) or by a
-   gate-keeper. Every `EHR_ACCESS` commit, import, archive load and repair
-   also projects the restriction and opt-out directives in force onto the
-   marks `ehr.access_restricted_at`, `vo_head.access_restricted_at` and
-   `ehr.opted_out_at`, which only the event outbox reads: it has no caller to
-   judge, so the marks read every directive as binding everyone, a data scope
-   beyond objects as the whole EHR (`service::ehr::access_marks`). The
-   projection and its rules are our own design; no specification governs
-   them.
+   gate-keeper. A data scope that names an object by a reference naming no
+   versioned object is refused at commit (`400`), since nothing could place
+   it. The event outbox has no request to judge, so it judges each event
+   with the same evaluator as an access service of the system kind, against
+   the EHR's settings when the feed is read: an event a directive denies to
+   that caller is never published, and an event whose verdict depends on the
+   data is published only when every object its contribution wrote is
+   admitted (`extensions::outbox::judge`, #5587). The caller and this rule
+   are our own design; no specification governs them.
    The commit of an `EHR_ACCESS` version also
    projects the settings in its own transaction (RM Common IM change control:
    every change is a version in a contribution) into `access_settings`: the
@@ -658,10 +659,9 @@ omission: a gate reached without a principal refuses. And a stage that cannot
 DECIDE is never read as a decision — an unreachable token issuer is `503`, a
 fact the evaluator cannot read never opens data, and a subject lookup of the
 patient scope that fails is `500` or `503`. FerroEHR evaluates no policy
-language and calls no remote policy decision point: the owner removed the
-embedded Cedar engine and the remote decision point on 2026-11-13 (#5487,
-#5515, #5516), since each is a second policy world that receives none of the
-openEHR access facts, and ITS-REST 1.1.0 mandates no authorization scheme
+language and calls no remote policy decision point (#5487), since either
+would be a second policy world that receives none of the openEHR access
+facts, and ITS-REST 1.1.0 mandates no authorization scheme
 (`Requests_and_responses.md` §Authentication and authorization). Silence is never consent, and a broken control never looks
 like a policy outcome.
 
@@ -1165,9 +1165,7 @@ a category map or a Member State's access delay), so each is an **admin
 register**: `audit-categories` (the EHDS Annex II 3.2(c) category map) and
 `access-delay` (the EHDS Art. 3(3) delay). The TOML keys they replace
 (`[audit.categories]`, `[privacy.access_delay]`) are removed outright and
-refused as unknown keys. A third register, the Cedar policy set, went with
-the Cedar engine (#5515): clinical migration 0041 deletes its stored versions
-and takes its name out of the table's check.
+refused as unknown keys.
 
 - **Storage.** One append-only clinical table, `policy_register (register,
   version, document jsonb, committer, committed_at)`. A register with no row

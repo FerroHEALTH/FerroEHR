@@ -18,9 +18,9 @@
   design (#5121, `docs/plans/access-log.md`).
 
 This plan is the design and its rationale. Beside it,
-`docs/plans/abac-openehr/antora/` holds the computable part of a draft
+`docs/specifications/access-control/antora/` holds the computable part of a draft
 openEHR change, laid out as the access log draft is
-(`docs/plans/access-log/antora/`):
+(`docs/specifications/access-log/antora/`):
 
 - `tools/openehr-codegen/draft/bmm/openehr_access_control_0.1.0.bmm.json`
   (moved there as the generator's input, #5506; on submission it goes to the

@@ -45,8 +45,10 @@ Basic verification, SMART scopes, outbound client credentials),
 `jsonwebtoken` 11 (test fixtures only), `ferrohealth-session` 0.2 (the
 viewer's sign-in and session), `argon2` 0.5 +
 `password-hash` 0.5 (password hashing), `tower-sessions` 0.15 *(verify)*,
-`axum-login` 0.18 *(verify)*, `secrecy` 0.10, `zeroize` 1. RBAC/ABAC is
-shipped (`ferroehr-rest::access`, incl. a `cedar-policy` path).
+`axum-login` 0.18 *(verify)*, `secrecy` 0.10, `zeroize` 1. Access decisions
+are the fixed evaluator over the openEHR access content
+(`ferroehr::access_eval`): no policy-engine crate and no remote decision
+point.
 
 TLS/crypto: `rustls` 0.23, `tokio-rustls` 0.26, `rustls-pemfile` 2,
 `webpki-roots` 0.26, `rand` 0.9, `getrandom` 0.3, `sha2` 0.10, `hmac` 0.12,

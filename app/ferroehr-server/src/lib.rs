@@ -24,6 +24,7 @@ use std::time::Duration;
 use anyhow::Context as _;
 use clap::{Parser, Subcommand};
 use ferroehr::aql::subject::ehr_subject;
+use ferroehr::config::authz::EhrAccessDefault;
 use ferroehr::config::deployment::{DatabaseFacts, DeploymentPosture, DeploymentProfile};
 use ferroehr::config::management::EndpointLevels;
 use ferroehr::config::management::ManagementConfig;
@@ -431,6 +432,7 @@ fn assemble_service(
         .with_licence(licence)
         .with_deployment(deployment)
         .with_outbox_gate(OutboxGate::WhileGranted)
+        .with_ehr_access_default(outbox_access_default(config))
         .with_skip_identical_resend(config.record.versioning.idempotent_resend)
         .with_privacy(Arc::new(privacy))
         .with_cohort(config.privacy.cohort.clone())
@@ -449,6 +451,17 @@ fn assemble_service(
 
     service = attach_terminology(service, config)?;
     attach_multimedia(party_binding::install(service, config)?, config)
+}
+
+/// The disposition of an EHR with no settings, as the request path reads it:
+/// `[authz.rbac] ehr_access_default` while authentication is on, and open
+/// while it is off, where no request is judged by it either.
+fn outbox_access_default(config: &ferroehr::config::FerroEhrConfig) -> EhrAccessDefault {
+    if config.auth.shared.enabled {
+        config.authz.rbac.ehr_access_default
+    } else {
+        EhrAccessDefault::Open
+    }
 }
 
 /// Wires authorization, active only when authentication is enabled: the RBAC

@@ -11,7 +11,7 @@
   the party binding (#5002, #5007, #5008) and the consent reference (#5106)
 
 This plan is the design and its rationale. Beside it,
-`docs/plans/access-log/antora/` holds the draft openEHR specification change,
+`docs/specifications/access-log/antora/` holds the draft openEHR specification change,
 written as specification text another vendor could implement and laid out
 as an Antora module of the openEHR RM component, so it drops into the
 openEHR specification repositories (`antora/PROVENANCE.md` names the
@@ -1074,7 +1074,7 @@ touches (the openEHR Jira projects by component):
 - **SPECPR:** a problem report that records the gap this proposal fills,
   quoting BASE §Security Policy, so the CRs have a report to resolve.
 
-The Antora module in `docs/plans/access-log/antora/` is the body of the
+The Antora module in `docs/specifications/access-log/antora/` is the body of the
 SPECRM request, in the layout the openEHR specifications now use; its
 terminology, ITS-REST and AQL pages move to the TERM, ITS-REST and QUERY
 components for the other requests.
@@ -1132,5 +1132,5 @@ Art 36(1), due 26 March 2027), a note would contain:
 
 - [ ] The owner has reviewed the design and the proposal.
 - [ ] Every implementation sub-issue of #5121 is closed; the last one deletes
-  this file and `docs/plans/access-log/`, and the specification text moves to
-  the issue that submits it.
+  this file. The specification draft stays in `docs/specifications/access-log/`
+  while it is under public discussion.

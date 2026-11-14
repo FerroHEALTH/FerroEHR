@@ -19,11 +19,14 @@
 //! else, is the reader's.
 //!
 //! A read leaves out the clinical rows of an EHR that carries a legal mark
-//! when it is read: a restriction (GDPR Art. 18(2) leaves only storage), an
-//! EHDS Art. 8 access restriction of the EHR or of an object the commit
-//! touched, or an unoverridden research objection (GDPR Art. 21(6)). Such a
-//! row is served once the mark is lifted, while the reader's cursor has not
-//! passed it (`docs/law/eu/gdpr/text.html`, `docs/law/eu/ehds/text.html`).
+//! when it is read: a restriction of processing (GDPR Art. 18(2) leaves only
+//! storage) or an unoverridden research objection (GDPR Art. 21(6),
+//! `docs/law/eu/gdpr/text.html`). The feed then serves only the events the
+//! access evaluator lets an access service of the system kind read, judged
+//! against each EHR's own `EHR_ACCESS` settings ([`judge`]), so nothing a
+//! directive denies is published. A row left out is served once the mark is
+//! lifted or the directive no longer denies it, while the reader's cursor has
+//! not passed it.
 //!
 //! Commits can end in another order than the one they drew their `seq` in. A
 //! commit therefore holds a shared advisory lock on its domain's outbox from
@@ -44,6 +47,7 @@
 )]
 
 pub mod config;
+mod judge;
 
 use std::time::Duration;
 
@@ -54,6 +58,7 @@ use sqlx::{Connection as _, PgConnection, PgPool};
 use crate::db::acquire::{AcquireError, acquire};
 use crate::error::refusal::Missing;
 use crate::error::{ErrorChain, ServiceError};
+use crate::ids::EhrId;
 use crate::party_binding::grants::capabilities::Capabilities;
 use crate::party_binding::grants::live::LiveGrants;
 use crate::party_binding::grants::operation::{Operation, READER};
@@ -186,6 +191,13 @@ pub struct FeedEvent {
     /// The stored PHI-free envelope, its members beside `seq`.
     #[serde(flatten)]
     pub envelope: Map<String, Value>,
+    /// The EHR the event is about, which the access evaluator judges it by;
+    /// `None` for a demographic commit.
+    #[serde(skip)]
+    ehr_id: Option<EhrId>,
+    /// The contribution the event announces; `None` for an erasure.
+    #[serde(skip)]
+    contribution_id: Option<uuid::Uuid>,
 }
 
 /// The active reader's cursor, under a row lock when `lock` is set; `None`
@@ -211,27 +223,35 @@ async fn active_cursor(
 const fn feed_sql(domain: OutboxDomain) -> &'static str {
     match domain {
         OutboxDomain::Clinical => {
-            "SELECT o.seq, o.envelope FROM event_outbox o \
+            "SELECT o.seq, o.envelope, o.ehr_id, o.contribution_id FROM event_outbox o \
              WHERE o.seq > $1 \
                AND NOT EXISTS (SELECT 1 FROM ehr e WHERE e.id = o.ehr_id \
                    AND (e.restricted_at IS NOT NULL \
-                        OR e.access_restricted_at IS NOT NULL \
                         OR (e.research_objected_at IS NOT NULL \
                             AND e.research_objection_ground IS NULL))) \
-               AND NOT EXISTS (SELECT 1 FROM version v \
-                   JOIN vo_head h ON h.vo_id = v.vo_id \
-                   WHERE v.contribution_id = o.contribution_id \
-                     AND h.access_restricted_at IS NOT NULL) \
              ORDER BY o.seq LIMIT $2"
         }
         OutboxDomain::Party => {
-            "SELECT seq, envelope FROM event_outbox WHERE seq > $1 ORDER BY seq LIMIT $2"
+            "SELECT seq, envelope, ehr_id, contribution_id FROM event_outbox \
+             WHERE seq > $1 ORDER BY seq LIMIT $2"
         }
     }
 }
 
-/// Up to `limit` events of `domain`'s outbox after the active `reader`'s
+/// One stored outbox row as the feed reads it.
+type FeedRow = (
+    i64,
+    Json<Map<String, Value>>,
+    Option<uuid::Uuid>,
+    Option<uuid::Uuid>,
+);
+
+/// Up to `limit` rows of `domain`'s outbox after the active `reader`'s
 /// cursor, in `seq` order; `None` when the reader is unknown or inactive.
+///
+/// The rows are not yet judged by the access evaluator: the feed serves them
+/// through [`FerroEhrService::outbox_events`], which leaves out what a
+/// directive denies.
 ///
 /// # Errors
 ///
@@ -243,6 +263,19 @@ pub async fn read(
     reader: &str,
     limit: i64,
 ) -> Result<Option<Vec<FeedEvent>>, OutboxError> {
+    read_after(pool, domain, reader, None, limit).await
+}
+
+/// Up to `limit` rows of `domain`'s outbox after the active `reader`'s cursor
+/// and after `after`, in `seq` order; `None` when the reader is unknown or
+/// inactive.
+async fn read_after(
+    pool: &PgPool,
+    domain: OutboxDomain,
+    reader: &str,
+    after: Option<i64>,
+    limit: i64,
+) -> Result<Option<Vec<FeedEvent>>, OutboxError> {
     let mut conn = acquire(pool).await?;
     let mut tx = conn.begin().await?;
     sqlx::query(EXCLUSIVE_LOCK).execute(&mut *tx).await?;
@@ -250,15 +283,20 @@ pub async fn read(
         tx.rollback().await?;
         return Ok(None);
     };
-    let rows: Vec<(i64, Json<Map<String, Value>>)> = sqlx::query_as(feed_sql(domain))
-        .bind(cursor)
+    let rows: Vec<FeedRow> = sqlx::query_as(feed_sql(domain))
+        .bind(after.map_or(cursor, |after| after.max(cursor)))
         .bind(limit)
         .fetch_all(&mut *tx)
         .await?;
     tx.commit().await?;
     Ok(Some(
         rows.into_iter()
-            .map(|(seq, Json(envelope))| FeedEvent { seq, envelope })
+            .map(|(seq, Json(envelope), ehr_id, contribution_id)| FeedEvent {
+                seq,
+                envelope,
+                ehr_id: ehr_id.map(EhrId),
+                contribution_id,
+            })
             .collect(),
     ))
 }
@@ -497,13 +535,18 @@ impl FerroEhrService {
     }
 
     /// Up to `limit` events of `domain`'s outbox after `reader`'s cursor, in
-    /// `seq` order.
+    /// `seq` order, leaving out every clinical event the access evaluator
+    /// would not let an access service of the system kind read ([`judge`]).
+    ///
+    /// The rows left out do not shorten the page: the read goes on past them
+    /// until it holds `limit` events or reaches the tail.
     ///
     /// # Errors
     ///
     /// [`ServiceError::NotFound`] when no change-feed grant in force names the
     /// reader, [`ServiceError::Forbidden`] when the request's caller holds no
-    /// grant naming it, and a database failure otherwise.
+    /// grant naming it, `service_overloaded` (`503`) when the access settings
+    /// cannot be read, and a database failure otherwise.
     pub async fn outbox_events(
         &self,
         domain: OutboxDomain,
@@ -511,9 +554,26 @@ impl FerroEhrService {
         limit: i64,
     ) -> Result<Vec<FeedEvent>, ServiceError> {
         self.granted_reader(domain, reader).await?;
-        read(self.outbox_pool(domain), domain, reader, limit)
-            .await?
-            .ok_or_else(|| unknown_reader(reader))
+        let pool = self.outbox_pool(domain);
+        let wanted = usize::try_from(limit).unwrap_or(0);
+        let mut served = Vec::new();
+        let mut after = None;
+        loop {
+            let page = read_after(pool, domain, reader, after, limit)
+                .await?
+                .ok_or_else(|| unknown_reader(reader))?;
+            let full = page.len() >= wanted && wanted > 0;
+            after = page.last().map(|event| event.seq).or(after);
+            served.extend(match domain {
+                OutboxDomain::Clinical => self.publishable(page).await?,
+                OutboxDomain::Party => page,
+            });
+            if !full || served.len() >= wanted {
+                break;
+            }
+        }
+        served.truncate(wanted);
+        Ok(served)
     }
 
     /// Move `reader`'s cursor over `domain`'s outbox to `last_seq`.

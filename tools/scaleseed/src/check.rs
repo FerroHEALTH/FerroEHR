@@ -36,7 +36,7 @@ const VERSION_KEPT: &str = "tier, kind, sys_version, trunk_version, branch_numbe
 /// The `vo_head` columns a clone keeps, the identifiers left out.
 const HEAD_KEPT: &str = "kind, tier, head_sys_version, trunk_head_sys_version, lifecycle_state, \
     template_id, committed_at, restricted_at, retention_hold_at, archived_at, archive_reason, \
-    access_restricted_at, person_withheld_until, trunk_head_content_key";
+    person_withheld_until, trunk_head_content_key";
 
 /// Checks up to `limit` sampled clones; returns how many it checked.
 ///
