@@ -615,20 +615,25 @@ async fn a_manifest_export_under_the_override_records_it() {
 }
 
 /// Recording and reversing an opt-out each write an access-log entry for the
-/// EHR, naming the register (#5564).
+/// EHR, naming the `EHR_ACCESS` settings they commit (#5564).
 #[tokio::test]
 async fn recording_and_reversing_an_opt_out_each_write_an_entry() {
     let (_db, pool, app) = Box::pin(app(true)).await;
     let (ehr, _vo) = ehr_with_composition(&app).await;
-    for (reverse, action) in [(false, "create"), (true, "delete")] {
+    for (step, reverse) in [(1, false), (2, true)] {
         let (status, body) = opt_out(&app, &ehr, reverse).await;
-        assert_eq!(status, StatusCode::NO_CONTENT, "opt-out {reverse}: {body}");
-        let written = crate::access_log_http::entries(&pool, 1, |s| {
+        assert_eq!(status, StatusCode::OK, "opt-out {reverse}: {body}");
+        let written = crate::access_log_http::entries(&pool, step, |s| {
             s.ehr_id.as_deref() == Some(ehr.as_str())
-                && s.action.as_deref() == Some(action)
-                && s.content.contains("\"access-opt-out:ehr-wide\"")
+                && s.action.as_deref() == Some("update")
+                && s.content.contains("\"ehr-access:ehr-wide\"")
         })
         .await;
-        assert_eq!(written[0].result.as_deref(), Some("granted"), "{written:?}");
+        assert!(
+            written
+                .iter()
+                .all(|s| s.result.as_deref() == Some("granted")),
+            "{written:?}"
+        );
     }
 }

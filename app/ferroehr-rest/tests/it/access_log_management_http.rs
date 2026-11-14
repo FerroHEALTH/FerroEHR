@@ -6,8 +6,8 @@
 //! the local store.
 //!
 //! The kinds are the physical EHR delete, one EHR and in bulk; the EHR mark
-//! registers (restriction, access restriction, research objection, and the
-//! opt-out in `crate::access_opt_out_http`, which grants the access service);
+//! registers (restriction, research objection, and the `EHR_ACCESS` settings
+//! commit that carries an opt-out, in `crate::access_opt_out_http`);
 //! the archival tier; the retention register; the repository dump and load;
 //! and the EHR Extract export and import. Each writes one entry per EHR it
 //! touched through the one recording path. SCIM touches party data only and
@@ -108,11 +108,6 @@ async fn each_mark_register_writes_an_entry_for_its_ehr() {
             "/admin/restriction",
             json!({ "ehr_id": ehr, "ground": "national" }),
             "restriction",
-        ),
-        (
-            "/admin/access-restriction",
-            json!({ "ehr_id": ehr }),
-            "access-restriction",
         ),
         (
             "/admin/research-objection",

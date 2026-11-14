@@ -108,12 +108,13 @@ that contributed a row, a statement that projects only the EHR
 
 The administrative routes that touch an EHR write entries the same way, one
 per EHR they touched: the physical EHR delete, one EHR or in bulk; the
-restriction, access-restriction, research-objection, opt-out, access-delay
-and access-repair registers; archiving an EHR and restoring it; its retention
-anchor and the retention hold on one of its objects; the repository dump and
-load; and the EHR Extract export and import. The import of another system's
-access log (`ferroehr access-log import`) writes its `import` entry through
-the same path. SCIM provisioning touches party data only and writes none.
+restriction, research-objection, access-delay and access-repair registers and
+the `EHR_ACCESS` settings commit that carries a restriction or an opt-out;
+archiving an EHR and restoring it; its retention anchor and the retention hold
+on one of its objects; the repository dump and load; and the EHR Extract
+export and import. The import of another system's access log (`ferroehr
+access-log import`) writes its `import` entry through the same path. SCIM
+provisioning touches party data only and writes none.
 
 The entry names who accessed (the bound party, the groups, the provider, the
 binding outcome and the credential by its issuer, subject, client and token
