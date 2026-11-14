@@ -27,6 +27,11 @@ const VITAL_SIGNS: &str = "service/knowledge/opt/Vital Signs Encounter (Composit
 /// A ROLE template whose defects the conversion reports.
 const ROLE: &str = "opt/valid/role.v2.opt";
 
+/// A fixed conversion time, so two conversions of one template compare equal.
+fn conversion_time() -> jiff::Timestamp {
+    "2026-11-11T09:30:00Z".parse().expect("a valid timestamp")
+}
+
 /// The parsed OPT at `rel` under `corpus/fixtures/`.
 fn parse_opt(rel: &str) -> opt14::types::OperationalTemplate {
     let path = format!("{}/../../corpus/fixtures/{rel}", env!("CARGO_MANIFEST_DIR"));
@@ -41,7 +46,7 @@ fn parse_opt(rel: &str) -> opt14::types::OperationalTemplate {
 fn printed_adl2_reparses() {
     for rel in [MINIMAL_OBSERVATION, MINIMAL_EVALUATION, VITAL_SIGNS] {
         let opt = parse_opt(rel);
-        let conversion = convert_opt_to_adl2(&opt).expect("convert");
+        let conversion = convert_opt_to_adl2(&opt, conversion_time()).expect("convert");
         for root in &conversion.roots {
             openehr_adl::assemble::parse_artefact(&root.adl2, Dialect::Adl2).unwrap_or_else(|e| {
                 let line = e.first().map_or(0, |err| err.line);
@@ -69,7 +74,7 @@ fn printed_adl2_reparses() {
 #[test]
 fn filled_slots_carry_include_assertions() {
     let opt = parse_opt(MINIMAL_OBSERVATION);
-    let conversion = convert_opt_to_adl2(&opt).expect("convert");
+    let conversion = convert_opt_to_adl2(&opt, conversion_time()).expect("convert");
     let composition = conversion
         .roots
         .iter()
@@ -98,7 +103,7 @@ fn filled_slots_carry_include_assertions() {
 #[test]
 fn domain_types_become_attribute_tuples() {
     let opt = parse_opt(VITAL_SIGNS);
-    let conversion = convert_opt_to_adl2(&opt).expect("convert");
+    let conversion = convert_opt_to_adl2(&opt, conversion_time()).expect("convert");
     let all = conversion
         .roots
         .iter()
@@ -120,7 +125,8 @@ fn domain_types_become_attribute_tuples() {
 #[test]
 fn converted_roots_carry_their_conversion_details() {
     let opt = parse_opt(ROLE);
-    let conversion = convert_opt_to_adl2(&opt).unwrap_or_else(|e| panic!("convert Role.v2: {e}"));
+    let conversion = convert_opt_to_adl2(&opt, conversion_time())
+        .unwrap_or_else(|e| panic!("convert Role.v2: {e}"));
     let role = conversion
         .roots
         .iter()
@@ -138,7 +144,7 @@ fn converted_roots_carry_their_conversion_details() {
         "the printed ADL 2 states the conversion details:\n{}",
         role.adl2
     );
-    let first = convert_opt_to_adl2(&opt).expect("second convert");
+    let first = convert_opt_to_adl2(&opt, conversion_time()).expect("second convert");
     assert_eq!(
         conversion, first,
         "the conversion result, logs included, is deterministic"
@@ -149,7 +155,8 @@ fn converted_roots_carry_their_conversion_details() {
 /// embedded root as the definition reaches it.
 #[test]
 fn roots_come_in_document_order() {
-    let conversion = convert_opt_to_adl2(&parse_opt(MINIMAL_OBSERVATION)).expect("convert");
+    let conversion =
+        convert_opt_to_adl2(&parse_opt(MINIMAL_OBSERVATION), conversion_time()).expect("convert");
     let ids: Vec<&str> = conversion
         .roots
         .iter()
@@ -177,7 +184,7 @@ fn extra_languages_are_recorded_in_conversion_details() {
     let path = format!("{}/{DEMO_VITALS}", env!("CARGO_MANIFEST_DIR"));
     let xml = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
     let opt = opt14::from_xml(&xml).unwrap_or_else(|e| panic!("parse OPT {path}: {e:?}"));
-    let conversion = convert_opt_to_adl2(&opt).expect("convert Demo Vitals");
+    let conversion = convert_opt_to_adl2(&opt, conversion_time()).expect("convert Demo Vitals");
     let mut recorded = 0;
     for root in &conversion.roots {
         let artefact = openehr_adl::assemble::parse_artefact(&root.adl2, Dialect::Adl2)
@@ -251,7 +258,7 @@ fn converted_roots_validate_without_errors() {
     let path = format!("{}/{DEMO_VITALS}", env!("CARGO_MANIFEST_DIR"));
     let xml = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
     let opt = opt14::from_xml(&xml).unwrap_or_else(|e| panic!("parse OPT {path}: {e:?}"));
-    let conversion = convert_opt_to_adl2(&opt).expect("convert Demo Vitals");
+    let conversion = convert_opt_to_adl2(&opt, conversion_time()).expect("convert Demo Vitals");
     for root in &conversion.roots {
         let errors: Vec<_> = openehr_adl::validate::validate_source(
             &root.adl2,

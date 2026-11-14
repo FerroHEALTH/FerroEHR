@@ -130,7 +130,9 @@ pub struct OptConversion {
 /// Each embedded `C_ARCHETYPE_ROOT` is decomposed into a scoped 1.4-shaped
 /// `v2_4` source archetype and run through [`convert`]; embedded children are
 /// replaced by open slots in their parent and the fill edges recorded in
-/// [`OptConversion::structure`].
+/// [`OptConversion::structure`]. `time` is the moment every root's conversion
+/// record names (`AOM2/master01-preface.adoc` §Release 2.3 changes), passed in
+/// so that one conversion can be reproduced exactly.
 ///
 /// # Errors
 ///
@@ -141,8 +143,9 @@ pub struct OptConversion {
 ///   printer has no syntax for.
 pub fn convert_opt_to_adl2(
     opt: &opt14::types::OperationalTemplate,
+    time: jiff::Timestamp,
 ) -> Result<OptConversion, OptConvertError> {
-    let (archetypes, structure) = convert_opt_to_archetypes(opt)?;
+    let (archetypes, structure) = convert_opt_to_archetypes(opt, time)?;
     let roots = archetypes
         .into_iter()
         .map(|root| {
@@ -209,6 +212,7 @@ fn minimal_description(conversion_details: BTreeMap<String, String>) -> Resource
 /// As [`convert_opt_to_adl2`], except [`OptConvertError::Print`].
 fn convert_opt_to_archetypes(
     opt: &opt14::types::OperationalTemplate,
+    time: jiff::Timestamp,
 ) -> Result<(Vec<ConvertedArchetype>, Vec<FillEdge>), OptConvertError> {
     let mut dx = Decomposer::new(opt);
     // Unit 0 is the OPT's top root; nested roots are appended in document order
@@ -221,6 +225,10 @@ fn convert_opt_to_archetypes(
         // no resolvable lineage, so they emit unspecialised at depth 0 (no
         // openEHR spec governs 1.4→2 conversion — our own design).
         collapse_specialised_codes: true,
+        // Every root converts out of the one template, which the conversion
+        // record names (`AOM2/master01-preface.adoc` §Release 2.3 changes).
+        source_model: Some(opt.template_id.value.clone()),
+        time,
         ..ConvertConfig::default()
     };
     let mut archetypes = Vec::with_capacity(units.len());
