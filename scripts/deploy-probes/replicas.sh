@@ -18,8 +18,8 @@
 # The second instance's port, shifted off the overlay's default as the
 # family's other ports are.
 export FERROEHR_REPLICA_PORT="${PROBE_REPLICA_PORT:-18081}"
-CDR2="http://localhost:${FERROEHR_REPLICA_PORT}"
-API2="$CDR2/ferroehr/rest/openehr/v1"
+SECOND_CDR="http://localhost:${FERROEHR_REPLICA_PORT}"
+SECOND_API="$SECOND_CDR/ferroehr/rest/openehr/v1"
 
 # An overlay mounting the key at `dir` into the instances `services` and
 # switching each to pgp mode, written to `out`.
@@ -76,13 +76,13 @@ probes_replicas() {
     "a second instance on the same database and key boots, and both report the instances agree"
   dc "${files[@]}" --profile replicas --profile s3 up -d --wait \
     ferroehr ferroehr-2 >/dev/null 2>&1
-  if ! wait_http "$CDR2/health/readiness" 90 || ! wait_http "$CDR/health/readiness" 90; then
+  if ! wait_http "$SECOND_CDR/health/readiness" 90 || ! wait_http "$CDR/health/readiness" 90; then
     probe_fail "two serving instances" "$(dc "${files[@]}" logs --tail 5 ferroehr-2 2>&1 | tail -3)"
     probe_done
     replicas_down
     return 0
   fi
-  assert_eq "up" "$(indicator_state "$CDR2" instances)" \
+  assert_eq "up" "$(indicator_state "$SECOND_CDR" instances)" \
     "the second instance compared itself with the first at start"
   probe_done
 
@@ -93,9 +93,9 @@ probes_replicas() {
   if [[ -z "$ehr" ]]; then
     probe_fail "an EHR committed through the first instance" "no id returned"
   else
-    assert_eq "200" "$(http_code -u "$BASIC" "$API2/ehr/$ehr")" \
+    assert_eq "200" "$(http_code -u "$BASIC" "$SECOND_API/ehr/$ehr")" \
       "the second instance reads what the first committed"
-    assert_eq "200" "$(http_code -u "$BASIC" "$API2/ehr/$ehr/ehr_status")"
+    assert_eq "200" "$(http_code -u "$BASIC" "$SECOND_API/ehr/$ehr/ehr_status")"
   fi
   probe_done
 
@@ -107,7 +107,7 @@ probes_replicas() {
   local -a writers=()
   for i in $(seq 1 20); do
     api="$API"
-    [[ $((i % 2)) -eq 0 ]] && api="$API2"
+    [[ $((i % 2)) -eq 0 ]] && api="$SECOND_API"
     curl -s -u "$BASIC" -X POST -o /dev/null -w '%{http_code}\n' "$api/ehr" >> "$codes" &
     writers+=("$!")
   done
@@ -142,10 +142,10 @@ probes_replicas() {
     local mismatch
     mismatch="$(replica_key_overlay "$other" "$PROBE_TMP/replicas-other.yml" ferroehr-2)"
     dc "${files[@]}" -f "$mismatch" --profile replicas up -d --wait ferroehr-2 >/dev/null 2>&1
-    wait_http "$CDR2/health/readiness" 90 || true
-    assert_eq "degraded" "$(indicator_state "$CDR2" instances)" \
+    wait_http "$SECOND_CDR/health/readiness" 90 || true
+    assert_eq "degraded" "$(indicator_state "$SECOND_CDR" instances)" \
       "the instance with another key compares itself with the first at start"
-    assert_contains "$(curl -s -u "$BASIC" "$CDR2/management/health")" "another signing key" \
+    assert_contains "$(curl -s -u "$BASIC" "$SECOND_CDR/management/health")" "another signing key" \
       "the management view says what differs"
   fi
   probe_done
