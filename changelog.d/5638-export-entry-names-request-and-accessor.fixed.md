@@ -1,0 +1,1 @@
+- An EHR Extract export's access-log entry names the request id, the bound `PERSON` and the provider, as every other access entry does.

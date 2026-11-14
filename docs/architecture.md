@@ -716,6 +716,15 @@ which is what makes an optional stage safe to disable:
    names; the EHRs the copy does not hold are read in one statement. A served
    EHR with no settings needs no read, and its care ground is inferred from
    which of its two verdicts could have served the row (our own design).
+   Every EHR a query touches gets an entry (#5639): an EHR its scope names,
+   whatever its rows hold, and, for an aggregate projection, each EHR whose
+   data the aggregate read, carried per row as a hidden
+   `array_agg(DISTINCT …)` column in the same statement; a refused query is
+   recorded against the EHR it asked for. An emergency's lifted denies carry
+   the items they cover, and an entry naming the objects it admitted names
+   only the lifted denies covering one of them (#5630). A record the service
+   writes itself, such as an EHR Extract export's, names the request and the
+   caller's binding, which the adapter publishes for the request (#5638).
 3. **RBAC** — the coarse operation class (public / clinical / admin /
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an
