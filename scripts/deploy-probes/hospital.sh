@@ -447,6 +447,23 @@ h_rerelate() {
   [[ "$H_CODE" = 200 || "$H_CODE" = 204 ]]
 }
 
+# Declares the EHR subject reference `id` under `namespace` on the PERSON
+# `person` through instance `n` as `who`: a ferroehr-operations::record_subject
+# element of its details, as the registering system writes it (#5634).
+h_declare_subject() {
+  local n="$1" who="$2" person="$3" namespace="$4" id="$5" body version element
+  h_call "$n" admin GET "/demographic/person/$person"
+  version="$(jq -r '.uid.value' <<<"$H_BODY")"
+  element="$(jq -nc --argjson k "$(j_term record_subject)" --arg ns "$namespace" --arg id "$id" \
+    '{_type:"ELEMENT",archetype_node_id:"at0010",name:$k,
+      value:{_type:"DV_IDENTIFIER",issuer:$ns,id:$id,type:"PI"}}')"
+  body="$(jq -c --argjson e "$element" 'del(.uid)
+    | .details = ((.details // {_type:"ITEM_TREE",archetype_node_id:"at0009",
+        name:{_type:"DV_TEXT",value:"details"}}) | .items = ((.items // []) + [$e]))' <<<"$H_BODY")"
+  H_IF_MATCH="\"$version\"" h_call "$n" "$who" PUT "/demographic/person/$version" "$body"
+  [[ "$H_CODE" = 200 || "$H_CODE" = 204 ]]
+}
+
 # The templates of the record, each a vendored OPT, by the role it plays.
 H_OPTS="corpus/fixtures/service/knowledge/opt"
 H_T_ENCOUNTER="minimal_evaluation.en.v1"
@@ -1265,7 +1282,7 @@ pix_feed() {
 
 # The care-relationship and representation assertions again on a stack with
 # the quickstart's default subject index, where the EHR_STATUS carries the
-# FerroPIX pseudonym. Tracked by #5634.
+# FerroPIX pseudonym and Eva's PERSON declares it (#5634).
 hospital_pixm() {
   unset FERROEHR_EHR_INDEX
   hospital_files patients
@@ -1317,6 +1334,10 @@ hospital_pixm() {
     "http://localhost:${FERROEHR_PIX_PORT}/fhir/Patient/\$ihe-pix?sourceIdentifier=urn:oid:2.999.1.1%7Ceva-0001&targetSystem=urn:oid:2.999.7.1" \
     | jq -r '[.. | objects | select(.system? == "urn:oid:2.999.7.1") | .value] | first // empty')"
   [[ -n "$pseudonym" ]] || probe_fail "Eva's pseudonym from FerroPIX" "none"
+  # Her PERSON declares the pseudonym, so her EHR reaches its care and
+  # representation (#5634).
+  h_declare_subject 1 admin "$(hv person_eva)" urn:oid:2.999.7.1 "$pseudonym" \
+    || h_fail_call "Eva's PERSON declares her pseudonym"
   h_call 1 admin POST /ehr "$(jq -nc --arg p "$pseudonym" '{_type:"EHR_STATUS",
     archetype_node_id:"openEHR-EHR-EHR_STATUS.generic.v1",name:{_type:"DV_TEXT",value:"EHR status"},
     archetype_details:{_type:"ARCHETYPED",rm_version:"1.1.0",
