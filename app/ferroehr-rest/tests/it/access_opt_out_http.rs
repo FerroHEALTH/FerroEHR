@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The EHDS Art. 10 opt-out from access through the access services, end to
-//! end over the assembled router (#4516).
+//! end over the assembled router (#4516), as an `opt_out` directive of the
+//! EHR's `EHR_ACCESS` the controller commits (#5510).
 //!
 //! Regulation (EU) 2025/327 Art. 10(1) lets a person opt out from access to
 //! their data "through the electronic health data access services referred to
@@ -11,11 +12,12 @@
 //! necessary to protect vital interests (`docs/law/eu/ehds/text.html`). The
 //! tests assert that an opted-out EHR answers an access-service caller at
 //! every route, query and export as an unknown EHR does while every other
-//! caller reads it as before, that a reversal brings it back, that an
-//! emergency purpose overrides it with the override on the trail, that
-//! recording, reversing and reading the register are access records, and
-//! that recording is refused while the deployment declares no access-service
-//! caller. No openEHR spec governs an opt-out: our own design/extension.
+//! caller reads it as before, that a later version without it brings it back,
+//! that an emergency purpose overrides it with the override on the trail,
+//! that recording, reversing and reading it are access records and its history
+//! is kept as `EHR_ACCESS` versions, and that recording is refused while the
+//! deployment declares no access-service caller. No openEHR spec governs an
+//! opt-out: our own design/extension.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -180,21 +182,77 @@ async fn ehr_with_composition(app: &Router) -> (String, String) {
     (ehr, vo)
 }
 
-/// The admin records (`reverse = false`) or reverses the opt-out of `ehr`;
-/// returns the answer.
-async fn opt_out(app: &Router, ehr: &str, reverse: bool) -> (StatusCode, String) {
-    let path = if reverse {
-        "/admin/access-opt-out/reverse"
-    } else {
-        "/admin/access-opt-out"
-    };
+/// Every `EHR_ACCESS` version of `ehr`, newest first, as the admin reads
+/// them; the answer when the read is refused.
+async fn versions(app: &Router, ehr: &str) -> Result<Vec<Value>, (StatusCode, String)> {
+    let (status, body) = send(
+        app,
+        "GET",
+        &format!("{EXT}/admin/ehr-access?ehr_id={ehr}"),
+        "root",
+        None,
+        None,
+    )
+    .await;
+    if status != StatusCode::OK {
+        return Err((status, body));
+    }
+    let read: Value = serde_json::from_str(&body).expect("settings json");
+    Ok(read["versions"].as_array().expect("versions").clone())
+}
+
+/// Whether the settings of `version` hold an `opt_out` directive.
+fn opts_out(version: &Value) -> bool {
+    version["settings"]["directives"]
+        .as_array()
+        .is_some_and(|directives| {
+            directives
+                .iter()
+                .any(|d| d["kind"]["defining_code"]["code_string"] == json!("opt_out"))
+        })
+}
+
+/// The admin commits `settings` for `ehr` over the version `preceding`.
+async fn commit_settings(
+    app: &Router,
+    ehr: &str,
+    preceding: &str,
+    settings: &Value,
+) -> (StatusCode, String) {
     send(
         app,
         "POST",
-        &common::full(path),
+        &common::full("/admin/ehr-access"),
         "root",
         None,
-        Some(("application/json", json!({ "ehr_id": ehr }).to_string())),
+        Some((
+            "application/json",
+            json!({ "ehr_id": ehr, "preceding_version_uid": preceding, "settings": settings })
+                .to_string(),
+        )),
+    )
+    .await
+}
+
+/// The admin records (`reverse = false`) or reverses the opt-out of `ehr`, by
+/// reading the current `EHR_ACCESS` and committing a version with or without
+/// an `opt_out` directive; returns the answer.
+async fn opt_out(app: &Router, ehr: &str, reverse: bool) -> (StatusCode, String) {
+    let current = match versions(app, ehr).await {
+        Ok(versions) => versions.first().cloned().expect("a current version"),
+        Err(refused) => return refused,
+    };
+    let directives = if reverse {
+        Vec::new()
+    } else {
+        vec![common::access_directive("opt_out", &[])]
+    };
+    let preceding = current["version_uid"].as_str().expect("version uid");
+    commit_settings(
+        app,
+        ehr,
+        preceding,
+        &common::directive_settings(&directives),
     )
     .await
 }
@@ -276,7 +334,7 @@ async fn an_opted_out_ehr_reads_as_absent_to_the_access_services_until_reversed(
     );
 
     let (status, body) = opt_out(&app, &ehr, false).await;
-    assert_eq!(status, StatusCode::NO_CONTENT, "record: {body}");
+    assert_eq!(status, StatusCode::OK, "record: {body}");
 
     let (status, body) = send(
         &app,
@@ -353,7 +411,7 @@ async fn an_opted_out_ehr_reads_as_absent_to_the_access_services_until_reversed(
     assert!(uids.iter().any(|uid| uid.starts_with(&vo)), "{uids:?}");
 
     let (status, body) = opt_out(&app, &ehr, true).await;
-    assert_eq!(status, StatusCode::NO_CONTENT, "reverse: {body}");
+    assert_eq!(status, StatusCode::OK, "reverse: {body}");
     assert_eq!(
         send(&app, "GET", &composition, "service", None, None)
             .await
@@ -365,31 +423,21 @@ async fn an_opted_out_ehr_reads_as_absent_to_the_access_services_until_reversed(
     assert!(uids.iter().any(|uid| uid.starts_with(&vo)), "{uids:?}");
 }
 
-/// Recording, reversing and reading the register are access records naming
-/// the administrator, and the register keeps the reversed opt-out.
+/// Recording, reversing and reading the opt-out are access records naming
+/// the administrator, and the `EHR_ACCESS` versions keep the reversed opt-out.
 #[tokio::test]
 async fn recording_reversing_and_reading_the_opt_out_are_access_records() {
     let (_db, pool, app) = Box::pin(app(true)).await;
     let (ehr, _) = ehr_with_composition(&app).await;
-    assert_eq!(opt_out(&app, &ehr, false).await.0, StatusCode::NO_CONTENT);
-    assert_eq!(opt_out(&app, &ehr, true).await.0, StatusCode::NO_CONTENT);
-    let (status, body) = send(
-        &app,
-        "GET",
-        &format!("{EXT}/admin/access-opt-out?ehr_id={ehr}"),
-        "root",
-        None,
-        None,
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    let register: Value = serde_json::from_str(&body).expect("register json");
-    let rows = register["access_opt_outs"].as_array().expect("rows");
-    assert_eq!(rows.len(), 1, "{register}");
-    assert_eq!(rows[0]["ehr_id"], json!(ehr));
-    assert!(rows[0]["reversed_at"].is_string(), "{register}");
+    assert_eq!(opt_out(&app, &ehr, false).await.0, StatusCode::OK);
+    assert_eq!(opt_out(&app, &ehr, true).await.0, StatusCode::OK);
+    let versions = versions(&app, &ehr).await.expect("the versions read");
+    assert_eq!(versions.len(), 3, "{versions:?}");
+    assert!(!opts_out(&versions[0]), "the reversal is current");
+    assert!(opts_out(&versions[1]), "the reversed opt-out is kept");
 
-    let actions: Vec<String> = trail(&pool, "access-opt-out:ehr-wide", 3)
+    // Each act reads the current version before it commits over it.
+    let actions: Vec<String> = trail(&pool, "ehr-access:ehr-wide", 5)
         .await
         .into_iter()
         .map(|(action, principal, emergency)| {
@@ -398,7 +446,7 @@ async fn recording_reversing_and_reading_the_opt_out_are_access_records() {
             action
         })
         .collect();
-    assert_eq!(actions, ["C", "D", "R"]);
+    assert_eq!(actions, ["R", "U", "R", "U", "R"]);
 }
 
 /// An access service declaring an emergency purpose reads the opted-out EHR
@@ -408,7 +456,7 @@ async fn recording_reversing_and_reading_the_opt_out_are_access_records() {
 async fn the_vital_interest_override_reads_the_ehr_and_is_recorded() {
     let (_db, pool, app) = Box::pin(app(true)).await;
     let (ehr, vo) = ehr_with_composition(&app).await;
-    assert_eq!(opt_out(&app, &ehr, false).await.0, StatusCode::NO_CONTENT);
+    assert_eq!(opt_out(&app, &ehr, false).await.0, StatusCode::OK);
     let composition = format!("{BASE}/ehr/{ehr}/composition/{vo}");
 
     let (status, body) = send(&app, "GET", &composition, "service", Some("TREAT"), None).await;
@@ -457,19 +505,12 @@ async fn recording_is_refused_while_no_access_service_is_declared() {
         body.contains("access_service") && body.contains("[authz.grants] allowed"),
         "{body}"
     );
-    assert_eq!(opt_out(&app, &ehr, true).await.0, StatusCode::NO_CONTENT);
-    let (status, body) = send(
-        &app,
-        "GET",
-        &format!("{EXT}/admin/access-opt-out?ehr_id={ehr}"),
-        "root",
-        None,
-        None,
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    let register: Value = serde_json::from_str(&body).expect("register json");
-    assert_eq!(register["access_opt_outs"], json!([]));
+    assert_eq!(opt_out(&app, &ehr, true).await.0, StatusCode::OK);
+    let versions = versions(&app, &ehr).await.expect("the versions read");
+    assert!(
+        !versions.iter().any(opts_out),
+        "no version holds an opt-out: {versions:?}"
+    );
     assert_eq!(
         send(
             &app,
@@ -490,15 +531,19 @@ async fn recording_is_refused_while_no_access_service_is_declared() {
 #[tokio::test]
 async fn a_malformed_ehr_id_is_refused_on_every_opt_out_route() {
     let (_db, _pool, app) = Box::pin(app(true)).await;
-    for reverse in [false, true] {
-        let (status, body) = opt_out(&app, "not-a-uuid", reverse).await;
-        assert_eq!(status, StatusCode::BAD_REQUEST, "reverse={reverse}: {body}");
+    let (ehr, _) = ehr_with_composition(&app).await;
+    let current = versions(&app, &ehr).await.expect("the versions read");
+    let preceding = current[0]["version_uid"].as_str().expect("version uid");
+    for directives in [vec![common::access_directive("opt_out", &[])], Vec::new()] {
+        let settings = common::directive_settings(&directives);
+        let (status, body) = commit_settings(&app, "not-a-uuid", preceding, &settings).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
         assert!(body.contains("invalid EHR id: not-a-uuid"), "{body}");
     }
     let (status, body) = send(
         &app,
         "GET",
-        &format!("{EXT}/admin/access-opt-out?ehr_id=not-a-uuid"),
+        &format!("{EXT}/admin/ehr-access?ehr_id=not-a-uuid"),
         "root",
         None,
         None,
@@ -541,7 +586,7 @@ async fn a_manifest_export_under_the_override_records_it() {
     let (_db, pool, app) = Box::pin(app(true)).await;
     let (ehr, _vo) = ehr_with_composition(&app).await;
     let (kept, _) = ehr_with_composition(&app).await;
-    assert_eq!(opt_out(&app, &ehr, false).await.0, StatusCode::NO_CONTENT);
+    assert_eq!(opt_out(&app, &ehr, false).await.0, StatusCode::OK);
     let uri = format!("{EXT}/message/export");
     let body = manifest(&[&kept, &ehr, &ehr]);
     let export = |purpose| {

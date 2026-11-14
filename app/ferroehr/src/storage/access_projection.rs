@@ -7,7 +7,7 @@
 //!
 //! An EHR's rows are replaced whole in the transaction that commits its
 //! `EHR_ACCESS` version, and every change to its settings row notifies every
-//! replica on [`CHANNEL`] at commit (the trigger of migration 0039). No
+//! replica on [`CHANNEL`] at commit (the trigger of migration 0040). No
 //! openEHR spec governs the projection or its storage SQL: our own design.
 
 use serde::Serialize;

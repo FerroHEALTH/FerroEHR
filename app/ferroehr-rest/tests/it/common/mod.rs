@@ -19,6 +19,7 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::config::auth_section::AuthConfig;
 use ferroehr::config::rest::ApiConfig;
+use ferroehr::ids::EhrId;
 use ferroehr::party_binding::grants::bootstrap::{ClientGrant, PersonGrant};
 use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::party_binding::grants::standing::GrantStanding;
@@ -51,8 +52,6 @@ pub(crate) const FHIR: &str = "/ferroehr/rest/fhir/r4";
 const EXTENSION_ROOTS: &[&str] = &[
     "/admin/access-delay",
     "/admin/access-log",
-    "/admin/access-opt-out",
-    "/admin/access-restriction",
     "/admin/access_policy",
     "/admin/archive",
     "/admin/config",
@@ -856,6 +855,62 @@ pub(crate) fn access_settings(default: &str, gate_keepers: &[uuid::Uuid]) -> Val
             .collect();
     }
     settings
+}
+
+/// A deny directive of the access control `kind` (`restriction` or
+/// `opt_out`) that a declared emergency lifts, covering the versioned objects
+/// `objects`, or the whole EHR when there are none (EHDS Art. 8 and Art. 10).
+pub(crate) fn access_directive(kind: &str, objects: &[&str]) -> Value {
+    let term = |code: &str| {
+        serde_json::json!({ "_type": "DV_CODED_TEXT", "value": code,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID",
+                    "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
+                "code_string": code } })
+    };
+    let mut directive = serde_json::json!({
+        "_type": "ACCESS_DIRECTIVE",
+        "name": { "_type": "DV_TEXT", "value": kind },
+        "archetype_node_id": "at0001",
+        "kind": term(kind),
+        "effect": term("deny"),
+        "emergency_override": true
+    });
+    if !objects.is_empty() {
+        let refs: Vec<Value> = objects
+            .iter()
+            .map(|id| {
+                serde_json::json!({ "_type": "OBJECT_REF", "namespace": "local",
+                    "type": "VERSIONED_COMPOSITION",
+                    "id": { "_type": "HIER_OBJECT_ID", "value": id } })
+            })
+            .collect();
+        directive["data"] = serde_json::json!([{ "objects": refs }]);
+    }
+    directive
+}
+
+/// `access_directives` settings, open where no directive applies, holding
+/// `directives`.
+pub(crate) fn directive_settings(directives: &[Value]) -> Value {
+    let mut settings = access_settings("open", &[]);
+    if !directives.is_empty() {
+        settings["directives"] = Value::Array(directives.to_vec());
+    }
+    settings
+}
+
+/// Commits `settings` as the `EHR_ACCESS` settings of `ehr_id` through the
+/// controller's service call, over the current version.
+pub(crate) async fn commit_access_settings(svc: &FerroEhrService, ehr_id: EhrId, settings: Value) {
+    let versions = svc
+        .ehr_access_versions(ehr_id)
+        .await
+        .expect("the EHR_ACCESS versions read");
+    let (current, _) = versions.first().expect("a current EHR_ACCESS version");
+    svc.commit_ehr_access_settings(ehr_id, current, settings)
+        .await
+        .expect("the controller commits the settings");
 }
 
 /// The live `PERSON` in `pool` carrying the key `key` under `issuer`.

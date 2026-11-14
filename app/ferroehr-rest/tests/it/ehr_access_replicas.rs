@@ -236,10 +236,6 @@ async fn a_lost_listener_reads_the_settings_on_every_request() {
 
 /// Terminates every listener session on the projection's channel, again and
 /// again, so no replica's listener stays connected while the task runs.
-#[expect(
-    clippy::infinite_loop,
-    reason = "the test aborts the task when it is done"
-)]
 async fn cut_listeners(pool: PgPool) {
     loop {
         // NOTE: PostgreSQL 18 pg_terminate_backend, a listener that reconnects is cut again.
