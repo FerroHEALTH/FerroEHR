@@ -19,7 +19,7 @@
 //! one change the table's triggers admit.
 //!
 //! Verification is the access log's own: `audit.verify_access_log_chain()`
-//! and [`crate::system_log::store::chains::AuditChains::verify`].
+//! and [`crate::system_log::store::AuditStore::verify_chain_advancing`].
 
 #![expect(
     clippy::disallowed_types,
