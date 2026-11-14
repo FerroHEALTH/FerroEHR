@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 745 keys. A deployment that holds real data sets the 10
+# This file lists 742 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
@@ -1747,26 +1747,8 @@ system_id = "ferroehr.local"
 # Optional, unset by default (infrastructure).
 #? minimum = "low"
 
-# The signed checkpoints and link signatures of the access log, and the systems
-# whose exported logs are imported.
+# The systems whose exported access logs are imported.
 #? [audit.access_log]
-# Seal the head of the chain in a signed `ACCESS_LOG_CHECKPOINT`
-# (`FERROEHR__AUDIT__ACCESS_LOG__CHECKPOINTS`). Off by default; on, the keyring
-# must hold an `OpenPGP` key (`record.signing.mode = "pgp"`), or the server
-# refuses to start. Optional (trust).
-#? checkpoints = false
-# The time between two scheduled checkpoints
-# (`FERROEHR__AUDIT__ACCESS_LOG__CHECKPOINT_INTERVAL`); a run writes one only
-# when the chain has grown since the last. `"0s"` leaves checkpoints to
-# `ferroehr access-log checkpoint` and `POST /admin/access-log/checkpoint`.
-# Default one hour. Optional.
-#? checkpoint_interval = "1h"
-# Sign the digest of each new link with the keyring's key
-# (`FERROEHR__AUDIT__ACCESS_LOG__SIGN_LINKS`), as the eHDSI Audit Trail Profile
-# §2.2 asks of a national contact point. Off by default: it costs one
-# signature per record. On, the keyring must hold an `OpenPGP` key. Optional
-# (trust).
-#? sign_links = false
 # Armored `OpenPGP` public certificates of the systems whose exported logs this
 # deployment imports (`FERROEHR__AUDIT__ACCESS_LOG__TRUSTED_KEY_FILES`). An
 # import verifies the checkpoint against these and the keyring's own key, and
