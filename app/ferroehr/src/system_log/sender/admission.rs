@@ -40,6 +40,16 @@ impl AuditSender {
         }
     }
 
+    /// The records waiting in the queue for the drain, which the
+    /// `audit_drain_queue_depth` gauge reads.
+    #[must_use]
+    pub fn queued(&self) -> usize {
+        self.inner
+            .tx
+            .max_capacity()
+            .saturating_sub(self.inner.tx.capacity())
+    }
+
     /// Replace the access-log entry `uid` by its tombstone, removed at
     /// `time_removed` on `grounds`, and store `event`, the record of the act,
     /// as its own access-log entry, in one transaction of the local store;
