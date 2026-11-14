@@ -472,7 +472,7 @@ async fn an_art_9_3_restriction_applies_to_the_subject_view_alone() {
     );
 
     let listened = fx.svc.access_policy().listened();
-    listened.spawn_listener();
+    listened.spawn_listener((*fx.pool.connect_options()).clone());
     let deadline = Instant::now() + Duration::from_secs(10);
     while !listened.is_listening() {
         assert!(Instant::now() < deadline, "the listener connects");

@@ -17,6 +17,7 @@ use std::sync::{Arc, OnceLock};
 use opentelemetry::KeyValue;
 use opentelemetry::metrics::{AsyncInstrument, Counter, Gauge, Histogram, Meter};
 
+use crate::instance::{Agreement, Instances};
 use crate::policy_register::listen::Listened;
 use crate::service::FerroEhrService;
 
@@ -69,9 +70,12 @@ pub const AUDIT_CHAIN_LAST_VERIFICATION: &str = "audit_chain_last_verification";
 pub const AUDIT_CHAIN_INTACT: &str = "audit_chain_intact";
 /// Records waiting in the audit drain's queue.
 pub const AUDIT_DRAIN_QUEUE_DEPTH: &str = "audit_drain_queue_depth";
+/// Live instances of the deployment that differ from this one, by what
+/// differs (`differs`), at its last comparison (#5589).
+pub const INSTANCE_MISMATCHES: &str = "instance_mismatches";
 
 /// Every instrument name of this module, for the naming tests.
-pub const NAMES: [&str; 23] = [
+pub const NAMES: [&str; 24] = [
     ACCESS_COPY_LOOKUPS,
     ACCESS_COPY_REFILLS,
     ACCESS_COPY_DROPS,
@@ -95,6 +99,7 @@ pub const NAMES: [&str; 23] = [
     AUDIT_CHAIN_LAST_VERIFICATION,
     AUDIT_CHAIN_INTACT,
     AUDIT_DRAIN_QUEUE_DEPTH,
+    INSTANCE_MISMATCHES,
 ];
 
 // ── Bucket ladders ───────────────────────────────────────────────────────────
@@ -351,6 +356,40 @@ pub fn observe(meter: &Meter, service: &Arc<FerroEhrService>) {
             if let Some(queued) = drained.audit_queued() {
                 observer.observe(queued, &[]);
             }
+        })
+        .build();
+}
+
+/// Register how many live instances of the deployment differ from this one.
+///
+/// Counted at its last comparison, by what differs (`differs = signing_key |
+/// configuration`); nothing before the first comparison or after one that
+/// could not read the rows, which the `instances` health indicator names.
+pub fn observe_instances(meter: &Meter, instances: &Arc<Instances>) {
+    let held = Arc::clone(instances);
+    let _mismatches = meter
+        .u64_observable_gauge(INSTANCE_MISMATCHES)
+        .with_description(
+            "Live instances of the deployment that sign with another key or run another \
+             configuration (differs = signing_key | configuration)",
+        )
+        .with_callback(move |observer| {
+            let differences = match held.agreement() {
+                Agreement::Agrees { .. } => Vec::new(),
+                Agreement::Differs(differences) => differences,
+                Agreement::Unread | Agreement::Unknown => return,
+            };
+            let count = |pick: fn(&crate::instance::Difference) -> bool| {
+                u64::try_from(differences.iter().filter(|d| pick(d)).count()).unwrap_or(u64::MAX)
+            };
+            observer.observe(
+                count(|d| d.signing_key),
+                &[KeyValue::new("differs", "signing_key")],
+            );
+            observer.observe(
+                count(|d| d.configuration),
+                &[KeyValue::new("differs", "configuration")],
+            );
         })
         .build();
 }

@@ -76,6 +76,7 @@ async fn ask(access: Arc<RequestAccess>, ehr_id: EhrId) -> Outcome {
         settings: Arc::new(None),
         subject: None,
         version: None,
+        revision: ferroehr::storage::access_projection::Revision::default(),
     };
     let judged = Arc::clone(&access);
     with_request_access(access, async move {

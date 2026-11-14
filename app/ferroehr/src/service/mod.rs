@@ -52,7 +52,7 @@ pub mod version_update;
 mod write;
 
 use crate::service::definition::lineage::{ArchetypeLineageCache, archetype_lineage_cache};
-use crate::service::ehr::access::EhrAccessCache;
+use crate::service::ehr::access_cache::EhrAccessCache;
 use crate::service::query::config::QueryConfig;
 use crate::service::query::plan_cache::PlanCache;
 use crate::service::terminology::fhir::FhirTerminologyProvider;
@@ -297,10 +297,7 @@ impl FerroEhrService {
             #[cfg(feature = "multimedia")]
             multimedia: None,
             ehr_access: Arc::clone(&ehr_access),
-            ehr_access_listened: Arc::new(ehr::access::listened(
-                pools.clinical.clone(),
-                &ehr_access,
-            )),
+            ehr_access_listened: Arc::new(ehr::access_cache::listened(&ehr_access)),
             plan_cache: PlanCache::default(),
             archetype_lineage: archetype_lineage_cache(),
             query_timeout: None,

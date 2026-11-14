@@ -13,7 +13,10 @@
 //! never serves an outdated policy. The admin registers listen on
 //! [`CHANNEL`], the policy grants and the `EHR_ACCESS` projection on their
 //! own channels; a [`Subscriber`] drops what each notification names before
-//! the notification counts as received. No openEHR spec governs operational
+//! the notification counts as received. Each listener holds a connection of
+//! its own, never one of the request pools, so the pools may run through a
+//! transaction-mode pooler that would end a `LISTEN`
+//! ([`crate::db::domain::listen_options`]). No openEHR spec governs operational
 //! policy: our own design.
 
 use std::fmt;
@@ -23,11 +26,14 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU64, Ordering};
 use std::time::Duration;
 
-use sqlx::PgPool;
-use sqlx::postgres::PgListener;
+use sqlx::postgres::{PgConnectOptions, PgListener, PgPoolOptions};
 
 /// The channel a register write notifies and every replica listens on.
 pub const CHANNEL: &str = "ferroehr_policy_register";
+
+/// The `application_name` of every listener session, which tells an operator
+/// a `LISTEN` session from a pooled connection in `pg_stat_activity`.
+pub const SESSION_NAME: &str = "ferroehr policy listener";
 
 /// The pause before a lost listener connects again.
 const RECONNECT: Duration = Duration::from_secs(1);
@@ -50,8 +56,6 @@ pub trait Subscriber: fmt::Debug + Send + Sync {
 /// listener on its channel, and the notifications it has received.
 #[derive(Debug)]
 pub struct Listened {
-    /// The pool the listener connects through.
-    pool: PgPool,
     /// The channel it listens on.
     channel: &'static str,
     /// Whether the listener is connected, so a request may trust the copy
@@ -85,12 +89,11 @@ struct ListenerCounts {
 }
 
 impl Listened {
-    /// The listener state of `channel` over `pool`, not yet listening, so
-    /// every request reads until [`Self::spawn_listener`] connects.
+    /// The listener state of `channel`, not yet listening, so every request
+    /// reads until [`Self::spawn_listener`] connects.
     #[must_use]
-    pub fn new(pool: PgPool, channel: &'static str) -> Self {
+    pub fn new(channel: &'static str) -> Self {
         Self {
-            pool,
             channel,
             listening: AtomicBool::new(false),
             stale: AtomicBool::new(false),
@@ -101,18 +104,14 @@ impl Listened {
         }
     }
 
-    /// The listener state of `channel` over `pool`, as [`Self::new`], whose
-    /// every notification `subscriber` drops from its copy before it counts
-    /// as received.
+    /// The listener state of `channel`, as [`Self::new`], whose every
+    /// notification `subscriber` drops from its copy before it counts as
+    /// received.
     #[must_use]
-    pub fn with_subscriber(
-        pool: PgPool,
-        channel: &'static str,
-        subscriber: Arc<dyn Subscriber>,
-    ) -> Self {
+    pub fn with_subscriber(channel: &'static str, subscriber: Arc<dyn Subscriber>) -> Self {
         Self {
             subscriber: Some(subscriber),
-            ..Self::new(pool, channel)
+            ..Self::new(channel)
         }
     }
 
@@ -130,11 +129,11 @@ impl Listened {
         }
     }
 
-    /// Listen on the channel on this replica's behalf, in a detached task
-    /// that ends with the runtime, connecting again whenever the connection
-    /// is lost.
-    pub fn spawn_listener(self: &Arc<Self>) {
-        tokio::spawn(listen(Arc::clone(self)));
+    /// Listen on the channel on this replica's behalf, on a connection of
+    /// its own made with `connect`, in a detached task that ends with the
+    /// runtime, connecting again whenever the connection is lost.
+    pub fn spawn_listener(self: &Arc<Self>, connect: PgConnectOptions) {
+        tokio::spawn(listen(Arc::clone(self), connect));
     }
 
     /// Whether a notification is pending or the listener is down, so the next
@@ -230,10 +229,10 @@ impl Listened {
     clippy::infinite_loop,
     reason = "a detached task that lives as long as the runtime"
 )]
-async fn listen(state: Arc<Listened>) {
+async fn listen(state: Arc<Listened>, options: PgConnectOptions) {
     let channel = state.channel;
     loop {
-        match connect(&state).await {
+        match connect(channel, &options).await {
             Ok(mut listener) => {
                 state.drop_all().await;
                 state.mark_stale();
@@ -269,9 +268,19 @@ async fn listen(state: Arc<Listened>) {
     }
 }
 
-/// A listener on the channel over the pool.
-async fn connect(state: &Listened) -> Result<PgListener, sqlx::Error> {
-    let mut listener = PgListener::connect_with(&state.pool).await?;
-    listener.listen(state.channel).await?;
+/// A listener on `channel`, on one connection made with `options` and named
+/// [`SESSION_NAME`] that no pool shares, the way `PgListener::connect` makes
+/// it from a URL.
+async fn connect(channel: &str, options: &PgConnectOptions) -> Result<PgListener, sqlx::Error> {
+    let session = PgPoolOptions::new()
+        .max_connections(1)
+        .min_connections(0)
+        .max_lifetime(None)
+        .idle_timeout(None)
+        .connect_with(options.clone().application_name(SESSION_NAME))
+        .await?;
+    let mut listener = PgListener::connect_with(&session).await?;
+    listener.ignore_pool_close_event(true);
+    listener.listen(channel).await?;
     Ok(listener)
 }

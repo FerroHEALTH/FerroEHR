@@ -24,6 +24,7 @@ use uuid::Uuid;
 
 use crate::access_eval::scope::{Item, Object};
 use crate::ids::{EhrId, VoId};
+use crate::storage::access_projection::Revision;
 use crate::storage::error::StorageError;
 
 /// What the evaluator reads of one versioned object.
@@ -41,6 +42,8 @@ pub struct HeadFacts {
     pub origins: Option<Vec<String>>,
     /// The trunk head's commit instant.
     pub recorded: Option<jiff::Timestamp>,
+    /// The revision of the owning EHR's settings row the read found.
+    pub revision: Revision,
 }
 
 impl HeadFacts {
@@ -59,6 +62,7 @@ impl HeadFacts {
             recorded: row
                 .try_get::<Option<jiff_sqlx::Timestamp>, _>("access_recorded")?
                 .map(jiff_sqlx::Timestamp::to_jiff),
+            revision: Revision::read(row)?,
         })
     }
 
@@ -77,7 +81,7 @@ impl HeadFacts {
     /// Whether the running request may read the object.
     #[must_use]
     pub fn admitted(&self) -> bool {
-        crate::access_eval::condition::admits(self.ehr_id, &self.item())
+        crate::access_eval::condition::admits(self.ehr_id, self.revision, &self.item())
     }
 }
 
@@ -93,7 +97,19 @@ pub fn admits_stored(stored: &crate::storage::version_repo::read::StoredVersion)
         origins: origins.as_deref(),
         recorded: stored.head_committed_at,
     });
-    crate::access_eval::condition::admits(stored.ehr_id, &item)
+    crate::access_eval::condition::admits(stored.ehr_id, stored.access_revision, &item)
+}
+
+/// Whether `stored` may be served to the current request.
+///
+/// The access evaluator admits it ([`admits_stored`]), and an object an EHDS
+/// Art. 3(3) delay withholds is absent to a patient-context request
+/// (`docs/law/eu/ehds/text.html`). No openEHR spec governs either: our own
+/// design/extension.
+#[must_use]
+pub fn visible(stored: &crate::storage::version_repo::read::StoredVersion) -> bool {
+    use crate::system_log::access_context::access_delay_enforced;
+    admits_stored(stored) && (!stored.person_withheld || !access_delay_enforced())
 }
 
 /// The system ids a `version.origins` stamp names.

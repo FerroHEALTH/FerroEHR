@@ -240,9 +240,10 @@ pub async fn ehr_summary_read(
     pool: &PgPool,
     ehr_id: EhrId,
 ) -> Result<Option<EhrSummaryRead>, StorageError> {
-    let Some(row) = sqlx::query(
-        "SELECT e.system_id, e.time_created, \
-                s.vo_id AS status_vo, s.trunk_version, s.branch_number, \
+    let Some(row) = sqlx::query(concat!(
+        "SELECT e.system_id, e.time_created, ",
+        access_revision!("e.id"),
+        ", s.vo_id AS status_vo, s.trunk_version, s.branch_number, \
                 s.branch_version, s.creating_system_id, \
                 a.vo_id AS access_vo, \
                 COALESCE(f.folders, ARRAY[]::uuid[]) AS folders, f.folders_changed_at \
@@ -274,8 +275,8 @@ pub async fn ehr_summary_read(
              ) fc \
              WHERE f.ehr_id = e.id \
          ) f ON true \
-         WHERE e.id = $1",
-    )
+         WHERE e.id = $1"
+    ))
     .bind(ehr_id)
     .fetch_optional(&mut *acquire(pool).await?)
     .await?
@@ -303,6 +304,7 @@ pub async fn ehr_summary_read(
         folders_changed_at: row
             .try_get::<Option<jiff_sqlx::Timestamp>, _>("folders_changed_at")?
             .map(jiff_sqlx::Timestamp::to_jiff),
+        access_revision: crate::storage::access_projection::Revision::read(&row)?,
     }))
 }
 
@@ -327,6 +329,8 @@ pub struct EhrSummaryRead {
     /// creating commit or its logical delete. `None` when the EHR indexes no
     /// hierarchy.
     pub folders_changed_at: Option<jiff::Timestamp>,
+    /// The revision of the EHR's access settings row.
+    pub access_revision: crate::storage::access_projection::Revision,
 }
 
 /// The current `EHR_STATUS` version identity of the merged summary read.
@@ -583,6 +587,33 @@ pub async fn live_folder_root_exists(
     .bind(root_name)
     .fetch_one(&mut *acquire(pool).await?)
     .await?)
+}
+
+/// Whether the EHR `ehr_id` is restricted (`ehr.restricted_at`) and the
+/// revision of its access settings row, read on the commit's transaction in
+/// one statement; `None` when the EHR does not exist.
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn restriction_and_revision(
+    tx: &mut PgConnection,
+    ehr_id: EhrId,
+) -> Result<Option<(bool, crate::storage::access_projection::Revision)>, StorageError> {
+    let row = sqlx::query(concat!(
+        "SELECT e.restricted_at IS NOT NULL AS restricted, ",
+        access_revision!("e.id"),
+        " FROM ehr e WHERE e.id = $1"
+    ))
+    .bind(ehr_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    row.map(|row| {
+        Ok((
+            row.try_get("restricted")?,
+            crate::storage::access_projection::Revision::read(&row)?,
+        ))
+    })
+    .transpose()
 }
 
 /// Whether the EHR row exists.

@@ -117,6 +117,17 @@ Alert on `audit_chain_intact == 0`, and on `time() -
 audit_chain_last_verification_seconds` above twice `[audit.store]
 verify_interval`.
 
+## The instances of a deployment
+
+| Metric | Type | Labels | What it tells you |
+|---|---|---|---|
+| `instance_mismatches` | gauge | `differs` | Live instances of the deployment that differ from this one at its last comparison: `differs` is `signing_key` or `configuration`. Absent before the first comparison and after one that could not read the instance table. |
+
+Each instance compares itself with every instance that touched its row in the
+last 90 seconds, at start and every 30 seconds
+([Running several instances](installation/several-instances.md)). Alert on
+`instance_mismatches > 0`.
+
 ## Health indicators
 
 The [health document](operations.md#choosing-a-health-endpoint) reports the
@@ -127,6 +138,7 @@ recording while you investigate.
 | Indicator | Reads `DEGRADED` when |
 |---|---|
 | `policy_listeners` | a listener is lost, naming each one |
+| `instances` | another live instance signs with another key or runs another configuration, naming each one |
 | `audit_chain` | the newest verification found damage, or could not run |
 | `audit_sender` | auditing is off; under `fail_mode = "open"` it reads `UP` with a stated caution |
 | `audit_delivery` | a forwarder cannot reach its Audit Record Repository |
@@ -223,11 +235,14 @@ recording while you investigate.
 
 ### A signing key mismatch between instances
 
-- **Metric:** `ferroehr access-log verify` reports link-signature findings
-  while `audit_chain_intact` reads `1`: the digests verify and the
-  signatures do not.
-- **Health:** the instance that does not hold the other key verifies nothing
-  the other signed.
+- **Metric:** `instance_mismatches{differs="signing_key"}` above `0` from the
+  moment the second key starts. Links signed before you fixed it show as
+  link-signature findings of `ferroehr access-log verify` while
+  `audit_chain_intact` reads `1`: the digests verify and the signatures do
+  not.
+- **Health:** `instances` reads `DEGRADED` on every instance and names each
+  one that signs with another key, from start
+  ([Running several instances](installation/several-instances.md#every-instance-shares-the-same-signing-key-and-configuration)).
 - **What happens:** every instance appends to one chain and signs each link
   with its own `[record.signing]` key. An instance that verifies with
   another key reports each link the other signed.
@@ -238,7 +253,9 @@ recording while you investigate.
   2. Keep the links already signed verifiable: list the public certificate
      of the key that signed them in `retired_key_files`.
   3. Run `ferroehr access-log verify` again; it exits 0 when every link
-     verifies.
+     verifies. `instances` reads `UP` again once the instance with the other
+     key has stopped, and within 90 seconds of its last heartbeat when it
+     stopped without removing its row.
 
 ### Rotating the signing key
 

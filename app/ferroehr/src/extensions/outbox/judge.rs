@@ -110,16 +110,11 @@ fn entry_of(ehr_id: EhrId, stored: Stored) -> EhrEntry {
             }),
         ),
     };
-    // NOTE: our own design, the local source names each party by its container's UUID,
-    // so a subject id that is no UUID names no PERSON of this store.
-    let subject = stored
-        .subject
-        .as_deref()
-        .and_then(|subject| subject.parse::<Uuid>().ok());
     EhrEntry {
         version: settings.as_ref().and(stored.version),
         settings: Arc::new(settings),
-        subject,
+        subject: stored.revision.subject,
+        revision: stored.revision,
     }
 }
 

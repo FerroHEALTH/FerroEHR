@@ -23,7 +23,7 @@ use std::sync::Arc;
 use anyhow::Context as _;
 use clap::Subcommand;
 use ferroehr::config::FerroEhrConfig;
-use ferroehr::db::domain::DomainPools;
+use ferroehr::db::domain::{Domain, DomainPools};
 use ferroehr::ids::VoId;
 use ferroehr::party_binding::check::{Administrator, BasicUser, CheckInput, Expected, Report};
 use ferroehr::party_binding::fill::{LEASE_RENEWAL, LEASE_TTL, Lease};
@@ -220,12 +220,17 @@ pub async fn prepare(
         .rebuild_ehr_access_projection(Rebuild::Fill)
         .await
         .context("filling the EHR_ACCESS projection")?;
-    service.ehr_access_listened().spawn_listener();
+    service
+        .ehr_access_listened()
+        .spawn_listener(listen_options(config, Domain::Clinical)?);
     service
         .read_grants()
         .await
         .context("reading the policy grants")?;
-    service.grants().listened().spawn_listener();
+    service
+        .grants()
+        .listened()
+        .spawn_listener(listen_options(config, Domain::Party)?);
     service.grants().log_agreements();
     service
         .grants()
@@ -648,4 +653,17 @@ async fn judged(pools: &DomainPools, config: &FerroEhrConfig) -> anyhow::Result<
         errors.join("; ")
     );
     Ok(service)
+}
+
+/// The connect options of the `LISTEN` sessions of `domain`
+/// ([`ferroehr::db::domain::listen_options`]).
+///
+/// # Errors
+/// The listener DSN does not parse.
+pub(crate) fn listen_options(
+    config: &FerroEhrConfig,
+    domain: Domain,
+) -> anyhow::Result<sqlx::postgres::PgConnectOptions> {
+    ferroehr::db::domain::listen_options(&config.database, domain)
+        .with_context(|| format!("reading the {domain} listener DSN"))
 }

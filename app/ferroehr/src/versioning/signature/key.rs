@@ -248,6 +248,12 @@ impl PgpKey {
         rsa_family(algorithm).then_some(algorithm)
     }
 
+    /// The fingerprint of the certificate, upper-case hex.
+    #[must_use]
+    pub fn fingerprint(&self) -> String {
+        format!("{:X}", self.public.fingerprint())
+    }
+
     /// Produce an ASCII-armored RFC 4880 detached signature over `data`.
     ///
     /// # Errors

@@ -12,11 +12,9 @@ fn provider() -> ferrohealth_telemetry::telemetry::Telemetry {
     .expect("the Prometheus reader should build")
 }
 
-/// A listener over a pool that never connects, so it reads as down.
+/// A listener that never connects, so it reads as down.
 fn listener() -> Arc<Listened> {
-    let pool = sqlx::PgPool::connect_lazy("postgres://ferroehr@localhost/none")
-        .expect("a lazy pool should build without a connection");
-    Arc::new(Listened::new(pool, "ferroehr_test_channel"))
+    Arc::new(Listened::new("ferroehr_test_channel"))
 }
 
 /// The exporter derives `_total`, `_seconds` and `_bytes`, so a name that
@@ -120,5 +118,30 @@ async fn the_exporter_renders_the_access_path_families() {
     assert!(
         !rendered.contains("policy_notification_age"),
         "a listener that heard nothing reports no notification age: {rendered}"
+    );
+}
+
+/// The mismatch gauge reports nothing before this instance compared itself
+/// with the others, and the instances that differ once it has.
+#[tokio::test]
+async fn the_exporter_renders_the_instances_that_differ() {
+    let telemetry = provider();
+    let meter = telemetry.meter(super::super::metrics::SCOPE);
+    let pool = sqlx::PgPool::connect_lazy("postgres://ferroehr@localhost/none")
+        .expect("a lazy pool should build without a connection");
+    let instances = Arc::new(Instances::new(
+        pool,
+        crate::instance::Fingerprint {
+            signing_key: "digest".to_owned(),
+            configuration: "c0ffee".to_owned(),
+        },
+    ));
+    observe_instances(&meter, &instances);
+    let rendered = telemetry
+        .render_prometheus()
+        .expect("the exposition should encode");
+    assert!(
+        !rendered.contains(INSTANCE_MISMATCHES),
+        "nothing before the first comparison: {rendered}"
     );
 }

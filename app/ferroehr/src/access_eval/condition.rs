@@ -18,7 +18,7 @@
 //! a background task or a test, nothing is published and nothing is
 //! withheld. No openEHR spec governs this: our own design (#5513, #5588).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
@@ -38,6 +38,7 @@ use crate::ids::EhrId;
 use crate::party_binding::grants::caller::CareTeam;
 use crate::party_binding::grants::live::LiveGrants;
 use crate::service::ehr::access_settings::EhrAccessSettings;
+use crate::storage::access_projection::Revision;
 
 task_local! {
     static REQUEST_ACCESS: Arc<RequestAccess>;
@@ -59,6 +60,34 @@ pub struct RequestAccess {
     grants: Option<Arc<LiveGrants>>,
     verdicts: Mutex<BTreeMap<EhrId, Judgement>>,
     recorded: Recorded,
+    stale: Option<Arc<StaleCopies>>,
+}
+
+/// The EHRs whose copy on this replica a read found older than the row in
+/// force: the copy drops each before its next read of the EHR.
+///
+/// A replica learns of a change committed on another one by its
+/// notification, which arrives after the commit. A read in between compares
+/// the revision its verdict was judged on with the row it reads, refuses on
+/// a mismatch, and marks the copy here, so the next request reads the row.
+/// No openEHR spec governs this: our own design (#5589).
+#[derive(Debug, Default)]
+pub struct StaleCopies(Mutex<BTreeSet<EhrId>>);
+
+impl StaleCopies {
+    /// Marks the copy of `ehr_id` stale.
+    pub fn mark(&self, ehr_id: EhrId) {
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(ehr_id);
+    }
+
+    /// The EHRs marked since the last call, which are no longer marked.
+    #[must_use]
+    pub fn take(&self) -> BTreeSet<EhrId> {
+        std::mem::take(&mut *self.0.lock().unwrap_or_else(PoisonError::into_inner))
+    }
 }
 
 /// One EHR as the access evaluator reads it from this replica's copy: its
@@ -74,6 +103,8 @@ pub struct EhrEntry {
     /// The uid of the `EHR_ACCESS` version the settings were read from, which
     /// the access record names; `None` for an EHR with no settings.
     pub version: Option<String>,
+    /// The revision of the settings row the entry was read from.
+    pub revision: Revision,
 }
 
 /// One EHR's verdict in a request, with what it was judged from.
@@ -86,6 +117,8 @@ pub struct Judgement {
     /// The uid of the `EHR_ACCESS` version that carries them; `None` when
     /// it could not be read.
     pub version: Option<String>,
+    /// The revision of the settings row they were read from.
+    pub revision: Revision,
 }
 
 /// What the access record of a request names beside the verdicts: the
@@ -162,7 +195,16 @@ impl RequestAccess {
             grants: in_force.grants,
             verdicts: Mutex::new(BTreeMap::new()),
             recorded: Recorded::default(),
+            stale: None,
         }
+    }
+
+    /// This evaluator, marking in `stale` each copy a read finds older than
+    /// the row in force.
+    #[must_use]
+    pub fn with_stale_copies(mut self, stale: Arc<StaleCopies>) -> Self {
+        self.stale = Some(stale);
+        self
     }
 
     /// This evaluator, its access record naming `facts`.
@@ -408,6 +450,7 @@ impl RequestAccess {
             verdict: Arc::new(self.judge(Some(ehr_id), (*entry.settings).as_ref(), cared)),
             settings: Arc::clone(&entry.settings),
             version: entry.version.clone(),
+            revision: entry.revision,
         }
     }
 
@@ -424,6 +467,7 @@ impl RequestAccess {
             settings: Arc::new(None),
             subject: None,
             version: None,
+            revision: Revision::default(),
         };
         let at = Some(ehr_id);
         let cared =
@@ -451,6 +495,27 @@ impl RequestAccess {
             tracing::error!(%ehr_id, "an EHR this request did not judge is withheld");
             Outcome::Absent(Refusal::Restricted)
         }
+    }
+
+    /// Whether this request judged `ehr_id` on a revision of its settings
+    /// row other than `seen`, the revision a read found in force; such a
+    /// copy is marked stale. An EHR the request has not judged is not.
+    #[must_use]
+    pub fn stale(&self, ehr_id: EhrId, seen: Revision) -> bool {
+        let Some(judged) = self.judgement(ehr_id) else {
+            return false;
+        };
+        if judged.revision == seen {
+            return false;
+        }
+        tracing::warn!(
+            %ehr_id,
+            "a read found the EHR's access settings newer than this replica's copy; refused"
+        );
+        if let Some(stale) = &self.stale {
+            stale.mark(ehr_id);
+        }
+        true
     }
 
     /// Count the request's decisions once it ended: one per EHR it judged or
@@ -672,12 +737,25 @@ where
     output
 }
 
-/// Whether `item` of `ehr_id` may leave the store for the running request:
-/// always outside a request, and for an object of no EHR.
+/// Whether `item` of `ehr_id` may leave the store for the running request.
+///
+/// `seen` is the revision of the EHR's settings row the read found beside
+/// the item. Always outside a request, and for an object of no EHR; a
+/// verdict judged on another revision admits nothing
+/// ([`RequestAccess::stale`]).
 #[must_use]
-pub fn admits(ehr_id: Option<EhrId>, item: &Item<'_>) -> bool {
+pub fn admits(ehr_id: Option<EhrId>, seen: Revision, item: &Item<'_>) -> bool {
     match (current(), ehr_id) {
-        (Some(access), Some(ehr_id)) => access.outcome(ehr_id, item) == Outcome::Admit,
+        (Some(access), Some(ehr_id)) => {
+            !access.stale(ehr_id, seen) && access.outcome(ehr_id, item) == Outcome::Admit
+        }
         _ => true,
     }
+}
+
+/// Whether the running request judged `ehr_id` on a revision of its settings
+/// row other than `seen`; `false` outside a request.
+#[must_use]
+pub fn stale(ehr_id: EhrId, seen: Revision) -> bool {
+    current().is_some_and(|access| access.stale(ehr_id, seen))
 }

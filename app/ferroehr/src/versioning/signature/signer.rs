@@ -187,6 +187,16 @@ impl Signer {
         matches!(self.mode, SignerMode::Pgp(_))
     }
 
+    /// The fingerprint of the keyring's `OpenPGP` certificate, upper-case hex;
+    /// `None` in `digest` mode.
+    #[must_use]
+    pub fn key_fingerprint(&self) -> Option<String> {
+        match &self.mode {
+            SignerMode::Pgp(key) => Some(key.fingerprint()),
+            SignerMode::Digest => None,
+        }
+    }
+
     /// Sign `data`, a statement of the system other than a version, with the
     /// keyring's `OpenPGP` key: an armored RFC 4880 detached signature, the
     /// form `ATTESTATION._proof_` takes (RM common

@@ -6,13 +6,14 @@
 //! `policy_listeners` health indicator names the lost listeners while they
 //! are down, and each reconnects. While a listener is down its copy reads the
 //! store on every request, so the indicator degrades and never withdraws
-//! readiness. No openEHR spec governs the process model: our own design
-//! (#5594).
+//! readiness. Each listener holds a session of its own, apart from the
+//! request pools. No openEHR spec governs the process model: our own design
+//! (#5594, #5589).
 
 use std::sync::Arc;
 use std::time::Duration;
 
-use ferroehr::policy_register::listen::Listened;
+use ferroehr::policy_register::listen::{Listened, SESSION_NAME};
 use ferroehr::telemetry::indicators::PolicyListenersHealth;
 use ferrohealth_health::document::State;
 use ferrohealth_health::registry::HealthIndicator;
@@ -46,11 +47,23 @@ async fn a_killed_listener_degrades_health_until_it_reconnects() {
         "nothing listens before the spawn"
     );
     for (_, listened) in &listeners {
-        listened.spawn_listener();
+        listened.spawn_listener((*db.pool().connect_options()).clone());
     }
     let every = || listeners.iter().all(|(_, l)| l.is_listening());
     wait_until(every, "every listener connects").await;
     assert_eq!(health.check().await.state(), State::Up);
+    let named: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM pg_stat_activity \
+         WHERE datname = current_database() AND query LIKE 'LISTEN %' AND application_name = $1",
+    )
+    .bind(SESSION_NAME)
+    .fetch_one(&db.pool())
+    .await
+    .expect("the listener sessions are read");
+    assert_eq!(
+        named, 4,
+        "each listener holds a named session of its own, apart from the pools"
+    );
 
     let killed: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM (SELECT pg_terminate_backend(pid) FROM pg_stat_activity \

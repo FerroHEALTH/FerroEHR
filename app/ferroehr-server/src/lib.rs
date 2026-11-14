@@ -63,6 +63,7 @@ pub mod access_log;
 pub mod audit_chain;
 pub mod db_cmd;
 pub mod definitions;
+pub mod instances;
 pub mod party_binding;
 pub mod policy;
 pub mod process;
@@ -924,6 +925,8 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         verify_on_read = ?signer.verify_on_read(),
         "version signing configured"
     );
+    // Every instance shares the key and the configuration (#5589).
+    let instances = instances::join(pool.clone(), &config, &signer, &mut indicators).await?;
     let access_log = access_log::build(&config, pools.audit.clone(), Arc::clone(&signer))?;
     // NOTE: our own design, the drain appends every access's entry through the checkpoints'
     // store, which signs links under an OpenPGP key; no request has run before this.
@@ -970,7 +973,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     let binding_lease = party_binding::prepare(&service, &config).await?;
     // The policy in force before the listeners take traffic, and the retention
     // register keyed on the category register in force.
-    policy::read_and_listen(&service).await?;
+    policy::read_and_listen(&service, &config).await?;
     service
         .mirror_category_map()
         .await
@@ -1010,10 +1013,9 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     )));
     // The listeners, the access copies and the audit drain, read at each
     // collection (#5591).
-    telemetry::access_path::observe(
-        &telemetry.telemetry().meter(telemetry::metrics::SCOPE),
-        &service,
-    );
+    let meter = telemetry.telemetry().meter(telemetry::metrics::SCOPE);
+    telemetry::access_path::observe(&meter, &service);
+    telemetry::access_path::observe_instances(&meter, &instances);
 
     // The readiness registry closes over every started subsystem, so it is
     // assembled after the last optional one.
@@ -1058,6 +1060,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     .await
     .context("serving ferroehr-rest")?;
     tracing::info!(?drained, "the listeners drained");
+    instances::leave(&instances).await;
 
     if let Some(held) = binding_lease {
         held.release().await;

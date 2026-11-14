@@ -192,10 +192,14 @@ pub(crate) async fn commit_version_set(
     }
 
     // An EHR_ACCESS version changes the EHR's access-control policy (the
-    // settings are change-controlled — RM ehr master04 §EHR Access), so drop the
-    // cached settings the access gate consults per request.
+    // settings are change-controlled — RM ehr master04 §EHR Access), and an
+    // EHR_STATUS version may change the subject whose care relationships
+    // decide access, so drop the copy the access gate consults per request.
     if let Some(ehr_id) = ehr_id
-        && outcome.versions.iter().any(|c| c.kind == Kind::EhrAccess)
+        && outcome
+            .versions
+            .iter()
+            .any(|c| matches!(c.kind, Kind::EhrAccess | Kind::EhrStatus))
     {
         cx.invalidate_ehr_access(ehr_id).await;
     }

@@ -275,7 +275,20 @@ fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigErro
             file.as_deref(),
             errors,
         );
+        let file = settings.listen_url_file.take();
+        resolve(
+            &format!("database.{domain}.listen_url"),
+            &mut settings.listen_url,
+            file.as_deref(),
+            errors,
+        );
     }
+    resolve(
+        "database.listen_url",
+        &mut database.listen_url,
+        database.listen_url_file.take().as_deref(),
+        errors,
+    );
     resolve(
         "database.migrate_url",
         &mut database.migrate_url,

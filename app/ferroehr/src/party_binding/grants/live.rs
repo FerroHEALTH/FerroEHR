@@ -145,7 +145,7 @@ impl LiveGrants {
     #[must_use]
     pub fn new(pool: PgPool) -> Self {
         Self {
-            listened: Arc::new(Listened::new(pool.clone(), CHANNEL)),
+            listened: Arc::new(Listened::new(CHANNEL)),
             pool,
             ceiling: RwLock::new(Arc::new(GrantCeiling::default())),
             federation: RwLock::new(Arc::default()),

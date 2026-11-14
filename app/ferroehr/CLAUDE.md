@@ -45,7 +45,10 @@ memory per replica (`LiveGrants`, invalidated through `NOTIFY`) for
 `policy_register` (the operational-policy admin registers: the audit category
 map and the access delay, versioned in the clinical
 `policy_register` table, held in memory and read again when `listen::Listened`
-says a write notified),
+says a write notified, each listener on a connection of its own),
+`instance` (each running instance's signing key fingerprint and
+configuration digest in `clinical.instance`, compared at start and every
+30 seconds, #5589),
 `licence`, `ids`, `extensions`, `banner`, `decommission` (the `ferroehr db
 erase` operation: blobs first, then `db::erase_schema` drops every schema,
 behind a confirmation naming the instance), `manufacturer` (the one source of

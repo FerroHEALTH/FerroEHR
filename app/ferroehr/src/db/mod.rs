@@ -38,6 +38,7 @@ pub mod acquire;
 pub mod domain;
 pub mod iden;
 pub mod parent_statistics;
+mod session;
 
 use std::path::PathBuf;
 
@@ -120,6 +121,19 @@ pub struct DbConfig {
     /// it — the mounted-secret route, as [`Self::url_file`] is for the
     /// clinical DSN. Setting both is a boot error.
     pub migrate_url_file: Option<PathBuf>,
+    /// DSN the policy listeners hold their `LISTEN` sessions on, for every
+    /// domain on [`Self::url`]; unset reuses [`Self::url`].
+    ///
+    /// Each listener holds one connection of its own, apart from the pools, for
+    /// as long as it listens. `PgBouncer` in transaction mode ends a `LISTEN`
+    /// when the transaction ends, so a deployment whose pools reach
+    /// `PostgreSQL` through such a pooler points this key at the primary
+    /// directly or at a session-mode pooler. No openEHR spec governs the
+    /// process model: our own design (#5589).
+    pub listen_url: Option<SecretUrl>,
+    /// Path to a file holding [`Self::listen_url`], read at boot in place of
+    /// it. Setting both is a boot error.
+    pub listen_url_file: Option<PathBuf>,
     /// Upper bound of the connection pool.
     pub max_connections: u32,
     /// Connections the pool keeps open when idle (avoids cold reopen +
@@ -169,6 +183,8 @@ impl Default for DbConfig {
             url_file: None,
             migrate_url: None,
             migrate_url_file: None,
+            listen_url: None,
+            listen_url_file: None,
             // Deliberate defaults: 20 max (10 hard-capped realistic write
             // concurrency ×2), 2 min (no cold reopen churn at idle).
             max_connections: 20,
@@ -428,43 +444,6 @@ pub enum SchemaMismatch {
 
 // ── Pool ─────────────────────────────────────────────────────────────────────
 
-/// How often a backend running a statement checks that its client is still
-/// connected, so a statement whose connection [`acquire::Lease`] closed stops
-/// within this interval instead of running to its end.
-const CLIENT_CONNECTION_CHECK: &str = "SET client_connection_check_interval = 1000";
-
-/// Everything a freshly-opened physical connection needs before it serves a
-/// query: the domain's search path, the client-connection check and the
-/// statement-timeout backstop.
-///
-/// One implementation for every pool, so a domain cannot drop a setting.
-/// Dropping the timeout in particular silently disarms the DB-side
-/// runaway-query guard, and a broken control must never look like a policy
-/// outcome.
-async fn open_session(
-    conn: &mut PgConnection,
-    search_path: &'static str,
-    statement_timeout: Option<&str>,
-) -> Result<(), sqlx::Error> {
-    sqlx::query(search_path).execute(&mut *conn).await?;
-    // NOTE: PostgreSQL docs §20.3.1, `client_connection_check_interval`:
-    // a backend whose client closed the connection stops its running query at the next check.
-    sqlx::query(CLIENT_CONNECTION_CHECK)
-        .execute(&mut *conn)
-        .await?;
-    if let Some(statement_timeout) = statement_timeout {
-        // A session-level SET on the physical connection, surviving every
-        // checkout, where `SET LOCAL` would last one transaction.
-        // `AssertSqlSafe` is audited: PostgreSQL's `SET` takes no bind
-        // placeholder and the value is a `u64` from our own configuration,
-        // never client input.
-        sqlx::query(sqlx::AssertSqlSafe(statement_timeout.to_owned()))
-            .execute(&mut *conn)
-            .await?;
-    }
-    Ok(())
-}
-
 /// The pool options for one domain: sizing + acquire timeout from settings,
 /// the domain's session setup on every physical connection, and no per-checkout
 /// liveness ping. Connection retirement stays on the `sqlx` defaults (an idle
@@ -496,9 +475,9 @@ fn pool_options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
             // Cloned per call: `after_connect` takes an `Fn`, so the captured
             // value cannot be moved out of it.
             let statement_timeout = statement_timeout.clone();
-            Box::pin(
-                async move { open_session(conn, search_path, statement_timeout.as_deref()).await },
-            )
+            Box::pin(async move {
+                session::open_session(conn, search_path, statement_timeout.as_deref()).await
+            })
         })
 }
 

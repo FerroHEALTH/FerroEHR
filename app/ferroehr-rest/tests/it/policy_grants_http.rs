@@ -56,13 +56,14 @@ async fn replica(
         .with_mapped_party_templates(sections.mapped_templates())
         .with_binding_mapping(crate::party_binding_http::professionals(mapping))
         .with_grant_ceiling(ceiling);
+    let listen_on = (*party.as_ref().unwrap_or(pool).connect_options()).clone();
     if let Some(party) = party {
         svc = svc.with_demographic_pool(party);
     }
     let svc = Arc::new(svc);
     if listen {
         let listened = svc.grants().listened();
-        listened.spawn_listener();
+        listened.spawn_listener(listen_on);
         let deadline = std::time::Instant::now() + Duration::from_secs(10);
         while !listened.is_listening() {
             assert!(

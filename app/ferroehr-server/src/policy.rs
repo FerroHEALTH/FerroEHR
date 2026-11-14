@@ -8,23 +8,34 @@
 //! policy: our own design.
 
 use anyhow::Context as _;
+use ferroehr::config::FerroEhrConfig;
+use ferroehr::db::domain::Domain;
 use ferroehr::service::FerroEhrService;
+
+use crate::party_binding::listen_options;
 
 /// Read the policy registers and the access policy in force, and start the
 /// listener of each, so a write on any replica reaches this one.
 ///
 /// # Errors
 /// The policy store did not answer.
-pub async fn read_and_listen(service: &FerroEhrService) -> anyhow::Result<()> {
+pub async fn read_and_listen(
+    service: &FerroEhrService,
+    config: &FerroEhrConfig,
+) -> anyhow::Result<()> {
+    let clinical = listen_options(config, Domain::Clinical)?;
     service
         .read_policy_registers()
         .await
         .context("reading the operational-policy registers")?;
-    service.policy_registers().listened().spawn_listener();
+    service
+        .policy_registers()
+        .listened()
+        .spawn_listener(clinical.clone());
     service
         .read_access_policy()
         .await
         .context("reading the access policy")?;
-    service.access_policy().listened().spawn_listener();
+    service.access_policy().listened().spawn_listener(clinical);
     Ok(())
 }

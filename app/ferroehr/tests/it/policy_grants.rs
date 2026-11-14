@@ -824,7 +824,7 @@ async fn a_change_on_one_replica_reaches_another_through_its_notification() {
     let writer = replica(&db.pool(), GrantCeiling::default()).await;
     let reader = replica(&db.pool(), GrantCeiling::default()).await;
     let listened = reader.grants().listened();
-    listened.spawn_listener();
+    listened.spawn_listener((*db.pool().connect_options()).clone());
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     while !listened.is_listening() {
         assert!(
