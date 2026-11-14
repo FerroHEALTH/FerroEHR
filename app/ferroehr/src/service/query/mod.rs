@@ -13,6 +13,8 @@
 //!   execution orchestration (parse → plan → execute → assemble), paging
 //!   composition, `ehr_ids` resolution, and the per-query execution budget.
 //!   The AQL *engine* it drives is [`crate::aql`].
+//! - `budget` — the page, the row ceiling and the time budget of one
+//!   execution, shared by every execution path.
 //! - `join` — a query that joins a demographic root to its EHR, run as one
 //!   statement per pool and joined on the party-to-EHR map (no openEHR spec
 //!   governs it — our own design).
@@ -28,6 +30,7 @@
 //!   configuration — our own design).
 
 mod access_log;
+mod budget;
 pub mod config;
 mod execute;
 mod join;

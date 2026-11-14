@@ -44,7 +44,8 @@ use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
 
-use super::execute::{Failure, accessed_content, apply_result_ceiling, compose_paging};
+use super::budget::{apply_result_ceiling, compose_paging};
+use super::execute::{Failure, accessed_content};
 use super::result_set::{result_set_json, substitute_params};
 
 /// The two halves of a joined query, lowered.

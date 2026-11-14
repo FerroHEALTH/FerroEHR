@@ -220,8 +220,9 @@ mod tests {
 
     use super::*;
 
+    /// The first column of the query `aql`, typed.
     fn path(aql: &str) -> Result<LogPath, LogQueryError> {
-        let query = parse_str(&format!("SELECT {aql} FROM ACCESS_LOG_ENTRY l")).expect("parses");
+        let query = parse_str(aql).expect("parses");
         let path = query
             .select
             .columns
@@ -236,41 +237,53 @@ mod tests {
 
     #[test]
     fn the_paths_the_design_names_resolve() {
-        let party = path("l/accessor/party/external_ref/id/value").expect("resolves");
+        let party = path("SELECT l/accessor/party/external_ref/id/value FROM ACCESS_LOG_ENTRY l")
+            .expect("resolves");
         assert_eq!(party.leaf, Leaf::Text);
         assert!(!party.multiple);
-        let version = path("l/items/version_id/value").expect("resolves");
+        let version =
+            path("SELECT l/items/version_id/value FROM ACCESS_LOG_ENTRY l").expect("resolves");
         assert!(version.multiple, "items is a list");
         assert_eq!(version.leaf, Leaf::Text);
         assert_eq!(
-            path("l/link/sequence").expect("resolves").leaf,
+            path("SELECT l/link/sequence FROM ACCESS_LOG_ENTRY l")
+                .expect("resolves")
+                .leaf,
             Leaf::Number
         );
         assert_eq!(
-            path("l/is_emergency").expect("resolves").leaf,
+            path("SELECT l/is_emergency FROM ACCESS_LOG_ENTRY l")
+                .expect("resolves")
+                .leaf,
             Leaf::Boolean
         );
-        assert_eq!(path("l").expect("resolves").leaf, Leaf::Object);
+        assert_eq!(
+            path("SELECT l FROM ACCESS_LOG_ENTRY l")
+                .expect("resolves")
+                .leaf,
+            Leaf::Object
+        );
     }
 
     #[test]
     fn a_generic_parameter_resolves_to_its_argument() {
-        let lower = path("l/occurred/lower/value").expect("DV_INTERVAL<DV_DATE_TIME>");
+        let lower = path("SELECT l/occurred/lower/value FROM ACCESS_LOG_ENTRY l")
+            .expect("DV_INTERVAL<DV_DATE_TIME>");
         assert_eq!(lower.leaf, Leaf::Text);
     }
 
     #[test]
     fn an_unknown_step_is_refused() {
         assert!(matches!(
-            path("l/accessor/nickname"),
+            path("SELECT l/accessor/nickname FROM ACCESS_LOG_ENTRY l"),
             Err(LogQueryError::UnknownAttribute { .. })
         ));
         assert!(matches!(
-            path("x/uid/value"),
+            path("SELECT x/uid/value FROM ACCESS_LOG_ENTRY l"),
             Err(LogQueryError::UnknownVariable(_))
         ));
         assert!(matches!(
-            path("l/items[rm_type='COMPOSITION']/version_id"),
+            path("SELECT l/items[rm_type='COMPOSITION']/version_id FROM ACCESS_LOG_ENTRY l"),
             Err(LogQueryError::PathPredicate(_))
         ));
     }
@@ -281,14 +294,15 @@ mod tests {
             "items": [{"version_id": {"value": "a::s::1"}}, {"version_id": {"value": "b::s::2"}}],
             "ehr_id": {"value": "e"}
         });
-        let version = path("l/items/version_id/value").expect("resolves");
+        let version =
+            path("SELECT l/items/version_id/value FROM ACCESS_LOG_ENTRY l").expect("resolves");
         assert_eq!(
             version.read(&view),
             serde_json::json!(["a::s::1", "b::s::2"])
         );
-        let ehr = path("l/ehr_id/value").expect("resolves");
+        let ehr = path("SELECT l/ehr_id/value FROM ACCESS_LOG_ENTRY l").expect("resolves");
         assert_eq!(ehr.read(&view), serde_json::json!("e"));
-        let absent = path("l/query/language").expect("resolves");
+        let absent = path("SELECT l/query/language FROM ACCESS_LOG_ENTRY l").expect("resolves");
         assert_eq!(absent.read(&view), Value::Null);
     }
 }

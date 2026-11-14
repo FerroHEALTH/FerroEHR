@@ -39,7 +39,8 @@ use crate::service::FerroEhrService;
 use crate::service::admin::access_log_read::log_failure;
 use crate::service::query::request::{AqlQueryRequest, LogRead, QueryOutcome};
 
-use super::execute::{Failure, apply_result_ceiling, compose_paging};
+use super::budget::{apply_result_ceiling, compose_paging};
+use super::execute::Failure;
 use super::result_set::{result_set_json, substitute_params};
 
 impl FerroEhrService {
