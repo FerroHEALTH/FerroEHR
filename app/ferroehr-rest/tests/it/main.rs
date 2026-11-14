@@ -103,6 +103,7 @@ mod federation_http;
 mod fixture_smoke;
 mod flat_http;
 mod headers;
+mod hospital;
 mod http;
 mod item_tag_http;
 mod legal_marks_http;
