@@ -75,10 +75,12 @@ probes_replicas() {
   probe "P-REPLICA-BOOT" "$PROBE_WORKING" "deployment" "#5589" \
     "a second instance on the same database and key boots, and both report the instances agree"
   # The overlay publishes the second instance's port on the identity issuer,
-  # so Compose recreates the issuer, and every service in its network
-  # namespace must be recreated with it: FerroPIX left in the old namespace is
-  # unreachable on localhost, and FerroEHR refuses to boot without it.
-  dc "${files[@]}" --profile replicas --profile s3 up -d --wait --always-recreate-deps \
+  # so the issuer is recreated, and a running container that joined its
+  # network namespace keeps the old one alive with its host ports: the new
+  # issuer then cannot start. The stack therefore goes down first, its
+  # volumes kept, and comes up whole on the overlay.
+  dc down --remove-orphans >/dev/null 2>&1 || true
+  dc "${files[@]}" --profile replicas --profile s3 up -d --wait \
     ferroehr ferroehr-2 >/dev/null 2>&1
   if ! wait_http "$SECOND_CDR/health/readiness" 90 || ! wait_http "$CDR/health/readiness" 90; then
     probe_fail "two serving instances" "$(replica_state "${files[@]}")"
@@ -169,13 +171,12 @@ replica_state() {
   done
 }
 
-# Stop the second instance and bring the quickstart stack back as the other
-# families expect it: the issuer drops the second port, so it is recreated
-# with every service in its namespace again.
+# Bring the quickstart stack back as the other families expect it: the issuer
+# drops the second port, so the stack goes down, its volumes kept, and comes
+# up whole without the overlay.
 replicas_down() {
   dc -f docker-compose.yml -f docker-compose.replicas.yml --profile replicas \
-    rm -sf ferroehr-2 >/dev/null 2>&1 || true
-  dc -f docker-compose.yml --profile s3 up -d --wait --always-recreate-deps \
-    ferroehr seaweedfs seaweedfs-init ferroehr-provision >/dev/null 2>&1
+    down --remove-orphans >/dev/null 2>&1 || true
+  compose_up ferroehr seaweedfs seaweedfs-init ferroehr-provision
   wait_http "$CDR/health/readiness" 90 || true
 }
