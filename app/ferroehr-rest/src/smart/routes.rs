@@ -28,16 +28,17 @@
 //!   party protection holds to a representation of the patient. The ADMIN API needs the product scope, except the outbox
 //!   feed, which needs [`OUTBOX_SCOPE`] alone, so a feed reader reaches no
 //!   other admin route and no admin caller reads the feed by default.
-//! - A `patient/` grant reaches only the EHR of the token's launch context
-//!   (`master07 §Context Selection`): an EHR route's `{ehr_id}`, a query's
-//!   single-EHR `ehr_id`; an operation that names no EHR is refused to it.
+//! - A `patient/` grant is checked here for its resource family and
+//!   permission alone. The token's launch context (`master07 §Context
+//!   Selection`) becomes the caller's own EHR, and the access evaluator alone
+//!   confines a subject caller to it on every route that names an EHR
+//!   (`refused-not-subject`, #5606).
 //! - A route the table does not know is refused, so a route mounted without a
 //!   classification fails closed.
 
 use std::collections::HashMap;
 
 use ferrohealth_smart::guard::Requirement;
-use ferrohealth_smart::openehr;
 use ferrohealth_smart::openehr::smart_scopes::{Permission, ResourceFamily};
 use http::{HeaderMap, Method, Uri};
 use openehr_its::rest::decode::query_component_octets;
@@ -306,7 +307,8 @@ fn path_param(template: &str, path: &str, name: &str) -> Option<String> {
         .map(std::borrow::Cow::into_owned)
 }
 
-/// The EHR a request addresses, for the `patient/` confinement: a query's
+/// The EHR a request addresses, for the representative's and the contact
+/// point's confinement: a query's
 /// single-EHR scope (the `ehr_id` parameter or the `openehr-ehr-id` header,
 /// ITS-REST `query/Request.md` §About the `ehr_id` parameter), otherwise the
 /// route's `{ehr_id}` segment.
@@ -341,14 +343,15 @@ pub(crate) fn target_ehr(
     matched.and_then(|template| path_param(template, uri.path(), "ehr_id"))
 }
 
-/// Checks `requirement` for `principal`, confines a `patient/` grant to the EHR
-/// of the launch context, and confines a bound representative to the EHR of
-/// the subject it represents.
+/// Checks `requirement` for `principal`, and confines a bound representative
+/// to the EHR of the subject it represents.
 ///
-/// A requirement on openEHR data that only `patient/` grants cover reaches the
-/// one EHR the token's `ehrId` names (`master07 §Context Selection`;
+/// A `patient/` grant meets a requirement by its resource family and
+/// permission; which EHR it reaches is the access evaluator's decision, on the
+/// caller's own EHR from the token's `ehrId` (`master07 §Context Selection`;
 /// `master08 §Resource Scopes`: "access is restricted to data within that
-/// patient's EHR"), so `target` must name it.
+/// patient's EHR"). SMART App Launch requires the server to hold the patient
+/// context and names no layer, so the evaluator holding it is our own design.
 ///
 /// A representative reaches only the EHR whose `EHR_STATUS` names the subject
 /// it represents ([`Principal::represented`], #5086) on the EHR's data and its
@@ -361,8 +364,7 @@ pub(crate) fn target_ehr(
 ///
 /// # Errors
 /// The reason the debug log records: the grants do not meet the requirement,
-/// a `patient/` grant addresses another EHR or none, a representative
-/// addresses an EHR other than the represented subject's, or a
+/// a representative addresses an EHR other than the represented subject's, or a
 /// consent-conditioned read carries no consent decision reference.
 pub(crate) fn check(
     requirement: &Requirement,
@@ -397,31 +399,6 @@ pub(crate) fn check(
         && matches!(permission, Permission::Read | Permission::Search)
     {
         return Err("a consent-conditioned read carries no consent decision reference");
-    }
-    if let Requirement::OpenEhr {
-        family,
-        permission,
-        resource,
-    } = requirement
-        && let Some(caller) = principal.access.caller()
-    {
-        let covering = openehr::covering(
-            &caller.openehr_scopes(),
-            *family,
-            *permission,
-            resource.as_deref(),
-            principal.honoured,
-        );
-        // NOTE: a contact point's caller carries no launch context; the EHR of its TRC
-        // patient stands in for it (eHDSI XCA Profile 8.0.1 §4.2.1).
-        if openehr::confined(&covering)
-            && !crate::extensions::access::authn::trc::is_bound(&principal.access)
-        {
-            match (target, principal.access.ehr_id()) {
-                (Some(target), Some(launched)) if target == launched => {}
-                _ => return Err("a patient grant reaches only the EHR of the launch context"),
-            }
-        }
     }
     Ok(())
 }

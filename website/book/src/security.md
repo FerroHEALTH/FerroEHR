@@ -431,7 +431,7 @@ refuses decides, and a deny overrides a permit:
 
 | Step | What refuses | Answer |
 |---|---|---|
-| 0. Subject | a patient, the `subject` caller kind, on an EHR other than the one its launch context names | `403 refused-not-subject` |
+| 0. Subject | a patient (the `subject` caller kind), or a caller whose grants are `patient/` grants alone, on an EHR other than the one its launch context names, or on an operation that names no EHR | `403 refused-not-subject` |
 | 1. Opt-out (EHDS Art. 10) | an `opt_out` directive, for an access service | `404`, as for an unknown EHR |
 | 2. Restriction (EHDS Art. 8) | a `restriction` directive, for a professional, a system or an access service, over the data it covers | `404`, as for unknown data |
 | 3. Consent deny | any other deny directive that applies; a representative a `delegation` directive names reads only what it permits | `403 refused-consent-denied` |
@@ -842,10 +842,19 @@ subject's directives.
 - An AQL query reads only the rows of the patient's own EHR, whatever the query
   scopes or projects, including a query that reads only the `ehr` row, and its
   counts and pages see only those rows.
-- A patient-context token whose launch context names no EHR reaches none.
+- A patient-context token whose launch context names no EHR reaches none, and
+  an operation on EHR data that names no EHR (creating an EHR, a lookup by
+  subject, a query with no single-EHR scope, an import naming no EHR) is
+  refused the same way.
 
-The SMART layer holds the same launch context on top: a `patient/` grant
-reaches only the EHR its `ehrId` names. The `[auth] patient_claim` and
+The evaluator holds the launch context alone. The SMART layer checks a
+`patient/` grant's resource family and permission and refuses on nothing
+else, so every route answers a caller on another EHR the same way and the
+access record names step 0. A professional whose grants are `patient/` grants
+alone, a clinician app launched for one patient, is held to that patient's
+EHR the same way, and on that EHR takes every step of the procedure. A contact
+point's caller is held to the EHR of its treatment relationship
+confirmation's patient. The `[auth] patient_claim` and
 `[auth] patient_namespace` keys of earlier releases are gone; a configuration
 that sets either is refused as naming unknown keys.
 

@@ -26,7 +26,7 @@ The steps run in order for each EHR the access reaches. The first step that refu
 |Step |Rule |Refusal
 
 |0. Subject
-|A caller of kind `subject` is the subject of the one EHR its authenticated context names. Every other EHR MUST be refused to it, whatever that EHR's directives permit.
+|A caller of kind `subject` is the subject of the one EHR its authenticated context names, and a caller whose grants reach only the EHR of its authenticated context reaches that EHR alone. Every other EHR, and an operation on EHR data that names no EHR, MUST be refused to either, whatever any EHR's directives permit. On its own EHR, a caller of another kind takes every further step.
 |`refused-not-subject`
 
 |1. Opt-out

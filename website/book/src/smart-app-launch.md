@@ -3,7 +3,7 @@
 FerroEHR is the **resource server** of a SMART on openEHR platform: a clinical
 app is launched with an OAuth 2.0 access token from your authorization server
 (Keycloak or any standards-compliant identity provider), and the CDR checks
-the token, enforces the SMART on openEHR scopes it carries, and binds a
+the token, enforces the SMART on openEHR scopes it carries, and holds a
 `patient/` grant to the EHR of the launch context. FerroEHR never issues
 tokens, registers clients, or serves the OAuth 2.0 endpoints itself; those
 remain your authorization server's job. Token checking and scope enforcement
@@ -94,12 +94,17 @@ person signed in through that client holds the person's grants.
 
 When an app is launched for a patient, your authorization server puts the
 openEHR EHR id of the launch context in the token's `ehrId` claim
-(master07 §Context Selection). A `patient/` grant then reaches that one EHR:
+(master07 §Context Selection). The SMART layer checks a `patient/` grant for
+its resource family and permission, and the
+[access evaluator](security.md#a-patients-own-ehr) holds a caller whose
+grants are `patient/` grants alone to that one EHR:
 
-- it counts only for an issuer listed in `[auth.smart] patient_issuers`, because an
+- the grant counts only for an issuer listed in `[auth.smart] patient_issuers`, because an
   `ehrId` names an EHR of the platform that issued it;
-- an EHR route whose `{ehr_id}` names another EHR is refused, and so is an
-  operation that names no EHR, such as creating an EHR;
+- any operation on another EHR is refused with `403` `refused-not-subject`,
+  recorded as step 0 (subject), whether its path, its single-EHR query or
+  import scope, its manifest or its result names that EHR; so is an operation
+  that names no EHR, such as creating an EHR;
 - a query runs only within the launch context's EHR, named by its single-EHR
   `ehr_id` parameter or `openehr-ehr-id` header; a query naming no EHR, or
   another one, is refused;

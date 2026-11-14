@@ -122,6 +122,7 @@ impl Reader {
             kind: self.kind,
             party: self.party.clone(),
             own_ehr: None,
+            patient_grants_only: false,
             acts_for: Vec::new(),
             roles: Vec::new(),
             facts: self.facts.clone(),

@@ -293,6 +293,14 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
             &path,
         );
         caller.stamp_decision(&mut event);
+        // NOTE: our own design (#5606), an evaluator refusal refuses EHR data, so its record
+        // writes an access-log entry whatever the operation's resource class.
+        if event.decided.as_ref().is_some_and(|d| d.refused.is_some())
+            && event.domain != AccessDomain::Ehr
+            && event.entry == EntryScope::ByDomain
+        {
+            event.entry = EntryScope::Refusal;
+        }
         categorise(&mut event, &state, op, object.as_ref());
         fill_access(&mut event, &access, &state);
         op_rejected = state.backend().emit(event) == EmitOutcome::Rejected;

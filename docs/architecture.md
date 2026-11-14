@@ -599,14 +599,21 @@ which is what makes an optional stage safe to disable:
    `refused-purpose-missing` or `refused-purpose-not-permitted`; (7) the
    default disposition, `403` `refused-consent-required`, an EHR with no
    settings taking `[authz.rbac] ehr_access_default`. The subject skips every
-   step on their own EHR (Art. 3) and is refused `403` `refused-not-subject`
-   on every other, before step 1 (#5605): a caller is the `subject` kind through a SMART App Launch
-   patient-context credential, and its own EHR is the `ehrId` of that launch
-   context (ITS-REST `master07` §Context Selection; `master08` §Resource
-   Scopes, "Access is restricted to data within that patient's EHR"), so the
-   evaluator alone confines a patient to their EHR on every route, every EHR
-   an Extract names and every row, count and page of a query (#5586, our own
-   design). A representative skips steps 4 to 7. An emergency purpose lifts
+   step on their own EHR (Art. 3). A confined caller is refused `403`
+   `refused-not-subject` on every other EHR, before step 1 (#5605): the
+   `subject` kind, through a SMART App Launch patient-context credential, and
+   any caller whose grants on the EHR's data are `patient/` grants alone. Its
+   own EHR is the `ehrId` of the launch context (ITS-REST `master07` §Context
+   Selection; `master08` §Resource Scopes, "Access is restricted to data
+   within that patient's EHR"), or a contact point's TRC patient's EHR. The
+   evaluator alone confines it, on every route that names an EHR in its path,
+   its single-EHR query or import scope, its manifest or its result, and on
+   every row, count and page of a query; an operation on EHR data that names
+   no EHR (an EHR create, a lookup by subject, an unscoped query or import)
+   is refused at step 0. The SMART layer checks only a grant's family and
+   permission (#5586, #5606, our own design: SMART App Launch requires the
+   patient context held and names no layer). On its own EHR a confined
+   professional takes every step. A representative skips steps 4 to 7. An emergency purpose lifts
    an opt-out for an access service that may override it (Art. 10(2)), and,
    with `[authz.rbac] emergency_access_role`, a restriction or a consent deny
    whose `emergency_override` holds and steps 4 to 7 (Art. 11(5)). A

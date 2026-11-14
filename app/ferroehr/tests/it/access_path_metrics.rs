@@ -49,6 +49,7 @@ fn request(emergency: Emergency) -> Arc<RequestAccess> {
             kind: CallerKind::Professional,
             party: Some(party.clone()),
             own_ehr: None,
+            patient_grants_only: false,
             acts_for: Vec::new(),
             roles: Vec::new(),
             facts: CallerFacts::default(),

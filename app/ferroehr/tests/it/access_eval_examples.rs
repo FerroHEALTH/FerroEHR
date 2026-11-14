@@ -200,6 +200,7 @@ fn access(
             kind: CallerKind::Professional,
             party: Some(party.to_string()),
             own_ehr: None,
+            patient_grants_only: false,
             acts_for,
             roles: Vec::new(),
             facts,
