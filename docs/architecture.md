@@ -507,15 +507,18 @@ which is what makes an optional stage safe to disable:
    with the policies and rules in this object"). The settings are the
    `access_directives` scheme, an `ACCESS_DIRECTIVE_SETTINGS` of the draft
    access control package, refused whole with `400` at every write unless the
-   draft BMM's invariants and the terminology groups hold (RM EHR IM
+   draft BMM's invariants, the terminology groups and the RM `Value_valid` of
+   each `DV_DATE_TIME` and `DV_DURATION` it holds (#5629) hold (RM EHR IM
    §`ACCESS_CONTROL_SETTINGS` leaves the class "Currently implementation
    dependent": the scheme is our own design). The default archetype
    `access_directives.v1.0.0` constrains the settings to that class, which the
    ADL 2 validator reads from the draft class tables beside RM 1.2.0
-   (`draft_model`, AOM2 master11 RM adaptation). A new version is committed by a
-   gate-keeper the current settings name or by `admin_role` on the subject's
-   instruction (BASE Architecture Overview §Security Policy, "Access control of
-   access settings"); the settings are read only by those callers and the
+   (`draft_model`, AOM2 master11 RM adaptation). A new version is committed by the
+   subject while the current settings name no gate-keeper, by a gate-keeper
+   the current settings name, or by `admin_role` on the subject's instruction
+   (BASE Architecture Overview §Access Control: the gate-keeper is "usually
+   the patient for mentally competent adults"), so naming gate-keepers without
+   `PARTY_SELF` takes the subject's write away (#5636); the settings are read only by those callers and the
    subject, and are absent to anyone else in AQL, an EHR Extract and the
    CONTRIBUTION read, since a restriction stays invisible to a provider (EHDS
    Art. 8). An EHR Extract also carries them for the holder of an
@@ -642,10 +645,31 @@ which is what makes an optional stage safe to disable:
    and on an operation that names none, recorded as step 0 (representation)
    (#5609, our own design under EHDS Art. 4(2)). On that EHR it is held to
    steps 1 to 4, the `delegation` directives of its `EHR_ACCESS` and the
-   controller's rules included, and skips steps 5 to 8. An emergency purpose
-   lifts an opt-out for an access service that may override it
-   (Art. 10(2)), and, with `[authz.rbac] emergency_access_role`, a
-   restriction, a consent deny or a deny rule whose `emergency_override`
+   controller's rules included, and skips steps 5 to 8. A caller acting for
+   someone else is a representative whatever issuer it signed in through, so
+   a `patients` portal login bound to a representative's `PERSON` takes
+   those steps too; only the person themselves is the subject (#5613). The
+   subject and the representative pass the RBAC role gate's Clinical class
+   with no role, since their right comes from who they are (EHDS Art. 3 and
+   4(2), #5633), and the access log's standing reads their EHR from the same
+   evaluator `Caller` (#5614). A read, query or export by a caller admitted
+   under a federation agreement whose `consent` condition applies, naming no
+   consent decision reference, is refused at step 0 with
+   `refused-consent-reference-missing`, a fact of the `Caller` (#5614; the
+   SMART layer checks scopes alone). An EHR id the store does not hold
+   answers `404` before any step refuses, read only when a verdict refuses,
+   so a restriction's `404` is never told apart from it (#5623). A write is
+   judged on the template, root archetype, origins and commit instant of the
+   content it is about to store, inside the commit transaction and before
+   anything is stored (#5626, `versioning::restriction::WriteGate`), by
+   steps 3 to 8: an opt-out and a restriction never judge a write's content,
+   since EHDS Art. 8 restricts who sees data and not its recording, a refused
+   write would stop care being documented and its `404` would hint at the
+   restriction; they decide a write for the EHR alone, and the data written
+   stay covered by them for reading (owner ruling on #5621). An
+   emergency purpose lifts an opt-out for an access service that may
+   override it (Art. 10(2)), and, with `[authz.rbac] emergency_access_role`,
+   a restriction, a consent deny or a deny rule whose `emergency_override`
    holds and steps 5 to 8 (Art. 11(5)).
 
    **Controller rules** (#5621, #5624, #5627; our own design, proposed in
@@ -667,13 +691,10 @@ which is what makes an optional stage safe to disable:
    permit exception. Which templates a caller commits is a rule as well, for
    every caller: the `template` element of a `commit_composition` grant is
    gone. A federation agreement's `template` elements stay the contract with
-   the partner, and the rules hold for its persons too, deny winning. A write
-   is judged by steps 1 and 2 for the EHR and by steps 3 to 8 for the version
-   it commits (`versioning::restriction::Written`): a restriction and an
-   opt-out limit access to existing data, writing new data is no access to
-   them, so no write reveals one. Where a decision depends on the datum, the
-   route guard judges a named object, and the commit a written version,
-   before any step about the EHR alone decides (#5627). A
+   the partner, and the rules hold for its persons too, deny winning. Where a
+   decision depends on the datum, the route guard judges a named object, and
+   the commit a created version, before any step about the EHR alone decides
+   (#5627). A
    directive applies by `applies_to` (every attribute of an actor scope
    holds), `operations`, `purposes` and `time_validity`; a fact that cannot
    be read (a validity bound with no offset, an undeclared purpose, an

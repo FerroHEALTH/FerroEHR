@@ -94,8 +94,8 @@ grant. When the EHR's access directives or the access policy refuse, `detail`
 starts with the refusal code (`refused-consent-denied`,
 `refused-policy-denied`, `refused-consent-required`, `refused-sensitivity`,
 `refused-no-care-relationship`, `refused-purpose-missing`,
-`refused-not-subject`,
-`refused-not-represented`; see
+`refused-not-subject`, `refused-not-represented`,
+`refused-consent-reference-missing`; see
 [Access directives](../security.md)).
 
 With `Prefer: return=representation`: `refusal`, that code. A restriction or an

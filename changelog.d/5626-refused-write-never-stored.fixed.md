@@ -1,0 +1,1 @@
+- A write that the subject's directives refuse by its template, root archetype, origin or commit instant is refused before any version is stored, with `403` and its refusal code, or `404` naming no uid under a restriction, and its access-log entry records the refusal. Before, a create whose content a deny covered was stored and answered `404` naming the new uid.

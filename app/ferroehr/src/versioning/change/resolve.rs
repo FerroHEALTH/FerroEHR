@@ -14,15 +14,14 @@ use serde_json::Value;
 use sqlx::PgConnection;
 
 use super::{
-    Committed, ResolvedWrite, canonical_body_text, next_version, reject_deleted_with_data,
-    resolve_lifecycle, stamp_version_uid, validate_transition,
+    ResolvedWrite, canonical_body_text, next_version, reject_deleted_with_data, resolve_lifecycle,
+    stamp_version_uid, validate_transition,
 };
 use crate::error::ServiceError;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
 use crate::storage::codec::decompose;
 use crate::storage::identifier_repo;
 use crate::storage::row::NodeRow;
-use crate::versioning::audit::AuditInput;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::{
     Kind, SigningCtx, attestation, external, lifecycle, person, profile, system,
@@ -403,49 +402,4 @@ async fn retire_protected_identifiers(
     }
     identifier_repo::retire_live(tx, vo_id).await?;
     Ok(())
-}
-
-/// `resolved`, a create or a modify, once the access evaluator admits its
-/// content as `written` judges it; a delete carries none.
-///
-/// # Errors
-/// [`ServiceError::Forbidden`] naming the refusal code.
-pub(super) fn admit_written(
-    written: &crate::versioning::restriction::Written,
-    resolved: ResolvedWrite,
-) -> Result<ResolvedWrite, ServiceError> {
-    if resolved.canonical_text.is_some() {
-        written.admit(
-            resolved.vo_id,
-            super::root_archetype(&resolved.rows).as_deref(),
-            &resolved.origins,
-            resolved.time_committed,
-        )?;
-    }
-    Ok(resolved)
-}
-
-/// The opt-in answer to an identical re-send (#4415): the existing version
-/// `r` shares its content with, and no commit, when `r` is a modify whose
-/// content equalled the preceding tip's; `None` otherwise. The tip is the
-/// one version the `If-Match` names, so an earlier version's content is
-/// never matched. ITS-REST does not govern skipping an identical commit: our
-/// own design, after what Cadasto answers.
-pub(super) fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
-    let (Some(preceding), Some(_)) = (&r.preceding, r.shared_from) else {
-        return None;
-    };
-    Some(Committed {
-        vo_id: r.vo_id,
-        sys_version: preceding.sys_version,
-        tree: preceding.tree,
-        creating_system_id: preceding.creating_system_id.clone(),
-        kind: r.kind,
-        change_type: audit.change_type.clone(),
-        template_id: r.template_id.clone(),
-        root_archetype: super::root_archetype(&r.rows),
-        time_committed: preceding.committed_at,
-        skipped: true,
-        content_digest: r.content_digest,
-    })
 }

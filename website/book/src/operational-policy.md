@@ -329,7 +329,7 @@ group is FerroEHR's own design.
 | `access caller kind` | `professional`, `access_service`, `subject`, `representative`, `system` | `ACCESS_ACTOR_SCOPE.caller_kind`. An `access_service` caller is one holding the `access_service` grant |
 | `access operation` | `read`, `write`, `export`, `query` | `ACCESS_DIRECTIVE.operations`: the operation classes a directive applies to. No capability grants one |
 | `care relationship` | `member_of`, `under_care_of` | The `name` of a `PARTY_RELATIONSHIP` |
-| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-policy-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented` | The access record of a refusal |
+| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-policy-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented`, `refused-consent-reference-missing` | The access record of a refusal |
 | `access log withheld` | `accessor_party`, `accessor_provider`, `accessor_roles`, `accessor_groups` | `ACCESS_LOG_RESTRICTION.withheld`: the accessor members the access log's subject view withholds under EHDS Art. 9(3) |
 
 Two grants of the operation table belong to access control:
@@ -612,7 +612,7 @@ named by its `ferroehr-operations` code:
 | `purpose` | `DV_CODED_TEXT` or `DV_TEXT`: what the exchange is for |
 | `gdpr_art_6_1`, `gdpr_art_9_2` | `DV_TEXT` or `DV_CODED_TEXT`: the point of GDPR Art. 6(1), `a` to `f`, and of Art. 9(2), `a` to `j` |
 | `national_provision` | `DV_TEXT`: the provision of the law that applies |
-| `consent` | `registry` (an external consent registry, whose question names the responsible professional) or `local`: the source of the consent a read is conditioned on; a read must then carry its consent decision reference |
+| `consent` | `registry` (an external consent registry, whose question names the responsible professional) or `local`: the source of the consent a read is conditioned on; a read must then carry its consent decision reference, and the access evaluator refuses one that carries none with `403 refused-consent-reference-missing` |
 | `read_scope` | `DV_TEXT`, one per scope: a `patient/` scope the callers may read |
 | `template` | `DV_TEXT`, one per template: a template an external person may commit |
 | `discard_window` | `DV_DURATION` of whole hours, such as `PT24H`: an external person may discard a dispensation of its own point of care within it |

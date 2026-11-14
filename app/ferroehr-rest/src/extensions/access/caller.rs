@@ -38,6 +38,7 @@ use uuid::Uuid;
 
 use super::authn::trc::TrcPatientEhr;
 use super::authn::{Principal, current_principal};
+use super::authz::AuthzHandle;
 use crate::api::operation::{Verb, operation};
 use crate::state::AppState;
 
@@ -52,52 +53,19 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
     let principal = current_principal();
     let principal = principal.as_ref();
     let backend = state.backend();
-    let settings = backend.settings_caller();
     let capabilities = Capabilities::current();
-    let kind = kind(principal, settings.subject(), &capabilities);
-    let roles = principal.map_or_else(Vec::new, |p| p.roles.clone());
-    let authz = state.authz();
-    let (server_default, admin_role) = authz
-        .as_deref()
-        .map_or((EhrAccessDefault::Open, "ADMIN".to_owned()), |handle| {
-            (handle.ehr_access_default(), handle.admin_role().to_owned())
-        });
-    let mut acts_for: Vec<String> = capabilities
-        .facts()
-        .care_teams()
-        .iter()
-        .map(|team| team.team().to_string())
-        .collect();
-    if let Some(provider) = capabilities
-        .client()
-        .and_then(|client| client.provider.as_ref())
-    {
-        acts_for.push(provider.party.to_string());
-    }
-    acts_for.extend(
-        capabilities
-            .facts()
-            .provider_groups()
-            .iter()
-            .map(Uuid::to_string),
-    );
-    let patient_grants_only = patient_grants_only(principal, op);
-    let caller = Caller {
-        kind,
-        party: settings.party().map(str::to_owned),
-        own_ehr: own_ehr(principal, kind, patient_grants_only),
-        patient_grants_only,
-        acts_for,
-        administrator: roles.iter().any(|r| r.eq_ignore_ascii_case(&admin_role)),
-        facts: capabilities.facts().clone(),
-        settings,
-    };
+    let caller = caller_of(state, principal, &capabilities, Some(op));
+    let kind = caller.kind;
     let purpose = ferroehr::system_log::access_context::current_purpose();
     let asking = Asking {
         operation: operation_class(op),
         emergency: emergency(state, principal, kind, purpose.as_deref()),
         purpose,
     };
+    let server_default = state
+        .authz()
+        .as_deref()
+        .map_or(EhrAccessDefault::Open, AuthzHandle::ehr_access_default);
     let default = match server_default {
         EhrAccessDefault::Open => AccessDefault::Open,
         EhrAccessDefault::Restricted => AccessDefault::Restricted,
@@ -118,19 +86,92 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
     ))
 }
 
+/// The evaluator's caller of the running request, as the access log's
+/// standing reads it: one source for who the caller is and which EHR a
+/// confined caller reaches (#5614).
+pub(crate) fn current_caller(state: &AppState) -> Caller {
+    let principal = current_principal();
+    caller_of(state, principal.as_ref(), &Capabilities::current(), None)
+}
+
+/// The evaluator's caller `principal` is, holding `capabilities`, asking
+/// for `op`; with no operation, its grants are read as reaching more than
+/// one patient's EHR.
+fn caller_of(
+    state: &AppState,
+    principal: Option<&Principal>,
+    capabilities: &Capabilities,
+    op: Option<&str>,
+) -> Caller {
+    let settings = state.backend().settings_caller();
+    let kind = kind(principal, settings.subject(), capabilities);
+    let roles = principal.map_or_else(Vec::new, |p| p.roles.clone());
+    let admin_role = state.authz().as_deref().map_or_else(
+        || "ADMIN".to_owned(),
+        |handle| handle.admin_role().to_owned(),
+    );
+    let mut acts_for: Vec<String> = capabilities
+        .facts()
+        .care_teams()
+        .iter()
+        .map(|team| team.team().to_string())
+        .collect();
+    if let Some(provider) = capabilities
+        .client()
+        .and_then(|client| client.provider.as_ref())
+    {
+        acts_for.push(provider.party.to_string());
+    }
+    acts_for.extend(
+        capabilities
+            .facts()
+            .provider_groups()
+            .iter()
+            .map(Uuid::to_string),
+    );
+    let patient_grants_only = op.is_some_and(|op| patient_grants_only(principal, op));
+    Caller {
+        kind,
+        party: settings.party().map(str::to_owned),
+        own_ehr: own_ehr(principal, kind, patient_grants_only),
+        patient_grants_only,
+        acts_for,
+        administrator: roles.iter().any(|r| r.eq_ignore_ascii_case(&admin_role)),
+        facts: capabilities.facts().clone(),
+        settings,
+        lacks_consent_reference: principal.is_some_and(lacks_consent_reference),
+    }
+}
+
+/// Whether `principal` was admitted under a federation agreement whose
+/// `consent` condition applies and names no consent decision reference, the
+/// token's mapped `consent.reference` (Wabvpz Art. 1(j) and Art. 15a(1),
+/// `docs/law/nl/wabvpz/text.html`, for the condition the agreement carries).
+fn lacks_consent_reference(principal: &Principal) -> bool {
+    super::authn::declared::admitted(&principal.access)
+        .is_some_and(|agreement| agreement.consent.is_some())
+        && principal
+            .access
+            .caller()
+            .and_then(ferrohealth_smart::resource::Caller::consent_reference)
+            .is_none()
+}
+
 /// The caller's kind (`access caller kind`).
 fn kind(principal: Option<&Principal>, subject: bool, capabilities: &Capabilities) -> CallerKind {
     let Some(principal) = principal else {
         return CallerKind::Professional;
     };
     let smart = principal.access.caller();
-    if subject || smart.is_some_and(ferrohealth_smart::resource::Caller::is_the_person) {
-        return CallerKind::Subject;
-    }
+    // NOTE: EHDS Art. 4(2), whoever acts for someone else is their representative whatever
+    // issuer it logged in through, so the representation is read before the person (#5613).
     let represents =
         smart.is_some_and(|caller| matches!(caller.kind(), SmartKind::Representative { .. }));
     if represents || principal.represented.is_some() {
         return CallerKind::Representative;
+    }
+    if subject || smart.is_some_and(ferrohealth_smart::resource::Caller::is_the_person) {
+        return CallerKind::Subject;
     }
     let external = smart.is_some_and(|caller| {
         matches!(
