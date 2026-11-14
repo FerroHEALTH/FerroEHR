@@ -17,6 +17,7 @@ use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::Invalid;
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
 use openehr_its::rest::generated::common::UpdateAudit;
@@ -335,7 +336,7 @@ async fn ehr_status_update_checks_the_committer() {
         let svc = svc.clone();
         async move {
             let mut body = svc
-                .ehr_status(ehr, None)
+                .ehr_object(ehr, EhrObject::Status, None)
                 .await
                 .map(|r| r.body)
                 .expect("the current EHR_STATUS");

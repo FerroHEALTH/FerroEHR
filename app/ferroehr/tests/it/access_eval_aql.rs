@@ -31,19 +31,22 @@ use serde_json::{Value, json};
 
 use crate::fixtures::{change_type, composition, create_ehr_for_party, uv};
 
-/// The professional the tests ask as.
-const NURSE: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f83";
+/// The controller the test access policy names.
+const CONTROLLER: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f83";
 /// The query every test pages through.
 const COMPOSITIONS: &str =
     "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c ORDER BY c/uid/value";
 /// The count of the same rows.
 const COUNT: &str = "SELECT COUNT(c/uid/value) FROM EHR e CONTAINS COMPOSITION c";
 
-/// Three EHRs, each with two compositions, the subject of each a `PERSON`.
+/// Three EHRs, each with two compositions, the subject of each a `PERSON`,
+/// and the nurse, the `PERSON` the professional the tests ask as is bound to,
+/// which a directive names only as a party of the store.
 struct World {
     _db: testkit::TestDb,
     svc: FerroEhrService,
     ehrs: Vec<(EhrId, uuid::Uuid, Vec<String>)>,
+    nurse: String,
 }
 
 /// A term of the access control groups.
@@ -121,7 +124,29 @@ impl World {
             objects.sort();
             ehrs.push((ehr_id, subject, objects));
         }
-        Self { _db: db, svc, ehrs }
+        let nurse = crate::fixtures::create_party(
+            &svc,
+            uv(
+                &crate::admin_fixture::person(
+                    "Nurse",
+                    &json!([{ "_type": "ELEMENT", "archetype_node_id": "at0003",
+                        "name": { "_type": "DV_TEXT", "value": "family" },
+                        "value": { "_type": "DV_TEXT", "value": "Nurse" } }]),
+                ),
+                "249",
+                None,
+            ),
+        )
+        .await
+        .expect("the nurse is created")
+        .0
+        .to_string();
+        Self {
+            _db: db,
+            svc,
+            ehrs,
+            nurse,
+        }
     }
 
     /// Commits `settings` as the current `EHR_ACCESS` of EHR `index`.
@@ -194,33 +219,33 @@ struct Ask {
 }
 
 impl Ask {
-    /// A professional bound to `NURSE`, asking with no purpose.
-    fn professional() -> Self {
-        Self::of(CallerKind::Professional)
+    /// A professional bound to the nurse of `world`, asking with no purpose.
+    fn professional(world: &World) -> Self {
+        Self::of(world, CallerKind::Professional)
     }
 
     /// The subject of `own`, through a patient context naming that EHR, or
     /// naming none.
-    fn subject(own: Option<EhrId>) -> Self {
-        let mut ask = Self::of(CallerKind::Subject);
+    fn subject(world: &World, own: Option<EhrId>) -> Self {
+        let mut ask = Self::of(world, CallerKind::Subject);
         ask.caller.party = None;
         ask.caller.own_ehr = own;
         ask.caller.settings = SettingsCaller::new(false, true, None);
         ask
     }
 
-    /// A caller of `kind` bound to `NURSE`.
-    fn of(kind: CallerKind) -> Self {
+    /// A caller of `kind` bound to the nurse of `world`.
+    fn of(world: &World, kind: CallerKind) -> Self {
         Self {
             caller: Caller {
                 kind,
-                party: Some(NURSE.to_owned()),
+                party: Some(world.nurse.clone()),
                 own_ehr: None,
                 acts_for: Vec::new(),
                 roles: Vec::new(),
                 facts: CallerFacts::default(),
                 administrator: false,
-                settings: SettingsCaller::new(false, false, Some(NURSE.to_owned())),
+                settings: SettingsCaller::new(false, false, Some(world.nurse.clone())),
             },
             purpose: None,
             policy: None,
@@ -348,14 +373,14 @@ async fn step_1_an_opted_out_ehr_leaves_the_query() {
     let expected = except(&world, &[0], &[]);
     assert_reads(
         &world,
-        &Ask::of(CallerKind::AccessService),
+        &Ask::of(&world, CallerKind::AccessService),
         &expected,
         "an access service",
     )
     .await;
     assert_reads(
         &world,
-        &Ask::professional(),
+        &Ask::professional(&world),
         &world.every(),
         "a professional",
     )
@@ -383,7 +408,13 @@ async fn step_2_a_restricted_object_leaves_the_query() {
         .settings(1, &settings("open", &[restriction(None)], &[]))
         .await;
     let expected = except(&world, &[], &[&hidden]);
-    assert_reads(&world, &Ask::professional(), &expected, "a professional").await;
+    assert_reads(
+        &world,
+        &Ask::professional(&world),
+        &expected,
+        "a professional",
+    )
+    .await;
     let world2 = Box::pin(World::new()).await;
     let hidden2 = world2.objects(1)[0].clone();
     let excepted = directive(
@@ -393,14 +424,14 @@ async fn step_2_a_restricted_object_leaves_the_query() {
         "data": [{ "objects": [object_ref(&hidden2)] }],
         "exceptions": [directive("consent", "permit", &json!({ "applies_to": [{ "party": {
             "_type": "PARTY_REF", "namespace": "local", "type": "PERSON",
-            "id": { "_type": "HIER_OBJECT_ID", "value": NURSE } } }] }))] }),
+            "id": { "_type": "HIER_OBJECT_ID", "value": world2.nurse } } }] }))] }),
     );
     world2
         .settings(1, &settings("open", &[excepted], &[]))
         .await;
     assert_reads(
         &world2,
-        &Ask::professional(),
+        &Ask::professional(&world2),
         &world2.every(),
         "the excepted caller",
     )
@@ -416,12 +447,12 @@ async fn step_3_a_consent_deny_leaves_the_query() {
         "deny",
         &json!({ "applies_to": [{ "party": {
         "_type": "PARTY_REF", "namespace": "local", "type": "PERSON",
-        "id": { "_type": "HIER_OBJECT_ID", "value": NURSE } } }] }),
+        "id": { "_type": "HIER_OBJECT_ID", "value": world.nurse } } }] }),
     );
     world.settings(2, &settings("open", &[deny], &[])).await;
     assert_reads(
         &world,
-        &Ask::professional(),
+        &Ask::professional(&world),
         &except(&world, &[2], &[]),
         "the denied caller",
     )
@@ -439,12 +470,12 @@ async fn step_4_a_sensitive_object_leaves_the_query() {
     world.settings(0, &settings("open", &[], &[label])).await;
     assert_reads(
         &world,
-        &Ask::professional(),
+        &Ask::professional(&world),
         &except(&world, &[], &[&labelled]),
         "uncleared",
     )
     .await;
-    let mut cleared = Ask::professional();
+    let mut cleared = Ask::professional(&world);
     cleared.caller.facts = cleared_for_hiv();
     assert_reads(&world, &cleared, &world.every(), "cleared").await;
 }
@@ -468,7 +499,7 @@ fn policy(members: &Value) -> AccessPolicy {
         "name": { "_type": "DV_TEXT", "value": "Policy" },
         "archetype_node_id": "openEHR-EHR-ACCESS_POLICY.controller.v1",
         "controller": { "_type": "PARTY_REF", "namespace": "local", "type": "ORGANISATION",
-                        "id": { "_type": "HIER_OBJECT_ID", "value": NURSE } },
+                        "id": { "_type": "HIER_OBJECT_ID", "value": CONTROLLER } },
         "care_relationship_required": false,
         "purpose_required": false
     });
@@ -485,7 +516,7 @@ fn policy(members: &Value) -> AccessPolicy {
 async fn step_5_only_the_ehrs_in_care_are_queried() {
     let world = Box::pin(World::new()).await;
     world.settings(1, &settings("open", &[], &[])).await;
-    let mut ask = Ask::professional();
+    let mut ask = Ask::professional(&world);
     ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
     assert_reads(&world, &ask, &[], "no relationship").await;
     ask.cared = vec![world.subject(0), world.subject(1)];
@@ -503,7 +534,7 @@ async fn step_5_only_the_ehrs_in_care_are_queried() {
 #[tokio::test]
 async fn step_6_a_missing_purpose_reads_nothing() {
     let world = Box::pin(World::new()).await;
-    let mut ask = Ask::professional();
+    let mut ask = Ask::professional(&world);
     ask.policy = Some(policy(&json!({ "purpose_required": true })));
     assert_reads(&world, &ask, &[], "no purpose").await;
     ask.purpose = Some("TREAT");
@@ -540,12 +571,12 @@ async fn step_7_the_default_disposition_bounds_the_query() {
     let other = world.objects(0)[1].clone();
     assert_reads(
         &world,
-        &Ask::professional(),
+        &Ask::professional(&world),
         &except(&world, &[], &[&other]),
         "consent required",
     )
     .await;
-    let mut restricted = Ask::professional();
+    let mut restricted = Ask::professional(&world);
     restricted.default = AccessDefault::Restricted;
     let mut expected: Vec<String> = world.objects(1);
     expected.push(permitted);
@@ -574,7 +605,7 @@ async fn a_query_served_ehr_names_the_grounds_of_a_direct_read() {
     world
         .settings(0, &settings("consent_required", &[permit], &[]))
         .await;
-    let (ask, ehr_id) = (Ask::professional(), world.ehrs[0].0);
+    let (ask, ehr_id) = (Ask::professional(&world), world.ehrs[0].0);
 
     let queried = request_of(&ask);
     let outcome = run_query(&world, &ask, &queried, COMPOSITIONS, None).await;
@@ -640,8 +671,8 @@ async fn a_patient_query_reads_only_their_own_ehr() {
         )
         .await;
     let (own, other) = (world.ehrs[0].0, world.ehrs[1].0);
-    let patient = Ask::subject(Some(own));
-    let open = Ask::professional();
+    let patient = Ask::subject(&world, Some(own));
+    let open = Ask::professional(&world);
     for aql in [
         "SELECT e/ehr_id/value FROM EHR e",
         "SELECT e/ehr_id/value, e/ehr_status/subject FROM EHR e",
@@ -665,7 +696,7 @@ async fn a_patient_query_reads_only_their_own_ehr() {
     let count = first_column(&world, &patient, "SELECT COUNT(*) FROM EHR e").await;
     assert_eq!(count, vec![json!(1)], "one EHR is in the caller's scope");
     assert_reads(&world, &patient, &world.objects(0), "the subject of EHR 0").await;
-    let settled = Ask::subject(Some(other));
+    let settled = Ask::subject(&world, Some(other));
     assert_reads(&world, &settled, &world.objects(1), "the subject of EHR 1").await;
 }
 
@@ -683,7 +714,7 @@ async fn a_patient_query_outside_any_own_ehr_reads_nothing() {
             Some(EhrId(uuid::Uuid::now_v7())),
         ),
     ] {
-        let ask = Ask::subject(own);
+        let ask = Ask::subject(&world, own);
         assert_eq!(
             first_column(&world, &ask, aql).await,
             Vec::<Value>::new(),
@@ -692,7 +723,7 @@ async fn a_patient_query_outside_any_own_ehr_reads_nothing() {
         assert_reads(&world, &ask, &[], case).await;
     }
     let unique = world.ehrs[2].0;
-    let served = first_column(&world, &Ask::subject(Some(unique)), aql).await;
+    let served = first_column(&world, &Ask::subject(&world, Some(unique)), aql).await;
     assert_eq!(
         served,
         vec![json!(unique.0.to_string())],
@@ -713,7 +744,7 @@ async fn a_shared_subject_id_names_no_other_ehr() {
     let ehr_b = crate::fixtures::create_ehr_subject(&world.svc, &shared("other.patients")).await;
     let aql = "SELECT e/ehr_id/value FROM EHR e";
     for ehr in [ehr_a, ehr_b] {
-        let served = first_column(&world, &Ask::subject(Some(ehr)), aql).await;
+        let served = first_column(&world, &Ask::subject(&world, Some(ehr)), aql).await;
         assert_eq!(served, vec![json!(ehr.0.to_string())]);
     }
 }
@@ -731,7 +762,7 @@ async fn a_patient_is_refused_every_ehr_but_their_own() {
         )
         .await;
     let own = world.ehrs[0].0;
-    let ask = Ask::subject(Some(own));
+    let ask = Ask::subject(&world, Some(own));
     let access = request_of(&ask);
     let ehrs: Vec<EhrId> = world.ehrs.iter().map(|(ehr, _, _)| *ehr).collect();
     Box::pin(with_request_access(
@@ -746,7 +777,7 @@ async fn a_patient_is_refused_every_ehr_but_their_own() {
             access.outcome(*ehr, &item) == ferroehr::access_eval::procedure::Outcome::Admit;
         assert_eq!(admitted, *ehr == own, "{ehr:?}");
     }
-    let nobody = request_of(&Ask::subject(None));
+    let nobody = request_of(&Ask::subject(&world, None));
     Box::pin(with_request_access(
         Arc::clone(&nobody),
         world.svc.judge_request_ehrs(&ehrs),

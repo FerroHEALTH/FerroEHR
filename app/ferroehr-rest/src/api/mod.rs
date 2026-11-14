@@ -249,8 +249,8 @@ pub(crate) fn its_openapi_router() -> OpenApiRouter<AppState> {
 
 /// FerroEHR's own routes, which ITS-REST does not define and which are no FHIR
 /// or IHE interface, as one native `utoipa-axum` router (paths relative to the
-/// extensions root): the ADMIN extensions, the archetype and artefact library
-/// with its ADL 1.4 to ADL 2 conversion,
+/// extensions root): the ADMIN extensions, the `EHR_ACCESS` reads, the archetype
+/// and artefact library with its ADL 1.4 to ADL 2 conversion,
 /// `PARTY_RELATIONSHIP`, the EHR Extract messages, the cohort query,
 /// terminology and the outbox feed. They are mounted under
 /// `{rest_root}/extensions/v1`, beside the openEHR base path, on their own
@@ -263,6 +263,7 @@ pub(crate) fn its_openapi_router() -> OpenApiRouter<AppState> {
 pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .merge(ehr::openapi_routes::extension_routes())
+        .merge(ehr::ehr_access::routes())
         .merge(ehr::access_delay::routes())
         .merge(ehr::access_log::routes())
         .merge(demographic::relationship::relationship_routes())

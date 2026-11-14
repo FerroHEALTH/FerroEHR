@@ -20,7 +20,9 @@
 //! touches, or holding `no_subject_namespace` for a subject with none;
 //! exporting by a system caller needs an `export_ehr_extract` grant covering
 //! the EHR the same way. No openEHR spec governs who may import or export:
-//! our own design (#5005, #5432, #5438, #5439, #5521, #5530).
+//! our own design (#5005, #5432, #5438, #5439, #5521, #5530). An imported
+//! `EHR_ACCESS` directive names only parties this CDR or the extract holds
+//! (#5517).
 
 #![expect(
     clippy::disallowed_types,
@@ -38,6 +40,7 @@ use crate::ids::{EhrId, VoId};
 use crate::party_binding::grants::capabilities::Capabilities;
 use crate::party_binding::grants::operation::{CREATING_SYSTEM, Operation};
 use crate::service::FerroEhrService;
+use crate::service::ehr::access_parties::Landing;
 use crate::versioning::Kind;
 use crate::versioning::import::ImportContainer;
 
@@ -85,7 +88,43 @@ impl FerroEhrService {
     ) -> Result<(Vec<ImportContainer>, Vec<ImportContainer>), ServiceError> {
         let (containers, parties) = super::import::parse_import_containers(extract)?;
         self.admit_import(&containers, &parties, operation).await?;
+        self.check_imported_directive_parties(&containers, &parties)
+            .await?;
         Ok((containers, parties))
+    }
+
+    /// Refuses an import whose head `EHR_ACCESS` version, the one the import
+    /// puts in force, has a directive naming a party that neither the
+    /// demographic store nor the extract's demographics chapter holds
+    /// ([`Self::check_directive_parties`]). An earlier version is the record of
+    /// what was in force then and decides nothing, so a party erased since
+    /// never blocks a faithful import.
+    ///
+    /// # Errors
+    /// The refusals of [`Self::check_directive_parties`].
+    async fn check_imported_directive_parties(
+        &self,
+        containers: &[ImportContainer],
+        parties: &[ImportContainer],
+    ) -> Result<(), ServiceError> {
+        let landing: Landing = parties
+            .iter()
+            .map(|party| (party.vo_id, party.kind.as_str().to_owned()))
+            .collect();
+        for container in containers.iter().filter(|c| c.kind == Kind::EhrAccess) {
+            // NOTE: the import replays a container's versions in this order, so the last is its head.
+            let head = container
+                .versions
+                .iter()
+                .max_by_key(|v| (v.lineage(), v.tree.columns()));
+            if let Some(settings) = head
+                .and_then(|v| v.data.get("settings"))
+                .filter(|s| !s.is_null())
+            {
+                self.check_directive_parties(settings, &landing).await?;
+            }
+        }
+        Ok(())
     }
 
     /// The `creating_system_id`s whose wrapped committers the request's

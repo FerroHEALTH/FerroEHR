@@ -123,6 +123,37 @@ The `versioned_ehr_status` sub-resource exposes the full version history:
 - `GET …/versioned_ehr_status/version` (optionally `?version_at_time=`) and
   `…/version/{version_uid}` — a specific version.
 
+## EHR_ACCESS
+
+**EHR_ACCESS** holds the record's access directives: who may reach which data,
+for what, until when (the [access directives](../security.md#access-directives)
+scheme). An EHR holds exactly one, versioned like `EHR_STATUS`. The openEHR
+REST API defines no `EHR_ACCESS` endpoint, so FerroEHR reads it through its own
+extension under the extensions root, with the paths, `version_at_time` and
+`version_uid` addressing, `ETag` and `Last-Modified` of the `EHR_STATUS`
+reads:
+
+```shell
+curl -u ferroehr:ferroehr \
+  http://localhost:8080/ferroehr/rest/extensions/v1/ehr/$EHR_ID/ehr_access
+```
+
+- `GET …/ehr_access` (optionally `?version_at_time=`) and
+  `…/ehr_access/{version_uid}`: the `EHR_ACCESS` with its settings,
+- `GET …/versioned_ehr_access`: the `VERSIONED_EHR_ACCESS` object,
+- `GET …/versioned_ehr_access/revision_history`: the revision history,
+- `GET …/versioned_ehr_access/version` (optionally `?version_at_time=`) and
+  `…/version/{version_uid}`: a specific version.
+
+The access evaluator judges these reads as it judges any read of the EHR, and
+each writes an access-log entry. Only the administrator, the record's person
+and the gate-keepers read the settings; to anyone else the EHR reads as one
+without an `EHR_ACCESS` (`404`), so a restriction stays invisible. A read that
+carries the settings is `application/json` only: canonical XML has no class
+for them, so an XML `Accept` gets `406`. A new version is written with a
+CONTRIBUTION; a directive that names a party the demographic service does not
+hold is refused with `422` naming the directive and the party.
+
 ## COMPOSITION
 
 A **COMPOSITION** is a committed clinical document, validated against its

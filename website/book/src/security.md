@@ -341,13 +341,33 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
   (`404`). One caller more receives the `EHR_ACCESS` in an EHR Extract: the
   holder of an `export_ehr_extract` grant whose `subject_namespace` covers
   the EHR, such as a migration client, since the extract transfers the whole
-  EHR and an import elsewhere must keep the person's directives.
+  EHR and an import elsewhere must keep the person's directives. Those
+  callers read the settings over the wire with
+  `GET /ferroehr/rest/extensions/v1/ehr/{ehr_id}/ehr_access` and its
+  `versioned_ehr_access` reads, a FerroEHR extension shaped on the
+  `EHR_STATUS` reads ([Resource walkthroughs](using-the-api/resources.md#ehr_access)),
+  which another product uses to exchange the directives.
 - **Every write is checked:** a CONTRIBUTION, an EHR Extract import and an
   admin archive load that carry settings are refused whole with `400` naming
   the first defect: settings of another scheme (the removed
   `FERROEHR_ACCESS_CONTROL_V1` among them), a member the class does not
   declare, or a broken invariant of the draft package, named as
-  `CLASS.Invariant`, such as `ACCESS_DIRECTIVE.Restriction_denies`.
+  `CLASS.Invariant`, such as `ACCESS_DIRECTIVE.Restriction_denies`. The
+  same writes, and the controller's commit, refuse with `422` a directive
+  that names a party the demographic service does not hold, naming the
+  directive and the party: an actor scope's `party`, or the `external_ref`
+  of the `instructed_by` party, in the directive or any of its exceptions. A
+  reference of another type than the party it names is refused the same
+  way, and so is an id that is no UUID, since the evaluator could never
+  match it to a caller. A gate-keeper whose `external_ref` names such a
+  party is refused the same way, naming the gate-keeper, since it would lock
+  the settings to nobody. An import may name a party its own demographics
+  chapter carries, and an archive load one its demographic records carry.
+  An import and an archive load check only the head `EHR_ACCESS` version,
+  the one in force: an earlier version is the unchanged record of what was
+  in force then and decides nothing, so a party erased since (under GDPR
+  Art. 17, for example) never blocks a faithful restore of your own export.
+  `PARTY_SELF` names the record's person and needs no lookup.
 - **Unreadable settings:** stored settings that do not read as the scheme
   hold the EHR closed. A request that names the EHR is refused with `500`,
   no query reaches it, and the server logs an error naming it. Only settings

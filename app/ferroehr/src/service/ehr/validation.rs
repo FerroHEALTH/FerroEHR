@@ -304,7 +304,7 @@ impl FerroEhrService {
             }
             Kind::EhrAccess => {
                 self.privacy.enforce(kind.as_str(), data)?;
-                validate_ehr_access(data, incomplete)
+                self.validate_ehr_access_for_commit(data, incomplete).await
             }
             Kind::Folder => {
                 self.privacy.enforce(kind.as_str(), data)?;

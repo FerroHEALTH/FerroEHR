@@ -10,6 +10,7 @@
 //! and the `UPDATE_VERSION` commit envelope — so the seeds and probes live
 //! here once rather than once per suite.
 
+use ferroehr::service::ehr::object::EhrObject;
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -48,7 +49,7 @@ pub(crate) async fn seed_full_ehr(svc: &FerroEhrService) -> EhrId {
     let ehr_id = crate::fixtures::create_ehr(svc).await;
 
     let mut updated = svc
-        .ehr_status(ehr_id, None)
+        .ehr_object(ehr_id, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status get");
